@@ -1,0 +1,134 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}SIM Akreditasi RS - Workstation STARKES PDCA{% endblock %}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'css/style.css' %}">
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+
+    <!-- MOBILE TOPBAR -->
+    <nav class="d-md-none mobile-topbar d-flex justify-content-between align-items-center">
+        <button class="btn btn-sm border-0 p-0" type="button" data-bs-toggle="offcanvas" data-bs-target="#mobileSidebar">
+            <i class="bi bi-list fs-4 text-dark"></i>
+        </button>
+        <div class="d-flex align-items-center gap-2">
+            <div class="brand-icon-sm">
+                <i class="bi bi-hospital text-white"></i>
+            </div>
+            <span class="fw-bold" style="font-size:0.9rem; color:#0F172A;">SIM AKREDITASI</span>
+        </div>
+        <div class="user-avatar-sm">
+            {{ request.user.username|first|upper }}
+        </div>
+    </nav>
+
+    <!-- MOBILE OFFCANVAS SIDEBAR -->
+    <div class="offcanvas offcanvas-start offcanvas-sidebar d-md-none" id="mobileSidebar" tabindex="-1">
+        <div class="offcanvas-header border-bottom bg-slate-900 text-white">
+            <div class="d-flex align-items-center gap-2">
+                <div class="brand-icon">
+                    <i class="bi bi-hospital"></i>
+                </div>
+                <div>
+                    <h6 class="mb-0 fw-bold">SIM AKREDITASI</h6>
+                    <small class="text-white-50" style="font-size:0.65rem;">STARKES PDCA Workstation</small>
+                </div>
+            </div>
+            <button type="button" class="btn-close btn-close-white text-reset" data-bs-dismiss="offcanvas"></button>
+        </div>
+        <div class="offcanvas-body p-0 bg-slate-900">
+            {% include "includes/sidebar.html" %}
+        </div>
+    </div>
+
+    <!-- DESKTOP SIDEBAR -->
+    <aside class="sidebar-desktop d-none d-md-flex flex-column">
+        <div class="sidebar-brand">
+            <div class="brand-icon">
+                <i class="bi bi-hospital"></i>
+            </div>
+            <div class="sidebar-brand-text">
+                <h6>SIM AKREDITASI</h6>
+                <small>STARKES PDCA Workstation</small>
+            </div>
+        </div>
+        {% include "includes/sidebar.html" %}
+    </aside>
+
+    <!-- MAIN CONTENT -->
+    <div class="main-content">
+        <!-- TOP NAVBAR -->
+        <header class="d-none d-md-flex top-bar">
+            <div class="page-heading">
+                <h5>{% block page_title %}Dashboard Pokja{% endblock %}</h5>
+                <small class="text-muted">{% block page_subtitle %}Sistem Manajemen Dokumen &amp; Mitigasi Risiko Akreditasi RS{% endblock %}</small>
+            </div>
+            <div class="user-pill">
+                <a href="{% url 'akreditasi:rekap' %}" class="btn btn-sm btn-outline-secondary d-inline-flex align-items-center gap-1">
+                    <i class="bi bi-printer"></i> Rekap Cetak
+                </a>
+                <a href="{% url 'akreditasi:export_excel' %}" class="btn btn-sm btn-outline-success d-inline-flex align-items-center gap-1">
+                    <i class="bi bi-file-earmark-excel"></i> Export Excel
+                </a>
+                <div class="user-info">
+                    <div class="user-avatar">
+                        {{ request.user.username|first|upper }}
+                    </div>
+                    <div class="user-text">
+                        <span class="user-name">{{ request.user.get_full_name|default:request.user.username }}</span>
+                        <span class="user-role">{% if request.user.is_superuser %}Admin Akreditasi{% else %}Asesor/Pokja{% endif %}</span>
+                    </div>
+                </div>
+                <form method="post" action="{% url 'accounts:logout' %}" class="d-inline">
+                    {% csrf_token %}
+                    <button type="submit" class="btn-logout" title="Keluar">
+                        <i class="bi bi-box-arrow-right"></i>
+                    </button>
+                </form>
+            </div>
+        </header>
+
+        <main class="content-area">
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="alert alert-{{ message.tags }} alert-dismissible fade show py-2 mb-3 shadow-xs d-flex align-items-center justify-content-between" role="alert">
+                        <div>
+                            {% if message.tags == 'success' %}<i class="bi bi-check-circle-fill me-1.5 text-success"></i>{% endif %}
+                            {% if message.tags == 'danger' or message.tags == 'error' %}<i class="bi bi-exclamation-triangle-fill me-1.5 text-danger"></i>{% endif %}
+                            {{ message }}
+                        </div>
+                        <button type="button" class="btn-close p-2" data-bs-dismiss="alert" style="font-size:0.65rem;"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+
+            {% block content %}{% endblock %}
+        </main>
+    </div>
+
+    <!-- TOAST CONTAINER -->
+    <div class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index: 1090;">
+        <div id="appToast" class="toast align-items-center text-white bg-dark border-0 shadow" role="alert" aria-live="assertive" aria-atomic="true">
+            <div class="d-flex">
+                <div class="toast-body d-flex align-items-center gap-2" id="toastMessage">
+                    <i class="bi bi-info-circle"></i> Info
+                </div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="{% static 'js/main.js' %}"></script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% load crispy_forms_tags %}
+
+{% block title %}Kelola Unit Kerja | SIM Akreditasi RS{% endblock %}
+{% block page_title %}Kelola Unit Kerja{% endblock %}
+{% block page_subtitle %}Tambah & kelola Unit Kerja Rumah Sakit{% endblock %}
+
+{% block content %}
+
+<div class="row g-3">
+
+    <!-- LEFT: Form -->
+    <div class="col-lg-5">
+        <div class="card">
+            <div class="card-header d-flex align-items-center gap-2">
+                <i class="bi bi-building text-primary"></i>
+                Tambah Unit Kerja Baru
+            </div>
+            <div class="card-body p-3">
+                <form method="post" action="{% url 'akreditasi:unit_list' %}">
+                    {% csrf_token %}
+                    {{ form|crispy }}
+                    <button type="submit" class="btn btn-primary w-100 d-inline-flex align-items-center justify-content-center gap-2 mt-2">
+                        <i class="bi bi-plus-lg"></i>
+                        Simpan Unit Kerja
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- RIGHT: Table -->
+    <div class="col-lg-7">
+        <div class="table-card">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead>
+                        <tr>
+                            <th>Kode Unit</th>
+                            <th>Nama Unit Kerja</th>
+                            <th>Penanggung Jawab (PIC)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for unit in units %}
+                        <tr>
+                            <td>
+                                <span class="font-mono fw-bold text-primary" style="font-size: 0.78rem;">{{ unit.code }}</span>
+                            </td>
+                            <td>
+                                <span class="fw-semibold text-dark" style="font-size: 0.8rem;">{{ unit.name }}</span>
+                            </td>
+                            <td>
+                                <span class="text-muted" style="font-size: 0.78rem;">{{ unit.pic_name|default:"—" }}</span>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="3" class="text-center py-4 text-muted">
+                                <i class="bi bi-building d-block mb-1" style="font-size: 1.5rem;"></i>
+                                Belum ada Unit Kerja. Tambahkan di sebelah kiri.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+</div>
+{% endblock %}

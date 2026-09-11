@@ -1,0 +1,57 @@
+{% load akreditasi_tags %}
+<div class="sidebar-nav">
+    <div class="nav-section">
+        <i class="bi bi-grid-1x2-fill me-1" style="font-size:0.6rem;"></i> Kelompok Kerja (Pokja)
+    </div>
+    {% for cat in sidebar_categories %}
+    <a href="{% url 'akreditasi:dashboard' %}?cat={{ cat.id }}" class="nav-link {% if active_category.id == cat.id %}active{% endif %}">
+        <span class="nav-icon"><i class="bi bi-folder2-open"></i></span>
+        <span class="nav-text">
+            <span class="nav-title">{{ cat.code }}</span>
+            <span class="nav-desc">{{ cat.name }}</span>
+            <div class="progress mt-1" style="height: 4px; background: rgba(255,255,255,0.1); border-radius: 4px;">
+                <div class="progress-bar {% if cat.percentage >= 80 %}bg-success{% elif cat.percentage >= 60 %}bg-warning{% else %}bg-danger{% endif %}"
+                     role="progressbar"
+                     style="width: {{ cat.percentage }}%;"
+                     aria-valuenow="{{ cat.percentage }}" aria-valuemin="0" aria-valuemax="100">
+                </div>
+            </div>
+            <span style="font-size:0.6rem; opacity:0.7;" class="font-mono">{{ cat.total_score }}/{{ cat.max_possible_score }} ({{ cat.percentage }}%)</span>
+        </span>
+    </a>
+    {% endfor %}
+
+    <div class="nav-section mt-3">
+        <i class="bi bi-gear-fill me-1" style="font-size:0.6rem;"></i> Menu Lainnya
+    </div>
+    <a href="{% url 'akreditasi:unit_list' %}" class="nav-link">
+        <span class="nav-icon"><i class="bi bi-building"></i></span>
+        <span class="nav-text">
+            <span class="nav-title">Unit Kerja</span>
+            <span class="nav-desc">Kelola Unit RS</span>
+        </span>
+    </a>
+    <a href="{% url 'akreditasi:rekap' %}" class="nav-link">
+        <span class="nav-icon"><i class="bi bi-clipboard-data"></i></span>
+        <span class="nav-text">
+            <span class="nav-title">Rekapitulasi</span>
+            <span class="nav-desc">Cetak Laporan</span>
+        </span>
+    </a>
+    <a href="{% url 'admin:index' %}" class="nav-link" target="_blank">
+        <span class="nav-icon"><i class="bi bi-shield-lock"></i></span>
+        <span class="nav-text">
+            <span class="nav-title">Django Admin</span>
+            <span class="nav-desc">Panel Master Data</span>
+        </span>
+    </a>
+</div>
+
+{% if sidebar_framework %}
+<div class="sidebar-footer">
+    <div class="d-flex align-items-center justify-content-between">
+        <small class="text-muted" style="font-size:0.65rem;">{{ sidebar_framework.name|truncatechars:30 }}</small>
+        <span class="badge bg-primary" style="font-size:0.6rem;">{{ sidebar_framework.cycle_type }}</span>
+    </div>
+</div>
+{% endif %}

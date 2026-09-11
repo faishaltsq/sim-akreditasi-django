@@ -1,0 +1,153 @@
+{% extends "base.html" %}
+{% load crispy_forms_tags %}
+
+{% block title %}{{ title }} | SIM Akreditasi RS{% endblock %}
+{% block page_title %}{{ title }}{% endblock %}
+{% block page_subtitle %}Formulir Elemen Penilaian · Siklus PDCA & RKA{% endblock %}
+
+{% block content %}
+<form method="post" action="">
+{% csrf_token %}
+
+<div class="row g-3">
+
+    <!-- LEFT: main forms -->
+    <div class="col-lg-8">
+
+        <!-- Card: Identitas EP -->
+        <div class="card mb-3">
+            <div class="card-header d-flex align-items-center gap-2">
+                <i class="bi bi-file-earmark-text text-primary"></i>
+                Identitas Elemen Penilaian
+            </div>
+            <div class="card-body p-3">
+                {{ item_form|crispy }}
+            </div>
+        </div>
+
+        <!-- Card: PDCA & RKA -->
+        <div class="card mb-3">
+            <div class="card-header d-flex align-items-center gap-2">
+                <i class="bi bi-arrow-repeat text-success"></i>
+                Siklus PDCA &amp; Anggaran RKA
+            </div>
+            <div class="card-body p-3">
+                {{ record_form|crispy }}
+            </div>
+        </div>
+
+        <!-- Bottom actions -->
+        <div class="d-flex align-items-center gap-2 no-print">
+            {% if item %}
+                <a href="{% url 'akreditasi:dashboard' %}?cat={{ item.category.id }}" class="btn btn-outline-secondary d-inline-flex align-items-center gap-1">
+                    <i class="bi bi-arrow-left"></i> Kembali
+                </a>
+            {% else %}
+                <a href="{% url 'akreditasi:dashboard' %}" class="btn btn-outline-secondary d-inline-flex align-items-center gap-1">
+                    <i class="bi bi-arrow-left"></i> Kembali
+                </a>
+            {% endif %}
+            <button type="submit" class="btn btn-primary d-inline-flex align-items-center gap-2">
+                <i class="bi bi-floppy"></i>
+                Simpan EP
+            </button>
+        </div>
+
+    </div>
+
+    <!-- RIGHT: Evidence requirements -->
+    <div class="col-lg-4">
+        <div class="sticky-top" style="top: 80px;">
+            <div class="card">
+                <div class="card-header d-flex align-items-center gap-2">
+                    <i class="bi bi-collection text-warning"></i>
+                    Kebutuhan Bukti Pembuktian (RDOS)
+                </div>
+                <div class="card-body p-3">
+                    <p class="text-muted small mb-3">
+                        Tentukan jenis bukti yang diperlukan untuk membuktikan pemenuhan Elemen Penilaian ini.
+                    </p>
+
+                    <div id="evidence-rows">
+                        {% if item %}
+                            {% for req in item.evidence_reqs.all %}
+                            <div class="evidence-row d-flex align-items-start gap-2 mb-2">
+                                <select name="req_type[]" class="form-select form-select-sm" style="width: 65px; flex-shrink:0;">
+                                    <option value="R" {% if req.category_type == "R" %}selected{% endif %}>R</option>
+                                    <option value="D" {% if req.category_type == "D" %}selected{% endif %}>D</option>
+                                    <option value="W" {% if req.category_type == "W" %}selected{% endif %}>W</option>
+                                    <option value="O" {% if req.category_type == "O" %}selected{% endif %}>O</option>
+                                    <option value="S" {% if req.category_type == "S" %}selected{% endif %}>S</option>
+                                </select>
+                                <input type="text" name="req_title[]" class="form-control form-control-sm" placeholder="Keterangan bukti..." value="{{ req.title }}">
+                                <button type="button" class="btn btn-sm btn-outline-danger flex-shrink-0 remove-evidence-btn" title="Hapus">
+                                    <i class="bi bi-x"></i>
+                                </button>
+                            </div>
+                            {% endfor %}
+                        {% endif %}
+                    </div>
+
+                    <button type="button" id="add-evidence-btn" class="btn btn-sm btn-outline-primary w-100 d-flex align-items-center justify-content-center gap-1 mt-2">
+                        <i class="bi bi-plus-lg"></i>
+                        Tambah Kebutuhan Bukti
+                    </button>
+
+                    <div class="mt-3 pt-3 border-top">
+                        <div class="small text-muted mb-1 fw-bold">Keterangan Kode:</div>
+                        <div class="d-flex flex-wrap gap-2">
+                            <span class="badge-r">R</span><span class="text-muted" style="font-size:0.65rem;">Regulasi</span>
+                            <span class="badge-d">D</span><span class="text-muted" style="font-size:0.65rem;">Dokumen</span>
+                            <span class="badge-w">W</span><span class="text-muted" style="font-size:0.65rem;">Wawancara</span>
+                            <span class="badge-o">O</span><span class="text-muted" style="font-size:0.65rem;">Observasi</span>
+                            <span class="badge-s">S</span><span class="text-muted" style="font-size:0.65rem;">Simulasi</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+</form>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+    const container = document.getElementById('evidence-rows');
+    const addBtn = document.getElementById('add-evidence-btn');
+
+    function createRow() {
+        const div = document.createElement('div');
+        div.className = 'evidence-row d-flex align-items-start gap-2 mb-2';
+        div.innerHTML = `
+            <select name="req_type[]" class="form-select form-select-sm" style="width: 65px; flex-shrink:0;">
+                <option value="R">R</option>
+                <option value="D">D</option>
+                <option value="W">W</option>
+                <option value="O">O</option>
+                <option value="S">S</option>
+            </select>
+            <input type="text" name="req_title[]" class="form-control form-control-sm" placeholder="Keterangan bukti...">
+            <button type="button" class="btn btn-sm btn-outline-danger flex-shrink-0 remove-evidence-btn" title="Hapus">
+                <i class="bi bi-x"></i>
+            </button>
+        `;
+        return div;
+    }
+
+    addBtn.addEventListener('click', function () {
+        const row = createRow();
+        container.appendChild(row);
+        row.querySelector('input').focus();
+    });
+
+    container.addEventListener('click', function (e) {
+        if (e.target.closest('.remove-evidence-btn')) {
+            e.target.closest('.evidence-row').remove();
+        }
+    });
+})();
+</script>
+{% endblock %}

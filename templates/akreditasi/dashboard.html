@@ -1,0 +1,311 @@
+{% extends "base.html" %}
+{% load akreditasi_tags %}
+
+{% block title %}{{ active_category.code }} — {{ active_category.name }} | SIM Akreditasi RS{% endblock %}
+{% block page_title %}{{ active_category.code }} — {{ active_category.name }}{% endblock %}
+{% block page_subtitle %}Dashboard Pokja · Siklus PDCA & Manajemen Risiko Akreditasi{% endblock %}
+
+{% block content %}
+
+<!-- METRIC RIBBON -->
+<div class="metric-ribbon">
+
+    <!-- Card 1: Capaian Skor -->
+    <div class="metric-card">
+        <div class="metric-label">Capaian Skor Pokja</div>
+        <div class="metric-value text-primary">{{ percentage }}%</div>
+        <div class="metric-sub">({{ total_score }}/{{ total_possible }}) Skor Self-Assessment</div>
+        <div class="mt-2">
+            <span class="badge bg-{{ active_category.status_level.badge }} bg-opacity-15 text-{{ active_category.status_level.badge }} border border-{{ active_category.status_level.badge }} border-opacity-25 fw-bold" style="font-size: 0.62rem;">
+                {{ active_category.status_level.label }}
+            </span>
+        </div>
+    </div>
+
+    <!-- Card 2: Total Alokasi RKA -->
+    <div class="metric-card">
+        <div class="metric-label">Total Alokasi RKA</div>
+        <div class="metric-value" style="font-size: 1.1rem; color: var(--primary);">{{ total_cost|rupiah }}</div>
+        <div class="metric-sub mt-1">
+            <span class="text-info fw-600">Capex:</span> Rp {{ capex_cost|floatformat:0 }}
+            &nbsp;/&nbsp;
+            <span class="text-warning fw-600">Opex:</span> Rp {{ opex_cost|floatformat:0 }}
+        </div>
+    </div>
+
+    <!-- Card 3: Tindakan Non-Biaya -->
+    <div class="metric-card">
+        <div class="metric-label">Tindakan Non-Biaya</div>
+        <div class="metric-value text-success">{{ non_cost_count }}</div>
+        <div class="metric-sub">Tindakan · Optimasi alur &amp; SOP</div>
+    </div>
+
+    <!-- Card 4: RDOS Legend -->
+    <div class="metric-card">
+        <div class="metric-label">Badge RDOS</div>
+        <div class="d-flex align-items-end gap-2 mt-2 flex-wrap">
+            <div class="d-flex flex-column align-items-center gap-1">
+                <span class="badge-r">R</span>
+                <span style="font-size:0.55rem; color:var(--text-muted); font-weight:600;">Regulasi</span>
+            </div>
+            <div class="d-flex flex-column align-items-center gap-1">
+                <span class="badge-d">D</span>
+                <span style="font-size:0.55rem; color:var(--text-muted); font-weight:600;">Dokumen</span>
+            </div>
+            <div class="d-flex flex-column align-items-center gap-1">
+                <span class="badge-w">W</span>
+                <span style="font-size:0.55rem; color:var(--text-muted); font-weight:600;">Wawancara</span>
+            </div>
+            <div class="d-flex flex-column align-items-center gap-1">
+                <span class="badge-o">O</span>
+                <span style="font-size:0.55rem; color:var(--text-muted); font-weight:600;">Observasi</span>
+            </div>
+            <div class="d-flex flex-column align-items-center gap-1">
+                <span class="badge-s">S</span>
+                <span style="font-size:0.55rem; color:var(--text-muted); font-weight:600;">Simulasi</span>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<!-- PAGE HEADER BOX -->
+<div class="page-header-box">
+    <div>
+        <div class="d-flex align-items-center gap-2 mb-1">
+            <span class="badge bg-primary fw-bold font-mono" style="font-size: 0.75rem;">{{ active_category.code }}</span>
+        </div>
+        <p class="page-title mb-0">{{ active_category.name }}</p>
+        {% if active_category.description %}
+            <p class="page-subtitle mb-0">{{ active_category.description }}</p>
+        {% endif %}
+    </div>
+    <div class="d-flex align-items-center gap-2 flex-wrap no-print">
+        <form method="get" class="d-flex align-items-center gap-2">
+            <input type="hidden" name="cat" value="{{ active_category.id }}">
+            <select name="unit" class="form-select form-select-sm" style="min-width: 200px;" onchange="this.form.submit()">
+                <option value="">Semua Unit ({{ units|length }})</option>
+                {% for unit in units %}
+                    <option value="{{ unit.id }}" {% if request.GET.unit == unit.id|stringformat:"s" %}selected{% endif %}>
+                        [{{ unit.code }}] {{ unit.name }}
+                    </option>
+                {% endfor %}
+            </select>
+        </form>
+        <a href="{% url 'akreditasi:ep_create' %}?cat={{ active_category.id }}" class="btn btn-primary btn-sm d-inline-flex align-items-center gap-1">
+            <i class="bi bi-plus-lg"></i>
+            Tambah EP
+        </a>
+    </div>
+</div>
+
+<!-- MAIN TABLE -->
+{% if items %}
+<div class="table-card">
+    <div class="table-responsive">
+        <table class="table table-hover align-top mb-0">
+            <thead>
+                <tr>
+                    <th style="width: 18%;">Unit &amp; Kode EP</th>
+                    <th style="width: 13%;">Asesmen Baseline</th>
+                    <th style="width: 17%;">PLAN: Indikator &amp; Risiko</th>
+                    <th style="width: 14%;">DO: Bukti Pembuktian</th>
+                    <th style="width: 10%; text-align: center;">CHECK: Skor</th>
+                    <th style="width: 18%;">ACTION: RTL &amp; RKA</th>
+                    <th style="width: 10%; text-align: center;" class="no-print">Aksi</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in items %}
+                {% with record=item.record %}
+                <tr>
+                    <!-- Col 1: Unit & Kode EP -->
+                    <td>
+                        <span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-20 font-mono fw-bold mb-1 d-inline-block" style="font-size: 0.68rem;">{{ item.code }}</span>
+                        <div class="fw-bold text-dark" style="font-size: 0.78rem;">{{ record.unit.name }}</div>
+                        <div class="text-muted" style="font-size: 0.7rem; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">{{ item.description }}</div>
+                    </td>
+
+                    <!-- Col 2: Asesmen Baseline -->
+                    <td>
+                        <div class="baseline-card">
+                            <span class="label">Kondisi Riil:</span>
+                            {{ record.baseline_data|default:"—" }}
+                        </div>
+                    </td>
+
+                    <!-- Col 3: PLAN -->
+                    <td>
+                        <div class="plan-mutu">
+                            <span class="plan-label" style="color: #1E40AF;">• Indikator Mutu:</span>
+                            {{ record.quality_target|default:"—" }}
+                        </div>
+                        <div class="border-top pt-1 mt-1 plan-risiko">
+                            <span class="plan-label" style="color: #991B1B;">• Mitigasi Risiko:</span>
+                            {{ record.risk_mitigation|default:"—" }}
+                        </div>
+                    </td>
+
+                    <!-- Col 4: DO - Bukti -->
+                    <td>
+                        {% for req in item.evidence_reqs.all %}
+                        <div class="d-flex align-items-start gap-1 mb-1 flex-wrap">
+                            <span class="badge-{{ req.category_type|lower }}">{{ req.category_type }}</span>
+                            <small class="text-muted" style="font-size: 0.67rem; line-height: 1.3;">{{ req.title }}</small>
+                        </div>
+                        {% if req.files.exists %}
+                        <div class="text-success font-mono" style="font-size: 0.65rem;">
+                            <i class="bi bi-paperclip"></i> {{ req.files.first.file_name }}
+                        </div>
+                        {% endif %}
+                        {% empty %}
+                        <span class="text-muted" style="font-size: 0.7rem;">Belum ada persyaratan</span>
+                        {% endfor %}
+                    </td>
+
+                    <!-- Col 5: CHECK - Skor -->
+                    <td class="text-center">
+                        <div class="mb-2">
+                            <span class="score-badge score-{{ record.score }}">
+                                {% if record.score == 10 %}
+                                    <i class="bi bi-check-circle-fill"></i> 10 — Lengkap
+                                {% elif record.score == 5 %}
+                                    <i class="bi bi-dash-circle-fill"></i> 5 — Sebagian
+                                {% else %}
+                                    <i class="bi bi-x-circle-fill"></i> 0 — Belum
+                                {% endif %}
+                            </span>
+                        </div>
+                        <div class="quick-score-group no-print">
+                            <button type="button"
+                                class="quick-score-btn {% if record.score == 10 %}active{% endif %}"
+                                data-record-id="{{ record.id }}"
+                                data-score="10">10</button>
+                            <button type="button"
+                                class="quick-score-btn {% if record.score == 5 %}active{% endif %}"
+                                data-record-id="{{ record.id }}"
+                                data-score="5">5</button>
+                            <button type="button"
+                                class="quick-score-btn {% if record.score == 0 %}active{% endif %}"
+                                data-record-id="{{ record.id }}"
+                                data-score="0">0</button>
+                        </div>
+                        {% if record.eval_notes %}
+                        <div class="text-muted mt-1" style="font-size: 0.65rem; font-style: italic; max-width: 120px; margin: 0 auto; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="{{ record.eval_notes }}">
+                            {{ record.eval_notes }}
+                        </div>
+                        {% endif %}
+                    </td>
+
+                    <!-- Col 6: ACTION - RTL & RKA -->
+                    <td>
+                        <div class="text-dark mb-1" style="font-size: 0.72rem;">{{ record.action_plan|default:"—" }}</div>
+                        {% if record.pic or record.target_date %}
+                        <div class="d-flex align-items-center gap-2 text-muted mb-2" style="font-size: 0.67rem;">
+                            {% if record.pic %}
+                                <span><i class="bi bi-person-fill me-1"></i>{{ record.pic }}</span>
+                            {% endif %}
+                            {% if record.target_date %}
+                                <span><i class="bi bi-calendar-check me-1"></i>{{ record.target_date }}</span>
+                            {% endif %}
+                        </div>
+                        {% endif %}
+                        <div class="p-1 rounded" style="background: #F8FAFC; border: 1px solid #E2E8F0;">
+                            <div class="font-mono fw-bold" style="font-size: 0.72rem; color: #1E40AF;">{{ record.est_cost|rupiah }}</div>
+                            {% if record.budget_source %}
+                            <div class="text-muted" style="font-size: 0.63rem;">{{ record.budget_source }}</div>
+                            {% endif %}
+                            <span class="budget-{{ record.budget_status|lower }}">{{ record.get_budget_status_display }}</span>
+                        </div>
+                    </td>
+
+                    <!-- Col 7: Aksi -->
+                    <td class="text-center no-print">
+                        <div class="d-flex align-items-center justify-content-center gap-1">
+                            <a href="{% url 'akreditasi:ep_edit' item.id %}"
+                               class="btn btn-sm btn-outline-primary d-inline-flex align-items-center"
+                               title="Edit EP">
+                                <i class="bi bi-pencil"></i>
+                            </a>
+                            <form method="post" action="{% url 'akreditasi:ep_delete' item.id %}" class="d-inline">
+                                {% csrf_token %}
+                                <button type="submit"
+                                    class="btn btn-sm btn-outline-danger d-inline-flex align-items-center"
+                                    title="Hapus EP"
+                                    onclick="return confirm('Hapus EP ini? Semua data PDCA terkait akan terhapus.')">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+                {% endwith %}
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{% else %}
+<!-- EMPTY STATE -->
+<div class="text-center py-5">
+    <div class="card mx-auto" style="max-width: 380px;">
+        <div class="card-body py-5">
+            <i class="bi bi-inbox text-muted" style="font-size: 3rem;"></i>
+            <h6 class="fw-bold mt-3 mb-1">Belum ada Elemen Penilaian</h6>
+            <p class="text-muted small mb-3">Tambahkan EP pertama untuk Pokja <strong>{{ active_category.code }}</strong></p>
+            <a href="{% url 'akreditasi:ep_create' %}?cat={{ active_category.id }}" class="btn btn-primary btn-sm d-inline-flex align-items-center gap-1">
+                <i class="bi bi-plus-lg"></i>
+                Tambah EP Pertama
+            </a>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const csrfToken = '{{ csrf_token }}';
+
+    document.querySelectorAll('.quick-score-btn').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            const recordId = this.dataset.recordId;
+            const score = this.dataset.score;
+            const group = this.closest('.quick-score-group');
+
+            fetch(`/ep/record/${recordId}/quick-score/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfToken,
+                },
+                body: JSON.stringify({ score: parseInt(score) }),
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    group.querySelectorAll('.quick-score-btn').forEach(b => b.classList.remove('active'));
+                    this.classList.add('active');
+
+                    const scoreDisplay = group.closest('td').querySelector('.score-badge');
+                    if (scoreDisplay) {
+                        scoreDisplay.className = 'score-badge score-' + score;
+                        const icons = { '10': 'bi-check-circle-fill', '5': 'bi-dash-circle-fill', '0': 'bi-x-circle-fill' };
+                        const labels = { '10': '10 — Lengkap', '5': '5 — Sebagian', '0': '0 — Belum' };
+                        scoreDisplay.innerHTML = `<i class="bi ${icons[score]}"></i> ${labels[score]}`;
+                    }
+
+                    const toast = new bootstrap.Toast(document.getElementById('appToast'));
+                    document.getElementById('toastMessage').innerHTML = `<i class="bi bi-check-circle-fill text-success"></i>&nbsp;Skor berhasil diperbarui`;
+                    toast.show();
+                }
+            })
+            .catch(err => console.error('Quick score error:', err));
+        });
+    });
+});
+</script>
+{% endblock %}

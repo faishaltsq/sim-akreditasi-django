@@ -1,0 +1,193 @@
+{% extends "base.html" %}
+{% load akreditasi_tags %}
+
+{% block title %}Rekapitulasi Akreditasi RS | SIM Akreditasi RS{% endblock %}
+{% block page_title %}Rekapitulasi Akreditasi RS{% endblock %}
+{% block page_subtitle %}Cetak Laporan · STARKES {{ sidebar_framework.version }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    @media print {
+        .sidebar-desktop, .mobile-topbar, .top-bar, .no-print { display: none !important; }
+        .main-content { margin-left: 0 !important; }
+        body { background: #fff !important; font-size: 10pt; }
+        .content-area { padding: 0 !important; }
+        .table th { background: #1E293B !important; color: #fff !important; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+        .card { break-inside: avoid; border: 1px solid #ddd !important; box-shadow: none !important; }
+        .metric-ribbon { grid-template-columns: repeat(3, 1fr) !important; gap: 0.5rem !important; }
+        .table-card { box-shadow: none !important; }
+        .pokja-group-header { background: #F1F5F9 !important; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- Page Header -->
+<div class="page-header-box mb-3">
+    <div>
+        <p class="page-title mb-0">Rekapitulasi Akreditasi RS — STARKES {{ sidebar_framework.version }}</p>
+        <p class="page-subtitle mb-0">Laporan capaian per-Pokja dan seluruh Elemen Penilaian</p>
+    </div>
+    <div class="d-flex align-items-center gap-2 no-print">
+        <button onclick="window.print()" class="btn btn-sm btn-outline-secondary d-inline-flex align-items-center gap-1">
+            <i class="bi bi-printer"></i> Cetak
+        </button>
+        <a href="{% url 'akreditasi:export_excel' %}" class="btn btn-sm btn-outline-success d-inline-flex align-items-center gap-1">
+            <i class="bi bi-file-earmark-excel"></i> Export Excel
+        </a>
+    </div>
+</div>
+
+<!-- Executive Summary -->
+<div class="metric-ribbon mb-4">
+    <div class="metric-card">
+        <div class="metric-label">Capaian Keseluruhan</div>
+        <div class="metric-value text-primary">{{ overall_pct }}%</div>
+        <div class="metric-sub">{{ total_score }}/{{ total_possible }} Skor Total</div>
+    </div>
+    <div class="metric-card">
+        <div class="metric-label">Total Biaya RKA</div>
+        <div class="metric-value" style="font-size: 1.1rem; color: var(--primary);">{{ total_rka|rupiah }}</div>
+        <div class="metric-sub">Seluruh estimasi anggaran</div>
+    </div>
+    <div class="metric-card">
+        <div class="metric-label">Total EP</div>
+        <div class="metric-value text-success">{{ items|length }}</div>
+        <div class="metric-sub">Elemen Penilaian terdaftar</div>
+    </div>
+</div>
+
+<!-- Table 1: Per-Pokja Summary -->
+<div class="table-card mb-4">
+    <div class="p-2 px-3 fw-bold d-flex align-items-center gap-2" style="font-size: 0.82rem; border-bottom: 1px solid var(--border);">
+        <i class="bi bi-bar-chart-fill text-primary"></i>
+        Ringkasan per-Pokja
+    </div>
+    <div class="table-responsive">
+        <table class="table mb-0">
+            <thead>
+                <tr>
+                    <th>Kode Pokja</th>
+                    <th>Nama Pokja</th>
+                    <th class="text-center">Jml EP</th>
+                    <th class="text-center">Skor Total</th>
+                    <th class="text-center">Skor Maks</th>
+                    <th class="text-center">Capaian %</th>
+                    <th class="text-center">Status Predikat</th>
+                    <th class="text-end">Total Estimasi Biaya</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for cat in categories %}
+                <tr>
+                    <td><span class="font-mono fw-bold text-primary" style="font-size: 0.75rem;">{{ cat.code }}</span></td>
+                    <td class="fw-semibold text-dark" style="font-size: 0.78rem;">{{ cat.name }}</td>
+                    <td class="text-center font-mono">{{ cat.items.count }}</td>
+                    <td class="text-center font-mono fw-bold">{{ cat.total_score }}</td>
+                    <td class="text-center font-mono">{{ cat.max_possible_score }}</td>
+                    <td class="text-center">
+                        <span class="font-mono fw-bold {% if cat.percentage >= 80 %}text-success{% elif cat.percentage >= 60 %}text-warning{% else %}text-danger{% endif %}">
+                            {{ cat.percentage }}%
+                        </span>
+                    </td>
+                    <td class="text-center">
+                        <span class="badge bg-{{ cat.status_level.badge }} bg-opacity-15 text-{{ cat.status_level.badge }}" style="font-size: 0.62rem; font-weight: 700;">
+                            {{ cat.status_level.label }}
+                        </span>
+                    </td>
+                    <td class="text-end font-mono fw-semibold" style="font-size: 0.75rem; color: var(--primary);">
+                        {% with cat_items=cat.items.all %}
+                            {% for it in cat_items %}
+                                {% if forloop.first %}{% endif %}
+                            {% endfor %}
+                        {% endwith %}
+                        —
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="8" class="text-center text-muted py-4">Belum ada data Pokja</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Table 2: Detail All EP -->
+<div class="table-card">
+    <div class="p-2 px-3 fw-bold d-flex align-items-center gap-2" style="font-size: 0.82rem; border-bottom: 1px solid var(--border);">
+        <i class="bi bi-table text-success"></i>
+        Detail Seluruh Elemen Penilaian
+    </div>
+    <div class="table-responsive">
+        <table class="table mb-0">
+            <thead>
+                <tr>
+                    <th>Pokja</th>
+                    <th>Kode EP</th>
+                    <th>Unit</th>
+                    <th class="text-center">Skor</th>
+                    <th>PIC</th>
+                    <th>Target</th>
+                    <th class="text-end">Estimasi Biaya</th>
+                    <th class="text-center">Status Anggaran</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% regroup items by category as grouped_items %}
+                {% for group in grouped_items %}
+                <tr class="pokja-group-header">
+                    <td colspan="8" class="fw-bold py-2 px-3" style="background: #F1F5F9; font-size: 0.78rem; border-bottom: 2px solid var(--primary);">
+                        <span class="font-mono text-primary me-2">{{ group.grouper.code }}</span>
+                        {{ group.grouper.name }}
+                    </td>
+                </tr>
+                {% for item in group.list %}
+                {% with record=item.record %}
+                <tr>
+                    <td><span class="font-mono text-muted" style="font-size: 0.7rem;">{{ item.category.code }}</span></td>
+                    <td>
+                        <a href="{% url 'akreditasi:ep_detail' item.id %}" class="font-mono fw-bold text-primary text-decoration-none" style="font-size: 0.75rem;">
+                            {{ item.code }}
+                        </a>
+                    </td>
+                    <td style="font-size: 0.75rem;">
+                        {% if record %}{{ record.unit.name }}{% else %}—{% endif %}
+                    </td>
+                    <td class="text-center">
+                        {% if record %}
+                            <span class="score-{{ record.score }}">
+                                {{ record.score }}
+                            </span>
+                        {% else %}
+                            <span class="text-muted">—</span>
+                        {% endif %}
+                    </td>
+                    <td style="font-size: 0.75rem;">
+                        {% if record %}{{ record.pic|default:"—" }}{% else %}—{% endif %}
+                    </td>
+                    <td style="font-size: 0.75rem;">
+                        {% if record %}{{ record.target_date|default:"—" }}{% else %}—{% endif %}
+                    </td>
+                    <td class="text-end font-mono" style="font-size: 0.75rem; color: var(--primary);">
+                        {% if record %}{{ record.est_cost|rupiah }}{% else %}Rp 0{% endif %}
+                    </td>
+                    <td class="text-center">
+                        {% if record %}
+                            <span class="budget-{{ record.budget_status|lower }}">{{ record.get_budget_status_display }}</span>
+                        {% else %}
+                            <span class="text-muted" style="font-size: 0.65rem;">—</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endwith %}
+                {% endfor %}
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{% endblock %}

@@ -1,0 +1,208 @@
+{% extends "base.html" %}
+{% load akreditasi_tags %}
+
+{% block title %}{{ item.code }} — Detail EP | SIM Akreditasi RS{% endblock %}
+{% block page_title %}{{ item.code }}{% endblock %}
+{% block page_subtitle %}{{ item.sub_standard }} · Detail Elemen Penilaian{% endblock %}
+
+{% block content %}
+
+<!-- Header -->
+<div class="page-header-box mb-3">
+    <div>
+        <div class="d-flex align-items-center gap-2 mb-1">
+            <span class="badge bg-primary font-mono fw-bold" style="font-size: 0.75rem;">{{ item.code }}</span>
+            <span class="text-muted" style="font-size: 0.78rem;">{{ item.sub_standard }}</span>
+        </div>
+        <p class="page-title mb-0">{{ item.sub_title }}</p>
+        <p class="page-subtitle mb-0">{{ item.description }}</p>
+    </div>
+    <div class="d-flex align-items-center gap-2 no-print">
+        <a href="{% url 'akreditasi:ep_edit' item.id %}" class="btn btn-sm btn-outline-primary d-inline-flex align-items-center gap-1">
+            <i class="bi bi-pencil"></i> Edit EP
+        </a>
+        <a href="{% url 'akreditasi:dashboard' %}?cat={{ item.category.id }}" class="btn btn-sm btn-outline-secondary d-inline-flex align-items-center gap-1">
+            <i class="bi bi-arrow-left"></i> Kembali
+        </a>
+    </div>
+</div>
+
+<div class="row g-3">
+
+    <!-- LEFT: PDCA Record -->
+    <div class="col-lg-8">
+        {% if record %}
+        <div class="card mb-3">
+            <div class="card-header d-flex align-items-center gap-2">
+                <i class="bi bi-arrow-repeat text-success"></i>
+                Siklus PDCA Record
+            </div>
+            <div class="card-body p-3">
+
+                <!-- Unit -->
+                <dl class="row mb-0" style="font-size: 0.82rem;">
+                    <dt class="col-sm-4 text-muted fw-normal" style="font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.04em;">Unit Kerja</dt>
+                    <dd class="col-sm-8 fw-bold text-dark">{{ record.unit.name }}</dd>
+                </dl>
+                <hr class="my-2">
+
+                <!-- BASELINE -->
+                <div class="mb-3">
+                    <div class="text-muted fw-bold mb-1" style="font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.06em;">
+                        <i class="bi bi-clipboard-data me-1"></i>Asesmen Baseline
+                    </div>
+                    <div class="baseline-card">
+                        <span class="label">Kondisi Riil:</span>
+                        {{ record.baseline_data|default:"Belum diisi" }}
+                    </div>
+                </div>
+
+                <!-- PLAN -->
+                <div class="p-2 rounded mb-3" style="background: #EFF6FF; border: 1px solid #BFDBFE;">
+                    <div class="text-primary fw-bold mb-2" style="font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.06em;">
+                        <i class="bi bi-flag me-1"></i>PLAN
+                    </div>
+                    <dl class="row mb-0 small">
+                        <dt class="col-sm-4 text-muted fw-semibold">Indikator Mutu</dt>
+                        <dd class="col-sm-8">{{ record.quality_target|default:"—" }}</dd>
+                        <dt class="col-sm-4 text-muted fw-semibold">Mitigasi Risiko</dt>
+                        <dd class="col-sm-8">{{ record.risk_mitigation|default:"—" }}</dd>
+                    </dl>
+                </div>
+
+                <!-- CHECK -->
+                <div class="p-2 rounded mb-3" style="background: #ECFDF5; border: 1px solid #A7F3D0;">
+                    <div class="text-success fw-bold mb-2" style="font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.06em;">
+                        <i class="bi bi-check2-circle me-1"></i>CHECK
+                    </div>
+                    <div class="d-flex align-items-center gap-3 flex-wrap">
+                        <span class="score-badge score-{{ record.score }}">
+                            {% if record.score == 10 %}
+                                <i class="bi bi-check-circle-fill"></i> 10 — Lengkap
+                            {% elif record.score == 5 %}
+                                <i class="bi bi-dash-circle-fill"></i> 5 — Sebagian
+                            {% else %}
+                                <i class="bi bi-x-circle-fill"></i> 0 — Belum
+                            {% endif %}
+                        </span>
+                        {% if record.eval_notes %}
+                        <span class="text-muted" style="font-size: 0.75rem; font-style: italic;">{{ record.eval_notes }}</span>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- ACTION -->
+                <div class="p-2 rounded mb-3" style="background: #FFFBEB; border: 1px solid #FDE68A;">
+                    <div class="text-warning fw-bold mb-2" style="font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.06em;">
+                        <i class="bi bi-lightning-charge me-1"></i>ACTION (RTL)
+                    </div>
+                    <dl class="row mb-0 small">
+                        <dt class="col-sm-4 text-muted fw-semibold">Rencana Tindak Lanjut</dt>
+                        <dd class="col-sm-8">{{ record.action_plan|default:"—" }}</dd>
+                        <dt class="col-sm-4 text-muted fw-semibold">PIC</dt>
+                        <dd class="col-sm-8">{{ record.pic|default:"—" }}</dd>
+                        <dt class="col-sm-4 text-muted fw-semibold">Target Waktu</dt>
+                        <dd class="col-sm-8">{{ record.target_date|default:"—" }}</dd>
+                    </dl>
+                </div>
+
+                <!-- BUDGET -->
+                <div class="p-2 rounded" style="background: #F8FAFC; border: 1px solid #E2E8F0;">
+                    <div class="text-secondary fw-bold mb-2" style="font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.06em;">
+                        <i class="bi bi-wallet2 me-1"></i>Anggaran RKA
+                    </div>
+                    <dl class="row mb-0 small">
+                        <dt class="col-sm-4 text-muted fw-semibold">Estimasi Biaya</dt>
+                        <dd class="col-sm-8 fw-bold font-mono text-primary">{{ record.est_cost|rupiah }}</dd>
+                        <dt class="col-sm-4 text-muted fw-semibold">Sumber Anggaran</dt>
+                        <dd class="col-sm-8">{{ record.budget_source|default:"—" }}</dd>
+                        <dt class="col-sm-4 text-muted fw-semibold">Status</dt>
+                        <dd class="col-sm-8">
+                            <span class="budget-{{ record.budget_status|lower }}">{{ record.get_budget_status_display }}</span>
+                        </dd>
+                    </dl>
+                </div>
+
+            </div>
+        </div>
+        {% else %}
+        <div class="card">
+            <div class="card-body text-center py-5">
+                <i class="bi bi-inbox text-muted fs-2 d-block mb-2"></i>
+                <p class="text-muted small mb-2">Belum ada record PDCA untuk EP ini.</p>
+                <a href="{% url 'akreditasi:ep_edit' item.id %}" class="btn btn-primary btn-sm">Buat Record PDCA</a>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- RIGHT: Evidence -->
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header d-flex align-items-center gap-2">
+                <i class="bi bi-collection text-warning"></i>
+                Bukti Pembuktian (RDWOS)
+            </div>
+            <div class="card-body p-3">
+                {% for req in item.evidence_reqs.all %}
+                <div class="mb-4">
+                    <!-- Req header -->
+                    <div class="d-flex align-items-start gap-2 mb-2">
+                        <span class="badge-{{ req.category_type|lower }}">{{ req.category_type }}</span>
+                        <div style="min-width: 0;">
+                            <div class="fw-semibold" style="font-size: 0.78rem;">{{ req.title }}</div>
+                            {% if req.is_mandatory %}
+                                <span class="badge bg-danger bg-opacity-10 text-danger" style="font-size: 0.6rem;">Wajib</span>
+                            {% else %}
+                                <span class="badge bg-secondary bg-opacity-10 text-secondary" style="font-size: 0.6rem;">Opsional</span>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Files -->
+                    {% for f in req.files.all %}
+                    <div class="d-flex align-items-center justify-content-between p-2 rounded mb-1" style="background: #F8FAFC; border: 1px solid #E2E8F0; font-size: 0.72rem;">
+                        <div class="d-flex align-items-center gap-2 min-w-0">
+                            <i class="bi bi-file-earmark-check text-success flex-shrink-0"></i>
+                            <div class="min-w-0">
+                                <div class="fw-semibold text-dark text-truncate" style="max-width: 160px;" title="{{ f.file_name }}">{{ f.file_name }}</div>
+                                <span class="text-muted">{{ f.file_size }}</span>
+                            </div>
+                        </div>
+                        <div class="d-flex align-items-center gap-1 flex-shrink-0 ms-2">
+                            <span class="badge {% if f.status == 'VALID' %}bg-success{% elif f.status == 'REVIEW' %}bg-warning{% else %}bg-secondary{% endif %} bg-opacity-15 text-{% if f.status == 'VALID' %}success{% elif f.status == 'REVIEW' %}warning{% else %}secondary{% endif %}" style="font-size: 0.6rem;">
+                                {{ f.get_status_display }}
+                            </span>
+                            <a href="{{ f.get_download_url }}" target="_blank" class="btn btn-sm btn-outline-secondary py-0 px-1" title="Unduh" style="font-size: 0.65rem; line-height: 1.5;">
+                                <i class="bi bi-download"></i>
+                            </a>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <div class="text-muted" style="font-size: 0.7rem; font-style: italic;">Belum ada berkas yang diunggah</div>
+                    {% endfor %}
+
+                    <!-- Upload mini-form -->
+                    <form method="post" action="{% url 'akreditasi:upload_bukti' req.id %}" enctype="multipart/form-data" class="mt-2 no-print">
+                        {% csrf_token %}
+                        <div class="input-group input-group-sm">
+                            <input type="file" name="file" class="form-control form-control-sm" accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.png">
+                            <button type="submit" class="btn btn-sm btn-outline-success">
+                                <i class="bi bi-upload"></i>
+                            </button>
+                        </div>
+                    </form>
+                </div>
+                {% if not forloop.last %}<hr class="my-2">{% endif %}
+                {% empty %}
+                <div class="text-center py-3">
+                    <i class="bi bi-clipboard-x text-muted fs-5 d-block mb-1"></i>
+                    <span class="text-muted small">Belum ada persyaratan bukti</span>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+</div>
+{% endblock %}
