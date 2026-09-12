@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+{% load akreditasi_tags %}
+
+{% block title %}Profil Rumah Sakit — SIK AP{% endblock %}
+{% block page_title %}Profil Rumah Sakit{% endblock %}
+{% block page_subtitle %}Pengaturan data identitas dan informasi akreditasi institusi{% endblock %}
+
+{% block content %}
+<div class="container-fluid p-0">
+
+    <div class="row">
+        <div class="col-12 col-lg-8">
+            <div class="card shadow-sm border-0 mb-4">
+                <div class="card-header bg-white py-3">
+                    <h6 class="fw-bold mb-0 text-dark"><i class="bi bi-hospital text-primary me-2"></i>Informasi Rumah Sakit</h6>
+                </div>
+                <div class="card-body p-4">
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="row g-3">
+                            <div class="col-12 col-md-8">
+                                <label class="form-label small fw-bold">Nama Rumah Sakit</label>
+                                <input type="text" name="name" class="form-control" value="{{ profile.name }}" required>
+                            </div>
+                            <div class="col-12 col-md-4">
+                                <label class="form-label small fw-bold">Kode RS (Kemenkes)</label>
+                                <input type="text" name="kode_rs" class="form-control font-mono" value="{{ profile.kode_rs }}" placeholder="Misal: 3201012">
+                            </div>
+
+                            <div class="col-12">
+                                <label class="form-label small fw-bold">Alamat Lengkap</label>
+                                <textarea name="alamat" class="form-control" rows="2">{{ profile.alamat }}</textarea>
+                            </div>
+
+                            <div class="col-12 col-md-6">
+                                <label class="form-label small fw-bold">Kota / Kabupaten</label>
+                                <input type="text" name="kota" class="form-control" value="{{ profile.kota }}">
+                            </div>
+                            <div class="col-12 col-md-6">
+                                <label class="form-label small fw-bold">Nomor Telepon / Hotline</label>
+                                <input type="text" name="telepon" class="form-control font-mono" value="{{ profile.telepon }}">
+                            </div>
+
+                            <div class="col-12 col-md-6">
+                                <label class="form-label small fw-bold">Alamat Email Resmi</label>
+                                <input type="email" name="email" class="form-control" value="{{ profile.email }}">
+                            </div>
+                            <div class="col-12 col-md-6">
+                                <label class="form-label small fw-bold">Website</label>
+                                <input type="url" name="website" class="form-control" value="{{ profile.website }}" placeholder="https://...">
+                            </div>
+
+                            <div class="col-12 col-md-6">
+                                <label class="form-label small fw-bold">Direktur / Pimpinan RS</label>
+                                <input type="text" name="direktur" class="form-control" value="{{ profile.direktur }}">
+                            </div>
+                            <div class="col-12 col-md-3">
+                                <label class="form-label small fw-bold">Tipe RS</label>
+                                <select name="tipe" class="form-select">
+                                    <option value="A" {% if profile.tipe == 'A' %}selected{% endif %}>Kelas A</option>
+                                    <option value="B" {% if profile.tipe == 'B' %}selected{% endif %}>Kelas B</option>
+                                    <option value="C" {% if profile.tipe == 'C' %}selected{% endif %}>Kelas C</option>
+                                    <option value="D" {% if profile.tipe == 'D' %}selected{% endif %}>Kelas D</option>
+                                    <option value="Khusus" {% if profile.tipe == 'Khusus' %}selected{% endif %}>RS Khusus</option>
+                                </select>
+                            </div>
+                            <div class="col-12 col-md-3">
+                                <label class="form-label small fw-bold">Tahun Akreditasi</label>
+                                <input type="number" name="akreditasi_tahun" class="form-control font-mono" value="{{ profile.akreditasi_tahun }}">
+                            </div>
+
+                            <div class="col-12">
+                                <label class="form-label small fw-bold">URL Logo RS (Opsional)</label>
+                                <input type="url" name="logo_url" class="form-control" value="{{ profile.logo_url }}" placeholder="https://...">
+                                <div class="form-text small">Tautan gambar logo publik untuk ditampilkan di header sistem &amp; laporan resmi.</div>
+                            </div>
+                        </div>
+
+                        <div class="mt-4 pt-3 border-top text-end">
+                            <button type="submit" class="btn btn-primary d-inline-flex align-items-center gap-1">
+                                <i class="bi bi-save"></i> Simpan Profil RS
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12 col-lg-4">
+            <div class="card shadow-sm border-0 mb-4">
+                <div class="card-header bg-white py-3">
+                    <h6 class="fw-bold mb-0 text-dark"><i class="bi bi-info-circle text-primary me-2"></i>Tentang Sistem SIK AP</h6>
+                </div>
+                <div class="card-body">
+                    <p class="small text-muted mb-2">
+                        <strong>SIK AP</strong> adalah Sistem Manajemen Dokumen Akreditasi Rumah Sakit berbasis siklus <strong>PDCA (Plan - Do - Check - Action)</strong> sesuai Standar Akreditasi Kemenkes (STARKES).
+                    </p>
+                    <ul class="small text-muted ps-3 mb-0">
+                        <li>Fasilitas penyimpanan dokumen bukti RDWOS terpusat.</li>
+                        <li>Penilaian capaian EP otomatis (10, 5, 0).</li>
+                        <li>Rekapitulasi capaian dan ekspor matriks resmi.</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+{% endblock %}

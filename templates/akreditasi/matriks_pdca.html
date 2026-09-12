@@ -1,0 +1,745 @@
+{% extends "base.html" %}
+{% load akreditasi_tags %}
+
+{% block title %}Matriks PDCA — {{ active_category.code }} | SIK AP{% endblock %}
+{% block page_title %}Matriks PDCA: {{ active_category.code }} — {{ active_category.name }}{% endblock %}
+{% block page_subtitle %}Siklus Plan-Do-Check-Action & Manajemen Bukti RDWOS Standar STARKES{% endblock %}
+
+{% block extra_css %}
+<style>
+    .matriks-table th {
+        background-color: #0F172A;
+        color: #F8FAFC;
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        vertical-align: middle;
+        padding: 0.75rem 0.6rem;
+    }
+    .matriks-table td {
+        font-size: 0.78rem;
+        vertical-align: top;
+        padding: 0.6rem;
+    }
+    .col-ep-code { width: 9%; }
+    .col-ep-desc { width: 21%; }
+    .col-pdca { width: 15%; position: relative; }
+    .col-score { width: 10%; }
+    
+    .pdca-cell-content {
+        min-height: 65px;
+        cursor: pointer;
+        padding: 0.4rem;
+        border-radius: 4px;
+        background: #F8FAFC;
+        border: 1px dashed #CBD5E1;
+        transition: all 0.15s ease-in-out;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+    }
+    .pdca-cell-content:hover {
+        background: #EFF6FF;
+        border-color: #3B82F6;
+    }
+    .cell-text {
+        font-size: 0.74rem;
+        line-height: 1.35;
+        color: #334155;
+        white-space: pre-wrap;
+        word-break: break-word;
+    }
+    .cell-footer {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-top: 0.4rem;
+        padding-top: 0.3rem;
+        border-top: 1px dotted #E2E8F0;
+    }
+    .score-select {
+        font-family: 'JetBrains Mono', monospace;
+        font-weight: 700;
+        font-size: 0.82rem;
+        border-radius: 6px;
+        padding: 0.35rem 0.5rem;
+        transition: background-color 0.2s;
+    }
+    .score-10 { background-color: #D1FAE5 !important; color: #065F46 !important; border-color: #10B981 !important; }
+    .score-5  { background-color: #FEF3C7 !important; color: #92400E !important; border-color: #F59E0B !important; }
+    .score-0  { background-color: #FEE2E2 !important; color: #991B1B !important; border-color: #EF4444 !important; }
+
+    .badge-rdwos-r { background-color: #DBEAFE; color: #1E40AF; }
+    .badge-rdwos-d { background-color: #DCFCE7; color: #166534; }
+    .badge-rdwos-w { background-color: #FEF9C3; color: #854D0E; }
+    .badge-rdwos-o { background-color: #F3E8FF; color: #6B21A8; }
+    .badge-rdwos-s { background-color: #FFE4E6; color: #9F1239; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid p-0">
+
+    <!-- HEADER FILTER & CONTROL BAR -->
+    <div class="card shadow-sm border-0 mb-3 bg-white">
+        <div class="card-body p-3">
+            <form method="get" class="row g-2 align-items-center">
+                <!-- Dropdown Pokja -->
+                <div class="col-12 col-md-3">
+                    <label class="form-label small text-muted mb-1 fw-semibold">Pilih Pokja / Bab</label>
+                    <select name="cat" class="form-select form-select-sm font-mono" onchange="this.form.submit()">
+                        {% for cat in categories %}
+                        <option value="{{ cat.id }}" {% if cat.id == active_category.id %}selected{% endif %}>
+                            {{ cat.code }} - {{ cat.name|truncatechars:28 }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <!-- Dropdown Standar -->
+                <div class="col-12 col-md-3">
+                    <label class="form-label small text-muted mb-1 fw-semibold">Pilih Standar</label>
+                    <select name="sub" class="form-select form-select-sm font-mono" onchange="this.form.submit()">
+                        <option value="ALL">-- Semua Standar --</option>
+                        {% for sub in sub_standards %}
+                        <option value="{{ sub }}" {% if sub == selected_sub %}selected{% endif %}>
+                            Standar {{ sub }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <!-- Filter Unit Kerja -->
+                <div class="col-12 col-md-2">
+                    <label class="form-label small text-muted mb-1 fw-semibold">Unit Kerja</label>
+                    <select name="unit" class="form-select form-select-sm" onchange="this.form.submit()">
+                        <option value="ALL">-- Semua Unit --</option>
+                        {% for u in units %}
+                        <option value="{{ u.id }}" {% if u.id|stringformat:"s" == selected_unit_id %}selected{% endif %}>
+                            {{ u.code }} - {{ u.name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <!-- Right Action Buttons -->
+                <div class="col-12 col-md-4 text-md-end pt-3 pt-md-0">
+                    <div class="d-flex justify-content-md-end gap-2">
+                        <a href="{% url 'akreditasi:ep_create' %}" class="btn btn-sm btn-success d-inline-flex align-items-center gap-1">
+                            <i class="bi bi-plus-circle"></i> Tambah EP
+                        </a>
+                        <a href="{% url 'akreditasi:export_excel' %}" class="btn btn-sm btn-outline-primary d-inline-flex align-items-center gap-1">
+                            <i class="bi bi-file-earmark-excel"></i> Ekspor Excel
+                        </a>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- POKJA SUMMARY STRIP -->
+    <div class="d-flex justify-content-between align-items-center bg-light border rounded px-3 py-2 mb-3">
+        <div class="d-flex align-items-center gap-3">
+            <span class="badge bg-primary fs-6 font-mono">{{ active_category.code }}</span>
+            <span class="fw-bold text-dark">{{ active_category.name }}</span>
+            <span class="text-muted small">({{ items|length }} Elemen Penilaian)</span>
+        </div>
+        <div class="d-flex align-items-center gap-3">
+            <span class="small text-muted font-mono">Skor: <strong>{{ total_score }} / {{ total_possible }}</strong></span>
+            <div class="progress" style="width: 120px; height: 8px;">
+                <div class="progress-bar {% if percentage >= 80 %}bg-success{% elif percentage >= 60 %}bg-warning{% else %}bg-danger{% endif %}"
+                     role="progressbar" style="width: {{ percentage }}%;"></div>
+            </div>
+            <span class="badge {% if percentage >= 80 %}bg-success{% elif percentage >= 60 %}bg-warning{% else %}bg-danger{% endif %} font-mono">
+                {{ percentage }}%
+            </span>
+        </div>
+    </div>
+
+    <!-- MATRIKS UTAMA (TABEL 7 KOLOM) -->
+    <div class="card shadow-sm border-0 mb-4">
+        <div class="table-responsive">
+            <table class="table table-bordered align-middle mb-0 matriks-table">
+                <thead>
+                    <tr>
+                        <th class="col-ep-code text-center">Nomor EP</th>
+                        <th class="col-ep-desc">Elemen Penilaian (EP)</th>
+                        <th class="col-pdca">Plan (Risiko/Regulasi)</th>
+                        <th class="col-pdca">Do (SOP/Implementasi)</th>
+                        <th class="col-pdca">Check (Evaluasi RDWOS)</th>
+                        <th class="col-pdca">Action (Tindak Lanjut RTL)</th>
+                        <th class="col-score text-center">Skor (10/5/0)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in items %}
+                    <tr id="row-ep-{{ item.id }}">
+                        <!-- Kolom 1: Nomor EP -->
+                        <td class="text-center bg-white">
+                            <span class="fw-bold font-mono text-primary d-block">{{ item.code }}</span>
+                            <span class="badge bg-secondary font-mono small" style="font-size:0.65rem;">Std {{ item.sub_standard }}</span>
+                            <div class="mt-2">
+                                <a href="{% url 'akreditasi:ep_detail' item.id %}" class="btn btn-xs btn-outline-secondary py-0 px-1" style="font-size:0.65rem;" title="Detail Lengkap">
+                                    <i class="bi bi-eye"></i> Detail
+                                </a>
+                            </div>
+                        </td>
+
+                        <!-- Kolom 2: Teks Lengkap EP -->
+                        <td class="bg-white">
+                            <div class="fw-semibold text-dark mb-1" style="line-height:1.35;">{{ item.description }}</div>
+                            {% if item.sub_title %}
+                            <div class="text-muted small mb-1" style="font-size:0.7rem;"><em>{{ item.sub_title }}</em></div>
+                            {% endif %}
+                            <div class="d-flex flex-wrap gap-1 mt-1">
+                                {% if item.record.unit %}
+                                <span class="badge bg-light text-dark border font-mono" style="font-size:0.65rem;">
+                                    <i class="bi bi-building me-1"></i>{{ item.record.unit.code }}
+                                </span>
+                                {% endif %}
+                                {% if item.record.target_date %}
+                                <span class="badge bg-light text-muted border font-mono" style="font-size:0.65rem;">
+                                    <i class="bi bi-calendar-event me-1"></i>{{ item.record.target_date|date:"d/m/Y" }}
+                                </span>
+                                {% endif %}
+                            </div>
+                        </td>
+
+                        <!-- Kolom 3: Plan (Analisis Risiko/Regulasi) -->
+                        <td>
+                            <div class="pdca-cell-content" onclick="openInlineEditModal({{ item.record.id }}, 'risk_mitigation', 'Plan (Analisis Risiko/Regulasi)', '{{ item.code }}')">
+                                <div class="cell-text" id="cell-risk_mitigation-{{ item.record.id }}">
+                                    {{ item.record.risk_mitigation|default:"<span class='text-muted fst-italic'>Klik untuk isi Plan / Analisis Risiko...</span>"|safe }}
+                                </div>
+                                <div class="cell-footer">
+                                    <span class="badge bg-white text-secondary border font-mono" style="font-size:0.6rem;">Plan</span>
+                                    <button type="button" class="btn btn-sm btn-link p-0 text-primary text-decoration-none" 
+                                            onclick="event.stopPropagation(); openBuktiModal({{ item.id }}, '{{ item.code }}');" title="Manajemen Bukti Dokumen">
+                                        <i class="bi bi-paperclip fs-6"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </td>
+
+                        <!-- Kolom 4: Do (Implementasi/SOP/Kebijakan) -->
+                        <td>
+                            <div class="pdca-cell-content" onclick="openInlineEditModal({{ item.record.id }}, 'quality_target', 'Do (Implementasi / SOP / Kebijakan)', '{{ item.code }}')">
+                                <div class="cell-text" id="cell-quality_target-{{ item.record.id }}">
+                                    {{ item.record.quality_target|default:"<span class='text-muted fst-italic'>Klik untuk isi Do / SOP...</span>"|safe }}
+                                </div>
+                                <div class="cell-footer">
+                                    <span class="badge bg-white text-secondary border font-mono" style="font-size:0.6rem;">Do</span>
+                                    <button type="button" class="btn btn-sm btn-link p-0 text-primary text-decoration-none" 
+                                            onclick="event.stopPropagation(); openBuktiModal({{ item.id }}, '{{ item.code }}');" title="Manajemen Bukti Dokumen">
+                                        <i class="bi bi-paperclip fs-6"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </td>
+
+                        <!-- Kolom 5: Check (Evaluasi Pelaksanaan/RDWOS) -->
+                        <td>
+                            <div class="pdca-cell-content" onclick="openInlineEditModal({{ item.record.id }}, 'eval_notes', 'Check (Evaluasi Pelaksanaan / RDWOS)', '{{ item.code }}')">
+                                <div class="cell-text" id="cell-eval_notes-{{ item.record.id }}">
+                                    {{ item.record.eval_notes|default:"<span class='text-muted fst-italic'>Klik untuk isi Check / Evaluasi...</span>"|safe }}
+                                </div>
+                                <div class="cell-footer">
+                                    <!-- Badges RDWOS Berkas Terlampir -->
+                                    <div class="d-flex gap-1 flex-wrap">
+                                        {% for req in item.evidence_reqs.all %}
+                                            {% if req.files.all %}
+                                                <span class="badge badge-rdwos-{{ req.category_type|lower }} font-mono" style="font-size:0.6rem;" title="{{ req.title }}">
+                                                    {{ req.category_type }}: {{ req.files.count }}
+                                                </span>
+                                            {% endif %}
+                                        {% endfor %}
+                                    </div>
+                                    <button type="button" class="btn btn-sm btn-link p-0 text-primary text-decoration-none ms-auto" 
+                                            onclick="event.stopPropagation(); openBuktiModal({{ item.id }}, '{{ item.code }}');" title="Manajemen Bukti Dokumen">
+                                        <i class="bi bi-paperclip fs-6"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </td>
+
+                        <!-- Kolom 6: Action (Tindak Lanjut / RTL) -->
+                        <td>
+                            <div class="pdca-cell-content" onclick="openInlineEditModal({{ item.record.id }}, 'action_plan', 'Action (Tindak Lanjut / RTL)', '{{ item.code }}')">
+                                <div class="cell-text" id="cell-action_plan-{{ item.record.id }}">
+                                    {{ item.record.action_plan|default:"<span class='text-muted fst-italic'>Klik untuk isi Action / RTL...</span>"|safe }}
+                                </div>
+                                <div class="cell-footer">
+                                    <span class="badge bg-white text-secondary border font-mono" style="font-size:0.6rem;">Action</span>
+                                    <button type="button" class="btn btn-sm btn-link p-0 text-primary text-decoration-none" 
+                                            onclick="event.stopPropagation(); openBuktiModal({{ item.id }}, '{{ item.code }}');" title="Manajemen Bukti Dokumen">
+                                        <i class="bi bi-paperclip fs-6"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </td>
+
+                        <!-- Kolom 7: Skor (10, 5, 0) Quick Scoring AJAX -->
+                        <td class="text-center bg-white">
+                            <select class="form-select score-select score-{{ item.record.score|default:0 }}" 
+                                    id="score-select-{{ item.record.id }}"
+                                    data-record-id="{{ item.record.id }}"
+                                    onchange="updateQuickScore(this)">
+                                <option value="10" {% if item.record.score == 10 %}selected{% endif %}>10 (Tercapai)</option>
+                                <option value="5"  {% if item.record.score == 5 %}selected{% endif %}>5 (Proses)</option>
+                                <option value="0"  {% if item.record.score == 0 or not item.record.score %}selected{% endif %}>0 (Belum)</option>
+                            </select>
+                            <span class="small font-mono text-muted d-block mt-1 score-saving-indicator" id="saving-indicator-{{ item.record.id }}" style="display:none; font-size:0.65rem;">
+                                <i class="bi bi-arrow-repeat spin"></i> Menyimpan...
+                            </span>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="7" class="text-center py-5 text-muted">
+                            <i class="bi bi-folder-x fs-1 d-block mb-2 text-secondary"></i>
+                            Tidak ada Elemen Penilaian pada filter ini.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</div>
+
+<!-- ========================================================================== -->
+<!-- MODAL: MANAJEMEN BUKTI DOKUMEN (3-TAB SESUAI SPEC)                         -->
+<!-- ========================================================================== -->
+<div class="modal fade" id="modalBuktiDokumen" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content shadow-lg border-0">
+            <div class="modal-header bg-primary text-white py-3">
+                <div>
+                    <h6 class="modal-title fw-bold" id="modalBuktiTitle">Manajemen Bukti Dokumen</h6>
+                    <small class="text-white-50" id="modalBuktiSubtitle">Memuat detail EP...</small>
+                </div>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-0">
+                <!-- Nav Tabs -->
+                <ul class="nav nav-tabs px-3 pt-2 bg-light border-bottom" role="tablist">
+                    <li class="nav-item">
+                        <button class="nav-link active fw-semibold small" data-bs-toggle="tab" data-bs-target="#tabUploadBaru">
+                            <i class="bi bi-cloud-arrow-up me-1"></i> Tab 1: Upload Baru
+                        </button>
+                    </li>
+                    <li class="nav-item">
+                        <button class="nav-link fw-semibold small" data-bs-toggle="tab" data-bs-target="#tabPilihRepo">
+                            <i class="bi bi-collection me-1"></i> Tab 2: Pilih dari Repositori
+                        </button>
+                    </li>
+                    <li class="nav-item">
+                        <button class="nav-link fw-semibold small" data-bs-toggle="tab" data-bs-target="#tabDaftarTerlink">
+                            <i class="bi bi-link-45deg me-1"></i> Tab 3: Daftar Terlink (<span id="countLinkedFiles">0</span>)
+                        </button>
+                    </li>
+                </ul>
+
+                <div class="tab-content p-3">
+                    <!-- TAB 1: UPLOAD BARU -->
+                    <div class="tab-pane fade show active" id="tabUploadBaru">
+                        <form id="formUploadBuktiAjax" onsubmit="submitUploadBukti(event)">
+                            <div class="mb-3">
+                                <label class="form-label small fw-bold">Jenis Regulasi / Bukti (RDWOS)</label>
+                                <select class="form-select form-select-sm" id="uploadReqSelect" required>
+                                    <!-- Populated via AJAX -->
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label small fw-bold">Nama Dokumen</label>
+                                <input type="text" class="form-control form-control-sm" id="uploadDocName" placeholder="Contoh: SK Direktur tentang Struktur Organisasi RS" required>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label small fw-bold">Berkas (PDF, DOCX, XLSX, max 15MB)</label>
+                                <input type="file" class="form-control form-control-sm" id="uploadFileInput" required>
+                            </div>
+                            <div class="text-end">
+                                <button type="submit" class="btn btn-sm btn-primary" id="btnSubmitUpload">
+                                    <i class="bi bi-upload me-1"></i> Simpan &amp; Link Dokumen
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <!-- TAB 2: PILIH DARI REPOSITORI -->
+                    <div class="tab-pane fade" id="tabPilihRepo">
+                        <p class="small text-muted mb-2">Pilih dokumen yang sudah pernah diunggah di sistem untuk ditautkan ke EP ini:</p>
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold">Tautkan ke Kategori Bukti:</label>
+                            <select class="form-select form-select-sm" id="linkTargetReqSelect">
+                                <!-- Populated via AJAX -->
+                            </select>
+                        </div>
+                        <div class="table-responsive" style="max-height: 250px;">
+                            <table class="table table-sm table-hover align-middle mb-0" style="font-size:0.75rem;">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th style="width:40px;">Pilih</th>
+                                        <th>Nama Berkas</th>
+                                        <th>Kategori Asal</th>
+                                        <th>Ukuran</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="repoFilesTableBody">
+                                    <!-- Populated via AJAX -->
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="text-end mt-3">
+                            <button type="button" class="btn btn-sm btn-primary" onclick="linkSelectedRepoDoc()">
+                                <i class="bi bi-link me-1"></i> Link Dokumen Terpilih
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- TAB 3: DAFTAR DOKUMEN TERLINK -->
+                    <div class="tab-pane fade" id="tabDaftarTerlink">
+                        <div class="table-responsive">
+                            <table class="table table-sm table-bordered align-middle mb-0" style="font-size:0.75rem;">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Tipe</th>
+                                        <th>Nama Dokumen</th>
+                                        <th>Ukuran</th>
+                                        <th>Status</th>
+                                        <th class="text-center" style="width:70px;">Aksi</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="linkedFilesTableBody">
+                                    <!-- Populated via AJAX -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer py-2 bg-light">
+                <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Tutup</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ========================================================================== -->
+<!-- MODAL: INLINE EDIT TEXT SEL PDCA                                           -->
+<!-- ========================================================================== -->
+<div class="modal fade" id="modalInlineEdit" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-md modal-dialog-centered">
+        <div class="modal-content shadow-lg border-0">
+            <div class="modal-header bg-dark text-white py-2">
+                <h6 class="modal-title small fw-bold" id="modalInlineTitle">Edit Sel PDCA</h6>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-3">
+                <input type="hidden" id="inlineRecordId">
+                <input type="hidden" id="inlineField">
+                <div class="mb-2">
+                    <label class="form-label small text-muted mb-1" id="inlineFieldLabel">Isi Teks:</label>
+                    <textarea class="form-control" id="inlineTextValue" rows="5" placeholder="Masukkan rincian..."></textarea>
+                </div>
+            </div>
+            <div class="modal-footer py-2 bg-light">
+                <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Batal</button>
+                <button type="button" class="btn btn-sm btn-primary" id="btnSaveInline" onclick="saveInlineEdit()">
+                    <i class="bi bi-check-lg me-1"></i> Simpan Perubahan
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// QUICK SCORE AJAX
+function updateQuickScore(selectElem) {
+    const recordId = selectElem.getAttribute('data-record-id');
+    const newScore = selectElem.value;
+    const indicator = document.getElementById(`saving-indicator-${recordId}`);
+
+    // Update style class
+    selectElem.classList.remove('score-10', 'score-5', 'score-0');
+    selectElem.classList.add(`score-${newScore}`);
+
+    if (indicator) indicator.style.display = 'block';
+
+    fetch(`/ep/record/${recordId}/quick-score/`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'X-CSRFToken': getCookie('csrftoken')
+        },
+        body: `score=${newScore}`
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (indicator) indicator.style.display = 'none';
+        if (data.success) {
+            showToast('Skor berhasil disimpan!', 'success');
+        } else {
+            showToast('Gagal simpan skor: ' + (data.error || ''), 'danger');
+        }
+    })
+    .catch(err => {
+        if (indicator) indicator.style.display = 'none';
+        showToast('Terjadi kesalahan jaringan', 'danger');
+    });
+}
+
+// INLINE EDIT MODAL
+let inlineModalInstance = null;
+function openInlineEditModal(recordId, field, label, epCode) {
+    document.getElementById('inlineRecordId').value = recordId;
+    document.getElementById('inlineField').value = field;
+    document.getElementById('modalInlineTitle').innerText = `${epCode} — ${label}`;
+    
+    // Ambil isi teks saat ini dari DOM
+    const cellElem = document.getElementById(`cell-${field}-${recordId}`);
+    let currentText = cellElem ? cellElem.innerText.trim() : '';
+    if (currentText.includes('Klik untuk isi')) currentText = '';
+    document.getElementById('inlineTextValue').value = currentText;
+
+    if (!inlineModalInstance) {
+        inlineModalInstance = new bootstrap.Modal(document.getElementById('modalInlineEdit'));
+    }
+    inlineModalInstance.show();
+}
+
+function saveInlineEdit() {
+    const recordId = document.getElementById('inlineRecordId').value;
+    const field = document.getElementById('inlineField').value;
+    const value = document.getElementById('inlineTextValue').value.trim();
+
+    fetch(`/ep/record/${recordId}/inline-edit/`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCookie('csrftoken')
+        },
+        body: JSON.stringify({ field: field, value: value })
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            const cellElem = document.getElementById(`cell-${field}-${recordId}`);
+            if (cellElem) {
+                cellElem.innerHTML = value ? escapeHtml(value) : `<span class='text-muted fst-italic'>Klik untuk isi...</span>`;
+            }
+            if (inlineModalInstance) inlineModalInstance.hide();
+            showToast('Data berhasil diperbarui!', 'success');
+        } else {
+            showToast('Gagal update: ' + (data.error || ''), 'danger');
+        }
+    })
+    .catch(err => {
+        showToast('Kesalahan server saat menyimpan', 'danger');
+    });
+}
+
+// MODAL BUKTI DOKUMEN AJAX
+let buktiModalInstance = null;
+let currentActiveItemId = null;
+
+function openBuktiModal(itemId, itemCode) {
+    currentActiveItemId = itemId;
+    document.getElementById('modalBuktiTitle').innerText = `Bukti Dokumen: ${itemCode}`;
+    document.getElementById('modalBuktiSubtitle').innerText = 'Mengambil data berkas...';
+
+    if (!buktiModalInstance) {
+        buktiModalInstance = new bootstrap.Modal(document.getElementById('modalBuktiDokumen'));
+    }
+    buktiModalInstance.show();
+
+    // Fetch data
+    fetch(`/ep/${itemId}/bukti-data/`)
+    .then(r => r.json())
+    .then(data => {
+        document.getElementById('modalBuktiSubtitle').innerText = data.item_desc || '';
+        document.getElementById('countLinkedFiles').innerText = data.linked_files.length;
+
+        // Populate dropdown requirements
+        const uploadSelect = document.getElementById('uploadReqSelect');
+        const linkSelect = document.getElementById('linkTargetReqSelect');
+        uploadSelect.innerHTML = '';
+        linkSelect.innerHTML = '';
+
+        data.reqs.forEach(req => {
+            const opt = `<option value="${req.id}">[${req.type}] ${req.title}</option>`;
+            uploadSelect.innerHTML += opt;
+            linkSelect.innerHTML += opt;
+        });
+
+        // Populate Tab 3: Linked Files
+        const linkedTbody = document.getElementById('linkedFilesTableBody');
+        linkedTbody.innerHTML = '';
+        if (data.linked_files.length === 0) {
+            linkedTbody.innerHTML = `<tr><td colspan="5" class="text-center text-muted py-3">Belum ada berkas ditautkan.</td></tr>`;
+        } else {
+            data.linked_files.forEach(f => {
+                linkedTbody.innerHTML += `
+                    <tr>
+                        <td><span class="badge bg-secondary font-mono">${f.req_type}</span></td>
+                        <td>
+                            <a href="${f.file_url}" target="_blank" class="fw-bold text-decoration-none">
+                                <i class="bi bi-file-earmark-text text-primary me-1"></i>${escapeHtml(f.file_name)}
+                            </a>
+                        </td>
+                        <td class="font-mono">${f.file_size}</td>
+                        <td><span class="badge bg-success-subtle text-success border border-success">${f.status}</span></td>
+                        <td class="text-center">
+                            <button class="btn btn-sm btn-outline-danger py-0 px-1" onclick="unlinkDocFile(${f.id})" title="Hapus tautan">
+                                <i class="bi bi-x-lg"></i>
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            });
+        }
+
+        // Populate Tab 2: Repo Files
+        const repoTbody = document.getElementById('repoFilesTableBody');
+        repoTbody.innerHTML = '';
+        if (data.repo_files.length === 0) {
+            repoTbody.innerHTML = `<tr><td colspan="4" class="text-center text-muted py-3">Tidak ada berkas repositori tersedia.</td></tr>`;
+        } else {
+            data.repo_files.forEach(rf => {
+                repoTbody.innerHTML += `
+                    <tr>
+                        <td class="text-center">
+                            <input type="radio" name="selected_repo_file" value="${rf.id}">
+                        </td>
+                        <td class="fw-semibold">${escapeHtml(rf.file_name)}</td>
+                        <td><span class="badge bg-light text-dark border">${rf.ep_origin} (${rf.type})</span></td>
+                        <td class="font-mono text-muted">${rf.file_size}</td>
+                    </tr>
+                `;
+            });
+        }
+    })
+    .catch(err => {
+        document.getElementById('modalBuktiSubtitle').innerText = 'Gagal memuat berkas.';
+    });
+}
+
+function submitUploadBukti(e) {
+    e.preventDefault();
+    const reqId = document.getElementById('uploadReqSelect').value;
+    const docName = document.getElementById('uploadDocName').value;
+    const fileInput = document.getElementById('uploadFileInput');
+
+    if (!fileInput.files || fileInput.files.length === 0) {
+        showToast('Pilih berkas terlebih dahulu', 'warning');
+        return;
+    }
+
+    const formData = new FormData();
+    formData.append('doc_name', docName);
+    formData.append('file', fileInput.files[0]);
+
+    const submitBtn = document.getElementById('btnSubmitUpload');
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = `<i class="bi bi-arrow-repeat spin me-1"></i> Mengunggah...`;
+
+    fetch(`/ep/bukti/upload-ajax/${reqId}/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': getCookie('csrftoken')
+        },
+        body: formData
+    })
+    .then(r => r.json())
+    .then(data => {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = `<i class="bi bi-upload me-1"></i> Simpan & Link Dokumen`;
+        if (data.success) {
+            showToast('Berkas bukti berhasil diunggah & ditautkan!', 'success');
+            document.getElementById('formUploadBuktiAjax').reset();
+            openBuktiModal(currentActiveItemId, '');
+        } else {
+            showToast('Gagal upload: ' + (data.error || ''), 'danger');
+        }
+    })
+    .catch(err => {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = `<i class="bi bi-upload me-1"></i> Simpan & Link Dokumen`;
+        showToast('Kesalahan server saat upload', 'danger');
+    });
+}
+
+function linkSelectedRepoDoc() {
+    const selectedRadio = document.querySelector('input[name="selected_repo_file"]:checked');
+    if (!selectedRadio) {
+        showToast('Pilih salah satu berkas dari repositori', 'warning');
+        return;
+    }
+    const targetReqId = document.getElementById('linkTargetReqSelect').value;
+    const fileId = selectedRadio.value;
+
+    fetch('/ep/bukti/link/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCookie('csrftoken')
+        },
+        body: JSON.stringify({ req_id: targetReqId, file_id: fileId })
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            showToast('Berkas berhasil ditautkan!', 'success');
+            openBuktiModal(currentActiveItemId, '');
+        } else {
+            showToast('Gagal tautkan berkas: ' + (data.error || ''), 'danger');
+        }
+    });
+}
+
+function unlinkDocFile(fileId) {
+    if (!confirm('Yakin ingin melepas tautan berkas ini?')) return;
+
+    fetch(`/ep/bukti/unlink/${fileId}/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': getCookie('csrftoken')
+        }
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            showToast('Tautan berkas berhasil dilepas', 'info');
+            openBuktiModal(currentActiveItemId, '');
+        } else {
+            showToast('Gagal melepas: ' + (data.error || ''), 'danger');
+        }
+    });
+}
+
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.innerText = text;
+    return div.innerHTML;
+}
+</script>
+{% endblock %}

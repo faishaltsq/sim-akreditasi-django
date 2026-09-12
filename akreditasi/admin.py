@@ -1,7 +1,7 @@
 from django.contrib import admin
 from .models import (
     Framework, UnitKerja, Category, StandardItem,
-    EvidenceReq, QualityRecord, EvidenceFile, AuditLog
+    EvidenceReq, QualityRecord, EvidenceFile, AuditLog, RumahSakitProfile
 )
 
 
@@ -64,3 +64,8 @@ class AuditLogAdmin(admin.ModelAdmin):
     list_display = ('timestamp', 'user', 'aksi', 'model_name', 'object_repr')
     list_filter = ('aksi', 'model_name')
     readonly_fields = ('timestamp',)
+
+
+@admin.register(RumahSakitProfile)
+class RumahSakitProfileAdmin(admin.ModelAdmin):
+    list_display = ('name', 'kode_rs', 'kota', 'tipe', 'akreditasi_tahun')

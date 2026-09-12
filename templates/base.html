@@ -69,8 +69,8 @@
         <!-- TOP NAVBAR -->
         <header class="d-none d-md-flex top-bar">
             <div class="page-heading">
-                <h5>{% block page_title %}Dashboard Pokja{% endblock %}</h5>
-                <small class="text-muted">{% block page_subtitle %}Sistem Manajemen Dokumen &amp; Mitigasi Risiko Akreditasi RS{% endblock %}</small>
+                <h5>{% block page_title %}Dashboard{% endblock %}</h5>
+                <small class="text-muted">{% block page_subtitle %}{{ rs_profile.name|default:"SIM Akreditasi RS" }}{% endblock %}</small>
             </div>
             <div class="user-pill">
                 <a href="{% url 'akreditasi:rekap' %}" class="btn btn-sm btn-outline-secondary d-inline-flex align-items-center gap-1">

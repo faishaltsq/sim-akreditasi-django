@@ -5,84 +5,158 @@ from django.contrib import messages
 from django.http import JsonResponse, HttpResponse
 from django.db import transaction
 from django.views.decorators.http import require_POST
+from django.db.models import Count, Q, Sum
 from openpyxl import Workbook
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 
 from .models import (
     Category, StandardItem, QualityRecord,
-    EvidenceReq, EvidenceFile, UnitKerja, Framework, AuditLog
+    EvidenceReq, EvidenceFile, UnitKerja, Framework, AuditLog, RumahSakitProfile
 )
 from .forms import StandardItemForm, QualityRecordForm, UnitKerjaForm, EvidenceFileUploadForm
 from .supabase_storage import upload_to_supabase_storage
 
 
+# ==============================================================================
+# 1. DASHBOARD UTAMA (SIK AP Overview)
+# ==============================================================================
 @login_required
 def dashboard(request):
-    active_cat_id = request.GET.get('cat')
-    selected_unit_id = request.GET.get('unit', 'ALL')
+    rs_profile = RumahSakitProfile.get_default()
+    framework = Framework.objects.first()
+    categories = Category.objects.all().order_by('order')
 
+    all_items = StandardItem.objects.select_related('category', 'record__unit').prefetch_related('evidence_reqs__files')
+    total_ep = all_items.count()
+
+    total_possible_score = total_ep * 10
+    total_current_score = sum(getattr(i, 'record', None).score if hasattr(i, 'record') and i.record else 0 for i in all_items)
+    capaian_rata_rata = round((total_current_score / total_possible_score) * 100, 1) if total_possible_score > 0 else 0
+
+    # Total Dokumen: file bukti terunggah vs target (total evidence requirements)
+    all_reqs = EvidenceReq.objects.all()
+    total_target_dokumen = all_reqs.count()
+    total_uploaded_dokumen = EvidenceFile.objects.values('requirement_id').distinct().count()
+
+    # Evaluasi PDCA: % EP yang sudah masuk tahap Check atau Action
+    ep_check_action = QualityRecord.objects.filter(
+        Q(eval_notes__isnull=False, eval_notes__gt='') |
+        Q(action_plan__isnull=False, action_plan__gt='') |
+        Q(score__gt=0)
+    ).count()
+    persen_evaluasi_pdca = round((ep_check_action / total_ep) * 100, 1) if total_ep > 0 else 0
+
+    # Anggaran RKA
+    total_anggaran = QualityRecord.objects.aggregate(total=Sum('est_cost'))['total'] or 0
+    anggaran_capex = QualityRecord.objects.filter(
+        Q(budget_source__icontains='Capex') | Q(budget_source__icontains='Sarpras')
+    ).aggregate(total=Sum('est_cost'))['total'] or 0
+    anggaran_opex = max(0, float(total_anggaran) - float(anggaran_capex))
+    non_biaya_count = QualityRecord.objects.filter(est_cost=0).count()
+
+    # Data Pie Chart "Status Kepatuhan EP"
+    count_tercapai = QualityRecord.objects.filter(score=10).count()
+    count_proses = QualityRecord.objects.filter(score=5).count()
+    count_belum = total_ep - (count_tercapai + count_proses)
+    if total_ep > 0:
+        pct_tercapai = round((count_tercapai / total_ep) * 100, 1)
+        pct_proses = round((count_proses / total_ep) * 100, 1)
+        pct_belum = round((count_belum / total_ep) * 100, 1)
+    else:
+        pct_tercapai = pct_proses = pct_belum = 0
+
+    # Aktivitas Terkini (5 log audit terbaru)
+    aktivitas_terkini = AuditLog.objects.select_related('user').order_by('-timestamp')[:5]
+
+    context = {
+        'rs_profile': rs_profile,
+        'framework': framework,
+        'categories': categories,
+        'total_ep': total_ep,
+        'capaian_rata_rata': capaian_rata_rata,
+        'total_uploaded_dokumen': total_uploaded_dokumen,
+        'total_target_dokumen': total_target_dokumen,
+        'persen_evaluasi_pdca': persen_evaluasi_pdca,
+        'ep_check_action': ep_check_action,
+        'total_anggaran': float(total_anggaran),
+        'anggaran_capex': float(anggaran_capex),
+        'anggaran_opex': float(anggaran_opex),
+        'non_biaya_count': non_biaya_count,
+        'count_tercapai': count_tercapai,
+        'count_proses': count_proses,
+        'count_belum': count_belum,
+        'pct_tercapai': pct_tercapai,
+        'pct_proses': pct_proses,
+        'pct_belum': pct_belum,
+        'aktivitas_terkini': aktivitas_terkini,
+    }
+    return render(request, 'akreditasi/dashboard.html', context)
+
+
+# ==============================================================================
+# 2. HALAMAN INTI: MATRIKS PDCA (Detail Per Pokja & Standar)
+# ==============================================================================
+@login_required
+def matriks_pdca(request):
     categories = Category.objects.all().order_by('order')
     if not categories.exists():
         return render(request, 'akreditasi/empty.html')
 
-    if active_cat_id:
-        active_category = get_object_or_404(Category, id=active_cat_id)
+    selected_cat_id = request.GET.get('cat')
+    selected_sub = request.GET.get('sub', 'ALL')
+    selected_unit_id = request.GET.get('unit', 'ALL')
+
+    if selected_cat_id:
+        active_category = get_object_or_404(Category, id=selected_cat_id)
     else:
         active_category = categories.first()
+
+    # Ambil list sub-standar unik di Pokja ini untuk filter
+    sub_standards = (
+        StandardItem.objects.filter(category=active_category)
+        .values_list('sub_standard', flat=True)
+        .distinct()
+        .order_by('sub_standard')
+    )
 
     items_qs = active_category.items.prefetch_related(
         'evidence_reqs__files',
         'record__unit'
     ).order_by('order', 'code')
 
+    if selected_sub != 'ALL':
+        items_qs = items_qs.filter(sub_standard=selected_sub)
+
     if selected_unit_id != 'ALL':
         items_qs = items_qs.filter(record__unit_id=selected_unit_id)
 
     items = list(items_qs)
 
+    # Kalkulasi metriks pokja aktif
     total_possible = len(items) * 10
     total_score = sum(getattr(item, 'record', None).score if hasattr(item, 'record') and item.record else 0 for item in items)
     percentage = round((total_score / total_possible) * 100) if total_possible > 0 else 0
 
-    total_cost = 0
-    capex_cost = 0
-    opex_cost = 0
-    non_cost_count = 0
-
-    for item in items:
-        rec = getattr(item, 'record', None)
-        if rec:
-            cost = float(rec.est_cost or 0)
-            total_cost += cost
-            if 'Capex' in (rec.budget_source or '') or 'Sarpras' in (rec.budget_source or ''):
-                capex_cost += cost
-            elif cost > 0:
-                opex_cost += cost
-            else:
-                non_cost_count += 1
-
     units = UnitKerja.objects.all().order_by('code')
-
-    status_badge = active_category.status_level if active_category else {'label': 'BELUM', 'badge': 'danger'}
 
     context = {
         'categories': categories,
         'active_category': active_category,
-        'items': items,
-        'units': units,
+        'sub_standards': sub_standards,
+        'selected_sub': selected_sub,
         'selected_unit_id': selected_unit_id,
-        'total_score': total_score,
+        'units': units,
+        'items': items,
         'total_possible': total_possible,
+        'total_score': total_score,
         'percentage': percentage,
-        'status_badge': status_badge,
-        'total_cost': total_cost,
-        'capex_cost': capex_cost,
-        'opex_cost': opex_cost,
-        'non_cost_count': non_cost_count,
     }
-    return render(request, 'akreditasi/dashboard.html', context)
+    return render(request, 'akreditasi/matriks_pdca.html', context)
 
 
+# ==============================================================================
+# 3. QUICK SCORE AJAX (Dropdown Skor 10, 5, 0 Langsung Simpan)
+# ==============================================================================
 @login_required
 @require_POST
 def quick_score(request, record_id):
@@ -116,6 +190,254 @@ def quick_score(request, record_id):
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
 
 
+# ==============================================================================
+# 4. INLINE EDIT SEL PDCA (Plan, Do, Check, Action AJAX)
+# ==============================================================================
+@login_required
+@require_POST
+def inline_edit_pdca(request, record_id):
+    record = get_object_or_404(QualityRecord, id=record_id)
+    try:
+        data = json.loads(request.body)
+        field = data.get('field')  # 'baseline_data', 'quality_target', 'risk_mitigation', 'eval_notes', 'action_plan'
+        value = data.get('value', '').strip()
+
+        allowed_fields = ['baseline_data', 'quality_target', 'risk_mitigation', 'eval_notes', 'action_plan', 'pic', 'target_date']
+        if field in allowed_fields:
+            setattr(record, field, value)
+            record.save()
+
+            AuditLog.objects.create(
+                user=request.user,
+                aksi='UPDATE',
+                model_name='QualityRecord',
+                object_repr=f"{record.standard_item.code} ({field})",
+                detail=f"Update isi sel {field}: {value[:80]}"
+            )
+            return JsonResponse({'success': True, 'field': field, 'value': value})
+        return JsonResponse({'success': False, 'error': 'Field tidak diizinkan'}, status=400)
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+# ==============================================================================
+# 5. MODAL MANAJEMEN BUKTI DOKUMEN (3-TAB: Upload Baru, Pilih Repo, Terlink)
+# ==============================================================================
+@login_required
+def modal_bukti_data(request, item_id):
+    item = get_object_or_404(StandardItem, id=item_id)
+    reqs = item.evidence_reqs.prefetch_related('files').all()
+
+    # Tab 3: Daftar berkas terlink ke EP ini
+    linked_files = []
+    for req in reqs:
+        for f in req.files.all():
+            linked_files.append({
+                'id': f.id,
+                'req_id': req.id,
+                'req_type': req.category_type,
+                'req_title': req.title,
+                'file_name': f.file_name,
+                'file_size': f.file_size,
+                'file_url': f.get_download_url,
+                'version': f.version,
+                'status': f.status,
+                'uploaded_at': f.uploaded_at.strftime('%d/%m/%Y %H:%M'),
+            })
+
+    # Tab 2: Dokumen repositori lain yang sudah ada di sistem (bisa ditautkan)
+    all_repo_files = EvidenceFile.objects.select_related('requirement__standard_item').all().order_by('-uploaded_at')[:30]
+    repo_list = []
+    current_linked_ids = [f['id'] for f in linked_files]
+    for rf in all_repo_files:
+        if rf.id not in current_linked_ids:
+            repo_list.append({
+                'id': rf.id,
+                'file_name': rf.file_name,
+                'file_size': rf.file_size,
+                'ep_origin': rf.requirement.standard_item.code,
+                'type': rf.requirement.category_type,
+            })
+
+    req_options = [{'id': r.id, 'type': r.category_type, 'title': r.title} for r in reqs]
+
+    return JsonResponse({
+        'item_code': item.code,
+        'item_desc': item.description,
+        'reqs': req_options,
+        'linked_files': linked_files,
+        'repo_files': repo_list,
+    })
+
+
+@login_required
+@require_POST
+def upload_bukti_ajax(request, req_id):
+    evidence_req = get_object_or_404(EvidenceReq, id=req_id)
+    file_obj = request.FILES.get('file')
+    doc_name = request.POST.get('doc_name', '').strip()
+
+    if not file_obj:
+        return JsonResponse({'success': False, 'error': 'Pilih berkas terlebih dahulu.'}, status=400)
+
+    final_name = doc_name if doc_name else file_obj.name
+    res = upload_to_supabase_storage(file_obj, final_name)
+    if res.get('success'):
+        size_mb = f"{file_obj.size / (1024 * 1024):.1f} MB" if file_obj.size >= 1024 * 1024 else f"{file_obj.size / 1024:.0f} KB"
+        ev_file = EvidenceFile.objects.create(
+            requirement=evidence_req,
+            file=file_obj if not res.get('is_cloud') else None,
+            file_url=res.get('url', ''),
+            file_name=final_name,
+            file_size=size_mb,
+            status='VALID'
+        )
+        AuditLog.objects.create(
+            user=request.user,
+            aksi='UPLOAD',
+            model_name='EvidenceFile',
+            object_repr=f"{evidence_req.standard_item.code} - {final_name}",
+            detail="Berkas bukti diunggah via Modal Manajemen Bukti"
+        )
+        return JsonResponse({
+            'success': True,
+            'file_id': ev_file.id,
+            'file_name': ev_file.file_name,
+            'file_url': ev_file.get_download_url,
+            'file_size': ev_file.file_size,
+        })
+    return JsonResponse({'success': False, 'error': res.get('error', 'Gagal upload')}, status=500)
+
+
+@login_required
+@require_POST
+def link_existing_doc(request):
+    try:
+        data = json.loads(request.body)
+        target_req_id = data.get('req_id')
+        source_file_id = data.get('file_id')
+
+        target_req = get_object_or_404(EvidenceReq, id=target_req_id)
+        source_file = get_object_or_404(EvidenceFile, id=source_file_id)
+
+        # Clone record EvidenceFile ke target requirement
+        new_file = EvidenceFile.objects.create(
+            requirement=target_req,
+            file=source_file.file,
+            file_url=source_file.file_url,
+            file_name=source_file.file_name,
+            file_size=source_file.file_size,
+            version=source_file.version,
+            status=source_file.status
+        )
+
+        AuditLog.objects.create(
+            user=request.user,
+            aksi='UPLOAD',
+            model_name='EvidenceFile',
+            object_repr=f"{target_req.standard_item.code} - {new_file.file_name}",
+            detail=f"Menautkan dokumen dari repositori ({source_file.file_name})"
+        )
+        return JsonResponse({'success': True, 'file_id': new_file.id, 'file_name': new_file.file_name})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@login_required
+@require_POST
+def unlink_doc(request, file_id):
+    ev_file = get_object_or_404(EvidenceFile, id=file_id)
+    name = ev_file.file_name
+    ep_code = ev_file.requirement.standard_item.code
+    ev_file.delete()
+
+    AuditLog.objects.create(
+        user=request.user,
+        aksi='DELETE',
+        model_name='EvidenceFile',
+        object_repr=f"{ep_code} - {name}",
+        detail="Membatalkan tautan dokumen bukti"
+    )
+    return JsonResponse({'success': True, 'message': f"Dokumen {name} berhasil dilepas dari tautan."})
+
+
+# ==============================================================================
+# 6. DAFTAR ELEMEN PENILAIAN (EP LIST VIEW)
+# ==============================================================================
+@login_required
+def ep_list(request):
+    categories = Category.objects.all().order_by('order')
+    units = UnitKerja.objects.all().order_by('code')
+
+    selected_cat = request.GET.get('cat', 'ALL')
+    selected_sub = request.GET.get('sub', 'ALL')
+    selected_unit = request.GET.get('unit', 'ALL')
+    search_q = request.GET.get('q', '').strip()
+
+    items_qs = StandardItem.objects.select_related('category', 'record__unit').prefetch_related('evidence_reqs__files').order_by('category__order', 'order', 'code')
+
+    if selected_cat != 'ALL':
+        items_qs = items_qs.filter(category_id=selected_cat)
+    if selected_sub != 'ALL':
+        items_qs = items_qs.filter(sub_standard=selected_sub)
+    if selected_unit != 'ALL':
+        items_qs = items_qs.filter(record__unit_id=selected_unit)
+    if search_q:
+        items_qs = items_qs.filter(
+            Q(code__icontains=search_q) |
+            Q(description__icontains=search_q) |
+            Q(sub_title__icontains=search_q)
+        )
+
+    # Sub-standard list for filtering
+    sub_list = StandardItem.objects.values_list('sub_standard', flat=True).distinct().order_by('sub_standard')
+
+    return render(request, 'akreditasi/ep_list.html', {
+        'items': items_qs,
+        'categories': categories,
+        'units': units,
+        'sub_list': sub_list,
+        'selected_cat': selected_cat,
+        'selected_sub': selected_sub,
+        'selected_unit': selected_unit,
+        'search_q': search_q,
+    })
+
+
+# ==============================================================================
+# 7. REPOSITORI DOKUMEN BUKTI (RDWOS HUB)
+# ==============================================================================
+@login_required
+def dokumen_hub(request):
+    selected_type = request.GET.get('type', 'ALL')
+    search_q = request.GET.get('q', '').strip()
+
+    files_qs = EvidenceFile.objects.select_related(
+        'requirement__standard_item__category',
+        'requirement__standard_item__record__unit'
+    ).order_by('-uploaded_at')
+
+    if selected_type != 'ALL':
+        files_qs = files_qs.filter(requirement__category_type=selected_type)
+
+    if search_q:
+        files_qs = files_qs.filter(
+            Q(file_name__icontains=search_q) |
+            Q(requirement__title__icontains=search_q) |
+            Q(requirement__standard_item__code__icontains=search_q)
+        )
+
+    return render(request, 'akreditasi/dokumen_hub.html', {
+        'files': files_qs,
+        'selected_type': selected_type,
+        'search_q': search_q,
+        'total_files': files_qs.count(),
+    })
+
+
+# ==============================================================================
+# 8. FORM CREATE & EDIT EP
+# ==============================================================================
 @login_required
 def ep_create(request):
     if request.method == 'POST':
@@ -148,7 +470,7 @@ def ep_create(request):
                 )
 
                 messages.success(request, f"Elemen Penilaian {item.code} berhasil ditambahkan!")
-                return redirect(f"/dashboard/?cat={item.category.id}")
+                return redirect(f"/matriks/?cat={item.category.id}")
     else:
         init_cat = request.GET.get('cat')
         initial_data = {}
@@ -189,7 +511,7 @@ def ep_edit(request, item_id):
                 )
 
                 messages.success(request, f"Perubahan pada {item.code} berhasil disimpan!")
-                return redirect(f"/dashboard/?cat={item.category.id}")
+                return redirect(f"/matriks/?cat={item.category.id}")
     else:
         item_form = StandardItemForm(instance=item)
         record_form = QualityRecordForm(instance=record)
@@ -265,9 +587,12 @@ def ep_delete(request, item_id):
         detail="Elemen Penilaian dihapus permanen"
     )
     messages.success(request, f"Elemen Penilaian {code} telah dihapus.")
-    return redirect(f"/dashboard/?cat={cat_id}")
+    return redirect(f"/matriks/?cat={cat_id}")
 
 
+# ==============================================================================
+# 9. MANAJEMEN DATA: UNIT KERJA & POKJA
+# ==============================================================================
 @login_required
 def unit_list_create(request):
     units = UnitKerja.objects.all().order_by('code')
@@ -282,6 +607,54 @@ def unit_list_create(request):
     return render(request, 'akreditasi/unit_form.html', {'units': units, 'form': form})
 
 
+@login_required
+def pokja_manage(request):
+    categories = Category.objects.all().order_by('order')
+    return render(request, 'akreditasi/pokja_list.html', {'categories': categories})
+
+
+# ==============================================================================
+# 10. PENGATURAN: PROFIL RS & LOG SISTEM
+# ==============================================================================
+@login_required
+def profil_rs_view(request):
+    profile = RumahSakitProfile.get_default()
+    if request.method == 'POST':
+        profile.name = request.POST.get('name', profile.name).strip()
+        profile.kode_rs = request.POST.get('kode_rs', profile.kode_rs).strip()
+        profile.alamat = request.POST.get('alamat', profile.alamat).strip()
+        profile.kota = request.POST.get('kota', profile.kota).strip()
+        profile.telepon = request.POST.get('telepon', profile.telepon).strip()
+        profile.email = request.POST.get('email', profile.email).strip()
+        profile.website = request.POST.get('website', profile.website).strip()
+        profile.direktur = request.POST.get('direktur', profile.direktur).strip()
+        profile.tipe = request.POST.get('tipe', profile.tipe).strip()
+        profile.akreditasi_tahun = int(request.POST.get('akreditasi_tahun', profile.akreditasi_tahun) or 2026)
+        profile.logo_url = request.POST.get('logo_url', profile.logo_url).strip()
+        profile.save()
+
+        AuditLog.objects.create(
+            user=request.user,
+            aksi='UPDATE',
+            model_name='RumahSakitProfile',
+            object_repr=profile.name,
+            detail="Profil Rumah Sakit diperbarui"
+        )
+        messages.success(request, "Profil Rumah Sakit berhasil diperbarui!")
+        return redirect('akreditasi:profil_rs')
+
+    return render(request, 'akreditasi/profil_rs.html', {'profile': profile})
+
+
+@login_required
+def audit_log_view(request):
+    logs = AuditLog.objects.select_related('user').order_by('-timestamp')[:100]
+    return render(request, 'akreditasi/audit_log.html', {'logs': logs})
+
+
+# ==============================================================================
+# 11. LAPORAN & EKSPOR DATA
+# ==============================================================================
 @login_required
 def rekap_view(request):
     categories = Category.objects.all().order_by('order')

@@ -1,57 +1,128 @@
 {% load akreditasi_tags %}
 <div class="sidebar-nav">
-    <div class="nav-section">
-        <i class="bi bi-grid-1x2-fill me-1" style="font-size:0.6rem;"></i> Kelompok Kerja (Pokja)
+    <!-- 1. DASHBOARD UTAMA -->
+    <a href="{% url 'akreditasi:dashboard' %}" class="nav-link {% if request.resolver_match.url_name == 'dashboard' or request.resolver_match.url_name == 'dashboard_alias' %}active{% endif %}">
+        <span class="nav-icon"><i class="bi bi-house-door-fill"></i></span>
+        <span class="nav-text">
+            <span class="nav-title">Dashboard Utama</span>
+            <span class="nav-desc">Ringkasan Status PDCA</span>
+        </span>
+    </a>
+
+    <!-- 2. MODUL AKREDITASI (INTI) -->
+    <div class="nav-section mt-2">
+        <i class="bi bi-shield-check me-1" style="font-size:0.6rem;"></i> Modul Akreditasi
+    </div>
+    <a href="{% url 'akreditasi:matriks_pdca' %}" class="nav-link {% if request.resolver_match.url_name == 'matriks_pdca' %}active{% endif %}">
+        <span class="nav-icon"><i class="bi bi-arrow-repeat"></i></span>
+        <span class="nav-text">
+            <span class="nav-title">Matriks PDCA</span>
+            <span class="nav-desc">Halaman Matriks Pokja</span>
+        </span>
+    </a>
+    <a href="{% url 'akreditasi:ep_list' %}" class="nav-link {% if request.resolver_match.url_name == 'ep_list' %}active{% endif %}">
+        <span class="nav-icon"><i class="bi bi-list-check"></i></span>
+        <span class="nav-text">
+            <span class="nav-title">Elemen Penilaian (EP)</span>
+            <span class="nav-desc">Daftar Terperinci Semua EP</span>
+        </span>
+    </a>
+    <a href="{% url 'akreditasi:dokumen_hub' %}" class="nav-link {% if request.resolver_match.url_name == 'dokumen_hub' %}active{% endif %}">
+        <span class="nav-icon"><i class="bi bi-archive-fill"></i></span>
+        <span class="nav-text">
+            <span class="nav-title">Dokumen Bukti (RDWOS)</span>
+            <span class="nav-desc">Repositori Semua Berkas</span>
+        </span>
+    </a>
+
+    <!-- SUB-SECTION: DAFTAR POKJA (UNTUK AKSES CEPAT MATRIKS) -->
+    <div class="nav-section mt-2">
+        <i class="bi bi-folder2 me-1" style="font-size:0.6rem;"></i> Pokja STARKES
     </div>
     {% for cat in sidebar_categories %}
-    <a href="{% url 'akreditasi:dashboard' %}?cat={{ cat.id }}" class="nav-link {% if active_category.id == cat.id %}active{% endif %}">
-        <span class="nav-icon"><i class="bi bi-folder2-open"></i></span>
+    <a href="{% url 'akreditasi:matriks_pdca' %}?cat={{ cat.id }}" class="nav-link py-1 {% if request.resolver_match.url_name == 'matriks_pdca' and active_category.id == cat.id %}active{% endif %}" style="margin: 0.05rem 0.75rem;">
+        <span class="nav-icon" style="font-size:0.9rem;"><i class="bi bi-folder2-open"></i></span>
         <span class="nav-text">
-            <span class="nav-title">{{ cat.code }}</span>
-            <span class="nav-desc">{{ cat.name }}</span>
-            <div class="progress mt-1" style="height: 4px; background: rgba(255,255,255,0.1); border-radius: 4px;">
-                <div class="progress-bar {% if cat.percentage >= 80 %}bg-success{% elif cat.percentage >= 60 %}bg-warning{% else %}bg-danger{% endif %}"
-                     role="progressbar"
-                     style="width: {{ cat.percentage }}%;"
-                     aria-valuenow="{{ cat.percentage }}" aria-valuemin="0" aria-valuemax="100">
-                </div>
+            <div class="d-flex align-items-center justify-content-between">
+                <span class="nav-title font-mono" style="font-size:0.75rem;">{{ cat.code }}</span>
+                <span style="font-size:0.6rem; opacity:0.8;" class="font-mono">{{ cat.percentage }}%</span>
             </div>
-            <span style="font-size:0.6rem; opacity:0.7;" class="font-mono">{{ cat.total_score }}/{{ cat.max_possible_score }} ({{ cat.percentage }}%)</span>
+            <div class="progress" style="height: 3px; background: rgba(255,255,255,0.1); border-radius: 3px; margin-top:2px;">
+                <div class="progress-bar {% if cat.percentage >= 80 %}bg-success{% elif cat.percentage >= 60 %}bg-warning{% else %}bg-danger{% endif %}"
+                     role="progressbar" style="width: {{ cat.percentage }}%;"></div>
+            </div>
         </span>
     </a>
     {% endfor %}
 
-    <div class="nav-section mt-3">
-        <i class="bi bi-gear-fill me-1" style="font-size:0.6rem;"></i> Menu Lainnya
+    <!-- 3. MANAJEMEN DATA -->
+    <div class="nav-section mt-2">
+        <i class="bi bi-database-fill me-1" style="font-size:0.6rem;"></i> Manajemen Data
     </div>
-    <a href="{% url 'akreditasi:unit_list' %}" class="nav-link">
+    <a href="{% url 'akreditasi:pokja_manage' %}" class="nav-link {% if request.resolver_match.url_name == 'pokja_manage' %}active{% endif %}">
+        <span class="nav-icon"><i class="bi bi-diagram-3-fill"></i></span>
+        <span class="nav-text">
+            <span class="nav-title">Pokja &amp; Standar</span>
+            <span class="nav-desc">Struktur Akreditasi</span>
+        </span>
+    </a>
+    <a href="{% url 'akreditasi:unit_list' %}" class="nav-link {% if request.resolver_match.url_name == 'unit_list' %}active{% endif %}">
         <span class="nav-icon"><i class="bi bi-building"></i></span>
         <span class="nav-text">
             <span class="nav-title">Unit Kerja</span>
-            <span class="nav-desc">Kelola Unit RS</span>
+            <span class="nav-desc">Daftar Instalasi &amp; Unit RS</span>
         </span>
     </a>
-    <a href="{% url 'akreditasi:rekap' %}" class="nav-link">
-        <span class="nav-icon"><i class="bi bi-clipboard-data"></i></span>
+    <a href="{% url 'admin:auth_user_changelist' %}" class="nav-link" target="_blank">
+        <span class="nav-icon"><i class="bi bi-people-fill"></i></span>
         <span class="nav-text">
-            <span class="nav-title">Rekapitulasi</span>
-            <span class="nav-desc">Cetak Laporan</span>
+            <span class="nav-title">Pengguna</span>
+            <span class="nav-desc">Manajemen User / Asesor</span>
         </span>
     </a>
-    <a href="{% url 'admin:index' %}" class="nav-link" target="_blank">
-        <span class="nav-icon"><i class="bi bi-shield-lock"></i></span>
+
+    <!-- 4. LAPORAN -->
+    <div class="nav-section mt-2">
+        <i class="bi bi-file-earmark-bar-graph-fill me-1" style="font-size:0.6rem;"></i> Laporan
+    </div>
+    <a href="{% url 'akreditasi:rekap' %}" class="nav-link {% if request.resolver_match.url_name == 'rekap' %}active{% endif %}">
+        <span class="nav-icon"><i class="bi bi-pie-chart-fill"></i></span>
         <span class="nav-text">
-            <span class="nav-title">Django Admin</span>
-            <span class="nav-desc">Panel Master Data</span>
+            <span class="nav-title">Analisis Capaian</span>
+            <span class="nav-desc">Matriks &amp; Laporan Lengkap</span>
+        </span>
+    </a>
+    <a href="{% url 'akreditasi:export_excel' %}" class="nav-link">
+        <span class="nav-icon"><i class="bi bi-download"></i></span>
+        <span class="nav-text">
+            <span class="nav-title">Ekspor Data</span>
+            <span class="nav-desc">Unduh Excel Resmi</span>
+        </span>
+    </a>
+
+    <!-- 5. PENGATURAN -->
+    <div class="nav-section mt-2">
+        <i class="bi bi-gear-fill me-1" style="font-size:0.6rem;"></i> Pengaturan
+    </div>
+    <a href="{% url 'akreditasi:profil_rs' %}" class="nav-link {% if request.resolver_match.url_name == 'profil_rs' %}active{% endif %}">
+        <span class="nav-icon"><i class="bi bi-hospital"></i></span>
+        <span class="nav-text">
+            <span class="nav-title">Profil RS</span>
+            <span class="nav-desc">Identitas Rumah Sakit</span>
+        </span>
+    </a>
+    <a href="{% url 'akreditasi:audit_log' %}" class="nav-link {% if request.resolver_match.url_name == 'audit_log' %}active{% endif %}">
+        <span class="nav-icon"><i class="bi bi-clock-history"></i></span>
+        <span class="nav-text">
+            <span class="nav-title">Log Sistem</span>
+            <span class="nav-desc">Audit Trail Aktivitas</span>
         </span>
     </a>
 </div>
 
-{% if sidebar_framework %}
 <div class="sidebar-footer">
     <div class="d-flex align-items-center justify-content-between">
-        <small class="text-muted" style="font-size:0.65rem;">{{ sidebar_framework.name|truncatechars:30 }}</small>
-        <span class="badge bg-primary" style="font-size:0.6rem;">{{ sidebar_framework.cycle_type }}</span>
+        <small class="text-white-50" style="font-size:0.65rem;">{{ rs_profile.name|default:"RS Akreditasi"|truncatechars:24 }}</small>
+        <span class="badge bg-primary" style="font-size:0.58rem;">STARKES</span>
     </div>
 </div>
-{% endif %}

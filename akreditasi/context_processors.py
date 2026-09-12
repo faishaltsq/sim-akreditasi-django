@@ -1,4 +1,4 @@
-from .models import Category, Framework
+from .models import Category, Framework, RumahSakitProfile
 
 
 def sidebar_context(request):
@@ -8,7 +8,15 @@ def sidebar_context(request):
         categories = framework.categories.prefetch_related(
             'items__record'
         ).order_by('order')
+
+    rs_profile = None
+    try:
+        rs_profile = RumahSakitProfile.get_default()
+    except Exception:
+        pass
+
     return {
         'sidebar_framework': framework,
         'sidebar_categories': categories,
+        'rs_profile': rs_profile,
     }

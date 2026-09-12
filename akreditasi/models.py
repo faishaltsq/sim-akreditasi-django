@@ -196,6 +196,36 @@ class EvidenceFile(models.Model):
         return '#'
 
 
+class RumahSakitProfile(models.Model):
+    name = models.CharField('Nama Rumah Sakit', max_length=300, default='Rumah Sakit Umum')
+    kode_rs = models.CharField('Kode RS', max_length=50, blank=True)
+    alamat = models.TextField('Alamat', blank=True)
+    kota = models.CharField('Kota', max_length=100, blank=True)
+    telepon = models.CharField('Telepon', max_length=50, blank=True)
+    email = models.EmailField('Email', blank=True)
+    website = models.URLField('Website', blank=True)
+    direktur = models.CharField('Nama Direktur', max_length=200, blank=True)
+    tipe = models.CharField('Tipe RS', max_length=100, blank=True, help_text='Contoh: RS Tipe B, RSUD, RSKIA')
+    akreditasi_tahun = models.PositiveIntegerField('Tahun Target Akreditasi', default=2026)
+    logo_url = models.URLField('URL Logo RS', blank=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = 'Profil Rumah Sakit'
+        verbose_name_plural = 'Profil Rumah Sakit'
+
+    def __str__(self):
+        return self.name
+
+    @classmethod
+    def get_default(cls):
+        obj, _ = cls.objects.get_or_create(
+            id=1,
+            defaults={'name': 'Rumah Sakit Anda'}
+        )
+        return obj
+
+
 class AuditLog(models.Model):
     AKSI_CHOICES = [
         ('CREATE', 'Tambah'),
