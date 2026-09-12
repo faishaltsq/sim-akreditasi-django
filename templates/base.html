@@ -84,8 +84,16 @@
                         {{ request.user.username|first|upper }}
                     </div>
                     <div class="user-text">
-                        <span class="user-name">{{ request.user.get_full_name|default:request.user.username }}</span>
-                        <span class="user-role">{% if request.user.is_superuser %}Admin Akreditasi{% else %}Asesor/Pokja{% endif %}</span>
+                        <span class="user-name">{{ request.user.profile.full_name|default:request.user.get_full_name|default:request.user.username }}</span>
+                        <span class="user-role">
+                            {% if request.user.profile %}
+                                <span class="badge bg-{{ request.user.profile.role_badge_class }}" style="font-size:0.6rem; padding: 1px 5px;">{{ request.user.profile.get_role_display }}</span>
+                            {% elif request.user.is_superuser %}
+                                <span class="badge bg-danger" style="font-size:0.6rem; padding: 1px 5px;">Super Admin</span>
+                            {% else %}
+                                <span class="badge bg-secondary" style="font-size:0.6rem; padding: 1px 5px;">User</span>
+                            {% endif %}
+                        </span>
                     </div>
                 </div>
                 <form method="post" action="{% url 'accounts:logout' %}" class="d-inline">

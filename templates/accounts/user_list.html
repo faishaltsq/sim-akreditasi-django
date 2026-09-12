@@ -1,0 +1,150 @@
+{% extends "base.html" %}
+
+{% block page_title %}Manajemen Pengguna & Hak Akses{% endblock %}
+{% block page_subtitle %}Kelola akun, peran RBAC, dan keterkaitan unit kerja{% endblock %}
+
+{% block content %}
+<div class="container-fluid p-0">
+
+    <!-- Header -->
+    <div class="page-header-box mb-3">
+        <div>
+            <h5 class="page-title mb-0"><i class="bi bi-people-fill text-primary me-2"></i>Daftar Pengguna Sistem</h5>
+            <p class="page-subtitle mb-0 text-muted" style="font-size:0.75rem;">Total {{ users|length }} pengguna terdaftar</p>
+        </div>
+        <a href="{% url 'accounts:user_create' %}" class="btn btn-primary btn-sm d-inline-flex align-items-center gap-1">
+            <i class="bi bi-person-plus-fill"></i> Tambah Pengguna
+        </a>
+    </div>
+
+    <!-- Filter -->
+    <div class="card shadow-sm border mb-3">
+        <div class="card-body py-2 px-3">
+            <form method="get" class="row g-2 align-items-end">
+                <div class="col-auto">
+                    <label class="form-label small fw-bold mb-1">Filter Peran</label>
+                    <select name="role" class="form-select form-select-sm" onchange="this.form.submit()">
+                        <option value="ALL" {% if selected_role == 'ALL' %}selected{% endif %}>Semua Peran</option>
+                        {% for val, label in role_choices %}
+                        <option value="{{ val }}" {% if selected_role == val %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-auto">
+                    <label class="form-label small fw-bold mb-1">Cari</label>
+                    <input type="text" name="q" value="{{ search_q }}" class="form-control form-control-sm" placeholder="Username, nama, jabatan...">
+                </div>
+                <div class="col-auto">
+                    <button type="submit" class="btn btn-outline-primary btn-sm"><i class="bi bi-search me-1"></i>Cari</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Tabel User -->
+    <div class="table-card">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th>Username</th>
+                        <th>Nama Lengkap</th>
+                        <th>Peran / Hak Akses</th>
+                        <th>Jabatan</th>
+                        <th>Unit Kerja</th>
+                        <th>Pokja</th>
+                        <th>Status</th>
+                        <th class="text-center" style="width:100px;">Aksi</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for u in users %}
+                    <tr>
+                        <td>
+                            <span class="fw-bold font-mono" style="font-size:0.8rem;">{{ u.username }}</span>
+                            {% if u.is_superuser %}<i class="bi bi-shield-fill-check text-danger ms-1" title="Superuser"></i>{% endif %}
+                        </td>
+                        <td>
+                            {% if u.profile %}
+                                <span class="fw-semibold">{{ u.profile.full_name|default:u.get_full_name|default:"-" }}</span>
+                            {% else %}
+                                <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if u.profile %}
+                                <span class="badge bg-{{ u.profile.role_badge_class }}">{{ u.profile.get_role_display }}</span>
+                            {% else %}
+                                <span class="badge bg-secondary">Belum diset</span>
+                            {% endif %}
+                        </td>
+                        <td class="small text-muted">{{ u.profile.jabatan|default:"-" }}</td>
+                        <td class="small">
+                            {% if u.profile and u.profile.unit_kerja %}
+                                <span class="font-mono text-primary" style="font-size:0.72rem;">[{{ u.profile.unit_kerja.code }}]</span>
+                                {{ u.profile.unit_kerja.name }}
+                            {% else %}
+                                <span class="text-muted">—</span>
+                            {% endif %}
+                        </td>
+                        <td class="small">
+                            {% if u.profile %}
+                                {% for p in u.profile.pokja_access.all %}
+                                    <span class="badge bg-info text-white" style="font-size:0.65rem;">{{ p.code }}</span>
+                                {% empty %}
+                                    <span class="text-muted">—</span>
+                                {% endfor %}
+                            {% else %}
+                                <span class="text-muted">—</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if u.is_active %}
+                                <span class="badge bg-success-subtle text-success border border-success" style="font-size:0.65rem;">Aktif</span>
+                            {% else %}
+                                <span class="badge bg-danger-subtle text-danger border border-danger" style="font-size:0.65rem;">Nonaktif</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-center">
+                            <a href="{% url 'accounts:user_edit' u.id %}" class="btn btn-sm btn-outline-primary py-0 px-1.5" title="Edit">
+                                <i class="bi bi-pencil-square"></i>
+                            </a>
+                            {% if u != request.user %}
+                            <form method="post" action="{% url 'accounts:user_delete' u.id %}" class="d-inline" onsubmit="return confirm('Hapus pengguna {{ u.username }}? Tindakan ini tidak dapat dibatalkan.');">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-sm btn-outline-danger py-0 px-1.5" title="Hapus">
+                                    <i class="bi bi-trash3"></i>
+                                </button>
+                            </form>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="8" class="text-center py-4 text-muted">
+                            <i class="bi bi-person-x fs-3 d-block mb-1 text-secondary"></i>
+                            Tidak ada pengguna ditemukan.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Legend Peran -->
+    <div class="card shadow-sm border mt-3">
+        <div class="card-header bg-white py-2 fw-bold small"><i class="bi bi-info-circle text-primary me-1"></i> Keterangan Peran RBAC (5 Level Hak Akses)</div>
+        <div class="card-body py-2">
+            <div class="row g-2" style="font-size:0.75rem;">
+                <div class="col-auto"><span class="badge bg-danger">Super Admin</span> Akses penuh seluruh fitur & konfigurasi</div>
+                <div class="col-auto"><span class="badge bg-primary">Admin RS</span> Kelola data akreditasi, user, unit kerja</div>
+                <div class="col-auto"><span class="badge bg-info text-white">Koordinator Pokja</span> Edit data di Pokja yang ditugaskan</div>
+                <div class="col-auto"><span class="badge bg-success">Kepala Unit</span> Edit data PDCA di unit kerja sendiri</div>
+                <div class="col-auto"><span class="badge bg-secondary">Asesor</span> Hanya baca (read-only viewer)</div>
+            </div>
+        </div>
+    </div>
+
+</div>
+{% endblock %}

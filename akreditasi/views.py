@@ -591,20 +591,91 @@ def ep_delete(request, item_id):
 
 
 # ==============================================================================
-# 9. MANAJEMEN DATA: UNIT KERJA & POKJA
+# 9. MANAJEMEN DATA: UNIT KERJA HIERARKI & POKJA
 # ==============================================================================
 @login_required
 def unit_list_create(request):
-    units = UnitKerja.objects.all().order_by('code')
     if request.method == 'POST':
         form = UnitKerjaForm(request.POST)
         if form.is_valid():
             u = form.save()
+            AuditLog.objects.create(
+                user=request.user,
+                aksi='CREATE',
+                model_name='UnitKerja',
+                object_repr=f"[{u.code}] {u.name}",
+                detail=f"Unit Kerja baru ditambahkan (Level {u.level})"
+            )
             messages.success(request, f"Unit Kerja '{u.name}' berhasil ditambahkan!")
             return redirect('akreditasi:unit_list')
     else:
         form = UnitKerjaForm()
-    return render(request, 'akreditasi/unit_form.html', {'units': units, 'form': form})
+
+    return render(request, 'akreditasi/unit_form.html', {'form': form})
+
+
+@login_required
+def unit_tree(request):
+    root_units = UnitKerja.objects.filter(parent__isnull=True).prefetch_related(
+        'children__children'
+    ).order_by('code')
+    all_units = UnitKerja.objects.all().order_by('level', 'code')
+    return render(request, 'akreditasi/unit_tree.html', {
+        'root_units': root_units,
+        'all_units': all_units,
+        'total_units': all_units.count(),
+    })
+
+
+@login_required
+def unit_edit(request, unit_id):
+    unit = get_object_or_404(UnitKerja, id=unit_id)
+    if request.method == 'POST':
+        form = UnitKerjaForm(request.POST, instance=unit)
+        if form.is_valid():
+            u = form.save()
+            AuditLog.objects.create(
+                user=request.user,
+                aksi='UPDATE',
+                model_name='UnitKerja',
+                object_repr=f"[{u.code}] {u.name}",
+                detail=f"Data Unit Kerja diperbarui"
+            )
+            messages.success(request, f"Unit Kerja '{u.name}' berhasil diperbarui!")
+            return redirect('akreditasi:unit_tree')
+    else:
+        form = UnitKerjaForm(instance=unit)
+
+    return render(request, 'akreditasi/unit_form.html', {
+        'form': form,
+        'unit': unit,
+        'title': f'Edit Unit Kerja: {unit.code}',
+    })
+
+
+@login_required
+@require_POST
+def unit_delete(request, unit_id):
+    unit = get_object_or_404(UnitKerja, id=unit_id)
+    name = f"[{unit.code}] {unit.name}"
+    child_count = unit.children.count()
+    if child_count > 0:
+        messages.error(request, f"Unit '{name}' masih memiliki {child_count} sub-unit. Hapus sub-unit terlebih dahulu.")
+        return redirect('akreditasi:unit_tree')
+    if unit.records.exists():
+        messages.error(request, f"Unit '{name}' masih terhubung ke Record PDCA. Pindahkan record terlebih dahulu.")
+        return redirect('akreditasi:unit_tree')
+
+    unit.delete()
+    AuditLog.objects.create(
+        user=request.user,
+        aksi='DELETE',
+        model_name='UnitKerja',
+        object_repr=name,
+        detail="Unit Kerja dihapus permanen"
+    )
+    messages.success(request, f"Unit Kerja '{name}' telah dihapus.")
+    return redirect('akreditasi:unit_tree')
 
 
 @login_required

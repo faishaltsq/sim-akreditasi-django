@@ -18,17 +18,53 @@ class Framework(models.Model):
 
 
 class UnitKerja(models.Model):
-    name = models.CharField('Nama Unit Kerja', max_length=200, unique=True)
+    LEVEL_CHOICES = [
+        (1, 'Tingkat 1 — Direktorat / Bidang'),
+        (2, 'Tingkat 2 — Bagian / Instalasi / Komite'),
+        (3, 'Tingkat 3 — Sub-Bagian / Ruangan / Unit Layanan'),
+    ]
+
+    parent = models.ForeignKey(
+        'self',
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name='children',
+        verbose_name='Induk Unit Kerja'
+    )
+    level = models.PositiveSmallIntegerField(
+        'Tingkat Hierarki',
+        choices=LEVEL_CHOICES,
+        default=1
+    )
+    name = models.CharField('Nama Unit Kerja', max_length=200)
     code = models.CharField('Kode Unit', max_length=30, unique=True)
     pic_name = models.CharField('Penanggung Jawab (PIC)', max_length=150, blank=True)
+    description = models.TextField('Keterangan / Fungsi', blank=True)
 
     class Meta:
         verbose_name = 'Unit Kerja'
         verbose_name_plural = 'Unit Kerja'
-        ordering = ['code']
+        ordering = ['level', 'code']
 
     def __str__(self):
-        return f"[{self.code}] {self.name}"
+        prefix = '—' * (self.level - 1) + (' ' if self.level > 1 else '')
+        return f"{prefix}[{self.code}] {self.name}"
+
+    def get_full_hierarchy(self):
+        names = [self.name]
+        curr = self.parent
+        while curr:
+            names.insert(0, curr.name)
+            curr = curr.parent
+        return ' > '.join(names)
+
+    def save(self, *args, **kwargs):
+        if self.parent:
+            self.level = min(self.parent.level + 1, 3)
+        else:
+            self.level = 1
+        super().save(*args, **kwargs)
 
 
 class Category(models.Model):

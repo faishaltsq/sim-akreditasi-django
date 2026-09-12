@@ -70,14 +70,21 @@
         <span class="nav-icon"><i class="bi bi-building"></i></span>
         <span class="nav-text">
             <span class="nav-title">Unit Kerja</span>
-            <span class="nav-desc">Daftar Instalasi &amp; Unit RS</span>
+            <span class="nav-desc">Tambah Unit Baru</span>
         </span>
     </a>
-    <a href="{% url 'admin:auth_user_changelist' %}" class="nav-link" target="_blank">
+    <a href="{% url 'akreditasi:unit_tree' %}" class="nav-link {% if request.resolver_match.url_name == 'unit_tree' %}active{% endif %}">
+        <span class="nav-icon"><i class="bi bi-diagram-2-fill"></i></span>
+        <span class="nav-text">
+            <span class="nav-title">Hierarki Unit</span>
+            <span class="nav-desc">Pohon Organisasi 3 Tingkat</span>
+        </span>
+    </a>
+    <a href="{% url 'accounts:user_list' %}" class="nav-link {% if request.resolver_match.url_name == 'user_list' or request.resolver_match.url_name == 'user_create' or request.resolver_match.url_name == 'user_edit' %}active{% endif %}">
         <span class="nav-icon"><i class="bi bi-people-fill"></i></span>
         <span class="nav-text">
             <span class="nav-title">Pengguna</span>
-            <span class="nav-desc">Manajemen User / Asesor</span>
+            <span class="nav-desc">Manajemen User &amp; Hak Akses</span>
         </span>
     </a>
 

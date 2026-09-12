@@ -34,6 +34,9 @@ urlpatterns = [
 
     # Manajemen Data
     path('unit/', views.unit_list_create, name='unit_list'),
+    path('unit/hierarki/', views.unit_tree, name='unit_tree'),
+    path('unit/<int:unit_id>/edit/', views.unit_edit, name='unit_edit'),
+    path('unit/<int:unit_id>/hapus/', views.unit_delete, name='unit_delete'),
     path('pokja/', views.pokja_manage, name='pokja_manage'),
 
     # Pengaturan

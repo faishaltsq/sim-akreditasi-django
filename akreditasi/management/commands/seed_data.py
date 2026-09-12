@@ -4,18 +4,66 @@ from akreditasi.models import (
     Framework, UnitKerja, Category,
     StandardItem, EvidenceReq, QualityRecord, EvidenceFile
 )
+from accounts.models import UserProfile
 
 
 class Command(BaseCommand):
-    help = 'Seed data awal: Framework STARKES, Pokja TKRS, 7 EP riil, Unit Kerja, Superuser admin'
+    help = 'Seed data awal: Framework STARKES, Pokja TKRS, 7 EP riil, Unit Kerja hierarki 3 tingkat, Superuser admin + user contoh'
 
     def handle(self, *args, **kwargs):
         self.stdout.write('Seeding database SIM Akreditasi RS...')
 
-        # Superuser
-        if not User.objects.filter(username='admin').exists():
-            User.objects.create_superuser('admin', 'admin@simakreditasi.id', 'admin123')
+        # ========================================================
+        # SUPERUSER + USER PROFILES
+        # ========================================================
+        admin_user, admin_created = User.objects.get_or_create(
+            username='admin',
+            defaults={'email': 'admin@simakreditasi.id', 'is_superuser': True, 'is_staff': True}
+        )
+        if admin_created:
+            admin_user.set_password('admin123')
+            admin_user.save()
             self.stdout.write('  [+] Superuser admin dibuat (password: admin123)')
+
+        UserProfile.objects.get_or_create(
+            user=admin_user,
+            defaults={
+                'role': 'SUPER_ADMIN',
+                'full_name': 'Administrator Sistem',
+                'jabatan': 'IT RS / Super Admin SIK AP',
+                'is_active_member': True,
+            }
+        )
+
+        # User contoh: Koordinator TKRS
+        koord_user, koord_created = User.objects.get_or_create(
+            username='koord_tkrs',
+            defaults={'email': 'koord_tkrs@simakreditasi.id', 'is_staff': False}
+        )
+        if koord_created:
+            koord_user.set_password('koord123')
+            koord_user.save()
+            self.stdout.write('  [+] User koord_tkrs dibuat (password: koord123)')
+
+        # User contoh: Kepala Unit Farmasi
+        kaunit_user, kaunit_created = User.objects.get_or_create(
+            username='ka_farmasi',
+            defaults={'email': 'ka_farmasi@simakreditasi.id', 'is_staff': False}
+        )
+        if kaunit_created:
+            kaunit_user.set_password('farmasi123')
+            kaunit_user.save()
+            self.stdout.write('  [+] User ka_farmasi dibuat (password: farmasi123)')
+
+        # User contoh: Asesor
+        asesor_user, asesor_created = User.objects.get_or_create(
+            username='asesor1',
+            defaults={'email': 'asesor@simakreditasi.id', 'is_staff': False}
+        )
+        if asesor_created:
+            asesor_user.set_password('asesor123')
+            asesor_user.save()
+            self.stdout.write('  [+] User asesor1 dibuat (password: asesor123)')
 
         # Framework
         fw, _ = Framework.objects.get_or_create(
@@ -23,21 +71,140 @@ class Command(BaseCommand):
             defaults={'cycle_type': 'PDCA', 'version': '2026'}
         )
 
-        # Unit Kerja
-        units_data = [
-            ('Sekretariat Dewas & Direksi', 'SEK-DIR', 'Dr. dr. Haryono, Sp.B'),
-            ('Bagian SDM & Diklat', 'SDM', 'Siti Rahmawati, S.Psi, MM'),
-            ('Bagian Keuangan & Akuntansi', 'KEU', 'Bambang Sudibyo, SE, Ak'),
-            ('Unit Rawat Inap', 'RANAP', 'Ns. Hendra Wijaya, S.Kep'),
-            ('Unit Pelayanan Farmasi', 'FARM', 'apt. Nurul Fatimah, S.Farm'),
-        ]
-        units = {}
-        for name, code, pic in units_data:
-            u, _ = UnitKerja.objects.get_or_create(
-                code=code,
-                defaults={'name': name, 'pic_name': pic}
-            )
-            units[code] = u
+        # ========================================================
+        # UNIT KERJA HIERARKI 3 TINGKAT
+        # ========================================================
+
+        # Level 1: Direktorat / Bidang
+        dir_yanmed, _ = UnitKerja.objects.get_or_create(
+            code='DIR-MED',
+            defaults={
+                'name': 'Direktorat Pelayanan Medik & Keperawatan',
+                'pic_name': 'Dr. dr. Haryono, Sp.B',
+                'description': 'Membawahi seluruh bidang dan unit pelayanan medik, keperawatan, dan penunjang klinis.',
+            }
+        )
+        dir_umum, _ = UnitKerja.objects.get_or_create(
+            code='DIR-UM',
+            defaults={
+                'name': 'Direktorat Umum, SDM & Keuangan',
+                'pic_name': 'Ir. Rudi Hartono, MM',
+                'description': 'Membawahi bagian SDM, keuangan, logistik, dan tata usaha.',
+            }
+        )
+        dir_mutu, _ = UnitKerja.objects.get_or_create(
+            code='DIR-MUTU',
+            defaults={
+                'name': 'Sekretariat Dewas & Direksi',
+                'pic_name': 'drg. Sartika Handayani, M.Kes',
+                'description': 'Sekretariat Dewan Pengawas, Direksi, dan Tim Mutu RS.',
+            }
+        )
+
+        # Level 2: Bagian / Instalasi / Komite (children of Level 1)
+        bag_sdm, _ = UnitKerja.objects.get_or_create(
+            code='SDM',
+            defaults={
+                'name': 'Bagian SDM & Diklat',
+                'pic_name': 'Siti Rahmawati, S.Psi, MM',
+                'parent': dir_umum,
+                'description': 'Perencanaan pegawai, kredensial nakes, pendidikan & pelatihan.',
+            }
+        )
+        bag_keuangan, _ = UnitKerja.objects.get_or_create(
+            code='KEU',
+            defaults={
+                'name': 'Bagian Keuangan & Akuntansi',
+                'pic_name': 'Bambang Sudibyo, SE, Ak',
+                'parent': dir_umum,
+                'description': 'Pengelolaan keuangan, perbendaharaan, akuntansi, dan anggaran RKA.',
+            }
+        )
+        bid_yanmed, _ = UnitKerja.objects.get_or_create(
+            code='BID-YAN',
+            defaults={
+                'name': 'Bidang Pelayanan Medis',
+                'pic_name': 'dr. Andi Prasetyo, Sp.PD',
+                'parent': dir_yanmed,
+                'description': 'Koordinasi pelayanan medik spesialis, rawat jalan, dan rawat inap.',
+            }
+        )
+        bid_penunjang, _ = UnitKerja.objects.get_or_create(
+            code='BID-PENJ',
+            defaults={
+                'name': 'Bidang Penunjang Medis',
+                'pic_name': 'dr. Maya Lestari, Sp.PK',
+                'parent': dir_yanmed,
+                'description': 'Farmasi, laboratorium, radiologi, gizi, dan penunjang medik lainnya.',
+            }
+        )
+
+        # Level 3: Sub-Bagian / Unit Layanan (children of Level 2)
+        unit_ranap, _ = UnitKerja.objects.get_or_create(
+            code='RANAP',
+            defaults={
+                'name': 'Unit Rawat Inap',
+                'pic_name': 'Ns. Hendra Wijaya, S.Kep',
+                'parent': bid_yanmed,
+                'description': 'Bangsal rawat inap kelas I, II, III, VIP, dan ICU.',
+            }
+        )
+        unit_rajal, _ = UnitKerja.objects.get_or_create(
+            code='RAJAL',
+            defaults={
+                'name': 'Unit Rawat Jalan / Poliklinik',
+                'pic_name': 'dr. Dewi Kusuma, Sp.A',
+                'parent': bid_yanmed,
+                'description': 'Poliklinik spesialis, poli umum, dan klinik eksekutif.',
+            }
+        )
+        unit_farmasi, _ = UnitKerja.objects.get_or_create(
+            code='FARM',
+            defaults={
+                'name': 'Unit Pelayanan Farmasi',
+                'pic_name': 'apt. Nurul Fatimah, S.Farm',
+                'parent': bid_penunjang,
+                'description': 'Farmasi rawat jalan, rawat inap, dan depo obat bangsal.',
+            }
+        )
+        unit_lab, _ = UnitKerja.objects.get_or_create(
+            code='LAB',
+            defaults={
+                'name': 'Laboratorium Patologi Klinik',
+                'pic_name': 'dr. Yusuf, Sp.PK',
+                'parent': bid_penunjang,
+                'description': 'Pemeriksaan hematologi, kimia klinik, urinalisis, serologi.',
+            }
+        )
+
+        units = {
+            'SEK-DIR': dir_mutu,  # backward-compatible alias
+            'SDM': bag_sdm,
+            'KEU': bag_keuangan,
+            'RANAP': unit_ranap,
+            'FARM': unit_farmasi,
+        }
+
+        # User Profiles yang terhubung ke Unit Kerja
+        UserProfile.objects.get_or_create(
+            user=kaunit_user,
+            defaults={
+                'role': 'KEPALA_UNIT',
+                'full_name': 'apt. Nurul Fatimah, S.Farm',
+                'jabatan': 'Kepala Unit Farmasi',
+                'unit_kerja': unit_farmasi,
+                'is_active_member': True,
+            }
+        )
+        UserProfile.objects.get_or_create(
+            user=asesor_user,
+            defaults={
+                'role': 'ASESOR',
+                'full_name': 'Dr. Surya Pratama',
+                'jabatan': 'Asesor Eksternal',
+                'is_active_member': True,
+            }
+        )
 
         # Pokja TKRS
         tkrs, _ = Category.objects.get_or_create(

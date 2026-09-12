@@ -7,22 +7,32 @@ from .models import StandardItem, QualityRecord, EvidenceReq, UnitKerja, Evidenc
 class UnitKerjaForm(forms.ModelForm):
     class Meta:
         model = UnitKerja
-        fields = ['name', 'code', 'pic_name']
+        fields = ['name', 'code', 'parent', 'pic_name', 'description']
         labels = {
             'name': 'Nama Unit Kerja',
             'code': 'Kode Unit',
+            'parent': 'Induk Unit (Kosongkan jika Level 1 / Direktorat)',
             'pic_name': 'Penanggung Jawab (PIC)',
+            'description': 'Keterangan / Fungsi',
+        }
+        widgets = {
+            'description': forms.Textarea(attrs={'rows': 2, 'placeholder': 'Deskripsi tugas/fungsi unit...'}),
         }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.fields['parent'].queryset = UnitKerja.objects.filter(level__in=[1, 2]).order_by('level', 'code')
         self.helper = FormHelper()
         self.helper.layout = Layout(
             Row(
-                Column('name', css_class='col-md-6'),
-                Column('code', css_class='col-md-3'),
-                Column('pic_name', css_class='col-md-3'),
+                Column('name', css_class='col-md-7'),
+                Column('code', css_class='col-md-5'),
             ),
+            Row(
+                Column('parent', css_class='col-md-7'),
+                Column('pic_name', css_class='col-md-5'),
+            ),
+            'description',
             Submit('submit', 'Simpan Unit Kerja', css_class='btn btn-primary mt-2'),
         )
 
