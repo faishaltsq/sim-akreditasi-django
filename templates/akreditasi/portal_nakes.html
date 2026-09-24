@@ -1,0 +1,483 @@
+{% extends "base.html" %}
+
+{% block title %}Portal Nakes — {{ profile.full_name|default:request.user.username }} | SIM Akreditasi RS{% endblock %}
+{% block page_title %}Portal Tenaga Kesehatan{% endblock %}
+{% block page_subtitle %}Capaian Akreditasi Unit & Kredensial Pribadi (KPS){% endblock %}
+
+{% block content %}
+<div class="container-fluid p-0">
+
+    <!-- HERO HEADER UNIT INFO -->
+    <div class="card border-0 shadow-sm mb-4" style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); color: white; border-radius: 12px;">
+        <div class="card-body p-4">
+            <div class="row align-items-center">
+                <div class="col-md-7">
+                    <div class="d-flex align-items-center gap-3">
+                        <div style="width: 58px; height: 58px; border-radius: 50%; background: rgba(59, 130, 246, 0.2); border: 2px solid #38bdf8; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; color: #38bdf8; font-weight: 700;">
+                            {{ profile.full_name|default:request.user.username|first|upper }}
+                        </div>
+                        <div>
+                            <h4 class="fw-bold mb-1">{{ profile.full_name|default:request.user.username }}</h4>
+                            <div class="d-flex flex-wrap align-items-center gap-2" style="font-size: 0.85rem;">
+                                <span class="badge bg-info text-dark">{{ profile.get_profesi_display|default:"Tenaga Kesehatan" }}</span>
+                                {% if profile.nip_nrp %}
+                                    <span class="text-white-50"><i class="bi bi-person-badge"></i> {{ profile.nip_nrp }}</span>
+                                {% endif %}
+                                <span class="text-white-50">•</span>
+                                <span class="text-warning fw-semibold"><i class="bi bi-hospital"></i> {{ unit.name|default:"(Belum Ditempatkan di Unit Kerja)" }}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-5 mt-3 mt-md-0 text-md-end">
+                    {% if unit %}
+                        <div class="d-inline-block text-start p-3" style="background: rgba(255,255,255,0.06); border-radius: 10px; border: 1px solid rgba(255,255,255,0.1); min-width: 220px;">
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <span style="font-size: 0.75rem; color: #94a3b8; text-transform: uppercase;">Kepatuhan Akreditasi Unit</span>
+                                <span class="fw-bold" style="font-size: 1.25rem; color: {% if percentage >= 80 %}#4ade80{% elif percentage >= 60 %}#fbbf24{% else %}#f87171{% endif %};">{{ percentage }}%</span>
+                            </div>
+                            <div class="progress" style="height: 6px; background-color: rgba(255,255,255,0.1);">
+                                <div class="progress-bar {% if percentage >= 80 %}bg-success{% elif percentage >= 60 %}bg-warning{% else %}bg-danger{% endif %}" role="progressbar" style="width: {{ percentage }}%"></div>
+                            </div>
+                            <div class="d-flex justify-content-between mt-2" style="font-size: 0.7rem; color: #cbd5e1;">
+                                <span>Skor: {{ total_score }}/{{ total_possible }}</span>
+                                <span>{{ unit_records|length }} Elemen Penilaian</span>
+                            </div>
+                        </div>
+                    {% else %}
+                        <div class="alert alert-warning py-2 px-3 mb-0" style="font-size: 0.85rem;">
+                            <i class="bi bi-exclamation-circle me-1"></i> Hubungi Tim Mutu RS untuk mengaitkan akun Anda ke Unit Kerja.
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- METRICS MINI STRIP -->
+    <div class="row g-3 mb-4">
+        <div class="col-6 col-lg-3">
+            <div class="card border-0 shadow-sm p-3 h-100" style="border-left: 4px solid #10b981 !important; border-radius: 10px;">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <small class="text-muted text-uppercase" style="font-size: 0.7rem;">EP Terpenuhi (10)</small>
+                        <h3 class="fw-bold mb-0 text-success">{{ count_10 }}</h3>
+                    </div>
+                    <div style="width: 38px; height: 38px; border-radius: 8px; background: #ecfdf5; display: flex; align-items: center; justify-content: center; color: #10b981;">
+                        <i class="bi bi-check-circle fs-5"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-lg-3">
+            <div class="card border-0 shadow-sm p-3 h-100" style="border-left: 4px solid #f59e0b !important; border-radius: 10px;">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <small class="text-muted text-uppercase" style="font-size: 0.7rem;">EP Sebagian (5)</small>
+                        <h3 class="fw-bold mb-0 text-warning">{{ count_5 }}</h3>
+                    </div>
+                    <div style="width: 38px; height: 38px; border-radius: 8px; background: #fffbeb; display: flex; align-items: center; justify-content: center; color: #f59e0b;">
+                        <i class="bi bi-exclamation-circle fs-5"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-lg-3">
+            <div class="card border-0 shadow-sm p-3 h-100" style="border-left: 4px solid #ef4444 !important; border-radius: 10px;">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <small class="text-muted text-uppercase" style="font-size: 0.7rem;">EP Belum Terpenuhi (0)</small>
+                        <h3 class="fw-bold mb-0 text-danger">{{ count_0 }}</h3>
+                    </div>
+                    <div style="width: 38px; height: 38px; border-radius: 8px; background: #fef2f2; display: flex; align-items: center; justify-content: center; color: #ef4444;">
+                        <i class="bi bi-x-circle fs-5"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-lg-3">
+            <div class="card border-0 shadow-sm p-3 h-100" style="border-left: 4px solid #3b82f6 !important; border-radius: 10px;">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <small class="text-muted text-uppercase" style="font-size: 0.7rem;">Portofolio KPS Saya</small>
+                        <h3 class="fw-bold mb-0 text-primary">{{ credentials.count }} Dokumen</h3>
+                    </div>
+                    <div style="width: 38px; height: 38px; border-radius: 8px; background: #eff6ff; display: flex; align-items: center; justify-content: center; color: #3b82f6;">
+                        <i class="bi bi-file-earmark-person fs-5"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MAIN TABS (4 TABS) -->
+    <div class="card border-0 shadow-sm mb-4" style="border-radius: 12px;">
+        <div class="card-header bg-white border-bottom pt-3 pb-0 px-4">
+            <ul class="nav nav-tabs border-0" id="nakesTabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active fw-semibold" id="tab-capaian-btn" data-bs-toggle="tab" data-bs-target="#tab-capaian" type="button" role="tab">
+                        <i class="bi bi-speedometer2 me-1.5"></i> Capaian Unit Saya
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link fw-semibold" id="tab-sop-btn" data-bs-toggle="tab" data-bs-target="#tab-sop" type="button" role="tab">
+                        <i class="bi bi-journal-bookmark me-1.5"></i> Pustaka SOP & Regulasi
+                        <span class="badge bg-secondary ms-1">{{ sop_files|length }}</span>
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link fw-semibold" id="tab-bukti-btn" data-bs-toggle="tab" data-bs-target="#tab-bukti" type="button" role="tab">
+                        <i class="bi bi-cloud-arrow-up me-1.5"></i> Kirim Bukti Ruangan
+                        {% if upload_targets %}<span class="badge bg-danger ms-1">{{ upload_targets|length }} butuh bukti</span>{% endif %}
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link fw-semibold" id="tab-kps-btn" data-bs-toggle="tab" data-bs-target="#tab-kps" type="button" role="tab">
+                        <i class="bi bi-person-badge-fill me-1.5 text-primary"></i> Portofolio KPS Saya (STR/SIP/Pelatihan)
+                        <span class="badge bg-primary ms-1">{{ credentials.count }}</span>
+                    </button>
+                </li>
+            </ul>
+        </div>
+
+        <div class="card-body p-4">
+            <div class="tab-content" id="nakesTabContent">
+
+                <!-- ========================================== -->
+                <!-- TAB 1: CAPAIAN UNIT SAYA -->
+                <!-- ========================================== -->
+                <div class="tab-pane fade show active" id="tab-capaian" role="tabpanel">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <div>
+                            <h6 class="fw-bold mb-0">Daftar Elemen Penilaian di {{ unit.name|default:"Unit Anda" }}</h6>
+                            <small class="text-muted">Pahami target mutu, mitigasi risiko, dan hasil evaluasi asesor pada unit kerja Anda.</small>
+                        </div>
+                    </div>
+
+                    {% if unit_records %}
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle border mb-0" style="font-size: 0.85rem;">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th style="width: 140px;">Pokja & Kode EP</th>
+                                        <th>Elemen Penilaian (EP)</th>
+                                        <th style="width: 180px;">Rencana Mutu (Plan)</th>
+                                        <th style="width: 110px;" class="text-center">Skor Mandiri</th>
+                                        <th>Evaluasi & Tindak Lanjut</th>
+                                        <th style="width: 70px;" class="text-center">Aksi</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for rec in unit_records %}
+                                        <tr>
+                                            <td>
+                                                <span class="badge bg-dark mb-1">{{ rec.standard_item.category.code }}</span><br>
+                                                <strong class="text-primary font-monospace">{{ rec.standard_item.code }}</strong>
+                                            </td>
+                                            <td>
+                                                <div class="fw-semibold text-dark">{{ rec.standard_item.sub_title }}</div>
+                                                <div class="text-muted" style="font-size: 0.8rem;">{{ rec.standard_item.description|truncatewords:25 }}</div>
+                                            </td>
+                                            <td>
+                                                {% if rec.quality_target %}
+                                                    <div class="text-success fw-semibold"><i class="bi bi-bullseye"></i> {{ rec.quality_target }}</div>
+                                                {% endif %}
+                                                {% if rec.risk_mitigation %}
+                                                    <small class="text-muted d-block mt-1"><i class="bi bi-shield-check"></i> {{ rec.risk_mitigation|truncatechars:60 }}</small>
+                                                {% endif %}
+                                                {% if not rec.quality_target and not rec.risk_mitigation %}
+                                                    <span class="text-muted fst-italic">-</span>
+                                                {% endif %}
+                                            </td>
+                                            <td class="text-center">
+                                                {% if rec.score == 10 %}
+                                                    <span class="badge bg-success py-2 px-3 fs-6">10</span>
+                                                    <small class="d-block text-success mt-1" style="font-size:0.65rem;">Lengkap</small>
+                                                {% elif rec.score == 5 %}
+                                                    <span class="badge bg-warning py-2 px-3 fs-6 text-dark">5</span>
+                                                    <small class="d-block text-warning mt-1" style="font-size:0.65rem;">Sebagian</small>
+                                                {% else %}
+                                                    <span class="badge bg-danger py-2 px-3 fs-6">0</span>
+                                                    <small class="d-block text-danger mt-1" style="font-size:0.65rem;">Belum</small>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                {% if rec.eval_notes %}
+                                                    <div class="text-dark"><i class="bi bi-clipboard-check text-info"></i> {{ rec.eval_notes }}</div>
+                                                {% endif %}
+                                                {% if rec.action_plan %}
+                                                    <div class="text-danger fw-semibold mt-1" style="font-size:0.75rem;"><i class="bi bi-arrow-repeat"></i> RTL: {{ rec.action_plan }}</div>
+                                                {% endif %}
+                                                {% if not rec.eval_notes and not rec.action_plan %}
+                                                    <span class="text-muted fst-italic">Belum ada catatan evaluasi</span>
+                                                {% endif %}
+                                            </td>
+                                            <td class="text-center">
+                                                <a href="{% url 'akreditasi:ep_detail' rec.standard_item.id %}" class="btn btn-sm btn-outline-primary" title="Lihat Detail EP">
+                                                    <i class="bi bi-arrow-right-circle"></i>
+                                                </a>
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="text-center py-5 text-muted">
+                            <i class="bi bi-inbox fs-1 d-block mb-2 text-secondary"></i>
+                            <p class="mb-0">Belum ada Elemen Penilaian yang ditugaskan ke unit kerja Anda.</p>
+                        </div>
+                    {% endif %}
+                </div>
+
+                <!-- ========================================== -->
+                <!-- TAB 2: PUSTAKA SOP & REGULASI RUANGAN -->
+                <!-- ========================================== -->
+                <div class="tab-pane fade" id="tab-sop" role="tabpanel">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <div>
+                            <h6 class="fw-bold mb-0">Pustaka Regulasi & Panduan Wawancara Surveior</h6>
+                            <small class="text-muted">Pelajari seluruh Standar Operasional Prosedur (SOP), Kebijakan, dan Pedoman yang berlaku di ruangan ini agar siap menjawab wawancara dan simulasi surveior akreditasi.</small>
+                        </div>
+                    </div>
+
+                    {% if sop_files %}
+                        <div class="row g-3">
+                            {% for item in sop_files %}
+                                <div class="col-md-6 col-lg-4">
+                                    <div class="card h-100 border shadow-xs" style="border-radius: 10px;">
+                                        <div class="card-body p-3 d-flex flex-column justify-content-between">
+                                            <div>
+                                                <div class="d-flex justify-content-between align-items-start mb-2">
+                                                    <span class="badge bg-info text-dark" style="font-size: 0.65rem;">R — Regulasi / SOP</span>
+                                                    <span class="badge bg-secondary font-monospace" style="font-size: 0.65rem;">{{ item.ep_code }}</span>
+                                                </div>
+                                                <h6 class="fw-bold text-dark mb-1" style="font-size: 0.9rem;">{{ item.file.file_name }}</h6>
+                                                <p class="text-muted mb-2" style="font-size: 0.75rem;">{{ item.req_title }}</p>
+                                            </div>
+                                            <div class="pt-2 border-top d-flex justify-content-between align-items-center">
+                                                <small class="text-muted" style="font-size: 0.7rem;">Ukuran: {{ item.file.file_size }}</small>
+                                                <a href="{{ item.file.get_download_url }}" target="_blank" class="btn btn-sm btn-primary d-inline-flex align-items-center gap-1" style="font-size: 0.75rem;">
+                                                    <i class="bi bi-eye"></i> Buka SOP
+                                                </a>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="text-center py-5 text-muted">
+                            <i class="bi bi-file-earmark-medical fs-1 d-block mb-2 text-secondary"></i>
+                            <p class="mb-0">Belum ada file SOP/Regulasi yang terunggah untuk unit Anda.</p>
+                        </div>
+                    {% endif %}
+                </div>
+
+                <!-- ========================================== -->
+                <!-- TAB 3: KIRIM BUKTI RUANGAN -->
+                <!-- ========================================== -->
+                <div class="tab-pane fade" id="tab-bukti" role="tabpanel">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <div>
+                            <h6 class="fw-bold mb-0">Kebutuhan Bukti Pelaksanaan (Dokumen / Checklist Ruangan)</h6>
+                            <small class="text-muted">Unggah dokumen pembuktian harian (contoh: logbook kalibrasi, notulen rapat shift, checklist APAR ruangan, dll.) langsung ke Elemen Penilaian terkait.</small>
+                        </div>
+                    </div>
+
+                    {% if upload_targets %}
+                        <div class="row g-3">
+                            {% for req in upload_targets %}
+                                <div class="col-md-6">
+                                    <div class="card border border-warning shadow-xs h-100" style="border-radius: 10px; background-color: #fffdfa;">
+                                        <div class="card-body p-3">
+                                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                                <span class="badge bg-warning text-dark font-monospace">{{ req.standard_item.code }}</span>
+                                                <span class="badge bg-danger">Wajib Dilengkapi</span>
+                                            </div>
+                                            <h6 class="fw-bold text-dark mb-1">{{ req.title }}</h6>
+                                            <p class="text-muted mb-3" style="font-size: 0.8rem;">EP: {{ req.standard_item.description|truncatewords:20 }}</p>
+
+                                            <form method="post" action="{% url 'akreditasi:upload_bukti' req.id %}" enctype="multipart/form-data">
+                                                {% csrf_token %}
+                                                <div class="input-group input-group-sm">
+                                                    <input type="file" name="file" class="form-control" required>
+                                                    <button class="btn btn-primary" type="submit">
+                                                        <i class="bi bi-upload"></i> Unggah
+                                                    </button>
+                                                </div>
+                                            </form>
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="alert alert-success py-3 px-4 d-flex align-items-center gap-3">
+                            <i class="bi bi-check-circle-fill fs-3 text-success"></i>
+                            <div>
+                                <h6 class="fw-bold mb-0">Luar biasa! Semua kebutuhan bukti di unit Anda telah memiliki berkas.</h6>
+                                <small class="text-muted">Jika ingin memperbarui versi atau melihat riwayat berkas, kunjungi menu Dokumen Bukti.</small>
+                            </div>
+                        </div>
+                    {% endif %}
+                </div>
+
+                <!-- ========================================== -->
+                <!-- TAB 4: PORTOFOLIO KPS SAYA -->
+                <!-- ========================================== -->
+                <div class="tab-pane fade" id="tab-kps" role="tabpanel">
+                    <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-2">
+                        <div>
+                            <h6 class="fw-bold mb-0">Portofolio Kredensial & Kualifikasi Staf (Bab KPS)</h6>
+                            <small class="text-muted">Simpan dan pantau masa berlaku Surat Tanda Registrasi (STR), Surat Izin Praktik (SIP), SPK/RKK, dan sertifikat pelatihan wajib (BHD, PPI, PMKP, K3RS) untuk asesmen kepatuhan KPS.</small>
+                        </div>
+                        <button type="button" class="btn btn-sm btn-primary d-inline-flex align-items-center gap-1" data-bs-toggle="modal" data-bs-target="#modalTambahKredensial">
+                            <i class="bi bi-plus-circle"></i> Tambah Dokumen KPS
+                        </button>
+                    </div>
+
+                    <!-- TABEL KREDENSIAL SAYA -->
+                    {% if credentials %}
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle border mb-0" style="font-size: 0.85rem;">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th style="width: 170px;">Jenis Dokumen</th>
+                                        <th>Nama / Judul Dokumen</th>
+                                        <th style="width: 160px;">Nomor Berkas</th>
+                                        <th style="width: 140px;">Masa Berlaku</th>
+                                        <th style="width: 120px;" class="text-center">Status</th>
+                                        <th style="width: 130px;" class="text-end">Aksi</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for cred in credentials %}
+                                        <tr>
+                                            <td>
+                                                <span class="badge bg-light text-dark border">{{ cred.get_doc_type_display }}</span>
+                                            </td>
+                                            <td>
+                                                <div class="fw-semibold text-dark">{{ cred.title }}</div>
+                                                {% if cred.issued_date %}
+                                                    <small class="text-muted">Terbit: {{ cred.issued_date|date:"d M Y" }}</small>
+                                                {% endif %}
+                                                {% if cred.verification_notes %}
+                                                    <small class="d-block text-info mt-1"><i class="bi bi-chat-left-text"></i> Catatan: {{ cred.verification_notes }}</small>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                <span class="font-monospace text-secondary">{{ cred.document_number|default:"-" }}</span>
+                                            </td>
+                                            <td>
+                                                {% if cred.valid_until %}
+                                                    <div>{{ cred.valid_until|date:"d M Y" }}</div>
+                                                    <span class="badge bg-{{ cred.expiry_badge.class }} mt-1" style="font-size: 0.65rem;">
+                                                        {{ cred.expiry_badge.label }}
+                                                    </span>
+                                                {% else %}
+                                                    <span class="text-muted fst-italic">Seumur Hidup / Tidak Ada</span>
+                                                {% endif %}
+                                            </td>
+                                            <td class="text-center">
+                                                {% if cred.status == 'VERIFIED' %}
+                                                    <span class="badge bg-success py-1.5 px-2.5"><i class="bi bi-patch-check-fill me-1"></i> Terverifikasi</span>
+                                                {% elif cred.status == 'PENDING' %}
+                                                    <span class="badge bg-warning text-dark py-1.5 px-2.5"><i class="bi bi-clock me-1"></i> Menunggu</span>
+                                                {% elif cred.status == 'EXPIRED' %}
+                                                    <span class="badge bg-danger py-1.5 px-2.5"><i class="bi bi-calendar-x me-1"></i> Kedaluwarsa</span>
+                                                {% else %}
+                                                    <span class="badge bg-danger py-1.5 px-2.5">{{ cred.get_status_display }}</span>
+                                                {% endif %}
+                                            </td>
+                                            <td class="text-end">
+                                                <div class="btn-group btn-group-sm">
+                                                    {% if cred.get_download_url != '#' %}
+                                                        <a href="{{ cred.get_download_url }}" target="_blank" class="btn btn-outline-primary" title="Lihat / Unduh Dokumen">
+                                                            <i class="bi bi-download"></i>
+                                                        </a>
+                                                    {% endif %}
+                                                    <form method="post" action="{% url 'akreditasi:delete_kredensial' cred.id %}" class="d-inline" onsubmit="return confirm('Hapus dokumen ini?')">
+                                                        {% csrf_token %}
+                                                        <button type="submit" class="btn btn-outline-danger" title="Hapus Dokumen">
+                                                            <i class="bi bi-trash"></i>
+                                                        </button>
+                                                    </form>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="text-center py-5 border rounded bg-light">
+                            <i class="bi bi-folder-x fs-1 d-block mb-2 text-secondary"></i>
+                            <h6 class="fw-bold mb-1">Belum Ada Dokumen Portofolio KPS</h6>
+                            <p class="text-muted mb-3" style="font-size: 0.85rem;">Unggah STR, SIP, atau sertifikat pelatihan Anda untuk memudahkan verifikasi Bab KPS oleh Tim Mutu.</p>
+                            <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#modalTambahKredensial">
+                                <i class="bi bi-plus-circle me-1"></i> Unggah Dokumen Sekarang
+                            </button>
+                        </div>
+                    {% endif %}
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<!-- MODAL TAMBAH KREDENSIAL KPS -->
+<div class="modal fade" id="modalTambahKredensial" tabindex="-1" aria-labelledby="modalTambahKredensialLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header bg-slate-900 text-white">
+                <h6 class="modal-title fw-bold" id="modalTambahKredensialLabel">
+                    <i class="bi bi-file-earmark-plus me-1 text-primary"></i> Unggah Dokumen Kredensial KPS
+                </h6>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="post" action="{% url 'akreditasi:upload_kredensial' %}" enctype="multipart/form-data">
+                {% csrf_token %}
+                <div class="modal-body p-4">
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold" style="font-size: 0.85rem;">Jenis Dokumen <span class="text-danger">*</span></label>
+                        {{ credential_form.doc_type }}
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold" style="font-size: 0.85rem;">Nama / Judul Dokumen <span class="text-danger">*</span></label>
+                        {{ credential_form.title }}
+                        <small class="text-muted" style="font-size: 0.75rem;">Contoh: STR Perawat, SIP Dokter Spesialis Bedah, Sertifikat Pelatihan BLS</small>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold" style="font-size: 0.85rem;">Nomor Dokumen / STR / SIP</label>
+                        {{ credential_form.document_number }}
+                    </div>
+                    <div class="row g-2 mb-3">
+                        <div class="col-6">
+                            <label class="form-label fw-semibold" style="font-size: 0.85rem;">Tanggal Terbit</label>
+                            {{ credential_form.issued_date }}
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label fw-semibold" style="font-size: 0.85rem;">Masa Berlaku Sampai</label>
+                            {{ credential_form.valid_until }}
+                            <small class="text-muted d-block" style="font-size: 0.7rem;">Kosongkan bila seumur hidup</small>
+                        </div>
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label fw-semibold" style="font-size: 0.85rem;">Berkas Scan (PDF / JPG / PNG) <span class="text-danger">*</span></label>
+                        {{ credential_form.file }}
+                    </div>
+                </div>
+                <div class="modal-footer bg-light">
+                    <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Batal</button>
+                    <button type="submit" class="btn btn-sm btn-primary">
+                        <i class="bi bi-cloud-arrow-up me-1"></i> Simpan Dokumen
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -22,6 +22,11 @@ from .supabase_storage import upload_to_supabase_storage
 # ==============================================================================
 @login_required
 def dashboard(request):
+    # Smart redirect: nakes langsung ke portal unit
+    profile = getattr(request.user, 'profile', None)
+    if profile and profile.role == 'STAF_NAKES':
+        return redirect('akreditasi:portal_nakes')
+
     rs_profile = RumahSakitProfile.get_default()
     framework = Framework.objects.first()
     categories = Category.objects.all().order_by('order')
@@ -832,3 +837,214 @@ def export_excel(request):
     response['Content-Disposition'] = 'attachment; filename="Matriks_PDCA_Akreditasi_RS.xlsx"'
     wb.save(response)
     return response
+
+
+# ==============================================================================
+# 12. PORTAL NAKES (Capaian Unit + SOP + Upload Bukti + Portofolio KPS)
+# ==============================================================================
+@login_required
+def portal_nakes(request):
+    profile = getattr(request.user, 'profile', None)
+    if not profile:
+        messages.warning(request, "Profil pengguna belum dibuat.")
+        return redirect('akreditasi:dashboard_alias')
+
+    unit = profile.unit_kerja
+    rs_profile = RumahSakitProfile.get_default()
+
+    # Data EP unit
+    unit_records = []
+    unit_items = []
+    total_score = 0
+    total_possible = 0
+    count_10 = count_5 = count_0 = 0
+    sop_files = []
+
+    if unit:
+        unit_records_qs = QualityRecord.objects.filter(unit=unit).select_related(
+            'standard_item__category'
+        ).prefetch_related(
+            'standard_item__evidence_reqs__files'
+        ).order_by('standard_item__category__order', 'standard_item__order')
+
+        for rec in unit_records_qs:
+            unit_records.append(rec)
+            unit_items.append(rec.standard_item)
+            total_score += rec.score
+            total_possible += 10
+            if rec.score == 10:
+                count_10 += 1
+            elif rec.score == 5:
+                count_5 += 1
+            else:
+                count_0 += 1
+
+        # SOP/Regulasi (kategori R) untuk unit ini
+        sop_reqs = EvidenceReq.objects.filter(
+            category_type='R',
+            standard_item__record__unit=unit,
+        ).prefetch_related('files').select_related('standard_item')
+        for req in sop_reqs:
+            for f in req.files.all():
+                sop_files.append({
+                    'file': f,
+                    'ep_code': req.standard_item.code,
+                    'req_title': req.title,
+                })
+
+    percentage = round((total_score / total_possible) * 100, 1) if total_possible > 0 else 0
+
+    # Upload bukti: requirement EP unit yang belum punya file
+    upload_targets = []
+    if unit:
+        reqs_unit = EvidenceReq.objects.filter(
+            standard_item__record__unit=unit,
+            category_type='D',
+        ).select_related('standard_item').prefetch_related('files')
+        for req in reqs_unit:
+            if req.files.count() == 0:
+                upload_targets.append(req)
+
+    # Portofolio KPS nakes
+    from accounts.models import NakesCredential
+    credentials = NakesCredential.objects.filter(user_profile=profile).order_by('doc_type', '-created_at')
+    # Auto-check expiry
+    for cred in credentials:
+        cred.auto_check_expiry()
+
+    from accounts.forms import NakesCredentialForm
+    credential_form = NakesCredentialForm()
+
+    context = {
+        'profile': profile,
+        'unit': unit,
+        'rs_profile': rs_profile,
+        'unit_records': unit_records,
+        'total_score': total_score,
+        'total_possible': total_possible,
+        'percentage': percentage,
+        'count_10': count_10,
+        'count_5': count_5,
+        'count_0': count_0,
+        'sop_files': sop_files,
+        'upload_targets': upload_targets,
+        'credentials': credentials,
+        'credential_form': credential_form,
+    }
+    return render(request, 'akreditasi/portal_nakes.html', context)
+
+
+@login_required
+@require_POST
+def upload_kredensial_nakes(request):
+    """Nakes upload dokumen STR/SIP/Sertifikat pelatihan."""
+    from accounts.forms import NakesCredentialForm
+    profile = request.user.profile
+    form = NakesCredentialForm(request.POST, request.FILES)
+    if form.is_valid():
+        cred = form.save(commit=False)
+        cred.user_profile = profile
+
+        file_obj = request.FILES.get('file')
+        if file_obj:
+            res = upload_to_supabase_storage(file_obj, f"kps/{profile.user.username}/{file_obj.name}")
+            if res.get('success') and res.get('url'):
+                cred.file_url = res['url']
+                cred.file = None
+            else:
+                cred.file = file_obj
+
+        cred.save()
+        AuditLog.objects.create(
+            user=request.user,
+            aksi='UPLOAD',
+            model_name='NakesCredential',
+            object_repr=f"{cred.get_doc_type_display()} - {cred.title}",
+            detail=f"Nakes mengunggah dokumen KPS: {cred.title}"
+        )
+        messages.success(request, f"Dokumen '{cred.title}' berhasil diunggah dan menunggu verifikasi.")
+    else:
+        messages.error(request, "Gagal mengunggah dokumen. Periksa form Anda.")
+
+    return redirect('akreditasi:portal_nakes')
+
+
+@login_required
+@require_POST
+def delete_kredensial_nakes(request, cred_id):
+    """Nakes hapus dokumen kredensial miliknya sendiri."""
+    from accounts.models import NakesCredential
+    cred = get_object_or_404(NakesCredential, id=cred_id, user_profile=request.user.profile)
+    title = cred.title
+    cred.delete()
+    AuditLog.objects.create(
+        user=request.user,
+        aksi='DELETE',
+        model_name='NakesCredential',
+        object_repr=title,
+        detail="Nakes menghapus dokumen KPS"
+    )
+    messages.success(request, f"Dokumen '{title}' berhasil dihapus.")
+    return redirect('akreditasi:portal_nakes')
+
+
+@login_required
+def rekap_kps_unit(request):
+    """Rekap kelengkapan KPS staf per unit — untuk Admin RS & Kepala Unit."""
+    profile = getattr(request.user, 'profile', None)
+    if not profile or profile.role not in ('SUPER_ADMIN', 'ADMIN_RS', 'KEPALA_UNIT'):
+        from django.http import HttpResponseForbidden
+        return HttpResponseForbidden("Akses ditolak.")
+
+    from accounts.models import UserProfile, NakesCredential
+
+    # Kepala Unit hanya lihat unitnya, Admin lihat semua / filter
+    selected_unit_id = request.GET.get('unit', 'ALL')
+    units = UnitKerja.objects.all().order_by('code')
+
+    nakes_qs = UserProfile.objects.filter(role='STAF_NAKES').select_related('unit_kerja', 'user').prefetch_related('credentials')
+
+    if profile.role == 'KEPALA_UNIT' and profile.unit_kerja:
+        nakes_qs = nakes_qs.filter(unit_kerja=profile.unit_kerja)
+    elif selected_unit_id != 'ALL':
+        nakes_qs = nakes_qs.filter(unit_kerja_id=selected_unit_id)
+
+    # Auto-check expiry
+    for nakes in nakes_qs:
+        for cred in nakes.credentials.all():
+            cred.auto_check_expiry()
+
+    context = {
+        'nakes_list': nakes_qs,
+        'units': units,
+        'selected_unit_id': selected_unit_id,
+        'profile': profile,
+    }
+    return render(request, 'akreditasi/rekap_kps.html', context)
+
+
+@login_required
+@require_POST
+def verify_kredensial(request, cred_id):
+    """Admin RS / Kepala Unit verifikasi kredensial nakes."""
+    profile = getattr(request.user, 'profile', None)
+    if not profile or profile.role not in ('SUPER_ADMIN', 'ADMIN_RS', 'KEPALA_UNIT'):
+        return JsonResponse({'success': False, 'error': 'Akses ditolak'}, status=403)
+
+    from accounts.models import NakesCredential
+    from accounts.forms import CredentialVerifyForm
+    cred = get_object_or_404(NakesCredential, id=cred_id)
+    form = CredentialVerifyForm(request.POST, instance=cred)
+    if form.is_valid():
+        form.save()
+        AuditLog.objects.create(
+            user=request.user,
+            aksi='UPDATE',
+            model_name='NakesCredential',
+            object_repr=f"{cred.get_doc_type_display()} - {cred.title}",
+            detail=f"Status diubah ke {cred.get_status_display()} oleh {request.user.username}"
+        )
+        messages.success(request, f"Status dokumen '{cred.title}' berhasil diperbarui.")
+    else:
+        messages.error(request, "Gagal memperbarui status.")
+    return redirect('akreditasi:rekap_kps')

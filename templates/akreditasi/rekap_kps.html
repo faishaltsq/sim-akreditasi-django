@@ -1,0 +1,133 @@
+{% extends "base.html" %}
+
+{% block title %}Rekap Kelengkapan KPS per Unit | SIM Akreditasi RS{% endblock %}
+{% block page_title %}Rekap KPS Staf per Unit{% endblock %}
+{% block page_subtitle %}Pemantauan Kredensial STR, SIP, dan Pelatihan Wajib Tenaga Kesehatan{% endblock %}
+
+{% block content %}
+<div class="container-fluid p-0">
+
+    <!-- FILTER -->
+    <div class="card border-0 shadow-sm mb-4" style="border-radius: 10px;">
+        <div class="card-body p-3">
+            <form method="get" class="row g-2 align-items-end">
+                <div class="col-md-4">
+                    <label class="form-label fw-semibold" style="font-size: 0.8rem;">Filter Unit Kerja</label>
+                    <select name="unit" class="form-select form-select-sm" onchange="this.form.submit()">
+                        <option value="ALL" {% if selected_unit_id == 'ALL' %}selected{% endif %}>— Semua Unit —</option>
+                        {% for u in units %}
+                            <option value="{{ u.id }}" {% if selected_unit_id|stringformat:"s" == u.id|stringformat:"s" %}selected{% endif %}>
+                                [{{ u.code }}] {{ u.name }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <button type="submit" class="btn btn-sm btn-primary"><i class="bi bi-search me-1"></i> Filter</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- TABEL NAKES -->
+    {% if nakes_list %}
+        {% for nakes in nakes_list %}
+            <div class="card border-0 shadow-sm mb-3" style="border-radius: 10px;">
+                <div class="card-header bg-white d-flex justify-content-between align-items-center py-3 px-4">
+                    <div class="d-flex align-items-center gap-3">
+                        <div style="width:42px; height:42px; border-radius:50%; background:#eff6ff; color:#3b82f6; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:1.1rem;">
+                            {{ nakes.full_name|default:nakes.user.username|first|upper }}
+                        </div>
+                        <div>
+                            <h6 class="fw-bold mb-0">{{ nakes.full_name|default:nakes.user.username }}</h6>
+                            <small class="text-muted">
+                                {{ nakes.get_profesi_display|default:"Nakes" }} •
+                                {{ nakes.unit_kerja.name|default:"Belum ditempatkan" }}
+                                {% if nakes.nip_nrp %} • NIP: {{ nakes.nip_nrp }}{% endif %}
+                            </small>
+                        </div>
+                    </div>
+                    <div class="d-flex gap-2">
+                        {% with cred_sum=nakes.credential_summary %}
+                            <span class="badge bg-success">{{ cred_sum.verified }} Verified</span>
+                            {% if cred_sum.expiring_soon > 0 %}<span class="badge bg-warning text-dark">{{ cred_sum.expiring_soon }} Segera Habis</span>{% endif %}
+                            {% if cred_sum.expired > 0 %}<span class="badge bg-danger">{{ cred_sum.expired }} Expired</span>{% endif %}
+                        {% endwith %}
+                    </div>
+                </div>
+                <div class="card-body p-0">
+                    {% if nakes.credentials.all %}
+                        <table class="table table-hover align-middle mb-0" style="font-size: 0.82rem;">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Jenis Dokumen</th>
+                                    <th>Judul</th>
+                                    <th>Nomor</th>
+                                    <th>Masa Berlaku</th>
+                                    <th class="text-center">Status</th>
+                                    <th class="text-end">Verifikasi</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for cred in nakes.credentials.all %}
+                                    <tr>
+                                        <td><span class="badge bg-light text-dark border">{{ cred.get_doc_type_display }}</span></td>
+                                        <td>
+                                            <strong>{{ cred.title }}</strong>
+                                            {% if cred.get_download_url != '#' %}
+                                                <a href="{{ cred.get_download_url }}" target="_blank" class="ms-1 text-primary"><i class="bi bi-box-arrow-up-right"></i></a>
+                                            {% endif %}
+                                        </td>
+                                        <td class="font-monospace text-secondary">{{ cred.document_number|default:"-" }}</td>
+                                        <td>
+                                            {% if cred.valid_until %}
+                                                {{ cred.valid_until|date:"d M Y" }}
+                                                <span class="badge bg-{{ cred.expiry_badge.class }} ms-1" style="font-size:0.6rem;">{{ cred.expiry_badge.label }}</span>
+                                            {% else %}
+                                                <span class="text-muted">-</span>
+                                            {% endif %}
+                                        </td>
+                                        <td class="text-center">
+                                            {% if cred.status == 'VERIFIED' %}
+                                                <span class="badge bg-success"><i class="bi bi-patch-check-fill"></i></span>
+                                            {% elif cred.status == 'PENDING' %}
+                                                <span class="badge bg-warning text-dark"><i class="bi bi-clock"></i></span>
+                                            {% elif cred.status == 'EXPIRED' %}
+                                                <span class="badge bg-danger"><i class="bi bi-calendar-x"></i></span>
+                                            {% else %}
+                                                <span class="badge bg-secondary">{{ cred.get_status_display }}</span>
+                                            {% endif %}
+                                        </td>
+                                        <td class="text-end">
+                                            <form method="post" action="{% url 'akreditasi:verify_kredensial' cred.id %}" class="d-inline-flex align-items-center gap-1">
+                                                {% csrf_token %}
+                                                <select name="status" class="form-select form-select-sm" style="width: auto; font-size: 0.75rem;">
+                                                    <option value="PENDING" {% if cred.status == 'PENDING' %}selected{% endif %}>Pending</option>
+                                                    <option value="VERIFIED" {% if cred.status == 'VERIFIED' %}selected{% endif %}>Verifikasi ✓</option>
+                                                    <option value="REJECTED" {% if cred.status == 'REJECTED' %}selected{% endif %}>Tolak ✗</option>
+                                                    <option value="EXPIRED" {% if cred.status == 'EXPIRED' %}selected{% endif %}>Expired</option>
+                                                </select>
+                                                <button type="submit" class="btn btn-sm btn-outline-primary"><i class="bi bi-check2"></i></button>
+                                            </form>
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    {% else %}
+                        <div class="text-center py-3 text-muted" style="font-size: 0.85rem;">
+                            <i class="bi bi-folder-x me-1"></i> Belum ada dokumen KPS yang diunggah.
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        {% endfor %}
+    {% else %}
+        <div class="text-center py-5 text-muted">
+            <i class="bi bi-people fs-1 d-block mb-2"></i>
+            <p>Belum ada staf nakes yang terdaftar{% if selected_unit_id != 'ALL' %} di unit ini{% endif %}.</p>
+        </div>
+    {% endif %}
+
+</div>
+{% endblock %}

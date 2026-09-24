@@ -125,6 +125,31 @@
             <span class="nav-desc">Audit Trail Aktivitas</span>
         </span>
     </a>
+
+    <!-- PORTAL NAKES — tampil untuk semua user yang punya unit_kerja -->
+    {% if request.user.profile.is_nakes %}
+    <div class="nav-section mt-2">
+        <i class="bi bi-heart-pulse-fill me-1" style="font-size:0.6rem;"></i> Portal Saya
+    </div>
+    <a href="{% url 'akreditasi:portal_nakes' %}" class="nav-link {% if request.resolver_match.url_name == 'portal_nakes' %}active{% endif %}">
+        <span class="nav-icon"><i class="bi bi-person-badge-fill"></i></span>
+        <span class="nav-text">
+            <span class="nav-title">Portal Nakes Saya</span>
+            <span class="nav-desc">Capaian Unit & Portofolio KPS</span>
+        </span>
+    </a>
+    {% endif %}
+
+    <!-- REKAP KPS — tampil untuk Admin RS & Kepala Unit -->
+    {% if request.user.profile.role == 'SUPER_ADMIN' or request.user.profile.role == 'ADMIN_RS' or request.user.profile.role == 'KEPALA_UNIT' %}
+    <a href="{% url 'akreditasi:rekap_kps' %}" class="nav-link {% if request.resolver_match.url_name == 'rekap_kps' %}active{% endif %}">
+        <span class="nav-icon"><i class="bi bi-person-vcard-fill"></i></span>
+        <span class="nav-text">
+            <span class="nav-title">Rekap KPS Staf</span>
+            <span class="nav-desc">Verifikasi STR/SIP/Pelatihan</span>
+        </span>
+    </a>
+    {% endif %}
 </div>
 
 <div class="sidebar-footer">
