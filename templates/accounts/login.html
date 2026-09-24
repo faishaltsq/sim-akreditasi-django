@@ -11,13 +11,13 @@
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
     <style>
         :root {
-            --primary: #2563EB;
-            --primary-deep: #1D4ED8;
-            --sidebar-bg: #0F172A;
-            --body-bg: #F1F5F9;
-            --text-primary: #0F172A;
-            --text-muted: #64748B;
-            --border: #E2E8F0;
+            --primary: #16a34a;
+            --primary-deep: #15803d;
+            --sidebar-bg: #f0fdf4;
+            --body-bg: #f7fef9;
+            --text-primary: #14532d;
+            --text-muted: #4ade80;
+            --border: #bbf7d0;
         }
         body {
             font-family: 'Plus Jakarta Sans', sans-serif;
@@ -40,11 +40,11 @@
             background: #FFFFFF;
             border-radius: 1rem;
             overflow: hidden;
-            box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.1), 0 8px 10px -6px rgba(15, 23, 42, 0.05);
+            box-shadow: 0 10px 25px -5px rgba(22,163,74,0.12), 0 8px 10px -6px rgba(22,163,74,0.06);
             border: 1px solid var(--border);
         }
         .brand-panel {
-            background: var(--sidebar-bg);
+            background: linear-gradient(160deg, #166534 0%, #15803d 60%, #16a34a 100%);
             color: #FFFFFF;
             padding: 3rem 2.5rem;
             display: flex;
@@ -59,7 +59,7 @@
             right: -50px;
             width: 200px;
             height: 200px;
-            background: radial-gradient(circle, rgba(37,99,235,0.2) 0%, rgba(15,23,42,0) 70%);
+            background: radial-gradient(circle, rgba(134,239,172,0.2) 0%, rgba(22,163,74,0) 70%);
             border-radius: 50%;
             pointer-events: none;
         }
@@ -67,13 +67,13 @@
             width: 56px;
             height: 56px;
             border-radius: 12px;
-            background: var(--primary);
+            background: rgba(255,255,255,0.2);
             display: flex;
             align-items: center;
             justify-content: center;
             font-size: 1.75rem;
             color: #FFFFFF;
-            box-shadow: 0 8px 16px rgba(37,99,235,0.35);
+            box-shadow: 0 8px 16px rgba(22,163,74,0.35);
             margin-bottom: 1.5rem;
         }
         .form-panel {
@@ -81,7 +81,7 @@
             background: #FFFFFF;
         }
         .form-control {
-            border: 1px solid var(--border);
+            border: 1px solid #bbf7d0;
             font-size: 0.875rem;
             border-radius: 0.5rem;
             padding: 0.6rem 0.85rem;
@@ -89,7 +89,7 @@
         }
         .form-control:focus {
             border-color: var(--primary);
-            box-shadow: 0 0 0 3px rgba(37,99,235,0.12);
+            box-shadow: 0 0 0 3px rgba(22,163,74,0.15);
         }
         .form-label {
             font-weight: 600;
@@ -112,7 +112,7 @@
         .login-footer {
             text-align: center;
             font-size: 0.75rem;
-            color: var(--text-muted);
+            color: #166534;
             padding: 1.25rem 1rem;
         }
     </style>
