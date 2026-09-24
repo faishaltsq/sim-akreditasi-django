@@ -1,6 +1,7 @@
 import json
 from django.shortcuts import render, redirect, get_object_or_404
-from django.contrib.auth.decorators import login_required
+from django.contrib.auth.decorators import login_required, user_passes_test
+from django.core.exceptions import PermissionDenied
 from django.contrib import messages
 from django.http import JsonResponse, HttpResponse
 from django.db import transaction
@@ -15,6 +16,44 @@ from .models import (
 )
 from .forms import StandardItemForm, QualityRecordForm, UnitKerjaForm, EvidenceFileUploadForm
 from .supabase_storage import upload_to_supabase_storage
+
+
+# ==============================================================================
+# RBAC HELPERS
+# ==============================================================================
+def _is_admin(user):
+    """Admin RS atau Superuser."""
+    if not user.is_authenticated:
+        return False
+    if user.is_superuser:
+        return True
+    p = getattr(user, 'profile', None)
+    return p and p.role in ('SUPER_ADMIN', 'ADMIN_RS')
+
+
+def _can_edit(user):
+    """Role yang boleh create/edit/delete EP (bukan Asesor, bukan Nakes)."""
+    if not user.is_authenticated:
+        return False
+    if user.is_superuser:
+        return True
+    p = getattr(user, 'profile', None)
+    return p and p.can_edit
+
+
+def _is_nakes_or_admin(user):
+    """Nakes sendiri atau Admin."""
+    if not user.is_authenticated:
+        return False
+    if user.is_superuser:
+        return True
+    p = getattr(user, 'profile', None)
+    return p and p.role in ('SUPER_ADMIN', 'ADMIN_RS', 'STAF_NAKES')
+
+
+admin_required = user_passes_test(_is_admin, login_url='/accounts/login/')
+editor_required = user_passes_test(_can_edit, login_url='/accounts/login/')
+nakes_or_admin = user_passes_test(_is_nakes_or_admin, login_url='/accounts/login/')
 
 
 # ==============================================================================
@@ -444,6 +483,7 @@ def dokumen_hub(request):
 # 8. FORM CREATE & EDIT EP
 # ==============================================================================
 @login_required
+@editor_required
 def ep_create(request):
     if request.method == 'POST':
         item_form = StandardItemForm(request.POST)
@@ -492,6 +532,7 @@ def ep_create(request):
 
 
 @login_required
+@editor_required
 def ep_edit(request, item_id):
     item = get_object_or_404(StandardItem, id=item_id)
     record, _ = QualityRecord.objects.get_or_create(
@@ -577,6 +618,7 @@ def upload_bukti(request, req_id):
 
 
 @login_required
+@editor_required
 @require_POST
 def ep_delete(request, item_id):
     item = get_object_or_404(StandardItem, id=item_id)
@@ -599,6 +641,7 @@ def ep_delete(request, item_id):
 # 9. MANAJEMEN DATA: UNIT KERJA HIERARKI & POKJA
 # ==============================================================================
 @login_required
+@admin_required
 def unit_list_create(request):
     if request.method == 'POST':
         form = UnitKerjaForm(request.POST)
@@ -633,6 +676,7 @@ def unit_tree(request):
 
 
 @login_required
+@admin_required
 def unit_edit(request, unit_id):
     unit = get_object_or_404(UnitKerja, id=unit_id)
     if request.method == 'POST':
@@ -659,6 +703,7 @@ def unit_edit(request, unit_id):
 
 
 @login_required
+@admin_required
 @require_POST
 def unit_delete(request, unit_id):
     unit = get_object_or_404(UnitKerja, id=unit_id)
@@ -684,6 +729,7 @@ def unit_delete(request, unit_id):
 
 
 @login_required
+@admin_required
 def pokja_manage(request):
     categories = Category.objects.all().order_by('order')
     return render(request, 'akreditasi/pokja_list.html', {'categories': categories})
@@ -693,6 +739,7 @@ def pokja_manage(request):
 # 10. PENGATURAN: PROFIL RS & LOG SISTEM
 # ==============================================================================
 @login_required
+@admin_required
 def profil_rs_view(request):
     profile = RumahSakitProfile.get_default()
     if request.method == 'POST':
@@ -723,6 +770,7 @@ def profil_rs_view(request):
 
 
 @login_required
+@admin_required
 def audit_log_view(request):
     logs = AuditLog.objects.select_related('user').order_by('-timestamp')[:100]
     return render(request, 'akreditasi/audit_log.html', {'logs': logs})
@@ -843,6 +891,7 @@ def export_excel(request):
 # 12. PORTAL NAKES (Capaian Unit + SOP + Upload Bukti + Portofolio KPS)
 # ==============================================================================
 @login_required
+@nakes_or_admin
 def portal_nakes(request):
     profile = getattr(request.user, 'profile', None)
     if not profile:

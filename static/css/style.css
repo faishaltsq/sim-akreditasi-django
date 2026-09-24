@@ -200,7 +200,7 @@ code, .font-mono, .mono { font-family: 'JetBrains Mono', monospace; }
 .table-card { background: var(--surface); border-radius: var(--radius-lg); border: 1px solid var(--border); overflow: hidden; box-shadow: var(--shadow); }
 
 /* EVIDENCE TYPE BADGES */
-.badge-r { background: #EFF6FF; color: #1D4ED8; border: 1px solid #BFDBFE; font-family: 'JetBrains Mono', monospace; font-size: 0.65rem; font-weight: 700; padding: 2px 7px; border-radius: 4px; }
+.badge-r { background: #dcfce7; color: #15803d; border: 1px solid #86efac; font-family: 'JetBrains Mono', monospace; font-size: 0.65rem; font-weight: 700; padding: 2px 7px; border-radius: 4px; }
 .badge-d { background: #dcfce7; color: #15803d; border: 1px solid #86efac; font-family: 'JetBrains Mono', monospace; font-size: 0.65rem; font-weight: 700; padding: 2px 7px; border-radius: 4px; }
 .badge-w { background: #FFFBEB; color: #B45309; border: 1px solid #FDE68A; font-family: 'JetBrains Mono', monospace; font-size: 0.65rem; font-weight: 700; padding: 2px 7px; border-radius: 4px; }
 .badge-o { background: #F5F3FF; color: #6D28D9; border: 1px solid #DDD6FE; font-family: 'JetBrains Mono', monospace; font-size: 0.65rem; font-weight: 700; padding: 2px 7px; border-radius: 4px; }
