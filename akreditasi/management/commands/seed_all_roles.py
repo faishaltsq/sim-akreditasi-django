@@ -111,9 +111,13 @@ class Command(BaseCommand):
                 code=code, category=pokja_pmkp,
                 defaults={'sub_standard': sub, 'sub_title': subtitle, 'description': desc, 'order': order}
             )
-            if created:
-                for r_type, title, mand in reqs:
-                    EvidenceReq.objects.create(standard_item=it, category_type=r_type, title=title, is_mandatory=mand)
+            # Selalu pastikan EvidenceReq terisi
+            for r_type, title, mand in reqs:
+                EvidenceReq.objects.get_or_create(
+                    standard_item=it, category_type=r_type, title=title,
+                    defaults={'is_mandatory': mand}
+                )
+            if not QualityRecord.objects.filter(standard_item=it).exists():
                 QualityRecord.objects.create(standard_item=it, unit=unit, **rec)
 
         # KPS EP
@@ -140,9 +144,13 @@ class Command(BaseCommand):
                 code=code, category=pokja_kps,
                 defaults={'sub_standard': sub, 'sub_title': subtitle, 'description': desc, 'order': order}
             )
-            if created:
-                for r_type, title, mand in reqs:
-                    EvidenceReq.objects.create(standard_item=it, category_type=r_type, title=title, is_mandatory=mand)
+            # Selalu pastikan EvidenceReq terisi
+            for r_type, title, mand in reqs:
+                EvidenceReq.objects.get_or_create(
+                    standard_item=it, category_type=r_type, title=title,
+                    defaults={'is_mandatory': mand}
+                )
+            if not QualityRecord.objects.filter(standard_item=it).exists():
                 QualityRecord.objects.create(standard_item=it, unit=unit, **rec)
 
         self.stdout.write(self.style.SUCCESS('  ✓ Data Pokja PMKP & KPS berhasil dibuat'))

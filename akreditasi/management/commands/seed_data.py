@@ -363,37 +363,36 @@ class Command(BaseCommand):
             code, sub_std, sub_title, desc, order, unit_code, reqs, record_data, *rest = ep_data
             sample_file = rest[0] if rest else None
 
-            if StandardItem.objects.filter(code=code).exists():
-                self.stdout.write(f'  [~] EP {code} sudah ada, dilewati.')
-                continue
-
-            item = StandardItem.objects.create(
-                category=tkrs,
+            item, created = StandardItem.objects.get_or_create(
                 code=code,
-                sub_standard=sub_std,
-                sub_title=sub_title,
-                description=desc,
-                order=order
+                category=tkrs,
+                defaults={
+                    'sub_standard': sub_std,
+                    'sub_title': sub_title,
+                    'description': desc,
+                    'order': order,
+                }
             )
 
+            # Selalu pastikan EvidenceReq terisi jika belum ada
             req_objects = []
             for cat_type, title, mandatory in reqs:
-                req = EvidenceReq.objects.create(
+                req, _ = EvidenceReq.objects.get_or_create(
                     standard_item=item,
                     category_type=cat_type,
                     title=title,
-                    is_mandatory=mandatory
+                    defaults={'is_mandatory': mandatory}
                 )
                 req_objects.append(req)
 
-            if record_data:
+            if record_data and not QualityRecord.objects.filter(standard_item=item).exists():
                 QualityRecord.objects.create(
                     standard_item=item,
                     unit=units[unit_code],
                     **record_data
                 )
 
-            if sample_file and req_objects:
+            if sample_file and req_objects and not EvidenceFile.objects.filter(requirement=req_objects[0]).exists():
                 EvidenceFile.objects.create(
                     requirement=req_objects[0],
                     file_name=sample_file,
