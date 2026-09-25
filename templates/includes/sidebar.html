@@ -185,14 +185,11 @@
 
     <!-- PUSAT KONTROL ADMIN — hanya muncul jika user memiliki izin -->
     {% if request.user.is_superuser or request.user.profile.role == 'SUPER_ADMIN' or request.user.profile.role == 'ADMIN_RS' %}
-    <div class="nav-section mt-2" style="border-top:1px solid #e2e8f0; padding-top:10px; margin-top:8px;">
-        <i class="bi bi-sliders2-vertical me-1" style="font-size:0.6rem;"></i> Admin Pusat Kontrol
-    </div>
     <a href="{% url 'accounts:admin_control_center' %}" class="nav-link {% if request.resolver_match.url_name == 'admin_control_center' %}active{% endif %}">
-        <span class="nav-icon"><i class="bi bi-sliders2-vertical" style="color:#0d9488;"></i></span>
+        <span class="nav-icon"><i class="bi bi-gear-wide-connected"></i></span>
         <span class="nav-text">
-            <span class="nav-title fw-bold">Pusat Kontrol Sistem</span>
-            <span class="nav-desc">Hierarki Unit, Hak Akses & Konfigurasi</span>
+            <span class="nav-title">Pusat Kontrol Sistem</span>
+            <span class="nav-desc">Hierarki, Hak Akses & Konfigurasi</span>
         </span>
     </a>
     {% endif %}
