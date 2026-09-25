@@ -1,83 +1,100 @@
 {% extends "base.html" %}
 
 {% block title %}Struktur &amp; Hierarki Unit Kerja | RS MonsisKami{% endblock %}
-{% block page_title %}Struktur &amp; Hierarki Unit Kerja{% endblock %}
-{% block page_subtitle %}Pohon organisasi terstruktur RS MonsisKami Tipe B: Level 1 (Pimpinan) &rarr; Level 2 (Direktorat/Komite) &rarr; Level 3 (Instalasi/KSM/Ruangan){% endblock %}
+{% block page_title %}Struktur &amp; Hierarki Unit Kerja RS{% endblock %}
+{% block page_subtitle %}Tata kelola 3 tingkat organisasi RS MonsisKami Tipe B: Level 1 (Pimpinan) &rarr; Level 2 (Direktorat/Komite) &rarr; Level 3 (Instalasi/KSM/Ruangan){% endblock %}
 
 {% block extra_css %}
 <style>
-    .level-card-stat {
+    .stat-box {
         border-radius: 12px;
         padding: 1rem 1.25rem;
         background: #ffffff;
         border: 1px solid var(--border);
-        transition: transform 0.15s ease, box-shadow 0.15s ease;
-    }
-    .level-card-stat:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(0,0,0,0.06);
-    }
-    .level-badge-1 { background: #0f766e; color: #fff; }
-    .level-badge-2 { background: #0d9488; color: #fff; }
-    .level-badge-3 { background: #14b8a6; color: #fff; }
-
-    .unit-tree-node-l2 {
-        border-left: 2px dashed #99f6e4;
-        margin-left: 1.5rem;
-        padding-left: 1rem;
-        position: relative;
-    }
-    .unit-tree-node-l3 {
-        border-left: 2px dashed #ccfbf1;
-        margin-left: 1.5rem;
-        padding-left: 1rem;
-        position: relative;
-    }
-
-    .unit-card {
-        border: 1px solid var(--border);
-        border-radius: 10px;
-        background: #ffffff;
-        padding: 0.75rem 1rem;
-        margin-bottom: 0.5rem;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+        cursor: pointer;
         transition: all 0.15s ease;
     }
-    .unit-card:hover {
+    .stat-box:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 16px rgba(13, 148, 136, 0.12);
         border-color: var(--primary);
-        box-shadow: 0 2px 8px rgba(13, 148, 136, 0.12);
-        background: #fcfeff;
     }
-    .unit-card.l1-card {
-        border-left: 5px solid #0f766e;
+
+    .level-badge-1 { background: #0f766e; color: #fff; font-weight: 700; }
+    .level-badge-2 { background: #0d9488; color: #fff; font-weight: 700; }
+    .level-badge-3 { background: #14b8a6; color: #fff; font-weight: 700; }
+
+    /* TREE STYLES */
+    .tree-l1 {
         background: #f8fafc;
+        border: 1px solid #cbd5e1;
+        border-left: 5px solid #0f766e;
+        border-radius: 10px;
+        padding: 0.85rem 1rem;
+        margin-bottom: 0.65rem;
     }
-    .unit-card.l2-card {
+    .tree-l2-wrapper {
+        border-left: 2px dashed #99f6e4;
+        margin-left: 1.5rem;
+        padding-left: 1.25rem;
+        margin-bottom: 0.75rem;
+    }
+    .tree-l2 {
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
         border-left: 4px solid #0d9488;
-        background: #ffffff;
+        border-radius: 8px;
+        padding: 0.7rem 0.9rem;
+        margin-bottom: 0.5rem;
     }
-    .unit-card.l3-card {
+    .tree-l3-wrapper {
+        border-left: 2px dashed #ccfbf1;
+        margin-left: 1.5rem;
+        padding-left: 1.25rem;
+        margin-bottom: 0.65rem;
+    }
+    .tree-l3 {
+        background: #fbfdfe;
+        border: 1px solid #f1f5f9;
         border-left: 3px solid #14b8a6;
-        background: #ffffff;
+        border-radius: 6px;
+        padding: 0.55rem 0.85rem;
+        margin-bottom: 0.35rem;
     }
 
     .btn-add-sub {
         font-size: 0.72rem;
         font-weight: 600;
-        padding: 2px 8px;
+        padding: 3px 9px;
         border-radius: 6px;
-        color: var(--primary);
+        color: #0f766e;
         background: #f0fdfa;
         border: 1px solid #99f6e4;
-        text-decoration: none;
+        cursor: pointer;
         display: inline-flex;
         align-items: center;
         gap: 4px;
         transition: all 0.15s;
     }
     .btn-add-sub:hover {
-        background: var(--primary);
+        background: #0d9488;
         color: #ffffff;
-        border-color: var(--primary);
+        border-color: #0d9488;
+    }
+
+    .nav-pills-custom .nav-link {
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: #64748b;
+        border-radius: 8px;
+        padding: 8px 16px;
+        transition: all 0.15s;
+    }
+    .nav-pills-custom .nav-link.active {
+        background-color: var(--primary);
+        color: #ffffff;
+        box-shadow: 0 2px 6px rgba(13, 148, 136, 0.25);
     }
 </style>
 {% endblock %}
@@ -85,190 +102,351 @@
 {% block content %}
 <div class="container-fluid p-0">
 
-    <!-- KPI & EXPLANATION ROW -->
+    <!-- KPI ROW (KLIK UNTUK PINDAH TAB) -->
     <div class="row g-3 mb-3">
         <div class="col-md-3 col-6">
-            <div class="level-card-stat d-flex align-items-center gap-3">
-                <div class="rounded-circle d-flex align-items-center justify-content-center" style="width:44px; height:44px; background:#f0fdfa; color:#0d9488; font-size:1.2rem;">
+            <div class="stat-box d-flex align-items-center gap-3" onclick="switchNavTab('tab-all')">
+                <div class="rounded-circle d-flex align-items-center justify-content-center" style="width:46px; height:46px; background:#f0fdfa; color:#0d9488; font-size:1.25rem;">
                     <i class="bi bi-diagram-3-fill"></i>
                 </div>
                 <div>
-                    <div class="text-muted small" style="font-size:0.75rem;">Total Unit Kerja</div>
-                    <div class="h4 mb-0 fw-bold font-mono">{{ total_units }}</div>
+                    <div class="text-muted small" style="font-size:0.75rem;">Total Seluruh Unit</div>
+                    <div class="h4 mb-0 fw-bold font-mono">{{ total_units }} <span class="small fw-normal text-muted" style="font-size:0.75rem;">Unit</span></div>
                 </div>
             </div>
         </div>
         <div class="col-md-3 col-6">
-            <div class="level-card-stat d-flex align-items-center gap-3" style="border-left: 4px solid #0f766e;">
-                <div class="rounded-circle d-flex align-items-center justify-content-center" style="width:44px; height:44px; background:#f1f5f9; color:#0f766e; font-size:1.1rem;">
+            <div class="stat-box d-flex align-items-center gap-3" style="border-left: 4px solid #0f766e;" onclick="switchNavTab('tab-l1')">
+                <div class="rounded-circle d-flex align-items-center justify-content-center" style="width:46px; height:46px; background:#f1f5f9; color:#0f766e; font-size:1.1rem;">
                     <span class="fw-bold font-mono" style="font-size:0.85rem;">L1</span>
                 </div>
                 <div>
                     <div class="text-muted small" style="font-size:0.75rem;">Level 1 — Pimpinan / Dewas</div>
-                    <div class="h5 mb-0 fw-bold font-mono text-dark">{{ count_l1 }} <span class="small fw-normal text-muted" style="font-size:0.7rem;">Unit</span></div>
+                    <div class="h5 mb-0 fw-bold font-mono text-dark">{{ count_l1 }} <span class="small fw-normal text-muted" style="font-size:0.75rem;">Unit</span></div>
                 </div>
             </div>
         </div>
         <div class="col-md-3 col-6">
-            <div class="level-card-stat d-flex align-items-center gap-3" style="border-left: 4px solid #0d9488;">
-                <div class="rounded-circle d-flex align-items-center justify-content-center" style="width:44px; height:44px; background:#ccfbf1; color:#0d9488; font-size:1.1rem;">
+            <div class="stat-box d-flex align-items-center gap-3" style="border-left: 4px solid #0d9488;" onclick="switchNavTab('tab-l2')">
+                <div class="rounded-circle d-flex align-items-center justify-content-center" style="width:46px; height:46px; background:#ccfbf1; color:#0d9488; font-size:1.1rem;">
                     <span class="fw-bold font-mono" style="font-size:0.85rem;">L2</span>
                 </div>
                 <div>
                     <div class="text-muted small" style="font-size:0.75rem;">Level 2 — Direktorat / Komite</div>
-                    <div class="h5 mb-0 fw-bold font-mono text-dark">{{ count_l2 }} <span class="small fw-normal text-muted" style="font-size:0.7rem;">Unit</span></div>
+                    <div class="h5 mb-0 fw-bold font-mono text-dark">{{ count_l2 }} <span class="small fw-normal text-muted" style="font-size:0.75rem;">Unit</span></div>
                 </div>
             </div>
         </div>
         <div class="col-md-3 col-6">
-            <div class="level-card-stat d-flex align-items-center gap-3" style="border-left: 4px solid #14b8a6;">
-                <div class="rounded-circle d-flex align-items-center justify-content-center" style="width:44px; height:44px; background:#f0fdfa; color:#14b8a6; font-size:1.1rem;">
+            <div class="stat-box d-flex align-items-center gap-3" style="border-left: 4px solid #14b8a6;" onclick="switchNavTab('tab-l3')">
+                <div class="rounded-circle d-flex align-items-center justify-content-center" style="width:46px; height:46px; background:#f0fdfa; color:#14b8a6; font-size:1.1rem;">
                     <span class="fw-bold font-mono" style="font-size:0.85rem;">L3</span>
                 </div>
                 <div>
-                    <div class="text-muted small" style="font-size:0.75rem;">Level 3 — Instalasi / KSM / Ruang</div>
-                    <div class="h5 mb-0 fw-bold font-mono text-dark">{{ count_l3 }} <span class="small fw-normal text-muted" style="font-size:0.7rem;">Unit</span></div>
+                    <div class="text-muted small" style="font-size:0.75rem;">Level 3 — Instalasi / Ruang</div>
+                    <div class="h5 mb-0 fw-bold font-mono text-dark">{{ count_l3 }} <span class="small fw-normal text-muted" style="font-size:0.75rem;">Unit</span></div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- PANDUAN CEPAT LEVEL HIERARKI -->
-    <div class="alert alert-light border d-flex align-items-start gap-3 py-2.5 px-3 mb-3" style="background:#f8fafc; font-size:0.8rem;">
-        <i class="bi bi-info-circle-fill text-primary mt-0.5" style="font-size:1.1rem;"></i>
-        <div class="flex-grow-1">
-            <div class="fw-bold text-dark mb-1">Tata Kelola Hierarki 3 Tingkat RS MonsisKami:</div>
-            <div class="d-flex flex-wrap gap-2 text-muted" style="font-size:0.76rem;">
-                <span class="badge bg-white text-dark border"><strong class="text-teal">Level 1 (Puncak):</strong> Pemilik, Dewan Pengawas (Dewas), Direktur Utama — <em>Tanpa Induk</em></span>
-                <span class="badge bg-white text-dark border"><strong class="text-teal">Level 2 (Menengah):</strong> SPI, Komite Medis/Mutu/PPI, Direktorat Medis/Keperawatan/Umum — <em>Induk: Level 1</em></span>
-                <span class="badge bg-white text-dark border"><strong class="text-teal">Level 3 (Pelaksana):</strong> Instalasi Farmasi, IGD, Rawat Inap, 14 KSM Spesialis, Depo — <em>Induk: Level 2</em></span>
+    <!-- PANDUAN RINGKAS TATA CARA PENAMBAHAN SUB-UNIT -->
+    <div class="card shadow-sm border-0 mb-3" style="background: linear-gradient(135deg, #f0fdfa 0%, #ffffff 100%); border-left: 4px solid var(--primary) !important;">
+        <div class="card-body p-3 d-flex flex-wrap align-items-center justify-content-between gap-3">
+            <div class="d-flex align-items-start gap-2.5">
+                <i class="bi bi-lightbulb-fill text-teal fs-4 mt-0.5"></i>
+                <div style="font-size:0.8rem;">
+                    <div class="fw-bold text-dark mb-0.5">Tata Cara Penambahan Sub-Unit Kerja:</div>
+                    <div class="text-muted">
+                        Temukan unit induk yang diinginkan &rarr; Klik tombol 
+                        <span class="badge bg-white text-teal border font-mono fw-bold">+ Tambah Sub-Unit</span> pada baris tersebut.
+                        Sistem otomatis mengisi unit induk dan menghitung tingkat target (Level 1 &rarr; Level 2, Level 2 &rarr; Level 3)!
+                    </div>
+                </div>
             </div>
-        </div>
-        <div class="d-flex gap-2">
-            <button class="btn btn-sm btn-primary d-inline-flex align-items-center gap-1.5" data-bs-toggle="modal" data-bs-target="#modalAddUnit" onclick="openAddUnitModal(null, null, 1)">
-                <i class="bi bi-plus-circle-fill"></i> Tambah Unit Level 1
-            </button>
+            <div class="d-flex gap-2">
+                <button class="btn btn-sm btn-primary d-inline-flex align-items-center gap-1.5" onclick="openAddUnitModal(null, null, 1)">
+                    <i class="bi bi-plus-circle-fill"></i> Tambah Unit Puncak (L1)
+                </button>
+                <a href="{% url 'akreditasi:unit_list' %}" class="btn btn-sm btn-outline-secondary d-inline-flex align-items-center gap-1">
+                    <i class="bi bi-table"></i> Mode Form / Tabel Lengkap
+                </a>
+            </div>
         </div>
     </div>
 
-    <!-- MAIN HIERARCHY TREE -->
+    <!-- TABS NAVIGASI VIEW -->
     <div class="card shadow-sm border mb-4">
         <div class="card-header bg-white py-2.5 d-flex flex-wrap justify-content-between align-items-center gap-2">
+            <ul class="nav nav-pills nav-pills-custom gap-1" id="unitViewTabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active" id="tab-all-btn" data-bs-toggle="pill" data-bs-target="#tab-all" type="button" role="tab">
+                        <i class="bi bi-diagram-2 me-1"></i> Pohon Hierarki Lengkap
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="tab-l1-btn" data-bs-toggle="pill" data-bs-target="#tab-l1" type="button" role="tab">
+                        <span class="badge level-badge-1 me-1">L1</span> Level 1 ({{ count_l1 }})
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="tab-l2-btn" data-bs-toggle="pill" data-bs-target="#tab-l2" type="button" role="tab">
+                        <span class="badge level-badge-2 me-1">L2</span> Level 2 ({{ count_l2 }})
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="tab-l3-btn" data-bs-toggle="pill" data-bs-target="#tab-l3" type="button" role="tab">
+                        <span class="badge level-badge-3 me-1">L3</span> Level 3 ({{ count_l3 }})
+                    </button>
+                </li>
+            </ul>
+
             <div class="d-flex align-items-center gap-2">
-                <i class="bi bi-diagram-2-fill text-primary"></i>
-                <span class="fw-bold small">Pohon Struktur Organisasi RS MonsisKami</span>
-                <span class="badge bg-light text-dark border font-mono ms-2" style="font-size:0.7rem;">{{ total_units }} Unit Terdaftar</span>
-            </div>
-            <div class="d-flex align-items-center gap-2">
-                <input type="text" id="unitSearchInput" class="form-control form-control-sm" placeholder="🔍 Cari nama/kode unit..." style="width: 220px; font-size:0.78rem;">
-                <div class="btn-group btn-group-sm" role="group">
-                    <button type="button" class="btn btn-outline-secondary active" onclick="filterLevel('all', this)">Semua</button>
-                    <button type="button" class="btn btn-outline-secondary" onclick="filterLevel('1', this)">L1</button>
-                    <button type="button" class="btn btn-outline-secondary" onclick="filterLevel('2', this)">L2</button>
-                    <button type="button" class="btn btn-outline-secondary" onclick="filterLevel('3', this)">L3</button>
-                </div>
+                <input type="text" id="tabSearchInput" class="form-control form-control-sm" placeholder="🔍 Cari nama / kode unit..." style="width: 220px; font-size:0.8rem;">
             </div>
         </div>
 
-        <div class="card-body p-3" id="treeContainer">
-            {% for l1 in root_units %}
-                <!-- ================= LEVEL 1 ================= -->
-                <div class="unit-node-wrapper mb-3" data-level="1" data-search="{{ l1.code|lower }} {{ l1.name|lower }} {{ l1.pic_name|default:''|lower }}">
-                    <div class="unit-card l1-card d-flex justify-content-between align-items-center">
-                        <div class="d-flex align-items-center gap-2">
-                            <span class="badge level-badge-1 font-mono" style="font-size:0.68rem;">LEVEL 1</span>
-                            <span class="fw-bold font-mono text-dark" style="font-size:0.85rem;">[{{ l1.code }}]</span>
-                            <span class="fw-bold text-dark" style="font-size:0.92rem;">{{ l1.name }}</span>
-                            {% if l1.pic_name %}
-                                <span class="text-muted small ms-2"><i class="bi bi-person-fill text-secondary me-0.5"></i>{{ l1.pic_name }}</span>
-                            {% endif %}
-                            <span class="badge bg-light text-muted border font-mono" style="font-size:0.65rem;">{{ l1.children.count }} Sub-Unit</span>
-                        </div>
-                        <div class="d-flex align-items-center gap-1">
-                            <!-- TOMBOL TAMBAH SUB-UNIT LEVEL 2 DI BAWAH UNIT INI -->
-                            <button type="button" class="btn-add-sub" onclick="openAddUnitModal('{{ l1.id }}', '{{ l1.name|escapejs }} [{{ l1.code }}]', 2)" title="Tambah Sub-Unit di bawah {{ l1.name }}">
-                                <i class="bi bi-plus-lg"></i> Tambah Sub-Unit (L2)
-                            </button>
-                            <a href="{% url 'akreditasi:unit_edit' l1.id %}" class="btn btn-sm btn-outline-secondary py-0 px-2" style="font-size:0.75rem;" title="Edit Unit"><i class="bi bi-pencil"></i></a>
-                            <form method="post" action="{% url 'akreditasi:unit_delete' l1.id %}" class="d-inline" onsubmit="return confirm('Hapus unit {{ l1.name }} dan seluruh sub-unit di bawahnya?');">
-                                {% csrf_token %}
-                                <button type="submit" class="btn btn-sm btn-outline-danger py-0 px-2" style="font-size:0.75rem;" title="Hapus"><i class="bi bi-trash"></i></button>
-                            </form>
-                        </div>
-                    </div>
+        <div class="card-body p-3">
+            <div class="tab-content" id="unitViewTabContent">
 
-                    <!-- ================= LEVEL 2 ================= -->
-                    <div class="unit-tree-node-l2">
-                        {% for l2 in l1.children.all %}
-                            <div class="unit-node-wrapper mb-2" data-level="2" data-search="{{ l2.code|lower }} {{ l2.name|lower }} {{ l2.pic_name|default:''|lower }}">
-                                <div class="unit-card l2-card d-flex justify-content-between align-items-center">
+                <!-- ======================================================== -->
+                <!-- TAB 1: POHON LENGKAP (TREE VIEW) -->
+                <!-- ======================================================== -->
+                <div class="tab-pane fade show active" id="tab-all" role="tabpanel">
+                    <div id="treeList">
+                        {% for l1 in root_units %}
+                            <div class="tree-group mb-3 searchable-item" data-text="{{ l1.code|lower }} {{ l1.name|lower }} {{ l1.pic_name|default:''|lower }}">
+                                
+                                <!-- BARIS LEVEL 1 -->
+                                <div class="tree-l1 d-flex flex-wrap justify-content-between align-items-center gap-2">
                                     <div class="d-flex align-items-center gap-2">
-                                        <span class="badge level-badge-2 font-mono" style="font-size:0.65rem;">LEVEL 2</span>
-                                        <span class="fw-bold font-mono text-primary" style="font-size:0.8rem;">[{{ l2.code }}]</span>
-                                        <span class="fw-semibold text-dark" style="font-size:0.85rem;">{{ l2.name }}</span>
-                                        {% if l2.pic_name %}
-                                            <span class="text-muted small ms-1"><i class="bi bi-person text-secondary me-0.5"></i>{{ l2.pic_name }}</span>
+                                        <span class="badge level-badge-1 font-mono" style="font-size:0.7rem;">LEVEL 1</span>
+                                        <span class="fw-bold font-mono text-dark" style="font-size:0.88rem;">[{{ l1.code }}]</span>
+                                        <span class="fw-bold text-dark" style="font-size:0.95rem;">{{ l1.name }}</span>
+                                        {% if l1.pic_name %}
+                                            <span class="text-muted small ms-1"><i class="bi bi-person-fill text-secondary me-0.5"></i>{{ l1.pic_name }}</span>
                                         {% endif %}
-                                        <span class="badge bg-light text-muted border font-mono" style="font-size:0.62rem;">{{ l2.children.count }} Sub</span>
+                                        <span class="badge bg-white text-muted border font-mono" style="font-size:0.68rem;">{{ l1.children.count }} Sub-Bagian</span>
                                     </div>
-                                    <div class="d-flex align-items-center gap-1">
-                                        <!-- TOMBOL TAMBAH SUB-UNIT LEVEL 3 DI BAWAH UNIT INI -->
-                                        <button type="button" class="btn-add-sub" onclick="openAddUnitModal('{{ l2.id }}', '{{ l2.name|escapejs }} [{{ l2.code }}]', 3)" title="Tambah Sub-Unit di bawah {{ l2.name }}">
-                                            <i class="bi bi-plus-lg"></i> Tambah Sub-Unit (L3)
+                                    <div class="d-flex align-items-center gap-1.5">
+                                        <!-- TOMBOL TAMBAH SUB-UNIT LEVEL 2 -->
+                                        <button type="button" class="btn-add-sub" onclick="openAddUnitModal('{{ l1.id }}', '{{ l1.name|escapejs }} [{{ l1.code }}]', 2)" title="Tambah Sub-Unit di bawah {{ l1.name }}">
+                                            <i class="bi bi-plus-lg"></i> Tambah Sub-Unit (L2)
                                         </button>
-                                        <a href="{% url 'akreditasi:unit_edit' l2.id %}" class="btn btn-sm btn-outline-secondary py-0 px-1.5" style="font-size:0.72rem;" title="Edit"><i class="bi bi-pencil"></i></a>
-                                        <form method="post" action="{% url 'akreditasi:unit_delete' l2.id %}" class="d-inline" onsubmit="return confirm('Hapus unit {{ l2.name }}?');">
+                                        <a href="{% url 'akreditasi:unit_edit' l1.id %}" class="btn btn-sm btn-outline-secondary py-0 px-2" style="font-size:0.75rem;" title="Edit Unit"><i class="bi bi-pencil"></i></a>
+                                        <form method="post" action="{% url 'akreditasi:unit_delete' l1.id %}" class="d-inline" onsubmit="return confirm('Hapus unit {{ l1.name }} dan seluruh anak di bawahnya?');">
                                             {% csrf_token %}
-                                            <button type="submit" class="btn btn-sm btn-outline-danger py-0 px-1.5" style="font-size:0.72rem;" title="Hapus"><i class="bi bi-trash"></i></button>
+                                            <button type="submit" class="btn btn-sm btn-outline-danger py-0 px-2" style="font-size:0.75rem;" title="Hapus"><i class="bi bi-trash"></i></button>
                                         </form>
                                     </div>
                                 </div>
 
-                                <!-- ================= LEVEL 3 ================= -->
-                                <div class="unit-tree-node-l3">
-                                    {% for l3 in l2.children.all %}
-                                        <div class="unit-node-wrapper mb-1" data-level="3" data-search="{{ l3.code|lower }} {{ l3.name|lower }} {{ l3.pic_name|default:''|lower }}">
-                                            <div class="unit-card l3-card d-flex justify-content-between align-items-center py-1 px-2.5">
-                                                <div class="d-flex align-items-center gap-1.5">
-                                                    <span class="badge level-badge-3 font-mono" style="font-size:0.6rem;">L3</span>
-                                                    <span class="fw-bold font-mono text-teal" style="font-size:0.75rem;">[{{ l3.code }}]</span>
-                                                    <span class="text-dark" style="font-size:0.8rem;">{{ l3.name }}</span>
-                                                    {% if l3.pic_name %}
-                                                        <span class="text-muted" style="font-size:0.72rem;">&bull; {{ l3.pic_name }}</span>
+                                <!-- DAFTAR LEVEL 2 DI BAWAH L1 -->
+                                <div class="tree-l2-wrapper">
+                                    {% for l2 in l1.children.all %}
+                                        <div class="tree-l2-group mb-2 searchable-item" data-text="{{ l2.code|lower }} {{ l2.name|lower }} {{ l2.pic_name|default:''|lower }}">
+                                            
+                                            <!-- BARIS LEVEL 2 -->
+                                            <div class="tree-l2 d-flex flex-wrap justify-content-between align-items-center gap-2">
+                                                <div class="d-flex align-items-center gap-2">
+                                                    <span class="badge level-badge-2 font-mono" style="font-size:0.65rem;">LEVEL 2</span>
+                                                    <span class="fw-bold font-mono text-teal" style="font-size:0.82rem;">[{{ l2.code }}]</span>
+                                                    <span class="fw-semibold text-dark" style="font-size:0.88rem;">{{ l2.name }}</span>
+                                                    {% if l2.pic_name %}
+                                                        <span class="text-muted small ms-1"><i class="bi bi-person text-secondary me-0.5"></i>{{ l2.pic_name }}</span>
                                                     {% endif %}
+                                                    <span class="badge bg-light text-muted border font-mono" style="font-size:0.65rem;">{{ l2.children.count }} Ruangan</span>
                                                 </div>
-                                                <div class="d-flex align-items-center gap-1">
-                                                    <a href="{% url 'akreditasi:unit_edit' l3.id %}" class="btn btn-sm btn-outline-secondary py-0 px-1.5" style="font-size:0.68rem;" title="Edit"><i class="bi bi-pencil"></i></a>
-                                                    <form method="post" action="{% url 'akreditasi:unit_delete' l3.id %}" class="d-inline" onsubmit="return confirm('Hapus unit {{ l3.name }}?');">
+                                                <div class="d-flex align-items-center gap-1.5">
+                                                    <!-- TOMBOL TAMBAH SUB-UNIT LEVEL 3 -->
+                                                    <button type="button" class="btn-add-sub" onclick="openAddUnitModal('{{ l2.id }}', '{{ l2.name|escapejs }} [{{ l2.code }}]', 3)" title="Tambah Sub-Unit di bawah {{ l2.name }}">
+                                                        <i class="bi bi-plus-lg"></i> Tambah Sub-Unit (L3)
+                                                    </button>
+                                                    <a href="{% url 'akreditasi:unit_edit' l2.id %}" class="btn btn-sm btn-outline-secondary py-0 px-1.5" style="font-size:0.72rem;" title="Edit"><i class="bi bi-pencil"></i></a>
+                                                    <form method="post" action="{% url 'akreditasi:unit_delete' l2.id %}" class="d-inline" onsubmit="return confirm('Hapus unit {{ l2.name }}?');">
                                                         {% csrf_token %}
-                                                        <button type="submit" class="btn btn-sm btn-outline-danger py-0 px-1.5" style="font-size:0.68rem;" title="Hapus"><i class="bi bi-trash"></i></button>
+                                                        <button type="submit" class="btn btn-sm btn-outline-danger py-0 px-1.5" style="font-size:0.72rem;" title="Hapus"><i class="bi bi-trash"></i></button>
                                                     </form>
                                                 </div>
                                             </div>
+
+                                            <!-- DAFTAR LEVEL 3 DI BAWAH L2 -->
+                                            <div class="tree-l3-wrapper">
+                                                {% for l3 in l2.children.all %}
+                                                    <div class="tree-l3 d-flex justify-content-between align-items-center gap-2 searchable-item" data-text="{{ l3.code|lower }} {{ l3.name|lower }} {{ l3.pic_name|default:''|lower }}">
+                                                        <div class="d-flex align-items-center gap-2">
+                                                            <span class="badge level-badge-3 font-mono" style="font-size:0.6rem;">LEVEL 3</span>
+                                                            <span class="fw-bold font-mono text-dark" style="font-size:0.78rem;">[{{ l3.code }}]</span>
+                                                            <span class="text-dark" style="font-size:0.83rem;">{{ l3.name }}</span>
+                                                            {% if l3.pic_name %}
+                                                                <span class="text-muted" style="font-size:0.73rem;">&bull; {{ l3.pic_name }}</span>
+                                                            {% endif %}
+                                                        </div>
+                                                        <div class="d-flex align-items-center gap-1">
+                                                            <a href="{% url 'akreditasi:unit_edit' l3.id %}" class="btn btn-sm btn-outline-secondary py-0 px-1.5" style="font-size:0.68rem;" title="Edit"><i class="bi bi-pencil"></i></a>
+                                                            <form method="post" action="{% url 'akreditasi:unit_delete' l3.id %}" class="d-inline" onsubmit="return confirm('Hapus unit {{ l3.name }}?');">
+                                                                {% csrf_token %}
+                                                                <button type="submit" class="btn btn-sm btn-outline-danger py-0 px-1.5" style="font-size:0.68rem;" title="Hapus"><i class="bi bi-trash"></i></button>
+                                                            </form>
+                                                        </div>
+                                                    </div>
+                                                {% empty %}
+                                                    <div class="text-muted py-1 ps-2 mb-1 fst-italic" style="font-size:0.72rem; color:#94a3b8 !important;">
+                                                        <i class="bi bi-dash"></i> Belum ada sub-unit level 3. Klik tombol <code>+ Tambah Sub-Unit (L3)</code> untuk menambahkan.
+                                                    </div>
+                                                {% endfor %}
+                                            </div>
+
                                         </div>
                                     {% empty %}
-                                        <div class="text-muted py-1 ps-2 mb-1 fst-italic" style="font-size:0.72rem; color:#94a3b8 !important;">
-                                            <i class="bi bi-dash"></i> Belum ada sub-unit level 3. Klik tombol <code>+ Tambah Sub-Unit (L3)</code> di atas untuk menambahkan.
+                                        <div class="text-muted py-1 ps-2 mb-1 fst-italic" style="font-size:0.75rem; color:#94a3b8 !important;">
+                                            <i class="bi bi-dash"></i> Belum ada bagian level 2. Klik tombol <code>+ Tambah Sub-Unit (L2)</code> untuk menambahkan.
                                         </div>
                                     {% endfor %}
                                 </div>
+
                             </div>
                         {% empty %}
-                            <div class="text-muted py-1 ps-2 mb-1 fst-italic" style="font-size:0.75rem; color:#94a3b8 !important;">
-                                <i class="bi bi-dash"></i> Belum ada bagian level 2. Klik tombol <code>+ Tambah Sub-Unit (L2)</code> di atas untuk menambahkan.
+                            <div class="text-center py-5 text-muted">
+                                Belum ada unit kerja terdaftar.
                             </div>
                         {% endfor %}
                     </div>
                 </div>
-            {% empty %}
-                <div class="text-center py-5 text-muted">
-                    <i class="bi bi-diagram-3 d-block mb-2" style="font-size:2.5rem; color:#cbd5e1;"></i>
-                    <p class="mb-2">Belum ada Unit Kerja terdaftar.</p>
-                    <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#modalAddUnit" onclick="openAddUnitModal(null, null, 1)">
-                        <i class="bi bi-plus-circle"></i> Tambah Unit Pertama
-                    </button>
+
+                <!-- ======================================================== -->
+                <!-- TAB 2: KHUSUS LEVEL 1 (PIMPINAN / DEWAS) -->
+                <!-- ======================================================== -->
+                <div class="tab-pane fade" id="tab-l1" role="tabpanel">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0" style="font-size:0.83rem;">
+                            <thead class="table-light">
+                                <tr>
+                                    <th style="width:110px;">Kode Unit</th>
+                                    <th>Nama Unit Kerja (Level 1 — Puncak)</th>
+                                    <th>Penanggung Jawab (PIC)</th>
+                                    <th>Sub-Bagian (L2)</th>
+                                    <th class="text-end" style="width:230px;">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for u in units_l1 %}
+                                <tr class="searchable-item" data-text="{{ u.code|lower }} {{ u.name|lower }} {{ u.pic_name|default:''|lower }}">
+                                    <td><span class="badge level-badge-1 font-mono">[{{ u.code }}]</span></td>
+                                    <td class="fw-bold text-dark">{{ u.name }}</td>
+                                    <td class="text-muted">{{ u.pic_name|default:"—" }}</td>
+                                    <td>
+                                        <span class="badge bg-light text-dark border">{{ u.children.count }} Sub-Unit</span>
+                                    </td>
+                                    <td class="text-end">
+                                        <button type="button" class="btn-add-sub" onclick="openAddUnitModal('{{ u.id }}', '{{ u.name|escapejs }} [{{ u.code }}]', 2)">
+                                            <i class="bi bi-plus-lg"></i> Tambah Sub (L2)
+                                        </button>
+                                        <a href="{% url 'akreditasi:unit_edit' u.id %}" class="btn btn-sm btn-outline-secondary py-0 px-2 ms-1"><i class="bi bi-pencil"></i></a>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr><td colspan="5" class="text-center py-4 text-muted">Tidak ada unit Level 1.</td></tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
-            {% endfor %}
+
+                <!-- ======================================================== -->
+                <!-- TAB 3: KHUSUS LEVEL 2 (DIREKTORAT / KOMITE) -->
+                <!-- ======================================================== -->
+                <div class="tab-pane fade" id="tab-l2" role="tabpanel">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0" style="font-size:0.83rem;">
+                            <thead class="table-light">
+                                <tr>
+                                    <th style="width:110px;">Kode Unit</th>
+                                    <th>Nama Unit Kerja (Level 2 — Direktorat / Komite)</th>
+                                    <th>Induk Pimpinan (Level 1)</th>
+                                    <th>Sub-Unit (L3)</th>
+                                    <th class="text-end" style="width:230px;">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for u in units_l2 %}
+                                <tr class="searchable-item" data-text="{{ u.code|lower }} {{ u.name|lower }} {{ u.parent.name|default:''|lower }}">
+                                    <td><span class="badge level-badge-2 font-mono">[{{ u.code }}]</span></td>
+                                    <td class="fw-semibold text-dark">{{ u.name }}</td>
+                                    <td>
+                                        {% if u.parent %}
+                                            <span class="badge bg-light text-dark border"><i class="bi bi-arrow-up-right me-0.5"></i>{{ u.parent.name }}</span>
+                                        {% else %}
+                                            <span class="text-muted">—</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-light text-dark border">{{ u.children.count }} Ruang</span>
+                                    </td>
+                                    <td class="text-end">
+                                        <button type="button" class="btn-add-sub" onclick="openAddUnitModal('{{ u.id }}', '{{ u.name|escapejs }} [{{ u.code }}]', 3)">
+                                            <i class="bi bi-plus-lg"></i> Tambah Sub (L3)
+                                        </button>
+                                        <a href="{% url 'akreditasi:unit_edit' u.id %}" class="btn btn-sm btn-outline-secondary py-0 px-2 ms-1"><i class="bi bi-pencil"></i></a>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr><td colspan="5" class="text-center py-4 text-muted">Tidak ada unit Level 2.</td></tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- ======================================================== -->
+                <!-- TAB 4: KHUSUS LEVEL 3 (INSTALASI / KSM / RUANGAN) -->
+                <!-- ======================================================== -->
+                <div class="tab-pane fade" id="tab-l3" role="tabpanel">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0" style="font-size:0.83rem;">
+                            <thead class="table-light">
+                                <tr>
+                                    <th style="width:110px;">Kode Unit</th>
+                                    <th>Nama Unit Kerja (Level 3 — Instalasi / Ruangan)</th>
+                                    <th>Induk Bagian (Level 2)</th>
+                                    <th>Induk Puncak (Level 1)</th>
+                                    <th>Penanggung Jawab</th>
+                                    <th class="text-end" style="width:100px;">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for u in units_l3 %}
+                                <tr class="searchable-item" data-text="{{ u.code|lower }} {{ u.name|lower }} {{ u.parent.name|default:''|lower }} {{ u.pic_name|default:''|lower }}">
+                                    <td><span class="badge level-badge-3 font-mono">[{{ u.code }}]</span></td>
+                                    <td class="text-dark">{{ u.name }}</td>
+                                    <td>
+                                        {% if u.parent %}
+                                            <span class="badge bg-light text-dark border">{{ u.parent.name }}</span>
+                                        {% else %}
+                                            <span class="text-muted">—</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if u.parent.parent %}
+                                            <span class="badge bg-light text-muted border">{{ u.parent.parent.name }}</span>
+                                        {% else %}
+                                            <span class="text-muted">—</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="text-muted">{{ u.pic_name|default:"—" }}</td>
+                                    <td class="text-end">
+                                        <a href="{% url 'akreditasi:unit_edit' u.id %}" class="btn btn-sm btn-outline-secondary py-0 px-2"><i class="bi bi-pencil"></i></a>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr><td colspan="6" class="text-center py-4 text-muted">Tidak ada unit Level 3.</td></tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+            </div>
         </div>
     </div>
 
@@ -356,8 +534,16 @@
     </div>
 </div>
 
-<!-- JAVASCRIPT LOGIC POHON & MODAL -->
+<!-- JAVASCRIPT TAB & MODAL -->
 <script>
+    function switchNavTab(tabId) {
+        const btn = document.getElementById(tabId + '-btn');
+        if (btn) {
+            const trigger = new bootstrap.Tab(btn);
+            trigger.show();
+        }
+    }
+
     function openAddUnitModal(parentId, parentName, targetLevel) {
         const modal = new bootstrap.Modal(document.getElementById('modalAddUnit'));
         const parentSelect = document.getElementById('id_parent');
@@ -401,36 +587,21 @@
         }
     }
 
-    // Real-time Search
-    document.getElementById('unitSearchInput').addEventListener('input', function(e) {
+    // Live search di tab aktif
+    document.getElementById('tabSearchInput').addEventListener('input', function(e) {
         const q = e.target.value.toLowerCase().trim();
-        const wrappers = document.querySelectorAll('.unit-node-wrapper');
+        const activePane = document.querySelector('.tab-pane.active');
+        if (!activePane) return;
 
-        wrappers.forEach(el => {
-            const searchData = el.getAttribute('data-search') || '';
-            if (!q || searchData.includes(q)) {
+        const items = activePane.querySelectorAll('.searchable-item');
+        items.forEach(el => {
+            const text = el.getAttribute('data-text') || '';
+            if (!q || text.includes(q)) {
                 el.style.display = '';
             } else {
                 el.style.display = 'none';
             }
         });
     });
-
-    // Level Filter
-    function filterLevel(level, btn) {
-        // Update active class
-        document.querySelectorAll('.btn-group .btn').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-
-        const wrappers = document.querySelectorAll('.unit-node-wrapper');
-        wrappers.forEach(el => {
-            const elLevel = el.getAttribute('data-level');
-            if (level === 'all' || elLevel === level) {
-                el.style.display = '';
-            } else {
-                el.style.display = 'none';
-            }
-        });
-    }
 </script>
 {% endblock %}
