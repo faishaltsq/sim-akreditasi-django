@@ -1,0 +1,804 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panduan Pengguna — RS MonsisKami | SIM Akreditasi Tipe B</title>
+    <!-- Google Fonts & Font Awesome -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    
+    <style>
+        :root {
+            --primary: #0d9488;
+            --primary-dark: #0f766e;
+            --primary-light: #ccfbf1;
+            --accent: #14b8a6;
+            --text-dark: #0f172a;
+            --text-muted: #64748b;
+            --bg-body: #f8fafc;
+            --card-bg: #ffffff;
+            --border: #e2e8f0;
+            --radius-md: 10px;
+            --radius-lg: 16px;
+            --shadow-sm: 0 1px 3px rgba(0,0,0,0.06);
+            --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.08), 0 2px 4px -2px rgba(0,0,0,0.04);
+            --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.1);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: var(--bg-body);
+            color: var(--text-dark);
+            line-height: 1.65;
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* SIDEBAR NAVIGATION */
+        .doc-sidebar {
+            width: 290px;
+            background: #ffffff;
+            border-right: 1px solid var(--border);
+            position: fixed;
+            top: 0;
+            bottom: 0;
+            left: 0;
+            display: flex;
+            flex-direction: column;
+            z-index: 100;
+            overflow-y: auto;
+        }
+
+        .brand-header {
+            padding: 24px 20px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: linear-gradient(180deg, #f0fdfa 0%, #ffffff 100%);
+        }
+
+        .brand-logo {
+            width: 42px;
+            height: 42px;
+            background: var(--primary);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #ffffff;
+            font-size: 1.25rem;
+            box-shadow: 0 4px 10px rgba(13, 148, 136, 0.3);
+        }
+
+        .brand-text h1 {
+            font-size: 0.95rem;
+            font-weight: 800;
+            color: var(--text-dark);
+            letter-spacing: -0.01em;
+            line-height: 1.2;
+        }
+
+        .brand-text p {
+            font-size: 0.72rem;
+            color: var(--primary-dark);
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .search-box {
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .search-input-wrapper {
+            position: relative;
+        }
+
+        .search-input-wrapper i {
+            position: absolute;
+            left: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-muted);
+            font-size: 0.85rem;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 8px 12px 8px 36px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-size: 0.85rem;
+            outline: none;
+            transition: all 0.2s;
+            font-family: inherit;
+        }
+
+        .search-input:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.15);
+        }
+
+        .doc-nav {
+            padding: 16px 12px;
+            flex: 1;
+        }
+
+        .nav-category {
+            font-size: 0.7rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--text-muted);
+            margin: 16px 8px 6px 8px;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 9px 12px;
+            border-radius: 8px;
+            color: #475569;
+            text-decoration: none;
+            font-size: 0.85rem;
+            font-weight: 500;
+            transition: all 0.2s;
+            margin-bottom: 2px;
+        }
+
+        .nav-item i {
+            width: 18px;
+            font-size: 0.95rem;
+            color: var(--text-muted);
+            transition: color 0.2s;
+        }
+
+        .nav-item:hover {
+            background-color: #f1f5f9;
+            color: var(--text-dark);
+        }
+
+        .nav-item:hover i {
+            color: var(--primary);
+        }
+
+        .nav-item.active {
+            background-color: var(--primary-light);
+            color: var(--primary-dark);
+            font-weight: 600;
+        }
+
+        .nav-item.active i {
+            color: var(--primary);
+        }
+
+        /* MAIN CONTENT */
+        .doc-content {
+            margin-left: 290px;
+            flex: 1;
+            padding: 40px 48px 80px;
+            max-width: 1100px;
+        }
+
+        .content-header {
+            margin-bottom: 36px;
+            padding-bottom: 24px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+        }
+
+        .content-header h2 {
+            font-size: 1.85rem;
+            font-weight: 800;
+            color: var(--text-dark);
+            letter-spacing: -0.02em;
+            margin-bottom: 6px;
+        }
+
+        .content-header p {
+            color: var(--text-muted);
+            font-size: 0.95rem;
+        }
+
+        .btn-print {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: #ffffff;
+            border: 1px solid var(--border);
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--text-dark);
+            cursor: pointer;
+            transition: all 0.2s;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .btn-print:hover {
+            border-color: var(--primary);
+            color: var(--primary);
+            background: #f0fdfa;
+        }
+
+        /* SECTION CARDS */
+        .section-block {
+            background: var(--card-bg);
+            border-radius: var(--radius-lg);
+            border: 1px solid var(--border);
+            padding: 32px;
+            margin-bottom: 32px;
+            box-shadow: var(--shadow-sm);
+            scroll-margin-top: 24px;
+        }
+
+        .section-title {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 1.35rem;
+            font-weight: 700;
+            color: var(--text-dark);
+            margin-bottom: 18px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid #f1f5f9;
+        }
+
+        .section-icon {
+            width: 38px;
+            height: 38px;
+            border-radius: 8px;
+            background: var(--primary-light);
+            color: var(--primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.1rem;
+        }
+
+        /* TABLES */
+        .doc-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.85rem;
+            margin: 18px 0;
+            background: #ffffff;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: var(--shadow-sm);
+            border: 1px solid var(--border);
+        }
+
+        .doc-table th {
+            background: #f8fafc;
+            color: #334155;
+            font-weight: 700;
+            text-align: left;
+            padding: 12px 14px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .doc-table td {
+            padding: 12px 14px;
+            border-bottom: 1px solid #f1f5f9;
+            color: #334155;
+            vertical-align: middle;
+        }
+
+        .doc-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .doc-table tr:hover td {
+            background-color: #f8fafc;
+        }
+
+        /* BADGES */
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 3px 8px;
+            border-radius: 6px;
+            font-size: 0.72rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+        }
+
+        .badge-r { background: #dbeafe; color: #1e40af; border: 1px solid #93c5fd; }
+        .badge-d { background: #dcfce7; color: #166534; border: 1px solid #86efac; }
+        .badge-w { background: #ffedd5; color: #9a3412; border: 1px solid #fdba74; }
+        .badge-o { background: #fef9c3; color: #854d0e; border: 1px solid #fde047; }
+        .badge-s { background: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; }
+
+        .badge-paripurna { background: #dcfce7; color: #15803d; border: 1px solid #86efac; }
+        .badge-utama { background: #dbeafe; color: #1d4ed8; border: 1px solid #93c5fd; }
+        .badge-madya { background: #fef3c7; color: #b45309; border: 1px solid #fcd34d; }
+        .badge-dasar { background: #fee2e2; color: #b91c1c; border: 1px solid #fca5a5; }
+
+        .code-pill {
+            font-family: 'JetBrains Mono', monospace;
+            background: #f1f5f9;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            color: #0f172a;
+            border: 1px solid #e2e8f0;
+        }
+
+        /* CALLOUTS */
+        .callout {
+            padding: 16px 20px;
+            border-radius: 8px;
+            margin: 18px 0;
+            display: flex;
+            gap: 14px;
+            align-items: flex-start;
+            font-size: 0.875rem;
+        }
+
+        .callout-info {
+            background-color: #f0fdfa;
+            border-left: 4px solid var(--primary);
+            color: #0f766e;
+        }
+
+        .callout-warning {
+            background-color: #fffbeb;
+            border-left: 4px solid #f59e0b;
+            color: #92400e;
+        }
+
+        .callout i {
+            font-size: 1.1rem;
+            margin-top: 2px;
+        }
+
+        /* STEPS LIST */
+        .step-list {
+            list-style: none;
+            counter-reset: step-counter;
+            margin: 18px 0;
+        }
+
+        .step-item {
+            position: relative;
+            padding-left: 44px;
+            margin-bottom: 20px;
+        }
+
+        .step-item::before {
+            counter-increment: step-counter;
+            content: counter(step-counter);
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: var(--primary);
+            color: #ffffff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 0.8rem;
+        }
+
+        .step-title {
+            font-weight: 700;
+            color: var(--text-dark);
+            margin-bottom: 4px;
+            font-size: 0.95rem;
+        }
+
+        .step-desc {
+            color: #475569;
+            font-size: 0.875rem;
+        }
+
+        /* PRINT STYLES */
+        @media print {
+            .doc-sidebar, .btn-print, .search-box {
+                display: none !important;
+            }
+            body {
+                background: #ffffff;
+                color: #000000;
+            }
+            .doc-content {
+                margin-left: 0 !important;
+                padding: 0 !important;
+                max-width: 100% !important;
+            }
+            .section-block {
+                box-shadow: none !important;
+                border: 1px solid #ccc !important;
+                page-break-inside: avoid;
+                margin-bottom: 20px;
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- SIDEBAR -->
+    <aside class="doc-sidebar">
+        <div class="brand-header">
+            <div class="brand-logo">
+                <i class="fa-solid fa-hospital"></i>
+            </div>
+            <div class="brand-text">
+                <h1>RS MonsisKami</h1>
+                <p>Panduan SIM Akreditasi</p>
+            </div>
+        </div>
+
+        <div class="search-box">
+            <div class="search-input-wrapper">
+                <i class="fa-solid fa-magnifying-glass"></i>
+                <input type="text" id="docSearch" class="search-input" placeholder="Cari fitur, role, cara...">
+            </div>
+        </div>
+
+        <nav class="doc-nav">
+            <div class="nav-category">Navigasi Utama</div>
+            <a href="#quickstart" class="nav-item active"><i class="fa-solid fa-bolt"></i> 01. Mulai Cepat</a>
+            <a href="#rdwos" class="nav-item"><i class="fa-solid fa-folder-tree"></i> 02. Dokumen RDWOS</a>
+            <a href="#pdca" class="nav-item"><i class="fa-solid fa-chart-pie"></i> 03. Matriks & Scoring</a>
+            <a href="#risiko" class="nav-item"><i class="fa-solid fa-shield-halved"></i> 04. Risiko & Insiden</a>
+            <a href="#organisasi" class="nav-item"><i class="fa-solid fa-sitemap"></i> 05. 65 Unit & Nakes</a>
+            <a href="#update-sop" class="nav-item"><i class="fa-solid fa-code-branch"></i> 06. SOP Update Fitur</a>
+        </nav>
+    </aside>
+
+    <!-- CONTENT -->
+    <main class="doc-content">
+        <header class="content-header">
+            <div>
+                <h2>Panduan Penggunaan Sistem Akreditasi</h2>
+                <p>Aplikasi Dokumen Manajemen & Akreditasi RS MonsisKami (Tipe B) — Standar KARS / STARKES</p>
+            </div>
+            <button class="btn-print" onclick="window.print()">
+                <i class="fa-solid fa-print"></i> Cetak / Simpan PDF
+            </button>
+        </header>
+
+        <!-- 01. QUICKSTART -->
+        <section id="quickstart" class="section-block">
+            <div class="section-title">
+                <div class="section-icon"><i class="fa-solid fa-bolt"></i></div>
+                <span>01. Panduan Mulai Cepat (Quickstart)</span>
+            </div>
+            
+            <p>Sistem ini dirancang khusus untuk mempermudah rumah sakit dalam menyiapkan akreditasi STARKES melalui siklus PDCA digital yang terpusat.</p>
+
+            <div class="callout callout-info">
+                <i class="fa-solid fa-circle-info"></i>
+                <div>
+                    <strong>Alamat Website Resmi:</strong> Akses aplikasi melalui link:
+                    <a href="https://sim-akreditasi-web-production.up.railway.app" target="_blank" style="color:var(--primary-dark); font-weight:700; text-decoration:underline;">
+                        sim-akreditasi-web-production.up.railway.app
+                    </a>
+                </div>
+            </div>
+
+            <h3 style="font-size:1.05rem; margin: 20px 0 10px; font-weight:700;">13 Akun Demo Sesuai Peran:</h3>
+            <div style="overflow-x:auto;">
+                <table class="doc-table">
+                    <thead>
+                        <tr>
+                            <th>Username</th>
+                            <th>Role / Jabatan</th>
+                            <th>Akses Utama</th>
+                            <th>Password</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr><td><span class="code-pill">admin</span></td><td>Super Admin</td><td>Akses penuh data master & setelan</td><td><span class="code-pill">admin123</span></td></tr>
+                        <tr><td><span class="code-pill">admin.mutu</span></td><td>Admin Mutu</td><td>Monitoring PDCA & scoring KARS</td><td><span class="code-pill">Mutu@1234</span></td></tr>
+                        <tr><td><span class="code-pill">koord.tkrs</span></td><td>Koord. TKRS</td><td>Kelola dokumen Tata Kelola RS</td><td><span class="code-pill">Tkrs@1234</span></td></tr>
+                        <tr><td><span class="code-pill">koord.pmkp</span></td><td>Koord. PMKP</td><td>Kelola indikator mutu & keselamatan</td><td><span class="code-pill">Pmkp@1234</span></td></tr>
+                        <tr><td><span class="code-pill">koord.kps</span></td><td>Koord. KPS</td><td>Kualifikasi & Pendidikan Staf</td><td><span class="code-pill">Kps@1234</span></td></tr>
+                        <tr><td><span class="code-pill">ka.ranap</span></td><td>Ka. Ruang Ranap</td><td>Register risiko rawat inap</td><td><span class="code-pill">Ranap@1234</span></td></tr>
+                        <tr><td><span class="code-pill">ka.farmasi</span></td><td>Ka. Farmasi</td><td>Regulasi LASA & high alert</td><td><span class="code-pill">Farmasi@1234</span></td></tr>
+                        <tr><td><span class="code-pill">ka.lab</span></td><td>Ka. Laboratorium</td><td>Kalibrasi & bukti PMI/PME</td><td><span class="code-pill">Lab@1234</span></td></tr>
+                        <tr><td><span class="code-pill">perawat.igd</span></td><td>Perawat (IGD)</td><td>Smart Redirect ke Portal Nakes</td><td><span class="code-pill">Perawat@1234</span></td></tr>
+                        <tr><td><span class="code-pill">dokter.spesialis</span></td><td>Dokter Spesialis</td><td>Smart Redirect ke Portal Nakes</td><td><span class="code-pill">Dokter@1234</span></td></tr>
+                        <tr><td><span class="code-pill">apoteker.farmasi</span></td><td>Apoteker Klinis</td><td>Smart Redirect ke Portal Nakes</td><td><span class="code-pill">Apoteker@1234</span></td></tr>
+                        <tr><td><span class="code-pill">analis.lab</span></td><td>Analis Kesehatan</td><td>Smart Redirect ke Portal Nakes</td><td><span class="code-pill">Analis@1234</span></td></tr>
+                        <tr><td><span class="code-pill">asesor.kars</span></td><td>Asesor KARS</td><td>Simulasi penilaian akreditasi</td><td><span class="code-pill">Asesor@1234</span></td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- 02. RDWOS -->
+        <section id="rdwos" class="section-block">
+            <div class="section-title">
+                <div class="section-icon"><i class="fa-solid fa-folder-tree"></i></div>
+                <span>02. Manajemen Dokumen Akreditasi (RDWOS)</span>
+            </div>
+            
+            <p>Setiap bukti kepatuhan dikelompokkan ke dalam standar baku <strong>R-D-W-O-S</strong>:</p>
+
+            <table class="doc-table">
+                <thead>
+                    <tr>
+                        <th style="width:70px;">Kode</th>
+                        <th>Kategori</th>
+                        <th>Badge</th>
+                        <th>Penjelasan & Contoh Berkas</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>R</strong></td>
+                        <td>Regulasi</td>
+                        <td><span class="badge badge-r">R - Regulasi</span></td>
+                        <td>SK Direktur, Kebijakan Pelayanan, Pedoman Kerja, dan Standar Prosedur Operasional (SPO).</td>
+                    </tr>
+                    <tr>
+                        <td><strong>D</strong></td>
+                        <td>Dokumen</td>
+                        <td><span class="badge badge-d">D - Dokumen</span></td>
+                        <td>Bukti tertulis pelaksanaan kegiatan (Formulir asesmen, notulen rapat koordinasi, rekam medis).</td>
+                    </tr>
+                    <tr>
+                        <td><strong>W</strong></td>
+                        <td>Wawancara</td>
+                        <td><span class="badge badge-w">W - Wawancara</span></td>
+                        <td>Catatan wawancara surveior terhadap staf, pasien, pimpinan, atau keluarga pasien.</td>
+                    </tr>
+                    <tr>
+                        <td><strong>O</strong></td>
+                        <td>Observasi</td>
+                        <td><span class="badge badge-o">O - Observasi</span></td>
+                        <td>Foto/video bukti visual di lapangan (kondisi APAR, penandaan obat LASA, tanda cuci tangan).</td>
+                    </tr>
+                    <tr>
+                        <td><strong>S</strong></td>
+                        <td>Simulasi</td>
+                        <td><span class="badge badge-s">S - Simulasi</span></td>
+                        <td>Laporan dan video pelaksanaan simulasi darurat (Code Blue, Code Red, evakuasi bencana).</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h3 style="font-size:1.05rem; margin: 24px 0 12px; font-weight:700;">Cara Mengunggah Bukti:</h3>
+            <ol class="step-list">
+                <li class="step-item">
+                    <div class="step-title">Buka Matriks PDCA</div>
+                    <div class="step-desc">Pilih Pokja dan Standar yang ingin dilengkapi dokumennya.</div>
+                </li>
+                <li class="step-item">
+                    <div class="step-title">Klik Ikon Klip Kertas (📎)</div>
+                    <div class="step-desc">Pilih baris Elemen Penilaian (EP) yang sesuai, lalu klik ikon upload.</div>
+                </li>
+                <li class="step-item">
+                    <div class="step-title">Pilih Jenis R-D-W-O-S & Berkas</div>
+                    <div class="step-desc">Tentukan jenis dokumen, beri nama judul, dan pilih file berkas (maksimal 15 MB).</div>
+                </li>
+                <li class="step-item">
+                    <div class="step-title">Simpan Berkas</div>
+                    <div class="step-desc">Dokumen langsung terunggah ke Supabase Cloud Storage dan diberi badge warna otomatis.</div>
+                </li>
+            </ol>
+        </section>
+
+        <!-- 03. PDCA & SCORING -->
+        <section id="pdca" class="section-block">
+            <div class="section-title">
+                <div class="section-icon"><i class="fa-solid fa-chart-pie"></i></div>
+                <span>03. Matriks PDCA & Auto-Scoring KARS</span>
+            </div>
+
+            <p>Pengelolaan akreditasi dilakukan dengan pendekatan siklus mutu berkesinambungan 7-Kolom:</p>
+
+            <table class="doc-table">
+                <thead>
+                    <tr>
+                        <th>Kolom Matriks</th>
+                        <th>Uraian Pengisian</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr><td><strong>1. EP / Kode</strong></td><td>Kode Elemen Penilaian STARKES (misal: PMKP.1 EP 1).</td></tr>
+                    <tr><td><strong>2. PLAN</strong></td><td>Regulasi yang mendasari, kebijakan RS, dan Rencana Kerja Anggaran.</td></tr>
+                    <tr><td><strong>3. DO</strong></td><td>Bukti implementasi di unit kerja pelayanan atau manajerial.</td></tr>
+                    <tr><td><strong>4. CHECK</strong></td><td>Hasil monitoring berkala, audit internal, dan pencapaian target indikator.</td></tr>
+                    <tr><td><strong>5. ACTION</strong></td><td>Tindak lanjut perbaikan (RTL, RTM, rekomendasi CPAR).</td></tr>
+                    <tr><td><strong>6. Bukti RDWOS</strong></td><td>Tautan file berkas pembuktian yang telah terunggah.</td></tr>
+                    <tr><td><strong>7. Skor EP</strong></td><td>Penilaian mandiri: <strong>10</strong> (Tercapai), <strong>5</strong> (Sebagian), <strong>0</strong> (Tidak).</td></tr>
+                </tbody>
+            </table>
+
+            <h3 style="font-size:1.05rem; margin: 24px 0 12px; font-weight:700;">Tingkat Kelulusan Akreditasi (Auto-Scoring):</h3>
+            <table class="doc-table">
+                <thead>
+                    <tr>
+                        <th>Predikat</th>
+                        <th>Syarat Capaian Skor</th>
+                        <th>Keterangan</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><span class="badge badge-paripurna">Paripurna ⭐⭐⭐⭐</span></td>
+                        <td><strong>≥ 80%</strong></td>
+                        <td>Seluruh bab/pokja memenuhi standar mutu tertinggi KARS.</td>
+                    </tr>
+                    <tr>
+                        <td><span class="badge badge-utama">Utama ⭐⭐⭐</span></td>
+                        <td><strong>≥ 60%</strong></td>
+                        <td>Memenuhi standar utama dengan sedikit rekomendasi perbaikan.</td>
+                    </tr>
+                    <tr>
+                        <td><span class="badge badge-madya">Madya ⭐⭐</span></td>
+                        <td><strong>≥ 40%</strong></td>
+                        <td>Standar madya terpenuhi.</td>
+                    </tr>
+                    <tr>
+                        <td><span class="badge badge-dasar">Dasar ⭐</span></td>
+                        <td><strong>≥ 20%</strong></td>
+                        <td>Kelulusan tingkat dasar.</td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+
+        <!-- 04. RISIKO & INSIDEN -->
+        <section id="risiko" class="section-block">
+            <div class="section-title">
+                <div class="section-icon"><i class="fa-solid fa-shield-halved"></i></div>
+                <span>04. Manajemen Risiko & Laporan Insiden</span>
+            </div>
+
+            <h3 style="font-size:1.05rem; margin-bottom: 10px; font-weight:700;">1. Register Risiko 5×5 Kemenkes:</h3>
+            <p>Perhitungan skor risiko otomatis berdasarkan interaksi dua variabel:</p>
+            <div class="callout callout-info">
+                <div>
+                    <strong>Formula Skor:</strong> <code>Skor Risiko = Nilai Dampak (1–5) × Nilai Probabilitas (1–5)</code><br>
+                    Skor <strong>1–3 (Rendah)</strong> | Skor <strong>4–9 (Sedang)</strong> | Skor <strong>10–14 (Tinggi)</strong> | Skor <strong>15–25 (Ekstrem)</strong>
+                </div>
+            </div>
+
+            <h3 style="font-size:1.05rem; margin: 24px 0 10px; font-weight:700;">2. Pelaporan Insiden Keselamatan Pasien (Anonim):</h3>
+            <p>Mendukung <em>Just Culture</em> — laporkan setiap insiden tanpa takut sanksi:</p>
+            <table class="doc-table">
+                <thead>
+                    <tr>
+                        <th>Kategori</th>
+                        <th>Nama Insiden</th>
+                        <th>Penjelasan</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr><td><strong>KNC</strong></td><td>Kejadian Nyaris Celaka</td><td>Terjadi insiden tetapi belum sampai terpapar pada pasien.</td></tr>
+                    <tr><td><strong>KTC</strong></td><td>Kejadian Tidak Cedera</td><td>Sudah terpapar pada pasien, namun tidak menimbulkan cedera.</td></tr>
+                    <tr><td><strong>KPC</strong></td><td>Kondisi Potensial Cedera</td><td>Kondisi/sarana yang berpotensi tinggi memicu terjadinya insiden.</td></tr>
+                    <tr><td><strong>KTD</strong></td><td>Kejadian Tidak Diharapkan</td><td>Insiden yang mengakibatkan cedera fisik/mental pada pasien.</td></tr>
+                    <tr><td><strong>Sentinel</strong></td><td>Kejadian Sentinel</td><td>Insiden tidak terduga yang mengakibatkan kematian atau cacat permanen.</td></tr>
+                </tbody>
+            </table>
+        </section>
+
+        <!-- 05. STRUKTUR & NAKES -->
+        <section id="organisasi" class="section-block">
+            <div class="section-title">
+                <div class="section-icon"><i class="fa-solid fa-sitemap"></i></div>
+                <span>05. Struktur Organisasi 65 Unit & Portal Nakes</span>
+            </div>
+
+            <p>RS MonsisKami memiliki struktur komprehensif Rumah Sakit Tipe B yang mencakup:</p>
+            <ul style="padding-left: 20px; font-size:0.875rem; margin-bottom: 20px; color:#334155;">
+                <li><strong>Tata Kelola & Pengawasan:</strong> Pemilik RS, Dewan Pengawas (Dewas), SPI.</li>
+                <li><strong>6 Komite Rumah Sakit:</strong> Komite Medis, Keperawatan, Mutu (PMKP), PPI, Etik & Hukum, Farmasi & Terapi.</li>
+                <li><strong>Pelayanan Medik & 14 KSM:</strong> KSM Penyakit Dalam, Bedah, Anak, Obsgin, Anestesi, Saraf, Jantung, Mata, THT, Kulit, Ortopedi, Paru, Radiologi, Patologi Klinik.</li>
+                <li><strong>Instalasi Penunjang & Umum:</strong> Farmasi, Lab, Radiologi, CSSD, Gizi, Rekam Medis, IPSRS, IT, Kesling/K3RS.</li>
+                <li><strong>Pendidikan & Penelitian:</strong> Bagian Diklit dan Diklat Staf.</li>
+            </ul>
+
+            <h3 style="font-size:1.05rem; margin-bottom: 10px; font-weight:700;">Portal Portofolio Nakes:</h3>
+            <p>Dokter, perawat, bidan, dan analis dapat langsung login dan mengunggah:</p>
+            <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:10px;">
+                <span class="code-pill">📜 STR (Registrasi)</span>
+                <span class="code-pill">📑 SIP / SIK (Praktik/Kerja)</span>
+                <span class="code-pill">🩺 SPK & RKK (Kewenangan Klinis)</span>
+                <span class="code-pill">🎓 Ijazah Terakhir</span>
+                <span class="code-pill">🎖️ Sertifikat Pelatihan</span>
+            </div>
+        </section>
+
+        <!-- 06. SOP UPDATE FITUR -->
+        <section id="update-sop" class="section-block">
+            <div class="section-title">
+                <div class="section-icon"><i class="fa-solid fa-code-branch"></i></div>
+                <span>06. SOP Pembaruan Fitur & Dokumentasi</span>
+            </div>
+
+            <div class="callout callout-warning">
+                <i class="fa-solid fa-triangle-exclamation"></i>
+                <div>
+                    <strong>Aturan Wajib Developer:</strong> Setiap deploy fitur baru ke production HARUS diiringi dengan penambahan dokumentasi di folder <code>docs/</code> dan update riwayat rilis.
+                </div>
+            </div>
+
+            <h3 style="font-size:1.05rem; margin: 20px 0 10px; font-weight:700;">Langkah Update Saat Ada Fitur Baru:</h3>
+            <ol class="step-list">
+                <li class="step-item">
+                    <div class="step-title">Perbarui File Markdown Terkait</div>
+                    <div class="step-desc">Tambahkan panduan pemakaian fitur baru ke dalam salah satu file <code>docs/01_*.md</code> s.d. <code>05_*.md</code>, atau buat file baru <code>docs/0X_*.md</code> jika berupa modul baru.</div>
+                </li>
+                <li class="step-item">
+                    <div class="step-title">Catat di Log Rilis Fitur</div>
+                    <div class="step-desc">Buka file <code>docs/06_STANDAR_OPERASIONAL_UPDATE_FITUR.md</code> dan tambahkan satu baris baru di tabel <strong>Log Rilis Fitur</strong> (versi, tanggal, hash commit, deskripsi).</div>
+                </li>
+                <li class="step-item">
+                    <div class="step-title">Tambahkan Section di Dokumen HTML</div>
+                    <div class="step-desc">Buka <code>docs/PANDUAN_LENGKAP_RS_MONSISKAMI.html</code>, tambahkan link navigasi di sidebar dan card section baru.</div>
+                </li>
+                <li class="step-item">
+                    <div class="step-title">Commit & Push ke GitHub</div>
+                    <div class="step-desc">Gunakan pesan commit: <code>docs(scope): update panduan fitur [nama fitur]</code> dan push ke master.</div>
+                </li>
+            </ol>
+        </section>
+
+    </main>
+
+    <!-- REALTIME SEARCH SCRIPT -->
+    <script>
+        const searchInput = document.getElementById('docSearch');
+        const sections = document.querySelectorAll('.section-block');
+        const navItems = document.querySelectorAll('.nav-item');
+
+        searchInput.addEventListener('input', function(e) {
+            const query = e.target.value.toLowerCase().trim();
+            sections.forEach(sec => {
+                const text = sec.innerText.toLowerCase();
+                if (text.includes(query)) {
+                    sec.style.display = 'block';
+                } else {
+                    sec.style.display = 'none';
+                }
+            });
+        });
+
+        // Smooth scroll & active nav tracking
+        window.addEventListener('scroll', () => {
+            let current = '';
+            sections.forEach(section => {
+                const sectionTop = section.offsetTop;
+                if (pageYOffset >= sectionTop - 100) {
+                    current = section.getAttribute('id');
+                }
+            });
+
+            navItems.forEach(item => {
+                item.classList.remove('active');
+                if (item.getAttribute('href') === `#${current}`) {
+                    item.classList.add('active');
+                }
+            });
+        });
+    </script>
+</body>
+</html>
