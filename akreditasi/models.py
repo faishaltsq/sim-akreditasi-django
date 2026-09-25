@@ -257,7 +257,12 @@ class RumahSakitProfile(models.Model):
     def get_default(cls):
         obj, _ = cls.objects.get_or_create(
             id=1,
-            defaults={'name': 'Rumah Sakit Anda'}
+            defaults={
+                'name': 'RS MonsisKami',
+                'tipe': 'Rumah Sakit Tipe B',
+                'kota': 'Jakarta',
+                'akreditasi_tahun': 2026,
+            }
         )
         return obj
 
@@ -285,3 +290,13 @@ class AuditLog(models.Model):
 
     def __str__(self):
         return f"{self.timestamp:%d/%m/%Y %H:%M} - {self.aksi} - {self.object_repr}"
+
+
+# Import models Fase 2 & 5 (Risiko PDCA, Insiden, Indikator Mutu)
+from .risiko_models import (  # noqa: E402, F401
+    RisikoUnit,
+    TindakLanjutRisiko,
+    InsidenKeselamatan,
+    IndikatorMutu,
+    CatatanIndikator,
+)

@@ -1,0 +1,187 @@
+{% extends 'base.html' %}
+
+{% block title %}Input Risiko Baru — SIM Akreditasi{% endblock %}
+{% block page_title %}Input Risiko Baru{% endblock %}
+{% block page_subtitle %}Form Identifikasi & Penilaian Risiko Unit{% endblock %}
+
+{% block extra_css %}
+<style>
+    .skor-badge { display:inline-block; padding:6px 18px; border-radius:20px; font-weight:700; font-size:1rem; color:#fff; transition:background .2s; }
+    input[type=range] { accent-color:#0d9488; }
+    .slider-val { display:inline-block; min-width:28px; text-align:center; font-weight:700; color:#0d9488; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-3">
+    <div class="row justify-content-center">
+        <div class="col-xl-8">
+
+            {# Breadcrumb #}
+            <nav aria-label="breadcrumb" class="mb-3">
+                <ol class="breadcrumb" style="font-size:.8rem;">
+                    <li class="breadcrumb-item"><a href="{% url 'akreditasi:risiko_daftar' %}" style="color:#0d9488;">Daftar Risiko</a></li>
+                    <li class="breadcrumb-item active">Input Risiko Baru</li>
+                </ol>
+            </nav>
+
+            {% if messages %}
+            {% for msg in messages %}
+            <div class="alert alert-{{ msg.tags }} py-2" style="font-size:.82rem;">{{ msg }}</div>
+            {% endfor %}
+            {% endif %}
+
+            <div class="card border-0 shadow-sm">
+                <div class="card-header border-0 py-3" style="background:linear-gradient(135deg,#0f766e,#0d9488); color:#fff;">
+                    <h6 class="mb-0 fw-bold"><i class="bi bi-shield-plus me-2"></i>Formulir Identifikasi Risiko Unit</h6>
+                </div>
+                <div class="card-body p-4">
+                    <form method="post" novalidate>
+                        {% csrf_token %}
+
+                        {# ── Bagian 1: Identifikasi ─────────────────── #}
+                        <h6 class="fw-bold mb-3 pb-1 border-bottom" style="color:#0f172a; font-size:.82rem;">A. Identifikasi Risiko</h6>
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label" style="font-size:.8rem; font-weight:600;">Unit Kerja <span class="text-danger">*</span></label>
+                                <select name="unit" class="form-select form-select-sm" required>
+                                    <option value="">— Pilih Unit —</option>
+                                    {% for u in units %}
+                                    <option value="{{ u.id }}">{{ u }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label" style="font-size:.8rem; font-weight:600;">Tahun <span class="text-danger">*</span></label>
+                                <input type="number" name="tahun" class="form-control form-control-sm" value="2026" min="2020" max="2035" required>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label" style="font-size:.8rem; font-weight:600;">Periode <span class="text-danger">*</span></label>
+                                <select name="periode" class="form-select form-select-sm" required>
+                                    <option value="">— Pilih —</option>
+                                    {% for val, label in periode_choices %}
+                                    <option value="{{ val }}">{{ label }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-4">
+                                <label class="form-label" style="font-size:.8rem; font-weight:600;">Kategori Risiko <span class="text-danger">*</span></label>
+                                <select name="kategori_risiko" class="form-select form-select-sm" required>
+                                    <option value="">— Pilih —</option>
+                                    {% for val, label in kategori_choices %}
+                                    <option value="{{ val }}">{{ label }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-8">
+                                <label class="form-label" style="font-size:.8rem; font-weight:600;">Jenis Risiko <span class="text-danger">*</span></label>
+                                <input type="text" name="jenis_risiko" class="form-control form-control-sm" placeholder="cth: Kesalahan pemberian obat" required>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label" style="font-size:.8rem; font-weight:600;">Deskripsi Risiko <span class="text-danger">*</span></label>
+                            <textarea name="deskripsi_risiko" class="form-control form-control-sm" rows="3" required placeholder="Deskripsikan risiko secara rinci…"></textarea>
+                        </div>
+
+                        {# ── Bagian 2: Penilaian (Slider) ───────────── #}
+                        <h6 class="fw-bold mb-3 pb-1 border-bottom" style="color:#0f172a; font-size:.82rem;">B. Penilaian Risiko</h6>
+                        <div class="row g-4 mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold" style="font-size:.8rem;">Dampak &nbsp;<span class="slider-val" id="dampak-val">3</span></label>
+                                <input type="range" name="dampak" id="dampak" class="form-range" min="1" max="5" step="1" value="3">
+                                <div class="d-flex justify-content-between" style="font-size:.65rem; color:#64748b;"><span>1 — Minimal</span><span>5 — Katastrofik</span></div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold" style="font-size:.8rem;">Probabilitas &nbsp;<span class="slider-val" id="prob-val">3</span></label>
+                                <input type="range" name="probabilitas" id="probabilitas" class="form-range" min="1" max="5" step="1" value="3">
+                                <div class="d-flex justify-content-between" style="font-size:.65rem; color:#64748b;"><span>1 — Sangat Jarang</span><span>5 — Hampir Pasti</span></div>
+                            </div>
+                        </div>
+                        {# Realtime Skor #}
+                        <div class="text-center mb-4 py-3" style="background:#f8fafc; border-radius:12px;">
+                            <div style="font-size:.78rem; color:#64748b; font-weight:600; margin-bottom:6px;">SKOR INHERENT (Dampak × Probabilitas)</div>
+                            <span class="skor-badge" id="skor-badge" style="background:#ca8a04;">9</span>
+                            <div id="skor-label" class="mt-2 fw-bold" style="font-size:.85rem; color:#ca8a04;">SEDANG</div>
+                        </div>
+
+                        {# ── Bagian 3: Mitigasi ─────────────────────── #}
+                        <h6 class="fw-bold mb-3 pb-1 border-bottom" style="color:#0f172a; font-size:.82rem;">C. Rencana Mitigasi</h6>
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label" style="font-size:.8rem; font-weight:600;">Strategi Mitigasi <span class="text-danger">*</span></label>
+                                <select name="strategi_mitigasi" class="form-select form-select-sm" required>
+                                    <option value="">— Pilih —</option>
+                                    {% for val, label in strategi_choices %}
+                                    <option value="{{ val }}">{{ label }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label" style="font-size:.8rem; font-weight:600;">PJ Mitigasi <span class="text-danger">*</span></label>
+                                <input type="text" name="pj_mitigasi" class="form-control form-control-sm" placeholder="Nama penanggung jawab" required>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label" style="font-size:.8rem; font-weight:600;">Rencana Aksi <span class="text-danger">*</span></label>
+                            <textarea name="rencana_aksi" class="form-control form-control-sm" rows="3" required placeholder="Langkah-langkah mitigasi…"></textarea>
+                        </div>
+                        <div class="mb-4">
+                            <label class="form-label" style="font-size:.8rem; font-weight:600;">Target Selesai</label>
+                            <input type="date" name="target_selesai" class="form-control form-control-sm">
+                        </div>
+
+                        <div class="d-flex gap-2 justify-content-end">
+                            <a href="{% url 'akreditasi:risiko_daftar' %}" class="btn btn-sm btn-outline-secondary">Batal</a>
+                            <button type="submit" class="btn btn-sm text-white px-4" style="background:#0d9488;"><i class="bi bi-save me-1"></i>Simpan Risiko</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function() {
+    const dampakEl  = document.getElementById('dampak');
+    const probEl    = document.getElementById('probabilitas');
+    const dValEl    = document.getElementById('dampak-val');
+    const pValEl    = document.getElementById('prob-val');
+    const badge     = document.getElementById('skor-badge');
+    const labelEl   = document.getElementById('skor-label');
+
+    const colors = { SANGAT_TINGGI:'#dc2626', TINGGI:'#ea580c', SEDANG:'#ca8a04', RENDAH:'#16a34a', SANGAT_RENDAH:'#64748b' };
+    const labels = { SANGAT_TINGGI:'SANGAT TINGGI', TINGGI:'TINGGI', SEDANG:'SEDANG', RENDAH:'RENDAH', SANGAT_RENDAH:'SANGAT RENDAH' };
+
+    function level(s) {
+        if (s >= 20) return 'SANGAT_TINGGI';
+        if (s >= 15) return 'TINGGI';
+        if (s >= 10) return 'SEDANG';
+        if (s >= 5)  return 'RENDAH';
+        return 'SANGAT_RENDAH';
+    }
+
+    function update() {
+        const d = parseInt(dampakEl.value);
+        const p = parseInt(probEl.value);
+        const s = d * p;
+        const lv = level(s);
+        dValEl.textContent = d;
+        pValEl.textContent = p;
+        badge.textContent = s;
+        badge.style.background = colors[lv];
+        labelEl.textContent = labels[lv];
+        labelEl.style.color = colors[lv];
+    }
+
+    dampakEl.addEventListener('input', update);
+    probEl.addEventListener('input', update);
+    update();
+})();
+</script>
+{% endblock %}

@@ -1,0 +1,133 @@
+{% extends 'base.html' %}
+
+{% block title %}Laporan Insiden Keselamatan — SIM Akreditasi{% endblock %}
+{% block page_title %}Laporan Insiden Keselamatan{% endblock %}
+{% block page_subtitle %}Form Pelaporan Anonim (KNC / KTD / Sentinel){% endblock %}
+
+{% block extra_css %}
+<style>
+    .severity-badge { padding:6px 14px; border-radius:20px; font-weight:600; font-size:.75rem; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-3">
+    <div class="row justify-content-center">
+        <div class="col-xl-8">
+
+            {# Breadcrumb #}
+            <nav aria-label="breadcrumb" class="mb-3">
+                <ol class="breadcrumb" style="font-size:.8rem;">
+                    <li class="breadcrumb-item"><a href="{% url 'akreditasi:risiko_daftar' %}" style="color:#0d9488;">Manajemen Risiko</a></li>
+                    <li class="breadcrumb-item active">Lapor Insiden</li>
+                </ol>
+            </nav>
+
+            {% if messages %}
+            {% for msg in messages %}
+            <div class="alert alert-{{ msg.tags }} py-2" style="font-size:.82rem;">{{ msg }}</div>
+            {% endfor %}
+            {% endif %}
+
+            {# Alert Anonim #}
+            <div class="alert py-2 mb-3 d-flex align-items-center gap-2" style="background:#f0fdfa; border:1px solid #99f6e4; font-size:.82rem; color:#0f172a;">
+                <i class="bi bi-shield-check text-success fs-5"></i>
+                <span><strong>Laporan ini bersifat anonim.</strong> Data identitas Anda tidak disimpan dalam laporan ini. Tujuan: mencegah berulangnya insiden serupa.</span>
+            </div>
+
+            <div class="card border-0 shadow-sm">
+                <div class="card-header border-0 py-3" style="background:linear-gradient(135deg,#991b1b,#dc2626); color:#fff;">
+                    <h6 class="mb-0 fw-bold"><i class="bi bi-exclamation-triangle-fill me-2"></i>Formulir Laporan Insiden Keselamatan Pasien</h6>
+                </div>
+                <div class="card-body p-4">
+                    <form method="post" novalidate>
+                        {% csrf_token %}
+
+                        {# ── A. Lokasi & Waktu ──────────────────────────── #}
+                        <h6 class="fw-bold mb-3 pb-1 border-bottom" style="color:#0f172a; font-size:.82rem;">A. Informasi Kejadian</h6>
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label" style="font-size:.8rem; font-weight:600;">Unit Terkait <small class="text-muted fw-normal">(opsional)</small></label>
+                                <select name="unit" class="form-select form-select-sm">
+                                    <option value="">— Anonim / Tidak Diketahui —</option>
+                                    {% for u in units %}
+                                    <option value="{{ u.id }}">{{ u }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label" style="font-size:.8rem; font-weight:600;">Lokasi Kejadian <span class="text-danger">*</span></label>
+                                <input type="text" name="lokasi_kejadian" class="form-control form-control-sm" required placeholder="cth: Ruang Rawat Inap A, Farmasi, IGD…">
+                            </div>
+                        </div>
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label" style="font-size:.8rem; font-weight:600;">Tanggal Kejadian <span class="text-danger">*</span></label>
+                                <input type="date" name="tanggal_kejadian" class="form-control form-control-sm" required>
+                            </div>
+                        </div>
+
+                        {# ── B. Klasifikasi Insiden ─────────────────────── #}
+                        <h6 class="fw-bold mb-3 pb-1 border-bottom mt-2" style="color:#0f172a; font-size:.82rem;">B. Klasifikasi Insiden</h6>
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label" style="font-size:.8rem; font-weight:600;">Jenis Insiden <span class="text-danger">*</span></label>
+                                <select name="jenis_insiden" class="form-select form-select-sm" required>
+                                    <option value="">— Pilih Jenis —</option>
+                                    {% for val, label in jenis_choices %}
+                                    <option value="{{ val }}">{{ label }}</option>
+                                    {% endfor %}
+                                </select>
+                                <div class="mt-2" style="font-size:.72rem; color:#64748b;">
+                                    <strong>KNC</strong> = Nyaris Cedera &bull; <strong>KTD</strong> = Tidak Diharapkan &bull; <strong>KTC</strong> = Tidak Cedera
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label" style="font-size:.8rem; font-weight:600;">Tingkat Keparahan <span class="text-danger">*</span></label>
+                                <select name="tingkat_keparahan" class="form-select form-select-sm" required>
+                                    <option value="">— Pilih Level —</option>
+                                    {% for val, label in keparahan_choices %}
+                                    <option value="{{ val }}">{{ label }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+
+                        {# ── C. Deskripsi ───────────────────────────────── #}
+                        <h6 class="fw-bold mb-3 pb-1 border-bottom mt-2" style="color:#0f172a; font-size:.82rem;">C. Uraian Kejadian</h6>
+                        <div class="mb-3">
+                            <label class="form-label" style="font-size:.8rem; font-weight:600;">Deskripsi Kejadian <span class="text-danger">*</span></label>
+                            <textarea name="deskripsi_kejadian" class="form-control form-control-sm" rows="4" required placeholder="Ceritakan secara kronologis: apa yang terjadi, bagaimana terjadinya, faktor apa yang berkontribusi…"></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label" style="font-size:.8rem; font-weight:600;">Tindakan Segera yang Sudah Dilakukan</label>
+                            <textarea name="tindakan_segera" class="form-control form-control-sm" rows="2" placeholder="cth: Pasien segera dirujuk ke dokter jaga, penghentian pemberian obat…"></textarea>
+                        </div>
+
+                        {# ── D. Pasien Terpapar ─────────────────────────── #}
+                        <div class="mb-4 p-3 rounded" style="background:#fef2f2; border:1px solid #fecaca;">
+                            <div class="form-check">
+                                <input type="checkbox" name="pasien_terpapar" id="pasien_terpapar" class="form-check-input" style="border-color:#dc2626;">
+                                <label class="form-check-label fw-semibold" for="pasien_terpapar" style="font-size:.82rem; color:#991b1b;">
+                                    <i class="bi bi-person-exclamation me-1"></i>Pasien terpapar / mengalami dampak dari kejadian ini
+                                </label>
+                            </div>
+                            <small class="text-muted d-block mt-1 ps-4" style="font-size:.72rem;">Centang jika insiden menyebabkan atau berpotensi menyebabkan cedera pada pasien.</small>
+                        </div>
+
+                        <div class="alert alert-warning py-2" style="font-size:.8rem;">
+                            <i class="bi bi-clock me-1"></i><strong>Pelaporan segera</strong> membantu tim mutu melakukan investigasi lebih cepat dan mencegah insiden berulang. Terima kasih atas kontribusi Anda.
+                        </div>
+
+                        <div class="d-flex gap-2 justify-content-end">
+                            <a href="{% url 'akreditasi:risiko_daftar' %}" class="btn btn-sm btn-outline-secondary">Batal</a>
+                            <button type="submit" class="btn btn-sm btn-danger px-4"><i class="bi bi-send me-1"></i>Kirim Laporan Insiden</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+{% endblock %}

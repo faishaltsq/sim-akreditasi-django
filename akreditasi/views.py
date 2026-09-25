@@ -112,6 +112,10 @@ def dashboard(request):
     # Aktivitas Terkini (5 log audit terbaru)
     aktivitas_terkini = AuditLog.objects.select_related('user').order_by('-timestamp')[:5]
 
+    # Struktur Unit Kerja RS untuk Dashboard (Pohon Hierarki)
+    root_units = UnitKerja.objects.filter(level=1).prefetch_related('children__children').order_by('code')
+    total_units_count = UnitKerja.objects.count()
+
     context = {
         'rs_profile': rs_profile,
         'framework': framework,
@@ -133,6 +137,8 @@ def dashboard(request):
         'pct_proses': pct_proses,
         'pct_belum': pct_belum,
         'aktivitas_terkini': aktivitas_terkini,
+        'root_units': root_units,
+        'total_units_count': total_units_count,
     }
     return render(request, 'akreditasi/dashboard.html', context)
 
@@ -797,6 +803,94 @@ def rekap_view(request):
         'total_score': total_score,
         'overall_pct': overall_pct,
         'total_rka': total_rka,
+    })
+
+
+@login_required
+def cetak_dokumen_pokja(request, cat_id):
+    """Fase 3.3: Cetak dokumen standar akreditasi per Pokja (PDF / Print layout)."""
+    cat = get_object_or_404(Category, id=cat_id)
+    items = StandardItem.objects.filter(category=cat).select_related('record__unit').prefetch_related('evidence_reqs__files').order_by('order', 'code')
+    ep_count = items.count()
+    tercapai = items.filter(record__score=10).count()
+    proses = items.filter(record__score=5).count()
+    belum = ep_count - tercapai - proses
+
+    return render(request, 'akreditasi/cetak_dokumen.html', {
+        'cat': cat,
+        'items': items,
+        'ep_count': ep_count,
+        'tercapai': tercapai,
+        'proses': proses,
+        'belum': belum,
+    })
+
+
+@login_required
+def auto_scoring_pokja(request):
+    """Fase 3.4: Auto-scoring pemenuhan EP per Pokja dengan formula KARS STARKES."""
+    categories = Category.objects.all().order_by('order')
+
+    def _nilai_akreditasi(pct):
+        if pct >= 80: return ('Paripurna', '#16a34a', '★★★★★')
+        if pct >= 60: return ('Utama', '#0d9488', '★★★★')
+        if pct >= 40: return ('Madya', '#ca8a04', '★★★')
+        if pct >= 20: return ('Dasar', '#ea580c', '★★')
+        return ('Tidak Terakreditasi', '#dc2626', '★')
+
+    pokja_data = []
+    grand_total_possible = 0
+    grand_total_score = 0
+
+    for cat in categories:
+        cat_items = StandardItem.objects.filter(category=cat).select_related('record')
+        ep_count = cat_items.count()
+        possible = ep_count * 10
+        score = sum(i.record.score for i in cat_items if hasattr(i, 'record') and i.record)
+        pct = round((score / possible) * 100, 1) if possible > 0 else 0
+        tercapai = cat_items.filter(record__score=10).count()
+        proses = cat_items.filter(record__score=5).count()
+        belum = ep_count - tercapai - proses
+        label, color, stars = _nilai_akreditasi(pct)
+
+        # Hitung kelengkapan bukti per pokja
+        req_count = EvidenceReq.objects.filter(standard_item__category=cat).count()
+        bukti_count = EvidenceFile.objects.filter(
+            requirement__standard_item__category=cat
+        ).values('requirement_id').distinct().count()
+        bukti_pct = round((bukti_count / req_count) * 100, 1) if req_count > 0 else 0
+
+        grand_total_possible += possible
+        grand_total_score += score
+
+        pokja_data.append({
+            'cat': cat,
+            'ep_count': ep_count,
+            'possible': possible,
+            'score': score,
+            'pct': pct,
+            'tercapai': tercapai,
+            'proses': proses,
+            'belum': belum,
+            'label': label,
+            'color': color,
+            'stars': stars,
+            'req_count': req_count,
+            'bukti_count': bukti_count,
+            'bukti_pct': bukti_pct,
+        })
+
+    grand_pct = round((grand_total_score / grand_total_possible) * 100, 1) if grand_total_possible > 0 else 0
+    grand_label, grand_color, grand_stars = _nilai_akreditasi(grand_pct)
+
+    return render(request, 'akreditasi/auto_scoring.html', {
+        'pokja_data': pokja_data,
+        'grand_pct': grand_pct,
+        'grand_label': grand_label,
+        'grand_color': grand_color,
+        'grand_stars': grand_stars,
+        'grand_total_score': grand_total_score,
+        'grand_total_possible': grand_total_possible,
     })
 
 

@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+{% block title %}Auto-Scoring Akreditasi — RS MonsisKami{% endblock %}
+{% block page_title %}Simulasi &amp; Auto-Scoring Akreditasi STARKES{% endblock %}
+{% block page_subtitle %}Perhitungan Otomatis Skor Pemenuhan Elemen Penilaian (EP) Berdasarkan Standar KARS / Kemenkes{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-0">
+    <!-- GRAND TOTAL SCORE HERO CARD -->
+    <div class="card shadow-sm border mb-4" style="border-left: 6px solid {{ grand_color }} !important;">
+        <div class="card-body p-4">
+            <div class="row align-items-center">
+                <div class="col-md-7">
+                    <div class="d-flex align-items-center gap-2 mb-2">
+                        <span class="badge" style="background: {{ grand_color }}; color: white; font-size: 0.85rem;">
+                            {{ grand_label|upper }}
+                        </span>
+                        <span style="color: #eab308; font-size: 1.1rem;">{{ grand_stars }}</span>
+                    </div>
+                    <h3 class="fw-bold mb-1" style="color: #0f172a;">Prediksi Kelulusan Akreditasi: {{ grand_label }}</h3>
+                    <p class="text-muted small mb-0">
+                        Total Skor Akumulasi: <strong class="text-dark">{{ grand_total_score }}</strong> dari target maksimal <strong>{{ grand_total_possible }}</strong> poin.
+                    </p>
+                </div>
+                <div class="col-md-5 text-md-end mt-3 mt-md-0">
+                    <div class="d-inline-flex flex-column align-items-end">
+                        <div class="d-flex align-items-baseline gap-1">
+                            <span class="display-4 fw-bold" style="color: {{ grand_color }};">{{ grand_pct }}</span>
+                            <span class="fs-4 text-muted">%</span>
+                        </div>
+                        <div class="progress w-100 mt-1" style="height: 8px; width: 180px;">
+                            <div class="progress-bar" style="width: {{ grand_pct }}%; background-color: {{ grand_color }};"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- TABEL CAPAIAN PER POKJA -->
+    <div class="card shadow-sm border">
+        <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+            <h6 class="mb-0 fw-bold"><i class="bi bi-award-fill text-primary me-2"></i>Rincian Capaian per Pokja Standar Akreditasi (STARKES)</h6>
+            <span class="badge bg-light text-dark font-mono">{{ pokja_data|length }} Pokja Aktif</span>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0" style="font-size: 0.85rem;">
+                <thead class="table-light">
+                    <tr>
+                        <th style="width: 80px;">Kode</th>
+                        <th>Nama Pokja (Bab Standar)</th>
+                        <th class="text-center" style="width: 90px;">Jml EP</th>
+                        <th class="text-center" style="width: 130px;">Kepatuhan Skor</th>
+                        <th class="text-center" style="width: 140px;">Progres Skor</th>
+                        <th class="text-center" style="width: 120px;">Bukti RDWOS</th>
+                        <th class="text-center" style="width: 120px;">Prediksi Bab</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for p in pokja_data %}
+                    <tr>
+                        <td class="font-mono fw-bold text-primary">{{ p.cat.code }}</td>
+                        <td>
+                            <div class="fw-bold text-dark">{{ p.cat.name }}</div>
+                            <div class="text-muted" style="font-size: 0.72rem;">
+                                EP Selesai (10): <strong class="text-success">{{ p.tercapai }}</strong> | Sebagian (5): <strong class="text-warning">{{ p.proses }}</strong> | Belum (0): <strong class="text-danger">{{ p.belum }}</strong>
+                            </div>
+                        </td>
+                        <td class="text-center font-mono">{{ p.ep_count }}</td>
+                        <td class="text-center">
+                            <span class="badge font-mono" style="background: {{ p.color }}; color: white; font-size: 0.8rem;">
+                                {{ p.pct }}%
+                            </span>
+                            <div class="text-muted" style="font-size: 0.65rem;">{{ p.score }} / {{ p.possible }}</div>
+                        </td>
+                        <td>
+                            <div class="progress" style="height: 6px;">
+                                <div class="progress-bar" style="width: {{ p.pct }}%; background-color: {{ p.color }};"></div>
+                            </div>
+                        </td>
+                        <td class="text-center">
+                            <span class="badge bg-light text-dark border font-mono" style="font-size: 0.75rem;">
+                                {{ p.bukti_count }} / {{ p.req_count }}
+                            </span>
+                            <div class="text-muted" style="font-size: 0.65rem;">{{ p.bukti_pct }}% terunggah</div>
+                        </td>
+                        <td class="text-center">
+                            <span class="badge" style="background: {{ p.color }}; color: white; font-size: 0.7rem;">
+                                {{ p.label }}
+                            </span>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="7" class="text-center py-4 text-muted">Belum ada data Pokja yang tersimpan.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

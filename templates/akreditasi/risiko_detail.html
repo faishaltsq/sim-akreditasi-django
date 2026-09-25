@@ -1,0 +1,266 @@
+{% extends 'base.html' %}
+
+{% block title %}Detail Risiko — {{ risiko.jenis_risiko }}{% endblock %}
+{% block page_title %}Detail Risiko{% endblock %}
+{% block page_subtitle %}{{ risiko.unit.name }} — {{ risiko.get_periode_display }} {{ risiko.tahun }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .matrix-table { border-collapse:separate; border-spacing:3px; }
+    .matrix-table td { width:46px; height:42px; text-align:center; vertical-align:middle; font-weight:700; font-size:.78rem; color:#fff; border-radius:4px; }
+    .matrix-table th { font-size:.7rem; text-align:center; vertical-align:middle; color:#64748b; padding:2px 6px; }
+    .matrix-highlight { outline:3px solid #0f172a; outline-offset:-1px; box-shadow:0 0 10px rgba(0,0,0,.5); position:relative; }
+    .matrix-highlight::after { content:'★'; display:block; font-size:.55rem; line-height:1; }
+    .badge-teal { background:#0d9488; color:#fff; }
+    .badge-purple { background:#7c3aed; color:#fff; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-3">
+
+    {# ── Breadcrumb & Top Bar ────────────────────────── #}
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-3">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb mb-0" style="font-size:.8rem;">
+                <li class="breadcrumb-item"><a href="{% url 'akreditasi:risiko_daftar' %}" style="color:#0d9488;">Daftar Risiko</a></li>
+                <li class="breadcrumb-item active">{{ risiko.jenis_risiko|truncatewords:5 }}</li>
+            </ol>
+        </nav>
+        <div class="d-flex gap-2">
+            <a href="{% url 'akreditasi:risiko_evaluasi' risiko_id=risiko.pk %}" class="btn btn-sm text-white" style="background:#0d9488;"><i class="bi bi-pencil-square me-1"></i>Evaluasi Risiko</a>
+            <a href="{% url 'akreditasi:risiko_daftar' %}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-arrow-left me-1"></i>Kembali</a>
+        </div>
+    </div>
+
+    {% if messages %}
+    {% for msg in messages %}
+    <div class="alert alert-{{ msg.tags }} py-2" style="font-size:.82rem;">{{ msg }}</div>
+    {% endfor %}
+    {% endif %}
+
+    <div class="row g-3">
+
+        {# ── Kolom Kiri: Info Risiko + Risk Matrix ─────── #}
+        <div class="col-lg-7">
+
+            {# Card Info Utama #}
+            <div class="card border-0 shadow-sm mb-3">
+                <div class="card-header border-0 py-3 d-flex justify-content-between align-items-center" style="background:linear-gradient(135deg,#0f766e,#0d9488); color:#fff;">
+                    <h6 class="mb-0 fw-bold">{{ risiko.jenis_risiko }}</h6>
+                    <span class="badge {% if risiko.status == 'IDENTIFIKASI' %}bg-secondary{% elif risiko.status == 'PLAN' %}bg-primary{% elif risiko.status == 'DO' %}bg-warning text-dark{% elif risiko.status == 'EVALUASI' %}badge-purple{% elif risiko.status == 'SELESAI' %}bg-success{% elif risiko.status == 'ACCEPTED' %}badge-teal{% endif %}" style="font-size:.7rem;">
+                        {{ risiko.get_status_display }}
+                    </span>
+                </div>
+                <div class="card-body p-3">
+                    <div class="row g-2 mb-3" style="font-size:.8rem;">
+                        <div class="col-sm-4 text-muted">Unit Kerja</div>
+                        <div class="col-sm-8 fw-semibold" style="color:#0f172a;">{{ risiko.unit }}</div>
+                        <div class="col-sm-4 text-muted">Periode / Tahun</div>
+                        <div class="col-sm-8" style="color:#0f172a;">{{ risiko.get_periode_display }} ({{ risiko.tahun }})</div>
+                        <div class="col-sm-4 text-muted">Kategori Risiko</div>
+                        <div class="col-sm-8"><span class="badge bg-light text-dark border">{{ risiko.get_kategori_risiko_display }}</span></div>
+                        <div class="col-sm-4 text-muted">PJ Mitigasi</div>
+                        <div class="col-sm-8" style="color:#0f172a;">{{ risiko.pj_mitigasi }}</div>
+                        <div class="col-sm-4 text-muted">Target Selesai</div>
+                        <div class="col-sm-8" style="color:#0f172a;">{{ risiko.target_selesai|date:"d M Y"|default:"—" }}</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="text-muted d-block mb-1" style="font-size:.75rem;">Deskripsi Risiko</label>
+                        <p class="p-2 rounded" style="background:#f8fafc; font-size:.82rem; color:#0f172a;">{{ risiko.deskripsi_risiko|linebreaksbr }}</p>
+                    </div>
+
+                    <div class="row g-2">
+                        <div class="col-md-6">
+                            <label class="text-muted d-block mb-1" style="font-size:.75rem;">Strategi Mitigasi</label>
+                            <span class="badge bg-info text-dark">{{ risiko.get_strategi_mitigasi_display }}</span>
+                        </div>
+                        <div class="col-md-12">
+                            <label class="text-muted d-block mb-1" style="font-size:.75rem;">Rencana Aksi</label>
+                            <p class="p-2 rounded" style="background:#f8fafc; font-size:.82rem; color:#0f172a;">{{ risiko.rencana_aksi|linebreaksbr }}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {# Card Residual (jika ada) #}
+            {% if risiko.dampak_residual and risiko.probabilitas_residual %}
+            <div class="card border-0 shadow-sm mb-3" style="background:#f0fdfa; border-left:4px solid #0d9488 !important;">
+                <div class="card-body p-3">
+                    <h6 class="fw-bold mb-2" style="font-size:.82rem; color:#0f766e;"><i class="bi bi-check-circle me-1"></i>Evaluasi Risiko Residual</h6>
+                    <div class="row g-2 text-center" style="font-size:.78rem;">
+                        <div class="col-3">
+                            <small class="text-muted d-block">Dampak Res.</small>
+                            <span class="fw-bold fs-6">{{ risiko.dampak_residual }}</span>
+                        </div>
+                        <div class="col-3">
+                            <small class="text-muted d-block">Prob. Res.</small>
+                            <span class="fw-bold fs-6">{{ risiko.probabilitas_residual }}</span>
+                        </div>
+                        <div class="col-3">
+                            <small class="text-muted d-block">Skor Res.</small>
+                            <span class="fw-bold fs-6" style="color:#0d9488;">{{ risiko.skor_residual }}</span>
+                        </div>
+                        <div class="col-3">
+                            <small class="text-muted d-block">Skor Awal</small>
+                            <span class="fw-bold fs-6 text-muted text-decoration-line-through">{{ risiko.skor_inherent }}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+        </div>
+
+        {# ── Kolom Kanan: Skor + Visual Risk Matrix 5×5 ── #}
+        <div class="col-lg-5">
+
+            {# Card Skor Inherent #}
+            <div class="card border-0 shadow-sm mb-3">
+                <div class="card-body p-3 text-center">
+                    <div class="text-muted fw-semibold mb-1" style="font-size:.72rem;">SKOR INHERENT</div>
+                    <div class="d-inline-flex align-items-center justify-content-center" style="width:68px; height:68px; border-radius:50%; background:{{ risiko.risk_color }}; color:#fff; font-size:1.6rem; font-weight:800;">
+                        {{ risiko.skor_inherent }}
+                    </div>
+                    <div class="mt-2 fw-bold" style="color:{{ risiko.risk_color }}; font-size:.9rem;">
+                        {{ risiko.risk_level|cut:"_" }}
+                    </div>
+                    <small class="text-muted">Dampak: {{ risiko.dampak }} &times; Probabilitas: {{ risiko.probabilitas }}</small>
+                </div>
+            </div>
+
+            {# Card Matrix 5×5 #}
+            <div class="card border-0 shadow-sm mb-3">
+                <div class="card-body p-3">
+                    <h6 class="fw-bold mb-2 text-center" style="font-size:.82rem; color:#0f172a;">Matriks Posisi Risiko (5×5)</h6>
+                    <div class="d-flex justify-content-center">
+                        <table class="matrix-table">
+                            <thead>
+                                <tr>
+                                    <th style="font-size:.65rem;">D \ P</th>
+                                    <th>1</th><th>2</th><th>3</th><th>4</th><th>5</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for d in "54321" %}
+                                <tr>
+                                    <th>{{ d }}</th>
+                                    {% for p in "12345" %}
+                                    {% with d_int=d|add:"0" p_int=p|add:"0" %}
+                                    {% widthratio d_int 1 p_int as s %}
+                                    <td style="background:{% if s >= 20 %}#dc2626{% elif s >= 15 %}#ea580c{% elif s >= 10 %}#ca8a04{% elif s >= 5 %}#16a34a{% else %}#64748b{% endif %};"
+                                        class="{% if d_int == risiko.dampak and p_int == risiko.probabilitas %}matrix-highlight{% endif %}"
+                                        title="Dampak {{ d }} × Prob {{ p }} = Skor {{ s }}">
+                                        {{ s }}
+                                    </td>
+                                    {% endwith %}
+                                    {% endfor %}
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="text-center mt-2" style="font-size:.68rem; color:#64748b;">
+                        <span class="d-inline-block me-2">★ = Posisi Risiko Saat Ini</span>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+    </div>
+
+    {# ── Tindak Lanjut Risiko (DO) ─────────────────────── #}
+    <div class="card border-0 shadow-sm mt-3">
+        <div class="card-header border-0 py-3 bg-white d-flex justify-content-between align-items-center">
+            <h6 class="mb-0 fw-bold" style="color:#0f172a;"><i class="bi bi-list-task me-2" style="color:#0d9488;"></i>Tindak Lanjut Risiko (Siklus DO)</h6>
+            <button class="btn btn-sm text-white" style="background:#0d9488;" data-bs-toggle="collapse" data-bs-target="#formTindakLanjut"><i class="bi bi-plus-lg me-1"></i>Tambah Aksi</button>
+        </div>
+        <div class="card-body p-3">
+
+            {# Collapse Form Tambah Tindak Lanjut Inline #}
+            <div class="collapse mb-3" id="formTindakLanjut">
+                <div class="p-3 rounded border" style="background:#f8fafc;">
+                    <h6 class="fw-bold mb-2" style="font-size:.8rem; color:#0f172a;">Tambah Aksi Tindak Lanjut</h6>
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="row g-2 mb-2">
+                            <div class="col-md-8">
+                                <label class="form-label" style="font-size:.75rem;">Aksi / Kegiatan <span class="text-danger">*</span></label>
+                                <input type="text" name="aksi" class="form-control form-control-sm" required placeholder="Deskripsi tindakan…">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label" style="font-size:.75rem;">Status</label>
+                                <select name="status_aksi" class="form-select form-select-sm">
+                                    {% for val, label in status_aksi_choices %}
+                                    <option value="{{ val }}">{{ label }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                        <div class="row g-2 mb-2">
+                            <div class="col-md-4">
+                                <label class="form-label" style="font-size:.75rem;">Tanggal Mulai</label>
+                                <input type="date" name="tanggal_mulai" class="form-control form-control-sm">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label" style="font-size:.75rem;">Tanggal Selesai</label>
+                                <input type="date" name="tanggal_selesai" class="form-control form-control-sm">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label" style="font-size:.75rem;">Catatan</label>
+                                <input type="text" name="catatan" class="form-control form-control-sm" placeholder="Catatan tambahan…">
+                            </div>
+                        </div>
+                        <div class="d-flex justify-content-end gap-2">
+                            <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="collapse" data-bs-target="#formTindakLanjut">Batal</button>
+                            <button type="submit" class="btn btn-sm text-white" style="background:#0d9488;">Simpan Aksi</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            {# Tabel Tindak Lanjut #}
+            <div class="table-responsive">
+                <table class="table table-sm table-hover mb-0" style="font-size:.8rem;">
+                    <thead style="background:#f1f5f9;">
+                        <tr>
+                            <th style="width:40px;">#</th>
+                            <th>Rencana Aksi</th>
+                            <th>Status</th>
+                            <th>Tgl Mulai</th>
+                            <th>Tgl Selesai</th>
+                            <th>Catatan</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for tl in tindak_lanjut %}
+                        <tr>
+                            <td>{{ tl.urutan }}</td>
+                            <td class="fw-semibold">{{ tl.aksi }}</td>
+                            <td>
+                                {% if tl.status_aksi == 'SELESAI' %}
+                                <span class="badge bg-success">Selesai</span>
+                                {% elif tl.status_aksi == 'SEDANG' %}
+                                <span class="badge bg-warning text-dark">Sedang Berjalan</span>
+                                {% else %}
+                                <span class="badge bg-secondary">Belum Dimulai</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ tl.tanggal_mulai|date:"d/m/Y"|default:"—" }}</td>
+                            <td>{{ tl.tanggal_selesai|date:"d/m/Y"|default:"—" }}</td>
+                            <td>{{ tl.catatan|default:"—" }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr><td colspan="6" class="text-center text-muted py-3">Belum ada tindak lanjut dicatat. Silakan klik "Tambah Aksi".</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+        </div>
+    </div>
+
+</div>
+{% endblock %}

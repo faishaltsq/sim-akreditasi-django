@@ -12,8 +12,7 @@
     <!-- 2. MODUL AKREDITASI (INTI) -->
     <div class="nav-section mt-2">
         <i class="bi bi-shield-check me-1" style="font-size:0.6rem;"></i> Modul Akreditasi
-    </div>
-    <a href="{% url 'akreditasi:matriks_pdca' %}" class="nav-link {% if request.resolver_match.url_name == 'matriks_pdca' %}active{% endif %}">
+    </div>    <a href="{% url 'akreditasi:matriks_pdca' %}" class="nav-link {% if request.resolver_match.url_name == 'matriks_pdca' %}active{% endif %}">
         <span class="nav-icon"><i class="bi bi-arrow-repeat"></i></span>
         <span class="nav-text">
             <span class="nav-title">Matriks PDCA</span>
@@ -88,10 +87,43 @@
         </span>
     </a>
 
+    <!-- MODUL RISIKO & INSIDEN (Fase 2 & 5) -->
+    <div class="nav-section mt-2">
+        <i class="bi bi-exclamation-triangle-fill me-1" style="font-size:0.6rem;"></i> Manajemen Risiko
+    </div>
+    <a href="{% url 'akreditasi:risiko_daftar' %}" class="nav-link {% if 'risiko' in request.resolver_match.url_name %}active{% endif %}">
+        <span class="nav-icon"><i class="bi bi-clipboard2-pulse-fill" style="color:#ea580c;"></i></span>
+        <span class="nav-text">
+            <span class="nav-title">Daftar Risiko PDCA</span>
+            <span class="nav-desc">Risk Register & Mitigasi</span>
+        </span>
+    </a>
+    <a href="{% url 'akreditasi:risiko_input' %}" class="nav-link {% if request.resolver_match.url_name == 'risiko_input' %}active{% endif %}">
+        <span class="nav-icon"><i class="bi bi-plus-circle-fill" style="color:#0d9488;"></i></span>
+        <span class="nav-text">
+            <span class="nav-title">Input Risiko Baru</span>
+            <span class="nav-desc">Identifikasi & Asesmen</span>
+        </span>
+    </a>
+    <a href="{% url 'akreditasi:insiden_lapor' %}" class="nav-link {% if request.resolver_match.url_name == 'insiden_lapor' %}active{% endif %}">
+        <span class="nav-icon"><i class="bi bi-shield-exclamation" style="color:#dc2626;"></i></span>
+        <span class="nav-text">
+            <span class="nav-title">Laporan Insiden</span>
+            <span class="nav-desc">KNC / KTD / Sentinel</span>
+        </span>
+    </a>
+
     <!-- 4. LAPORAN -->
     <div class="nav-section mt-2">
-        <i class="bi bi-file-earmark-bar-graph-fill me-1" style="font-size:0.6rem;"></i> Laporan
+        <i class="bi bi-file-earmark-bar-graph-fill me-1" style="font-size:0.6rem;"></i> Laporan &amp; Evaluasi
     </div>
+    <a href="{% url 'akreditasi:auto_scoring' %}" class="nav-link {% if request.resolver_match.url_name == 'auto_scoring' %}active{% endif %}">
+        <span class="nav-icon"><i class="bi bi-award-fill text-primary"></i></span>
+        <span class="nav-text">
+            <span class="nav-title fw-bold">Auto-Scoring Akreditasi</span>
+            <span class="nav-desc">Prediksi Kelulusan KARS</span>
+        </span>
+    </a>
     <a href="{% url 'akreditasi:rekap' %}" class="nav-link {% if request.resolver_match.url_name == 'rekap' %}active{% endif %}">
         <span class="nav-icon"><i class="bi bi-pie-chart-fill"></i></span>
         <span class="nav-text">
@@ -152,9 +184,9 @@
     {% endif %}
 </div>
 
-<div class="sidebar-footer">
+    <div class="sidebar-footer">
     <div class="d-flex align-items-center justify-content-between">
-        <small class="text-white-50" style="font-size:0.65rem;">{{ rs_profile.name|default:"RS Akreditasi"|truncatechars:24 }}</small>
-        <span class="badge bg-primary" style="font-size:0.58rem;">STARKES</span>
+        <small style="font-size:0.63rem; color:#64748b; font-weight:600;">RS MonsisKami Tipe B</small>
+        <span class="badge" style="background:#0d9488; font-size:0.58rem;">STARKES</span>
     </div>
 </div>

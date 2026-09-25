@@ -1,5 +1,6 @@
 from django.urls import path
 from . import views
+from . import risiko_views
 
 app_name = 'akreditasi'
 
@@ -46,6 +47,8 @@ urlpatterns = [
     # Laporan & Ekspor
     path('rekap/', views.rekap_view, name='rekap'),
     path('rekap/export/', views.export_excel, name='export_excel'),
+    path('rekap/scoring/', views.auto_scoring_pokja, name='auto_scoring'),
+    path('rekap/cetak/<int:cat_id>/', views.cetak_dokumen_pokja, name='cetak_dokumen'),
 
     # Portal Nakes & KPS (Opsi B)
     path('portal-nakes/', views.portal_nakes, name='portal_nakes'),
@@ -53,4 +56,13 @@ urlpatterns = [
     path('portal-nakes/hapus-kredensial/<int:cred_id>/', views.delete_kredensial_nakes, name='delete_kredensial'),
     path('rekap-kps/', views.rekap_kps_unit, name='rekap_kps'),
     path('rekap-kps/verifikasi/<int:cred_id>/', views.verify_kredensial, name='verify_kredensial'),
+
+    # Modul Manajemen Risiko PDCA (Fase 2)
+    path('risiko/', risiko_views.risiko_daftar, name='risiko_daftar'),
+    path('risiko/baru/', risiko_views.risiko_input, name='risiko_input'),
+    path('risiko/<int:risiko_id>/', risiko_views.risiko_detail, name='risiko_detail'),
+    path('risiko/<int:risiko_id>/evaluasi/', risiko_views.risiko_evaluasi, name='risiko_evaluasi'),
+
+    # Modul Insiden Keselamatan (Fase 5)
+    path('insiden/lapor/', risiko_views.insiden_lapor, name='insiden_lapor'),
 ]

@@ -1,3 +1,10 @@
+/* BADGE R-D-W-O-S (REGULASI, DOKUMEN, WAWANCARA, OBSERVASI, SIMULASI) */
+.badge-rdwos-r { background-color: #dbeafe !important; color: #1e40af !important; border: 1px solid #bfdbfe; font-weight: 700; }
+.badge-rdwos-d { background-color: #dcfce7 !important; color: #166534 !important; border: 1px solid #bbf7d0; font-weight: 700; }
+.badge-rdwos-w { background-color: #fef9c3 !important; color: #854d0e !important; border: 1px solid #fef08a; font-weight: 700; }
+.badge-rdwos-o { background-color: #f3e8ff !important; color: #6b21a8 !important; border: 1px solid #e9d5ff; font-weight: 700; }
+.badge-rdwos-s { background-color: #ffe4e6 !important; color: #9f1239 !important; border: 1px solid #fecdd3; font-weight: 700; }
+
 :root {
     --primary: #0d9488;
     --primary-deep: #0f766e;

@@ -1,0 +1,175 @@
+{% extends 'base.html' %}
+
+{% block title %}Evaluasi Risiko — {{ risiko.jenis_risiko }}{% endblock %}
+{% block page_title %}Evaluasi Risiko (Check/Act){% endblock %}
+{% block page_subtitle %}Penilaian Risiko Residual setelah Mitigasi{% endblock %}
+
+{% block extra_css %}
+<style>
+    .comparison-card { border-radius:12px; transition:transform .2s; }
+    .badge-teal { background:#0d9488; color:#fff; }
+    .badge-purple { background:#7c3aed; color:#fff; }
+    input[type=range] { accent-color:#0d9488; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-3">
+    <div class="row justify-content-center">
+        <div class="col-xl-9">
+
+            {# Breadcrumb #}
+            <nav aria-label="breadcrumb" class="mb-3">
+                <ol class="breadcrumb" style="font-size:.8rem;">
+                    <li class="breadcrumb-item"><a href="{% url 'akreditasi:risiko_daftar' %}" style="color:#0d9488;">Daftar Risiko</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'akreditasi:risiko_detail' risiko_id=risiko.pk %}" style="color:#0d9488;">Detail Risiko</a></li>
+                    <li class="breadcrumb-item active">Evaluasi</li>
+                </ol>
+            </nav>
+
+            {% if messages %}
+            {% for msg in messages %}
+            <div class="alert alert-{{ msg.tags }} py-2" style="font-size:.82rem;">{{ msg }}</div>
+            {% endfor %}
+            {% endif %}
+
+            {# Ringkasan Risiko #}
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-body p-3">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <span class="badge bg-secondary mb-1" style="font-size:.68rem;">{{ risiko.unit.name }}</span>
+                            <h5 class="fw-bold mb-0" style="color:#0f172a;">{{ risiko.jenis_risiko }}</h5>
+                            <small class="text-muted">{{ risiko.get_periode_display }} {{ risiko.tahun }} &bull; {{ risiko.get_kategori_risiko_display }}</small>
+                        </div>
+                        <span class="badge {% if risiko.status == 'IDENTIFIKASI' %}bg-secondary{% elif risiko.status == 'PLAN' %}bg-primary{% elif risiko.status == 'DO' %}bg-warning text-dark{% elif risiko.status == 'EVALUASI' %}badge-purple{% elif risiko.status == 'SELESAI' %}bg-success{% elif risiko.status == 'ACCEPTED' %}badge-teal{% endif %} p-2">
+                            Status: {{ risiko.get_status_display }}
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            {# Perbandingan Sebelum vs Sesudah #}
+            <h6 class="fw-bold mb-3" style="color:#0f172a;"><i class="bi bi-arrow-left-right me-1" style="color:#0d9488;"></i>Perbandingan Risiko Inherent vs Residual</h6>
+
+            <div class="row g-3 mb-4">
+                {# SEBELUM (Inherent) #}
+                <div class="col-md-6">
+                    <div class="card border-0 shadow-sm comparison-card h-100" style="background:#fff; border-top:4px solid {{ risiko.risk_color }} !important;">
+                        <div class="card-body p-4 text-center">
+                            <span class="badge bg-light text-dark border mb-2" style="font-size:.75rem;">SEBELUM MITIGASI (INHERENT)</span>
+                            <div class="my-3">
+                                <span class="d-inline-flex align-items-center justify-content-center" style="width:72px; height:72px; border-radius:50%; background:{{ risiko.risk_color }}; color:#fff; font-size:1.8rem; font-weight:800;">
+                                    {{ risiko.skor_inherent }}
+                                </span>
+                            </div>
+                            <h6 class="fw-bold mb-1" style="color:{{ risiko.risk_color }};">{{ risiko.risk_level|cut:"_" }}</h6>
+                            <div class="text-muted mt-2" style="font-size:.8rem;">
+                                Dampak: <strong>{{ risiko.dampak }}</strong> &times; Probabilitas: <strong>{{ risiko.probabilitas }}</strong>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {# SESUDAH (Residual - Live Preview) #}
+                <div class="col-md-6">
+                    <div class="card border-0 shadow-sm comparison-card h-100" style="background:#fff; border-top:4px solid #0d9488 !important;">
+                        <div class="card-body p-4 text-center">
+                            <span class="badge mb-2 text-white" style="background:#0d9488; font-size:.75rem;">SESUDAH MITIGASI (RESIDUAL)</span>
+                            <div class="my-3">
+                                <span id="res-badge" class="d-inline-flex align-items-center justify-content-center" style="width:72px; height:72px; border-radius:50%; background:#16a34a; color:#fff; font-size:1.8rem; font-weight:800;">
+                                    {{ risiko.skor_residual|default:"4" }}
+                                </span>
+                            </div>
+                            <h6 id="res-label" class="fw-bold mb-1" style="color:#16a34a;">RENDAH</h6>
+                            <div class="text-muted mt-2" style="font-size:.8rem;">
+                                Dampak Residual: <strong id="res-d-val">{{ risiko.dampak_residual|default:"2" }}</strong> &times; Probabilitas Residual: <strong id="res-p-val">{{ risiko.probabilitas_residual|default:"2" }}</strong>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {# Form Evaluasi #}
+            <div class="card border-0 shadow-sm">
+                <div class="card-header border-0 py-3" style="background:linear-gradient(135deg,#0f766e,#0d9488); color:#fff;">
+                    <h6 class="mb-0 fw-bold"><i class="bi bi-sliders me-2"></i>Tetapkan Skor Residual & Ubah Status ke EVALUASI</h6>
+                </div>
+                <div class="card-body p-4">
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="row g-4 mb-4">
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold" style="font-size:.8rem;">Dampak Residual (1–5) &nbsp;<span class="fw-bold text-teal" id="slider-d-display" style="color:#0d9488;">{{ risiko.dampak_residual|default:"2" }}</span></label>
+                                <input type="range" name="dampak_residual" id="dampak_residual" class="form-range" min="1" max="5" step="1" value="{{ risiko.dampak_residual|default:"2" }}" required>
+                                <div class="d-flex justify-content-between" style="font-size:.65rem; color:#64748b;"><span>1 — Minimal</span><span>5 — Katastrofik</span></div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold" style="font-size:.8rem;">Probabilitas Residual (1–5) &nbsp;<span class="fw-bold text-teal" id="slider-p-display" style="color:#0d9488;">{{ risiko.probabilitas_residual|default:"2" }}</span></label>
+                                <input type="range" name="probabilitas_residual" id="probabilitas_residual" class="form-range" min="1" max="5" step="1" value="{{ risiko.probabilitas_residual|default:"2" }}" required>
+                                <div class="d-flex justify-content-between" style="font-size:.65rem; color:#64748b;"><span>1 — Sangat Jarang</span><span>5 — Sangat Sering</span></div>
+                            </div>
+                        </div>
+
+                        <div class="alert alert-info py-2" style="font-size:.8rem;">
+                            <i class="bi bi-info-circle me-1"></i>Menyimpan evaluasi ini akan secara otomatis mengubah status risiko menjadi <strong>EVALUASI</strong> (tahap Check pada siklus PDCA).
+                        </div>
+
+                        <div class="d-flex gap-2 justify-content-end">
+                            <a href="{% url 'akreditasi:risiko_detail' risiko_id=risiko.pk %}" class="btn btn-sm btn-outline-secondary">Batal</a>
+                            <button type="submit" class="btn btn-sm text-white px-4" style="background:#0d9488;"><i class="bi bi-check2-circle me-1"></i>Simpan Evaluasi</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function() {
+    const dEl = document.getElementById('dampak_residual');
+    const pEl = document.getElementById('probabilitas_residual');
+    const dDisp = document.getElementById('slider-d-display');
+    const pDisp = document.getElementById('slider-p-display');
+    const resDVal = document.getElementById('res-d-val');
+    const resPVal = document.getElementById('res-p-val');
+    const resBadge = document.getElementById('res-badge');
+    const resLabel = document.getElementById('res-label');
+
+    const colors = { SANGAT_TINGGI:'#dc2626', TINGGI:'#ea580c', SEDANG:'#ca8a04', RENDAH:'#16a34a', SANGAT_RENDAH:'#64748b' };
+    const labels = { SANGAT_TINGGI:'SANGAT TINGGI', TINGGI:'TINGGI', SEDANG:'SEDANG', RENDAH:'RENDAH', SANGAT_RENDAH:'SANGAT RENDAH' };
+
+    function getLevel(s) {
+        if (s >= 20) return 'SANGAT_TINGGI';
+        if (s >= 15) return 'TINGGI';
+        if (s >= 10) return 'SEDANG';
+        if (s >= 5)  return 'RENDAH';
+        return 'SANGAT_RENDAH';
+    }
+
+    function updateResidual() {
+        const d = parseInt(dEl.value);
+        const p = parseInt(pEl.value);
+        const s = d * p;
+        const lv = getLevel(s);
+
+        dDisp.textContent = d;
+        pDisp.textContent = p;
+        resDVal.textContent = d;
+        resPVal.textContent = p;
+        resBadge.textContent = s;
+        resBadge.style.background = colors[lv];
+        resLabel.textContent = labels[lv];
+        resLabel.style.color = colors[lv];
+    }
+
+    dEl.addEventListener('input', updateResidual);
+    pEl.addEventListener('input', updateResidual);
+    updateResidual();
+})();
+</script>
+{% endblock %}
