@@ -95,7 +95,7 @@ class Command(BaseCommand):
                 1, dir_mutu,
                 [('R', 'SK Pembentukan Komite Mutu & Keselamatan Pasien', True),
                  ('D', 'Program Kerja Komite Mutu Tahunan 2026', True)],
-                {'score': 10, 'baseline_data': 'Komite mutu telah aktif dan teregistrasi Kemenkes.', 'quality_target': '100% kepatuhan tata kelola mutu.'}
+                {'score': 5, 'baseline_data': 'Komite mutu baru dibentuk dan program kerja masih dalam penyusunan.', 'quality_target': '100% kepatuhan tata kelola mutu.'}
             ),
             (
                 'PMKP 2 EP 1', 'PMKP 2', 'Pemilihan dan Pengumpulan Indikator Mutu',
@@ -117,8 +117,10 @@ class Command(BaseCommand):
                     standard_item=it, category_type=r_type, title=title,
                     defaults={'is_mandatory': mand}
                 )
-            if not QualityRecord.objects.filter(standard_item=it).exists():
-                QualityRecord.objects.create(standard_item=it, unit=unit, **rec)
+            rec_obj, rec_created = QualityRecord.objects.update_or_create(
+                standard_item=it,
+                defaults={'unit': unit, **rec}
+            )
 
         # KPS EP
         kps_items = [
@@ -128,7 +130,7 @@ class Command(BaseCommand):
                 1, dir_mutu,
                 [('R', 'Dokumen Analisis Beban Kerja (ABK) & Renbut Staf RS', True),
                  ('D', 'Pola Ketenagaan Terintegrasi 2026', True)],
-                {'score': 10, 'baseline_data': 'Pola ketenagaan telah mengadopsi standar Kemenkes.', 'quality_target': 'Kesesuaian ABK >90%.'}
+                {'score': 5, 'baseline_data': 'Pola ketenagaan sedang direvisi sesuai struktur baru 2026.', 'quality_target': 'Kesesuaian ABK >90%.'}
             ),
             (
                 'KPS 8 EP 1', 'KPS 8', 'Kredensial Tenaga Medis & Keperawatan',
@@ -136,7 +138,7 @@ class Command(BaseCommand):
                 2, unit_igd,
                 [('R', 'Pedoman Kredensial & Rekredensial Komite Medis/Keperawatan', True),
                  ('D', 'Berkas Verifikasi STR, SIP, SPK, dan RKK Staf', True)],
-                {'score': 10, 'baseline_data': 'Seluruh staf medis aktif memiliki SPK dan RKK yang sah.', 'quality_target': '100% nakes tersertifikasi.'}
+                {'score': 0, 'baseline_data': 'Proses rekredensialing berkas tenaga medis masih berjalan 40%.', 'quality_target': '100% nakes tersertifikasi.'}
             ),
         ]
         for code, sub, subtitle, desc, order, unit, reqs, rec in kps_items:
@@ -150,8 +152,10 @@ class Command(BaseCommand):
                     standard_item=it, category_type=r_type, title=title,
                     defaults={'is_mandatory': mand}
                 )
-            if not QualityRecord.objects.filter(standard_item=it).exists():
-                QualityRecord.objects.create(standard_item=it, unit=unit, **rec)
+            rec_obj, rec_created = QualityRecord.objects.update_or_create(
+                standard_item=it,
+                defaults={'unit': unit, **rec}
+            )
 
         self.stdout.write(self.style.SUCCESS('  ✓ Data Pokja PMKP & KPS berhasil dibuat'))
 

@@ -39,16 +39,16 @@
         <i class="bi bi-folder2 me-1" style="font-size:0.6rem;"></i> Pokja STARKES
     </div>
     {% for cat in sidebar_categories %}
-    <a href="{% url 'akreditasi:matriks_pdca' %}?cat={{ cat.id }}" class="nav-link py-1 {% if request.resolver_match.url_name == 'matriks_pdca' and active_category.id == cat.id %}active{% endif %}" style="margin: 0.05rem 0.75rem;">
+    <a href="{% url 'akreditasi:matriks_pdca' %}?cat={{ cat.id }}" class="nav-link nav-pokja py-1 {% if request.resolver_match.url_name == 'matriks_pdca' and active_category.id == cat.id %}active{% endif %}">
         <span class="nav-icon" style="font-size:0.9rem;"><i class="bi bi-folder2-open"></i></span>
         <span class="nav-text">
-            <div class="d-flex align-items-center justify-content-between">
-                <span class="nav-title font-mono" style="font-size:0.75rem;">{{ cat.code }}</span>
-                <span style="font-size:0.6rem; opacity:0.8;" class="font-mono">{{ cat.percentage }}%</span>
+            <div class="d-flex align-items-center justify-content-between gap-1">
+                <span class="nav-title" style="font-size:0.75rem; font-family:'JetBrains Mono',monospace;">{{ cat.code }}</span>
+                <span class="nav-pokja-pct">{{ cat.percentage }}%</span>
             </div>
-            <div class="progress" style="height: 3px; background: #e2e8f0; border-radius: 3px; margin-top:2px;">
-                <div class="progress-bar {% if cat.percentage >= 80 %}bg-success{% elif cat.percentage >= 60 %}bg-warning{% else %}bg-danger{% endif %}"
-                     role="progressbar" style="width: {{ cat.percentage }}%;"></div>
+            <div class="nav-pokja-bar">
+                <div class="nav-pokja-fill {% if cat.percentage >= 80 %}fill-success{% elif cat.percentage >= 60 %}fill-warning{% else %}fill-danger{% endif %}"
+                     style="width: {{ cat.percentage }}%;"></div>
             </div>
         </span>
     </a>

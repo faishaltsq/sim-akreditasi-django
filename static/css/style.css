@@ -357,6 +357,44 @@ code, .font-mono, .mono { font-family: 'JetBrains Mono', monospace; }
 /* Role badge .bg-teal (for STAF_NAKES role badge) */
 .badge.bg-teal { background-color: #0d9488 !important; color: #ffffff !important; }
 
+/* --- Pokja Sidebar Items (STARKES Scores) --- */
+.nav-pokja {
+    margin: 0.1rem 0.6rem !important;
+    padding: 0.4rem 0.65rem !important;
+    border-radius: var(--radius) !important;
+}
+.nav-pokja-pct {
+    font-size: 0.68rem !important;
+    font-weight: 700 !important;
+    font-family: 'JetBrains Mono', monospace !important;
+    color: var(--text-secondary) !important;
+    white-space: nowrap;
+}
+.sidebar-nav .nav-link.active .nav-pokja-pct {
+    color: #ffffff !important;
+}
+.nav-pokja-bar {
+    height: 4px;
+    background: #e2e8f0;
+    border-radius: 3px;
+    margin-top: 3px;
+    overflow: hidden;
+}
+.sidebar-nav .nav-link.active .nav-pokja-bar {
+    background: rgba(255, 255, 255, 0.25);
+}
+.nav-pokja-fill {
+    height: 100%;
+    border-radius: 3px;
+    transition: width 0.3s ease;
+}
+.nav-pokja-fill.fill-success { background-color: #10b981; }
+.nav-pokja-fill.fill-warning { background-color: #f59e0b; }
+.nav-pokja-fill.fill-danger  { background-color: #ef4444; }
+.sidebar-nav .nav-link.active .nav-pokja-fill {
+    background-color: #ffffff !important;
+}
+
 @media (max-width: 767.98px) {
     .main-content { margin-left: 0; }
     .content-area { padding: 1rem; }
