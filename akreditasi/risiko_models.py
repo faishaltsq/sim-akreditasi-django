@@ -89,14 +89,16 @@ class RisikoUnit(models.Model):
 
     @property
     def risk_level(self):
+        from .system_models import SystemConfig
+        cfg = SystemConfig.get_solo()
         skor = self.skor_inherent
-        if skor >= 20:
+        if skor >= cfg.risk_threshold_sangat_tinggi:
             return 'SANGAT_TINGGI'
-        if skor >= 15:
+        if skor >= cfg.risk_threshold_tinggi:
             return 'TINGGI'
-        if skor >= 10:
+        if skor >= cfg.risk_threshold_sedang:
             return 'SEDANG'
-        if skor >= 5:
+        if skor >= cfg.risk_threshold_rendah:
             return 'RENDAH'
         return 'SANGAT_RENDAH'
 

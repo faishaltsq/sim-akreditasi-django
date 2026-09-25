@@ -3,6 +3,76 @@ from django.conf import settings
 from django.utils import timezone
 
 
+# Default permission matrix per role
+PERMISSION_DEFAULTS = {
+    'SUPER_ADMIN': {
+        'can_view_pdca': True, 'can_edit_pdca': True, 'can_score_ep': True,
+        'can_view_rdwos': True, 'can_upload_rdwos': True, 'can_delete_rdwos': True,
+        'can_view_risiko': True, 'can_manage_risiko': True, 'can_lapor_insiden': True,
+        'can_investigate_insiden': True, 'can_view_scoring': True, 'can_export_reports': True,
+        'can_manage_units': True, 'can_manage_users': True, 'can_verify_kps': True,
+        'can_view_audit_log': True,
+        'can_access_control_center': True,
+        'can_manage_system_settings': True,
+    },
+    'ADMIN_RS': {
+        'can_view_pdca': True, 'can_edit_pdca': True, 'can_score_ep': True,
+        'can_view_rdwos': True, 'can_upload_rdwos': True, 'can_delete_rdwos': True,
+        'can_view_risiko': True, 'can_manage_risiko': True, 'can_lapor_insiden': True,
+        'can_investigate_insiden': True, 'can_view_scoring': True, 'can_export_reports': True,
+        'can_manage_units': True, 'can_manage_users': True, 'can_verify_kps': True,
+        'can_view_audit_log': True,
+        'can_access_control_center': True,
+        'can_manage_system_settings': False,   # Tab ambang batas, tema, freeze → hanya SUPER_ADMIN
+    },
+    'KOORDINATOR_POKJA': {
+        'can_view_pdca': True, 'can_edit_pdca': True, 'can_score_ep': True,
+        'can_view_rdwos': True, 'can_upload_rdwos': True, 'can_delete_rdwos': True,
+        'can_view_risiko': True, 'can_manage_risiko': False, 'can_lapor_insiden': True,
+        'can_investigate_insiden': False, 'can_view_scoring': True, 'can_export_reports': True,
+        'can_manage_units': False, 'can_manage_users': False, 'can_verify_kps': True,
+        'can_view_audit_log': False,
+        'can_access_control_center': False,
+        'can_manage_system_settings': False,
+    },
+    'KEPALA_UNIT': {
+        'can_view_pdca': True, 'can_edit_pdca': True, 'can_score_ep': False,
+        'can_view_rdwos': True, 'can_upload_rdwos': True, 'can_delete_rdwos': False,
+        'can_view_risiko': True, 'can_manage_risiko': True, 'can_lapor_insiden': True,
+        'can_investigate_insiden': False, 'can_view_scoring': True, 'can_export_reports': False,
+        'can_manage_units': False, 'can_manage_users': False, 'can_verify_kps': True,
+        'can_view_audit_log': False,
+        'can_access_control_center': False,
+        'can_manage_system_settings': False,
+    },
+    'STAF_NAKES': {
+        'can_view_pdca': True, 'can_edit_pdca': False, 'can_score_ep': False,
+        'can_view_rdwos': True, 'can_upload_rdwos': True, 'can_delete_rdwos': False,
+        'can_view_risiko': True, 'can_manage_risiko': False, 'can_lapor_insiden': True,
+        'can_investigate_insiden': False, 'can_view_scoring': False, 'can_export_reports': False,
+        'can_manage_units': False, 'can_manage_users': False, 'can_verify_kps': False,
+        'can_view_audit_log': False,
+        'can_access_control_center': False,
+        'can_manage_system_settings': False,
+    },
+    'ASESOR': {
+        'can_view_pdca': True, 'can_edit_pdca': False, 'can_score_ep': True,
+        'can_view_rdwos': True, 'can_upload_rdwos': False, 'can_delete_rdwos': False,
+        'can_view_risiko': True, 'can_manage_risiko': False, 'can_lapor_insiden': False,
+        'can_investigate_insiden': False, 'can_view_scoring': True, 'can_export_reports': True,
+        'can_manage_units': False, 'can_manage_users': False, 'can_verify_kps': False,
+        'can_view_audit_log': False,
+        'can_access_control_center': False,
+        'can_manage_system_settings': False,
+    },
+}
+
+# Izin yang tidak boleh diblokir survey freeze (tetap bisa akses) — hanya SUPER_ADMIN override
+FREEZE_PROTECTED_PERMS = {'can_view_pdca', 'can_view_rdwos', 'can_view_risiko', 'can_view_scoring', 'can_view_audit_log'}
+# Izin khusus admin yang tidak boleh di-revoke dari SUPER_ADMIN
+LOCKOUT_SAFE_PERMS = {'can_access_control_center', 'can_manage_users', 'can_manage_system_settings'}
+
+
 class UserProfile(models.Model):
     ROLE_CHOICES = [
         ('SUPER_ADMIN', 'Super Admin (Developer / IT RS)'),
@@ -85,6 +155,8 @@ class UserProfile(models.Model):
         blank=True,
         help_text='Nomor Induk Pegawai / Nomor Registrasi Pegawai.'
     )
+    # Override izin kustom per pengguna (dict: {'can_edit_pdca': True, ...})
+    custom_permissions = models.JSONField('Hak Akses Kustom', default=dict, blank=True)
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -101,21 +173,48 @@ class UserProfile(models.Model):
     def role_level(self):
         return self.ROLE_HIERARCHY.get(self.role, 0)
 
+    def has_permission(self, perm_code):
+        """
+        Evaluasi izin secara hierarkis:
+        1. is_superuser / SUPER_ADMIN → selalu True
+        2. Survey Freeze Mode aktif → izin edit/manage diblokir kecuali SUPER_ADMIN
+        3. custom_permissions per user → override spesifik
+        4. RolePermissionConfig → konfigurasi per role
+        5. Fallback ke PERMISSION_DEFAULTS
+        """
+        if self.user.is_superuser or self.role == 'SUPER_ADMIN':
+            return True
+
+        # Survey freeze: blokir semua izin kecuali read-only saat mode aktif
+        if perm_code not in FREEZE_PROTECTED_PERMS:
+            from akreditasi.system_models import SystemConfig
+            if SystemConfig.get_solo().survey_freeze_mode:
+                return False
+
+        # User-level custom override
+        if perm_code in self.custom_permissions:
+            return bool(self.custom_permissions[perm_code])
+
+        # Role-level config dari database
+        cfg = RolePermissionConfig.get_config_for_role(self.role)
+        return getattr(cfg, perm_code, False)
+
+    # --- Backward-compatible properties ---
     @property
     def can_edit(self):
-        return self.role in ('SUPER_ADMIN', 'ADMIN_RS', 'KOORDINATOR_POKJA', 'KEPALA_UNIT')
+        return self.has_permission('can_edit_pdca')
 
     @property
     def can_manage_users(self):
-        return self.role in ('SUPER_ADMIN', 'ADMIN_RS')
+        return self.has_permission('can_manage_users')
 
     @property
     def can_manage_structure(self):
-        return self.role in ('SUPER_ADMIN', 'ADMIN_RS')
+        return self.has_permission('can_manage_units')
 
     @property
     def can_upload(self):
-        return self.role in ('SUPER_ADMIN', 'ADMIN_RS', 'KOORDINATOR_POKJA', 'KEPALA_UNIT', 'STAF_NAKES')
+        return self.has_permission('can_upload_rdwos')
 
     @property
     def is_read_only(self):
@@ -251,3 +350,63 @@ class NakesCredential(models.Model):
         if self.valid_until and self.valid_until < timezone.now().date() and self.status == 'VERIFIED':
             self.status = 'EXPIRED'
             self.save(update_fields=['status', 'updated_at'])
+
+
+class RolePermissionConfig(models.Model):
+    """Konfigurasi 18 izin modular per peran — dapat diubah Admin via Pusat Kontrol."""
+    role = models.CharField('Peran Pengguna', max_length=30, unique=True, choices=UserProfile.ROLE_CHOICES)
+
+    # Modul PDCA & Scoring
+    can_view_pdca = models.BooleanField('Lihat Matriks PDCA', default=True)
+    can_edit_pdca = models.BooleanField('Edit Plan/Do/Check/Action', default=False)
+    can_score_ep = models.BooleanField('Beri Skor EP (0/5/10)', default=False)
+
+    # Modul RDWOS / Dokumen
+    can_view_rdwos = models.BooleanField('Akses Dokumen RDWOS', default=True)
+    can_upload_rdwos = models.BooleanField('Unggah Dokumen Bukti', default=False)
+    can_delete_rdwos = models.BooleanField('Hapus Dokumen Bukti', default=False)
+
+    # Modul Risiko & Insiden
+    can_view_risiko = models.BooleanField('Lihat Register Risiko', default=True)
+    can_manage_risiko = models.BooleanField('Input & Evaluasi Risiko', default=False)
+    can_lapor_insiden = models.BooleanField('Melaporkan Insiden (KNC/KTD)', default=True)
+    can_investigate_insiden = models.BooleanField('Investigasi & Analisis Insiden', default=False)
+
+    # Modul Laporan & Ekspor
+    can_view_scoring = models.BooleanField('Lihat Auto-Scoring KARS', default=True)
+    can_export_reports = models.BooleanField('Cetak Dokumen & Ekspor Excel', default=False)
+
+    # Modul Manajemen
+    can_manage_units = models.BooleanField('Kelola Struktur Unit Kerja', default=False)
+    can_manage_users = models.BooleanField('Kelola Pengguna & Hak Akses', default=False)
+    can_verify_kps = models.BooleanField('Verifikasi Kredensial Nakes', default=False)
+    can_view_audit_log = models.BooleanField('Lihat Log Audit Sistem', default=False)
+
+    # Modul Pusat Kontrol Admin
+    can_access_control_center = models.BooleanField('Akses Menu Pusat Kontrol Admin', default=False)
+    can_manage_system_settings = models.BooleanField('Ubah Konfigurasi Sistem (Ambang Batas, Tema, Freeze)', default=False)
+
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = 'Konfigurasi Izin Peran'
+        verbose_name_plural = 'Konfigurasi Izin Peran'
+
+    def __str__(self):
+        return f"Izin Peran: {self.get_role_display()}"
+
+    @classmethod
+    def get_config_for_role(cls, role):
+        """Ambil konfigurasi per role; buat dengan default aman jika belum ada."""
+        defaults = PERMISSION_DEFAULTS.get(role, {})
+        obj, _ = cls.objects.get_or_create(role=role, defaults=defaults)
+        return obj
+
+    @classmethod
+    def reset_to_defaults(cls):
+        """Reset semua role ke default KARS bawaan sistem."""
+        for role, defaults in PERMISSION_DEFAULTS.items():
+            obj, created = cls.objects.get_or_create(role=role)
+            for field, value in defaults.items():
+                setattr(obj, field, value)
+            obj.save()

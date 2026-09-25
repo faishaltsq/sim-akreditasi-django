@@ -17,13 +17,21 @@ class Framework(models.Model):
         return f"{self.name} ({self.cycle_type})"
 
 
-class UnitKerja(models.Model):
-    LEVEL_CHOICES = [
-        (1, 'Tingkat 1 — Direktorat / Bidang'),
-        (2, 'Tingkat 2 — Bagian / Instalasi / Komite'),
-        (3, 'Tingkat 3 — Sub-Bagian / Ruangan / Unit Layanan'),
-    ]
+TIPE_UNIT_CHOICES = [
+    ('PIMPINAN', 'Pimpinan / Pemilik / Dewas'),
+    ('DIREKTORAT', 'Direktorat / Bidang'),
+    ('KOMITE', 'Komite Medis / Keperawatan / Mutu'),
+    ('SPI', 'Satuan Pengawas Internal'),
+    ('BAGIAN', 'Bagian / Sub-Bagian Administrasi'),
+    ('INSTALASI', 'Instalasi Pelayanan Medis / Penunjang'),
+    ('KSM', 'Kelompok Staf Medis (KSM Spesialis)'),
+    ('RUANGAN', 'Ruangan Perawatan / Tindakan'),
+    ('DEPO', 'Depo Farmasi / Satelit'),
+    ('LAINNYA', 'Unit Penunjang Lainnya'),
+]
 
+
+class UnitKerja(models.Model):
     parent = models.ForeignKey(
         'self',
         on_delete=models.CASCADE,
@@ -32,36 +40,36 @@ class UnitKerja(models.Model):
         related_name='children',
         verbose_name='Induk Unit Kerja'
     )
-    level = models.PositiveSmallIntegerField(
-        'Tingkat Hierarki',
-        choices=LEVEL_CHOICES,
-        default=1
-    )
+    level = models.PositiveSmallIntegerField('Tingkat Hierarki', default=1)
     name = models.CharField('Nama Unit Kerja', max_length=200)
     code = models.CharField('Kode Unit', max_length=30, unique=True)
     pic_name = models.CharField('Penanggung Jawab (PIC)', max_length=150, blank=True)
     description = models.TextField('Keterangan / Fungsi', blank=True)
+    order = models.PositiveIntegerField('Urutan Tampilan', default=0)
+    tipe_unit = models.CharField('Jenis / Kategori Unit', max_length=40, choices=TIPE_UNIT_CHOICES, blank=True, default='LAINNYA')
+    is_active = models.BooleanField('Unit Aktif', default=True, help_text='Nonaktifkan unit tanpa menghapus data akreditasi historis.')
 
     class Meta:
         verbose_name = 'Unit Kerja'
         verbose_name_plural = 'Unit Kerja'
-        ordering = ['level', 'code']
+        ordering = ['level', 'order', 'code']
 
     def __str__(self):
         prefix = '—' * (self.level - 1) + (' ' if self.level > 1 else '')
         return f"{prefix}[{self.code}] {self.name}"
 
     def get_full_hierarchy(self):
-        names = [self.name]
+        names = [self.code]
         curr = self.parent
         while curr:
-            names.insert(0, curr.name)
+            names.insert(0, curr.code)
             curr = curr.parent
         return ' > '.join(names)
 
     def save(self, *args, **kwargs):
+        # N-level dinamis tanpa clamp statis — admin bisa bangun hierarki sedalam apapun
         if self.parent:
-            self.level = min(self.parent.level + 1, 3)
+            self.level = self.parent.level + 1
         else:
             self.level = 1
         super().save(*args, **kwargs)
@@ -101,12 +109,14 @@ class Category(models.Model):
 
     @property
     def status_level(self):
+        from .system_models import SystemConfig
+        cfg = SystemConfig.get_solo()
         pct = self.percentage
-        if pct >= 80:
+        if pct >= cfg.threshold_paripurna:
             return {'label': 'PARIPURNA (A)', 'badge': 'success'}
-        elif pct >= 70:
+        elif pct >= cfg.threshold_utama:
             return {'label': 'UTAMA (B)', 'badge': 'primary'}
-        elif pct >= 60:
+        elif pct >= cfg.threshold_madya:
             return {'label': 'MADYA (C)', 'badge': 'warning'}
         return {'label': 'BELUM MEMENUHI', 'badge': 'danger'}
 
@@ -300,3 +310,4 @@ from .risiko_models import (  # noqa: E402, F401
     IndikatorMutu,
     CatatanIndikator,
 )
+from .system_models import SystemConfig  # noqa: E402, F401

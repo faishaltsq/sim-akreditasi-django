@@ -1,0 +1,744 @@
+{% extends "base.html" %}
+
+{% block title %}Pusat Kontrol Sistem &amp; Hak Akses | RS MonsisKami{% endblock %}
+{% block page_title %}Pusat Kontrol Sistem &amp; Hak Akses{% endblock %}
+{% block page_subtitle %}Konfigurasi struktur hierarki organisasi, matriks izin modular, ambang kelulusan, dan kebijakan operasional rumah sakit.{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-0">
+
+  <!-- KPI Banner & Alert Mode Survei -->
+  {% if sys_config.survey_freeze_mode %}
+  <div class="alert alert-warning border-2 border-warning d-flex align-items-center mb-4 shadow-sm py-3" role="alert">
+    <div class="fs-2 me-3 text-warning"><i class="bi bi-shield-lock-fill"></i></div>
+    <div class="flex-grow-1">
+      <h6 class="alert-heading fw-bold mb-1">MODE KUNCI SURVEI AKTIF (READ-ONLY FREEZE)</h6>
+      <p class="mb-0 small text-dark">{{ sys_config.survey_freeze_message }} Seluruh staf &amp; pokja hanya memiliki hak akses baca. Hanya Super Admin yang dapat melakukan perubahan.</p>
+    </div>
+    {% if can_manage_system %}
+    <form method="post" action="{% url 'accounts:toggle_survey_freeze' %}" class="ms-3">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-sm btn-outline-dark fw-bold">Nonaktifkan Mode Survei</button>
+    </form>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  <!-- KPI Cards Header -->
+  <div class="row g-3 mb-4">
+    <div class="col-md-3 col-6">
+      <div class="card border-0 shadow-sm rounded-3 p-3 bg-white">
+        <div class="d-flex align-items-center">
+          <div class="rounded-3 bg-teal-subtle text-teal p-3 me-3 fs-4"><i class="bi bi-diagram-3"></i></div>
+          <div>
+            <div class="text-muted small fw-semibold">Total Unit Terdaftar</div>
+            <div class="fs-4 fw-bold text-dark">{{ all_units.count }} Unit</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3 col-6">
+      <div class="card border-0 shadow-sm rounded-3 p-3 bg-white">
+        <div class="d-flex align-items-center">
+          <div class="rounded-3 bg-primary-subtle text-primary p-3 me-3 fs-4"><i class="bi bi-shield-check"></i></div>
+          <div>
+            <div class="text-muted small fw-semibold">Peran Standar</div>
+            <div class="fs-4 fw-bold text-dark">{{ role_configs|length }} Peran</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3 col-6">
+      <div class="card border-0 shadow-sm rounded-3 p-3 bg-white">
+        <div class="d-flex align-items-center">
+          <div class="rounded-3 bg-success-subtle text-success p-3 me-3 fs-4"><i class="bi bi-award"></i></div>
+          <div>
+            <div class="text-muted small fw-semibold">Target Paripurna</div>
+            <div class="fs-4 fw-bold text-dark">&ge; {{ sys_config.threshold_paripurna }}%</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3 col-6">
+      <div class="card border-0 shadow-sm rounded-3 p-3 bg-white">
+        <div class="d-flex align-items-center">
+          <div class="rounded-3 {% if sys_config.survey_freeze_mode %}bg-danger-subtle text-danger{% else %}bg-secondary-subtle text-secondary{% endif %} p-3 me-3 fs-4">
+            <i class="bi {% if sys_config.survey_freeze_mode %}bi-lock-fill{% else %}bi-unlock{% endif %}"></i>
+          </div>
+          <div>
+            <div class="text-muted small fw-semibold">Status Sistem</div>
+            <div class="fs-6 fw-bold {% if sys_config.survey_freeze_mode %}text-danger{% else %}text-success{% endif %}">
+              {% if sys_config.survey_freeze_mode %}TERKUNCI (SURVEI){% else %}TERBUKA NORMAL{% endif %}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Tabs Card -->
+  <div class="card border-0 shadow-sm rounded-4 overflow-hidden mb-5">
+    <div class="card-header bg-white border-bottom border-slate-200 px-4 pt-3 pb-0">
+      <ul class="nav nav-tabs border-0" id="controlTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+          <button class="nav-link active fw-bold text-teal pb-3 px-3" id="tab-unit-btn" data-bs-toggle="tab" data-bs-target="#tab-unit" type="button" role="tab">
+            <i class="bi bi-diagram-3-fill me-1"></i> 1. Hierarki &amp; Unit Organisasi
+          </button>
+        </li>
+        <li class="nav-item" role="presentation">
+          <button class="nav-link fw-bold text-slate-600 pb-3 px-3" id="tab-roles-btn" data-bs-toggle="tab" data-bs-target="#tab-roles" type="button" role="tab">
+            <i class="bi bi-shield-shaded me-1"></i> 2. Matriks Hak Akses Peran
+          </button>
+        </li>
+        <li class="nav-item" role="presentation">
+          <button class="nav-link fw-bold text-slate-600 pb-3 px-3" id="tab-users-btn" data-bs-toggle="tab" data-bs-target="#tab-users" type="button" role="tab">
+            <i class="bi bi-person-gear me-1"></i> 3. Kustomisasi Akses Pengguna
+          </button>
+        </li>
+        <li class="nav-item" role="presentation">
+          <button class="nav-link fw-bold {% if can_manage_system %}text-slate-600{% else %}text-muted disabled{% endif %} pb-3 px-3" id="tab-thresholds-btn" data-bs-toggle="tab" data-bs-target="#tab-thresholds" type="button" role="tab">
+            <i class="bi bi-sliders me-1"></i> 4. Standar &amp; Ambang Batas {% if not can_manage_system %}<i class="bi bi-lock-fill text-muted small"></i>{% endif %}
+          </button>
+        </li>
+        <li class="nav-item" role="presentation">
+          <button class="nav-link fw-bold {% if can_manage_system %}text-slate-600{% else %}text-muted disabled{% endif %} pb-3 px-3" id="tab-branding-btn" data-bs-toggle="tab" data-bs-target="#tab-branding" type="button" role="tab">
+            <i class="bi bi-palette-fill me-1"></i> 5. Branding, Tema &amp; Mode Survei {% if not can_manage_system %}<i class="bi bi-lock-fill text-muted small"></i>{% endif %}
+          </button>
+        </li>
+      </ul>
+    </div>
+
+    <div class="card-body p-4 bg-slate-50">
+      <div class="tab-content" id="controlTabsContent">
+
+        <!-- ============================================================== -->
+        <!-- TAB 1: HIERARKI & UNIT ORGANISASI -->
+        <!-- ============================================================== -->
+        <div class="tab-pane fade show active" id="tab-unit" role="tabpanel">
+          <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3">
+            <div>
+              <h5 class="fw-bold text-dark mb-1">Pengaturan &amp; Kustomisasi Struktur Unit Kerja</h5>
+              <p class="text-muted small mb-0">Ubah induk unit (reparenting), urutan tampilan, tipe unit, atau nonaktifkan unit secara langsung.</p>
+            </div>
+            <div class="d-flex align-items-center gap-2">
+              <input type="text" id="unitSearchInput" class="form-control form-control-sm" placeholder="Cari nama/kode unit..." style="width: 250px;">
+              <a href="{% url 'akreditasi:unit_tree' %}" class="btn btn-sm btn-outline-teal fw-semibold" target="_blank">
+                <i class="bi bi-diagram-2 me-1"></i> Buka Pohon Visual
+              </a>
+            </div>
+          </div>
+
+          <div class="card border-0 shadow-sm rounded-3 overflow-hidden">
+            <div class="table-responsive" style="max-height: 550px;">
+              <table class="table table-hover align-middle mb-0" id="unitHierarchyTable">
+                <thead class="table-light sticky-top">
+                  <tr class="small text-muted text-uppercase">
+                    <th style="width: 90px;">Kode</th>
+                    <th>Nama Unit Kerja</th>
+                    <th style="width: 90px;">Level</th>
+                    <th style="width: 170px;">Tipe / Klasifikasi</th>
+                    <th style="width: 240px;">Induk Unit (Parent)</th>
+                    <th style="width: 90px;">Urutan</th>
+                    <th style="width: 90px;" class="text-center">Status</th>
+                    <th style="width: 100px;" class="text-end">Aksi</th>
+                  </tr>
+                </thead>
+                <tbody id="unitTableBody">
+                  {% for u in all_units %}
+                  <tr id="row-unit-{{ u.id }}" data-search="{{ u.code|lower }} {{ u.name|lower }} {{ u.get_tipe_unit_display|lower }}">
+                    <td><span class="badge bg-light text-dark font-monospace border">{{ u.code }}</span></td>
+                    <td>
+                      <div class="fw-semibold text-dark">{{ u.name }}</div>
+                      {% if u.pic_name %}<div class="text-muted small"><i class="bi bi-person me-1"></i>{{ u.pic_name }}</div>{% endif %}
+                    </td>
+                    <td>
+                      <span class="badge bg-teal-subtle text-teal fw-bold">Level {{ u.level }}</span>
+                    </td>
+                    <td>
+                      <select class="form-select form-select-sm" id="tipe-{{ u.id }}">
+                        <option value="PIMPINAN" {% if u.tipe_unit == 'PIMPINAN' %}selected{% endif %}>Pimpinan / Dewas</option>
+                        <option value="DIREKTORAT" {% if u.tipe_unit == 'DIREKTORAT' %}selected{% endif %}>Direktorat / Bidang</option>
+                        <option value="KOMITE" {% if u.tipe_unit == 'KOMITE' %}selected{% endif %}>Komite RS</option>
+                        <option value="SPI" {% if u.tipe_unit == 'SPI' %}selected{% endif %}>SPI</option>
+                        <option value="BAGIAN" {% if u.tipe_unit == 'BAGIAN' %}selected{% endif %}>Bagian / Sub-Bag</option>
+                        <option value="INSTALASI" {% if u.tipe_unit == 'INSTALASI' %}selected{% endif %}>Instalasi</option>
+                        <option value="KSM" {% if u.tipe_unit == 'KSM' %}selected{% endif %}>KSM Spesialis</option>
+                        <option value="RUANGAN" {% if u.tipe_unit == 'RUANGAN' %}selected{% endif %}>Ruangan</option>
+                        <option value="DEPO" {% if u.tipe_unit == 'DEPO' %}selected{% endif %}>Depo / Satelit</option>
+                        <option value="LAINNYA" {% if u.tipe_unit == 'LAINNYA' %}selected{% endif %}>Lainnya</option>
+                      </select>
+                    </td>
+                    <td>
+                      <select class="form-select form-select-sm" id="parent-{{ u.id }}">
+                        <option value="0">— Tanpa Induk (Puncak / L1) —</option>
+                        {% for cand in all_units %}
+                          {% if cand.id != u.id %}
+                          <option value="{{ cand.id }}" {% if u.parent_id == cand.id %}selected{% endif %}>
+                            {% if cand.level > 1 %}&nbsp;&nbsp;&nbsp;{% endif %}[{{ cand.code }}] {{ cand.name|truncatechars:28 }}
+                          </option>
+                          {% endif %}
+                        {% endfor %}
+                      </select>
+                    </td>
+                    <td>
+                      <input type="number" class="form-control form-control-sm text-center" id="order-{{ u.id }}" value="{{ u.order }}" style="width: 70px;">
+                    </td>
+                    <td class="text-center">
+                      <div class="form-check form-switch d-inline-block">
+                        <input class="form-check-input" type="checkbox" id="active-{{ u.id }}" {% if u.is_active %}checked{% endif %}>
+                      </div>
+                    </td>
+                    <td class="text-end">
+                      <button class="btn btn-sm btn-teal fw-semibold" onclick="saveUnitHierarchy({{ u.id }})">
+                        <i class="bi bi-check-lg"></i> Simpan
+                      </button>
+                    </td>
+                  </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- ============================================================== -->
+        <!-- TAB 2: MATRIKS HAK AKSES PERAN -->
+        <!-- ============================================================== -->
+        <div class="tab-pane fade" id="tab-roles" role="tabpanel">
+          <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3">
+            <div>
+              <h5 class="fw-bold text-dark mb-1">Matriks Hak Akses Peran Dinamis (Permission Matrix)</h5>
+              <p class="text-muted small mb-0">Atur izin operasional tiap peran. Perubahan berlaku seketika pada sesi seluruh pengguna.</p>
+            </div>
+            <div class="d-flex gap-2">
+              <form method="post" action="{% url 'accounts:reset_role_permissions' %}" onsubmit="return confirm('Kembalikan seluruh matriks izin ke standar bawaan KARS?');">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-sm btn-outline-danger fw-semibold">
+                  <i class="bi bi-arrow-counterclockwise me-1"></i> Reset ke Standar KARS
+                </button>
+              </form>
+              <button type="button" class="btn btn-sm btn-teal fw-semibold" onclick="saveRolePermissions()">
+                <i class="bi bi-save-fill me-1"></i> Simpan Seluruh Matriks Izin
+              </button>
+            </div>
+          </div>
+
+          <div class="card border-0 shadow-sm rounded-3 overflow-hidden">
+            <div class="table-responsive">
+              <table class="table table-bordered table-hover align-middle mb-0" id="permMatrixTable">
+                <thead class="table-light">
+                  <tr class="small text-muted text-uppercase text-center">
+                    <th class="text-start" style="width: 250px;">Modul Izin Sistem</th>
+                    {% for rc in role_configs %}
+                    <th style="min-width: 130px;">
+                      <div class="fw-bold text-dark">{{ rc.role_label|truncatechars:18 }}</div>
+                      <span class="badge bg-secondary-subtle text-dark font-monospace small">{{ rc.role_code }}</span>
+                    </th>
+                    {% endfor %}
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for field_name, field_label in perm_fields %}
+                  <tr>
+                    <td class="fw-semibold text-slate-700 bg-white">
+                      {{ field_label }}
+                      <div class="font-monospace text-muted" style="font-size: 0.72rem;">{{ field_name }}</div>
+                    </td>
+                    {% for rc in role_configs %}
+                    <td class="text-center bg-white">
+                      <div class="form-check form-switch d-inline-block">
+                        <input class="form-check-input perm-switch" type="checkbox"
+                               data-role="{{ rc.role_code }}"
+                               data-perm="{{ field_name }}"
+                               {% if rc.role_code == 'SUPER_ADMIN' and field_name in 'can_access_control_center,can_manage_users,can_manage_system_settings' %}
+                                 checked disabled title="Izin vital Super Admin tidak dapat dinonaktifkan demi keamanan."
+                               {% else %}
+                                 {% if rc.config|default:None %}
+                                   {% if field_name == 'can_view_pdca' and rc.config.can_view_pdca %}checked{% endif %}
+                                   {% if field_name == 'can_edit_pdca' and rc.config.can_edit_pdca %}checked{% endif %}
+                                   {% if field_name == 'can_score_ep' and rc.config.can_score_ep %}checked{% endif %}
+                                   {% if field_name == 'can_view_rdwos' and rc.config.can_view_rdwos %}checked{% endif %}
+                                   {% if field_name == 'can_upload_rdwos' and rc.config.can_upload_rdwos %}checked{% endif %}
+                                   {% if field_name == 'can_delete_rdwos' and rc.config.can_delete_rdwos %}checked{% endif %}
+                                   {% if field_name == 'can_view_risiko' and rc.config.can_view_risiko %}checked{% endif %}
+                                   {% if field_name == 'can_manage_risiko' and rc.config.can_manage_risiko %}checked{% endif %}
+                                   {% if field_name == 'can_lapor_insiden' and rc.config.can_lapor_insiden %}checked{% endif %}
+                                   {% if field_name == 'can_investigate_insiden' and rc.config.can_investigate_insiden %}checked{% endif %}
+                                   {% if field_name == 'can_view_scoring' and rc.config.can_view_scoring %}checked{% endif %}
+                                   {% if field_name == 'can_export_reports' and rc.config.can_export_reports %}checked{% endif %}
+                                   {% if field_name == 'can_manage_units' and rc.config.can_manage_units %}checked{% endif %}
+                                   {% if field_name == 'can_manage_users' and rc.config.can_manage_users %}checked{% endif %}
+                                   {% if field_name == 'can_verify_kps' and rc.config.can_verify_kps %}checked{% endif %}
+                                   {% if field_name == 'can_view_audit_log' and rc.config.can_view_audit_log %}checked{% endif %}
+                                   {% if field_name == 'can_access_control_center' and rc.config.can_access_control_center %}checked{% endif %}
+                                   {% if field_name == 'can_manage_system_settings' and rc.config.can_manage_system_settings %}checked{% endif %}
+                                 {% endif %}
+                               {% endif %}>
+                      </div>
+                    </td>
+                    {% endfor %}
+                  </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- ============================================================== -->
+        <!-- TAB 3: KUSTOMISASI AKSES PENGGUNA -->
+        <!-- ============================================================== -->
+        <div class="tab-pane fade" id="tab-users" role="tabpanel">
+          <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3">
+            <div>
+              <h5 class="fw-bold text-dark mb-1">Kustomisasi Izin Khusus Per Pengguna (User Overrides)</h5>
+              <p class="text-muted small mb-0">Beri izin khusus tambahan kepada staf tertentu tanpa harus menaikkan jabatan perannya.</p>
+            </div>
+            <div class="d-flex gap-2">
+              <input type="text" id="userSearchInput" class="form-control form-control-sm" placeholder="Cari nama / username staf..." style="width: 260px;">
+              <a href="{% url 'accounts:user_create' %}" class="btn btn-sm btn-teal fw-semibold">
+                <i class="bi bi-person-plus-fill me-1"></i> Tambah Pengguna Baru
+              </a>
+            </div>
+          </div>
+
+          <div class="card border-0 shadow-sm rounded-3 overflow-hidden">
+            <div class="table-responsive" style="max-height: 550px;">
+              <table class="table table-hover align-middle mb-0">
+                <thead class="table-light sticky-top">
+                  <tr class="small text-muted text-uppercase">
+                    <th>Pengguna</th>
+                    <th>Peran Dasar</th>
+                    <th>Unit Kerja</th>
+                    <th>Izin Kustom Aktif</th>
+                    <th class="text-end">Aksi Kustom</th>
+                  </tr>
+                </thead>
+                <tbody id="userTableBody">
+                  {% for u in all_users %}
+                  <tr class="user-row" data-search="{{ u.username|lower }} {{ u.profile.full_name|lower }} {{ u.profile.get_role_display|lower }}">
+                    <td>
+                      <div class="fw-bold text-dark">{{ u.username }}</div>
+                      <div class="text-muted small">{{ u.profile.full_name|default:"—" }} ({{ u.email|default:"no-email" }})</div>
+                    </td>
+                    <td>
+                      <span class="badge bg-{{ u.profile.role_badge_class }}">{{ u.profile.get_role_display }}</span>
+                    </td>
+                    <td>
+                      {% if u.profile.unit_kerja %}
+                        <span class="small font-monospace text-slate-700">[{{ u.profile.unit_kerja.code }}] {{ u.profile.unit_kerja.name|truncatechars:20 }}</span>
+                      {% else %}
+                        <span class="text-muted small">Semua Unit (RS)</span>
+                      {% endif %}
+                    </td>
+                    <td>
+                      {% if u.profile.custom_permissions %}
+                        <span class="badge bg-warning text-dark"><i class="bi bi-gear-fill me-1"></i>{{ u.profile.custom_permissions|length }} Izin Kustom Ditetapkan</span>
+                      {% else %}
+                        <span class="badge bg-light text-muted border">Mengikuti Peran</span>
+                      {% endif %}
+                    </td>
+                    <td class="text-end">
+                      <button class="btn btn-sm btn-outline-teal fw-semibold" onclick="openUserPermModal({{ u.id }}, '{{ u.username }}', '{{ u.profile.role }}')">
+                        <i class="bi bi-sliders2 me-1"></i> Atur Akses Kustom
+                      </button>
+                    </td>
+                  </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- ============================================================== -->
+        <!-- TAB 4: STANDAR & AMBANG BATAS AKREDITASI -->
+        <!-- ============================================================== -->
+        <div class="tab-pane fade" id="tab-thresholds" role="tabpanel">
+          {% if can_manage_system %}
+          <form method="post" action="{% url 'accounts:update_system_config' %}">
+            {% csrf_token %}
+            <div class="row g-4">
+              <!-- Kolom Kiri: Ambang Batas Kelulusan KARS -->
+              <div class="col-lg-6">
+                <div class="card border-0 shadow-sm rounded-3 p-4 bg-white h-100">
+                  <h6 class="fw-bold text-dark border-bottom pb-2 mb-3">
+                    <i class="bi bi-award-fill text-teal me-2"></i>Ambang Batas Nilai Kelulusan Akreditasi (Passing Grade %)
+                  </h6>
+                  <p class="text-muted small mb-4">Tentukan target persentase pencapaian EP minimum untuk predikat kelulusan RS.</p>
+
+                  <div class="mb-3">
+                    <label class="form-label fw-semibold small text-slate-700">Minimal Paripurna (Bintang 5 / Predikat A)</label>
+                    <div class="input-group">
+                      <input type="number" class="form-control" name="threshold_paripurna" value="{{ sys_config.threshold_paripurna }}" min="50" max="100">
+                      <span class="input-group-text">% Capaian</span>
+                    </div>
+                    <div class="form-text small">Standar KARS: &ge; 80%. RS dapat menaikkan ke 85% atau 90%.</div>
+                  </div>
+
+                  <div class="mb-3">
+                    <label class="form-label fw-semibold small text-slate-700">Minimal Utama (Bintang 4 / Predikat B)</label>
+                    <div class="input-group">
+                      <input type="number" class="form-control" name="threshold_utama" value="{{ sys_config.threshold_utama }}" min="40" max="100">
+                      <span class="input-group-text">% Capaian</span>
+                    </div>
+                  </div>
+
+                  <div class="mb-3">
+                    <label class="form-label fw-semibold small text-slate-700">Minimal Madya (Bintang 3 / Predikat C)</label>
+                    <div class="input-group">
+                      <input type="number" class="form-control" name="threshold_madya" value="{{ sys_config.threshold_madya }}" min="30" max="100">
+                      <span class="input-group-text">% Capaian</span>
+                    </div>
+                  </div>
+
+                  <div class="mb-3">
+                    <label class="form-label fw-semibold small text-slate-700">Minimal Dasar (Bintang 2 / Predikat D)</label>
+                    <div class="input-group">
+                      <input type="number" class="form-control" name="threshold_dasar" value="{{ sys_config.threshold_dasar }}" min="10" max="100">
+                      <span class="input-group-text">% Capaian</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Kolom Kanan: Kebijakan Bukti RDWOS, Matriks Risiko & KPS -->
+              <div class="col-lg-6">
+                <div class="card border-0 shadow-sm rounded-3 p-4 bg-white mb-4">
+                  <h6 class="fw-bold text-dark border-bottom pb-2 mb-3">
+                    <i class="bi bi-file-earmark-check-fill text-teal me-2"></i>Kebijakan Berkas Bukti RDWOS &amp; KPS Nakes
+                  </h6>
+
+                  <div class="mb-3">
+                    <label class="form-label fw-semibold small text-slate-700">Batas Maksimal Ukuran Unggah Dokumen</label>
+                    <div class="input-group">
+                      <input type="number" class="form-control" name="max_upload_size_mb" value="{{ sys_config.max_upload_size_mb }}" min="1" max="100">
+                      <span class="input-group-text">MB per Berkas</span>
+                    </div>
+                  </div>
+
+                  <div class="mb-3">
+                    <label class="form-label fw-semibold small text-slate-700">Ekstensi File yang Diizinkan</label>
+                    <input type="text" class="form-control" name="allowed_extensions" value="{{ sys_config.allowed_extensions }}">
+                    <div class="form-text small">Pisahkan dengan koma (contoh: pdf,docx,xlsx,jpg,png).</div>
+                  </div>
+
+                  <div class="mb-3">
+                    <label class="form-label fw-semibold small text-slate-700">Peringatan Kedaluwarsa STR/SIP Nakes</label>
+                    <div class="input-group">
+                      <input type="number" class="form-control" name="kps_alert_days" value="{{ sys_config.kps_alert_days }}" min="15" max="365">
+                      <span class="input-group-text">Hari Sebelum Expired</span>
+                    </div>
+                    <div class="form-text small">Indikator kuning &amp; notifikasi akan menyala saat masa berlaku tersisa &le; X hari.</div>
+                  </div>
+                </div>
+
+                <div class="card border-0 shadow-sm rounded-3 p-4 bg-white">
+                  <h6 class="fw-bold text-dark border-bottom pb-2 mb-3">
+                    <i class="bi bi-exclamation-triangle-fill text-warning me-2"></i>Ambang Batas Matriks Risiko 5&times;5
+                  </h6>
+                  <div class="row g-2">
+                    <div class="col-6 mb-2">
+                      <label class="form-label small fw-semibold text-danger">Batas Sangat Tinggi (&ge;)</label>
+                      <input type="number" class="form-control form-control-sm" name="risk_threshold_sangat_tinggi" value="{{ sys_config.risk_threshold_sangat_tinggi }}">
+                    </div>
+                    <div class="col-6 mb-2">
+                      <label class="form-label small fw-semibold text-warning">Batas Tinggi (&ge;)</label>
+                      <input type="number" class="form-control form-control-sm" name="risk_threshold_tinggi" value="{{ sys_config.risk_threshold_tinggi }}">
+                    </div>
+                    <div class="col-6 mb-2">
+                      <label class="form-label small fw-semibold text-secondary">Batas Sedang (&ge;)</label>
+                      <input type="number" class="form-control form-control-sm" name="risk_threshold_sedang" value="{{ sys_config.risk_threshold_sedang }}">
+                    </div>
+                    <div class="col-6 mb-2">
+                      <label class="form-label small fw-semibold text-success">Batas Rendah (&ge;)</label>
+                      <input type="number" class="form-control form-control-sm" name="risk_threshold_rendah" value="{{ sys_config.risk_threshold_rendah }}">
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Tombol Simpan Perubahan -->
+              <div class="col-12 text-end">
+                <button type="submit" class="btn btn-teal px-4 py-2 fw-bold shadow-sm">
+                  <i class="bi bi-check2-circle me-1"></i> Simpan Konfigurasi Standar &amp; Kebijakan
+                </button>
+              </div>
+            </div>
+          </form>
+          {% else %}
+          <div class="alert alert-secondary text-center py-5">
+            <i class="bi bi-lock-fill fs-1 text-muted d-block mb-3"></i>
+            <h5>Akses Terbatas (Khusus Super Admin)</h5>
+            <p class="text-muted mb-0">Hanya Super Admin yang berhak mengubah ambang batas akreditasi dan kebijakan sistem.</p>
+          </div>
+          {% endif %}
+        </div>
+
+        <!-- ============================================================== -->
+        <!-- TAB 5: BRANDING, TEMA & MODE SURVEI -->
+        <!-- ============================================================== -->
+        <div class="tab-pane fade" id="tab-branding" role="tabpanel">
+          {% if can_manage_system %}
+          <div class="row g-4">
+            <!-- Mode Kunci Survei -->
+            <div class="col-lg-6">
+              <div class="card border-0 shadow-sm rounded-3 p-4 bg-white h-100">
+                <h6 class="fw-bold text-dark border-bottom pb-2 mb-3">
+                  <i class="bi bi-shield-lock-fill text-danger me-2"></i>Mode Kunci Survei Akreditasi (Freeze Mode)
+                </h6>
+                <p class="text-muted small">
+                  Gunakan fitur ini saat <strong>Surveior KARS/Lembaga Akreditasi</strong> sedang melakukan survei lapangan.
+                  Saat diaktifkan, seluruh pengguna (selain Super Admin) otomatis berada dalam mode <strong>Baca Saja (Read-Only)</strong>
+                  untuk mencegah data terhapus, skor berubah, atau berkas tertukar secara tidak sengaja.
+                </p>
+
+                <div class="p-3 rounded-3 {% if sys_config.survey_freeze_mode %}bg-danger-subtle border border-danger{% else %}bg-light border{% endif %} text-center my-4">
+                  <div class="fs-5 fw-bold {% if sys_config.survey_freeze_mode %}text-danger{% else %}text-secondary{% endif %} mb-2">
+                    STATUS SAAT INI: {% if sys_config.survey_freeze_mode %}AKTIF TERKUNCI{% else %}TIDAK AKTIF (NORMAL){% endif %}
+                  </div>
+                  <form method="post" action="{% url 'accounts:toggle_survey_freeze' %}">
+                    {% csrf_token %}
+                    {% if sys_config.survey_freeze_mode %}
+                    <button type="submit" class="btn btn-outline-danger fw-bold px-4">
+                      <i class="bi bi-unlock-fill me-1"></i> Buka Kunci Sistem (Kembalikan ke Normal)
+                    </button>
+                    {% else %}
+                    <button type="submit" class="btn btn-danger fw-bold px-4 shadow-sm" onclick="return confirm('Aktifkan Mode Kunci Survei? Seluruh staf non-superadmin tidak akan bisa mengedit data sampai dibuka kembali.');">
+                      <i class="bi bi-lock-fill me-1"></i> Kunci Sistem Sekarang (Mode Survei)
+                    </button>
+                    {% endif %}
+                  </form>
+                </div>
+              </div>
+            </div>
+
+            <!-- Tema Visual & Kop Surat -->
+            <div class="col-lg-6">
+              <div class="card border-0 shadow-sm rounded-3 p-4 bg-white h-100">
+                <h6 class="fw-bold text-dark border-bottom pb-2 mb-3">
+                  <i class="bi bi-palette-fill text-teal me-2"></i>Tema Warna Antarmuka &amp; Kop Surat Resmi
+                </h6>
+
+                <form method="post" action="{% url 'accounts:update_system_config' %}">
+                  {% csrf_token %}
+                  <div class="mb-4">
+                    <label class="form-label fw-semibold small text-slate-700">Warna Aksen Antarmuka Sistem</label>
+                    <select class="form-select" name="theme_color">
+                      <option value="teal" {% if sys_config.theme_color == 'teal' %}selected{% endif %}>Teal Medis (Default RS MonsisKami)</option>
+                      <option value="blue" {% if sys_config.theme_color == 'blue' %}selected{% endif %}>Hospital Royal Blue</option>
+                      <option value="emerald" {% if sys_config.theme_color == 'emerald' %}selected{% endif %}>Emerald Green Health</option>
+                      <option value="navy" {% if sys_config.theme_color == 'navy' %}selected{% endif %}>Dark Navy Slate</option>
+                    </select>
+                  </div>
+
+                  <div class="mb-4">
+                    <label class="form-label fw-semibold small text-slate-700">Teks Kop Surat Resmi Dokumen Cetak</label>
+                    <textarea class="form-control font-monospace small" name="kop_surat_text" rows="4">{{ sys_config.kop_surat_text }}</textarea>
+                    <div class="form-text small">Kop surat ini otomatis dicetak di bagian atas lembar cetak dokumen &amp; matriks PDCA.</div>
+                  </div>
+
+                  <div class="text-end">
+                    <button type="submit" class="btn btn-teal fw-bold">
+                      <i class="bi bi-save me-1"></i> Simpan Tampilan &amp; Kop Surat
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          </div>
+          {% else %}
+          <div class="alert alert-secondary text-center py-5">
+            <i class="bi bi-lock-fill fs-1 text-muted d-block mb-3"></i>
+            <h5>Akses Terbatas (Khusus Super Admin)</h5>
+            <p class="text-muted mb-0">Hanya Super Admin yang berhak mengelola tema dan mengaktifkan Mode Kunci Survei.</p>
+          </div>
+          {% endif %}
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Modal Kustomisasi Hak Akses User -->
+<div class="modal fade" id="userPermModal" tabindex="-1" aria-labelledby="userPermModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-content rounded-4 border-0 shadow">
+      <div class="modal-header bg-slate-50 border-bottom px-4 py-3">
+        <h6 class="modal-title fw-bold text-dark" id="userPermModalLabel">
+          <i class="bi bi-person-gear text-teal me-2"></i>Kustomisasi Akses: <span id="modalUsername" class="text-teal font-monospace"></span>
+        </h6>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body p-4">
+        <div class="alert alert-light border small text-muted mb-3">
+          Peran pengguna ini: <strong id="modalUserRole" class="text-dark"></strong>. Centang izin di bawah untuk memberikan akses kustom spesifik yang menimpa (override) setelan bawaan perannya.
+        </div>
+        <div class="row g-3" id="modalUserPermCheckboxes">
+          {% for field_name, field_label in perm_fields %}
+          <div class="col-md-6">
+            <div class="card border p-2 rounded-3 bg-white">
+              <div class="form-check form-switch mb-0">
+                <input class="form-check-input user-perm-override-switch" type="checkbox" id="user-perm-{{ field_name }}" data-perm="{{ field_name }}">
+                <label class="form-check-label small fw-semibold text-dark" for="user-perm-{{ field_name }}">
+                  {{ field_label }}
+                  <span class="d-block text-muted font-monospace" style="font-size: 0.7rem;">{{ field_name }}</span>
+                </label>
+              </div>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+      <div class="modal-footer bg-slate-50 border-top px-4 py-3">
+        <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal">Batal</button>
+        <button type="button" class="btn btn-sm btn-teal fw-bold" onclick="saveUserCustomPerms()">
+          <i class="bi bi-check-lg me-1"></i> Simpan Akses Kustom Pengguna
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// Filter realtime tabel unit kerja
+document.getElementById('unitSearchInput').addEventListener('input', function(e) {
+  const q = e.target.value.toLowerCase().trim();
+  const rows = document.querySelectorAll('#unitTableBody tr');
+  rows.forEach(r => {
+    const text = r.getAttribute('data-search') || '';
+    r.style.display = text.includes(q) ? '' : 'none';
+  });
+});
+
+// Filter realtime tabel pengguna
+document.getElementById('userSearchInput').addEventListener('input', function(e) {
+  const q = e.target.value.toLowerCase().trim();
+  const rows = document.querySelectorAll('#userTableBody tr');
+  rows.forEach(r => {
+    const text = r.getAttribute('data-search') || '';
+    r.style.display = text.includes(q) ? '' : 'none';
+  });
+});
+
+// AJAX Simpan Hierarki Unit
+function saveUnitHierarchy(unitId) {
+  const parentId = document.getElementById('parent-' + unitId).value;
+  const order = document.getElementById('order-' + unitId).value;
+  const tipe = document.getElementById('tipe-' + unitId).value;
+  const isActive = document.getElementById('active-' + unitId).checked;
+
+  const formData = new FormData();
+  formData.append('parent_id', parentId);
+  formData.append('order', order);
+  formData.append('tipe_unit', tipe);
+  formData.append('is_active', isActive);
+
+  fetch(`/accounts/kontrol/unit/${unitId}/update-hierarchy/`, {
+    method: 'POST',
+    headers: { 'X-CSRFToken': getCookie('csrftoken') },
+    body: formData
+  })
+  .then(res => res.json())
+  .then(data => {
+    if (data.success) {
+      alert('Hierarki unit berhasil diperbarui!');
+      location.reload();
+    } else {
+      alert('Gagal: ' + (data.error || 'Terjadi kesalahan'));
+    }
+  })
+  .catch(err => alert('Error koneksi: ' + err));
+}
+
+// AJAX Simpan Seluruh Matriks Hak Akses Peran
+function saveRolePermissions() {
+  const payload = {};
+  document.querySelectorAll('.perm-switch').forEach(sw => {
+    const role = sw.getAttribute('data-role');
+    const perm = sw.getAttribute('data-perm');
+    if (!payload[role]) payload[role] = {};
+    payload[role][perm] = sw.checked;
+  });
+
+  fetch('/accounts/kontrol/permissions/update/', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRFToken': getCookie('csrftoken')
+    },
+    body: JSON.stringify(payload)
+  })
+  .then(res => res.json())
+  .then(data => {
+    if (data.success) {
+      alert('Matriks hak akses peran berhasil disimpan!');
+    } else {
+      alert('Gagal menyimpan matriks.');
+    }
+  })
+  .catch(err => alert('Error: ' + err));
+}
+
+// Modal User Custom Permissions
+let activeUserId = null;
+function openUserPermModal(userId, username, role) {
+  activeUserId = userId;
+  document.getElementById('modalUsername').textContent = username;
+  document.getElementById('modalUserRole').textContent = role;
+
+  // Uncheck all
+  document.querySelectorAll('.user-perm-override-switch').forEach(s => s.checked = false);
+
+  const modal = new bootstrap.Modal(document.getElementById('userPermModal'));
+  modal.show();
+}
+
+function saveUserCustomPerms() {
+  if (!activeUserId) return;
+  const customPerms = {};
+  document.querySelectorAll('.user-perm-override-switch').forEach(s => {
+    const perm = s.getAttribute('data-perm');
+    if (s.checked) {
+      customPerms[perm] = true;
+    }
+  });
+
+  fetch(`/accounts/kontrol/user/${activeUserId}/permissions/`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRFToken': getCookie('csrftoken')
+    },
+    body: JSON.stringify({ custom_permissions: customPerms })
+  })
+  .then(res => res.json())
+  .then(data => {
+    if (data.success) {
+      alert('Hak akses kustom pengguna berhasil disimpan!');
+      location.reload();
+    } else {
+      alert('Gagal menyimpan akses kustom.');
+    }
+  })
+  .catch(err => alert('Error: ' + err));
+}
+
+function getCookie(name) {
+  let cookieValue = null;
+  if (document.cookie && document.cookie !== '') {
+    const cookies = document.cookie.split(';');
+    for (let i = 0; i < cookies.length; i++) {
+      const cookie = cookies[i].trim();
+      if (cookie.substring(0, name.length + 1) === (name + '=')) {
+        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+        break;
+      }
+    }
+  }
+  return cookieValue;
+}
+</script>
+{% endblock %}
