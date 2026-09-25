@@ -1,72 +1,126 @@
 {% extends "base.html" %}
 {% load crispy_forms_tags %}
 
-{% block title %}Kelola Unit Kerja | SIM Akreditasi RS{% endblock %}
-{% block page_title %}Kelola Unit Kerja{% endblock %}
-{% block page_subtitle %}Tambah & kelola Unit Kerja Rumah Sakit{% endblock %}
+{% block title %}Tambah Unit Kerja | RS MonsisKami{% endblock %}
+{% block page_title %}Tambah Unit Kerja{% endblock %}
+{% block page_subtitle %}Tambahkan unit kerja baru ke dalam struktur organisasi RS MonsisKami{% endblock %}
 
 {% block content %}
-
 <div class="row g-3">
 
     <!-- LEFT: Form -->
-    <div class="col-lg-5">
-        <div class="card">
-            <div class="card-header d-flex align-items-center gap-2">
-                <i class="bi bi-building text-primary"></i>
-                Tambah Unit Kerja Baru
+    <div class="col-lg-6">
+        <div class="card shadow-sm border-0">
+            <div class="card-header bg-white d-flex align-items-center gap-2 py-2">
+                <i class="bi bi-building-add text-primary fs-5"></i>
+                <div>
+                    <div class="fw-bold small">Tambah Unit Kerja Baru</div>
+                    <div class="text-muted" style="font-size:0.68rem;">Isi formulir untuk menambahkan unit ke dalam hierarki RS</div>
+                </div>
             </div>
             <div class="card-body p-3">
+                {% if parent_obj %}
+                    <div class="alert alert-info py-2 px-3 mb-3 d-flex align-items-center gap-2" style="font-size:0.78rem;">
+                        <i class="bi bi-diagram-3-fill text-primary fs-5"></i>
+                        <div>
+                            <small>Menambahkan Sub-Unit di bawah:</small><br>
+                            <strong class="text-dark">[{{ parent_obj.code }}] {{ parent_obj.name }}</strong>
+                            <span class="badge bg-light text-dark border ms-1 font-mono" style="font-size:0.68rem;">→ Level {{ parent_obj.level|add:1 }}</span>
+                        </div>
+                    </div>
+                {% endif %}
                 <form method="post" action="{% url 'akreditasi:unit_list' %}">
                     {% csrf_token %}
                     {{ form|crispy }}
-                    <button type="submit" class="btn btn-primary w-100 d-inline-flex align-items-center justify-content-center gap-2 mt-2">
-                        <i class="bi bi-plus-lg"></i>
-                        Simpan Unit Kerja
-                    </button>
                 </form>
             </div>
         </div>
     </div>
 
-    <!-- RIGHT: Table -->
-    <div class="col-lg-7">
-        <div class="table-card">
-            <div class="table-responsive">
-                <table class="table table-hover mb-0">
-                    <thead>
-                        <tr>
-                            <th>Kode Unit</th>
-                            <th>Nama Unit Kerja</th>
-                            <th>Penanggung Jawab (PIC)</th>
-                        </tr>
-                    </thead>
+    <!-- RIGHT: Guide & Hierarchy Preview -->
+    <div class="col-lg-6">
+        <!-- Guide -->
+        <div class="card shadow-sm border-0 mb-3">
+            <div class="card-header bg-white py-2 d-flex align-items-center gap-2">
+                <i class="bi bi-lightbulb-fill text-warning"></i>
+                <span class="fw-bold small">Panduan Hierarki 3 Tingkat</span>
+            </div>
+            <div class="card-body py-2 px-3" style="font-size:0.78rem; line-height:1.6;">
+                <table class="table table-sm table-borderless mb-0" style="font-size:0.78rem;">
                     <tbody>
-                        {% for unit in units %}
                         <tr>
-                            <td>
-                                <span class="font-mono fw-bold text-primary" style="font-size: 0.78rem;">{{ unit.code }}</span>
-                            </td>
-                            <td>
-                                <span class="fw-semibold text-dark" style="font-size: 0.8rem;">{{ unit.name }}</span>
-                            </td>
-                            <td>
-                                <span class="text-muted" style="font-size: 0.78rem;">{{ unit.pic_name|default:"—" }}</span>
-                            </td>
+                            <td style="width:90px;"><span class="badge" style="background:#0f766e; color:#fff; font-size:0.7rem;">Level 1</span></td>
+                            <td><strong>Pimpinan / Pemilik / Dewas</strong> — Unit puncak RS (tanpa induk). Contoh: <em>PEMILIK RS, DEWAS, DIREKTUR-UTAMA</em></td>
                         </tr>
-                        {% empty %}
                         <tr>
-                            <td colspan="3" class="text-center py-4 text-muted">
-                                <i class="bi bi-building d-block mb-1" style="font-size: 1.5rem;"></i>
-                                Belum ada Unit Kerja. Tambahkan di sebelah kiri.
-                            </td>
+                            <td><span class="badge" style="background:#0d9488; color:#fff; font-size:0.7rem;">Level 2</span></td>
+                            <td><strong>Direktorat / Komite / Bidang</strong> — Anak dari Level 1. Contoh: <em>SPI, KOMITE-RS, DIREKTORAT-MEDIS, DIREKTORAT-KEPERAWATAN</em></td>
                         </tr>
-                        {% endfor %}
+                        <tr>
+                            <td><span class="badge" style="background:#14b8a6; color:#fff; font-size:0.7rem;">Level 3</span></td>
+                            <td><strong>Instalasi / KSM / Ruangan</strong> — Anak dari Level 2. Contoh: <em>IGD, RAWAT-INAP, KSM-BEDAH, INST-FARMASI</em></td>
+                        </tr>
                     </tbody>
                 </table>
+                <div class="text-muted mt-1 border-top pt-1" style="font-size:0.72rem;">
+                    <i class="bi bi-info-circle me-1"></i>
+                    <strong>Tips:</strong> Level otomatis ditentukan dari pilihan <strong>Induk Unit</strong>. Jika Induk dikosongkan → Level 1. Jika Induk Level 1 → Level 2. Jika Induk Level 2 → Level 3.
+                </div>
+            </div>
+        </div>
+
+        <!-- Preview Hierarki Saat Ini -->
+        <div class="card shadow-sm border-0">
+            <div class="card-header bg-white py-2 d-flex justify-content-between align-items-center">
+                <div class="d-flex align-items-center gap-2">
+                    <i class="bi bi-list-nested text-primary"></i>
+                    <span class="fw-bold small">Unit Kerja Terdaftar ({{ all_units.count }})</span>
+                </div>
+                <a href="{% url 'akreditasi:unit_tree' %}" class="btn btn-sm btn-outline-primary py-0 px-2" style="font-size:0.72rem;">
+                    <i class="bi bi-diagram-3 me-1"></i>Lihat Pohon Penuh
+                </a>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive" style="max-height: 380px; overflow-y:auto;">
+                    <table class="table table-hover table-sm align-middle mb-0" style="font-size:0.78rem;">
+                        <thead class="table-light">
+                            <tr>
+                                <th style="width:75px;">Kode</th>
+                                <th>Nama Unit</th>
+                                <th style="width:65px;">Level</th>
+                                <th>Induk</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for u in all_units %}
+                            <tr>
+                                <td class="font-mono fw-bold">{{ u.code }}</td>
+                                <td>
+                                    <span style="margin-left:{{ u.level|add:-1 }}rem;">
+                                        {% if u.level > 1 %}<span class="text-muted" style="font-size:0.7rem;">└ </span>{% endif %}
+                                        {{ u.name }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <span class="badge level-badge-{{ u.level }}" style="font-size:0.65rem;">L{{ u.level }}</span>
+                                </td>
+                                <td class="text-muted" style="font-size:0.72rem;">{{ u.parent.code|default:"—" }}</td>
+                            </tr>
+                            {% empty %}
+                            <tr><td colspan="4" class="text-center py-3 text-muted">Belum ada unit kerja.</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
     </div>
 
 </div>
+
+<style>
+    .level-badge-1 { background: #0f766e; color: #fff; }
+    .level-badge-2 { background: #0d9488; color: #fff; }
+    .level-badge-3 { background: #14b8a6; color: #fff; }
+</style>
 {% endblock %}

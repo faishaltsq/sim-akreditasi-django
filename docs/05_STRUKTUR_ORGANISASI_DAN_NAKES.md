@@ -67,14 +67,40 @@ Total **65 Unit Kerja** yang terdaftar dan aktif di database production.
 
 ## 2. Cara Melihat & Mengelola Unit Kerja
 
-### Daftar Unit Kerja:
-1. Buka menu **Unit Kerja** → **Daftar Unit** (`/unit/`).
-2. Tabel menampilkan Kode Unit, Nama, Level Hierarki, dan Unit Induk.
-3. Klik **Nama Unit** untuk melihat detil unit dan EP terkait pokja.
+### Struktur Hierarki 3 Tingkat:
+- **Level 1 (Pimpinan / Pemilik / Dewas / Direksi Utama):** Unit tingkat teratas tanpa induk (*parent*).
+- **Level 2 (Direktorat / Komite / SPI / Bidang):** Unit koordinasi dan penunjang langsung di bawah Direksi.
+- **Level 3 (Instalasi / KSM / Ruangan / Depo Pelayanan):** Unit kerja operasional tempat pelaksanaan SPO dan pelayanan pasien.
 
-### Pohon Hierarki:
-1. Buka menu **Unit Kerja** → **Pohon Hierarki** (`/unit/hierarki/`).
-2. Tampilkan seluruh struktur dalam format *tree view* interaktif.
+---
+
+### Cara Menambahkan Sub-Unit Kerja di Bawah Level Tertentu:
+
+#### ⚡ Cara Cepat (Rekomendasi — Melalui Pohon Struktur):
+1. Buka menu **Unit Kerja** &rarr; **Pohon Hierarki** (`/unit/hierarki/`).
+2. Temukan unit induk yang ingin ditambahkan anaknya (misal: ingin menambah depo baru di bawah *Instalasi Farmasi* atau ruang perawatan baru di bawah *Rawat Inap*).
+3. Klik tombol hijau **`+ Tambah Sub-Unit (L2)`** atau **`+ Tambah Sub-Unit (L3)`** yang terletak tepat di baris unit tersebut.
+4. Modal cepat akan terbuka dengan **Induk Unit Kerja otomatis terisi**:
+   - Sistem secara cerdas menghitung tingkatan target (misal: jika induk Level 2, maka unit baru otomatis Level 3).
+   - Masukkan **Nama Unit Kerja** (misal: "Depo Farmasi IGD").
+   - Masukkan **Kode Unit** (misal: "DEPO-IGD").
+   - Masukkan **Penanggung Jawab (PIC)** & **Keterangan**.
+5. Klik **Simpan Unit Kerja**. Unit baru langsung muncul di bawah induknya dalam pohon organisasi!
+
+#### 📝 Cara Manual (Melalui Form Unit Kerja):
+1. Buka menu **Unit Kerja** &rarr; **Tambah Unit** (`/unit/`).
+2. Pada dropdown **Induk Unit Kerja**:
+   - Jika dikosongkan &rarr; Unit otomatis tersimpan sebagai **Level 1** (Puncak).
+   - Jika memilih unit Level 1 &rarr; Unit otomatis tersimpan sebagai **Level 2**.
+   - Jika memilih unit Level 2 &rarr; Unit otomatis tersimpan sebagai **Level 3**.
+3. Klik **Simpan Unit Kerja**.
+
+---
+
+### Fitur Pencarian & Filter Tingkat Unit:
+Di halaman `/unit/hierarki/`, pengguna dapat:
+- Mengetik kode/nama unit di kolom pencarian **🔍 Cari unit...** untuk menemukan unit secara instan tanpa reload halaman.
+- Mengklik tombol filter **Semua / L1 / L2 / L3** untuk memfilter pohon berdasarkan tingkat hierarki.
 
 ---
 

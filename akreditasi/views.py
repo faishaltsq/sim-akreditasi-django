@@ -649,6 +649,17 @@ def ep_delete(request, item_id):
 @login_required
 @admin_required
 def unit_list_create(request):
+    # Support ?parent_id= pre-select dari tombol inline tree
+    parent_id = request.GET.get('parent_id') or request.POST.get('parent')
+    initial = {}
+    parent_obj = None
+    if parent_id:
+        try:
+            parent_obj = UnitKerja.objects.get(pk=parent_id)
+            initial['parent'] = parent_obj
+        except UnitKerja.DoesNotExist:
+            pass
+
     if request.method == 'POST':
         form = UnitKerjaForm(request.POST)
         if form.is_valid():
@@ -660,12 +671,18 @@ def unit_list_create(request):
                 object_repr=f"[{u.code}] {u.name}",
                 detail=f"Unit Kerja baru ditambahkan (Level {u.level})"
             )
-            messages.success(request, f"Unit Kerja '{u.name}' berhasil ditambahkan!")
-            return redirect('akreditasi:unit_list')
+            messages.success(request, f"✅ Unit Kerja '{u.name}' (Level {u.level}) berhasil ditambahkan!")
+            return redirect('akreditasi:unit_tree')
     else:
-        form = UnitKerjaForm()
+        form = UnitKerjaForm(initial=initial)
 
-    return render(request, 'akreditasi/unit_form.html', {'form': form})
+    # Kirim semua unit untuk preview hierarki di sidebar form
+    all_units = UnitKerja.objects.select_related('parent').order_by('level', 'code')
+    return render(request, 'akreditasi/unit_form.html', {
+        'form': form,
+        'parent_obj': parent_obj,
+        'all_units': all_units,
+    })
 
 
 @login_required
@@ -673,11 +690,23 @@ def unit_tree(request):
     root_units = UnitKerja.objects.filter(parent__isnull=True).prefetch_related(
         'children__children'
     ).order_by('code')
-    all_units = UnitKerja.objects.all().order_by('level', 'code')
+    all_units = UnitKerja.objects.select_related('parent').order_by('level', 'code')
+    # Sediakan form untuk modal penambahan cepat
+    form = UnitKerjaForm()
+    
+    # Hitung jumlah per level
+    count_l1 = all_units.filter(level=1).count()
+    count_l2 = all_units.filter(level=2).count()
+    count_l3 = all_units.filter(level=3).count()
+
     return render(request, 'akreditasi/unit_tree.html', {
         'root_units': root_units,
         'all_units': all_units,
         'total_units': all_units.count(),
+        'count_l1': count_l1,
+        'count_l2': count_l2,
+        'count_l3': count_l3,
+        'form': form,
     })
 
 
