@@ -282,6 +282,7 @@
                         <td class="text-center bg-white">
                             <select class="form-select score-select score-{{ item.record.score|default:0 }}" 
                                     id="score-select-{{ item.record.id }}"
+                                    aria-label="Skor EP {{ item.code }}"
                                     data-record-id="{{ item.record.id }}"
                                     onchange="updateQuickScore(this)">
                                 <option value="10" {% if item.record.score == 10 %}selected{% endif %}>10 (Tercapai)</option>
@@ -346,17 +347,17 @@
                     <div class="tab-pane fade show active" id="tabUploadBaru">
                         <form id="formUploadBuktiAjax" onsubmit="submitUploadBukti(event)">
                             <div class="mb-3">
-                                <label class="form-label small fw-bold">Jenis Regulasi / Bukti (RDWOS)</label>
+                                <label for="uploadReqSelect" class="form-label small fw-bold">Jenis Regulasi / Bukti (RDWOS)</label>
                                 <select class="form-select form-select-sm" id="uploadReqSelect" required>
                                     <!-- Populated via AJAX -->
                                 </select>
                             </div>
                             <div class="mb-3">
-                                <label class="form-label small fw-bold">Nama Dokumen</label>
+                                <label for="uploadDocName" class="form-label small fw-bold">Nama Dokumen</label>
                                 <input type="text" class="form-control form-control-sm" id="uploadDocName" placeholder="Contoh: SK Direktur tentang Struktur Organisasi RS" required>
                             </div>
                             <div class="mb-3">
-                                <label class="form-label small fw-bold">Berkas (PDF, DOCX, XLSX, max 15MB)</label>
+                                <label for="uploadFileInput" class="form-label small fw-bold">Berkas (PDF, DOCX, XLSX, max 15MB)</label>
                                 <input type="file" class="form-control form-control-sm" id="uploadFileInput" required>
                             </div>
                             <div class="text-end">
@@ -371,7 +372,7 @@
                     <div class="tab-pane fade" id="tabPilihRepo">
                         <p class="small text-muted mb-2">Pilih dokumen yang sudah pernah diunggah di sistem untuk ditautkan ke EP ini:</p>
                         <div class="mb-3">
-                            <label class="form-label small fw-bold">Tautkan ke Kategori Bukti:</label>
+                            <label for="linkTargetReqSelect" class="form-label small fw-bold">Tautkan ke Kategori Bukti:</label>
                             <select class="form-select form-select-sm" id="linkTargetReqSelect">
                                 <!-- Populated via AJAX -->
                             </select>
@@ -440,7 +441,7 @@
                 <input type="hidden" id="inlineRecordId">
                 <input type="hidden" id="inlineField">
                 <div class="mb-2">
-                    <label class="form-label small text-muted mb-1" id="inlineFieldLabel">Isi Teks:</label>
+                    <label for="inlineTextValue" class="form-label small text-muted mb-1" id="inlineFieldLabel">Isi Teks:</label>
                     <textarea class="form-control" id="inlineTextValue" rows="5" placeholder="Masukkan rincian..."></textarea>
                 </div>
             </div>
