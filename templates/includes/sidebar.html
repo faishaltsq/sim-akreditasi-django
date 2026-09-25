@@ -92,21 +92,21 @@
         <i class="bi bi-exclamation-triangle-fill me-1" style="font-size:0.6rem;"></i> Manajemen Risiko
     </div>
     <a href="{% url 'akreditasi:risiko_daftar' %}" class="nav-link {% if 'risiko' in request.resolver_match.url_name %}active{% endif %}">
-        <span class="nav-icon"><i class="bi bi-clipboard2-pulse-fill" style="color:#ea580c;"></i></span>
+        <span class="nav-icon"><i class="bi bi-clipboard2-pulse-fill"></i></span>
         <span class="nav-text">
             <span class="nav-title">Daftar Risiko PDCA</span>
             <span class="nav-desc">Risk Register & Mitigasi</span>
         </span>
     </a>
     <a href="{% url 'akreditasi:risiko_input' %}" class="nav-link {% if request.resolver_match.url_name == 'risiko_input' %}active{% endif %}">
-        <span class="nav-icon"><i class="bi bi-plus-circle-fill" style="color:#0d9488;"></i></span>
+        <span class="nav-icon"><i class="bi bi-plus-circle-fill"></i></span>
         <span class="nav-text">
             <span class="nav-title">Input Risiko Baru</span>
             <span class="nav-desc">Identifikasi & Asesmen</span>
         </span>
     </a>
     <a href="{% url 'akreditasi:insiden_lapor' %}" class="nav-link {% if request.resolver_match.url_name == 'insiden_lapor' %}active{% endif %}">
-        <span class="nav-icon"><i class="bi bi-shield-exclamation" style="color:#dc2626;"></i></span>
+        <span class="nav-icon"><i class="bi bi-shield-exclamation"></i></span>
         <span class="nav-text">
             <span class="nav-title">Laporan Insiden</span>
             <span class="nav-desc">KNC / KTD / Sentinel</span>
@@ -118,9 +118,9 @@
         <i class="bi bi-file-earmark-bar-graph-fill me-1" style="font-size:0.6rem;"></i> Laporan &amp; Evaluasi
     </div>
     <a href="{% url 'akreditasi:auto_scoring' %}" class="nav-link {% if request.resolver_match.url_name == 'auto_scoring' %}active{% endif %}">
-        <span class="nav-icon"><i class="bi bi-award-fill text-primary"></i></span>
+        <span class="nav-icon"><i class="bi bi-award-fill"></i></span>
         <span class="nav-text">
-            <span class="nav-title fw-bold">Auto-Scoring Akreditasi</span>
+            <span class="nav-title">Auto-Scoring Akreditasi</span>
             <span class="nav-desc">Prediksi Kelulusan KARS</span>
         </span>
     </a>
@@ -199,9 +199,9 @@
         <i class="bi bi-book-fill me-1" style="font-size:0.6rem;"></i> Bantuan
     </div>
     <a href="{% url 'akreditasi:panduan' %}" class="nav-link {% if request.resolver_match.url_name == 'panduan' %}active{% endif %}" target="_blank">
-        <span class="nav-icon"><i class="bi bi-book-fill" style="color:#0d9488;"></i></span>
+        <span class="nav-icon"><i class="bi bi-book-fill"></i></span>
         <span class="nav-text">
-            <span class="nav-title fw-bold">Panduan Pengguna</span>
+            <span class="nav-title">Panduan Pengguna</span>
             <span class="nav-desc">Tutorial pemakaian sistem</span>
         </span>
     </a>
