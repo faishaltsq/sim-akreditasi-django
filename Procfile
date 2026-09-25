@@ -1,1 +1,1 @@
-web: python manage.py collectstatic --no-input && python manage.py migrate && python manage.py seed_data && python manage.py seed_nakes && python manage.py seed_all_roles && gunicorn config.wsgi:application --bind 0.0.0.0:$PORT --workers 2 --timeout 120
+web: python manage.py collectstatic --no-input && python manage.py migrate && python manage.py seed_data && python manage.py seed_nakes && python manage.py seed_all_roles && python manage.py seed_hospital_type_b && gunicorn config.wsgi:application --bind 0.0.0.0:$PORT --workers 2 --timeout 120
