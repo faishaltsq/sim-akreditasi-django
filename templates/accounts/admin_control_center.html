@@ -152,7 +152,7 @@
                       {% if u.pic_name %}<div class="text-muted small"><i class="bi bi-person me-1"></i>{{ u.pic_name }}</div>{% endif %}
                     </td>
                     <td>
-                      <span class="badge bg-teal-subtle text-teal fw-bold">Level {{ u.level }}</span>
+                      <span class="level-badge-{{ u.level }} badge fw-bold">Level {{ u.level }}</span>
                     </td>
                     <td>
                       <select class="form-select form-select-sm" id="tipe-{{ u.id }}">

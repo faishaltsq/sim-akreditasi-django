@@ -277,6 +277,86 @@ code, .font-mono, .mono { font-family: 'JetBrains Mono', monospace; }
 /* Badge */
 .badge.bg-dark { background-color: #0f172a !important; }
 
+/* ============================================================
+   TEAL / SLATE / LEVEL BADGE UTILITY CLASSES
+   Missing definitions — warna kustom RS MonsisKami
+   ============================================================ */
+
+/* --- Teal Colors (primary brand) --- */
+.text-teal        { color: #0f766e !important; }
+.bg-teal          { background-color: #0d9488 !important; color: #fff !important; }
+.bg-teal-subtle   { background-color: #ccfbf1 !important; }
+.border-teal      { border-color: #99f6e4 !important; }
+
+/* Button Teal — solid */
+.btn-teal {
+    background-color: #0d9488; border-color: #0d9488; color: #ffffff;
+    font-weight: 600; border-radius: var(--radius); transition: all 0.15s ease;
+}
+.btn-teal:hover, .btn-teal:focus {
+    background-color: #0f766e; border-color: #0f766e; color: #ffffff;
+    box-shadow: 0 2px 6px rgba(13,148,136,0.3);
+}
+.btn-teal:active { background-color: #115e59; border-color: #115e59; }
+
+/* Button Teal — outline */
+.btn-outline-teal {
+    border: 1.5px solid #0d9488; color: #0f766e; background: transparent;
+    font-weight: 600; border-radius: var(--radius); transition: all 0.15s ease;
+}
+.btn-outline-teal:hover, .btn-outline-teal:focus {
+    background-color: #0d9488; color: #ffffff; border-color: #0d9488;
+}
+
+/* Form switch teal (overrides Bootstrap's default blue on .form-check-input:checked) */
+.form-check-input:checked { background-color: #0d9488; border-color: #0d9488; }
+
+/* --- Slate Colors (gray system) --- */
+.bg-slate-50      { background-color: #f8fafc !important; }
+.bg-slate-100     { background-color: #f1f5f9 !important; }
+.bg-slate-200     { background-color: #e2e8f0 !important; }
+.text-slate-500   { color: #64748b !important; }
+.text-slate-600   { color: #475569 !important; }
+.text-slate-700   { color: #334155 !important; }
+.border-slate-200 { border-color: #e2e8f0 !important; }
+
+/* --- Level Badge (Unit Kerja Hierarchy) --- */
+.level-badge-1 {
+    background: #f0fdfa !important; color: #0f766e !important;
+    border: 1px solid #99f6e4; font-weight: 700; font-size: 0.65rem;
+    padding: 2px 8px; border-radius: 4px;
+}
+.level-badge-2 {
+    background: #dbeafe !important; color: #1e40af !important;
+    border: 1px solid #93c5fd; font-weight: 700; font-size: 0.65rem;
+    padding: 2px 8px; border-radius: 4px;
+}
+.level-badge-3 {
+    background: #fef9c3 !important; color: #854d0e !important;
+    border: 1px solid #fde68a; font-weight: 700; font-size: 0.65rem;
+    padding: 2px 8px; border-radius: 4px;
+}
+.level-badge-4 {
+    background: #f3e8ff !important; color: #6b21a8 !important;
+    border: 1px solid #d8b4fe; font-weight: 700; font-size: 0.65rem;
+    padding: 2px 8px; border-radius: 4px;
+}
+.level-badge-5 {
+    background: #ffe4e6 !important; color: #9f1239 !important;
+    border: 1px solid #fecdd3; font-weight: 700; font-size: 0.65rem;
+    padding: 2px 8px; border-radius: 4px;
+}
+
+/* --- Bootstrap *-subtle overrides (high contrast) --- */
+.bg-primary-subtle   { background-color: #dbeafe !important; }
+.bg-secondary-subtle { background-color: #f1f5f9 !important; }
+.bg-success-subtle   { background-color: #dcfce7 !important; }
+.bg-warning-subtle   { background-color: #fef9c3 !important; }
+.bg-danger-subtle    { background-color: #fee2e2 !important; }
+
+/* Role badge .bg-teal (for STAF_NAKES role badge) */
+.badge.bg-teal { background-color: #0d9488 !important; color: #ffffff !important; }
+
 @media (max-width: 767.98px) {
     .main-content { margin-left: 0; }
     .content-area { padding: 1rem; }
