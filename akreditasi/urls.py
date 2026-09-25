@@ -65,4 +65,7 @@ urlpatterns = [
 
     # Modul Insiden Keselamatan (Fase 5)
     path('insiden/lapor/', risiko_views.insiden_lapor, name='insiden_lapor'),
+
+    # Panduan / Dokumentasi Interaktif
+    path('panduan/', views.panduan_dokumentasi, name='panduan'),
 ]

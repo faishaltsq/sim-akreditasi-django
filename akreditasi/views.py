@@ -807,6 +807,24 @@ def rekap_view(request):
 
 
 @login_required
+def panduan_dokumentasi(request):
+    """
+    Halaman panduan/dokumentasi penggunaan sistem interaktif.
+    Dapat diakses oleh semua pengguna yang sudah login.
+    """
+    from django.conf import settings
+    import os
+    
+    # Path ke file HTML dokumentasi
+    doc_path = os.path.join(settings.BASE_DIR, 'docs', 'PANDUAN_LENGKAP_RS_MONSISKAMI.html')
+    if os.path.exists(doc_path):
+        with open(doc_path, 'r', encoding='utf-8') as f:
+            html_content = f.read()
+        return HttpResponse(html_content, content_type='text/html; charset=utf-8')
+    return HttpResponse("Dokumentasi sedang diperbarui.", status=404)
+
+
+@login_required
 def cetak_dokumen_pokja(request, cat_id):
     """Fase 3.3: Cetak dokumen standar akreditasi per Pokja (PDF / Print layout)."""
     cat = get_object_or_404(Category, id=cat_id)
