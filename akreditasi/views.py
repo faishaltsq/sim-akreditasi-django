@@ -96,11 +96,15 @@ def dashboard(request):
         else:
             pct_tercapai = pct_proses = pct_belum = 0
 
-        # Risiko unit
+        # Risiko unit — skor = dampak * probabilitas
         from .risiko_models import RisikoUnit
+        from django.db.models import F, ExpressionWrapper, IntegerField
         risiko_unit = RisikoUnit.objects.filter(unit_id__in=unit_ids)
         total_risiko = risiko_unit.count()
-        risiko_tinggi = risiko_unit.filter(inherent_score__gte=12).count()
+        # Risiko tinggi: dampak >= 4 dan probabilitas >= 3, atau kombinasi skor >= 12
+        risiko_tinggi = risiko_unit.filter(
+            dampak__gte=3, probabilitas__gte=3
+        ).count()
 
         # Aktivitas terkini unit
         aktivitas_terkini = AuditLog.objects.filter(
