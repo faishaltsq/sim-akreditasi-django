@@ -60,7 +60,9 @@ Tab ini digunakan untuk mengelola seluruh struktur unit kerja rumah sakit mulai 
 3. **Pengaturan Tipe & Klasifikasi Unit:**
    - Pilihan: *Pimpinan / Dewas*, *Direktorat / Bidang*, *Komite RS*, *SPI*, *Bagian / Sub-Bag*, *Instalasi*, *KSM Spesialis*, *Ruangan Pelayanan*, *Depo / Satelit*, dan *Lainnya*.
 4. **Urutan Tampilan (*Sort Order*):**
-   - Atur angka urutan untuk menentukan urutan kemunculan unit di menu dan formulir.
+   - Atur angka urutan untuk menentukan posisi kemunculan unit di sidebar, dropdown formulir, dan halaman pohon hierarki.
+   - Unit dengan angka lebih kecil tampil lebih atas. Jika semua unit memiliki angka urutan yang sama (misal semua `0`), sistem akan menampilkan unit berdasarkan urutan ID database (kapan pertama kali dibuat).
+   - **Tips:** Gunakan kelipatan 10 (misal `10`, `20`, `30`) agar mudah menyisipkan unit baru di antara unit yang sudah ada tanpa perlu mengubah angka urutan seluruh unit.
 5. **Toggle Aktif / Arsip:**
    - Unit yang dinonaktifkan tidak akan muncul pada dropdown formulir baru, namun riwayat data lamanya tetap tersimpan aman.
 
