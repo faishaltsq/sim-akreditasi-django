@@ -1,8 +1,8 @@
 {% extends "base.html" %}
 {% load akreditasi_tags %}
 
-{% block page_title %}APLIKASI DOKUMEN MANAJEMEN DAN AKREDITASI RS MonsisKami{% endblock %}
-{% block page_subtitle %}Sistem Manajemen Dokumen Akreditasi STARKES &amp; Manajemen Risiko Terintegrasi Tipe B{% endblock %}
+{% block page_title %}{% if unit_dashboard %}{{ unit.name|upper }}{% else %}APLIKASI DOKUMEN MANAJEMEN DAN AKREDITASI RS MonsisKami{% endif %}{% endblock %}
+{% block page_subtitle %}{% if unit_dashboard %}Dashboard Unit — {{ unit.get_tipe_unit_display|default:"Unit Pelayanan" }} | {{ rs_profile.nama_rs|default:"RS MonsisKami Tipe B" }}{% else %}Sistem Manajemen Dokumen Akreditasi STARKES &amp; Manajemen Risiko Terintegrasi Tipe B{% endif %}{% endblock %}
 
 {% block extra_css %}
 <style>
@@ -63,6 +63,54 @@
 {% block content %}
 <div class="container-fluid p-0">
 
+    {% if unit_dashboard %}
+    <!-- ========================================================================= -->
+    <!-- HERO BANNER KHUSUS UNIT KERJA (BRANDED UNIT LANDING)                     -->
+    <!-- ========================================================================= -->
+    <div class="card border-0 shadow-sm mb-4" style="background: linear-gradient(135deg, #0f766e 0%, #0d9488 50%, #14b8a6 100%); border-radius: 1rem; color: #ffffff;">
+        <div class="card-body p-4 p-md-5">
+            <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3">
+                <div>
+                    <div class="d-flex align-items-center gap-2 mb-2">
+                        <span class="badge bg-white text-teal fw-bold px-3 py-1 font-monospace" style="color: #0f766e !important; font-size: 0.75rem;">
+                            <i class="bi bi-diagram-3 me-1"></i>KODE: {{ unit.code }}
+                        </span>
+                        <span class="badge bg-white/20 text-white border border-white/30 px-2.5 py-1" style="font-size: 0.72rem;">
+                            LEVEL {{ unit.level }} &bull; {{ unit.get_tipe_unit_display|default:"UNIT PELAYANAN" }}
+                        </span>
+                        {% if unit.parent %}
+                        <span class="badge bg-white/10 text-white-50 px-2.5 py-1" style="font-size: 0.72rem;">
+                            <i class="bi bi-arrow-return-right me-1"></i>Induk: {{ unit.parent.name }}
+                        </span>
+                        {% endif %}
+                    </div>
+                    <h1 class="display-6 fw-bold mb-1 text-white text-uppercase" style="letter-spacing: -0.02em;">
+                        {{ unit.name }}
+                    </h1>
+                    <p class="text-white-50 mb-0 fs-6">
+                        {% if unit.pic_name %}
+                        <i class="bi bi-person-badge me-1"></i>Kepala / Penanggung Jawab: <strong class="text-white">{{ unit.pic_name }}</strong> &bull;
+                        {% endif %}
+                        {{ rs_profile.nama_rs|default:"RS MonsisKami Tipe B" }}
+                    </p>
+                </div>
+
+                <div class="d-flex flex-wrap gap-2">
+                    <a href="{% url 'akreditasi:matriks_pdca' %}?unit={{ unit.id }}" class="btn btn-light fw-bold px-3 shadow-sm text-teal" style="color: #0f766e;">
+                        <i class="bi bi-table me-1"></i>Matriks PDCA Unit
+                    </a>
+                    <a href="{% url 'akreditasi:risiko_input' %}" class="btn btn-outline-light fw-semibold px-3">
+                        <i class="bi bi-shield-plus me-1"></i>Input Risiko
+                    </a>
+                    <a href="{% url 'akreditasi:insiden_lapor' %}" class="btn btn-outline-light fw-semibold px-3">
+                        <i class="bi bi-exclamation-triangle me-1"></i>Lapor Insiden
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
     <!-- 1. METRIC RIBBON (KPI BAR 4 CARDS) SESUAI SPEC -->
     <div class="row g-3 mb-4">
         <!-- BOX 1: CAPAIAN RATA-RATA -->
@@ -120,6 +168,52 @@
             </div>
         </div>
 
+        {% if unit_dashboard %}
+        <!-- BOX 3 (UNIT): TOTAL RISIKO UNIT -->
+        <div class="col-12 col-sm-6 col-xl-3">
+            <div class="kpi-card kpi-evaluasi">
+                <div>
+                    <div class="kpi-label">
+                        <span>Register Risiko Unit</span>
+                        <i class="bi bi-shield-exclamation text-warning fs-5"></i>
+                    </div>
+                    <div class="kpi-value text-warning">
+                        {{ total_risiko }}
+                    </div>
+                </div>
+                <div>
+                    <div class="d-flex justify-content-between kpi-sub mt-1.5">
+                        <span>Risiko Tinggi/Sangat Tinggi</span>
+                        <span class="fw-bold {% if risiko_tinggi > 0 %}text-danger{% else %}text-success{% endif %}">{{ risiko_tinggi }} Risiko</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- BOX 4 (UNIT): EP TERISI -->
+        <div class="col-12 col-sm-6 col-xl-3">
+            <div class="kpi-card kpi-anggaran">
+                <div>
+                    <div class="kpi-label">
+                        <span>Standar EP Terisi</span>
+                        <i class="bi bi-list-check text-purple fs-5" style="color:#8B5CF6;"></i>
+                    </div>
+                    <div class="kpi-value" style="color:#7C3AED; font-size:1.6rem;">
+                        {{ count_tercapai|add:count_proses }}<span class="fs-5 text-muted fw-normal">/{{ total_ep }}</span>
+                    </div>
+                </div>
+                <div class="kpi-sub pt-1 border-top">
+                    <div class="d-flex justify-content-between">
+                        <span class="text-success fw-bold">{{ count_tercapai }} Tercapai</span>
+                        <span class="text-warning fw-bold">{{ count_proses }} Proses</span>
+                    </div>
+                    <div class="text-muted mt-0.5" style="font-size:0.68rem;">
+                        {{ count_belum }} EP belum diisi (skor 0)
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% else %}
         <!-- BOX 3: EVALUASI PDCA -->
         <div class="col-12 col-sm-6 col-xl-3">
             <div class="kpi-card kpi-evaluasi">
@@ -167,6 +261,7 @@
                 </div>
             </div>
         </div>
+        {% endif %}
     </div>
 
     <!-- 2. MIDDLE ROW: PIE CHART STATUS KEPATUHAN & AKTIVITAS TERKINI -->

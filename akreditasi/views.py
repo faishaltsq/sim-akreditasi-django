@@ -61,10 +61,73 @@ nakes_or_admin = user_passes_test(_is_nakes_or_admin, login_url='/accounts/login
 # ==============================================================================
 @login_required
 def dashboard(request):
-    # Smart redirect: nakes langsung ke portal unit
     profile = getattr(request.user, 'profile', None)
-    if profile and profile.role == 'STAF_NAKES':
-        return redirect('akreditasi:portal_nakes')
+
+    # ===== MODE UNIT-SCOPED: user punya unit_kerja & bukan admin/direktur =====
+    if profile and profile.is_unit_scoped and profile.unit_kerja:
+        unit = profile.unit_kerja
+        # Kumpulkan unit ini + child units-nya agar EP dari sub-unit juga masuk
+        unit_ids = [unit.id] + list(UnitKerja.objects.filter(parent=unit).values_list('id', flat=True))
+
+        items = StandardItem.objects.filter(
+            record__unit_id__in=unit_ids
+        ).select_related('category', 'record__unit').prefetch_related('evidence_reqs__files')
+        total_ep = items.count()
+
+        total_possible_score = total_ep * 10
+        total_current_score = sum(i.record.score if hasattr(i, 'record') and i.record else 0 for i in items)
+        capaian_rata_rata = round((total_current_score / total_possible_score) * 100, 1) if total_possible_score > 0 else 0
+
+        # Dokumen terunggah vs target
+        unit_reqs = EvidenceReq.objects.filter(standard_item__record__unit_id__in=unit_ids)
+        total_target_dokumen = unit_reqs.count()
+        total_uploaded_dokumen = EvidenceFile.objects.filter(
+            requirement__standard_item__record__unit_id__in=unit_ids
+        ).values('requirement_id').distinct().count()
+
+        # Status EP
+        count_tercapai = QualityRecord.objects.filter(unit_id__in=unit_ids, score=10).count()
+        count_proses = QualityRecord.objects.filter(unit_id__in=unit_ids, score=5).count()
+        count_belum = total_ep - (count_tercapai + count_proses)
+        if total_ep > 0:
+            pct_tercapai = round((count_tercapai / total_ep) * 100, 1)
+            pct_proses = round((count_proses / total_ep) * 100, 1)
+            pct_belum = round((count_belum / total_ep) * 100, 1)
+        else:
+            pct_tercapai = pct_proses = pct_belum = 0
+
+        # Risiko unit
+        from .risiko_models import RisikoUnit
+        risiko_unit = RisikoUnit.objects.filter(unit_id__in=unit_ids)
+        total_risiko = risiko_unit.count()
+        risiko_tinggi = risiko_unit.filter(inherent_score__gte=12).count()
+
+        # Aktivitas terkini unit
+        aktivitas_terkini = AuditLog.objects.filter(
+            Q(user=request.user) | Q(detail__icontains=unit.name)
+        ).order_by('-timestamp')[:5]
+
+        context = {
+            'rs_profile': RumahSakitProfile.get_default(),
+            'unit_dashboard': True,
+            'unit': unit,
+            'total_ep': total_ep,
+            'capaian_rata_rata': capaian_rata_rata,
+            'total_uploaded_dokumen': total_uploaded_dokumen,
+            'total_target_dokumen': total_target_dokumen,
+            'count_tercapai': count_tercapai,
+            'count_proses': count_proses,
+            'count_belum': count_belum,
+            'pct_tercapai': pct_tercapai,
+            'pct_proses': pct_proses,
+            'pct_belum': pct_belum,
+            'total_risiko': total_risiko,
+            'risiko_tinggi': risiko_tinggi,
+            'aktivitas_terkini': aktivitas_terkini,
+        }
+        return render(request, 'akreditasi/dashboard.html', context)
+
+    # ===== MODE GLOBAL: Admin / Direktur / user tanpa unit_kerja =====
 
     rs_profile = RumahSakitProfile.get_default()
     framework = Framework.objects.first()

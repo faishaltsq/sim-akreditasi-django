@@ -173,6 +173,13 @@ class UserProfile(models.Model):
     def role_level(self):
         return self.ROLE_HIERARCHY.get(self.role, 0)
 
+    @property
+    def is_unit_scoped(self):
+        """User yang ruang lingkupnya dibatasi pada unit kerja spesifiknya."""
+        if self.user.is_superuser or self.role in ['SUPER_ADMIN', 'ADMIN_RS', 'DIREKTUR']:
+            return False
+        return bool(self.unit_kerja)
+
     def has_permission(self, perm_code):
         """
         Evaluasi izin secara hierarkis:

@@ -54,7 +54,8 @@
     </a>
     {% endfor %}
 
-    <!-- 3. MANAJEMEN DATA -->
+    <!-- 3. MANAJEMEN DATA (HANYA UNTUK ADMIN RS / SUPER ADMIN / DIREKTUR) -->
+    {% if not request.user.profile.is_unit_scoped %}
     <div class="nav-section mt-2">
         <i class="bi bi-database-fill me-1" style="font-size:0.6rem;"></i> Manajemen Data
     </div>
@@ -86,6 +87,7 @@
             <span class="nav-desc">Manajemen User &amp; Hak Akses</span>
         </span>
     </a>
+    {% endif %}
 
     <!-- MODUL RISIKO & INSIDEN (Fase 2 & 5) -->
     <div class="nav-section mt-2">
@@ -113,7 +115,8 @@
         </span>
     </a>
 
-    <!-- 4. LAPORAN -->
+    <!-- 4. LAPORAN (HANYA ADMIN/DIREKTUR) -->
+    {% if not request.user.profile.is_unit_scoped %}
     <div class="nav-section mt-2">
         <i class="bi bi-file-earmark-bar-graph-fill me-1" style="font-size:0.6rem;"></i> Laporan &amp; Evaluasi
     </div>
@@ -138,8 +141,10 @@
             <span class="nav-desc">Unduh Excel Resmi</span>
         </span>
     </a>
+    {% endif %}
 
-    <!-- 5. PENGATURAN -->
+    <!-- 5. PENGATURAN (HANYA ADMIN/DIREKTUR) -->
+    {% if not request.user.profile.is_unit_scoped %}
     <div class="nav-section mt-2">
         <i class="bi bi-gear-fill me-1" style="font-size:0.6rem;"></i> Pengaturan
     </div>
@@ -157,9 +162,10 @@
             <span class="nav-desc">Audit Trail Aktivitas</span>
         </span>
     </a>
+    {% endif %}
 
     <!-- PORTAL NAKES — tampil untuk semua user yang punya unit_kerja -->
-    {% if request.user.profile.is_nakes %}
+    {% if request.user.profile.unit_kerja %}
     <div class="nav-section mt-2">
         <i class="bi bi-heart-pulse-fill me-1" style="font-size:0.6rem;"></i> Portal Saya
     </div>
