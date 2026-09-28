@@ -402,9 +402,19 @@ def update_system_config(request):
         'threshold_paripurna', 'threshold_utama', 'threshold_madya', 'threshold_dasar',
         'kps_alert_days', 'max_upload_size_mb',
         'risk_threshold_sangat_tinggi', 'risk_threshold_tinggi', 'risk_threshold_sedang', 'risk_threshold_rendah',
+        'ai_max_tokens',
     ]
-    str_fields = ['allowed_extensions', 'theme_color', 'kop_surat_text', 'survey_freeze_message']
-    bool_fields = ['allow_nakes_self_upload']
+    str_fields = ['allowed_extensions', 'theme_color', 'kop_surat_text', 'survey_freeze_message',
+                  'ai_model_name']
+    bool_fields = ['allow_nakes_self_upload', 'ai_enabled',
+                   'ai_enable_risiko', 'ai_enable_pdca', 'ai_enable_insiden',
+                   'ai_enable_rdwos', 'ai_enable_kps']
+    float_fields = ['ai_temperature']
+
+    # API Key: hanya simpan jika user kirim nilai baru (tidak kosong)
+    new_api_key = request.POST.get('ai_api_key', '').strip()
+    if new_api_key:
+        cfg.ai_api_key = new_api_key
 
     for f in int_fields:
         val = request.POST.get(f)
@@ -417,6 +427,13 @@ def update_system_config(request):
     for f in bool_fields:
         val = request.POST.get(f, 'false')
         setattr(cfg, f, val.lower() in ('true', '1', 'on', 'yes'))
+    for f in float_fields:
+        val = request.POST.get(f)
+        if val is not None:
+            try:
+                setattr(cfg, f, float(val))
+            except ValueError:
+                pass
 
     cfg.save()
 

@@ -96,7 +96,12 @@
                         {# ── C. Deskripsi ───────────────────────────────── #}
                         <h6 class="fw-bold mb-3 pb-1 border-bottom mt-2" style="color:#0f172a; font-size:.82rem;">C. Uraian Kejadian</h6>
                         <div class="mb-3">
-                            <label class="form-label" style="font-size:.8rem; font-weight:600;">Deskripsi Kejadian <span class="text-danger">*</span></label>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <label class="form-label" style="font-size:.8rem; font-weight:600;">Deskripsi Kejadian <span class="text-danger">*</span></label>
+                                <button type="button" class="btn btn-sm btn-outline-danger px-2 py-0" id="btn-ai-insiden" style="font-size:.72rem;">
+                                    <i class="bi bi-stars me-1"></i>Analisis Grading & RCA dengan AI
+                                </button>
+                            </div>
                             <textarea name="deskripsi_kejadian" class="form-control form-control-sm" rows="4" required placeholder="Ceritakan secara kronologis: apa yang terjadi, bagaimana terjadinya, faktor apa yang berkontribusi…"></textarea>
                         </div>
                         <div class="mb-3">
@@ -130,4 +135,8 @@
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="/static/js/ai-assist.js"></script>
 {% endblock %}

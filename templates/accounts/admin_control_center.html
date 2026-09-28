@@ -458,6 +458,80 @@
                 </div>
               </div>
 
+              <!-- CARD 5: PENGATURAN ASISTEN AI DEEPSEEK -->
+              <div class="col-12">
+                <div class="card border-0 shadow-sm rounded-3 p-4 bg-white" style="border-left: 4px solid #0d9488 !important;">
+                  <div class="d-flex justify-content-between align-items-center border-bottom pb-2 mb-3">
+                    <h6 class="fw-bold text-dark mb-0">
+                      <i class="bi bi-stars text-teal me-2"></i> Integrasi AI Asisten Cerdas (DeepSeek API)
+                    </h6>
+                    <div class="form-check form-switch mb-0">
+                      <input class="form-check-input" type="checkbox" name="ai_enabled" id="aiEnabledToggle" value="true" {% if config.ai_enabled %}checked{% endif %}>
+                      <label class="form-check-label fw-bold small text-teal" for="aiEnabledToggle">Aktifkan Asisten AI</label>
+                    </div>
+                  </div>
+
+                  <div class="row g-3">
+                    <div class="col-md-7">
+                      <label class="form-label small fw-bold text-secondary">DeepSeek API Key</label>
+                      <div class="input-group input-group-sm">
+                        <input type="password" name="ai_api_key" id="aiApiKeyInput" class="form-control font-monospace" placeholder="{% if config.ai_api_key %}•••••••••••••••••••••••• (Tersimpan aman){% else %}sk-... Masukkan API Key DeepSeek{% endif %}">
+                        <button class="btn btn-outline-secondary" type="button" onclick="const f=document.getElementById('aiApiKeyInput'); f.type = f.type==='password'?'text':'password';">
+                          <i class="bi bi-eye"></i>
+                        </button>
+                      </div>
+                      <small class="text-muted" style="font-size:0.7rem;">Kunci disimpan terenkripsi di server dan <strong>tidak pernah dikirim ke browser pengguna</strong>. Dapatkan di <a href="https://platform.deepseek.com/" target="_blank" class="text-teal">platform.deepseek.com</a>.</small>
+                    </div>
+
+                    <div class="col-md-5">
+                      <label class="form-label small fw-bold text-secondary">Pilihan Model Default</label>
+                      <select name="ai_model_name" class="form-select form-select-sm">
+                        <option value="deepseek-chat" {% if config.ai_model_name == 'deepseek-chat' %}selected{% endif %}>DeepSeek-V3 Chat (Cepat, Ekonomis, Rekomendasi)</option>
+                        <option value="deepseek-reasoner" {% if config.ai_model_name == 'deepseek-reasoner' %}selected{% endif %}>DeepSeek-R1 Reasoner (Penalaran Klinis Mendalam)</option>
+                      </select>
+                      <small class="text-muted" style="font-size:0.7rem;">V3 untuk form mitigasi/tindak lanjut; R1 untuk analisis akar masalah / RCA.</small>
+                    </div>
+
+                    <div class="col-12">
+                      <label class="form-label small fw-bold text-secondary d-block mb-2">Modul yang Diizinkan Menggunakan AI:</label>
+                      <div class="d-flex flex-wrap gap-3">
+                        <div class="form-check form-check-inline">
+                          <input class="form-check-input" type="checkbox" name="ai_enable_risiko" id="mRisiko" value="true" {% if config.ai_enable_risiko %}checked{% endif %}>
+                          <label class="form-check-label small" for="mRisiko"><i class="bi bi-shield-plus me-1 text-warning"></i>Manajemen Risiko</label>
+                        </div>
+                        <div class="form-check form-check-inline">
+                          <input class="form-check-input" type="checkbox" name="ai_enable_pdca" id="mPdca" value="true" {% if config.ai_enable_pdca %}checked{% endif %}>
+                          <label class="form-check-label small" for="mPdca"><i class="bi bi-arrow-repeat me-1 text-primary"></i>Matriks PDCA</label>
+                        </div>
+                        <div class="form-check form-check-inline">
+                          <input class="form-check-input" type="checkbox" name="ai_enable_insiden" id="mInsiden" value="true" {% if config.ai_enable_insiden %}checked{% endif %}>
+                          <label class="form-check-label small" for="mInsiden"><i class="bi bi-exclamation-triangle me-1 text-danger"></i>Laporan Insiden (IKP)</label>
+                        </div>
+                        <div class="form-check form-check-inline">
+                          <input class="form-check-input" type="checkbox" name="ai_enable_rdwos" id="mRdwos" value="true" {% if config.ai_enable_rdwos %}checked{% endif %}>
+                          <label class="form-check-label small" for="mRdwos"><i class="bi bi-archive me-1 text-info"></i>Bukti RDWOS</label>
+                        </div>
+                        <div class="form-check form-check-inline">
+                          <input class="form-check-input" type="checkbox" name="ai_enable_kps" id="mKps" value="true" {% if config.ai_enable_kps %}checked{% endif %}>
+                          <label class="form-check-label small" for="mKps"><i class="bi bi-person-badge me-1 text-success"></i>Kredensial Nakes (KPS)</label>
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- Tombol Tes Koneksi -->
+                    <div class="col-12 pt-2 border-top d-flex align-items-center justify-content-between">
+                      <div>
+                        <button type="button" class="btn btn-sm btn-outline-teal" id="btn-test-deepseek">
+                          <i class="bi bi-plug me-1"></i> Uji Koneksi DeepSeek Sekarang
+                        </button>
+                        <span id="deepseek-test-status" class="ms-2 small"></span>
+                      </div>
+                      <small class="text-muted">Status: {% if config.get_deepseek_api_key %}<span class="badge bg-success-subtle text-success">API Key Terdeteksi</span>{% else %}<span class="badge bg-secondary-subtle text-secondary">Belum Terkonfigurasi</span>{% endif %}</small>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
               <!-- Tombol Simpan Perubahan -->
               <div class="col-12 text-end">
                 <button type="submit" class="btn btn-teal px-4 py-2 fw-bold shadow-sm">
@@ -741,4 +815,5 @@ function getCookie(name) {
   return cookieValue;
 }
 </script>
+<script src="/static/js/ai-assist.js"></script>
 {% endblock %}

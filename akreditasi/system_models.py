@@ -51,6 +51,29 @@ class SystemConfig(models.Model):
         'Teks Kop Surat Resmi', blank=True,
         default='PEMERINTAH DAERAH / YAYASAN KESEHATAN\nRS MONSISKAMI (TIPE B)\nJl. Kesehatan No. 1, Jakarta'
     )
+
+    # --- Konfigurasi AI Asisten DeepSeek ---
+    AI_MODEL_CHOICES = [
+        ('deepseek-chat', 'DeepSeek-V3 Chat (Cepat & Ekonomis)'),
+        ('deepseek-reasoner', 'DeepSeek-R1 Reasoner (Penalaran Klinis Mendalam)'),
+    ]
+    ai_enabled = models.BooleanField('Aktifkan Asisten AI DeepSeek', default=False)
+    ai_api_key = models.CharField(
+        'DeepSeek API Key', max_length=200, blank=True,
+        help_text='Dimulai dengan sk-... Disimpan terenkripsi, tidak pernah dikirim ke frontend.'
+    )
+    ai_model_name = models.CharField(
+        'Model DeepSeek Default', max_length=50,
+        choices=AI_MODEL_CHOICES, default='deepseek-chat'
+    )
+    ai_enable_risiko = models.BooleanField('AI: Modul Manajemen Risiko', default=True)
+    ai_enable_pdca = models.BooleanField('AI: Modul Matriks PDCA', default=True)
+    ai_enable_insiden = models.BooleanField('AI: Modul Laporan Insiden', default=True)
+    ai_enable_rdwos = models.BooleanField('AI: Modul Dokumen Bukti RDWOS', default=True)
+    ai_enable_kps = models.BooleanField('AI: Modul KPS / Kredensial Nakes', default=True)
+    ai_temperature = models.FloatField('Kreativitas AI (temperature 0.0–1.0)', default=0.3)
+    ai_max_tokens = models.PositiveSmallIntegerField('Maksimal Token Output AI', default=1000)
+
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
@@ -64,3 +87,10 @@ class SystemConfig(models.Model):
     def get_solo(cls):
         obj, _ = cls.objects.get_or_create(id=1)
         return obj
+
+    def get_deepseek_api_key(self):
+        """Ambil API Key dari database (SystemConfig) atau fallback ke environment variable."""
+        import os
+        if self.ai_api_key and self.ai_api_key.strip():
+            return self.ai_api_key.strip()
+        return os.environ.get('DEEPSEEK_API_KEY', '').strip()

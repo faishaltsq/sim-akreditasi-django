@@ -126,7 +126,12 @@
                             </div>
                         </div>
                         <div class="mb-3">
-                            <label class="form-label" style="font-size:.8rem; font-weight:600;">Rencana Aksi <span class="text-danger">*</span></label>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <label class="form-label" style="font-size:.8rem; font-weight:600;">Rencana Aksi <span class="text-danger">*</span></label>
+                                <button type="button" class="btn btn-sm btn-outline-teal px-2 py-0" id="btn-ai-mitigasi" style="font-size:.72rem; border-color:#0d9488; color:#0d9488;">
+                                    <i class="bi bi-stars me-1"></i>Bantu Susun dengan AI DeepSeek
+                                </button>
+                            </div>
                             <textarea name="rencana_aksi" class="form-control form-control-sm" rows="3" required placeholder="Langkah-langkah mitigasi…"></textarea>
                         </div>
                         <div class="mb-4">
@@ -148,6 +153,7 @@
 {% endblock %}
 
 {% block extra_js %}
+<script src="/static/js/ai-assist.js"></script>
 <script>
 (function() {
     const dampakEl  = document.getElementById('dampak');

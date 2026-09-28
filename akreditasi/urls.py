@@ -1,6 +1,7 @@
 from django.urls import path
 from . import views
 from . import risiko_views
+from . import ai_views
 
 app_name = 'akreditasi'
 
@@ -68,4 +69,12 @@ urlpatterns = [
 
     # Panduan / Dokumentasi Interaktif
     path('panduan/', views.panduan_dokumentasi, name='panduan'),
+
+    # ── Endpoint AI Asisten Cerdas DeepSeek (backend-only, tidak ada API Key di response) ──
+    path('ai/mitigasi-risiko/', ai_views.api_ai_mitigasi_risiko, name='ai_mitigasi_risiko'),
+    path('ai/pdca-plan/', ai_views.api_ai_pdca_plan, name='ai_pdca_plan'),
+    path('ai/insiden-grading/', ai_views.api_ai_insiden_grading, name='ai_insiden_grading'),
+    path('ai/evaluasi-risiko/', ai_views.api_ai_evaluasi_risiko, name='ai_evaluasi_risiko'),
+    path('ai/rdwos-analisis/', ai_views.api_ai_rdwos_analisis, name='ai_rdwos_analisis'),
+    path('ai/test-connection/', ai_views.api_ai_test_connection, name='ai_test_connection'),
 ]
