@@ -264,13 +264,30 @@
 
                         <!-- Kolom 6: Action (Tindak Lanjut / RTL) -->
                         <td>
-                            <div class="pdca-cell-content" onclick="openInlineEditModal({{ item.record.id }}, 'action_plan', 'Action (Tindak Lanjut / RTL)', '{{ item.code }}')">
+                            <div class="pdca-cell-content"
+                                 onclick="openInlineEditModal({{ item.record.id }}, 'action_plan', 'Action (Tindak Lanjut / RTL)', '{{ item.code }}', '{{ item.record.pic|escapejs }}', '{{ item.record.est_cost|default:0 }}')"
+                                 data-pic="{{ item.record.pic|escapejs }}"
+                                 data-cost="{{ item.record.est_cost|default:0 }}">
                                 <div class="cell-text" id="cell-action_plan-{{ item.record.id }}">
                                     {{ item.record.action_plan|default:"<span class='text-muted fst-italic'>Klik untuk isi Action / RTL...</span>"|safe }}
                                 </div>
+                                {% if item.record.pic or item.record.est_cost %}
+                                <div class="d-flex flex-wrap gap-1 mt-1">
+                                    {% if item.record.pic %}
+                                    <span class="badge bg-teal-subtle border" style="font-size:0.58rem; color:#0d9488;">
+                                        <i class="bi bi-person-fill me-1"></i>{{ item.record.pic }}
+                                    </span>
+                                    {% endif %}
+                                    {% if item.record.est_cost %}
+                                    <span class="badge bg-light border text-dark" style="font-size:0.58rem;">
+                                        <i class="bi bi-cash-coin me-1"></i>Rp {{ item.record.est_cost|floatformat:0 }}
+                                    </span>
+                                    {% endif %}
+                                </div>
+                                {% endif %}
                                 <div class="cell-footer">
                                     <span class="badge bg-white text-secondary border font-mono" style="font-size:0.6rem;">Action</span>
-                                    <button type="button" class="btn btn-sm btn-link p-0 text-primary text-decoration-none" 
+                                    <button type="button" class="btn btn-sm btn-link p-0 text-primary text-decoration-none"
                                             onclick="event.stopPropagation(); openBuktiModal({{ item.id }}, '{{ item.code }}');" title="Manajemen Bukti Dokumen">
                                         <i class="bi bi-paperclip fs-6"></i>
                                     </button>
@@ -444,6 +461,27 @@
                     <label for="inlineTextValue" class="form-label small text-muted mb-1" id="inlineFieldLabel">Isi Teks:</label>
                     <textarea class="form-control" id="inlineTextValue" rows="5" placeholder="Masukkan rincian..."></textarea>
                 </div>
+                <!-- PJ + Biaya: tampil hanya saat edit kolom Action -->
+                <div id="inlineActionExtra" style="display:none;">
+                    <hr class="my-2">
+                    <div class="row g-2">
+                        <div class="col-md-7">
+                            <label class="form-label small fw-semibold mb-1">
+                                <i class="bi bi-person-fill text-teal me-1"></i>Penanggung Jawab (PJ)
+                            </label>
+                            <input type="text" class="form-control form-control-sm" id="inlinePic"
+                                   placeholder="Nama penanggung jawab RTL...">
+                        </div>
+                        <div class="col-md-5">
+                            <label class="form-label small fw-semibold mb-1">
+                                <i class="bi bi-cash-coin text-teal me-1"></i>Estimasi Biaya (Rp)
+                            </label>
+                            <input type="number" class="form-control form-control-sm" id="inlineEstCost"
+                                   placeholder="0" min="0" step="1000">
+                            <div class="text-muted" style="font-size:0.65rem;" id="inlineCostDisplay"></div>
+                        </div>
+                    </div>
+                </div>
             </div>
             <div class="modal-footer py-2 bg-light">
                 <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Batal</button>
@@ -496,16 +534,33 @@ function updateQuickScore(selectElem) {
 
 // INLINE EDIT MODAL
 let inlineModalInstance = null;
-function openInlineEditModal(recordId, field, label, epCode) {
+function openInlineEditModal(recordId, field, label, epCode, currentPic, currentCost) {
     document.getElementById('inlineRecordId').value = recordId;
     document.getElementById('inlineField').value = field;
     document.getElementById('modalInlineTitle').innerText = `${epCode} — ${label}`;
-    
+
     // Ambil isi teks saat ini dari DOM
     const cellElem = document.getElementById(`cell-${field}-${recordId}`);
     let currentText = cellElem ? cellElem.innerText.trim() : '';
     if (currentText.includes('Klik untuk isi')) currentText = '';
     document.getElementById('inlineTextValue').value = currentText;
+
+    // Tampilkan/sembunyikan section PJ + Biaya hanya untuk kolom Action
+    const extraDiv = document.getElementById('inlineActionExtra');
+    if (field === 'action_plan') {
+        extraDiv.style.display = 'block';
+        document.getElementById('inlinePic').value = currentPic || '';
+        const costVal = parseFloat(currentCost) || 0;
+        document.getElementById('inlineEstCost').value = costVal > 0 ? costVal : '';
+        const displayEl = document.getElementById('inlineCostDisplay');
+        if (costVal > 0) {
+            displayEl.textContent = 'Rp ' + costVal.toLocaleString('id-ID');
+        } else {
+            displayEl.textContent = '';
+        }
+    } else {
+        extraDiv.style.display = 'none';
+    }
 
     if (!inlineModalInstance) {
         inlineModalInstance = new bootstrap.Modal(document.getElementById('modalInlineEdit'));
@@ -513,10 +568,31 @@ function openInlineEditModal(recordId, field, label, epCode) {
     inlineModalInstance.show();
 }
 
+// Update live preview Rp saat ketik biaya
+document.addEventListener('DOMContentLoaded', function() {
+    const costInput = document.getElementById('inlineEstCost');
+    if (costInput) {
+        costInput.addEventListener('input', function() {
+            const v = parseFloat(this.value) || 0;
+            document.getElementById('inlineCostDisplay').textContent =
+                v > 0 ? 'Rp ' + v.toLocaleString('id-ID') : '';
+        });
+    }
+});
+
 function saveInlineEdit() {
     const recordId = document.getElementById('inlineRecordId').value;
     const field = document.getElementById('inlineField').value;
     const value = document.getElementById('inlineTextValue').value.trim();
+
+    const payload = { field: field, value: value };
+
+    // Sertakan PJ + Biaya jika di kolom Action
+    if (field === 'action_plan') {
+        payload.pic = document.getElementById('inlinePic').value.trim();
+        const rawCost = document.getElementById('inlineEstCost').value.trim();
+        payload.est_cost = rawCost ? parseFloat(rawCost) : 0;
+    }
 
     fetch(`/ep/record/${recordId}/inline-edit/`, {
         method: 'POST',
@@ -524,7 +600,7 @@ function saveInlineEdit() {
             'Content-Type': 'application/json',
             'X-CSRFToken': getCookie('csrftoken')
         },
-        body: JSON.stringify({ field: field, value: value })
+        body: JSON.stringify(payload)
     })
     .then(r => r.json())
     .then(data => {
@@ -532,6 +608,11 @@ function saveInlineEdit() {
             const cellElem = document.getElementById(`cell-${field}-${recordId}`);
             if (cellElem) {
                 cellElem.innerHTML = value ? escapeHtml(value) : `<span class='text-muted fst-italic'>Klik untuk isi...</span>`;
+            }
+            // Reload halaman agar badge PJ + Biaya terupdate di sel
+            if (field === 'action_plan') {
+                location.reload();
+                return;
             }
             if (inlineModalInstance) inlineModalInstance.hide();
             showToast('Data berhasil diperbarui!', 'success');

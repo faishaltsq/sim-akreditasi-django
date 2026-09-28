@@ -319,9 +319,29 @@ def inline_edit_pdca(request, record_id):
         field = data.get('field')  # 'baseline_data', 'quality_target', 'risk_mitigation', 'eval_notes', 'action_plan'
         value = data.get('value', '').strip()
 
-        allowed_fields = ['baseline_data', 'quality_target', 'risk_mitigation', 'eval_notes', 'action_plan', 'pic', 'target_date']
+        allowed_fields = ['baseline_data', 'quality_target', 'risk_mitigation', 'eval_notes', 'action_plan', 'pic', 'target_date', 'est_cost', 'budget_source', 'budget_status']
         if field in allowed_fields:
+            if field == 'est_cost':
+                from decimal import Decimal, InvalidOperation
+                try:
+                    value = Decimal(value.replace('.', '').replace(',', '.')) if value else Decimal('0')
+                except (InvalidOperation, ValueError):
+                    value = Decimal('0')
             setattr(record, field, value)
+
+            # Jika action_plan dikirim bersama pic + est_cost (batch save dari modal)
+            extra_pic = data.get('pic')
+            extra_cost = data.get('est_cost')
+            if extra_pic is not None:
+                record.pic = extra_pic.strip()
+            if extra_cost is not None:
+                from decimal import Decimal, InvalidOperation
+                try:
+                    cost_str = str(extra_cost).replace('.', '').replace(',', '.')
+                    record.est_cost = Decimal(cost_str) if cost_str else Decimal('0')
+                except (InvalidOperation, ValueError):
+                    pass
+
             record.save()
 
             AuditLog.objects.create(

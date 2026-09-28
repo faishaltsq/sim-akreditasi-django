@@ -58,6 +58,7 @@ class RisikoUnit(models.Model):
     strategi_mitigasi = models.CharField('Strategi Mitigasi', max_length=10, choices=STRATEGI_CHOICES)
     rencana_aksi      = models.TextField('Rencana Aksi')
     pj_mitigasi       = models.CharField('PJ Mitigasi', max_length=150)
+    biaya_mitigasi    = models.DecimalField('Estimasi Biaya Mitigasi (Rp)', max_digits=14, decimal_places=2, default=0)
     target_selesai    = models.DateField('Target Selesai', null=True, blank=True)
     bukti_pelaksanaan = models.TextField('Bukti Pelaksanaan', blank=True)
 

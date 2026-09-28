@@ -155,6 +155,7 @@ def risiko_input(request):
                 strategi_mitigasi=request.POST['strategi_mitigasi'],
                 rencana_aksi=request.POST['rencana_aksi'],
                 pj_mitigasi=request.POST['pj_mitigasi'],
+                biaya_mitigasi=request.POST.get('biaya_mitigasi') or 0,
                 target_selesai=request.POST.get('target_selesai') or None,
                 status='IDENTIFIKASI',
                 created_by=request.user,
