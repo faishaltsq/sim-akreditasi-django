@@ -475,7 +475,7 @@
                     <div class="col-md-7">
                       <label class="form-label small fw-bold text-secondary">DeepSeek API Key</label>
                       <div class="input-group input-group-sm">
-                        <input type="password" name="ai_api_key" id="aiApiKeyInput" class="form-control font-monospace" placeholder="{% if config.ai_api_key %}•••••••••••••••••••••••• (Tersimpan aman){% else %}sk-... Masukkan API Key DeepSeek{% endif %}">
+                        <input type="password" name="ai_api_key" id="aiApiKeyInput" class="form-control font-monospace" placeholder="{% if sys_config.ai_api_key %}•••••••••••••••••••••••• (Tersimpan aman — isi ulang hanya jika ingin mengganti){% else %}sk-... Masukkan API Key DeepSeek{% endif %}">
                         <button class="btn btn-outline-secondary" type="button" onclick="const f=document.getElementById('aiApiKeyInput'); f.type = f.type==='password'?'text':'password';">
                           <i class="bi bi-eye"></i>
                         </button>

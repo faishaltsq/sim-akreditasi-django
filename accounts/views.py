@@ -241,6 +241,7 @@ def admin_control_center(request):
 
     return render(request, 'accounts/admin_control_center.html', {
         'sys_config': sys_config,
+        'config': sys_config,
         'can_manage_system': can_manage_system,
         'all_units': all_units,
         'root_units': root_units,
