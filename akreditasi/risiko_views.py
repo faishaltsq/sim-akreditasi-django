@@ -72,16 +72,33 @@ def _log(user, aksi, obj, detail=''):
 
 @login_required
 def risiko_daftar(request):
+    profile = getattr(request.user, 'profile', None)
     qs = RisikoUnit.objects.select_related('unit').all()
 
+    # Scope filtering untuk unit-scoped users
+    if profile and profile.is_unit_scoped and profile.unit_kerja:
+        user_unit = profile.unit_kerja
+        unit_ids = [user_unit.id] + list(UnitKerja.objects.filter(parent=user_unit).values_list('id', flat=True))
+        units = UnitKerja.objects.filter(id__in=unit_ids)
+        # Filter QS ke unit miliknya jika tidak ditentukan secara eksplisit
+        unit_id = request.GET.get('unit')
+        if not unit_id:
+            qs = qs.filter(unit_id__in=unit_ids)
+            default_filter_unit = str(user_unit.id)
+        else:
+            qs = qs.filter(unit_id=unit_id)
+            default_filter_unit = unit_id
+    else:
+        units = UnitKerja.objects.all()
+        unit_id = request.GET.get('unit')
+        if unit_id:
+            qs = qs.filter(unit_id=unit_id)
+        default_filter_unit = unit_id or ''
+
     # Filters
-    unit_id = request.GET.get('unit')
     tahun = request.GET.get('tahun')
     status = request.GET.get('status')
     kategori = request.GET.get('kategori')
-
-    if unit_id:
-        qs = qs.filter(unit_id=unit_id)
     if tahun:
         qs = qs.filter(tahun=tahun)
     if status:
@@ -90,7 +107,6 @@ def risiko_daftar(request):
         qs = qs.filter(kategori_risiko=kategori)
 
     matrix = _risk_matrix_summary(qs)
-    units = UnitKerja.objects.all()
     tahun_list = RisikoUnit.objects.values_list('tahun', flat=True).distinct().order_by('-tahun')
 
     ctx = {
@@ -102,7 +118,7 @@ def risiko_daftar(request):
         'kategori_choices': RisikoUnit.KATEGORI_CHOICES,
         'status_badges': STATUS_BADGES,
         'skor_color': _skor_color,
-        'filter_unit': unit_id or '',
+        'filter_unit': default_filter_unit,
         'filter_tahun': tahun or '',
         'filter_status': status or '',
         'filter_kategori': kategori or '',
@@ -114,7 +130,16 @@ def risiko_daftar(request):
 
 @login_required
 def risiko_input(request):
-    units = UnitKerja.objects.all()
+    profile = getattr(request.user, 'profile', None)
+    # Unit-scoped user: hanya unitnya sendiri + child units
+    if profile and profile.is_unit_scoped and profile.unit_kerja:
+        user_unit = profile.unit_kerja
+        unit_ids = [user_unit.id] + list(UnitKerja.objects.filter(parent=user_unit).values_list('id', flat=True))
+        units = UnitKerja.objects.filter(id__in=unit_ids)
+        default_unit_id = user_unit.id
+    else:
+        units = UnitKerja.objects.all()
+        default_unit_id = None
 
     if request.method == 'POST':
         try:
@@ -144,6 +169,7 @@ def risiko_input(request):
 
     ctx = {
         'units': units,
+        'default_unit_id': default_unit_id,
         'periode_choices': RisikoUnit.PERIODE_CHOICES,
         'kategori_choices': RisikoUnit.KATEGORI_CHOICES,
         'strategi_choices': RisikoUnit.STRATEGI_CHOICES,

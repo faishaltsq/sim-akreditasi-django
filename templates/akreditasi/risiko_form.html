@@ -45,9 +45,11 @@
                             <div class="col-md-6">
                                 <label class="form-label" style="font-size:.8rem; font-weight:600;">Unit Kerja <span class="text-danger">*</span></label>
                                 <select name="unit" class="form-select form-select-sm" required>
+                                    {% if not default_unit_id %}
                                     <option value="">— Pilih Unit —</option>
+                                    {% endif %}
                                     {% for u in units %}
-                                    <option value="{{ u.id }}">{{ u }}</option>
+                                    <option value="{{ u.id }}" {% if default_unit_id == u.id %}selected{% endif %}>{{ u }}</option>
                                     {% endfor %}
                                 </select>
                             </div>
