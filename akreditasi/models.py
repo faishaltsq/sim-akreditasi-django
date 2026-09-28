@@ -48,6 +48,12 @@ class UnitKerja(models.Model):
     order = models.PositiveIntegerField('Urutan Tampilan', default=0)
     tipe_unit = models.CharField('Jenis / Kategori Unit', max_length=40, choices=TIPE_UNIT_CHOICES, blank=True, default='LAINNYA')
     is_active = models.BooleanField('Unit Aktif', default=True, help_text='Nonaktifkan unit tanpa menghapus data akreditasi historis.')
+    standar_terkait = models.JSONField(
+        'Standar Akreditasi Terkait Unit',
+        default=dict,
+        blank=True,
+        help_text='Daftar Bab Pokja dan Kode Standar STARKES yang menjadi tanggung jawab unit ini, misal: {"PKPO": ["PKPO 1", "PKPO 2"]}'
+    )
 
     class Meta:
         verbose_name = 'Unit Kerja'

@@ -34,7 +34,38 @@
         </span>
     </a>
 
-    <!-- SUB-SECTION: DAFTAR POKJA (UNTUK AKSES CEPAT MATRIKS) -->
+    <!-- SUB-SECTION: DAFTAR POKJA / STANDAR TERKAIT UNIT -->
+    {% if sidebar_unit_standar %}
+    <!-- MODE UNIT-SCOPED: Tampilkan hanya Bab & Standar terkait unit -->
+    <div class="nav-section mt-2">
+        <i class="bi bi-bookmark-star-fill me-1" style="font-size:0.6rem;"></i> Bab Akreditasi Unit
+    </div>
+    {% for bab in sidebar_unit_standar %}
+    <div class="sidebar-bab mb-1">
+        <a class="nav-link nav-pokja py-1 d-flex align-items-center justify-content-between"
+           data-bs-toggle="collapse" href="#bab-{{ bab.code }}" role="button"
+           aria-expanded="false" aria-controls="bab-{{ bab.code }}"
+           style="cursor:pointer;">
+            <span class="d-flex align-items-center gap-1">
+                <i class="bi bi-journal-bookmark-fill" style="font-size:0.8rem;"></i>
+                <span style="font-size:0.78rem; font-weight:600; font-family:'JetBrains Mono',monospace;">{{ bab.code }}</span>
+            </span>
+            <span class="badge bg-light text-dark border" style="font-size:0.6rem; padding:1px 5px;">{{ bab.standar|length }}</span>
+        </a>
+        <div class="collapse" id="bab-{{ bab.code }}">
+            {% for std in bab.standar %}
+            <a href="{% url 'akreditasi:matriks_pdca' %}{% if bab.cat_id %}?cat={{ bab.cat_id }}&sub={{ std }}{% endif %}"
+               class="nav-link py-0 ps-4"
+               style="font-size:0.72rem; color:#475569; border-left:2px solid #e2e8f0; margin-left:1.1rem;">
+                <i class="bi bi-dot"></i> {{ std }}
+            </a>
+            {% endfor %}
+        </div>
+    </div>
+    {% endfor %}
+
+    {% else %}
+    <!-- MODE GLOBAL: Tampilkan semua Pokja -->
     <div class="nav-section mt-2">
         <i class="bi bi-folder2 me-1" style="font-size:0.6rem;"></i> Pokja STARKES
     </div>
@@ -53,6 +84,7 @@
         </span>
     </a>
     {% endfor %}
+    {% endif %}
 
     <!-- 3. MANAJEMEN DATA (HANYA UNTUK ADMIN RS / SUPER ADMIN / DIREKTUR) -->
     {% if not request.user.profile.is_unit_scoped %}

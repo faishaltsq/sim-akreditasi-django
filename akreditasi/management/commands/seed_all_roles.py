@@ -79,6 +79,15 @@ class Command(BaseCommand):
             code='FARM',
             defaults={'name': 'Unit Pelayanan Farmasi', 'parent': bid_penunjang, 'level': 3}
         )
+        # Update standar terkait STARKES Farmasi
+        unit_farmasi.standar_terkait = {
+            'TKRS': ['TKRS 9', 'TKRS 10', 'TKRS 11'],
+            'PKPO': ['PKPO 1', 'PKPO 2', 'PKPO 3', 'PKPO 4', 'PKPO 5', 'PKPO 6 & 7'],
+            'PPI':  ['PPI 5', 'PPI 7', 'PPI 7.1', 'PPI 7.2', 'PPI 8'],
+            'MFK':  ['MFK 4', 'MFK 5', 'MFK 5.1', 'MFK 7', 'MFK 8', 'MFK 9'],
+            'KPS':  ['KPS 1 & 3', 'KPS 4', 'KPS 5', 'KPS 8', 'KPS 10 & 12', 'KPS 11 & 14'],
+        }
+        unit_farmasi.save()
         unit_lab, _ = UnitKerja.objects.get_or_create(
             code='LAB',
             defaults={'name': 'Laboratorium Patologi Klinik', 'parent': bid_penunjang, 'level': 3}
