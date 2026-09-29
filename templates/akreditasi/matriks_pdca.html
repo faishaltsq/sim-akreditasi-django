@@ -60,9 +60,10 @@
     .score-select {
         font-family: 'JetBrains Mono', monospace;
         font-weight: 700;
-        font-size: 0.82rem;
+        font-size: 0.75rem;
         border-radius: 6px;
-        padding: 0.35rem 0.5rem;
+        padding: 0.35rem 0.3rem;
+        min-width: 105px;
         transition: background-color 0.2s;
     }
     .score-10 { background-color: #D1FAE5 !important; color: #065F46 !important; border-color: #10B981 !important; }
@@ -90,7 +91,7 @@
                     <select name="cat" class="form-select form-select-sm font-mono" onchange="this.form.submit()">
                         {% for cat in categories %}
                         <option value="{{ cat.id }}" {% if cat.id == active_category.id %}selected{% endif %}>
-                            {{ cat.code }} - {{ cat.name|truncatechars:28 }}
+                            {{ cat.code }} - {{ cat.name }}
                         </option>
                         {% endfor %}
                     </select>
@@ -272,14 +273,14 @@
                                     {{ item.record.action_plan|default:"<span class='text-muted fst-italic'>Klik untuk isi Action / RTL...</span>"|safe }}
                                 </div>
                                 {% if item.record.pic or item.record.est_cost %}
-                                <div class="d-flex flex-wrap gap-1 mt-1">
+                                <div class="d-flex flex-column gap-1 mt-1">
                                     {% if item.record.pic %}
-                                    <span class="badge bg-teal-subtle border" style="font-size:0.58rem; color:#0d9488;">
+                                    <span class="badge" style="font-size:0.6rem; background:#e6f9f7; color:#0d9488; border:1px solid #0d9488; text-align:left; font-weight:500; white-space:normal;">
                                         <i class="bi bi-person-fill me-1"></i>{{ item.record.pic }}
                                     </span>
                                     {% endif %}
                                     {% if item.record.est_cost %}
-                                    <span class="badge bg-light border text-dark" style="font-size:0.58rem;">
+                                    <span class="badge bg-light border text-secondary" style="font-size:0.6rem; text-align:left; font-weight:500;">
                                         <i class="bi bi-cash-coin me-1"></i>Rp {{ item.record.est_cost|floatformat:0 }}
                                     </span>
                                     {% endif %}
@@ -302,11 +303,11 @@
                                     aria-label="Skor EP {{ item.code }}"
                                     data-record-id="{{ item.record.id }}"
                                     onchange="updateQuickScore(this)">
-                                <option value="10" {% if item.record.score == 10 %}selected{% endif %}>10 (Tercapai)</option>
-                                <option value="5"  {% if item.record.score == 5 %}selected{% endif %}>5 (Proses)</option>
-                                <option value="0"  {% if item.record.score == 0 or not item.record.score %}selected{% endif %}>0 (Belum)</option>
+                                <option value="10" {% if item.record.score == 10 %}selected{% endif %}>10 ✓</option>
+                                <option value="5"  {% if item.record.score == 5 %}selected{% endif %}>5 △</option>
+                                <option value="0"  {% if item.record.score == 0 or not item.record.score %}selected{% endif %}>0 ✗</option>
                             </select>
-                            <span class="small font-mono text-muted d-block mt-1 score-saving-indicator" id="saving-indicator-{{ item.record.id }}" style="display:none; font-size:0.65rem;">
+                            <span class="small font-mono text-muted mt-1 score-saving-indicator" id="saving-indicator-{{ item.record.id }}" style="display:none; font-size:0.65rem;">
                                 <i class="bi bi-arrow-repeat spin"></i> Menyimpan...
                             </span>
                         </td>

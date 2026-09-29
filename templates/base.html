@@ -76,12 +76,6 @@
                 <small class="text-muted">{% block page_subtitle %}{{ rs_profile.name|default:"SIM Akreditasi RS" }}{% endblock %}</small>
             </div>
             <div class="user-pill">
-                <a href="{% url 'akreditasi:rekap' %}" class="btn btn-sm btn-outline-secondary d-inline-flex align-items-center gap-1">
-                    <i class="bi bi-printer"></i> Rekap Cetak
-                </a>
-                <a href="{% url 'akreditasi:export_excel' %}" class="btn btn-sm btn-outline-success d-inline-flex align-items-center gap-1">
-                    <i class="bi bi-file-earmark-excel"></i> Export Excel
-                </a>
                 <div class="user-info">
                     <div class="user-avatar">
                         {{ request.user.username|first|upper }}

@@ -52,14 +52,17 @@
             </span>
             <span class="badge bg-light text-dark border" style="font-size:0.6rem; padding:1px 5px;">{{ bab.standar|length }}</span>
         </a>
-        <div class="collapse" id="bab-{{ bab.code }}">
-            {% for std in bab.standar %}
-            <a href="{% url 'akreditasi:matriks_pdca' %}{% if bab.cat_id %}?cat={{ bab.cat_id }}&sub={{ std }}{% endif %}"
-               class="nav-link py-0 ps-4"
-               style="font-size:0.72rem; color:#475569; border-left:2px solid #e2e8f0; margin-left:1.1rem;">
-                <i class="bi bi-dot"></i> {{ std }}
-            </a>
-            {% endfor %}
+        <div class="collapse show" id="bab-{{ bab.code }}">
+            <div class="py-1 ps-2" style="background:#f8fafc; border-radius:6px; margin:2px 0 6px 0;">
+                {% for std in bab.standar %}
+                <a href="{% url 'akreditasi:matriks_pdca' %}{% if bab.cat_id %}?cat={{ bab.cat_id }}&sub={{ std }}{% endif %}"
+                   class="nav-link py-1 px-2 d-flex align-items-center gap-2"
+                   style="font-size:0.75rem; color:#334155; font-family:'JetBrains Mono',monospace; border-radius:4px; transition:background 0.15s;">
+                    <span style="display:inline-block; width:6px; height:6px; border-radius:50%; background:#0d9488; flex-shrink:0;"></span>
+                    <span>{{ std }}</span>
+                </a>
+                {% endfor %}
+            </div>
         </div>
     </div>
     {% endfor %}
