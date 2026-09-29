@@ -89,11 +89,23 @@
                 <div class="col-12 col-md-3">
                     <label class="form-label small text-muted mb-1 fw-semibold">Pilih Pokja / Bab</label>
                     <select name="cat" class="form-select form-select-sm font-mono" onchange="this.form.submit()">
-                        {% for cat in categories %}
-                        <option value="{{ cat.id }}" {% if cat.id == active_category.id %}selected{% endif %}>
-                            {{ cat.code }} - {{ cat.name }}
-                        </option>
-                        {% endfor %}
+                        {% if categories_by_kelompok %}
+                            {% for k_code, k_info in categories_by_kelompok.items %}
+                            <optgroup label="── {{ k_info.label|upper }} ──">
+                                {% for cat in k_info.categories %}
+                                <option value="{{ cat.id }}" {% if cat.id == active_category.id %}selected{% endif %}>
+                                    [{{ cat.code }}] {{ cat.name }}
+                                </option>
+                                {% endfor %}
+                            </optgroup>
+                            {% endfor %}
+                        {% else %}
+                            {% for cat in categories %}
+                            <option value="{{ cat.id }}" {% if cat.id == active_category.id %}selected{% endif %}>
+                                [{{ cat.code }}] {{ cat.name }}
+                            </option>
+                            {% endfor %}
+                        {% endif %}
                     </select>
                 </div>
 

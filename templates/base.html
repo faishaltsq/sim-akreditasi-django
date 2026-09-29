@@ -13,7 +13,7 @@
     <link rel="stylesheet" href="{% static 'css/style.css' %}">
     {% block extra_css %}{% endblock %}
 </head>
-<body>
+<body data-theme="{{ sys_config.theme_color|default:'teal' }}">
 
     <!-- MOBILE TOPBAR -->
     <nav class="d-md-none mobile-topbar d-flex justify-content-between align-items-center">
@@ -21,7 +21,7 @@
             <i class="bi bi-list fs-4 text-dark"></i>
         </button>
         <div class="d-flex align-items-center gap-2">
-            <div class="brand-icon-sm" style="background:#0d9488;">
+            <div class="brand-icon-sm">
                 <i class="bi bi-hospital text-white"></i>
             </div>
             <div>
@@ -38,7 +38,7 @@
     <div class="offcanvas offcanvas-start offcanvas-sidebar d-md-none" id="mobileSidebar" tabindex="-1">
         <div class="offcanvas-header border-bottom bg-white text-dark">
             <div class="d-flex align-items-center gap-2">
-                <div class="brand-icon" style="background:#0d9488;">
+                <div class="brand-icon">
                     <i class="bi bi-hospital text-white"></i>
                 </div>
                 <div>
@@ -56,7 +56,7 @@
     <!-- DESKTOP SIDEBAR -->
     <aside class="sidebar-desktop d-none d-md-flex flex-column">
         <div class="sidebar-brand">
-            <div class="brand-icon" style="background: linear-gradient(135deg, #0f766e, #0d9488); color: white;">
+            <div class="brand-icon">
                 <i class="bi bi-hospital"></i>
             </div>
             <div class="sidebar-brand-text">

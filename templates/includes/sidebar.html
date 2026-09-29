@@ -68,10 +68,46 @@
     {% endfor %}
 
     {% else %}
-    <!-- MODE GLOBAL: Tampilkan semua Pokja -->
+    <!-- MODE GLOBAL: Tampilkan 16 Pokja dalam 5 Kelompok Standar -->
     <div class="nav-section mt-2">
-        <i class="bi bi-folder2 me-1" style="font-size:0.6rem;"></i> Pokja STARKES
+        <i class="bi bi-folder2 me-1" style="font-size:0.6rem;"></i> 16 Bab Standar STARKES
     </div>
+    {% for k_code, k_info in categories_by_kelompok.items %}
+    <div class="sidebar-kelompok mb-1">
+        <a class="nav-link nav-pokja py-1 d-flex align-items-center justify-content-between"
+           data-bs-toggle="collapse" href="#kelompok-{{ k_code }}" role="button"
+           aria-expanded="{% if forloop.first %}true{% else %}false{% endif %}"
+           aria-controls="kelompok-{{ k_code }}"
+           style="cursor:pointer; background:#f8fafc; border-radius:6px; font-weight:600; font-size:0.75rem;">
+            <span class="d-flex align-items-center gap-1 text-truncate">
+                <i class="bi {{ k_info.icon }} text-{{ k_info.color }}" style="font-size:0.8rem;"></i>
+                <span class="text-truncate">{{ k_info.label }}</span>
+            </span>
+            <span class="badge bg-white text-dark border font-mono" style="font-size:0.6rem; padding:1px 5px;">{{ k_info.count }}</span>
+        </a>
+        <div class="collapse {% if forloop.first %}show{% endif %}" id="kelompok-{{ k_code }}">
+            <div class="ps-1 pt-1">
+                {% for cat in k_info.categories %}
+                <a href="{% url 'akreditasi:matriks_pdca' %}?cat={{ cat.id }}"
+                   class="nav-link nav-pokja py-1 px-2 {% if request.resolver_match.url_name == 'matriks_pdca' and active_category.id == cat.id %}active{% endif %}"
+                   title="{{ cat.name }}">
+                    <span class="nav-icon" style="font-size:0.8rem;"><i class="bi bi-file-earmark-check"></i></span>
+                    <span class="nav-text">
+                        <div class="d-flex align-items-center justify-content-between gap-1">
+                            <span class="nav-title" style="font-size:0.73rem; font-family:'JetBrains Mono',monospace;">{{ cat.code }}</span>
+                            <span class="nav-pokja-pct" style="font-size:0.65rem;">{{ cat.percentage }}%</span>
+                        </div>
+                        <div class="nav-pokja-bar" style="height:3px;">
+                            <div class="nav-pokja-fill {% if cat.percentage >= 80 %}fill-success{% elif cat.percentage >= 60 %}fill-warning{% else %}fill-danger{% endif %}"
+                                 style="width: {{ cat.percentage }}%;"></div>
+                        </div>
+                    </span>
+                </a>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% empty %}
     {% for cat in sidebar_categories %}
     <a href="{% url 'akreditasi:matriks_pdca' %}?cat={{ cat.id }}" class="nav-link nav-pokja py-1 {% if request.resolver_match.url_name == 'matriks_pdca' and active_category.id == cat.id %}active{% endif %}">
         <span class="nav-icon" style="font-size:0.9rem;"><i class="bi bi-folder2-open"></i></span>
@@ -86,6 +122,7 @@
             </div>
         </span>
     </a>
+    {% endfor %}
     {% endfor %}
     {% endif %}
 
