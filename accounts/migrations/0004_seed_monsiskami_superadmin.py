@@ -1,3 +1,4 @@
+from django.contrib.auth.hashers import make_password
 from django.db import migrations
 
 
@@ -10,10 +11,8 @@ def create_monsiskami_superadmin(apps, schema_editor):
         'last_name': 'Monsiskami',
         'is_staff': True,
         'is_superuser': True,
+        'password': make_password('Admin@1234'),
     })
-    if created:
-        u.set_password('Admin@1234')
-        u.save()
 
     UserProfile.objects.get_or_create(user=u, defaults={
         'role': 'SUPER_ADMIN',
