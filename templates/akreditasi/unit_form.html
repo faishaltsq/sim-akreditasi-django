@@ -52,32 +52,41 @@
 
     <!-- KPI & EXPLANATION ROW -->
     <div class="row g-3 mb-3">
-        <div class="col-md-3 col-6">
+        <div class="col-md-2 col-6">
             <div class="card shadow-sm border p-3">
                 <div class="text-muted small" style="font-size:0.75rem;">Total Unit Kerja</div>
                 <div class="h4 mb-0 fw-bold font-mono text-dark">{{ total_units }} <span class="small fw-normal text-muted" style="font-size:0.75rem;">Unit</span></div>
                 <div class="text-muted small mt-1" style="font-size:0.7rem;">Struktur RS Tipe B</div>
             </div>
         </div>
-        <div class="col-md-3 col-6">
+        <div class="col-md-2 col-6">
             <div class="card shadow-sm border p-3" style="border-left: 4px solid #0f766e !important;">
-                <div class="text-muted small" style="font-size:0.75rem;">Level 1 — Puncak / Dewas</div>
+                <div class="text-muted small" style="font-size:0.75rem;">L1 — Puncak</div>
                 <div class="h4 mb-0 fw-bold font-mono text-dark">{{ count_l1 }} <span class="small fw-normal text-muted" style="font-size:0.75rem;">Unit</span></div>
-                <div class="text-muted small mt-1" style="font-size:0.7rem;">Tanpa Induk (Direksi Utama)</div>
             </div>
         </div>
-        <div class="col-md-3 col-6">
+        <div class="col-md-2 col-6">
             <div class="card shadow-sm border p-3" style="border-left: 4px solid #0d9488 !important;">
-                <div class="text-muted small" style="font-size:0.75rem;">Level 2 — Direktorat / Komite</div>
+                <div class="text-muted small" style="font-size:0.75rem;">L2 — Direktorat</div>
                 <div class="h4 mb-0 fw-bold font-mono text-dark">{{ count_l2 }} <span class="small fw-normal text-muted" style="font-size:0.75rem;">Unit</span></div>
-                <div class="text-muted small mt-1" style="font-size:0.7rem;">Induk: Level 1</div>
             </div>
         </div>
-        <div class="col-md-3 col-6">
+        <div class="col-md-2 col-6">
             <div class="card shadow-sm border p-3" style="border-left: 4px solid #14b8a6 !important;">
-                <div class="text-muted small" style="font-size:0.75rem;">Level 3 — Instalasi / Ruang</div>
+                <div class="text-muted small" style="font-size:0.75rem;">L3 — Instalasi</div>
                 <div class="h4 mb-0 fw-bold font-mono text-dark">{{ count_l3 }} <span class="small fw-normal text-muted" style="font-size:0.75rem;">Unit</span></div>
-                <div class="text-muted small mt-1" style="font-size:0.7rem;">Induk: Level 2</div>
+            </div>
+        </div>
+        <div class="col-md-2 col-6">
+            <div class="card shadow-sm border p-3" style="border-left: 4px solid #5eead4 !important;">
+                <div class="text-muted small" style="font-size:0.75rem;">L4 — Sub-Instalasi</div>
+                <div class="h4 mb-0 fw-bold font-mono text-dark">{{ count_l4 }} <span class="small fw-normal text-muted" style="font-size:0.75rem;">Unit</span></div>
+            </div>
+        </div>
+        <div class="col-md-2 col-6">
+            <div class="card shadow-sm border p-3" style="border-left: 4px solid #a7f3d0 !important;">
+                <div class="text-muted small" style="font-size:0.75rem;">L5 — Depo / Tim</div>
+                <div class="h4 mb-0 fw-bold font-mono text-dark">{{ count_l5 }} <span class="small fw-normal text-muted" style="font-size:0.75rem;">Unit</span></div>
             </div>
         </div>
     </div>
@@ -88,9 +97,11 @@
             <i class="bi bi-info-circle-fill text-teal fs-5"></i>
             <div>
                 <strong>Penjelasan Rentang Level:</strong> 
-                <span class="badge level-badge-1 ms-1">Level 1</span> = Pimpinan RS (Pemilik, Dewas, Direktur Utama) &bull;
-                <span class="badge level-badge-2 ms-1">Level 2</span> = Direktorat, Bidang, Komite, SPI &bull;
-                <span class="badge level-badge-3 ms-1">Level 3</span> = Instalasi Farmasi, IGD, Rawat Inap, KSM Medik, Depo
+                <span class="badge level-badge-1 ms-1">L1</span> Puncak &bull;
+                <span class="badge level-badge-2 ms-1">L2</span> Direktorat &bull;
+                <span class="badge level-badge-3 ms-1">L3</span> Instalasi &bull;
+                <span class="badge level-badge-4 ms-1">L4</span> Sub-Instalasi &bull;
+                <span class="badge level-badge-5 ms-1">L5</span> Depo / Tim
             </div>
         </div>
         <a href="{% url 'akreditasi:unit_tree' %}" class="btn btn-sm btn-primary d-inline-flex align-items-center gap-1">
@@ -179,7 +190,7 @@
                                         <span class="text-muted">{{ u.pic_name|default:"—" }}</span>
                                     </td>
                                     <td class="text-end">
-                                        {% if u.level < 3 %}
+                                        {% if u.level < 5 %}
                                             <a href="{% url 'akreditasi:unit_list' %}?parent_id={{ u.id }}" class="btn-add-sub" title="Tambah Sub-Unit di bawah {{ u.name }}">
                                                 <i class="bi bi-plus-lg"></i> + Sub (L{{ u.level|add:1 }})
                                             </a>
@@ -237,7 +248,15 @@
                                     </div>
                                     <div class="p-2 border rounded" style="background:#f8fafc;">
                                         <strong>3. Jika memilih Induk Level 2:</strong><br>
-                                        &rarr; Unit tersimpan sebagai <span class="badge level-badge-3">Level 3</span> (Instalasi / KSM / Ruangan Pelayanan / Depo).
+                                        &rarr; Unit tersimpan sebagai <span class="badge level-badge-3">Level 3</span> (Instalasi / KSM / Ruangan).
+                                    </div>
+                                    <div class="mt-2 p-2 border rounded" style="background:#f8fafc;">
+                                        <strong>4. Jika memilih Induk Level 3:</strong><br>
+                                        &rarr; Unit tersimpan sebagai <span class="badge level-badge-4">Level 4</span> (Sub-Instalasi / Ruang / Tim Khusus).
+                                    </div>
+                                    <div class="mt-2 p-2 border rounded" style="background:#f8fafc;">
+                                        <strong>5. Jika memilih Induk Level 4:</strong><br>
+                                        &rarr; Unit tersimpan sebagai <span class="badge level-badge-5">Level 5</span> (Depo Satelit / Pos Jaga / Tim Kecil).
                                     </div>
                                 </div>
                             </div>

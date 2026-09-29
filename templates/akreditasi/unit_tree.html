@@ -24,6 +24,8 @@
     .level-badge-1 { background: #0f766e; color: #fff; font-weight: 700; }
     .level-badge-2 { background: #0d9488; color: #fff; font-weight: 700; }
     .level-badge-3 { background: #14b8a6; color: #fff; font-weight: 700; }
+    .level-badge-4 { background: #5eead4; color: #134e4a; font-weight: 700; }
+    .level-badge-5 { background: #ccfbf1; color: #134e4a; font-weight: 700; }
 
     /* TREE STYLES */
     .tree-l1 {
@@ -275,7 +277,7 @@
                                                 {% for l3 in l2.children.all %}
                                                     <div class="tree-l3 d-flex justify-content-between align-items-center gap-2 searchable-item" data-text="{{ l3.code|lower }} {{ l3.name|lower }} {{ l3.pic_name|default:''|lower }}">
                                                         <div class="d-flex align-items-center gap-2">
-                                                            <span class="badge level-badge-3 font-mono" style="font-size:0.6rem;">LEVEL 3</span>
+                                                            <span class="badge level-badge-3 font-mono" style="font-size:0.6rem;">L3</span>
                                                             <span class="fw-bold font-mono text-dark" style="font-size:0.78rem;">[{{ l3.code }}]</span>
                                                             <span class="text-dark" style="font-size:0.83rem;">{{ l3.name }}</span>
                                                             {% if l3.pic_name %}
@@ -283,6 +285,7 @@
                                                             {% endif %}
                                                         </div>
                                                         <div class="d-flex align-items-center gap-1">
+                                                            <a href="{% url 'akreditasi:unit_list' %}?parent_id={{ l3.id }}" class="btn btn-sm btn-outline-teal py-0 px-1" style="font-size:0.65rem;" title="Tambah L4">+L4</a>
                                                             <a href="{% url 'akreditasi:unit_edit' l3.id %}" class="btn btn-sm btn-outline-secondary py-0 px-1.5" style="font-size:0.68rem;" title="Edit"><i class="bi bi-pencil"></i></a>
                                                             <form method="post" action="{% url 'akreditasi:unit_delete' l3.id %}" class="d-inline" onsubmit="return confirm('Hapus unit {{ l3.name }}?');">
                                                                 {% csrf_token %}
@@ -290,9 +293,48 @@
                                                             </form>
                                                         </div>
                                                     </div>
+                                                    <!-- LEVEL 4 di bawah L3 -->
+                                                    {% for l4 in l3.children.all %}
+                                                    <div class="ps-4 border-start border-2 ms-3 mb-1 searchable-item" style="border-color:#e2e8f0 !important;" data-text="{{ l4.code|lower }} {{ l4.name|lower }}">
+                                                        <div class="d-flex justify-content-between align-items-center gap-2 py-1">
+                                                            <div class="d-flex align-items-center gap-2">
+                                                                <span class="badge level-badge-4 font-mono" style="font-size:0.58rem;">L4</span>
+                                                                <span class="fw-bold font-mono text-dark" style="font-size:0.75rem;">[{{ l4.code }}]</span>
+                                                                <span style="font-size:0.8rem;">{{ l4.name }}</span>
+                                                                {% if l4.pic_name %}<span class="text-muted" style="font-size:0.7rem;">&bull; {{ l4.pic_name }}</span>{% endif %}
+                                                            </div>
+                                                            <div class="d-flex align-items-center gap-1">
+                                                                <a href="{% url 'akreditasi:unit_list' %}?parent_id={{ l4.id }}" class="btn btn-sm btn-outline-teal py-0 px-1" style="font-size:0.62rem;" title="Tambah L5">+L5</a>
+                                                                <a href="{% url 'akreditasi:unit_edit' l4.id %}" class="btn btn-sm btn-outline-secondary py-0 px-1" style="font-size:0.65rem;"><i class="bi bi-pencil"></i></a>
+                                                                <form method="post" action="{% url 'akreditasi:unit_delete' l4.id %}" class="d-inline" onsubmit="return confirm('Hapus unit {{ l4.name }}?');">
+                                                                    {% csrf_token %}<button type="submit" class="btn btn-sm btn-outline-danger py-0 px-1" style="font-size:0.65rem;"><i class="bi bi-trash"></i></button>
+                                                                </form>
+                                                            </div>
+                                                        </div>
+                                                        <!-- LEVEL 5 di bawah L4 -->
+                                                        {% for l5 in l4.children.all %}
+                                                        <div class="ps-3 border-start border-2 ms-2 mb-1" style="border-color:#f1f5f9 !important;">
+                                                            <div class="d-flex justify-content-between align-items-center gap-2 py-1">
+                                                                <div class="d-flex align-items-center gap-2">
+                                                                    <span class="badge level-badge-5 font-mono" style="font-size:0.55rem;">L5</span>
+                                                                    <span class="fw-bold font-mono text-dark" style="font-size:0.72rem;">[{{ l5.code }}]</span>
+                                                                    <span style="font-size:0.77rem;">{{ l5.name }}</span>
+                                                                    {% if l5.pic_name %}<span class="text-muted" style="font-size:0.68rem;">&bull; {{ l5.pic_name }}</span>{% endif %}
+                                                                </div>
+                                                                <div class="d-flex align-items-center gap-1">
+                                                                    <a href="{% url 'akreditasi:unit_edit' l5.id %}" class="btn btn-sm btn-outline-secondary py-0 px-1" style="font-size:0.62rem;"><i class="bi bi-pencil"></i></a>
+                                                                    <form method="post" action="{% url 'akreditasi:unit_delete' l5.id %}" class="d-inline" onsubmit="return confirm('Hapus unit {{ l5.name }}?');">
+                                                                        {% csrf_token %}<button type="submit" class="btn btn-sm btn-outline-danger py-0 px-1" style="font-size:0.62rem;"><i class="bi bi-trash"></i></button>
+                                                                    </form>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        {% endfor %}
+                                                    </div>
+                                                    {% endfor %}
                                                 {% empty %}
                                                     <div class="text-muted py-1 ps-2 mb-1 fst-italic" style="font-size:0.72rem; color:#94a3b8 !important;">
-                                                        <i class="bi bi-dash"></i> Belum ada sub-unit level 3. Klik tombol <code>+ Tambah Sub-Unit (L3)</code> untuk menambahkan.
+                                                        <i class="bi bi-dash"></i> Belum ada sub-unit level 3.
                                                     </div>
                                                 {% endfor %}
                                             </div>
@@ -505,7 +547,7 @@
                         <select name="parent" id="id_parent" class="form-select form-select-sm" onchange="onParentChange(this)">
                             <option value="">(Tanpa Induk — Jadikan Level 1 / Pimpinan)</option>
                             {% for u in all_units %}
-                                {% if u.level < 3 %}
+                                {% if u.level < 5 %}
                                     <option value="{{ u.id }}" data-level="{{ u.level }}">
                                         [L{{ u.level }}] {{ u.code }} — {{ u.name }}
                                     </option>
@@ -513,7 +555,7 @@
                             {% endfor %}
                         </select>
                         <div class="form-text" style="font-size:0.68rem;">
-                            Kosongkan bila unit berada di tingkat teratas (Level 1). Pilih induk untuk otomatis menjadikannya Level 2 atau Level 3.
+                            Kosongkan bila unit berada di tingkat teratas (Level 1). Pilih induk untuk otomatis menentukan Level (hingga Level 5).
                         </div>
                     </div>
 

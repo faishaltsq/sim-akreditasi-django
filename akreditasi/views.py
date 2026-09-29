@@ -765,46 +765,52 @@ def unit_list_create(request):
 
     # Ambil semua unit dengan relasi parent dan children untuk tabel komprehensif
     all_units = UnitKerja.objects.select_related('parent').prefetch_related('children').order_by('level', 'code')
-    units_l1 = all_units.filter(level=1)
-    units_l2 = all_units.filter(level=2)
-    units_l3 = all_units.filter(level=3)
+    level_counts = {}
+    for lv in range(1, 6):
+        level_counts[lv] = all_units.filter(level=lv).count()
 
     return render(request, 'akreditasi/unit_form.html', {
         'form': form,
         'parent_obj': parent_obj,
         'all_units': all_units,
-        'units_l1': units_l1,
-        'units_l2': units_l2,
-        'units_l3': units_l3,
+        'units_l1': all_units.filter(level=1),
+        'units_l2': all_units.filter(level=2),
+        'units_l3': all_units.filter(level=3),
+        'units_l4': all_units.filter(level=4),
+        'units_l5': all_units.filter(level=5),
         'total_units': all_units.count(),
-        'count_l1': units_l1.count(),
-        'count_l2': units_l2.count(),
-        'count_l3': units_l3.count(),
+        'count_l1': level_counts[1],
+        'count_l2': level_counts[2],
+        'count_l3': level_counts[3],
+        'count_l4': level_counts[4],
+        'count_l5': level_counts[5],
     })
 
 
 @login_required
 def unit_tree(request):
     root_units = UnitKerja.objects.filter(parent__isnull=True).prefetch_related(
-        'children__children'
+        'children__children__children__children'
     ).order_by('code')
     all_units = UnitKerja.objects.select_related('parent').prefetch_related('children').order_by('level', 'code')
     form = UnitKerjaForm()
-    
-    units_l1 = all_units.filter(level=1)
-    units_l2 = all_units.filter(level=2)
-    units_l3 = all_units.filter(level=3)
+
+    level_counts = {lv: all_units.filter(level=lv).count() for lv in range(1, 6)}
 
     return render(request, 'akreditasi/unit_tree.html', {
         'root_units': root_units,
         'all_units': all_units,
-        'units_l1': units_l1,
-        'units_l2': units_l2,
-        'units_l3': units_l3,
+        'units_l1': all_units.filter(level=1),
+        'units_l2': all_units.filter(level=2),
+        'units_l3': all_units.filter(level=3),
+        'units_l4': all_units.filter(level=4),
+        'units_l5': all_units.filter(level=5),
         'total_units': all_units.count(),
-        'count_l1': units_l1.count(),
-        'count_l2': units_l2.count(),
-        'count_l3': units_l3.count(),
+        'count_l1': level_counts[1],
+        'count_l2': level_counts[2],
+        'count_l3': level_counts[3],
+        'count_l4': level_counts[4],
+        'count_l5': level_counts[5],
         'form': form,
     })
 
