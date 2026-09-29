@@ -219,6 +219,22 @@ def matriks_pdca(request):
     if not categories.exists():
         return render(request, 'akreditasi/empty.html')
 
+    # --- Unit-scoped filtering ---
+    is_unit_scoped = False
+    unit_standar_map = {}
+    user_unit = None
+    try:
+        profile = request.user.profile
+        if profile.is_unit_scoped and profile.unit_kerja:
+            is_unit_scoped = True
+            user_unit = profile.unit_kerja
+            unit_standar_map = user_unit.standar_terkait or {}
+            if unit_standar_map:
+                allowed_codes = list(unit_standar_map.keys())
+                categories = categories.filter(code__in=allowed_codes)
+    except Exception:
+        pass
+
     selected_cat_id = request.GET.get('cat')
     selected_sub = request.GET.get('sub', 'ALL')
     selected_unit_id = request.GET.get('unit', 'ALL')
@@ -236,10 +252,20 @@ def matriks_pdca(request):
         .order_by('sub_standard')
     )
 
+    # Jika unit-scoped, filter sub_standards hanya yang ada di standar_terkait
+    if is_unit_scoped and active_category.code in unit_standar_map:
+        allowed_subs = unit_standar_map[active_category.code]
+        sub_standards = [s for s in sub_standards if s in allowed_subs]
+
     items_qs = active_category.items.prefetch_related(
         'evidence_reqs__files',
         'record__unit'
     ).order_by('order', 'code')
+
+    # Jika unit-scoped, filter items hanya sub_standard yang diizinkan
+    if is_unit_scoped and active_category.code in unit_standar_map:
+        allowed_subs = unit_standar_map[active_category.code]
+        items_qs = items_qs.filter(sub_standard__in=allowed_subs)
 
     if selected_sub != 'ALL':
         items_qs = items_qs.filter(sub_standard=selected_sub)
@@ -254,7 +280,12 @@ def matriks_pdca(request):
     total_score = sum(getattr(item, 'record', None).score if hasattr(item, 'record') and item.record else 0 for item in items)
     percentage = round((total_score / total_possible) * 100) if total_possible > 0 else 0
 
-    units = UnitKerja.objects.all().order_by('code')
+    # Unit-scoped: lock ke unit sendiri; admin: tampilkan semua
+    if is_unit_scoped:
+        units = UnitKerja.objects.filter(id=user_unit.id)
+        selected_unit_id = str(user_unit.id)
+    else:
+        units = UnitKerja.objects.all().order_by('code')
 
     context = {
         'categories': categories,
@@ -267,6 +298,7 @@ def matriks_pdca(request):
         'total_possible': total_possible,
         'total_score': total_score,
         'percentage': percentage,
+        'is_unit_scoped': is_unit_scoped,
     }
     return render(request, 'akreditasi/matriks_pdca.html', context)
 

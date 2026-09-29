@@ -113,6 +113,12 @@
                 <!-- Filter Unit Kerja -->
                 <div class="col-12 col-md-2">
                     <label class="form-label small text-muted mb-1 fw-semibold">Unit Kerja</label>
+                    {% if is_unit_scoped %}
+                        <div class="form-control form-control-sm bg-light" style="font-size:0.78rem;">
+                            {{ units.0.code }} — {{ units.0.name }}
+                        </div>
+                        <input type="hidden" name="unit" value="{{ selected_unit_id }}">
+                    {% else %}
                     <select name="unit" class="form-select form-select-sm" onchange="this.form.submit()">
                         <option value="ALL">-- Semua Unit --</option>
                         {% for u in units %}
@@ -121,6 +127,7 @@
                         </option>
                         {% endfor %}
                     </select>
+                    {% endif %}
                 </div>
 
                 <!-- Right Action Buttons -->
