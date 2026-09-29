@@ -144,8 +144,10 @@
                             <span class="badge {% if r.status == 'IDENTIFIKASI' %}bg-secondary{% elif r.status == 'PLAN' %}bg-primary{% elif r.status == 'DO' %}bg-warning text-dark{% elif r.status == 'EVALUASI' %}badge-purple{% elif r.status == 'SELESAI' %}bg-success{% elif r.status == 'ACCEPTED' %}badge-teal{% endif %}" style="font-size:.65rem;">{{ r.get_status_display }}</span>
                         </td>
                         <td>
+                            <div class="d-flex gap-1">
                             <a href="{% url 'akreditasi:risiko_detail' risiko_id=r.pk %}" class="btn btn-sm btn-outline-secondary py-0 px-1" title="Detail"><i class="bi bi-eye"></i></a>
                             <a href="{% url 'akreditasi:risiko_evaluasi' risiko_id=r.pk %}" class="btn btn-sm btn-outline-primary py-0 px-1" title="Evaluasi"><i class="bi bi-pencil-square"></i></a>
+                            </div>
                         </td>
                     </tr>
                     {% empty %}

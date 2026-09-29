@@ -161,7 +161,7 @@
                     <div class="fw-bold text-dark mb-0.5">Tata Cara Penambahan Sub-Unit Kerja:</div>
                     <div class="text-muted">
                         Temukan unit induk yang diinginkan &rarr; Klik tombol 
-                        <span class="badge bg-white text-teal border font-mono fw-bold">+ Tambah Sub-Unit</span> pada baris tersebut.
+                        <span class="badge bg-white text-teal border font-mono fw-bold"><i class="bi bi-plus-lg"></i> Tambah Sub-Unit</span> pada baris tersebut.
                         Sistem otomatis mengisi unit induk dan menghitung tingkat target (Level 1 &rarr; Level 2, Level 2 &rarr; Level 3)!
                     </div>
                 </div>
@@ -304,7 +304,7 @@
                                                                 {% if l4.pic_name %}<span class="text-muted" style="font-size:0.7rem;">&bull; {{ l4.pic_name }}</span>{% endif %}
                                                             </div>
                                                             <div class="d-flex align-items-center gap-1">
-                                                                <a href="{% url 'akreditasi:unit_list' %}?parent_id={{ l4.id }}" class="btn btn-sm btn-outline-teal py-0 px-1" style="font-size:0.62rem;" title="Tambah L5">+L5</a>
+                                                                <a href="{% url 'akreditasi:unit_list' %}?parent_id={{ l4.id }}" class="btn btn-sm btn-outline-teal py-0 px-1" style="font-size:0.62rem;" title="Tambah L5"><i class="bi bi-plus-lg"></i> L5</a>
                                                                 <a href="{% url 'akreditasi:unit_edit' l4.id %}" class="btn btn-sm btn-outline-secondary py-0 px-1" style="font-size:0.65rem;"><i class="bi bi-pencil"></i></a>
                                                                 <form method="post" action="{% url 'akreditasi:unit_delete' l4.id %}" class="d-inline" onsubmit="return confirm('Hapus unit {{ l4.name }}?');">
                                                                     {% csrf_token %}<button type="submit" class="btn btn-sm btn-outline-danger py-0 px-1" style="font-size:0.65rem;"><i class="bi bi-trash"></i></button>

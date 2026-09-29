@@ -192,7 +192,7 @@
                                     <td class="text-end">
                                         {% if u.level < 5 %}
                                             <a href="{% url 'akreditasi:unit_list' %}?parent_id={{ u.id }}" class="btn-add-sub" title="Tambah Sub-Unit di bawah {{ u.name }}">
-                                                <i class="bi bi-plus-lg"></i> + Sub (L{{ u.level|add:1 }})
+                                                <i class="bi bi-plus-lg"></i> Sub (L{{ u.level|add:1 }})
                                             </a>
                                         {% endif %}
                                         <a href="{% url 'akreditasi:unit_edit' u.id %}" class="btn btn-sm btn-outline-secondary py-0 px-2 ms-1" title="Edit"><i class="bi bi-pencil"></i></a>
