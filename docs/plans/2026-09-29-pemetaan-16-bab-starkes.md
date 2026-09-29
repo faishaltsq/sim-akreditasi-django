@@ -96,11 +96,10 @@ Tambahkan field baru pada model `Category` (`akreditasi/models.py`):
    | `ADMISI` | Unit Pendaftaran & Admission | REKAM-MEDIS | ARK, HPK, MRMIK |
    | `CSSD` | Instalasi CSSD & Laundry | CSSD-JENAZAH | PPI, MFK |
 
-2. **Akun Demo Khusus RS Monsiskami** — 1 akun level `ADMIN_RS` tanpa pembatasan unit, khusus demonstrasi ke pimpinan/tim mutu/asesor:
+2. **Akun RS Monsiskami** — 1 akun level `SUPER_ADMIN` khusus demonstrasi:
    | Username | Nama | Role | Unit | Password |
    |---|---|---|---|---|
-   | `demo.monsiskami` | Demo RS Monsiskami | ADMIN_RS | — (akses seluruh RS) | `Demo@2024` |
-   > Catatan: akun ini **tidak `is_unit_scoped`** — bisa lihat seluruh 16 bab, semua matriks PDCA, semua unit kerja, laporan PDF. Tidak bisa akses Tab Sistem & Log (eksklusif `SUPER_ADMIN`).
+   | `monsiskami` | RS Monsiskami | SUPER_ADMIN | — (akses seluruh RS) | `Admin@1234` |
 
 3. **Akun Demo (unit-scoped) Baru** — 8 akun mencakup L3 dan L4:
    | Username | Nama | Role | Unit | Password |
@@ -113,6 +112,49 @@ Tambahkan field baru pada model `Category` (`akreditasi/models.py`):
    | `ka.cssd` | Ka. CSSD & Laundry | KEPALA_UNIT | CSSD (L4) | Unit@1234 |
    | `koordinator.mutu` | Koordinator Mutu & KP | KOORDINATOR | KMKP (L2) | Unit@1234 |
    | `staf.sdm` | Staf SDM & Diklat | STAF | BAG-SDM (L3) | Unit@1234 |
+
+### Fase 6: Perbaikan Fitur Tema Warna Antarmuka
+
+**Root Cause** — 3 komponen yang hilang:
+1. `context_processors.py` tidak menginjeksi `sys_config` (termasuk `theme_color`) ke seluruh template.
+2. `base.html` tidak membaca `theme_color` untuk mengubah CSS variable atau class body.
+3. `style.css` memakai warna teal hardcoded (`#0f766e`, `#0d9488`, `linear-gradient(135deg, #0f766e, #0d9488)`) — tidak ada CSS variable yang bisa di-override per tema.
+
+**Rencana Fix**:
+
+**A. Context Processor — injeksi `sys_config` ke semua halaman**
+- Tambahkan `SystemConfig.get_solo()` ke `akreditasi/context_processors.py` → expose `sys_config` sebagai context global.
+- Tidak ada migration, tidak ada model baru.
+
+**B. `base.html` — terapkan tema ke `<body>` dan CSS variables**
+- Tambahkan `data-theme="{{ sys_config.theme_color }}"` ke tag `<body>`.
+- Tambahkan `<style>` block di `<head>` yang override CSS variables berdasarkan `sys_config.theme_color`:
+  ```html
+  {% if sys_config.theme_color == 'blue' %}
+  :root { --theme-600: #1d4ed8; --theme-700: #1e40af; --theme-gradient: linear-gradient(135deg,#1d4ed8,#2563eb); }
+  {% elif sys_config.theme_color == 'emerald' %}
+  :root { --theme-600: #059669; --theme-700: #047857; --theme-gradient: linear-gradient(135deg,#059669,#10b981); }
+  {% elif sys_config.theme_color == 'navy' %}
+  :root { --theme-600: #1e3a5f; --theme-700: #172d4a; --theme-gradient: linear-gradient(135deg,#1e3a5f,#243b55); }
+  {% else %} {# teal default #}
+  :root { --theme-600: #0f766e; --theme-700: #0d9488; --theme-gradient: linear-gradient(135deg,#0f766e,#0d9488); }
+  {% endif %}
+  ```
+
+**C. `style.css` — ganti semua warna teal hardcoded ke CSS variables**
+- Ganti semua `#0f766e`, `#0d9488`, `#14b8a6`, gradient teal di sidebar, header, badge, button ke `var(--theme-600)`, `var(--theme-700)`, `var(--theme-gradient)`.
+- Pastikan Bootstrap `btn-teal`, `.bg-teal`, `.text-teal`, `.border-teal` juga mengacu ke variable (override via CSS).
+
+**Palet Tema Siap Pakai**:
+| Value | Nama Tampilan | Primary (600) | Secondary (700) | Gradient |
+|---|---|---|---|---|
+| `teal` | Teal Medis (Default) | `#0f766e` | `#0d9488` | teal → teal-400 |
+| `blue` | Hospital Royal Blue | `#1d4ed8` | `#1e40af` | blue-700 → blue-600 |
+| `emerald` | Emerald Green Health | `#059669` | `#047857` | emerald-600 → emerald-500 |
+| `navy` | Dark Navy Slate | `#1e3a5f` | `#172d4a` | navy-800 → navy-700 |
+
+**Verifikasi**:
+- Ganti tema di Pusat Kontrol → Save → Reload halaman → warna sidebar, header, badge, tombol berubah sesuai tema tanpa clear cache manual.
 
 ---
 

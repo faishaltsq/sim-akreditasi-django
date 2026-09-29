@@ -82,10 +82,21 @@ class UnitKerja(models.Model):
 
 
 class Category(models.Model):
+    KELOMPOK_CHOICES = [
+        ('MANAJEMEN', 'Kelompok Manajemen Rumah Sakit'),
+        ('PELAYANAN', 'Kelompok Pelayanan Berfokus pada Pasien'),
+        ('SASARAN_KP', 'Kelompok Sasaran Keselamatan Pasien'),
+        ('PROGNAS', 'Kelompok Program Nasional'),
+        ('PENDIDIKAN', 'Kelompok Integrasi Pendidikan Kesehatan'),
+    ]
+
     framework = models.ForeignKey(Framework, on_delete=models.CASCADE, related_name='categories')
     code = models.CharField('Kode Pokja', max_length=20)
     name = models.CharField('Nama Pokja', max_length=200)
     description = models.TextField('Deskripsi', blank=True)
+    kelompok = models.CharField('Kelompok Standar', max_length=20, choices=KELOMPOK_CHOICES, default='MANAJEMEN')
+    target_ep_count = models.PositiveIntegerField('Target Jumlah EP STARKES', default=0)
+    unit_pengampu = models.TextField('Unit Pengampu & Terlibat', blank=True)
     order = models.PositiveIntegerField('Urutan', default=0)
 
     class Meta:
