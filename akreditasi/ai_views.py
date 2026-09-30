@@ -14,6 +14,7 @@ from django.http import JsonResponse
 from django.views.decorators.http import require_POST
 from django.contrib.auth.decorators import login_required
 
+from .security_utils import rate_limit
 from .ai_service import (
     generate_risk_mitigation,
     generate_pdca_action_plan,
@@ -40,6 +41,7 @@ def _parse_json_body(request):
 
 @login_required
 @require_POST
+@rate_limit(max_calls=12, window=60, scope='ai')
 def api_ai_mitigasi_risiko(request):
     """Endpoint untuk tombol '✨ AI Bantu Rencana Mitigasi' di form risiko."""
     profile = getattr(request.user, 'profile', None)
@@ -81,6 +83,7 @@ def api_ai_mitigasi_risiko(request):
 
 @login_required
 @require_POST
+@rate_limit(max_calls=12, window=60, scope='ai')
 def api_ai_pdca_plan(request):
     """Endpoint untuk tombol '✨ AI Susun Action Plan PDCA'."""
     profile = getattr(request.user, 'profile', None)
@@ -114,6 +117,7 @@ def api_ai_pdca_plan(request):
 
 @login_required
 @require_POST
+@rate_limit(max_calls=12, window=60, scope='ai')
 def api_ai_insiden_grading(request):
     """Endpoint untuk tombol '✨ AI Grading & Rekomendasi Investigasi' di form insiden."""
     data = _parse_json_body(request)
@@ -151,6 +155,7 @@ def api_ai_insiden_grading(request):
 
 @login_required
 @require_POST
+@rate_limit(max_calls=12, window=60, scope='ai')
 def api_ai_evaluasi_risiko(request):
     """Endpoint untuk analisis efektivitas mitigasi di halaman evaluasi risiko."""
     profile = getattr(request.user, 'profile', None)
@@ -181,6 +186,7 @@ def api_ai_evaluasi_risiko(request):
 
 @login_required
 @require_POST
+@rate_limit(max_calls=12, window=60, scope='ai')
 def api_ai_rdwos_analisis(request):
     """Endpoint untuk analisis kelengkapan bukti dokumen RDWOS."""
     data = _parse_json_body(request)

@@ -1,10 +1,13 @@
+import os
 from django.contrib import admin
 from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
 
+ADMIN_URL = os.environ.get('DJANGO_ADMIN_URL', 'admin-sikai-7f3d/')
+
 urlpatterns = [
-    path('admin/', admin.site.urls),
+    path(ADMIN_URL, admin.site.urls),
     path('accounts/', include('accounts.urls')),
     path('', include('akreditasi.urls')),
 ]

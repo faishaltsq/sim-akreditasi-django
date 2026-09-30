@@ -1,4 +1,5 @@
 import json
+import logging
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.core.exceptions import PermissionDenied
@@ -16,6 +17,9 @@ from .models import (
 )
 from .forms import StandardItemForm, QualityRecordForm, UnitKerjaForm, EvidenceFileUploadForm
 from .supabase_storage import upload_to_supabase_storage
+from .file_security import validate_uploaded_file, sanitize_filename
+
+logger = logging.getLogger(__name__)
 
 
 # ==============================================================================
@@ -54,6 +58,41 @@ def _is_nakes_or_admin(user):
 admin_required = user_passes_test(_is_admin, login_url='/accounts/login/')
 editor_required = user_passes_test(_can_edit, login_url='/accounts/login/')
 nakes_or_admin = user_passes_test(_is_nakes_or_admin, login_url='/accounts/login/')
+
+
+def _can_modify_ep(user, standard_item) -> bool:
+    """
+    Cek hak modifikasi EP (IDOR & unit-scope guard).
+    Admin/SuperAdmin: always True.
+    Unit-scoped: hanya jika pokja + sub_standard terdaftar di standar_terkait unit.
+    """
+    if not user.is_authenticated:
+        return False
+    if user.is_superuser:
+        return True
+    p = getattr(user, 'profile', None)
+    if not p:
+        return False
+    if p.role in ('SUPER_ADMIN', 'ADMIN_RS', 'SURVEYOR_INTERNAL', 'KOORDINATOR_POKJA'):
+        return True
+    if p.is_unit_scoped and p.unit_kerja:
+        mapping = p.unit_kerja.standar_terkait or {}
+        cat_code = standard_item.category.code
+        if cat_code not in mapping:
+            return False
+        allowed_subs = mapping[cat_code]
+        return not allowed_subs or standard_item.sub_standard in allowed_subs
+    return True
+
+
+def _is_manager_role(user) -> bool:
+    """True untuk role yang berhak melihat data agregat (rekap, auto-scoring)."""
+    if not user.is_authenticated:
+        return False
+    if user.is_superuser:
+        return True
+    p = getattr(user, 'profile', None)
+    return p and p.role in ('SUPER_ADMIN', 'ADMIN_RS', 'KEPALA_UNIT', 'KOORDINATOR_POKJA')
 
 
 # ==============================================================================
@@ -233,7 +272,8 @@ def matriks_pdca(request):
                 allowed_codes = list(unit_standar_map.keys())
                 categories = categories.filter(code__in=allowed_codes)
     except Exception:
-        pass
+        logger.exception("Unit-scoping error: akses fallback ke global view untuk user %s", request.user.username)
+        return render(request, 'akreditasi/403.html', status=403)
 
     selected_cat_id = request.GET.get('cat')
     selected_sub = request.GET.get('sub', 'ALL')
@@ -310,6 +350,9 @@ def matriks_pdca(request):
 @require_POST
 def quick_score(request, record_id):
     record = get_object_or_404(QualityRecord, id=record_id)
+    # K-1 IDOR guard: cek hak akses unit terhadap EP ini
+    if not _can_modify_ep(request.user, record.standard_item):
+        return JsonResponse({'success': False, 'error': 'Akses ditolak: EP di luar cakupan unit Anda.'}, status=403)
     try:
         data = json.loads(request.body)
         new_score = int(data.get('score', 0))
@@ -336,7 +379,8 @@ def quick_score(request, record_id):
             })
         return JsonResponse({'success': False, 'error': 'Invalid score'}, status=400)
     except Exception as e:
-        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+        logger.exception("quick_score error")
+        return JsonResponse({'success': False, 'error': 'Terjadi kesalahan internal.'}, status=500)
 
 
 # ==============================================================================
@@ -346,6 +390,9 @@ def quick_score(request, record_id):
 @require_POST
 def inline_edit_pdca(request, record_id):
     record = get_object_or_404(QualityRecord, id=record_id)
+    # K-1 IDOR guard
+    if not _can_modify_ep(request.user, record.standard_item):
+        return JsonResponse({'success': False, 'error': 'Akses ditolak: EP di luar cakupan unit Anda.'}, status=403)
     try:
         data = json.loads(request.body)
         field = data.get('field')  # 'baseline_data', 'quality_target', 'risk_mitigation', 'eval_notes', 'action_plan'
@@ -386,7 +433,8 @@ def inline_edit_pdca(request, record_id):
             return JsonResponse({'success': True, 'field': field, 'value': value})
         return JsonResponse({'success': False, 'error': 'Field tidak diizinkan'}, status=400)
     except Exception as e:
-        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+        logger.exception("inline_edit_pdca error")
+        return JsonResponse({'success': False, 'error': 'Terjadi kesalahan internal.'}, status=500)
 
 
 # ==============================================================================
@@ -443,13 +491,18 @@ def modal_bukti_data(request, item_id):
 @require_POST
 def upload_bukti_ajax(request, req_id):
     evidence_req = get_object_or_404(EvidenceReq, id=req_id)
+    # K-1 IDOR guard
+    if not _can_modify_ep(request.user, evidence_req.standard_item):
+        return JsonResponse({'success': False, 'error': 'Akses ditolak: EP di luar cakupan unit Anda.'}, status=403)
     file_obj = request.FILES.get('file')
     doc_name = request.POST.get('doc_name', '').strip()
 
-    if not file_obj:
-        return JsonResponse({'success': False, 'error': 'Pilih berkas terlebih dahulu.'}, status=400)
+    # K-3 file validation
+    is_valid, error_msg = validate_uploaded_file(file_obj)
+    if not is_valid:
+        return JsonResponse({'success': False, 'error': error_msg}, status=400)
 
-    final_name = doc_name if doc_name else file_obj.name
+    final_name = sanitize_filename(doc_name if doc_name else file_obj.name)
     res = upload_to_supabase_storage(file_obj, final_name)
     if res.get('success'):
         size_mb = f"{file_obj.size / (1024 * 1024):.1f} MB" if file_obj.size >= 1024 * 1024 else f"{file_obj.size / 1024:.0f} KB"
@@ -509,13 +562,17 @@ def link_existing_doc(request):
         )
         return JsonResponse({'success': True, 'file_id': new_file.id, 'file_name': new_file.file_name})
     except Exception as e:
-        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+        logger.exception("link_existing_doc error")
+        return JsonResponse({'success': False, 'error': 'Gagal menautkan berkas bukti.'}, status=500)
 
 
 @login_required
 @require_POST
 def unlink_doc(request, file_id):
     ev_file = get_object_or_404(EvidenceFile, id=file_id)
+    # K-1 IDOR guard
+    if not _can_modify_ep(request.user, ev_file.requirement.standard_item):
+        return JsonResponse({'success': False, 'error': 'Akses ditolak.'}, status=403)
     name = ev_file.file_name
     ep_code = ev_file.requirement.standard_item.code
     ev_file.delete()
@@ -711,20 +768,28 @@ def ep_detail(request, item_id):
 @require_POST
 def upload_bukti(request, req_id):
     evidence_req = get_object_or_404(EvidenceReq, id=req_id)
+    # K-1 IDOR guard
+    if not _can_modify_ep(request.user, evidence_req.standard_item):
+        messages.error(request, "Akses ditolak: EP di luar cakupan unit Anda.")
+        return redirect('akreditasi:matriks')
+
     file_obj = request.FILES.get('file')
 
-    if not file_obj:
-        messages.error(request, "Pilih berkas terlebih dahulu.")
+    # K-3 file validation
+    is_valid, error_msg = validate_uploaded_file(file_obj)
+    if not is_valid:
+        messages.error(request, f"Gagal unggah: {error_msg}")
         return redirect('akreditasi:ep_detail', item_id=evidence_req.standard_item.id)
 
-    res = upload_to_supabase_storage(file_obj, file_obj.name)
+    safe_name = sanitize_filename(file_obj.name)
+    res = upload_to_supabase_storage(file_obj, safe_name)
     if res.get('success'):
         size_mb = f"{file_obj.size / (1024 * 1024):.1f} MB" if file_obj.size >= 1024 * 1024 else f"{file_obj.size / 1024:.0f} KB"
         EvidenceFile.objects.create(
             requirement=evidence_req,
             file=file_obj if not res.get('is_cloud') else None,
             file_url=res.get('url', ''),
-            file_name=file_obj.name,
+            file_name=safe_name,
             file_size=size_mb,
             status='VALID'
         )
@@ -732,10 +797,10 @@ def upload_bukti(request, req_id):
             user=request.user,
             aksi='UPLOAD',
             model_name='EvidenceFile',
-            object_repr=f"{evidence_req.standard_item.code} - {file_obj.name}",
+            object_repr=f"{evidence_req.standard_item.code} - {safe_name}",
             detail="Berkas bukti berhasil diunggah"
         )
-        messages.success(request, f"Berkas '{file_obj.name}' berhasil diunggah!")
+        messages.success(request, f"Berkas '{safe_name}' berhasil diunggah!")
     else:
         messages.error(request, f"Gagal mengunggah berkas: {res.get('error', 'Unknown error')}")
 
@@ -953,6 +1018,10 @@ def audit_log_view(request):
 # ==============================================================================
 @login_required
 def rekap_view(request):
+    # T-5 RBAC: hanya role manajerial
+    if not _is_manager_role(request.user):
+        from django.http import HttpResponseForbidden
+        return HttpResponseForbidden("Akses ditolak. Halaman ini hanya untuk Admin, Kepala Unit, dan Koordinator Pokja.")
     categories = Category.objects.all().order_by('order')
     items = StandardItem.objects.select_related('category', 'record__unit').prefetch_related('evidence_reqs__files').order_by('category__order', 'order', 'code')
 
@@ -1011,6 +1080,7 @@ def cetak_dokumen_pokja(request, cat_id):
 
 
 @login_required
+@editor_required
 def auto_scoring_pokja(request):
     """Fase 3.4: Auto-scoring pemenuhan EP per Pokja dengan formula KARS STARKES."""
     categories = Category.objects.all().order_by('order')
@@ -1274,7 +1344,14 @@ def upload_kredensial_nakes(request):
 
         file_obj = request.FILES.get('file')
         if file_obj:
-            res = upload_to_supabase_storage(file_obj, f"kps/{profile.user.username}/{file_obj.name}")
+            # K-3 file validation
+            is_valid, error_msg = validate_uploaded_file(file_obj)
+            if not is_valid:
+                messages.error(request, f"Gagal unggah: {error_msg}")
+                return redirect('akreditasi:portal_nakes')
+
+            safe_name = sanitize_filename(file_obj.name)
+            res = upload_to_supabase_storage(file_obj, f"kps/{profile.user.username}/{safe_name}")
             if res.get('success') and res.get('url'):
                 cred.file_url = res['url']
                 cred.file = None
@@ -1361,6 +1438,10 @@ def verify_kredensial(request, cred_id):
     from accounts.models import NakesCredential
     from accounts.forms import CredentialVerifyForm
     cred = get_object_or_404(NakesCredential, id=cred_id)
+    # K-2 IDOR guard: KEPALA_UNIT hanya boleh verifikasi nakes di unitnya sendiri
+    if profile.role == 'KEPALA_UNIT' and hasattr(profile, 'unit_kerja') and profile.unit_kerja:
+        if cred.user_profile.unit_kerja != profile.unit_kerja:
+            return JsonResponse({'success': False, 'error': 'Akses ditolak: nakes bukan dari unit Anda.'}, status=403)
     form = CredentialVerifyForm(request.POST, instance=cred)
     if form.is_valid():
         form.save()

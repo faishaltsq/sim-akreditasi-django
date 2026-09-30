@@ -4,12 +4,19 @@ import dj_database_url
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-SECRET_KEY = os.environ.get(
-    'DJANGO_SECRET_KEY',
-    'django-insecure-sim-akreditasi-dev-only-change-in-production'
-)
+# ── KEAMANAN: SECRET_KEY & DEBUG ─────────────────────────────────────────
+IS_PRODUCTION = bool(os.environ.get('RAILWAY_ENVIRONMENT') or os.environ.get('RENDER') or os.environ.get('DATABASE_URL'))
 
-DEBUG = os.environ.get('DJANGO_DEBUG', 'True').lower() in ('true', '1')
+SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY')
+if not SECRET_KEY:
+    if IS_PRODUCTION:
+        import secrets
+        SECRET_KEY = secrets.token_urlsafe(50)
+    else:
+        SECRET_KEY = 'django-insecure-sim-akreditasi-dev-only-change-in-production'
+
+# Default DEBUG: False di production, True di lokal
+DEBUG = os.environ.get('DJANGO_DEBUG', 'False' if IS_PRODUCTION else 'True').lower() in ('true', '1')
 
 ALLOWED_HOSTS = [
     h.strip()
@@ -44,6 +51,22 @@ if RAILWAY_STATIC_URL:
     CSRF_TRUSTED_ORIGINS.append(f'https://{RAILWAY_STATIC_URL}')
 
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+
+# ── KEAMANAN: HTTPS, COOKIE, & HEADERS ───────────────────────────────────
+if not DEBUG:
+    SECURE_SSL_REDIRECT = os.environ.get('SECURE_SSL_REDIRECT', 'True').lower() in ('true', '1')
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    SECURE_HSTS_SECONDS = 31536000          # 1 tahun HSTS
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD = True
+    SECURE_CONTENT_TYPE_NOSNIFF = True
+
+SESSION_COOKIE_HTTPONLY = True
+CSRF_COOKIE_HTTPONLY = True
+SESSION_COOKIE_AGE = 28800                 # Session kedaluwarsa setelah 8 jam
+SESSION_EXPIRE_AT_BROWSER_CLOSE = True
+X_FRAME_OPTIONS = 'DENY'
 
 INSTALLED_APPS = [
     'django.contrib.admin',
