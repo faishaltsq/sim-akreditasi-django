@@ -45,7 +45,7 @@ def _parse_json_body(request):
 def api_ai_mitigasi_risiko(request):
     """Endpoint untuk tombol '✨ AI Bantu Rencana Mitigasi' di form risiko."""
     profile = getattr(request.user, 'profile', None)
-    if profile and not profile.has_permission('can_edit_risk'):
+    if profile and not profile.has_permission('can_manage_risiko'):
         return JsonResponse({'success': False, 'error': 'Anda tidak memiliki hak akses mengubah data risiko.'}, status=403)
 
     data = _parse_json_body(request)
@@ -159,7 +159,7 @@ def api_ai_insiden_grading(request):
 def api_ai_evaluasi_risiko(request):
     """Endpoint untuk analisis efektivitas mitigasi di halaman evaluasi risiko."""
     profile = getattr(request.user, 'profile', None)
-    if profile and not profile.has_permission('can_edit_risk'):
+    if profile and not profile.has_permission('can_manage_risiko'):
         return JsonResponse({'success': False, 'error': 'Tidak memiliki hak akses.'}, status=403)
 
     data = _parse_json_body(request)
