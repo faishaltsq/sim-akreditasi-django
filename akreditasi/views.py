@@ -1080,9 +1080,12 @@ def cetak_dokumen_pokja(request, cat_id):
 
 
 @login_required
-@editor_required
 def auto_scoring_pokja(request):
     """Fase 3.4: Auto-scoring pemenuhan EP per Pokja dengan formula KARS STARKES."""
+    # RBAC: hanya role manajerial
+    if not _is_manager_role(request.user):
+        from django.http import HttpResponseForbidden
+        return HttpResponseForbidden("Akses ditolak. Fitur ini hanya untuk Admin, Kepala Unit, dan Koordinator Pokja.")
     categories = Category.objects.all().order_by('order')
 
     def _nilai_akreditasi(pct):
@@ -1150,6 +1153,10 @@ def auto_scoring_pokja(request):
 
 @login_required
 def export_excel(request):
+    # RBAC: hanya role manajerial
+    if not _is_manager_role(request.user):
+        from django.http import HttpResponseForbidden
+        return HttpResponseForbidden("Akses ditolak. Export hanya untuk Admin, Kepala Unit, dan Koordinator Pokja.")
     wb = Workbook()
     ws = wb.active
     ws.title = "Matriks PDCA STARKES"
