@@ -1,0 +1,104 @@
+{% extends 'base.html' %}
+{% block title %}Input Capaian — {{ ind.kode_indikator }} — SIK AP{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4 py-3">
+
+  <nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb small">
+      <li class="breadcrumb-item"><a href="{% url 'akreditasi:indikator_dashboard' %}">Indikator Mutu</a></li>
+      <li class="breadcrumb-item"><a href="{% url 'akreditasi:indikator_detail' ind.pk %}">{{ ind.kode_indikator }}</a></li>
+      <li class="breadcrumb-item active">Input Capaian</li>
+    </ol>
+  </nav>
+
+  <div class="row justify-content-center">
+    <div class="col-12 col-lg-6">
+      <div class="card border-0 shadow-sm rounded-3">
+        <div class="card-header bg-white py-3 border-0">
+          <h5 class="fw-bold mb-1">
+            <i class="bi bi-pencil-square text-success me-2"></i>Input Capaian Bulanan
+          </h5>
+          <p class="text-muted small mb-0">
+            <span class="badge bg-dark font-monospace">{{ ind.kode_indikator }}</span>
+            {{ ind.nama_indikator }}
+          </p>
+        </div>
+        <div class="card-body p-4">
+
+          {% if messages %}
+          {% for msg in messages %}
+          <div class="alert alert-{{ msg.tags }} alert-dismissible fade show" role="alert">
+            {{ msg }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+          </div>
+          {% endfor %}
+          {% endif %}
+
+          <div class="alert alert-info border-0 small rounded-3 mb-4">
+            <strong><i class="bi bi-info-circle me-1"></i>Target:</strong>
+            {{ ind.target_nilai|floatformat:1 }} {{ ind.satuan }}<br>
+            <strong>Numerator:</strong> {{ ind.numerator }}<br>
+            <strong>Denominator:</strong> {{ ind.denominator }}
+          </div>
+
+          <form method="POST">
+            {% csrf_token %}
+
+            <div class="row g-3 mb-3">
+              <div class="col-6">
+                <label class="form-label fw-semibold">Bulan <span class="text-danger">*</span></label>
+                <select name="bulan" class="form-select" required>
+                  {% for b in bulan_choices %}
+                  <option value="{{ b }}">{{ b }} — {{ b|date:"F" }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+              <div class="col-6">
+                <label class="form-label fw-semibold">Tahun <span class="text-danger">*</span></label>
+                <select name="tahun" class="form-select" required>
+                  <option value="2026">2026</option>
+                  <option value="2027">2027</option>
+                  <option value="2028">2028</option>
+                  <option value="2029">2029</option>
+                  <option value="2030">2030</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label fw-semibold">Nilai Numerator <span class="text-danger">*</span></label>
+              <input type="number" name="nilai_numerator" class="form-control" step="0.01" min="0" required
+                     placeholder="Jumlah kejadian sesuai kriteria numerator">
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label fw-semibold">Nilai Denominator <span class="text-danger">*</span></label>
+              <input type="number" name="nilai_denominator" class="form-control" step="0.01" min="0.01" required
+                     placeholder="Total populasi / total observasi (> 0)">
+              <div class="form-text text-muted">Capaian = (Numerator / Denominator) × 100</div>
+            </div>
+
+            <div class="mb-4">
+              <label class="form-label fw-semibold">Catatan / Analisa Singkat</label>
+              <textarea name="catatan" class="form-control" rows="3"
+                        placeholder="Contoh: Data diambil dari rekap SIMRS, ada kendala pencatatan di minggu ke-3..."></textarea>
+            </div>
+
+            <div class="d-flex gap-2">
+              <button type="submit" class="btn btn-success flex-fill">
+                <i class="bi bi-check-lg me-1"></i>Simpan Capaian
+              </button>
+              <a href="{% url 'akreditasi:indikator_detail' ind.pk %}" class="btn btn-outline-secondary">
+                Batal
+              </a>
+            </div>
+
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

@@ -2,6 +2,7 @@ from django.urls import path
 from . import views
 from . import risiko_views
 from . import ai_views
+from . import indikator_views
 
 app_name = 'akreditasi'
 
@@ -66,6 +67,11 @@ urlpatterns = [
 
     # Modul Insiden Keselamatan (Fase 5)
     path('insiden/lapor/', risiko_views.insiden_lapor, name='insiden_lapor'),
+
+    # Modul Indikator Mutu — INM + IMP-RS (Renstra 2026–2030)
+    path('indikator-mutu/', indikator_views.indikator_dashboard, name='indikator_dashboard'),
+    path('indikator-mutu/<int:indikator_id>/', indikator_views.indikator_detail, name='indikator_detail'),
+    path('indikator-mutu/<int:indikator_id>/capaian/', indikator_views.indikator_input_capaian, name='indikator_input_capaian'),
 
     # Panduan / Dokumentasi Interaktif
     path('panduan/', views.panduan_dokumentasi, name='panduan'),
