@@ -111,6 +111,31 @@
     </div>
     {% endif %}
 
+    <!-- ========================================================================= -->
+    <!-- HERO BANNER GLOBAL: ARIMA — RS MonsisKami (SEMUA USER)                    -->
+    <!-- ========================================================================= -->
+    {% if not unit_dashboard %}
+    <div class="card border-0 shadow-sm mb-4 overflow-hidden" style="border-radius: 1rem;">
+        <div class="card-body p-0">
+            <div class="d-flex align-items-center" style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f766e 100%); min-height: 120px;">
+                <!-- Ikon Gedung RS Besar -->
+                <div class="d-flex align-items-center justify-content-center flex-shrink-0 px-4 px-md-5" style="min-height:120px;">
+                    <i class="bi bi-building-fill" style="font-size: 3.5rem; color: rgba(255,255,255,0.85);"></i>
+                </div>
+                <!-- Teks Brand Besar -->
+                <div class="py-4 pe-4">
+                    <h2 class="fw-bold text-white mb-1" style="font-size: 2rem; letter-spacing: -0.03em; line-height: 1.1;">
+                        ARIMA <span class="text-white-50 fw-semibold" style="font-size:1.1rem;">—</span> RS MonsisKami
+                    </h2>
+                    <p class="text-white-50 mb-0" style="font-size: 0.82rem; line-height: 1.5; max-width: 600px;">
+                        Aplikasi Terpadu Manajemen Risiko dan Tata Kelola Dokumen Akreditasi &bull; Rumah Sakit Tipe B &bull; STARKES {{ rs_profile.akreditasi_tahun }}
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
     <!-- 1. METRIC RIBBON (KPI BAR 4 CARDS) SESUAI SPEC -->
     <div class="row g-3 mb-4">
         <!-- BOX 1: CAPAIAN RATA-RATA -->
