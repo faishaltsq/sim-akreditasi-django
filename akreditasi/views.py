@@ -991,6 +991,10 @@ def profil_rs_view(request):
         profile.tipe = request.POST.get('tipe', profile.tipe).strip()
         profile.akreditasi_tahun = int(request.POST.get('akreditasi_tahun', profile.akreditasi_tahun) or 2026)
         profile.logo_url = request.POST.get('logo_url', profile.logo_url).strip()
+        profile.visi = request.POST.get('visi', profile.visi).strip()
+        profile.misi = request.POST.get('misi', profile.misi).strip()
+        profile.tujuan = request.POST.get('tujuan', profile.tujuan).strip()
+        profile.motto = request.POST.get('motto', profile.motto).strip()
         profile.save()
 
         AuditLog.objects.create(

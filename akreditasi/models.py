@@ -271,6 +271,10 @@ class RumahSakitProfile(models.Model):
     tipe = models.CharField('Tipe RS', max_length=100, blank=True, help_text='Contoh: RS Tipe B, RSUD, RSKIA')
     akreditasi_tahun = models.PositiveIntegerField('Tahun Target Akreditasi', default=2026)
     logo_url = models.URLField('URL Logo RS', blank=True)
+    visi = models.TextField('Visi Rumah Sakit', blank=True)
+    misi = models.TextField('Misi Rumah Sakit', blank=True, help_text='Pisahkan tiap poin misi dengan baris baru')
+    tujuan = models.TextField('Tujuan Strategis', blank=True, help_text='Tujuan umum RS jangka panjang')
+    motto = models.CharField('Motto / Tagline RS', max_length=300, blank=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
