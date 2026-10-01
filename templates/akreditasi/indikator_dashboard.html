@@ -23,6 +23,17 @@
     </div>
   </div>
 
+  <!-- Navigasi Tahun Renstra 2026–2030 -->
+  <div class="d-flex flex-wrap gap-2 mb-4">
+    {% for yr in tahun_choices %}
+    <a href="?tahun={{ yr }}{% if filter_jenis %}&jenis={{ filter_jenis }}{% endif %}{% if filter_unit %}&unit={{ filter_unit }}{% endif %}"
+       class="btn {% if yr == filter_tahun %}btn-primary{% else %}btn-outline-primary{% endif %} px-4 py-2 fw-bold rounded-pill"
+       style="font-size: 0.95rem; min-width: 90px;">
+        <i class="bi bi-calendar3 me-1"></i>{{ yr }}
+    </a>
+    {% endfor %}
+  </div>
+
   <!-- Summary Cards -->
   <div class="row g-3 mb-4">
     {% for label, data in summary.items %}

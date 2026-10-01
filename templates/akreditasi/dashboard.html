@@ -264,6 +264,73 @@
         {% endif %}
     </div>
 
+    <!-- ROADMAP RENSTRA 2026–2030 (MENU TAHUN KLIK → INDIKATOR MUTU) -->
+    {% if renstra_years %}
+    <div class="card shadow-sm border-0 mb-4 rounded-3">
+        <div class="card-header bg-white py-3 d-flex flex-wrap justify-content-between align-items-center border-0">
+            <div>
+                <h6 class="fw-bold mb-0 text-dark">
+                    <i class="bi bi-rocket-takeoff text-primary me-2"></i>Roadmap Renstra RS 2026–2030
+                </h6>
+                <span class="text-muted small">Klik tahun untuk melihat indikator mutu tahunan</span>
+            </div>
+            <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-3 py-2">
+                {{ renstra_years.0.total_indikator }} Indikator Mutu Aktif
+            </span>
+        </div>
+        <div class="card-body px-3 pt-0 pb-3">
+            <div class="row g-3">
+                {% for yr in renstra_years %}
+                <div class="col-12 col-sm-6 col-lg">
+                    <a href="{% url 'akreditasi:indikator_dashboard' %}?tahun={{ yr.year }}"
+                       class="text-decoration-none d-block">
+                        <div class="border rounded-3 p-3 h-100 position-relative overflow-hidden transition-all"
+                             style="background: linear-gradient(135deg, {{ yr.color }}10, {{ yr.color }}05); border-color: {{ yr.color }}30 !important;"
+                             onmouseover="this.style.transform='translateY(-3px)'; this.style.boxShadow='0 6px 20px {{ yr.color }}25'"
+                             onmouseout="this.style.transform=''; this.style.boxShadow=''">
+                            <!-- Year Badge -->
+                            <div class="d-flex align-items-center justify-content-between mb-2">
+                                <span class="d-inline-flex align-items-center justify-content-center rounded-2 px-2 py-1"
+                                      style="background: {{ yr.color }}; color: white; font-weight: 800; font-size: 1.1rem; font-family: 'JetBrains Mono', monospace;">
+                                    {{ yr.year }}
+                                </span>
+                                <i class="bi {{ yr.icon }} fs-4" style="color: {{ yr.color }};"></i>
+                            </div>
+                            <!-- Label Fase -->
+                            <div class="fw-bold text-dark mb-2" style="font-size: 0.78rem; line-height: 1.3;">
+                                {{ yr.label }}
+                            </div>
+                            <!-- Stats -->
+                            {% if yr.has_data %}
+                            <div class="d-flex align-items-center gap-2 mb-2">
+                                <span class="fw-bold" style="font-size: 1.4rem; color: {{ yr.color }}; font-family: 'JetBrains Mono', monospace;">
+                                    {{ yr.avg_capaian }}%
+                                </span>
+                                <span class="text-muted" style="font-size: 0.68rem;">Rata-rata<br>Capaian</span>
+                            </div>
+                            <div class="progress mb-2" style="height: 5px; border-radius: 5px; background: {{ yr.color }}15;">
+                                <div class="progress-bar" role="progressbar"
+                                     style="width: {{ yr.avg_capaian }}%; background: {{ yr.color }}; border-radius: 5px;"></div>
+                            </div>
+                            <div class="d-flex justify-content-between" style="font-size: 0.65rem;">
+                                <span class="text-muted">{{ yr.total_catatan }} data capaian</span>
+                                <span class="fw-bold" style="color: {{ yr.color }};">{{ yr.tercapai }} tercapai</span>
+                            </div>
+                            {% else %}
+                            <div class="text-center py-2">
+                                <i class="bi bi-calendar-plus text-muted fs-4 d-block mb-1"></i>
+                                <span class="text-muted" style="font-size: 0.7rem;">Belum ada data capaian</span>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </a>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
     <!-- 2. MIDDLE ROW: PIE CHART STATUS KEPATUHAN & AKTIVITAS TERKINI -->
     <div class="row g-3 mb-4">
         <!-- GRAFIK INTI: PIE CHART STATUS KEPATUHAN EP -->

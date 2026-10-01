@@ -7,7 +7,7 @@ from django.contrib import messages
 from django.http import JsonResponse, HttpResponse
 from django.db import transaction
 from django.views.decorators.http import require_POST
-from django.db.models import Count, Q, Sum
+from django.db.models import Count, Q, Sum, F, Avg
 from openpyxl import Workbook
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 
@@ -102,6 +102,46 @@ def _is_manager_role(user) -> bool:
 def dashboard(request):
     profile = getattr(request.user, 'profile', None)
 
+    # Renstra 2026–2030: kalkulasi ringkasan indikator mutu per tahun (shared)
+    from .risiko_models import IndikatorMutu, CatatanIndikator
+    from django.db.models import ExpressionWrapper, DecimalField
+    renstra_years = []
+    RENSTRA_LABELS = {
+        2026: ('Consolidation & Digital Foundation', 'bi-cpu', '#0d6efd'),
+        2027: ('Service Modernization & Cost Containment', 'bi-gear-wide-connected', '#6f42c1'),
+        2028: ('Capacity Expansion & Clinical Excellence', 'bi-hospital', '#198754'),
+        2029: ('Market Leadership & Sustainability', 'bi-tree', '#20c997'),
+        2030: ('Regional Benchmark & Well-being', 'bi-trophy', '#fd7e14'),
+    }
+    total_indikator = IndikatorMutu.objects.filter(aktif=True).count()
+    for yr in range(2026, 2031):
+        label, icon, color = RENSTRA_LABELS[yr]
+        catatan_yr = CatatanIndikator.objects.filter(tahun=yr)
+        total_catatan = catatan_yr.count()
+        tercapai = catatan_yr.filter(
+            nilai_numerator__gte=F('indikator__target_nilai') * F('nilai_denominator') / 100
+        ).count() if total_catatan > 0 else 0
+        avg_capaian = 0
+        if total_catatan > 0:
+            avg_raw = catatan_yr.annotate(
+                pct=ExpressionWrapper(
+                    F('nilai_numerator') * 100 / F('nilai_denominator'),
+                    output_field=DecimalField()
+                )
+            ).aggregate(avg=Avg('pct'))['avg']
+            avg_capaian = round(float(avg_raw), 1) if avg_raw else 0
+        renstra_years.append({
+            'year': yr,
+            'label': label,
+            'icon': icon,
+            'color': color,
+            'total_catatan': total_catatan,
+            'tercapai': tercapai,
+            'avg_capaian': avg_capaian,
+            'total_indikator': total_indikator,
+            'has_data': total_catatan > 0,
+        })
+
     # ===== MODE UNIT-SCOPED: user punya unit_kerja & bukan admin/direktur =====
     if profile and profile.is_unit_scoped and profile.unit_kerja:
         unit = profile.unit_kerja
@@ -137,7 +177,7 @@ def dashboard(request):
 
         # Risiko unit — skor = dampak * probabilitas
         from .risiko_models import RisikoUnit
-        from django.db.models import F, ExpressionWrapper, IntegerField
+        from django.db.models import ExpressionWrapper, IntegerField
         risiko_unit = RisikoUnit.objects.filter(unit_id__in=unit_ids)
         total_risiko = risiko_unit.count()
         # Risiko tinggi: dampak >= 4 dan probabilitas >= 3, atau kombinasi skor >= 12
@@ -167,6 +207,7 @@ def dashboard(request):
             'total_risiko': total_risiko,
             'risiko_tinggi': risiko_tinggi,
             'aktivitas_terkini': aktivitas_terkini,
+            'renstra_years': renstra_years,
         }
         return render(request, 'akreditasi/dashboard.html', context)
 
@@ -245,6 +286,7 @@ def dashboard(request):
         'aktivitas_terkini': aktivitas_terkini,
         'root_units': root_units,
         'total_units_count': total_units_count,
+        'renstra_years': renstra_years,
     }
     return render(request, 'akreditasi/dashboard.html', context)
 

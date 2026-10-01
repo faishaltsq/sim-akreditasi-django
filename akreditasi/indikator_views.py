@@ -37,6 +37,11 @@ def indikator_dashboard(request):
     jenis = request.GET.get('jenis', '')
     unit_id = request.GET.get('unit', '')
     tahun = request.GET.get('tahun', '2026')
+    try:
+        tahun_int = int(tahun)
+    except (ValueError, TypeError):
+        tahun_int = 2026
+    tahun = str(tahun_int)
 
     qs = IndikatorMutu.objects.filter(aktif=True).select_related('unit', 'ep_terkait')
 
@@ -82,7 +87,8 @@ def indikator_dashboard(request):
         'units': units,
         'filter_jenis': jenis,
         'filter_unit': unit_id,
-        'filter_tahun': tahun,
+        'filter_tahun': tahun_int,
+        'tahun_choices': [2026, 2027, 2028, 2029, 2030],
         'is_manager': _is_manager(request.user),
     }
     return render(request, 'akreditasi/indikator_dashboard.html', ctx)
