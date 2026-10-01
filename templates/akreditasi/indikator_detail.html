@@ -133,6 +133,26 @@
   const labels = {{ chart_labels|safe }};
   const data = {{ chart_data|safe }};
   const target = {{ target_line }};
+  const hasData = data.some(v => v !== null);
+
+  // Plugin: tampilkan pesan ketika semua data null
+  const noDataPlugin = {
+    id: 'noDataMessage',
+    afterDraw(chart) {
+      if (!hasData) {
+        const {ctx: c, width, height} = chart;
+        c.save();
+        c.textAlign = 'center';
+        c.textBaseline = 'middle';
+        c.fillStyle = '#94a3b8';
+        c.font = 'bold 14px "Plus Jakarta Sans", sans-serif';
+        c.fillText('Belum ada data capaian untuk tahun ini', width / 2, height / 2 - 12);
+        c.font = '12px "Plus Jakarta Sans", sans-serif';
+        c.fillText('Garis merah putus-putus = target capaian', width / 2, height / 2 + 12);
+        c.restore();
+      }
+    }
+  };
 
   new Chart(ctx, {
     type: 'line',
@@ -176,11 +196,12 @@
       scales: {
         y: {
           beginAtZero: true,
-          max: 110,
+          max: Math.max(110, target + 20),
           ticks: { callback: v => v + '%' }
         }
       }
-    }
+    },
+    plugins: [noDataPlugin]
   });
 </script>
 {% endblock %}

@@ -184,23 +184,24 @@ def indikator_dashboard(request):
 
 @login_required
 def indikator_detail(request, indikator_id):
+    import json as _json
     ind = get_object_or_404(IndikatorMutu.objects.select_related('unit', 'ep_terkait'), pk=indikator_id)
     tahun = int(request.GET.get('tahun', 2026))
     catatan = ind.catatan.filter(tahun=tahun).order_by('bulan')
 
-    # Data chart: 12 bulan
+    # Data chart: 12 bulan — json.dumps agar None berubah menjadi null di JavaScript
     chart_labels = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agt', 'Sep', 'Okt', 'Nov', 'Des']
-    chart_data = [None] * 12
+    chart_data_raw = [None] * 12
     for c in catatan:
         if 1 <= c.bulan <= 12:
-            chart_data[c.bulan - 1] = float(c.nilai_capaian)
+            chart_data_raw[c.bulan - 1] = float(c.nilai_capaian)
 
     ctx = {
         'ind': ind,
         'catatan': catatan,
         'tahun': tahun,
-        'chart_labels': chart_labels,
-        'chart_data': chart_data,
+        'chart_labels': _json.dumps(chart_labels),
+        'chart_data': _json.dumps(chart_data_raw),
         'target_line': float(ind.target_nilai),
         'is_manager': _is_manager(request.user),
     }
