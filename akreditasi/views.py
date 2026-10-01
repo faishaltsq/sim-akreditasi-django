@@ -1049,7 +1049,11 @@ def profil_rs_view(request):
         messages.success(request, "Profil Rumah Sakit berhasil diperbarui!")
         return redirect('akreditasi:profil_rs')
 
-    return render(request, 'akreditasi/profil_rs.html', {'profile': profile})
+    from .indikator_views import RENSTRA_ANNUAL_FOCUS
+    return render(request, 'akreditasi/profil_rs.html', {
+        'profile': profile,
+        'renstra_matrix': RENSTRA_ANNUAL_FOCUS,
+    })
 
 
 @login_required

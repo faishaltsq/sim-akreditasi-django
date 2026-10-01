@@ -1,9 +1,9 @@
 {% extends "base.html" %}
 {% load akreditasi_tags %}
 
-{% block title %}Profil Rumah Sakit — SIK AP{% endblock %}
-{% block page_title %}Profil Rumah Sakit{% endblock %}
-{% block page_subtitle %}Pengaturan data identitas dan informasi akreditasi institusi{% endblock %}
+{% block title %}Profil RS &amp; Renstra 2026–2030 — ARIMA{% endblock %}
+{% block page_title %}ARIMA: Profil Rumah Sakit &amp; Arah Strategis Renstra{% endblock %}
+{% block page_subtitle %}Aplikasi Terpadu Manajemen Risiko dan Tata Kelola Dokumen Akreditasi RS — Modul 1: Visi, Misi &amp; Tujuan RS{% endblock %}
 
 {% block content %}
 <div class="container-fluid p-0">
@@ -123,21 +123,213 @@
         </div>
 
         <div class="col-12 col-lg-4">
-            <div class="card shadow-sm border-0 mb-4">
-                <div class="card-header bg-white py-3">
-                    <h6 class="fw-bold mb-0 text-dark"><i class="bi bi-info-circle text-primary me-2"></i>Tentang Sistem SIK AP</h6>
+            <!-- TENTANG SISTEM ARIMA & ALUR 5 MODUL -->
+            <div class="card shadow-sm border-0 mb-4 rounded-3">
+                <div class="card-header bg-white py-3 border-bottom">
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="badge bg-primary text-white fw-bold font-monospace" style="font-size:0.75rem;">ARIMA</span>
+                        <h6 class="fw-bold mb-0 text-dark">Sistem Terpadu SIM RS</h6>
+                    </div>
                 </div>
                 <div class="card-body">
-                    <p class="small text-muted mb-2">
-                        <strong>SIK AP</strong> adalah Sistem Manajemen Dokumen Akreditasi Rumah Sakit berbasis siklus <strong>PDCA (Plan - Do - Check - Action)</strong> sesuai Standar Akreditasi Kemenkes (STARKES).
+                    <p class="small text-muted mb-3" style="line-height:1.5;">
+                        <strong class="text-dark">ARIMA</strong> (Aplikasi Terpadu Manajemen Risiko dan Tata Kelola Dokumen Akreditasi) menyelaraskan kepatuhan standar <strong>STARKES Kemenkes RI</strong> dengan peta jalan strategis <strong>Renstra RS 2026–2030</strong>.
                     </p>
-                    <ul class="small text-muted ps-3 mb-0">
-                        <li>Fasilitas penyimpanan dokumen bukti RDWOS terpusat.</li>
-                        <li>Penilaian capaian EP otomatis (10, 5, 0).</li>
-                        <li>Rekapitulasi capaian dan ekspor matriks resmi.</li>
-                    </ul>
+                    <div class="p-3 bg-light rounded-3 mb-3 border">
+                        <span class="text-uppercase fw-bold text-muted small d-block mb-2" style="font-size:0.68rem; letter-spacing:0.05em;">
+                            <i class="bi bi-diagram-3-fill text-primary me-1"></i>Arsitektur Alur 5 Modul:
+                        </span>
+                        <ol class="small ps-3 mb-0 text-secondary" style="font-size:0.75rem; line-height:1.6;">
+                            <li><strong class="text-dark">Visi, Misi &amp; Tujuan RS</strong> (Renstra 5 Tahun)</li>
+                            <li><strong class="text-dark">Profil Data &amp; Analisis Masalah Unit</strong></li>
+                            <li><strong class="text-dark">Identifikasi &amp; Penilaian Risiko</strong> (Risk Register)</li>
+                            <li><strong class="text-dark">Penetapan Indikator Mutu</strong> (13 INM &amp; IMP-RS)</li>
+                            <li><strong class="text-dark">Plan: Mitigasi Risiko &amp; PDCA</strong> (Program Kerja)</li>
+                        </ol>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <a href="{% url 'akreditasi:indikator_dashboard' %}" class="btn btn-primary btn-sm flex-fill fw-semibold">
+                            <i class="bi bi-speedometer2 me-1"></i>Indikator Mutu
+                        </a>
+                        <a href="{% url 'akreditasi:matriks_pdca' %}" class="btn btn-outline-secondary btn-sm flex-fill fw-semibold">
+                            <i class="bi bi-table me-1"></i>Matriks PDCA
+                        </a>
+                    </div>
                 </div>
             </div>
+        </div>
+    </div>
+
+    <!-- TABEL ISU STRATEGIS RENSTRA 5 TAHUN (2026–2030) & FOKUS IMP-RS TAHUNAN -->
+    <div class="card shadow-sm border-0 mb-4 rounded-3">
+        <div class="card-header bg-white py-3 border-bottom d-flex flex-wrap justify-content-between align-items-center">
+            <div>
+                <span class="badge bg-primary-subtle text-primary border border-primary-subtle fw-bold font-monospace px-2.5 py-1 mb-1" style="font-size:0.72rem;">
+                    TABEL REFERENSI RESMI RENSTRA
+                </span>
+                <h5 class="fw-bold mb-0 text-dark">
+                    <i class="bi bi-calendar-range text-primary me-2"></i>Rincian Isu Strategis Renstra 5 Tahun (2026–2030) &amp; Fokus Indikator Mutu Prioritas Tahunan (IMP-RS)
+                </h5>
+                <small class="text-muted">Digunakan sebagai acuan penetapan prioritas pada Modul 1 (Visi-Misi) dan Modul 4 (Indikator Mutu RS)</small>
+            </div>
+            <a href="{% url 'akreditasi:indikator_dashboard' %}" class="btn btn-sm btn-primary fw-semibold px-3 mt-2 mt-md-0">
+                <i class="bi bi-arrow-up-right me-1"></i>Buka Dashboard Indikator Mutu
+            </a>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-bordered table-hover align-middle mb-0">
+                <thead class="table-light text-uppercase small text-muted" style="font-size:0.72rem; letter-spacing:0.04em;">
+                    <tr>
+                        <th class="text-center" style="width: 100px;">Tahun</th>
+                        <th style="width: 280px;">Isu Strategis Renstra RS</th>
+                        <th>Fokus Indikator Mutu Prioritas Tahunan (IMP-RS)</th>
+                        <th class="text-center" style="width: 160px;">Target</th>
+                        <th class="text-center" style="width: 120px;">Aksi</th>
+                    </tr>
+                </thead>
+                <tbody style="font-size:0.82rem;">
+                    <!-- 2026 -->
+                    <tr class="table-primary-subtle border-primary">
+                        <td class="text-center align-middle">
+                            <span class="badge bg-primary px-3 py-2 fw-bold font-monospace fs-6">2026</span>
+                            <span class="badge bg-white text-primary border d-block mt-1 small" style="font-size:0.65rem;">Tahun Berjalan</span>
+                        </td>
+                        <td class="align-middle">
+                            <div class="fw-bold text-dark fs-6">Consolidation &amp; Digital Foundation</div>
+                            <small class="text-muted d-block mt-1">Transisi digital RME menyeluruh, stabilitas SIMRS 24/7, dan integrasi SATUSEHAT Kemenkes RI.</small>
+                        </td>
+                        <td>
+                            <ol class="mb-0 ps-3">
+                                <li class="mb-1"><strong>Kelengkapan RME &lt; 24 Jam Pasca Visite</strong> <span class="badge bg-light text-secondary border font-monospace ms-1">IMP-RANAP-03</span></li>
+                                <li class="mb-1"><strong>Uptime Sistem SIMRS</strong> <span class="badge bg-light text-secondary border font-monospace ms-1">IMP-RM-03</span></li>
+                                <li><strong>Integrasi Data RME ke SATUSEHAT Kemenkes</strong> <span class="badge bg-light text-secondary border font-monospace ms-1">IMP-RM-01</span></li>
+                            </ol>
+                        </td>
+                        <td class="text-center align-middle font-monospace">
+                            <div class="fw-bold text-success">100%</div>
+                            <div class="fw-bold text-primary mt-1">&ge; 99,5%</div>
+                            <div class="fw-bold text-success mt-1">100%</div>
+                        </td>
+                        <td class="text-center align-middle">
+                            <a href="{% url 'akreditasi:indikator_dashboard' %}?tahun=2026" class="btn btn-sm btn-primary fw-semibold px-2 py-1">
+                                <i class="bi bi-eye me-1"></i>Lihat 2026
+                            </a>
+                        </td>
+                    </tr>
+
+                    <!-- 2027 -->
+                    <tr>
+                        <td class="text-center align-middle">
+                            <span class="badge bg-secondary-subtle text-dark border px-3 py-2 fw-bold font-monospace fs-6">2027</span>
+                        </td>
+                        <td class="align-middle">
+                            <div class="fw-bold text-dark fs-6">Service Modernization &amp; Cost Containment</div>
+                            <small class="text-muted d-block mt-1">Kendali mutu &amp; biaya, standardisasi Clinical Pathway berbasis AI, efisiensi pending claim BPJS.</small>
+                        </td>
+                        <td>
+                            <ol class="mb-0 ps-3">
+                                <li class="mb-1"><strong>Kepatuhan Clinical Pathway Berbasis AI Decision Support</strong> <span class="badge bg-light text-secondary border font-monospace ms-1">INM-08</span></li>
+                                <li class="mb-1"><strong>Variasi Biaya Antar-DPJP (Kendali Casemix)</strong> <span class="badge bg-light text-secondary border font-monospace ms-1">IMP-KEU-03</span></li>
+                                <li><strong>Angka Pengembalian Berkas Klaim BPJS (Pending Claim Rate)</strong> <span class="badge bg-light text-secondary border font-monospace ms-1">IMP-KEU-02</span></li>
+                            </ol>
+                        </td>
+                        <td class="text-center align-middle font-monospace">
+                            <div class="fw-bold text-primary">&ge; 85%</div>
+                            <div class="fw-bold text-warning mt-1">&le; 10%</div>
+                            <div class="fw-bold text-danger mt-1">&le; 3%</div>
+                        </td>
+                        <td class="text-center align-middle">
+                            <a href="{% url 'akreditasi:indikator_dashboard' %}?tahun=2027" class="btn btn-sm btn-outline-primary fw-semibold px-2 py-1">
+                                <i class="bi bi-eye me-1"></i>Lihat 2027
+                            </a>
+                        </td>
+                    </tr>
+
+                    <!-- 2028 -->
+                    <tr>
+                        <td class="text-center align-middle">
+                            <span class="badge bg-secondary-subtle text-dark border px-3 py-2 fw-bold font-monospace fs-6">2028</span>
+                        </td>
+                        <td class="align-middle">
+                            <div class="fw-bold text-dark fs-6">Capacity Expansion &amp; Clinical Excellence</div>
+                            <small class="text-muted d-block mt-1">Pemenuhan standar KRIS 12 kriteria rawat inap, percepatan alur UGD, dan TAT pindah ICU ke bangsal.</small>
+                        </td>
+                        <td>
+                            <ol class="mb-0 ps-3">
+                                <li class="mb-1"><strong>Length of Stay (LOS) Pasien di UGD &lt; 6 Jam</strong> <span class="badge bg-light text-secondary border font-monospace ms-1">IMP-UGD-02</span></li>
+                                <li class="mb-1"><strong>Pemenuhan 12 Kriteria Standar KRIS Rawat Inap</strong> <span class="badge bg-light text-secondary border font-monospace ms-1">IMP-RANAP-01</span></li>
+                                <li><strong>Turnaround Time Pindah Pasien ICU ke Bangsal</strong> <span class="badge bg-light text-secondary border font-monospace ms-1">IMP-ICU-03</span></li>
+                            </ol>
+                        </td>
+                        <td class="text-center align-middle font-monospace">
+                            <div class="fw-bold text-primary">&lt; 6 jam</div>
+                            <div class="fw-bold text-success mt-1">100%</div>
+                            <div class="fw-bold text-primary mt-1">&lt; 2 jam</div>
+                        </td>
+                        <td class="text-center align-middle">
+                            <a href="{% url 'akreditasi:indikator_dashboard' %}?tahun=2028" class="btn btn-sm btn-outline-primary fw-semibold px-2 py-1">
+                                <i class="bi bi-eye me-1"></i>Lihat 2028
+                            </a>
+                        </td>
+                    </tr>
+
+                    <!-- 2029 -->
+                    <tr>
+                        <td class="text-center align-middle">
+                            <span class="badge bg-secondary-subtle text-dark border px-3 py-2 fw-bold font-monospace fs-6">2029</span>
+                        </td>
+                        <td class="align-middle">
+                            <div class="fw-bold text-dark fs-6">Market Leadership &amp; Sustainability</div>
+                            <small class="text-muted d-block mt-1">Inisiatif Green Hospital ramah lingkungan, pemantauan limbah IoT, zero accident K3RS.</small>
+                        </td>
+                        <td>
+                            <ol class="mb-0 ps-3">
+                                <li class="mb-1"><strong>Kepatuhan Pengelolaan Limbah B3 / IPAL IoT (Green Hospital)</strong> <span class="badge bg-light text-secondary border font-monospace ms-1">IMP-RAD-03</span></li>
+                                <li class="mb-1"><strong>Angka Kecelakaan Kerja (K3RS)</strong> <span class="badge bg-light text-secondary border font-monospace ms-1">IMP-FARM-03</span></li>
+                                <li><strong>Efisiensi Konsumsi Energi / Air Operasional RS</strong> <span class="badge bg-light text-secondary border font-monospace ms-1">IMP-GIZI-02</span></li>
+                            </ol>
+                        </td>
+                        <td class="text-center align-middle font-monospace">
+                            <div class="fw-bold text-success">100%</div>
+                            <div class="fw-bold text-danger mt-1">0%</div>
+                            <div class="fw-bold text-primary mt-1">&ge; 15%</div>
+                        </td>
+                        <td class="text-center align-middle">
+                            <a href="{% url 'akreditasi:indikator_dashboard' %}?tahun=2029" class="btn btn-sm btn-outline-primary fw-semibold px-2 py-1">
+                                <i class="bi bi-eye me-1"></i>Lihat 2029
+                            </a>
+                        </td>
+                    </tr>
+
+                    <!-- 2030 -->
+                    <tr>
+                        <td class="text-center align-middle">
+                            <span class="badge bg-secondary-subtle text-dark border px-3 py-2 fw-bold font-monospace fs-6">2030</span>
+                        </td>
+                        <td class="align-middle">
+                            <div class="fw-bold text-dark fs-6">Regional Benchmark &amp; High Reliability</div>
+                            <small class="text-muted d-block mt-1">Rujukan regional unggulan, evaluasi beban kerja beban staf (NASA-TLX), dan retensi pasien prima.</small>
+                        </td>
+                        <td>
+                            <ol class="mb-0 ps-3">
+                                <li class="mb-1"><strong>Evaluasi Beban Kerja Staf Medis &amp; Non-Medis (NASA-TLX)</strong> <span class="badge bg-light text-secondary border font-monospace ms-1">IMP-SDM-01</span></li>
+                                <li class="mb-1"><strong>Indeks Kepuasan &amp; Retensi Pegawai (Employee Satisfaction)</strong> <span class="badge bg-light text-secondary border font-monospace ms-1">IMP-SDM-02</span></li>
+                                <li><strong>Indeks Kepuasan Masyarakat (IKM) &amp; Retensi Pasien</strong> <span class="badge bg-light text-secondary border font-monospace ms-1">INM-11</span></li>
+                            </ol>
+                        </td>
+                        <td class="text-center align-middle font-monospace">
+                            <div class="fw-bold text-info">Optimal</div>
+                            <div class="fw-bold text-primary mt-1">&ge; 85%</div>
+                            <div class="fw-bold text-success mt-1">&ge; 90%</div>
+                        </td>
+                        <td class="text-center align-middle">
+                            <a href="{% url 'akreditasi:indikator_dashboard' %}?tahun=2030" class="btn btn-sm btn-outline-primary fw-semibold px-2 py-1">
+                                <i class="bi bi-eye me-1"></i>Lihat 2030
+                            </a>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
         </div>
     </div>
 

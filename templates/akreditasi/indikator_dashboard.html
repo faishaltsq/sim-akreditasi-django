@@ -1,56 +1,188 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}Indikator Mutu RS & Renstra 2026–2030 — SIK AP{% endblock %}
+{% block title %}Indikator Mutu RS &amp; Renstra 2026–2030 — ARIMA{% endblock %}
+{% block page_title %}ARIMA: Indikator Mutu &amp; Penetapan Target Renstra{% endblock %}
+{% block page_subtitle %}Modul 4: Penetapan &amp; Monitoring 13 INM Kemenkes RI + 36 IMP-RS per Bidang Kerja (Renstra RS 2026–2030){% endblock %}
+
+{% block extra_css %}
+<style>
+  .renstra-banner {
+    background: linear-gradient(135deg, #0f172a 0%, #1e293b 60%, #0f766e 100%);
+    border-radius: 1rem;
+    color: #ffffff;
+    position: relative;
+    overflow: hidden;
+  }
+  .renstra-banner::after {
+    content: '';
+    position: absolute;
+    right: -40px;
+    bottom: -40px;
+    width: 220px;
+    height: 220px;
+    background: radial-gradient(circle, rgba(13,148,136,0.25) 0%, rgba(15,23,42,0) 70%);
+    border-radius: 50%;
+    pointer-events: none;
+  }
+  .fokus-card {
+    background: rgba(255, 255, 255, 0.08);
+    backdrop-filter: blur(8px);
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    border-radius: 0.75rem;
+    padding: 1rem 1.15rem;
+    transition: transform 0.18s ease, background 0.18s ease;
+  }
+  .fokus-card:hover {
+    background: rgba(255, 255, 255, 0.13);
+    transform: translateY(-2px);
+  }
+  .year-pill-btn {
+    border-radius: 50rem;
+    padding: 0.45rem 1.35rem;
+    font-weight: 700;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.9rem;
+    transition: all 0.15s ease;
+    border-width: 1.5px;
+  }
+  .indicator-table th {
+    font-size: 0.72rem;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    font-weight: 700;
+    background-color: #f8fafc;
+    border-bottom: 2px solid #e2e8f0;
+  }
+  .indicator-row:hover {
+    background-color: #f8fafc;
+  }
+  .badge-target {
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 700;
+    font-size: 0.85rem;
+  }
+</style>
+{% endblock %}
 
 {% block content %}
-<div class="container-fluid px-4 py-3">
+<div class="container-fluid px-3 px-md-4 py-3">
 
-  <!-- Header -->
-  <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 pb-2 border-bottom">
-    <div>
-      <h4 class="fw-bold mb-1">
-        <i class="bi bi-speedometer2 text-primary me-2"></i>Indikator Mutu &amp; Renstra 2026–2030
-      </h4>
-      <p class="text-muted small mb-0">
-        Monitoring 13 Indikator Mutu Nasional (INM) Kemenkes RI dan 36 Indikator Mutu Prioritas RS (IMP-RS) per Bidang Kerja
-      </p>
-    </div>
-    <div class="d-flex gap-2 align-items-center mt-2 mt-md-0">
-      <span class="badge bg-primary px-3 py-2 fs-6">
-        <i class="bi bi-calendar-check me-1"></i>Tahun {{ filter_tahun }}
-      </span>
+  <!-- ========================================================================= -->
+  <!-- 1. HEADER & NAVIGASI TAHUN RENSTRA 2026–2030 (PILL SWITCHER)               -->
+  <!-- ========================================================================= -->
+  <div class="card border-0 shadow-sm rounded-3 mb-4">
+    <div class="card-body p-3 p-md-4">
+      <div class="d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-3">
+        <div>
+          <div class="d-flex align-items-center gap-2 mb-1">
+            <span class="badge bg-primary px-2.5 py-1 text-white fw-bold font-monospace" style="font-size:0.7rem;">ARIMA MODUL 4</span>
+            <span class="text-muted small fw-semibold">Peta Jalan Renstra 5 Tahun</span>
+          </div>
+          <h4 class="fw-bold mb-1 text-dark">
+            <i class="bi bi-speedometer2 text-primary me-2"></i>Penetapan &amp; Monitoring Indikator Mutu RS
+          </h4>
+          <p class="text-muted small mb-0">
+            Monitoring terintegrasi <strong>13 INM Kemenkes RI</strong> (Wajib Konsisten) dan <strong>36 IMP-RS per Bidang Kerja</strong> berorientasi target Renstra 2026–2030.
+          </p>
+        </div>
+
+        <!-- Pill Navigasi Tahun (2026 - 2030) -->
+        <div class="d-flex align-items-center gap-2 flex-wrap">
+          <span class="text-muted small fw-bold text-uppercase d-none d-sm-inline font-monospace" style="font-size:0.75rem;">
+            Pilih Tahun:
+          </span>
+          <div class="btn-group shadow-sm rounded-pill p-1 bg-light border" role="group">
+            {% for yr in tahun_choices %}
+            <a href="?tahun={{ yr }}{% if filter_jenis %}&jenis={{ filter_jenis }}{% endif %}{% if filter_unit %}&unit={{ filter_unit }}{% endif %}"
+               class="btn year-pill-btn {% if yr == filter_tahun %}btn-primary text-white shadow-sm{% else %}btn-light text-secondary border-0{% endif %}">
+              {{ yr }}
+            </a>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 
-  <!-- Navigasi Tahun Renstra 2026–2030 -->
-  <div class="d-flex flex-wrap gap-2 mb-4">
-    {% for yr in tahun_choices %}
-    <a href="?tahun={{ yr }}{% if filter_jenis %}&jenis={{ filter_jenis }}{% endif %}{% if filter_unit %}&unit={{ filter_unit }}{% endif %}"
-       class="btn {% if yr == filter_tahun %}btn-primary{% else %}btn-outline-primary{% endif %} px-4 py-2 fw-bold rounded-pill"
-       style="font-size: 0.95rem; min-width: 90px;">
-        <i class="bi bi-calendar3 me-1"></i>{{ yr }}
-    </a>
-    {% endfor %}
+  <!-- ========================================================================= -->
+  <!-- 2. BANNER FOKUS STRATEGIS RENSTRA TAHUNAN (AUTO-POPULATE DARI DOCX)        -->
+  <!-- ========================================================================= -->
+  <div class="renstra-banner shadow-sm p-4 p-md-4 mb-4">
+    <div class="row align-items-center g-3 mb-3">
+      <div class="col-12 col-md-8">
+        <div class="d-flex align-items-center gap-2 mb-2">
+          <span class="badge bg-white text-dark fw-bold font-monospace px-3 py-1" style="font-size:0.8rem;">
+            <i class="bi bi-calendar3 me-1 text-primary"></i>TAHUN {{ filter_tahun }}
+          </span>
+          <span class="badge bg-white/20 text-white border border-white/30 px-2.5 py-1" style="font-size:0.72rem;">
+            ISU STRATEGIS RENSTRA RS
+          </span>
+        </div>
+        <h3 class="fw-bold mb-1 text-white" style="letter-spacing:-0.02em;">
+          {{ current_renstra.isu_strategis }}
+        </h3>
+        <p class="text-white-50 mb-0 small" style="line-height:1.45; max-width:680px;">
+          {{ current_renstra.sub_tema }} &bull; {{ current_renstra.deskripsi }}
+        </p>
+      </div>
+
+      <div class="col-12 col-md-4 text-md-end">
+        <span class="badge bg-emerald text-white px-3 py-2 fw-semibold" style="background:#059669; font-size:0.8rem;">
+          <i class="bi bi-shield-check me-1"></i>3 Fokus IMP-RS Tahunan Terpasang
+        </span>
+      </div>
+    </div>
+
+    <!-- 3 KARTU FOKUS INDIKATOR MUTU PRIORITAS TAHUNAN (AUTO-POPULATE) -->
+    <div class="row g-3 pt-2 border-top border-white/20">
+      {% for item in current_renstra.fokus_items %}
+      <div class="col-12 col-md-4">
+        <div class="fokus-card h-100 d-flex flex-column justify-content-between">
+          <div>
+            <div class="d-flex justify-content-between align-items-start mb-2">
+              <span class="badge bg-white text-dark font-monospace fw-bold" style="font-size:0.65rem;">
+                FOKUS #{{ item.nomor }} &bull; {{ item.kode_ref }}
+              </span>
+              <span class="badge bg-white/20 text-white font-monospace" style="font-size:0.65rem;">
+                {{ item.unit_name }}
+              </span>
+            </div>
+            <h6 class="fw-bold text-white mb-2" style="font-size:0.85rem; line-height:1.35;">
+              {{ item.nama }}
+            </h6>
+          </div>
+          <div class="d-flex justify-content-between align-items-end pt-2 border-top border-white/10 mt-2">
+            <span class="text-white-50 small" style="font-size:0.7rem;">Target Renstra:</span>
+            <span class="fw-bold text-warning font-monospace" style="font-size:1.05rem;">
+              {{ item.target }}
+            </span>
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
   </div>
 
-  <!-- Summary Cards -->
+  <!-- ========================================================================= -->
+  <!-- 3. KPI SUMMARY CARDS (RINGKASAN STATUS CAPAIAN)                           -->
+  <!-- ========================================================================= -->
   <div class="row g-3 mb-4">
     {% for label, data in summary.items %}
     <div class="col-12 col-sm-6 col-xl-3">
       <div class="card border-0 shadow-sm rounded-3 h-100">
-        <div class="card-body">
+        <div class="card-body p-3">
           <div class="d-flex justify-content-between align-items-start">
             <div>
-              <span class="text-muted text-uppercase fw-semibold" style="font-size:0.75rem;">{{ label }}</span>
-              <h3 class="fw-bold my-1 text-dark">{{ data.total }}</h3>
+              <span class="text-muted text-uppercase fw-semibold" style="font-size:0.7rem; letter-spacing:0.04em;">{{ label }}</span>
+              <h3 class="fw-bold my-1 text-dark font-monospace">{{ data.total }}</h3>
               <div class="small">
-                <span class="text-success fw-medium"><i class="bi bi-check-circle-fill me-1"></i>{{ data.tercapai }} Tercapai</span>
+                <span class="text-success fw-semibold"><i class="bi bi-check-circle-fill me-1"></i>{{ data.tercapai }} Tercapai</span>
                 <span class="text-muted mx-1">&bull;</span>
-                <span class="text-danger fw-medium">{{ data.belum }} Belum / Open</span>
+                <span class="text-danger fw-semibold">{{ data.belum }} Belum</span>
               </div>
             </div>
-            <div class="p-3 bg-light rounded-3 text-primary">
+            <div class="p-2.5 bg-light rounded-3 text-primary">
               <i class="bi bi-graph-up-arrow fs-4"></i>
             </div>
           </div>
@@ -60,21 +192,26 @@
     {% endfor %}
   </div>
 
-  <!-- Filter & Search Bar -->
+  <!-- ========================================================================= -->
+  <!-- 4. FILTER BAR CEPAT (JENIS & UNIT PENGAMPU)                               -->
+  <!-- ========================================================================= -->
   <div class="card border-0 shadow-sm rounded-3 mb-4">
     <div class="card-body p-3">
       <form method="GET" class="row g-2 align-items-center">
-        <div class="col-12 col-md-3">
-          <label class="form-label small text-muted mb-1">Jenis Indikator</label>
+        <input type="hidden" name="tahun" value="{{ filter_tahun }}">
+
+        <div class="col-12 col-md-4">
+          <label class="form-label small text-muted mb-1">Filter Kategori Indikator</label>
           <select name="jenis" class="form-select form-select-sm" onchange="this.form.submit()">
-            <option value="">Semua Jenis ({{ indikators.count }})</option>
+            <option value="">Semua Kategori ({{ indikators|length }})</option>
             {% for val, txt in jenis_choices %}
             <option value="{{ val }}" {% if filter_jenis == val %}selected{% endif %}>{{ txt }}</option>
             {% endfor %}
           </select>
         </div>
-        <div class="col-12 col-md-4">
-          <label class="form-label small text-muted mb-1">Unit Kerja Pengampu</label>
+
+        <div class="col-12 col-md-5">
+          <label class="form-label small text-muted mb-1">Filter Unit Pengampu</label>
           <select name="unit" class="form-select form-select-sm" onchange="this.form.submit()">
             <option value="">Semua Unit Kerja</option>
             {% for u in units %}
@@ -84,21 +221,12 @@
             {% endfor %}
           </select>
         </div>
-        <div class="col-12 col-md-2">
-          <label class="form-label small text-muted mb-1">Tahun Evaluasi</label>
-          <select name="tahun" class="form-select form-select-sm" onchange="this.form.submit()">
-            <option value="2026" {% if filter_tahun == "2026" %}selected{% endif %}>2026 (Fondasi)</option>
-            <option value="2027" {% if filter_tahun == "2027" %}selected{% endif %}>2027 (Modernisasi)</option>
-            <option value="2028" {% if filter_tahun == "2028" %}selected{% endif %}>2028 (Ekselensi)</option>
-            <option value="2029" {% if filter_tahun == "2029" %}selected{% endif %}>2029 (Green Hosp)</option>
-            <option value="2030" {% if filter_tahun == "2030" %}selected{% endif %}>2030 (Benchmark)</option>
-          </select>
-        </div>
-        <div class="col-12 col-md-3 d-flex align-items-end gap-2 pt-3 pt-md-0">
+
+        <div class="col-12 col-md-3 d-flex align-items-end gap-2 pt-2 pt-md-0">
           <button type="submit" class="btn btn-sm btn-primary flex-fill">
-            <i class="bi bi-filter me-1"></i>Terapkan
+            <i class="bi bi-funnel me-1"></i>Terapkan
           </button>
-          <a href="{% url 'akreditasi:indikator_dashboard' %}" class="btn btn-sm btn-outline-secondary">
+          <a href="{% url 'akreditasi:indikator_dashboard' %}?tahun={{ filter_tahun }}" class="btn btn-sm btn-outline-secondary">
             Reset
           </a>
         </div>
@@ -106,79 +234,131 @@
     </div>
   </div>
 
-  <!-- Table Indikator -->
-  <div class="card border-0 shadow-sm rounded-3">
-    <div class="card-header bg-white py-3 border-0">
-      <div class="d-flex justify-content-between align-items-center">
-        <h6 class="fw-bold mb-0">Daftar Indikator Mutu ({{ indikators.count }})</h6>
-        <span class="badge bg-light text-dark border">
-          <i class="bi bi-info-circle me-1"></i>Klik nama indikator untuk detail grafik tren 12 bulan
+  <!-- ========================================================================= -->
+  <!-- 5. TABEL UTAMA: INDIKATOR MUTU (TERBAGI DALAM SECTION JELAS)              -->
+  <!-- ========================================================================= -->
+  <div class="card border-0 shadow-sm rounded-3 overflow-hidden">
+    <div class="card-header bg-white py-3 border-bottom d-flex flex-wrap justify-content-between align-items-center">
+      <div>
+        <h5 class="fw-bold mb-0 text-dark">
+          <i class="bi bi-list-stars text-primary me-2"></i>Daftar Penetapan Indikator Mutu (Tahun {{ filter_tahun }})
+        </h5>
+        <small class="text-muted">Total {{ indikators|length }} indikator mutu aktif di sistem RS Monsiskami</small>
+      </div>
+      <div class="d-flex align-items-center gap-2 mt-2 mt-md-0">
+        <span class="badge bg-success-subtle text-success border border-success-subtle px-2.5 py-1 small">
+          <i class="bi bi-check2-circle me-1"></i>Tercapai
+        </span>
+        <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-2.5 py-1 small">
+          <i class="bi bi-clock-history me-1"></i>Belum / Proses
         </span>
       </div>
     </div>
+
     <div class="table-responsive">
-      <table class="table table-hover align-middle mb-0">
-        <thead class="table-light text-muted small text-uppercase">
+      <table class="table table-hover align-middle mb-0 indicator-table">
+        <thead>
           <tr>
-            <th class="ps-3" style="width: 100px;">Kode</th>
-            <th>Indikator Mutu</th>
-            <th style="width: 130px;">Jenis</th>
-            <th style="width: 120px;">Dimensi</th>
+            <th class="ps-3" style="width: 110px;">Kode</th>
+            <th>Nama Indikator Mutu &amp; Formula</th>
+            <th style="width: 140px;">Kategori</th>
             <th style="width: 180px;">Unit Pengampu</th>
             <th class="text-center" style="width: 110px;">Target</th>
-            <th style="width: 130px;">Standar EP</th>
-            <th class="text-end pe-3" style="width: 110px;">Aksi</th>
+            <th class="text-center" style="width: 120px;">Capaian ({{ filter_tahun }})</th>
+            <th class="text-center" style="width: 100px;">Status</th>
+            <th class="text-end pe-3" style="width: 100px;">Aksi</th>
           </tr>
         </thead>
         <tbody>
           {% for ind in indikators %}
-          <tr>
+          <tr class="indicator-row {% if ind.is_renstra_focus %}table-warning-subtle border-start border-warning border-3{% endif %}">
+            <!-- KODE -->
             <td class="ps-3">
-              <span class="badge bg-dark-subtle text-dark fw-bold font-monospace">{{ ind.kode_indikator }}</span>
+              <span class="badge bg-dark-subtle text-dark fw-bold font-monospace px-2 py-1" style="font-size:0.75rem;">
+                {{ ind.kode_indikator }}
+              </span>
+              {% if ind.is_renstra_focus %}
+              <span class="badge bg-warning text-dark d-block mt-1 font-monospace" style="font-size:0.6rem;">
+                <i class="bi bi-star-fill me-0.5"></i>RENSTRA
+              </span>
+              {% endif %}
             </td>
+
+            <!-- NAMA & FORMULA -->
             <td>
-              <a href="{% url 'akreditasi:indikator_detail' ind.pk %}?tahun={{ filter_tahun }}" class="text-decoration-none fw-semibold text-primary">
+              <a href="{% url 'akreditasi:indikator_detail' ind.pk %}?tahun={{ filter_tahun }}" class="text-decoration-none fw-bold text-dark d-block mb-0.5">
                 {{ ind.nama_indikator }}
               </a>
-              <div class="small text-muted text-truncate" style="max-width: 480px;" title="Num: {{ ind.numerator }} | Den: {{ ind.denominator }}">
-                <span class="text-secondary">N:</span> {{ ind.numerator|truncatechars:65 }}
+              <div class="small text-muted text-truncate" style="max-width: 520px;" title="Numerator: {{ ind.numerator }} | Denominator: {{ ind.denominator }}">
+                <span class="text-secondary fw-semibold">N:</span> {{ ind.numerator|truncatechars:65 }}
               </div>
             </td>
+
+            <!-- KATEGORI / JENIS -->
             <td>
               {% if ind.jenis == 'NASIONAL' %}
-                <span class="badge bg-danger-subtle text-danger border border-danger-subtle">INM Kemenkes</span>
+                <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-2 py-1">
+                  <i class="bi bi-flag-fill me-1"></i>INM Wajib
+                </span>
               {% elif ind.jenis == 'IMP_RS' %}
-                <span class="badge bg-primary-subtle text-primary border border-primary-subtle">IMP-RS</span>
+                <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-2 py-1">
+                  IMP-RS Prioritas
+                </span>
               {% else %}
-                <span class="badge bg-secondary-subtle text-secondary">{{ ind.get_jenis_display }}</span>
+                <span class="badge bg-secondary-subtle text-secondary px-2 py-1">
+                  {{ ind.get_jenis_display }}
+                </span>
               {% endif %}
             </td>
-            <td>
-              <span class="badge bg-light text-secondary border">{{ ind.get_dimensi_mutu_display }}</span>
-            </td>
+
+            <!-- UNIT PENGAMPU -->
             <td>
               {% if ind.unit %}
-                <span class="badge bg-light text-dark border">{{ ind.unit.code }}</span>
-                <span class="small text-muted d-block text-truncate" style="max-width: 160px;">{{ ind.unit.name }}</span>
+                <span class="badge bg-light text-dark border font-monospace" style="font-size:0.68rem;">{{ ind.unit.code }}</span>
+                <span class="small text-muted d-block text-truncate mt-0.5" style="max-width: 170px;">{{ ind.unit.name }}</span>
               {% else %}
-                <span class="text-muted small">Semua Unit (RS)</span>
+                <span class="badge bg-light text-secondary border">Rumah Sakit (Seluruh Unit)</span>
               {% endif %}
             </td>
+
+            <!-- TARGET -->
             <td class="text-center">
-              <span class="fw-bold text-dark">{{ ind.target_nilai|floatformat:1 }} {{ ind.satuan }}</span>
+              <span class="badge-target text-dark">
+                {{ ind.target_nilai|floatformat:1 }} {{ ind.satuan }}
+              </span>
             </td>
-            <td>
-              {% if ind.ep_terkait %}
-                <span class="badge bg-info-subtle text-info-emphasis border border-info-subtle font-monospace small">
-                  {{ ind.ep_terkait.code }}
+
+            <!-- CAPAIAN TERAKHIR TAHUN INI -->
+            <td class="text-center font-monospace">
+              {% if ind.last_catatan %}
+                <span class="fw-bold {% if ind.is_tercapai %}text-success{% else %}text-danger{% endif %} fs-6">
+                  {{ ind.last_catatan.nilai_capaian|floatformat:1 }} {{ ind.satuan }}
+                </span>
+                <span class="d-block text-muted" style="font-size:0.65rem;">
+                  Bulan ke-{{ ind.last_catatan.bulan }}
                 </span>
               {% else %}
                 <span class="text-muted small">—</span>
               {% endif %}
             </td>
+
+            <!-- STATUS TERCAPAI / BELUM -->
+            <td class="text-center">
+              {% if ind.is_tercapai %}
+                <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1">
+                  <i class="bi bi-check-lg me-0.5"></i>Tercapai
+                </span>
+              {% else %}
+                <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-2 py-1">
+                  <i class="bi bi-x me-0.5"></i>Belum
+                </span>
+              {% endif %}
+            </td>
+
+            <!-- AKSI -->
             <td class="text-end pe-3">
               <div class="btn-group btn-group-sm">
-                <a href="{% url 'akreditasi:indikator_detail' ind.pk %}?tahun={{ filter_tahun }}" class="btn btn-outline-primary" title="Lihat Tren Grafik">
+                <a href="{% url 'akreditasi:indikator_detail' ind.pk %}?tahun={{ filter_tahun }}" class="btn btn-outline-primary" title="Grafik Tren &amp; Riwayat">
                   <i class="bi bi-graph-up"></i>
                 </a>
                 {% if is_manager %}
@@ -191,8 +371,9 @@
           </tr>
           {% empty %}
           <tr>
-            <td colspan="8" class="text-center py-4 text-muted">
-              <i class="bi bi-inbox fs-2 d-block mb-2"></i>Tidak ada indikator mutu yang cocok dengan filter.
+            <td colspan="8" class="text-center py-5 text-muted">
+              <i class="bi bi-inbox fs-1 d-block mb-2 text-secondary"></i>
+              Tidak ada indikator mutu yang sesuai kriteria pencarian.
             </td>
           </tr>
           {% endfor %}

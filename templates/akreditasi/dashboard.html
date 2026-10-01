@@ -1,8 +1,8 @@
 {% extends "base.html" %}
 {% load akreditasi_tags %}
 
-{% block page_title %}{% if unit_dashboard %}{{ unit.name|upper }}{% else %}APLIKASI DOKUMEN MANAJEMEN DAN AKREDITASI RS MonsisKami{% endif %}{% endblock %}
-{% block page_subtitle %}{% if unit_dashboard %}Dashboard Unit — {{ unit.get_tipe_unit_display|default:"Unit Pelayanan" }} | {{ rs_profile.nama_rs|default:"RS MonsisKami Tipe B" }}{% else %}Sistem Manajemen Dokumen Akreditasi STARKES &amp; Manajemen Risiko Terintegrasi Tipe B{% endif %}{% endblock %}
+{% block page_title %}{% if unit_dashboard %}{{ unit.name|upper }}{% else %}ARIMA — RS MonsisKami{% endif %}{% endblock %}
+{% block page_subtitle %}{% if unit_dashboard %}Dashboard Unit — {{ unit.get_tipe_unit_display|default:"Unit Pelayanan" }} | {{ rs_profile.nama_rs|default:"RS MonsisKami Tipe B" }}{% else %}Aplikasi Terpadu Manajemen Risiko dan Tata Kelola Dokumen Akreditasi RS{% endif %}{% endblock %}
 
 {% block extra_css %}
 <style>
