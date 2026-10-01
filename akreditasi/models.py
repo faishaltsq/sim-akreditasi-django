@@ -286,16 +286,54 @@ class RumahSakitProfile(models.Model):
 
     @classmethod
     def get_default(cls):
-        obj, _ = cls.objects.get_or_create(
+        DEFAULT_VISI = "Menjadi Rumah Sakit Rujukan Unggul yang Terpercaya, Modern, dan Berdaya Saing Global Melalui Pelayanan Kesehatan Paripurna Berbasis Keselamatan Pasien dan Tata Kelola Digital."
+        DEFAULT_MISI = (
+            "1. Menyelenggarakan pelayanan kesehatan yang komprehensif, bermutu tinggi, dan berorientasi pada keselamatan pasien.\n"
+            "2. Mengembangkan kompetensi dan profesionalisme seluruh sumber daya manusia kesehatan secara berkesinambungan.\n"
+            "3. Mengembangkan tata kelola rumah sakit yang transparan, akuntabel, dan berbasis teknologi informasi terintegrasi.\n"
+            "4. Mewujudkan sarana, prasarana, dan fasilitas pelayanan yang ramah lingkungan (Green Hospital) serta adaptif terhadap kemajuan zaman."
+        )
+        DEFAULT_MOTTO = "Melayani dengan Hati, Mengutamakan Keselamatan, Mengabdi untuk Negeri."
+        DEFAULT_TUJUAN = "Mewujudkan tata kelola klinis dan manajemen yang unggul, mencapai standar akreditasi paripurna STARKES, serta menjamin kesinambungan pelayanan kesehatan yang berkualitas bagi seluruh lapisan masyarakat."
+
+        obj, created = cls.objects.get_or_create(
             id=1,
             defaults={
                 'name': 'RS MonsisKami',
                 'tipe': 'Rumah Sakit Tipe B',
                 'kota': 'Jakarta',
                 'akreditasi_tahun': 2026,
+                'visi': DEFAULT_VISI,
+                'misi': DEFAULT_MISI,
+                'motto': DEFAULT_MOTTO,
+                'tujuan': DEFAULT_TUJUAN,
             }
         )
+        # Jika sudah ada di DB tapi field visi masih kosong, populate default
+        if not obj.visi:
+            obj.visi = DEFAULT_VISI
+            obj.misi = DEFAULT_MISI
+            obj.motto = DEFAULT_MOTTO
+            obj.tujuan = DEFAULT_TUJUAN
+            obj.save(update_fields=['visi', 'misi', 'motto', 'tujuan'])
         return obj
+
+    @property
+    def misi_list(self):
+        """Return list baris misi tanpa penomoran manual dan tanpa baris kosong."""
+        import re
+        if not self.misi:
+            return []
+        items = []
+        for line in self.misi.splitlines():
+            line = line.strip()
+            if not line:
+                continue
+            # Buang penomoran manual di depan seperti '1. ', '1) ', '- '
+            cleaned = re.sub(r'^\s*(\d+[\.\)]\s*|-\s*)', '', line).strip()
+            if cleaned:
+                items.append(cleaned)
+        return items
 
 
 class AuditLog(models.Model):
