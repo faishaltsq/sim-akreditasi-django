@@ -115,13 +115,10 @@
                                 <label class="form-label" style="font-size:.8rem; font-weight:600;">
                                     <i class="bi bi-graph-up-arrow text-primary me-1"></i>Indikator Mutu Terkait
                                 </label>
-                                <select name="indikator_mutu_terkait" class="form-select form-select-sm">
-                                    <option value="">— Tidak ada / Pilih Indikator —</option>
-                                    {% for ind in indikator_list %}
-                                    <option value="{{ ind.id }}" data-target="{{ ind.target_nilai }}">[{{ ind.kode_indikator }}] {{ ind.nama_indikator }}</option>
-                                    {% endfor %}
+                                <select name="indikator_mutu_terkait" id="indikator_mutu_select" class="form-select form-select-sm">
+                                    <option value="">— Pilih unit dahulu untuk memfilter indikator —</option>
                                 </select>
-                                <small class="text-muted" style="font-size:.65rem;">Link risiko ini ke dashboard indikator mutu (INM / IMP-RS / IMP-Unit)</small>
+                                <small class="text-muted" style="font-size:.65rem;">Indikator mutu otomatis difilter sesuai unit kerja yang dipilih</small>
                             </div>
                             <div class="col-md-4">
                                 <label class="form-label" style="font-size:.8rem; font-weight:600;">
@@ -132,6 +129,13 @@
                                        min="0" max="100" step="0.01">
                                 <small class="text-muted" style="font-size:.65rem;">Target capaian indikator mutu terkait risiko ini</small>
                             </div>
+                        </div>
+                        {# Preset Rencana Aksi per Indikator #}
+                        <div id="preset-rencana-aksi-container" class="mb-3" style="display:none;">
+                            <label class="form-label" style="font-size:.78rem; font-weight:600; color:#0f766e;">
+                                <i class="bi bi-lightning-charge-fill me-1"></i>Pilih Rencana Aksi Cepat <span class="text-muted fw-normal">(klik untuk menambahkan)</span>
+                            </label>
+                            <div id="preset-chips" class="d-flex flex-wrap gap-2"></div>
                         </div>
 
                         {# ── Bagian D: Mitigasi ─────────────────────── #}
@@ -192,6 +196,7 @@
 <script src="/static/js/ai-assist.js"></script>
 <script>
 (function() {
+    // ── Skor Risiko Realtime ──────────────────────────────────────────────
     const dampakEl  = document.getElementById('dampak');
     const probEl    = document.getElementById('probabilitas');
     const dValEl    = document.getElementById('dampak-val');
@@ -227,17 +232,146 @@
     probEl.addEventListener('input', update);
     update();
 
-    // Auto-fill target capaian dari data-target indikator yang dipilih
-    const indikatorSel = document.querySelector('select[name="indikator_mutu_terkait"]');
-    const targetInp    = document.getElementById('target_capaian_indikator');
-    if (indikatorSel && targetInp) {
+    // ── Filter Indikator Mutu per Unit (AJAX) ────────────────────────────
+    const unitSelect     = document.querySelector('select[name="unit"]');
+    const indikatorSel   = document.getElementById('indikator_mutu_select');
+    const targetInp      = document.getElementById('target_capaian_indikator');
+    const presetContainer = document.getElementById('preset-rencana-aksi-container');
+    const presetChips    = document.getElementById('preset-chips');
+    const rencanaAksiTA  = document.querySelector('textarea[name="rencana_aksi"]');
+
+    // Simpan data indikator saat ini untuk dipakai tombol AI
+    let _currentIndikator = null;
+
+    function buildPresetChips(presets) {
+        presetChips.innerHTML = '';
+        if (!presets || !presets.length) return;
+        presets.forEach(function(text) {
+            const chip = document.createElement('button');
+            chip.type = 'button';
+            chip.className = 'btn btn-sm';
+            chip.style.cssText = 'font-size:.72rem; border:1px solid #0d9488; color:#0f766e; background:#f0fdfa; border-radius:20px; padding:3px 12px;';
+            chip.innerHTML = '<i class="bi bi-plus-circle me-1"></i>' + text;
+            chip.addEventListener('click', function() {
+                if (!rencanaAksiTA) return;
+                const cur = rencanaAksiTA.value.trim();
+                rencanaAksiTA.value = cur ? cur + '\n• ' + text : '• ' + text;
+                // Visual feedback
+                chip.style.background = '#0d9488';
+                chip.style.color = '#fff';
+                setTimeout(function() {
+                    chip.style.background = '#f0fdfa';
+                    chip.style.color = '#0f766e';
+                }, 800);
+                rencanaAksiTA.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            });
+            presetChips.appendChild(chip);
+        });
+    }
+
+    function loadIndikatorByUnit(unitId) {
+        // Reset dropdown
+        indikatorSel.innerHTML = '<option value="">⏳ Memuat indikator...</option>';
+        presetContainer.style.display = 'none';
+        _currentIndikator = null;
+
+        const url = '/akreditasi/risiko/api/indikator-by-unit/' + (unitId ? '?unit_id=' + unitId : '');
+        fetch(url)
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                indikatorSel.innerHTML = '<option value="">— Tidak ada / Pilih Indikator —</option>';
+                if (!data.indikator || !data.indikator.length) {
+                    indikatorSel.innerHTML += '<option disabled>Tidak ada indikator untuk unit ini</option>';
+                    return;
+                }
+                let lastJenis = '';
+                data.indikator.forEach(function(ind) {
+                    if (ind.jenis !== lastJenis) {
+                        const grp = document.createElement('optgroup');
+                        grp.label = '── ' + ind.jenis + ' ──';
+                        indikatorSel.appendChild(grp);
+                        lastJenis = ind.jenis;
+                    }
+                    const opt = document.createElement('option');
+                    opt.value = ind.id;
+                    opt.textContent = '[' + ind.kode + '] ' + ind.nama;
+                    opt.dataset.target = ind.target;
+                    opt.dataset.satuan = ind.satuan;
+                    opt.dataset.presets = JSON.stringify(ind.preset_rencana_aksi);
+                    opt.dataset.kode = ind.kode;
+                    opt.dataset.nama = ind.nama;
+                    indikatorSel.appendChild(opt);
+                });
+            })
+            .catch(function() {
+                indikatorSel.innerHTML = '<option value="">— Gagal memuat, coba lagi —</option>';
+            });
+    }
+
+    if (unitSelect) {
+        // Load saat halaman pertama dibuka
+        if (unitSelect.value) {
+            loadIndikatorByUnit(unitSelect.value);
+        } else {
+            // Tampilkan semua jika superadmin (tidak ada default unit)
+            loadIndikatorByUnit('');
+        }
+
+        unitSelect.addEventListener('change', function() {
+            loadIndikatorByUnit(this.value);
+        });
+    }
+
+    // Saat indikator dipilih: auto-fill target + tampilkan preset chips
+    if (indikatorSel) {
         indikatorSel.addEventListener('change', function() {
             const opt = this.options[this.selectedIndex];
-            const t   = opt.getAttribute('data-target');
-            if (t && t !== 'None' && !targetInp.value) {
+            _currentIndikator = null;
+
+            if (!opt.value) {
+                presetContainer.style.display = 'none';
+                return;
+            }
+
+            // Auto-fill target capaian
+            const t = opt.dataset.target;
+            if (t && t !== 'None' && targetInp && !targetInp.value) {
                 targetInp.value = parseFloat(t).toFixed(2);
             }
+
+            // Preset rencana aksi chips
+            try {
+                const presets = JSON.parse(opt.dataset.presets || '[]');
+                if (presets.length) {
+                    buildPresetChips(presets);
+                    presetContainer.style.display = 'block';
+                } else {
+                    presetContainer.style.display = 'none';
+                }
+            } catch(e) {
+                presetContainer.style.display = 'none';
+            }
+
+            // Simpan data indikator untuk tombol AI
+            _currentIndikator = {
+                kode: opt.dataset.kode,
+                nama: opt.dataset.nama,
+                target: opt.dataset.target,
+                satuan: opt.dataset.satuan,
+            };
         });
+    }
+
+    // ── Override ai-assist.js: inject konteks indikator ke payload AI ────
+    // Patch window sehingga saat btn-ai-mitigasi diklik, konteks indikator disertakan
+    const origBtnAi = document.getElementById('btn-ai-mitigasi');
+    if (origBtnAi) {
+        origBtnAi.addEventListener('click', function() {
+            // Daftarkan indikator ke window global agar ai-assist.js bisa baca
+            if (_currentIndikator) {
+                window._arimaIndikatorContext = _currentIndikator;
+            }
+        }, true); // capture phase: sebelum ai-assist.js
     }
 })();
 </script>

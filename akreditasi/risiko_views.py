@@ -4,10 +4,12 @@ Fase 2 — Views Manajemen Risiko PDCA + Insiden Keselamatan
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
+from django.http import JsonResponse
 from django.db.models import Count, Q
 from django.utils import timezone
+from django.views.decorators.http import require_GET
 
-from .risiko_models import RisikoUnit, TindakLanjutRisiko, InsidenKeselamatan
+from .risiko_models import RisikoUnit, TindakLanjutRisiko, InsidenKeselamatan, IndikatorMutu
 from .models import UnitKerja, AuditLog
 
 
@@ -68,7 +70,116 @@ def _log(user, aksi, obj, detail=''):
     )
 
 
-# ── 1. Daftar Risiko ────────────────────────────────────────────────────
+# ── 0. AJAX: Indikator Mutu per Unit (filter dropdown) ─────────────────
+
+# Preset rencana aksi realistis per jenis indikator (kode prefix → preset)
+_RENCANA_AKSI_PRESET = {
+    # Farmasi
+    'IMP-FARM-01': [
+        'Review alur antrian pendaftaran & dispensing obat jadi',
+        'Optimalkan pra-dispensing dan pembagian shift apoteker',
+        'Implementasi sistem pemrosesan resep digital (e-prescribing)',
+        'Edukasi pasien terkait estimasi waktu tunggu via display antrian',
+    ],
+    'IMP-FARM-02': [
+        'Audit proses peracikan obat dan identifikasi bottleneck',
+        'Tambah staf asisten apoteker saat jam puncak pelayanan',
+        'Siapkan bahan baku racikan pre-batch untuk formulasi umum',
+    ],
+    'IMP-FARM-03': [
+        'Lakukan root cause analysis (RCA) setiap kejadian medication error',
+        'Implementasi double-check 2 apoteker untuk obat LASA & high-alert',
+        'Pasang stiker High Alert & LASA sesuai panduan KARS SKP 3',
+        'Edukasi ulang staf farmasi tentang 6 benar pemberian obat',
+    ],
+    # Laboratorium
+    'IMP-LAB-01': [
+        'Audit proses pre-analitik: waktu pengambilan sampel hingga pemeriksaan',
+        'Kalibrasi rutin alat laboratorium dan validasi reagen',
+        'Optimalkan alur pengiriman sampel urgent dari IGD/ICU',
+    ],
+    # IBS
+    'IMP-IBS-01': [
+        'Sosialisasi ulang Surgical Safety Checklist (SSC) ke seluruh tim OK',
+        'Tunjuk PIC auditor SSC per sesi operasi',
+        'Lakukan audit SSC mingguan & feedback langsung ke tim bedah',
+    ],
+    'IMP-IBS-02': [
+        'Implementasi bundle IDO: antibiotik profilaksis <60 menit pre-insisi',
+        'Audit kepatuhan teknik aseptik dan preparasi kulit pasien',
+        'Monitor suhu & kadar glukosa intraoperatif sesuai bundle IDO KARS',
+        'Review dan perbarui SPO perawatan luka post-operasi',
+    ],
+    # ICU
+    'IMP-ICU-01': [
+        'Implementasi bundle VAP: elevasi kepala 30-45°, oral hygiene Chlorhexidine',
+        'Audit kepatuhan bundle VAP harian oleh PJ infeksi ICU',
+        'Review sedasi & target weaning ventilator setiap hari',
+    ],
+    'IMP-ICU-02': [
+        'Implementasi bundle CAUTI: perawatan kateter steril harian',
+        'Evaluasi indikasi pemasangan & rencana pencabutan kateter setiap hari',
+        'Audit kepatuhan hand hygiene staf ICU sebelum/sesudah intervensi',
+    ],
+    # PPI (umum)
+    'DEFAULT_PPI': [
+        'Tingkatkan kepatuhan hand hygiene sesuai 5 Momen WHO',
+        'Laksanakan audit PPI mingguan & feedback ke unit',
+        'Update SPO penanganan limbah medis & APD sesuai PMK 27/2017',
+        'Sosialisasi bundle infeksi terkait layanan kesehatan (HAIS)',
+    ],
+    # Mutu umum
+    'DEFAULT': [
+        'Lakukan analisis akar masalah (RCA/Fishbone) atas capaian yang belum tercapai',
+        'Susun rencana PDCA bulanan: Plan→Do→Check→Act',
+        'Lakukan supervisi dan coaching langsung kepada staf pelaksana',
+        'Evaluasi capaian indikator per bulan di rapat mutu unit',
+        'Dokumentasikan setiap perbaikan sebagai bukti EP akreditasi',
+    ],
+}
+
+
+def _get_preset_rencana_aksi(kode_indikator: str) -> list:
+    """Return daftar preset rencana aksi berdasarkan kode indikator."""
+    if kode_indikator in _RENCANA_AKSI_PRESET:
+        return _RENCANA_AKSI_PRESET[kode_indikator]
+    # Coba prefix kategori (IMP-FARM, IMP-IBS, dst.)
+    prefix = '-'.join(kode_indikator.split('-')[:2]) if '-' in kode_indikator else ''
+    # Cek PPI terkait
+    if 'PPI' in kode_indikator.upper() or 'VAP' in kode_indikator.upper() or 'IDO' in kode_indikator.upper():
+        return _RENCANA_AKSI_PRESET['DEFAULT_PPI']
+    return _RENCANA_AKSI_PRESET['DEFAULT']
+
+
+@login_required
+@require_GET
+def api_indikator_by_unit(request):
+    """AJAX: Return daftar IndikatorMutu aktif berdasarkan unit_id.
+    Tanpa unit_id → return semua. Termasuk preset rencana aksi per indikator.
+    """
+    unit_id = request.GET.get('unit_id')
+    qs = IndikatorMutu.objects.filter(aktif=True).select_related('unit')
+    if unit_id:
+        # Tampilkan indikator milik unit ini + indikator INM global (unit=null)
+        qs = qs.filter(Q(unit_id=unit_id) | Q(unit__isnull=True))
+    qs = qs.order_by('jenis', 'kode_indikator')
+
+    data = []
+    for ind in qs:
+        data.append({
+            'id': ind.id,
+            'kode': ind.kode_indikator,
+            'nama': ind.nama_indikator,
+            'jenis': ind.get_jenis_display(),
+            'target': float(ind.target_nilai),
+            'satuan': ind.satuan,
+            'unit_name': ind.unit.name if ind.unit else 'Global / Nasional',
+            'preset_rencana_aksi': _get_preset_rencana_aksi(ind.kode_indikator),
+        })
+    return JsonResponse({'indikator': data})
+
+
+
 
 @login_required
 def risiko_daftar(request):

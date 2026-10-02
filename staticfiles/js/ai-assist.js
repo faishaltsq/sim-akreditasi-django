@@ -80,8 +80,15 @@
             const stratSelect = document.querySelector('select[name="strategi_mitigasi"]');
             const strategi = stratSelect ? stratSelect.value : 'Mitigasi (Reduce)';
 
-            if (!jenisRisiko && !deskripsiRisiko) {
-                alert('Silakan ketik dahulu "Jenis Risiko" atau "Deskripsi Risiko" agar AI memiliki konteks.');
+            // Konteks Indikator Mutu jika ada
+            const indCtx = window._arimaIndikatorContext || null;
+            let indDesc = '';
+            if (indCtx) {
+                indDesc = `Indikator Mutu Terkait: [${indCtx.kode}] ${indCtx.nama} (Target: ${indCtx.target}${indCtx.satuan})`;
+            }
+
+            if (!jenisRisiko && !deskripsiRisiko && !indDesc) {
+                alert('Silakan pilih Indikator Mutu atau ketik dahulu "Jenis Risiko" / "Deskripsi Risiko" agar AI memiliki konteks.');
                 if (jenisInput) jenisInput.focus();
                 return;
             }
@@ -103,8 +110,8 @@
                     body: JSON.stringify({
                         unit_name: unitName,
                         kategori_risiko: kategoriRisiko,
-                        jenis_risiko: jenisRisiko,
-                        deskripsi_risiko: deskripsiRisiko,
+                        jenis_risiko: jenisRisiko || (indCtx ? `Risiko capaian ${indCtx.nama}` : ''),
+                        deskripsi_risiko: deskripsiRisiko + (indDesc ? `\n${indDesc}` : ''),
                         dampak: dampak,
                         probabilitas: probabilitas,
                         strategi: strategi,
