@@ -1,5 +1,6 @@
 from .models import Category, Framework, RumahSakitProfile
 from .system_models import SystemConfig
+from django.core.cache import cache
 
 
 KELOMPOK_META = {
@@ -10,40 +11,55 @@ KELOMPOK_META = {
     'PENDIDIKAN': {'label': 'Integrasi Pendidikan', 'icon': 'bi-mortarboard', 'color': 'info'},
 }
 
+_SIDEBAR_CACHE_TTL = 300  # 5 menit
+
 
 def sidebar_context(request):
-    framework = Framework.objects.first()
-    categories = []
-    categories_by_kelompok = {}
+    # Cache framework + categories global (tidak bergantung user) selama 5 menit
+    framework = cache.get('sidebar_framework')
+    categories = cache.get('sidebar_categories')
+    categories_by_kelompok = cache.get('sidebar_categories_by_kelompok')
 
-    if framework:
-        categories = list(framework.categories.prefetch_related(
-            'items__record'
-        ).order_by('order'))
+    if framework is None or categories is None:
+        framework = Framework.objects.first()
+        categories = []
+        categories_by_kelompok = {}
 
-        # Kelompokkan kategori untuk sidebar & matriks
-        for code, meta in KELOMPOK_META.items():
-            k_cats = [c for c in categories if c.kelompok == code]
-            if k_cats:
-                categories_by_kelompok[code] = {
-                    'label': meta['label'],
-                    'icon': meta['icon'],
-                    'color': meta['color'],
-                    'categories': k_cats,
-                    'count': len(k_cats),
-                }
+        if framework:
+            categories = list(framework.categories.prefetch_related(
+                'items__record'
+            ).order_by('order'))
 
-    rs_profile = None
-    try:
-        rs_profile = RumahSakitProfile.get_default()
-    except Exception:
-        pass
+            for code, meta in KELOMPOK_META.items():
+                k_cats = [c for c in categories if c.kelompok == code]
+                if k_cats:
+                    categories_by_kelompok[code] = {
+                        'label': meta['label'],
+                        'icon': meta['icon'],
+                        'color': meta['color'],
+                        'categories': k_cats,
+                        'count': len(k_cats),
+                    }
 
-    sys_config = None
-    try:
-        sys_config = SystemConfig.get_solo()
-    except Exception:
-        pass
+        cache.set('sidebar_framework', framework, _SIDEBAR_CACHE_TTL)
+        cache.set('sidebar_categories', categories, _SIDEBAR_CACHE_TTL)
+        cache.set('sidebar_categories_by_kelompok', categories_by_kelompok, _SIDEBAR_CACHE_TTL)
+
+    rs_profile = cache.get('sidebar_rs_profile')
+    if rs_profile is None:
+        try:
+            rs_profile = RumahSakitProfile.get_default()
+            cache.set('sidebar_rs_profile', rs_profile, _SIDEBAR_CACHE_TTL)
+        except Exception:
+            pass
+
+    sys_config = cache.get('sidebar_sys_config')
+    if sys_config is None:
+        try:
+            sys_config = SystemConfig.get_solo()
+            cache.set('sidebar_sys_config', sys_config, _SIDEBAR_CACHE_TTL)
+        except Exception:
+            pass
 
     # Sidebar standar terkait untuk unit-scoped user (Kepala Instalasi, dll)
     sidebar_unit_standar = None

@@ -213,6 +213,16 @@ def dashboard(request):
 
     # ===== MODE GLOBAL: Admin / Direktur / user tanpa unit_kerja =====
 
+    # Cache seluruh dashboard context selama 5 menit (kunci per framework)
+    from django.core.cache import cache
+    _cache_key = 'dashboard_global_context'
+    cached_ctx = cache.get(_cache_key)
+
+    if cached_ctx is not None:
+        # Gabungkan renstra_years yang sudah dihitung di atas (real-time) ke cached ctx
+        cached_ctx['renstra_years'] = renstra_years
+        return render(request, 'akreditasi/dashboard.html', cached_ctx)
+
     rs_profile = RumahSakitProfile.get_default()
     framework = Framework.objects.first()
     categories = Category.objects.all().order_by('order')
@@ -288,6 +298,7 @@ def dashboard(request):
         'total_units_count': total_units_count,
         'renstra_years': renstra_years,
     }
+    cache.set(_cache_key, context, 300)
     return render(request, 'akreditasi/dashboard.html', context)
 
 
