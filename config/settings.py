@@ -5,7 +5,7 @@ import dj_database_url
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 # ── KEAMANAN: SECRET_KEY & DEBUG ─────────────────────────────────────────
-IS_PRODUCTION = bool(os.environ.get('RAILWAY_ENVIRONMENT') or os.environ.get('RENDER') or os.environ.get('DATABASE_URL'))
+IS_PRODUCTION = bool(os.environ.get('RAILWAY_ENVIRONMENT') or os.environ.get('RENDER') or os.environ.get('VERCEL') or os.environ.get('DATABASE_URL'))
 
 SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY')
 if not SECRET_KEY:
@@ -23,7 +23,7 @@ ALLOWED_HOSTS = [
     for h in os.environ.get('DJANGO_ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
     if h.strip()
 ]
-ALLOWED_HOSTS += ['.onrender.com', '.railway.app', '.pythonanywhere.com', 'testserver']
+ALLOWED_HOSTS += ['.onrender.com', '.railway.app', '.pythonanywhere.com', '.vercel.app', 'testserver']
 
 CSRF_TRUSTED_ORIGINS = [
     o.strip()
@@ -33,6 +33,7 @@ CSRF_TRUSTED_ORIGINS = [
 CSRF_TRUSTED_ORIGINS += [
     'https://*.onrender.com',
     'https://*.railway.app',
+    'https://*.vercel.app',
 ]
 
 RENDER_EXTERNAL_HOSTNAME = os.environ.get('RENDER_EXTERNAL_HOSTNAME')
