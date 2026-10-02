@@ -57,6 +57,29 @@
         height: 220px;
         width: 100%;
     }
+    /* Stepper line Roadmap Renstra */
+    .renstra-stepper {
+        position: relative;
+    }
+    .renstra-stepper::before {
+        content: '';
+        position: absolute;
+        top: 42px;
+        left: 5%;
+        width: 90%;
+        height: 2px;
+        background: repeating-linear-gradient(90deg, #cbd5e1 0px, #cbd5e1 6px, transparent 6px, transparent 12px);
+        z-index: 0;
+        pointer-events: none;
+    }
+    .renstra-year-card {
+        position: relative;
+        z-index: 1;
+    }
+    .renstra-year-active {
+        box-shadow: 0 0 0 2px #3b82f6, 0 0 18px 4px rgba(59, 130, 246, 0.3) !important;
+        border-color: #3b82f6 !important;
+    }
 </style>
 {% endblock %}
 
@@ -179,12 +202,12 @@
                 <div>
                     {% if total_target_dokumen > 0 %}
                     {% widthratio total_uploaded_dokumen total_target_dokumen 100 as pct_doc %}
-                    <div class="progress" style="height: 6px; border-radius: 6px; background: #E2E8F0;">
-                        <div class="progress-bar bg-primary" role="progressbar" style="width: {{ pct_doc }}%;"></div>
+                    <div class="progress" style="height: 8px; border-radius: 6px; background: #E2E8F0;">
+                        <div class="progress-bar bg-primary" role="progressbar" style="width: {{ pct_doc }}%;" title="Dokumen Terunggah (Do): {{ pct_doc }}%"></div>
                     </div>
-                    <div class="d-flex justify-content-between kpi-sub mt-1.5">
-                        <span>Dokumen Terunggah</span>
-                        <span class="fw-bold">{{ pct_doc }}% Terpenuhi</span>
+                    <div class="d-flex justify-content-between kpi-sub mt-2" style="font-size:0.75rem;">
+                        <span class="text-muted"><i class="bi bi-cloud-arrow-up text-primary me-1"></i>Do: {{ total_uploaded_dokumen }} berkas</span>
+                        <span class="fw-bold text-primary">{{ pct_doc }}% Terunggah</span>
                     </div>
                     {% else %}
                     <div class="kpi-sub">Target dokumen belum diset</div>
@@ -276,11 +299,11 @@
                     </div>
                 </div>
                 <div class="kpi-sub pt-1 border-top">
-                    <div class="d-flex justify-content-between">
-                        <span>Capex: <strong>{{ anggaran_capex|rupiah }}</strong></span>
-                        <span>Opex: <strong>{{ anggaran_opex|rupiah }}</strong></span>
+                    <div class="d-flex justify-content-between" style="font-size:0.85rem;">
+                        <span class="text-dark"><i class="bi bi-box-arrow-in-down text-success me-1"></i>Capex: <strong class="text-success">{{ anggaran_capex|rupiah }}</strong></span>
+                        <span class="text-dark"><i class="bi bi-arrow-repeat text-info me-1"></i>Opex: <strong class="text-info">{{ anggaran_opex|rupiah }}</strong></span>
                     </div>
-                    <div class="text-muted mt-0.5" style="font-size:0.68rem;">
+                    <div class="text-muted mt-1" style="font-size:0.72rem;">
                         {{ non_biaya_count }} Tindakan Non-Biaya (Rp 0)
                     </div>
                 </div>
@@ -365,12 +388,12 @@
             </span>
         </div>
         <div class="card-body px-3 pt-0 pb-3">
-            <div class="row g-3">
+            <div class="row g-3 renstra-stepper">
                 {% for yr in renstra_years %}
-                <div class="col-12 col-sm-6 col-lg">
+                <div class="col-12 col-sm-6 col-lg renstra-year-card">
                     <a href="{% url 'akreditasi:indikator_dashboard' %}?tahun={{ yr.year }}"
                        class="text-decoration-none d-block">
-                        <div class="border rounded-3 p-3 h-100 position-relative overflow-hidden transition-all"
+                        <div class="border rounded-3 p-3 h-100 position-relative overflow-hidden transition-all {% if yr.year == 2026 %}renstra-year-active{% endif %}"
                              style="background: linear-gradient(135deg, {{ yr.color }}10, {{ yr.color }}05); border-color: {{ yr.color }}30 !important;"
                              onmouseover="this.style.transform='translateY(-3px)'; this.style.boxShadow='0 6px 20px {{ yr.color }}25'"
                              onmouseout="this.style.transform=''; this.style.boxShadow=''">
@@ -380,6 +403,9 @@
                                       style="background: {{ yr.color }}; color: white; font-weight: 800; font-size: 1.1rem; font-family: 'JetBrains Mono', monospace;">
                                     {{ yr.year }}
                                 </span>
+                                {% if yr.year == 2026 %}
+                                <span class="badge bg-primary text-white font-monospace" style="font-size:0.6rem;">TAHUN AKTIF</span>
+                                {% endif %}
                                 <i class="bi {{ yr.icon }} fs-4" style="color: {{ yr.color }};"></i>
                             </div>
                             <!-- Label Fase -->
