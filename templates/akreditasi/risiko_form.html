@@ -275,7 +275,7 @@
         presetContainer.style.display = 'none';
         _currentIndikator = null;
 
-        const url = '/akreditasi/risiko/api/indikator-by-unit/' + (unitId ? '?unit_id=' + unitId : '');
+        const url = '/risiko/api/indikator-by-unit/' + (unitId ? '?unit_id=' + unitId : '');
         fetch(url)
             .then(function(r) { return r.json(); })
             .then(function(data) {
