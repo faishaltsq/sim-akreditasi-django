@@ -10,6 +10,11 @@
       }
     }
   ],
+  "functions": {
+    "config/wsgi.py": {
+      "maxDuration": 60
+    }
+  },
   "routes": [
     {
       "src": "/(.*)",
