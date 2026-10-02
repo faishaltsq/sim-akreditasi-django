@@ -283,6 +283,39 @@
     </a>
     {% endif %}
 
+    <!-- MANAJEMEN PASIEN (SIMRS) — tampil untuk semua user -->
+    <div class="nav-section mt-2" style="border-top:1px solid #e2e8f0; padding-top:10px; margin-top:8px;">
+        <i class="bi bi-people-fill me-1" style="font-size:0.6rem;"></i> Manajemen Pasien
+    </div>
+    <a href="{% url 'pasien:dashboard' %}" class="nav-link {% if request.resolver_match.app_name == 'pasien' and request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
+        <span class="nav-icon"><i class="bi bi-speedometer2"></i></span>
+        <span class="nav-text">
+            <span class="nav-title">Dashboard Pasien</span>
+            <span class="nav-desc">KPI & Statistik SIMRS</span>
+        </span>
+    </a>
+    <a href="{% url 'pasien:pasien_daftar' %}" class="nav-link {% if request.resolver_match.url_name == 'pasien_daftar' or request.resolver_match.url_name == 'pasien_baru' %}active{% endif %}">
+        <span class="nav-icon"><i class="bi bi-person-lines-fill"></i></span>
+        <span class="nav-text">
+            <span class="nav-title">Data Pasien</span>
+            <span class="nav-desc">Master & Pendaftaran</span>
+        </span>
+    </a>
+    <a href="{% url 'pasien:kunjungan_daftar' %}" class="nav-link {% if request.resolver_match.url_name == 'kunjungan_daftar' or request.resolver_match.url_name == 'kunjungan_baru' %}active{% endif %}">
+        <span class="nav-icon"><i class="bi bi-clipboard2-pulse-fill"></i></span>
+        <span class="nav-text">
+            <span class="nav-title">Kunjungan Pasien</span>
+            <span class="nav-desc">IGD / Rajal / Ranap</span>
+        </span>
+    </a>
+    <a href="{% url 'pasien:bed_management' %}" class="nav-link {% if request.resolver_match.url_name == 'bed_management' %}active{% endif %}">
+        <span class="nav-icon"><i class="bi bi-grid-3x3-gap-fill"></i></span>
+        <span class="nav-text">
+            <span class="nav-title">Bed Management</span>
+            <span class="nav-desc">Ketersediaan & BOR</span>
+        </span>
+    </a>
+
     <!-- PUSAT KONTROL ADMIN — hanya muncul jika user memiliki izin -->
     {% if request.user.is_superuser or request.user.profile.role == 'SUPER_ADMIN' or request.user.profile.role == 'ADMIN_RS' %}
     <a href="{% url 'accounts:admin_control_center' %}" class="nav-link {% if request.resolver_match.url_name == 'admin_control_center' %}active{% endif %}">

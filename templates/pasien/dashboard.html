@@ -1,0 +1,257 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard Manajemen Pasien — ARIMA{% endblock %}
+{% block page_title %}Dashboard Manajemen Pasien{% endblock %}
+{% block page_subtitle %}Manajemen Pasien — RS MonsisKami{% endblock %}
+
+{% block extra_css %}
+<style>
+    .kpi-card {
+        background: #fff; border: 1px solid #e2e8f0; border-radius: .75rem;
+        padding: 1.1rem 1.2rem; box-shadow: 0 1px 3px rgba(0,0,0,.04);
+        height: 100%; position: relative; overflow: hidden;
+    }
+    .kpi-card::before {
+        content: ''; position: absolute; top: 0; left: 0;
+        width: 4px; height: 100%; background: #0d9488;
+    }
+    .kpi-label { font-size: .68rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: #64748b; }
+    .kpi-value { font-size: 1.85rem; font-weight: 800; font-family: 'JetBrains Mono', monospace; color: #0f172a; line-height: 1.1; margin: .3rem 0; }
+    .kpi-sub { font-size: .72rem; color: #64748b; }
+    .chart-container { position: relative; height: 220px; width: 100%; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid p-0">
+
+    <!-- HERO BANNER -->
+    <div class="card border-0 shadow-sm mb-4 overflow-hidden" style="border-radius: 1rem;">
+        <div class="card-body p-0">
+            <div class="d-flex align-items-center" style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0d9488 100%); min-height: 110px;">
+                <div class="d-flex align-items-center justify-content-center flex-shrink-0 px-4 px-md-5" style="min-height:110px;">
+                    <i class="bi bi-people-fill" style="font-size: 3rem; color: rgba(255,255,255,.85);"></i>
+                </div>
+                <div class="py-3 pe-4">
+                    <h2 class="fw-bold text-white mb-1" style="font-size: 1.8rem; letter-spacing: -.03em; line-height: 1.1;">
+                        Dashboard Manajemen Pasien <span class="text-white-50 fw-semibold" style="font-size:1rem;">—</span> RS MonsisKami
+                    </h2>
+                    <p class="text-white-50 mb-0" style="font-size: .82rem; line-height: 1.5;">
+                        Pendaftaran &bull; Pelayanan &bull; Rawat Inap &bull; Billing &bull; Discharge
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- KPI ROW 1: PRIMARY -->
+    <div class="row g-3 mb-3">
+        <div class="col-6 col-lg">
+            <div class="kpi-card">
+                <div class="kpi-label"><i class="bi bi-people me-1"></i>Total Pasien</div>
+                <div class="kpi-value" style="color:#0d9488;">{{ total_pasien }}</div>
+                <div class="kpi-sub">Master pasien terdaftar</div>
+            </div>
+        </div>
+        <div class="col-6 col-lg">
+            <div class="kpi-card" style="--accent:#10B981;">
+                <div class="kpi-label"><i class="bi bi-heart-pulse me-1"></i>Pasien Aktif</div>
+                <div class="kpi-value" style="color:#10B981;">{{ pasien_aktif }}</div>
+                <div class="kpi-sub">Sedang dilayani</div>
+            </div>
+        </div>
+        <div class="col-6 col-lg">
+            <div class="kpi-card">
+                <div class="kpi-label"><i class="bi bi-hospital me-1"></i>BOR</div>
+                <div class="kpi-value" style="color:#0f766e;">{{ bor }}%</div>
+                <div class="kpi-sub">Bed Occupancy Rate</div>
+            </div>
+        </div>
+        <div class="col-6 col-lg">
+            <div class="kpi-card">
+                <div class="kpi-label"><i class="bi bi-clock-history me-1"></i>Avg LOS</div>
+                <div class="kpi-value" style="color:#6366f1;">{{ los_avg }} <span style="font-size:.9rem;color:#94a3b8;">hari</span></div>
+                <div class="kpi-sub">Length of Stay (30 hari)</div>
+            </div>
+        </div>
+        <div class="col-6 col-lg">
+            <div class="kpi-card">
+                <div class="kpi-label"><i class="bi bi-exclamation-triangle me-1"></i>Risiko Tinggi</div>
+                <div class="kpi-value" style="color:#ef4444;">{{ risiko_tinggi }}</div>
+                <div class="kpi-sub">Asesmen risiko aktif</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- KPI ROW 2: SECONDARY -->
+    <div class="row g-3 mb-4">
+        <div class="col-6 col-md-3">
+            <div class="kpi-card">
+                <div class="kpi-label"><i class="bi bi-building me-1"></i>Ranap</div>
+                <div class="kpi-value" style="font-size:1.5rem; color:#0d9488;">{{ pasien_ranap }}</div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="kpi-card">
+                <div class="kpi-label"><i class="bi bi-lightning me-1"></i>IGD</div>
+                <div class="kpi-value" style="font-size:1.5rem; color:#ef4444;">{{ pasien_igd }}</div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="kpi-card">
+                <div class="kpi-label"><i class="bi bi-calendar2-check me-1"></i>Rajal</div>
+                <div class="kpi-value" style="font-size:1.5rem; color:#3b82f6;">{{ pasien_rajal }}</div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="kpi-card">
+                <div class="kpi-label"><i class="bi bi-graph-up me-1"></i>7 Hari</div>
+                <div class="kpi-value" style="font-size:1.5rem; color:#8b5cf6;">{{ kunjungan_week }}</div>
+                <div class="kpi-sub">Kunjungan terakhir</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- CHARTS ROW -->
+    <div class="row g-3 mb-4">
+        <!-- TREN KUNJUNGAN 7 HARI -->
+        <div class="col-12 col-lg-7">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-white py-3 border-0 d-flex justify-content-between align-items-center">
+                    <span class="fw-bold" style="font-size:.85rem;"><i class="bi bi-graph-up-arrow me-2" style="color:#0d9488;"></i>Tren Kunjungan 7 Hari</span>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container"><canvas id="trenChart"></canvas></div>
+                </div>
+            </div>
+        </div>
+        <!-- DISTRIBUSI PENJAMIN -->
+        <div class="col-12 col-lg-5">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-white py-3 border-0 d-flex justify-content-between align-items-center">
+                    <span class="fw-bold" style="font-size:.85rem;"><i class="bi bi-pie-chart-fill me-2" style="color:#0d9488;"></i>Distribusi Penjamin</span>
+                </div>
+                <div class="card-body d-flex align-items-center justify-content-center">
+                    <div class="chart-container"><canvas id="penjaminChart"></canvas></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- TABEL KUNJUNGAN TERBARU -->
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header bg-white py-3 border-0 d-flex justify-content-between align-items-center">
+            <span class="fw-bold" style="font-size:.85rem;"><i class="bi bi-clock-history me-2" style="color:#0d9488;"></i>10 Kunjungan Terbaru</span>
+            <a href="{% url 'pasien:kunjungan_daftar' %}" class="text-decoration-none small">Lihat Semua &rarr;</a>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0" style="font-size:.82rem;">
+                    <thead class="table-light">
+                        <tr>
+                            <th style="font-size:.8rem;">No. Kunjungan</th>
+                            <th style="font-size:.8rem;">Pasien</th>
+                            <th style="font-size:.8rem;">Jenis</th>
+                            <th style="font-size:.8rem;">Status</th>
+                            <th style="font-size:.8rem;">Tgl. Masuk</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for kj in kunjungan_terbaru %}
+                        <tr>
+                            <td class="font-monospace fw-semibold">
+                                <a href="{% url 'pasien:kunjungan_detail' pk=kj.pk %}" class="text-decoration-none" style="color:#0d9488;">{{ kj.no_kunjungan }}</a>
+                            </td>
+                            <td>{{ kj.pasien.nama_lengkap }}</td>
+                            <td><span class="badge bg-light text-dark border" style="font-size:.7rem;">{{ kj.get_jenis_kunjungan_display }}</span></td>
+                            <td>
+                                {% if kj.status == 'DAFTAR' %}<span class="badge bg-secondary">Terdaftar</span>
+                                {% elif kj.status == 'TRIAGE' %}<span class="badge bg-danger">Triage</span>
+                                {% elif kj.status == 'ASESMEN' %}<span class="badge bg-primary">Asesmen</span>
+                                {% elif kj.status == 'RANAP' %}<span class="badge bg-warning text-dark">Ranap</span>
+                                {% elif kj.status == 'PULANG' %}<span class="badge bg-success">Pulang</span>
+                                {% elif kj.status == 'RUJUK' %}<span class="badge bg-info">Rujuk</span>
+                                {% elif kj.status == 'MENINGGAL' %}<span class="badge bg-dark">Meninggal</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-muted font-monospace" style="font-size:.75rem;">{{ kj.tanggal_masuk|date:"d/m/Y H:i" }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr><td colspan="5" class="text-center py-4 text-muted"><i class="bi bi-inbox fs-3 d-block mb-1"></i>Belum ada kunjungan.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- QUICK LINKS -->
+    <div class="row g-3 mb-4">
+        <div class="col-auto">
+            <a href="{% url 'pasien:pasien_baru' %}" class="btn btn-sm fw-semibold px-3" style="background:#0d9488;color:#fff;"><i class="bi bi-person-plus me-1"></i>Daftarkan Pasien Baru</a>
+        </div>
+        <div class="col-auto">
+            <a href="{% url 'pasien:kunjungan_baru' %}" class="btn btn-sm btn-outline-dark fw-semibold px-3"><i class="bi bi-plus-circle me-1"></i>Kunjungan Baru</a>
+        </div>
+        <div class="col-auto">
+            <a href="{% url 'pasien:bed_management' %}" class="btn btn-sm btn-outline-dark fw-semibold px-3"><i class="bi bi-grid-3x3 me-1"></i>Bed Management</a>
+        </div>
+        <div class="col-auto">
+            <a href="{% url 'akreditasi:dashboard' %}" class="btn btn-sm btn-outline-dark fw-semibold px-3"><i class="bi bi-building me-1"></i>Dashboard Akreditasi</a>
+        </div>
+    </div>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Tren 7 hari
+    const trenLabels = [{% for t in tren %}'{{ t.label }}'{% if not forloop.last %},{% endif %}{% endfor %}];
+    const trenData   = [{% for t in tren %}{{ t.count }}{% if not forloop.last %},{% endif %}{% endfor %}];
+    new Chart(document.getElementById('trenChart').getContext('2d'), {
+        type: 'line',
+        data: {
+            labels: trenLabels,
+            datasets: [{
+                label: 'Kunjungan',
+                data: trenData,
+                borderColor: '#0d9488',
+                backgroundColor: 'rgba(13,148,136,.1)',
+                fill: true, tension: .35, pointRadius: 4,
+                pointBackgroundColor: '#0d9488', borderWidth: 2,
+            }]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+                y: { beginAtZero: true, ticks: { stepSize: 1, font: { size: 11 } } },
+                x: { ticks: { font: { size: 11 } } }
+            }
+        }
+    });
+
+    // Penjamin donut
+    const penjaminLabels = [{% for p in penjamin_dist %}'{{ p.penjamin }}'{% if not forloop.last %},{% endif %}{% endfor %}];
+    const penjaminData   = [{% for p in penjamin_dist %}{{ p.n }}{% if not forloop.last %},{% endif %}{% endfor %}];
+    new Chart(document.getElementById('penjaminChart').getContext('2d'), {
+        type: 'doughnut',
+        data: {
+            labels: penjaminLabels,
+            datasets: [{
+                data: penjaminData,
+                backgroundColor: ['#0d9488','#3b82f6','#f59e0b','#ef4444','#8b5cf6'],
+                borderWidth: 2, borderColor: '#fff', hoverOffset: 4,
+            }]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false, cutout: '65%',
+            plugins: { legend: { position: 'bottom', labels: { font: { size: 11 }, padding: 12 } } }
+        }
+    });
+});
+</script>
+{% endblock %}

@@ -1,0 +1,268 @@
+"""Views Manajemen Pasien — Dashboard, Daftar, Detail, Form."""
+from django.shortcuts import render, redirect, get_object_or_404
+from django.contrib.auth.decorators import login_required
+from django.contrib import messages
+from django.db.models import Count, Avg, Sum, Q
+from django.utils import timezone
+from datetime import timedelta
+
+from .models import Pasien, KunjunganPasien, Bed, Ruangan, CPPT, AsesmenRisikoKlinis, BillingItem, DischargeRecord
+
+
+def _kpi():
+    now = timezone.now()
+    aktif_qs = KunjunganPasien.objects.filter(status__in=['DAFTAR','TRIAGE','ASESMEN','RANAP'])
+
+    total_pasien  = Pasien.objects.count()
+    pasien_aktif  = aktif_qs.count()
+    pasien_ranap  = aktif_qs.filter(jenis_kunjungan='RANAP').count()
+    pasien_igd    = aktif_qs.filter(jenis_kunjungan='IGD').count()
+    pasien_rajal  = aktif_qs.filter(jenis_kunjungan='RAJAL').count()
+
+    total_bed  = Bed.objects.exclude(status='TIDAK_AKTIF').count()
+    bed_terisi = Bed.objects.filter(status='TERISI').count()
+    bor        = round((bed_terisi / total_bed) * 100, 1) if total_bed > 0 else 0
+
+    pulang_qs = KunjunganPasien.objects.filter(
+        status='PULANG', tanggal_keluar__gte=now - timedelta(days=30)
+    )
+    los_avg = 0
+    if pulang_qs.exists():
+        total_los = sum(k.lama_rawat for k in pulang_qs)
+        los_avg = round(total_los / pulang_qs.count(), 1)
+
+    kunjungan_week = KunjunganPasien.objects.filter(
+        tanggal_masuk__gte=now - timedelta(days=7)
+    ).count()
+
+    risiko_tinggi = AsesmenRisikoKlinis.objects.filter(
+        grade__in=['TINGGI', 'SANGAT_TINGGI'],
+        kunjungan__status__in=['DAFTAR','TRIAGE','ASESMEN','RANAP']
+    ).count()
+
+    return {
+        'total_pasien': total_pasien, 'pasien_aktif': pasien_aktif,
+        'pasien_ranap': pasien_ranap, 'pasien_igd': pasien_igd,
+        'pasien_rajal': pasien_rajal, 'total_bed': total_bed,
+        'bed_terisi': bed_terisi, 'bor': bor,
+        'los_avg': los_avg, 'kunjungan_week': kunjungan_week,
+        'risiko_tinggi': risiko_tinggi,
+    }
+
+
+@login_required
+def dashboard(request):
+    kpi = _kpi()
+    ruangan_list     = Ruangan.objects.prefetch_related('beds').order_by('jenis', 'kelas')
+    kunjungan_terbaru = KunjunganPasien.objects.select_related('pasien', 'bed__ruangan').order_by('-created_at')[:10]
+    penjamin_dist    = KunjunganPasien.objects.values('penjamin').annotate(n=Count('id')).order_by('-n')
+
+    now = timezone.now()
+    tren = []
+    for i in range(6, -1, -1):
+        d = now - timedelta(days=i)
+        c = KunjunganPasien.objects.filter(tanggal_masuk__date=d.date()).count()
+        tren.append({'label': d.strftime('%d/%m'), 'count': c})
+
+    ctx = {**kpi, 'ruangan_list': ruangan_list, 'kunjungan_terbaru': kunjungan_terbaru,
+           'penjamin_dist': penjamin_dist, 'tren': tren}
+    return render(request, 'pasien/dashboard.html', ctx)
+
+
+@login_required
+def pasien_daftar(request):
+    q = request.GET.get('q', '')
+    qs = Pasien.objects.all()
+    if q:
+        qs = qs.filter(Q(nama_lengkap__icontains=q) | Q(no_rm__icontains=q) | Q(nik__icontains=q) | Q(no_bpjs__icontains=q))
+    return render(request, 'pasien/pasien_daftar.html', {'pasien_list': qs[:100], 'q': q})
+
+
+@login_required
+def pasien_detail(request, pk):
+    p = get_object_or_404(Pasien, pk=pk)
+    kunjungan_list = p.kunjungan.select_related('bed__ruangan').order_by('-tanggal_masuk')
+    return render(request, 'pasien/pasien_detail.html', {'pasien': p, 'kunjungan_list': kunjungan_list})
+
+
+@login_required
+def pasien_daftar_baru(request):
+    if request.method == 'POST':
+        try:
+            p = Pasien(
+                no_rm=request.POST['no_rm'],
+                nik=request.POST.get('nik', ''),
+                nama_lengkap=request.POST['nama_lengkap'],
+                tanggal_lahir=request.POST['tanggal_lahir'],
+                jenis_kelamin=request.POST['jenis_kelamin'],
+                golongan_darah=request.POST.get('golongan_darah', '-'),
+                alamat=request.POST.get('alamat', ''),
+                no_hp=request.POST.get('no_hp', ''),
+                no_bpjs=request.POST.get('no_bpjs', ''),
+                alergi_obat=request.POST.get('alergi_obat', ''),
+                alergi_lain=request.POST.get('alergi_lain', ''),
+            )
+            p.full_clean()
+            p.save()
+            messages.success(request, f'Pasien {p.nama_lengkap} berhasil didaftarkan. No. RM: {p.no_rm}')
+            return redirect('pasien:pasien_detail', pk=p.pk)
+        except Exception as e:
+            messages.error(request, f'Gagal: {e}')
+    return render(request, 'pasien/pasien_form.html', {
+        'goldar_choices': Pasien.GOLDAR, 'jk_choices': Pasien.JENIS_KELAMIN,
+    })
+
+
+@login_required
+def kunjungan_daftar(request):
+    status_filter = request.GET.get('status', '')
+    jenis_filter  = request.GET.get('jenis', '')
+    qs = KunjunganPasien.objects.select_related('pasien', 'bed__ruangan').order_by('-tanggal_masuk')
+    if status_filter:
+        qs = qs.filter(status=status_filter)
+    if jenis_filter:
+        qs = qs.filter(jenis_kunjungan=jenis_filter)
+    ctx = {
+        'kunjungan_list': qs[:100],
+        'status_choices': KunjunganPasien.STATUS_KUNJUNGAN,
+        'jenis_choices': KunjunganPasien.JENIS_KUNJUNGAN,
+        'filter_status': status_filter, 'filter_jenis': jenis_filter,
+    }
+    return render(request, 'pasien/kunjungan_daftar.html', ctx)
+
+
+@login_required
+def kunjungan_detail(request, pk):
+    k = get_object_or_404(KunjunganPasien.objects.select_related('pasien', 'bed__ruangan', 'created_by'), pk=pk)
+    billing_list  = k.billing.all()
+    total_billing = sum(b.subtotal for b in billing_list)
+    ctx = {
+        'k': k, 'cppt_list': k.cppt.all(), 'asesmen_list': k.asesmen_risiko.all(),
+        'billing_list': billing_list, 'total_billing': total_billing,
+        'discharge': getattr(k, 'discharge', None),
+        'profesi_choices': CPPT.PROFESI,
+        'asesmen_choices': AsesmenRisikoKlinis.JENIS_ASESMEN,
+        'grade_choices': AsesmenRisikoKlinis.GRADE,
+        'billing_choices': BillingItem.KATEGORI,
+        'status_choices': KunjunganPasien.STATUS_KUNJUNGAN,
+        'kondisi_pulang_choices': DischargeRecord.KONDISI_PULANG,
+    }
+    return render(request, 'pasien/kunjungan_detail.html', ctx)
+
+
+@login_required
+def kunjungan_baru(request):
+    if request.method == 'POST':
+        try:
+            pasien_obj = get_object_or_404(Pasien, pk=request.POST['pasien_id'])
+            k = KunjunganPasien(
+                pasien=pasien_obj,
+                no_kunjungan=request.POST['no_kunjungan'],
+                jenis_kunjungan=request.POST['jenis_kunjungan'],
+                tanggal_masuk=request.POST['tanggal_masuk'],
+                dpjp=request.POST.get('dpjp', ''),
+                poliklinik=request.POST.get('poliklinik', ''),
+                penjamin=request.POST.get('penjamin', 'UMUM'),
+                triage=request.POST.get('triage', ''),
+                catatan_admisi=request.POST.get('catatan_admisi', ''),
+                general_consent=bool(request.POST.get('general_consent')),
+                status='TRIAGE' if request.POST['jenis_kunjungan'] == 'IGD' else 'DAFTAR',
+                created_by=request.user,
+            )
+            k.full_clean()
+            k.save()
+            messages.success(request, f'Kunjungan {k.no_kunjungan} berhasil dibuat.')
+            return redirect('pasien:kunjungan_detail', pk=k.pk)
+        except Exception as e:
+            messages.error(request, f'Gagal: {e}')
+    pasien_id = request.GET.get('pasien')
+    ctx = {
+        'pasien_list': Pasien.objects.order_by('nama_lengkap'),
+        'selected_pasien': Pasien.objects.filter(pk=pasien_id).first() if pasien_id else None,
+        'jenis_choices': KunjunganPasien.JENIS_KUNJUNGAN,
+        'penjamin_choices': KunjunganPasien.TIPE_PENJAMIN,
+        'triage_choices': KunjunganPasien.TRIAGE_CHOICES,
+    }
+    return render(request, 'pasien/kunjungan_form.html', ctx)
+
+
+@login_required
+def cppt_tambah(request, kunjungan_pk):
+    k = get_object_or_404(KunjunganPasien, pk=kunjungan_pk)
+    if request.method == 'POST':
+        try:
+            CPPT.objects.create(
+                kunjungan=k, profesi=request.POST['profesi'],
+                nama_ppa=request.POST['nama_ppa'], tanggal=request.POST['tanggal'],
+                subjektif=request.POST['subjektif'], objektif=request.POST['objektif'],
+                asesmen=request.POST['asesmen'], plan=request.POST['plan'],
+                verifikasi_dpjp=bool(request.POST.get('verifikasi_dpjp')),
+            )
+            messages.success(request, 'CPPT berhasil ditambahkan.')
+        except Exception as e:
+            messages.error(request, f'Gagal: {e}')
+    return redirect('pasien:kunjungan_detail', pk=kunjungan_pk)
+
+
+@login_required
+def billing_tambah(request, kunjungan_pk):
+    k = get_object_or_404(KunjunganPasien, pk=kunjungan_pk)
+    if request.method == 'POST':
+        try:
+            BillingItem.objects.create(
+                kunjungan=k, kategori=request.POST['kategori'],
+                nama_item=request.POST['nama_item'],
+                kuantitas=request.POST.get('kuantitas', 1),
+                harga_satuan=request.POST.get('harga_satuan', 0),
+                kode_icd=request.POST.get('kode_icd', ''),
+                dicatat_oleh=request.user,
+            )
+            messages.success(request, 'Item billing ditambahkan.')
+        except Exception as e:
+            messages.error(request, f'Gagal: {e}')
+    return redirect('pasien:kunjungan_detail', pk=kunjungan_pk)
+
+
+@login_required
+def discharge_proses(request, kunjungan_pk):
+    k = get_object_or_404(KunjunganPasien, pk=kunjungan_pk)
+    if request.method == 'POST':
+        try:
+            total = sum(b.subtotal for b in k.billing.all())
+            DischargeRecord.objects.update_or_create(
+                kunjungan=k,
+                defaults=dict(
+                    tanggal_discharge=request.POST['tanggal_discharge'],
+                    kondisi_pulang=request.POST['kondisi_pulang'],
+                    resume_medis=request.POST['resume_medis'],
+                    edukasi_pulang=request.POST.get('edukasi_pulang', ''),
+                    obat_pulang=request.POST.get('obat_pulang', ''),
+                    jadwal_kontrol=request.POST.get('jadwal_kontrol') or None,
+                    total_tagihan=total,
+                    status_clearance='CLEARANCE' if request.POST.get('clearance') else 'PROSES',
+                    dibuat_oleh=request.user,
+                )
+            )
+            k.status = request.POST.get('status_keluar', 'PULANG')
+            k.tanggal_keluar = request.POST['tanggal_discharge']
+            k.diagnosa_keluar = request.POST.get('diagnosa_keluar', '')
+            k.save()
+            if k.bed:
+                k.bed.status = 'STERILISASI'
+                k.bed.save()
+            messages.success(request, 'Discharge berhasil diproses.')
+        except Exception as e:
+            messages.error(request, f'Gagal: {e}')
+    return redirect('pasien:kunjungan_detail', pk=kunjungan_pk)
+
+
+@login_required
+def bed_management(request):
+    ruangan_list = Ruangan.objects.prefetch_related('beds').order_by('jenis', 'kelas', 'kode')
+    total_bed    = Bed.objects.exclude(status='TIDAK_AKTIF').count()
+    bed_terisi   = Bed.objects.filter(status='TERISI').count()
+    bor = round((bed_terisi / total_bed) * 100, 1) if total_bed else 0
+    return render(request, 'pasien/bed_management.html', {
+        'ruangan_list': ruangan_list, 'total_bed': total_bed,
+        'bed_terisi': bed_terisi, 'bor': bor,
+    })

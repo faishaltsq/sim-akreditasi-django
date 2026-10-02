@@ -1,0 +1,162 @@
+{% extends "base.html" %}
+
+{% block title %}Pendaftaran Kunjungan Baru — ARIMA{% endblock %}
+{% block page_title %}Pendaftaran Kunjungan Baru{% endblock %}
+{% block page_subtitle %}Manajemen Pasien — RS MonsisKami{% endblock %}
+
+{% block content %}
+<div class="container-fluid p-0" style="max-width: 860px;">
+
+    <!-- BREADCRUMB -->
+    <nav aria-label="breadcrumb" class="mb-3">
+        <ol class="breadcrumb mb-0" style="font-size:.8rem;">
+            <li class="breadcrumb-item"><a href="{% url 'pasien:dashboard' %}" class="text-decoration-none" style="color:#0d9488;">Dashboard</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'pasien:kunjungan_daftar' %}" class="text-decoration-none" style="color:#0d9488;">Daftar Kunjungan</a></li>
+            <li class="breadcrumb-item active">Kunjungan Baru</li>
+        </ol>
+    </nav>
+
+    <div class="card border-0 shadow-sm">
+        <div class="card-header py-3 border-0" style="background: linear-gradient(90deg,#0f766e,#0d9488); border-radius:.75rem .75rem 0 0;">
+            <h6 class="fw-bold text-white mb-0" style="font-size:.9rem;"><i class="bi bi-file-earmark-plus me-2"></i>Registrasi Kunjungan Pasien</h6>
+        </div>
+        <div class="card-body p-4">
+            <form method="post" id="kunjunganForm">
+                {% csrf_token %}
+
+                <!-- PASIEN SELECTION -->
+                <p class="fw-bold mb-2" style="font-size:.78rem; text-transform:uppercase; letter-spacing:.05em; color:#0d9488;"><i class="bi bi-person me-1"></i>Pilih Pasien</p>
+                <div class="row g-3 mb-4">
+                    <div class="col-12">
+                        <label class="form-label" style="font-size:.8rem; font-weight:600;">Pasien <span class="text-danger">*</span></label>
+                        <select name="pasien_id" class="form-select form-select-sm" required style="font-size:.82rem;">
+                            <option value="">— Pilih Pasien —</option>
+                            {% for p in pasien_list %}
+                            <option value="{{ p.pk }}" {% if selected_pasien and selected_pasien.pk == p.pk %}selected{% endif %}>
+                                [{{ p.no_rm }}] {{ p.nama_lengkap }} (NIK: {{ p.nik|default:"-" }})
+                            </option>
+                            {% endfor %}
+                        </select>
+                        <div class="form-text" style="font-size:.72rem;">Pasien belum terdaftar? <a href="{% url 'pasien:pasien_baru' %}" target="_blank" style="color:#0d9488;">Daftarkan pasien baru di sini</a>.</div>
+                    </div>
+                </div>
+
+                <!-- DETAIL KUNJUNGAN -->
+                <p class="fw-bold mb-2" style="font-size:.78rem; text-transform:uppercase; letter-spacing:.05em; color:#0d9488;"><i class="bi bi-hospital me-1"></i>Detail Admisi</p>
+                <div class="row g-3 mb-4">
+                    <div class="col-md-6">
+                        <label class="form-label" style="font-size:.8rem; font-weight:600;">No. Kunjungan <span class="text-danger">*</span></label>
+                        <input type="text" name="no_kunjungan" id="noKunjungan" class="form-control form-control-sm font-monospace" placeholder="cth. REG-20241001-001" required style="font-size:.82rem;">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label" style="font-size:.8rem; font-weight:600;">Jenis Kunjungan <span class="text-danger">*</span></label>
+                        <select name="jenis_kunjungan" id="jenisKunjungan" class="form-select form-select-sm" required style="font-size:.82rem;">
+                            <option value="">— Pilih Jenis —</option>
+                            {% for val, label in jenis_choices %}
+                            <option value="{{ val }}">{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label" style="font-size:.8rem; font-weight:600;">Tanggal & Waktu Masuk <span class="text-danger">*</span></label>
+                        <input type="datetime-local" name="tanggal_masuk" id="tanggalMasuk" class="form-control form-control-sm" required style="font-size:.82rem;">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label" style="font-size:.8rem; font-weight:600;">Penjamin <span class="text-danger">*</span></label>
+                        <select name="penjamin" class="form-select form-select-sm" required style="font-size:.82rem;">
+                            {% for val, label in penjamin_choices %}
+                            <option value="{{ val }}" {% if val == 'UMUM' %}selected{% endif %}>{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label" style="font-size:.8rem; font-weight:600;">Dokter Penanggung Jawab (DPJP)</label>
+                        <input type="text" name="dpjp" class="form-control form-control-sm" placeholder="dr. ..." style="font-size:.82rem;">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label" style="font-size:.8rem; font-weight:600;">Poliklinik / Ruang Pelayanan</label>
+                        <input type="text" name="poliklinik" class="form-control form-control-sm" placeholder="cth. Poli Penyakit Dalam / IGD" style="font-size:.82rem;">
+                    </div>
+
+                    <!-- TRIAGE (IGD ONLY) -->
+                    <div class="col-md-6" id="triageContainer" style="display:none;">
+                        <label class="form-label" style="font-size:.8rem; font-weight:600; color:#ef4444;"><i class="bi bi-shield-shaded me-1"></i>Triage IGD <span class="text-danger">*</span></label>
+                        <select name="triage" id="triageSelect" class="form-select form-select-sm" style="font-size:.82rem;">
+                            <option value="">— Pilih Triage —</option>
+                            {% for val, label in triage_choices %}
+                            <option value="{{ val }}">{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="col-12">
+                        <label class="form-label" style="font-size:.8rem; font-weight:600;">Catatan Admisi / Alasan Datang</label>
+                        <textarea name="catatan_admisi" class="form-control form-control-sm" rows="3" placeholder="Keluhan utama, rujukan dari mana, kondisi umum saat tiba..." style="font-size:.82rem;"></textarea>
+                    </div>
+
+                    <!-- GENERAL CONSENT -->
+                    <div class="col-12">
+                        <div class="form-check p-3 rounded" style="background:#f8fafc; border:1px dashed #cbd5e1;">
+                            <input class="form-check-input" type="checkbox" name="general_consent" value="1" id="generalConsent" required>
+                            <label class="form-check-label fw-semibold" for="generalConsent" style="font-size:.82rem; color:#0f172a;">
+                                General Consent Ditandatangani Pasien / Keluarga <span class="text-danger">*</span>
+                            </label>
+                            <div class="text-muted" style="font-size:.72rem;">Pasien atau wali telah memahami dan menyetujui persetujuan umum pelayanan rawat jalan / inap / gawat darurat.</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- BUTTONS -->
+                <div class="d-flex gap-2">
+                    <button type="submit" class="btn btn-sm fw-bold px-4" style="background:#0d9488;color:#fff;">
+                        <i class="bi bi-check-circle me-1"></i>Daftarkan Kunjungan
+                    </button>
+                    <a href="{% url 'pasien:kunjungan_daftar' %}" class="btn btn-sm btn-outline-secondary fw-semibold px-3">Batal</a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Auto populate date
+    const now = new Date();
+    now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+    const isoString = now.toISOString().slice(0, 16);
+    const dateInput = document.getElementById('tanggalMasuk');
+    if (!dateInput.value) {
+        dateInput.value = isoString;
+    }
+
+    // Auto generate No Kunjungan if empty
+    const noKunjunganInput = document.getElementById('noKunjungan');
+    if (!noKunjunganInput.value) {
+        const rand = Math.floor(1000 + Math.random() * 9000);
+        const ymd = now.toISOString().slice(0, 10).replace(/-/g, '');
+        noKunjunganInput.value = `REG-${ymd}-${rand}`;
+    }
+
+    // Toggle Triage on IGD selection
+    const jenisSelect = document.getElementById('jenisKunjungan');
+    const triageBox   = document.getElementById('triageContainer');
+    const triageSelect= document.getElementById('triageSelect');
+
+    function toggleTriage() {
+        if (jenisSelect.value === 'IGD') {
+            triageBox.style.display = 'block';
+            triageSelect.required = true;
+        } else {
+            triageBox.style.display = 'none';
+            triageSelect.required = false;
+        }
+    }
+
+    jenisSelect.addEventListener('change', toggleTriage);
+    toggleTriage();
+});
+</script>
+{% endblock %}

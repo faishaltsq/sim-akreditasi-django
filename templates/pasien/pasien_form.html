@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+
+{% block title %}Daftarkan Pasien Baru — ARIMA{% endblock %}
+{% block page_title %}Daftarkan Pasien Baru{% endblock %}
+{% block page_subtitle %}Manajemen Pasien — RS MonsisKami{% endblock %}
+
+{% block content %}
+<div class="container-fluid p-0" style="max-width: 860px;">
+
+    <!-- BREADCRUMB -->
+    <nav aria-label="breadcrumb" class="mb-3">
+        <ol class="breadcrumb mb-0" style="font-size:.8rem;">
+            <li class="breadcrumb-item"><a href="{% url 'pasien:dashboard' %}" class="text-decoration-none" style="color:#0d9488;">Dashboard</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'pasien:pasien_daftar' %}" class="text-decoration-none" style="color:#0d9488;">Daftar Pasien</a></li>
+            <li class="breadcrumb-item active">Pasien Baru</li>
+        </ol>
+    </nav>
+
+    <div class="card border-0 shadow-sm">
+        <div class="card-header py-3 border-0" style="background: linear-gradient(90deg,#0f766e,#0d9488); border-radius:.75rem .75rem 0 0;">
+            <h6 class="fw-bold text-white mb-0" style="font-size:.9rem;"><i class="bi bi-person-plus me-2"></i>Form Pendaftaran Pasien</h6>
+        </div>
+        <div class="card-body p-4">
+            <form method="post">
+                {% csrf_token %}
+
+                <!-- IDENTITAS -->
+                <p class="fw-bold mb-2" style="font-size:.78rem; text-transform:uppercase; letter-spacing:.05em; color:#0d9488;"><i class="bi bi-id-card me-1"></i>Identitas Pasien</p>
+                <div class="row g-3 mb-4">
+                    <div class="col-md-4">
+                        <label class="form-label" style="font-size:.8rem; font-weight:600;">No. Rekam Medis <span class="text-danger">*</span></label>
+                        <input type="text" name="no_rm" class="form-control form-control-sm" placeholder="cth. RM-2024-001234" required style="font-size:.82rem;">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label" style="font-size:.8rem; font-weight:600;">NIK</label>
+                        <input type="text" name="nik" maxlength="16" class="form-control form-control-sm" placeholder="16 digit NIK KTP" style="font-size:.82rem;">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label" style="font-size:.8rem; font-weight:600;">No. BPJS</label>
+                        <input type="text" name="no_bpjs" class="form-control form-control-sm" placeholder="No. BPJS Kesehatan" style="font-size:.82rem;">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label" style="font-size:.8rem; font-weight:600;">Nama Lengkap <span class="text-danger">*</span></label>
+                        <input type="text" name="nama_lengkap" class="form-control form-control-sm" placeholder="Nama sesuai KTP" required style="font-size:.82rem;">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label" style="font-size:.8rem; font-weight:600;">Tanggal Lahir <span class="text-danger">*</span></label>
+                        <input type="date" name="tanggal_lahir" class="form-control form-control-sm" required style="font-size:.82rem;">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label" style="font-size:.8rem; font-weight:600;">Jenis Kelamin <span class="text-danger">*</span></label>
+                        <select name="jenis_kelamin" class="form-select form-select-sm" required style="font-size:.82rem;">
+                            <option value="">— Pilih —</option>
+                            {% for val, label in jk_choices %}
+                            <option value="{{ val }}">{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label" style="font-size:.8rem; font-weight:600;">Golongan Darah</label>
+                        <select name="golongan_darah" class="form-select form-select-sm" style="font-size:.82rem;">
+                            {% for val, label in goldar_choices %}
+                            <option value="{{ val }}" {% if val == '-' %}selected{% endif %}>{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label" style="font-size:.8rem; font-weight:600;">No. HP</label>
+                        <input type="text" name="no_hp" class="form-control form-control-sm" placeholder="08xx-xxxx-xxxx" style="font-size:.82rem;">
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label" style="font-size:.8rem; font-weight:600;">Alamat</label>
+                        <textarea name="alamat" class="form-control form-control-sm" rows="2" placeholder="Alamat lengkap sesuai KTP" style="font-size:.82rem;"></textarea>
+                    </div>
+                </div>
+
+                <!-- ALERGI -->
+                <p class="fw-bold mb-2" style="font-size:.78rem; text-transform:uppercase; letter-spacing:.05em; color:#ef4444;"><i class="bi bi-exclamation-triangle me-1"></i>Informasi Alergi</p>
+                <div class="row g-3 mb-4">
+                    <div class="col-md-6">
+                        <label class="form-label" style="font-size:.8rem; font-weight:600;">Alergi Obat</label>
+                        <textarea name="alergi_obat" class="form-control form-control-sm" rows="2" placeholder="Tulis nama obat yang menyebabkan alergi, pisahkan dengan koma. Kosongkan jika tidak ada." style="font-size:.82rem;"></textarea>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label" style="font-size:.8rem; font-weight:600;">Alergi Lain</label>
+                        <textarea name="alergi_lain" class="form-control form-control-sm" rows="2" placeholder="Alergi makanan, bahan, lingkungan, dll." style="font-size:.82rem;"></textarea>
+                    </div>
+                </div>
+
+                <!-- BUTTONS -->
+                <div class="d-flex gap-2">
+                    <button type="submit" class="btn btn-sm fw-bold px-4" style="background:#0d9488;color:#fff;">
+                        <i class="bi bi-person-check me-1"></i>Daftarkan Pasien
+                    </button>
+                    <a href="{% url 'pasien:pasien_daftar' %}" class="btn btn-sm btn-outline-secondary fw-semibold px-3">Batal</a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+</div>
+{% endblock %}

@@ -9,6 +9,7 @@ ADMIN_URL = os.environ.get('DJANGO_ADMIN_URL', 'admin-sikai-7f3d/')
 urlpatterns = [
     path(ADMIN_URL, admin.site.urls),
     path('accounts/', include('accounts.urls')),
+    path('pasien/', include('pasien.urls')),
     path('', include('akreditasi.urls')),
 ]
 

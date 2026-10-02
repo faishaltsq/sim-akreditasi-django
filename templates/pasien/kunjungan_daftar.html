@@ -1,0 +1,120 @@
+{% extends "base.html" %}
+
+{% block title %}Daftar Kunjungan — ARIMA{% endblock %}
+{% block page_title %}Daftar Kunjungan Pasien{% endblock %}
+{% block page_subtitle %}Manajemen Pasien — RS MonsisKami{% endblock %}
+
+{% block content %}
+<div class="container-fluid p-0">
+
+    <!-- BREADCRUMB -->
+    <nav aria-label="breadcrumb" class="mb-3">
+        <ol class="breadcrumb mb-0" style="font-size:.8rem;">
+            <li class="breadcrumb-item"><a href="{% url 'pasien:dashboard' %}" class="text-decoration-none" style="color:#0d9488;">Dashboard</a></li>
+            <li class="breadcrumb-item active">Kunjungan Pasien</li>
+        </ol>
+    </nav>
+
+    <!-- HEADER + FILTER -->
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-body py-3 d-flex flex-wrap gap-2 align-items-center justify-content-between">
+            <h6 class="fw-bold mb-0" style="font-size:.95rem;"><i class="bi bi-clipboard2-pulse-fill me-2" style="color:#0d9488;"></i>Daftar Kunjungan</h6>
+            <div class="d-flex gap-2 align-items-center flex-wrap">
+                <form method="get" class="d-flex gap-2 align-items-center">
+                    <select name="status" class="form-select form-select-sm" style="font-size:.8rem; min-width:130px;" onchange="this.form.submit()">
+                        <option value="">Semua Status</option>
+                        {% for val, label in status_choices %}
+                        <option value="{{ val }}" {% if filter_status == val %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                    <select name="jenis" class="form-select form-select-sm" style="font-size:.8rem; min-width:130px;" onchange="this.form.submit()">
+                        <option value="">Semua Jenis</option>
+                        {% for val, label in jenis_choices %}
+                        <option value="{{ val }}" {% if filter_jenis == val %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                    {% if filter_status or filter_jenis %}
+                    <a href="{% url 'pasien:kunjungan_daftar' %}" class="btn btn-sm btn-outline-secondary" style="font-size:.8rem;">Reset</a>
+                    {% endif %}
+                </form>
+                <a href="{% url 'pasien:kunjungan_baru' %}" class="btn btn-sm fw-semibold px-3" style="background:#0d9488;color:#fff;">
+                    <i class="bi bi-plus-circle me-1"></i>Kunjungan Baru
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- TABLE -->
+    <div class="card border-0 shadow-sm">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0" style="font-size:.82rem;">
+                    <thead class="table-light">
+                        <tr>
+                            <th style="font-size:.8rem;">No. Kunjungan</th>
+                            <th style="font-size:.8rem;">Pasien</th>
+                            <th style="font-size:.8rem;">Jenis</th>
+                            <th style="font-size:.8rem;">Status</th>
+                            <th style="font-size:.8rem;">Tanggal Masuk</th>
+                            <th style="font-size:.8rem;">DPJP</th>
+                            <th style="font-size:.8rem;">Penjamin</th>
+                            <th style="font-size:.8rem;">Ruangan</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for k in kunjungan_list %}
+                        <tr style="cursor:pointer;" onclick="location.href='{% url 'pasien:kunjungan_detail' pk=k.pk %}'">
+                            <td class="font-monospace fw-semibold" style="color:#0d9488;">{{ k.no_kunjungan }}</td>
+                            <td>
+                                <div class="fw-semibold">{{ k.pasien.nama_lengkap }}</div>
+                                <div class="text-muted font-monospace" style="font-size:.72rem;">{{ k.pasien.no_rm }}</div>
+                            </td>
+                            <td>
+                                {% if k.jenis_kunjungan == 'IGD' %}
+                                <span class="badge bg-danger-subtle text-danger border border-danger" style="font-size:.72rem;">IGD</span>
+                                {% elif k.jenis_kunjungan == 'RANAP' %}
+                                <span class="badge bg-warning-subtle text-warning border border-warning" style="font-size:.72rem;">Ranap</span>
+                                {% else %}
+                                <span class="badge bg-info-subtle text-info border border-info" style="font-size:.72rem;">Rajal</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if k.status == 'DAFTAR' %}<span class="badge bg-secondary">Terdaftar</span>
+                                {% elif k.status == 'TRIAGE' %}<span class="badge bg-danger">Triage</span>
+                                {% elif k.status == 'ASESMEN' %}<span class="badge bg-primary">Asesmen</span>
+                                {% elif k.status == 'RANAP' %}<span class="badge bg-warning text-dark">Ranap</span>
+                                {% elif k.status == 'PULANG' %}<span class="badge bg-success">Pulang</span>
+                                {% elif k.status == 'RUJUK' %}<span class="badge bg-info">Rujuk</span>
+                                {% elif k.status == 'MENINGGAL' %}<span class="badge bg-dark">Meninggal</span>
+                                {% endif %}
+                                {% if k.triage %}
+                                    {% if k.triage == 'MERAH' %}<span class="badge bg-danger ms-1" style="font-size:.65rem;"><i class="bi bi-circle-fill"></i></span>
+                                    {% elif k.triage == 'KUNING' %}<span class="badge bg-warning text-dark ms-1" style="font-size:.65rem;"><i class="bi bi-circle-fill"></i></span>
+                                    {% elif k.triage == 'HIJAU' %}<span class="badge bg-success ms-1" style="font-size:.65rem;"><i class="bi bi-circle-fill"></i></span>
+                                    {% elif k.triage == 'HITAM' %}<span class="badge bg-dark ms-1" style="font-size:.65rem;"><i class="bi bi-circle-fill"></i></span>
+                                    {% endif %}
+                                {% endif %}
+                            </td>
+                            <td class="font-monospace text-muted" style="font-size:.75rem;">{{ k.tanggal_masuk|date:"d/m/Y H:i" }}</td>
+                            <td style="font-size:.8rem;">{{ k.dpjp|default:"-" }}</td>
+                            <td><span class="badge bg-light text-dark border" style="font-size:.7rem;">{{ k.get_penjamin_display }}</span></td>
+                            <td style="font-size:.78rem;">
+                                {% if k.bed %}{{ k.bed.ruangan.nama }} / {{ k.bed.kode_bed }}{% else %}-{% endif %}
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="8" class="text-center py-5 text-muted">
+                                <i class="bi bi-clipboard-x fs-1 d-block mb-2" style="color:#cbd5e1;"></i>
+                                Tidak ada kunjungan ditemukan.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+</div>
+{% endblock %}

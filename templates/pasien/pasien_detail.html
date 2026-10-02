@@ -1,0 +1,135 @@
+{% extends "base.html" %}
+
+{% block title %}{{ pasien.nama_lengkap }} — Rekam Medis{% endblock %}
+{% block page_title %}Detail Pasien{% endblock %}
+{% block page_subtitle %}Manajemen Pasien — RS MonsisKami{% endblock %}
+
+{% block content %}
+<div class="container-fluid p-0">
+
+    <!-- BREADCRUMB -->
+    <nav aria-label="breadcrumb" class="mb-3">
+        <ol class="breadcrumb mb-0" style="font-size:.8rem;">
+            <li class="breadcrumb-item"><a href="{% url 'pasien:dashboard' %}" class="text-decoration-none" style="color:#0d9488;">Dashboard</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'pasien:pasien_daftar' %}" class="text-decoration-none" style="color:#0d9488;">Daftar Pasien</a></li>
+            <li class="breadcrumb-item active">{{ pasien.nama_lengkap }}</li>
+        </ol>
+    </nav>
+
+    <!-- PATIENT CARD -->
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-body p-4">
+            <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-start gap-3">
+                <div>
+                    <div class="d-flex align-items-center gap-2 mb-2 flex-wrap">
+                        <span class="badge font-monospace px-2.5 py-1" style="background:#ccfbf1; color:#0f766e; font-size:.8rem;">
+                            <i class="bi bi-person-vcard me-1"></i>{{ pasien.no_rm }}
+                        </span>
+                        {% if pasien.jenis_kelamin == 'L' %}
+                        <span class="badge bg-primary-subtle text-primary border border-primary" style="font-size:.75rem;">Laki-laki</span>
+                        {% else %}
+                        <span class="badge bg-danger-subtle text-danger border border-danger" style="font-size:.75rem;">Perempuan</span>
+                        {% endif %}
+                        <span class="badge bg-light text-secondary border font-monospace" style="font-size:.75rem;">Gol. Darah: {{ pasien.golongan_darah }}</span>
+                        {% if pasien.has_alergi %}
+                        <span class="badge bg-danger text-white"><i class="bi bi-exclamation-triangle-fill me-1"></i>ALERGI</span>
+                        {% endif %}
+                    </div>
+                    <h3 class="fw-bold mb-1" style="color:#0f172a; font-size:1.5rem;">{{ pasien.nama_lengkap }}</h3>
+                    <p class="text-muted mb-0" style="font-size:.82rem;">
+                        <span><i class="bi bi-calendar3 me-1"></i>{{ pasien.tanggal_lahir|date:"d F Y" }} ({{ pasien.umur }} tahun)</span> &bull;
+                        {% if pasien.nik %}<span><i class="bi bi-card-heading me-1"></i>NIK: {{ pasien.nik }}</span> &bull;{% endif %}
+                        {% if pasien.no_bpjs %}<span><i class="bi bi-shield-check me-1"></i>BPJS: {{ pasien.no_bpjs }}</span> &bull;{% endif %}
+                        {% if pasien.no_hp %}<span><i class="bi bi-telephone me-1"></i>{{ pasien.no_hp }}</span>{% endif %}
+                    </p>
+                    {% if pasien.alamat %}
+                    <p class="text-muted mb-0 mt-1" style="font-size:.82rem;"><i class="bi bi-geo-alt me-1"></i>{{ pasien.alamat }}</p>
+                    {% endif %}
+                </div>
+                <div class="d-flex gap-2 align-self-start">
+                    <a href="{% url 'pasien:kunjungan_baru' %}?pasien={{ pasien.pk }}" class="btn btn-sm fw-bold px-3" style="background:#0d9488;color:#fff;">
+                        <i class="bi bi-plus-circle me-1"></i>Buka Kunjungan Baru
+                    </a>
+                </div>
+            </div>
+
+            <!-- ALERGI ALERT -->
+            {% if pasien.has_alergi %}
+            <div class="alert alert-danger mt-3 mb-0 py-2 d-flex align-items-center gap-2" style="font-size:.82rem;">
+                <i class="bi bi-exclamation-octagon-fill fs-5"></i>
+                <div>
+                    <strong>Peringatan Alergi:</strong>
+                    {% if pasien.alergi_obat %}<span>Obat: <u>{{ pasien.alergi_obat }}</u></span>{% endif %}
+                    {% if pasien.alergi_lain %}<span class="ms-2">Lainnya: <u>{{ pasien.alergi_lain }}</u></span>{% endif %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- RIWAYAT KUNJUNGAN -->
+    <div class="card border-0 shadow-sm">
+        <div class="card-header bg-white py-3 border-0 d-flex justify-content-between align-items-center">
+            <span class="fw-bold" style="font-size:.9rem;"><i class="bi bi-clock-history me-2" style="color:#0d9488;"></i>Riwayat Kunjungan ({{ kunjungan_list.count }})</span>
+            <a href="{% url 'pasien:kunjungan_baru' %}?pasien={{ pasien.pk }}" class="btn btn-sm btn-outline-dark fw-semibold" style="font-size:.78rem;">
+                <i class="bi bi-plus me-1"></i>Kunjungan Baru
+            </a>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0" style="font-size:.82rem;">
+                    <thead class="table-light">
+                        <tr>
+                            <th style="font-size:.8rem;">No. Kunjungan</th>
+                            <th style="font-size:.8rem;">Jenis</th>
+                            <th style="font-size:.8rem;">Status</th>
+                            <th style="font-size:.8rem;">Tgl. Masuk</th>
+                            <th style="font-size:.8rem;">Tgl. Keluar</th>
+                            <th style="font-size:.8rem;">DPJP</th>
+                            <th style="font-size:.8rem;">Ruangan / Bed</th>
+                            <th style="font-size:.8rem;">Diagnosa</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for k in kunjungan_list %}
+                        <tr style="cursor:pointer;" onclick="location.href='{% url 'pasien:kunjungan_detail' pk=k.pk %}'">
+                            <td class="font-monospace fw-semibold" style="color:#0d9488;">{{ k.no_kunjungan }}</td>
+                            <td><span class="badge bg-light text-dark border" style="font-size:.7rem;">{{ k.get_jenis_kunjungan_display }}</span></td>
+                            <td>
+                                {% if k.status == 'DAFTAR' %}<span class="badge bg-secondary">Terdaftar</span>
+                                {% elif k.status == 'TRIAGE' %}<span class="badge bg-danger">Triage</span>
+                                {% elif k.status == 'ASESMEN' %}<span class="badge bg-primary">Asesmen</span>
+                                {% elif k.status == 'RANAP' %}<span class="badge bg-warning text-dark">Ranap</span>
+                                {% elif k.status == 'PULANG' %}<span class="badge bg-success">Pulang</span>
+                                {% elif k.status == 'RUJUK' %}<span class="badge bg-info">Rujuk</span>
+                                {% elif k.status == 'MENINGGAL' %}<span class="badge bg-dark">Meninggal</span>
+                                {% endif %}
+                            </td>
+                            <td class="font-monospace text-muted" style="font-size:.75rem;">{{ k.tanggal_masuk|date:"d/m/Y H:i" }}</td>
+                            <td class="font-monospace text-muted" style="font-size:.75rem;">{{ k.tanggal_keluar|date:"d/m/Y H:i"|default:"-" }}</td>
+                            <td>{{ k.dpjp|default:"-" }}</td>
+                            <td>
+                                {% if k.bed %}
+                                <span class="badge bg-light text-dark border">{{ k.bed.ruangan.nama }} ({{ k.bed.kode_bed }})</span>
+                                {% else %}
+                                <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-truncate" style="max-width:180px;" title="{{ k.diagnosa_masuk }}">{{ k.diagnosa_masuk|default:"-" }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="8" class="text-center py-5 text-muted">
+                                <i class="bi bi-calendar-x fs-1 d-block mb-2" style="color:#cbd5e1;"></i>
+                                Belum ada riwayat kunjungan untuk pasien ini.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+</div>
+{% endblock %}
