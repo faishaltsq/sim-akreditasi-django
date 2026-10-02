@@ -148,7 +148,13 @@ STORAGES = {
         'BACKEND': 'django.core.files.storage.FileSystemStorage',
     },
     'staticfiles': {
-        'BACKEND': 'whitenoise.storage.CompressedManifestStaticFilesStorage',
+        # CompressedManifest butuh manifest di filesystem — tidak cocok untuk Vercel serverless
+        # Gunakan WhiteNoise biasa di Vercel, manifest di server-based hosting
+        'BACKEND': (
+            'whitenoise.storage.CompressedStaticFilesStorage'
+            if os.environ.get('VERCEL')
+            else 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+        ),
     },
 }
 

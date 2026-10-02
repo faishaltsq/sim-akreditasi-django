@@ -3,8 +3,11 @@ __pycache__/
 *.sqlite3
 db.sqlite3
 /media/
-/staticfiles/
+# staticfiles committed to repo for Vercel static serving
+# /staticfiles/
 .env
 .venv/
 env/
 *.log
+
+.vercel
