@@ -1,0 +1,1190 @@
+[
+  {
+    "table_idx": 0,
+    "no": "1",
+    "unit_kerja": "Tim Audit Operasional & Keuangan (2.1.1.1)",
+    "pj": "Ketua Tim Audit Operasional & Keuangan",
+    "unit_terkait": "• Bagian Keuangan & Penganggaran (3.3.1)\n\n\n• Bagian Akuntansi & Klaim (3.3.2)\n• Subbag Aset (3.2.2.1)",
+    "indikator": "Penyelesaian Pelaksanaan Audit Operasional & Keuangan Tepat Waktu Sesuai Program Kerja Tahunan (PKPT) 100% (Manajerial)",
+    "rencana_aksi": "1. Menyusun jadwal audit berkala dan matrik cakupan audit operasional-keuangan bulanan.\n2. Monitoring progres audit dan penerbitan Laporan Hasil Audit (LHA) secara digital di sistem ARIMA.\n3. Pemantauan tindak lanjut rekomendasi audit (clearance rate) bersama jajaran unit kerja terkait."
+  },
+  {
+    "table_idx": 0,
+    "no": "2",
+    "unit_kerja": "Tim Audit Medik & Governance (2.1.1.2)",
+    "pj": "Ketua Tim Audit Medik & Governance",
+    "unit_terkait": "• Komite Medik / KSM (4.7)\n\n\n• Komite Keperawatan\n\n\n• Subbag Hukum & Etika (2.1.3.1)",
+    "indikator": "Kepatuhan Pelaksanaan Audit Medis dan Audit Klinis Terjadwal 100% (Klinis / Governance)",
+    "rencana_aksi": "1. Menetapkan topic priority audit medis berdasarkan kasus risiko tinggi (high risk, high cost, volume tinggi).\n2. Melakukan evaluasi ketaatan DPJP terhadap Panduan Praktik Klinis (PPK) & Clinical Pathway.\n\n\n3. Menyusun rekomendasi perbaikan klinis dan pelaporan hasil audit secara berkala kepada Direktur Utama."
+  },
+  {
+    "table_idx": 0,
+    "no": "3",
+    "unit_kerja": "Sub-Tim Mutu Pelayanan & Akreditasi (2.1.2.1)",
+    "pj": "Ketua Sub-Tim Mutu Pelayanan & Akreditasi",
+    "unit_terkait": "• Seluruh Direktorat & Unit Kerja Operasional (Menu 3 & 4)",
+    "indikator": "Pemenuhan / Kepatuhan Elemen Penilaian (EP) Akreditasi STARKES ≥ 90% di Seluruh Unit Kerja (Manajerial / Mutu)",
+    "rencana_aksi": "1. Melakukan pemantauan dan validasi data indikator mutu unit/INM secara real-time via Dashboard ARIMA.\n2. Menyelenggarakan self-assessment dan mock audit akreditasi internal berkala per triwulan.\n3. Pendampingan penyusunan dokumen bukti (RDWOS) dan tindakan korektif PDCA di unit kerja yang belum mencapai target."
+  },
+  {
+    "table_idx": 0,
+    "no": "4",
+    "unit_kerja": "Sub-Tim Keselamatan Pasien & Manajemen Risiko (2.1.2.2)",
+    "pj": "Ketua Sub-Tim Keselamatan Pasien & Manajemen Risiko",
+    "unit_terkait": "• Seluruh Instalasi & Bangsal (4.1 s/d 4.6)\n\n\n• Subbag K3RS (3.2.2.3)",
+    "indikator": "Persentase Tindak Lanjut dan Pelaporan Insiden Keselamatan Pasien (IKP) Tepat Waktu (< 2x24 Jam) 100% (Keselamatan Pasien)",
+    "rencana_aksi": "1. Optimalisasi alur pelaporan IKP elektronik dan investigasi sederhana / RCA (Root Cause Analysis) di aplikasi ARIMA.\n2. Sosialisasi budaya keselamatan (just culture) dan kepatuhan grading risiko insiden.\n3. Penyusunan laporan berkala IKP dan risk register pembaruan RS setiap semester."
+  },
+  {
+    "table_idx": 0,
+    "no": "5",
+    "unit_kerja": "Sub-Tim Pencegahan & Pengendalian Infeksi / PPI (2.1.2.3)",
+    "pj": "Ketua Sub-Tim PPI / IPCN",
+    "unit_terkait": "• Seluruh Bangsal IRIN (4.5)\n\n\n• IBS (4.3)\n\n\n• CSSD & Laundry (4.6.6.1)",
+    "indikator": "Kepatuhan Kebersihan Tangan (Hand Hygiene) Tenaga Kesehatan ≥ 85% (INM / Klinis)",
+    "rencana_aksi": "1. Melakukan audit berkala kepatuhan 5 Momen Kebersihan Tangan di seluruh area pelayanan secara acak.\n2. Penyediaan sarana handrub dan fasilitas cuci tangan steril yang adekuat di setiap point of care.\n3. Edukasi rutin, kampanye hand hygiene, serta pemberian apresiasi (award) bagi unit terdisiplin."
+  },
+  {
+    "table_idx": 0,
+    "no": "6",
+    "unit_kerja": "Subbag Hukum, Etika RS & Humas (2.1.3.1)",
+    "pj": "Kasubbag Hukum, Etika RS & Humas",
+    "unit_terkait": "• Subbag Sekretariat (2.1.3.2)\n\n\n• KSM / Komite Etik (4.7)\n\n\n• Subbag Kredensial (3.2.1.2)",
+    "indikator": "Persentase Penyelesaian / Penanganan Sengketa Hukum & Pelanggaran Etika RS Tepat Waktu 100% (Manajerial / Governance)",
+    "rencana_aksi": "1. Penyusunan dan pembaruan berkala Hospital Bylaws, Medical Staff Bylaws, serta SPO penanganan komplain legal.\n2. Melakukan evaluasi dan mediasi awal terhadap potensi sengketa medis/hukum dalam kurun waktu 1x24 jam.\n3. Penyelenggarakan edukasi hukum kesehatan, etika profesi, dan keterbukaan informasi publik bagi staf."
+  },
+  {
+    "table_idx": 0,
+    "no": "7",
+    "unit_kerja": "Subbag Sekretariat & Layanan Pelanggan (2.1.3.2)",
+    "pj": "Kasubbag Sekretariat & Layanan Pelanggan",
+    "unit_terkait": "• Seluruh IRJ / IRIN / Penunjang (Menu 4)\n\n\n• Subbag SIMRS (3.3.3.1)",
+    "indikator": "Tingkat Kepuasan Pasien dan Pengunjung (IKM) ≥ 85% & Tindak Lanjut Komplain Pelanggan < 24 Jam 100% (INM / Manajerial)",
+    "rencana_aksi": "1. Pengelolaan Customer Feedback System (Survei kepuasan digital/QR-code dan kotak saran) terintegrasi ke SIMRS.\n2. Penanganan langsung komplain pelanggan (fast response) melalui Central Customer Service / WhatsApp Center.\n3. Evaluasi bulanan peta komplain dan koordinasi perbaikan layanan bersama unit kerja terkait."
+  },
+  {
+    "table_idx": 1,
+    "no": "1",
+    "unit_kerja": "Seksi Pelayanan Rawat Jalan & Rawat Inap (3.1.1.1)",
+    "pj": "Kepala Seksi Pelayanan Rawat Jalan & Rawat Inap",
+    "unit_terkait": "• Instalasi Rawat Jalan (4.1)\n\n\n• Subbag SIMRS (3.3.3.1)",
+    "indikator": "Waktu Tunggu Pelayanan Rawat Jalan ≤ 60 Menit (INM / Manajerial)",
+    "rencana_aksi": "1. Implementasi sistem antrean online terintegrasi SIMRS/ARIMA dan BPJS.\n\n\n2. Monitoring ketepatan waktu kehadiran jam praktik dokter DPJP.\n\n\n3. Evaluasi dan redistribusi beban alur pendaftaran dan poliklinik."
+  },
+  {
+    "table_idx": 1,
+    "no": "2",
+    "unit_kerja": "Seksi Pelayanan Rawat Jalan & Rawat Inap (3.1.1.1)",
+    "pj": "Kepala Seksi Pelayanan Rawat Jalan & Rawat Inap",
+    "unit_terkait": "• KSM / DPJP (4.7)\n\n\n• Sub-Tim Mutu (2.1.2.1)",
+    "indikator": "Kepatuhan DPJP terhadap Panduan Praktik Klinis (PPK) / Clinical Pathway ≥ 80% (Klinis)",
+    "rencana_aksi": "1. Audit medis berkala terhadap Rekam Medis Elektronik (RME) pasien rawat inap.\n\n\n2. Sosialisasi dan refreshment PPK/Clinical Pathway terbaru bagi KSM.\n\n\n3. Evaluasi kesesuaian lama rawat (Length of Stay / LOS) dengan kriteria evaluasi standar."
+  },
+  {
+    "table_idx": 1,
+    "no": "3",
+    "unit_kerja": "Seksi Pelayanan Rawat Jalan & Rawat Inap (3.1.1.1)",
+    "pj": "Kepala Seksi Pelayanan Rawat Jalan & Rawat Inap",
+    "unit_terkait": "• Instalasi Rawat Inap (4.5)\n\n\n• KSM Terkait (4.7)",
+    "indikator": "Angka Readmisi Pasien Rawat Inap dengan Diagnosis Sama < 30 Hari ≤ 2% (Klinis)",
+    "rencana_aksi": "1. Standarisasi kriteria Discharge Planning (perencanaan pasien pulang) sejak hari pertama rawat.\n\n\n2. Pemberian edukasi perawatan rumah dan obat pulang secara komprehensif.\n\n\n3. Pemantauan via tele-konsultasi/kunjungan rumah (home care) bila diperlukan."
+  },
+  {
+    "table_idx": 1,
+    "no": "4",
+    "unit_kerja": "Seksi Pelayanan Rawat Jalan & Rawat Inap (3.1.1.1)",
+    "pj": "Kepala Seksi Pelayanan Rawat Jalan & Rawat Inap",
+    "unit_terkait": "• IRJ (4.1)\n\n\n• IRIN (4.5)\n\n\n• Subbag Layanan Pelanggan (2.1.3.2)",
+    "indikator": "Tingkat Kepuasan Pasien Rawat Jalan & Rawat Inap ≥ 85% (INM / Manajerial)",
+    "rencana_aksi": "1. Pemantauan harian hasil survei kepatuhan dan kepuasan pasien berbasis digital/QR.\n\n\n2. Penanganan keluhan teknis pelayanan medis rawat jalan/inap maksimal 1x24 jam.\n\n\n3. Pelatihan penyegaran komunikasi efektif bagi staf medis dan admin rawat."
+  },
+  {
+    "table_idx": 1,
+    "no": "5",
+    "unit_kerja": "Seksi Pelayanan Rawat Jalan & Rawat Inap (3.1.1.1)",
+    "pj": "Kepala Seksi Pelayanan Rawat Jalan & Rawat Inap",
+    "unit_terkait": "• Instalasi Rekam Medis (4.6.5)\n\n\n• Subbag Billing & Klaim (3.3.2.2)",
+    "indikator": "Kelengkapan Pengisian Rekam Medis Elektronik (RME) Pasien Pulang < 24 Jam 100% (Manajerial)",
+    "rencana_aksi": "1. Optimalisasi mandatory field pada sistem RME ARIMA agar tidak bisa di-close jika belum lengkap.\n\n\n2. Monitoring harian kelengkapan resume medis/DPJP oleh kepala unit.\n\n\n3. Umpan balik (feedback) berkala kepada DPJP yang terlambat mengisi RME."
+  },
+  {
+    "table_idx": 2,
+    "no": "1",
+    "unit_kerja": "Seksi Pelayanan GD, Bedah & Intensif (3.1.1.2)",
+    "pj": "Kepala Seksi GD, Bedah & Perawatan Intensif",
+    "unit_terkait": "• Instalasi Gawat Darurat (4.2)\n\n\n• KSM Terkait (4.7)",
+    "indikator": "Waktu Tanggap Pelayanan Dokter di Gawat Darurat (Response Time) ≤ 5 Menit (INM / Klinis)",
+    "rencana_aksi": "1. Penataan ulang alur triase ATS (Australasian Triage Scale) di IGD.\n2. Memastikan kesiapan dokter jaga IGD standby 24 jam di area tindakan.\n3. Evaluasi sistem panggil emergency (code red/code blue) terintegrasi SIMRS."
+  },
+  {
+    "table_idx": 2,
+    "no": "2",
+    "unit_kerja": "Seksi Pelayanan GD, Bedah & Intensif (3.1.1.2)",
+    "pj": "Kepala Seksi GD, Bedah & Perawatan Intensif",
+    "unit_terkait": "• Instalasi Bedah Sentral (4.3)\n\n\n• Depo Farmasi Bedah (4.6.3.3)",
+    "indikator": "Kepatuhan Waktu Operasi Cito (Emergency Surgery Response Time) ≤ 30 Menit (Klinis)",
+    "rencana_aksi": "1. Standarisasi alur penyiapan tim bedah, anestesi, dan instrumen kamar operasi cito.\n2. Ketersediaan paket perbekalan farmasi emergency siap pakai di Depo OK.\n3. Evaluasi berkala penyebab penundaan (delay) operasi cito."
+  },
+  {
+    "table_idx": 2,
+    "no": "3",
+    "unit_kerja": "Seksi Pelayanan GD, Bedah & Intensif (3.1.1.2)",
+    "pj": "Kepala Seksi GD, Bedah & Perawatan Intensif",
+    "unit_terkait": "• Instalasi Bedah Sentral (4.3)\n\n\n• KSM Anestesi & Bedah (4.7)",
+    "indikator": "Kepatuhan Pelaksanaan Surgical Safety Checklist (SSC) 100% (INM / Klinis)",
+    "rencana_aksi": "1. Wajib melaksanakan 3 fase SSC (Sign In, Time Out, Sign Out) secara disiplin.\n\n\n2. Digitalisasi konfirmasi SSC langsung pada modul OK aplikasi ARIMA.\n\n\n3. Audit harian kelengkapan pengisian SSC oleh Perawat OK dan Dokter Anestesi."
+  },
+  {
+    "table_idx": 2,
+    "no": "4",
+    "unit_kerja": "Seksi Pelayanan GD, Bedah & Intensif (3.1.1.2)",
+    "pj": "Kepala Seksi GD, Bedah & Perawatan Intensif",
+    "unit_terkait": "• Instalasi Perawatan Intensif (4.4)\n\n\n• Tim PPI (2.1.2.3)",
+    "indikator": "Angka Kejadian Infeksi VAP / VASC / IAD di Unit Perawatan Intensif (ICU) ≤ 3‰ (Klinis)",
+    "rencana_aksi": "1. Penerapan ketat bundling pencegahan infeksi ventilator dan kateter urin/pembuluh darah.\n\n\n2. Pelatihan teknik suctioning dan perawatan alat invasif steril bagi perawat ICU.\n3. Monitoring kebersihan lingkungan ICU dan sterilisasi rutin alat respirasi."
+  },
+  {
+    "table_idx": 2,
+    "no": "5",
+    "unit_kerja": "Seksi Pelayanan GD, Bedah & Intensif (3.1.1.2)",
+    "pj": "Kepala Seksi GD, Bedah & Perawatan Intensif",
+    "unit_terkait": "• IBS (4.3)\n\n\n• Perawatan Intensif (4.4)\n\n\n• Subbag IPSRS (3.2.2.2)",
+    "indikator": "Kesiapan dan Ketersediaan Alat Medis Emergency & Life Support 100% (Manajerial)",
+    "rencana_aksi": "1. Pemeliharaan dan kalibrasi rutin alat vital (defibrilator, ventilator, anestesi).\n2. Pengecekan trolley emergency harian dengan segel terstandar.\n3. Uji fungsi berkala sistem kelistrikan cadangan (UPS/Genset) di area kritis."
+  },
+  {
+    "table_idx": 3,
+    "no": "1",
+    "unit_kerja": "Seksi Asuhan Keperawatan & Kebidanan (3.1.2.1)",
+    "pj": "Kepala Seksi Asuhan Keperawatan & Kebidanan",
+    "unit_terkait": "• Seluruh Bangsal IRIN (4.5)\n\n\n• Sub-Tim K3RS (2.1.2.2)",
+    "indikator": "Kepatuhan Upaya Pencegahan Risiko Pasien Jatuh 100% (INM / Keselamatan)",
+    "rencana_aksi": "1. Penilaian awal dan re-asesmen berkala skala risiko jatuh (Morse/Humpty Dumpty).\n\n\n2. Memastikan ketersediaan dan penggunaan stiker kuning serta bed rail yang berfungsi.\n\n\n3. Edukasi partisipasi aktif keluarga pasien dalam pencegahan jatuh."
+  },
+  {
+    "table_idx": 3,
+    "no": "2",
+    "unit_kerja": "Seksi Asuhan Keperawatan & Kebidanan (3.1.2.1)",
+    "pj": "Kepala Seksi Asuhan Keperawatan & Kebidanan",
+    "unit_terkait": "• Bangsal IRIN (4.5)\n\n\n• Instalasi Gizi (4.6.4)",
+    "indikator": "Angka Kejadian Dekubitus pada Pasien Tirah Baring Pasca-Rawat ≤ 1,5% (Klinis)",
+    "rencana_aksi": "1. Pelaksanaan protokol alih baring (miring kanan-kiri) setiap 2 jam pada pasien total care.\n\n\n2. Penggunaan kasur dekubitus (air mattress) dan perawatan kulit teratur.\n\n\n3. Asesmen skala Braden dan intervensi nutrisi bersama tim gizi."
+  },
+  {
+    "table_idx": 3,
+    "no": "3",
+    "unit_kerja": "Seksi Asuhan Keperawatan & Kebidanan (3.1.2.1)",
+    "pj": "Kepala Seksi Asuhan Keperawatan & Kebidanan",
+    "unit_terkait": "• Bangsal Obgyn / VK (4.5.5)\n\n\n• KSM Obgyn & Anak (4.7)",
+    "indikator": "Kepatuhan Pelaksanaan Inisiasi Menyusu Dini (IMD) pada Persalinan Normal ≥ 80% (Klinis)",
+    "rencana_aksi": "1. Penerapan prosedur IMD minimal 1 jam pertama pasca-persalinan di Kamar Bersalin (VK).\n\n\n2. Edukasi IMD dan ASI Eksklusif sejak masa antenatal care (ANC).\n\n\n3. Pemantauan dan pencatatan kepatuhan IMD pada formulir asuhan kebidanan RME."
+  },
+  {
+    "table_idx": 3,
+    "no": "4",
+    "unit_kerja": "Seksi Asuhan Keperawatan & Kebidanan (3.1.2.1)",
+    "pj": "Kepala Seksi Asuhan Keperawatan & Kebidanan",
+    "unit_terkait": "• Seluruh Unit Rawat Inap (4.5)\n\n\n• Subbag SIMRS (3.3.3.1)",
+    "indikator": "Kepatuhan Pelaksanaan Pemantauan EWSS dan Eskalasi Klinis 100% (Klinis)",
+    "rencana_aksi": "1. Pengisian skor EWSS digital real-time pada aplikasi ARIMA oleh perawat shift.\n\n\n2. Simulasi/pelatihan rutin alur eskalasi penanganan pasien memburuk.\n\n\n3. Audit verifikasi pengisian skor EWSS harian oleh Kepala Ruangan."
+  },
+  {
+    "table_idx": 3,
+    "no": "5",
+    "unit_kerja": "Seksi Asuhan Keperawatan & Kebidanan (3.1.2.1)",
+    "pj": "Kepala Seksi Asuhan Keperawatan & Kebidanan",
+    "unit_terkait": "• Seluruh Unit Keperawatan (4.1 s/d 4.5)",
+    "indikator": "Angka Ketaatan Pelaksanaan Timbang Terima (Handover) SBAR 100% (Manajerial)",
+    "rencana_aksi": "1. Penerapan standar metode SBAR (Situation, Background, Assessment, Recommendation) saat pergantian shift.\n\n\n2. Verifikasi instrumen bedside handover langsung di samping tempat tidur pasien.\n\n\n3. Audit dokumentasi timbang terima pada RME ARIMA."
+  },
+  {
+    "table_idx": 4,
+    "no": "1",
+    "unit_kerja": "Seksi Mutu, Etika, & Logistik Keperawatan (3.1.2.2)",
+    "pj": "Kepala Seksi Mutu, Etika & Logistik Keperawatan",
+    "unit_terkait": "• Sub-Tim PPI (2.1.2.3)\n\n\n• Seluruh Unit Perawat (Menu 4)",
+    "indikator": "Kepatuhan Kebersihan Tangan (Hand Hygiene) Staf Keperawatan ≥ 85% (INM / Klinis)",
+    "rencana_aksi": "1. Audit acak harian 5 momen cuci tangan perawat/bidan di seluruh bangsal.\n\n\n2. Pemenuhan ketersediaan handrub dan sabun antiseptik di setiap bed pasien.\n\n\n3. Program edukasi ulang dan penyegaran (refreshment) cuci tangan steril."
+  },
+  {
+    "table_idx": 4,
+    "no": "2",
+    "unit_kerja": "Seksi Mutu, Etika, & Logistik Keperawatan (3.1.2.2)",
+    "pj": "Kepala Seksi Mutu, Etika & Logistik Keperawatan",
+    "unit_terkait": "• Subbag Kredensial SDM (3.2.1.2)\n\n\n• Komite Keperawatan",
+    "indikator": "Persentase Perawat/Bidan yang Memiliki Surat Penugasan Klinis (SPK) & RKK Aktif 100% (Manajerial)",
+    "rencana_aksi": "1. Pemetaan dan pembaruan database lisensi (STR, SIP, SPK, RKK) perawat via SIMRS.\n\n\n2. Notifikasi otomatis 3 bulan sebelum masa berlaku STR/SIP perawat habis.\n\n\n3. Pelaksanaan proses kredensial dan re-kredensial keperawatan tepat waktu."
+  },
+  {
+    "table_idx": 4,
+    "no": "3",
+    "unit_kerja": "Seksi Mutu, Etika, & Logistik Keperawatan (3.1.2.2)",
+    "pj": "Kepala Seksi Mutu, Etika & Logistik Keperawatan",
+    "unit_terkait": "• Subbag Aset & Logistik (3.2.2.1)\n\n\n• CSSD (4.6.6.1)",
+    "indikator": "Ketersediaan Logistik & Alkes Keperawatan Siap Pakai di Bangsal 100% (Manajerial)",
+    "rencana_aksi": "1. Penetapan kuota stok minimum (stock buffer) linen dan alkes keperawatan per unit.\n2. Efisiensi sistem amprah/permintaan logistik keperawatan berbasis ARIMA.\n3. Evaluasi berkala kelayakan dan kondisi fisik linen/alat perawatan pasien."
+  },
+  {
+    "table_idx": 4,
+    "no": "4",
+    "unit_kerja": "Seksi Mutu, Etika, & Logistik Keperawatan (3.1.2.2)",
+    "pj": "Kepala Seksi Mutu, Etika & Logistik Keperawatan",
+    "unit_terkait": "• Subbag Hukum & Etika (2.1.3.1)\n\n\n• Komite Keperawatan",
+    "indikator": "Nihil (Zero) Pelanggaran Etika dan Disiplin Profesi Keperawatan (Governance)",
+    "rencana_aksi": "1. Sosialisasi Kode Etik Keperawatan dan peraturan internal (Nursing Staff Bylaws).\n\n\n2. Pembentukan sistem konseling etika dan ronde keperawatan berkala.\n3. Penanganan dan tindak lanjut laporan dugaan pelanggaran etik perawat < 2x24 jam."
+  },
+  {
+    "table_idx": 4,
+    "no": "5",
+    "unit_kerja": "Seksi Mutu, Etika, & Logistik Keperawatan (3.1.2.2)",
+    "pj": "Kepala Seksi Mutu, Etika & Logistik Keperawatan",
+    "unit_terkait": "• Subbag Pengembangan SDM (3.2.1.2)\n\n\n• Seluruh Bangsal (4.5)",
+    "indikator": "Pemenuhan Jam Pelatihan/Pelatihan Keperawatan Minimal 20 Jam/Perawat/Tahun 100% (Manajerial)",
+    "rencana_aksi": "1. Penyusunan kalender In-House Training (BCLS, EWS, PPI, Keselamatan Pasien).\n2. Pencatatan dan pemantauan satuan kredit partisipasi (SKP) pelatihan staf perawat.\n3. Evaluasi dampak pelatihan terhadap peningkatkan mutu asuhan keperawatan unit."
+  },
+  {
+    "table_idx": 5,
+    "no": "1",
+    "unit_kerja": "Seksi Penunjang Diagnostik (3.1.3.1)",
+    "pj": "Kepala Seksi Penunjang Diagnostik",
+    "unit_terkait": "• Instalasi Laboratorium (4.6.1)\n\n\n• Subbag SIMRS (3.3.3.1)",
+    "indikator": "Waktu Tunggu Hasil Pelayanan Laboratorium Rutin (Darah Rutin) ≤ 140 Menit (INM / Manajerial)",
+    "rencana_aksi": "1. Integrasi alat laboratorium otomatis ke SIMRS melalui Laboratory Information System (LIS).\n\n\n2. Evaluasi jam sibuk dan optimasi alur penerimaan spesimen darah.\n\n\n3. Pemantauan real-time durasi proses sejak sampel diterima hingga verifikasi hasil."
+  },
+  {
+    "table_idx": 5,
+    "no": "2",
+    "unit_kerja": "Seksi Penunjang Diagnostik (3.1.3.1)",
+    "pj": "Kepala Seksi Penunjang Diagnostik",
+    "unit_terkait": "• Laboratorium & BDRS (4.6.1)\n\n\n• IRJ / IRIN / IGD (4.1, 4.2, 4.5)",
+    "indikator": "Pelaporan Hasil Nilai Kritis (Critical Value) Laboratorium < 30 Menit 100% (INM / Keselamatan)",
+    "rencana_aksi": "1. Penetapan daftar baku Nilai Kritis laboratorium yang disepakati KSM Medik.\n2. Pelaksanaan Prosedur Read-Back (Tulis, Baca, Konfirmasi) saat melapor ke DPJP/perawat.\n3. Pencatatan log book / sistem notifikasi otomatis nilai kritis pada ARIMA."
+  },
+  {
+    "table_idx": 5,
+    "no": "3",
+    "unit_kerja": "Seksi Penunjang Diagnostik (3.1.3.1)",
+    "pj": "Kepala Seksi Penunjang Diagnostik",
+    "unit_terkait": "• Instalasi Radiologi (4.6.2)\n\n\n• Subbag SIMRS (3.3.3.1)",
+    "indikator": "Waktu Tunggu Hasil Pelayanan Foto Thorax Rutin ≤ 3 Jam (Manajerial)",
+    "rencana_aksi": "1. Optimalisasi penggunaan sistem PACS (Picture Archiving and Communication System).\n2. Distribusi jadwal ekspertise radiolog yang merata setiap hari kerja.\n3. Monitoring antrean pemeriksaan radiologi via dashboard penunjang."
+  },
+  {
+    "table_idx": 5,
+    "no": "4",
+    "unit_kerja": "Seksi Penunjang Diagnostik (3.1.3.1)",
+    "pj": "Kepala Seksi Penunjang Diagnostik",
+    "unit_terkait": "• Radiologi & Imaging (4.6.2)\n\n\n• Subbag K3RS (3.2.2.3)",
+    "indikator": "Kepatuhan Pelaksanaan Pemantauan Paparan Radiasi & Pemakaian TLD Staf 100% (Keselamatan)",
+    "rencana_aksi": "1. Kewajiban penggunaan Thermo Luminescent Dosimeter (TLD) bagi staf radiologi.\n2. Kalibrasi berkala pesawat rontgen dan inspeksi rutin ketebalan proteksi timbal (Pb).\n3. Pemeriksaan kesehatan berkala dan pemantauan dosis radiasi staf tiap semester."
+  },
+  {
+    "table_idx": 5,
+    "no": "5",
+    "unit_kerja": "Seksi Penunjang Diagnostik (3.1.3.1)",
+    "pj": "Kepala Seksi Penunjang Diagnostik",
+    "unit_terkait": "• Laboratorium (4.6.1)\n\n\n• Radiologi (4.6.2)\n\n\n• Tim Mutu (2.1.2.1)",
+    "indikator": "Kepatuhan Pemantauan Mutu Internal (PME/PMI) Laboratorium & Radiologi 100% (Klinis)",
+    "rencana_aksi": "1. Pelaksanaan Pemantauan Mutu Internal (PMI) reagen & alat harian sebelum pelayanan.\n2. Keikutsertaan aktif dalam Program Pemantauan Mutu Eksternal (PME) nasional.\n3. Evaluasi dan koreksi kalibrasi jika ditemukan deviasi hasil pengujian."
+  },
+  {
+    "table_idx": 6,
+    "no": "1",
+    "unit_kerja": "Seksi Penunjang Non-Diagnostik (3.1.3.2)",
+    "pj": "Kepala Seksi Penunjang Non-Diagnostik",
+    "unit_terkait": "• Instalasi Farmasi RS (4.6.3)\n\n\n• Subbag SIMRS (3.3.3.1)",
+    "indikator": "Waktu Tunggu Pelayanan Obat Jadi ≤ 30 Menit & Obat Racikan ≤ 60 Menit (INM / Manajerial)",
+    "rencana_aksi": "1. Digitalisasi e-resep langsung dari poliklinik/RME ke Depo Farmasi.\n2. Penataan tata letak (layout) obat berdasarkan sistem Fast/Slow Moving & LASA.\n3. Pembagian tugas penyiapan obat dan verifikasi akhir yang teratur."
+  },
+  {
+    "table_idx": 6,
+    "no": "2",
+    "unit_kerja": "Seksi Penunjang Non-Diagnostik (3.1.3.2)",
+    "pj": "Kepala Seksi Penunjang Non-Diagnostik",
+    "unit_terkait": "• IFRS / Depo Farmasi (4.6.3)\n\n\n• Sub-Tim K3RS (2.1.2.2)",
+    "indikator": "Kepatuhan Pelabelan dan Penyimpanan Obat High Alert & NORUM/LASA 100% (Keselamatan)",
+    "rencana_aksi": "1. Pemberian stiker High Alert (merah) dan LASA (kuning) pada setiap kemasan obat.\n2. Penyimpanan obat High Alert di lemari terkunci khusus dan terpisah.\n3. Audit berkala kelayakan penyimpanan dan suhu ruang/kulkas farmasi."
+  },
+  {
+    "table_idx": 6,
+    "no": "3",
+    "unit_kerja": "Seksi Penunjang Non-Diagnostik (3.1.3.2)",
+    "pj": "Kepala Seksi Penunjang Non-Diagnostik",
+    "unit_terkait": "• Instalasi Gizi & Dietetik (4.6.4)\n\n\n• Bangsal IRIN (4.5)",
+    "indikator": "Ketepatan Waktu Pendistribusian Makanan Pasien Rawat Inap ≥ 90% (Manajerial)",
+    "rencana_aksi": "Penyusunan dan pematuhan jadwal distribusi makan pasien (Pagi, Siang, Malam).\nPenggunaan kereta dorong makanan (trolley) berbahan isolasi termal.\n3. Koordinasi waktu pendistribusian makanan dengan jadwal tindakan medis/keperawatan."
+  },
+  {
+    "table_idx": 6,
+    "no": "4",
+    "unit_kerja": "Seksi Penunjang Non-Diagnostik (3.1.3.2)",
+    "pj": "Kepala Seksi Penunjang Non-Diagnostik",
+    "unit_terkait": "• Instalasi Gizi & Dietetik (4.6.4)\n\n\n• Tim PPI (2.1.2.3)",
+    "indikator": "Sisa Makanan yang Tidak Termakan oleh Pasien (Comstock) ≤ 20% (Klinis / Pelayanan)",
+    "rencana_aksi": "Skrining gizi awal dan konsultasi diet sesuai kuesioner preferensi pasien.\nVariasi menu harian dan penyajian makanan yang menarik serta higienis.\n3. Evaluasi bulanan sisa makanan pasien per bangsal perawatan."
+  },
+  {
+    "table_idx": 6,
+    "no": "5",
+    "unit_kerja": "Seksi Penunjang Non-Diagnostik (3.1.3.2)",
+    "pj": "Kepala Seksi Penunjang Non-Diagnostik",
+    "unit_terkait": "• Instalasi Rekam Medis / RMIK (4.6.5)\n\n\n• Subbag Billing/Klaim (3.3.2.2)",
+    "indikator": "Kepatuhan Kerahasiaan & Keamanan Akses Rekam Medis Elektronik (RME) 100% (Manajerial / Tata Kelola)",
+    "rencana_aksi": "Penerapan otentikasi hak akses berbasis peran (Role-Based Access Control) pada ARIMA.\nPenandatanganan pernyataan komitmen kerahasiaan data medis oleh seluruh staf.\n3. Audit jejak digital (log trace) sistem RME secara rutin untuk mencegah kebocoran data."
+  },
+  {
+    "table_idx": 7,
+    "no": "1",
+    "unit_kerja": "Subbag Rekrutmen & Administrasi Kepegawaian (3.2.1.1)",
+    "pj": "Kasubbag Rekrutmen & Admin Kepegawaian",
+    "unit_terkait": "• Seluruh Direktorat & Unit Kerja (Menu 3 & 4)",
+    "indikator": "Pemenuhan Kebutuhan Tenaga Kerja Sesuai Analisis Beban Kerja (ABK) ≥ 90% (Manajerial)",
+    "rencana_aksi": "1. Pembaruan tahunan pemetaan Analis Beban Kerja (ABK) dan Analis Jabatan di seluruh unit.\n\n\n2. Optimalisasi sistem rekrutmen berbasis digital untuk mempercepat proses sourcing dan seleksi.\n\n\n3. Evaluasi berkala rasio kecukupan SDM medis, keperawatan, dan non-medis."
+  },
+  {
+    "table_idx": 7,
+    "no": "2",
+    "unit_kerja": "Subbag Rekrutmen & Administrasi Kepegawaian (3.2.1.1)",
+    "pj": "Kasubbag Rekrutmen & Admin Kepegawaian",
+    "unit_terkait": "• Subbag SIMRS & IT (3.3.3.1)\n\n\n• Seluruh Unit Kerja",
+    "indikator": "Kelengkapan Dokumen File Kepegawaian (Personnel File) Staf 100% (Manajerial)",
+    "rencana_aksi": "1. Digitalisasi seluruh berkas kepegawaian (ijazah, STR, SIP, Sertifikat, KTP, SK) ke Sistem ARIMA.\n\n\n2. Verifikasi keabsahan dokumen ijazah dan lisensi ke lembaga penerbit (primary source verification).\n\n\n3. Audit kelengkapan file kepegawaian secara berkala setiap semester."
+  },
+  {
+    "table_idx": 7,
+    "no": "3",
+    "unit_kerja": "Subbag Rekrutmen & Administrasi Kepegawaian (3.2.1.1)",
+    "pj": "Kasubbag Rekrutmen & Admin Kepegawaian",
+    "unit_terkait": "• KSM / Komite Medik (4.7)\n\n\n• Subbag Kredensial (3.2.1.2)",
+    "indikator": "Ketepatan Waktu Pembaruan Lisensi (STR & SIP / SIK) Staf Medis & Nakes ≥ 95% (Manajerial / Legal)",
+    "rencana_aksi": "1. Notifikasi otomatis dari ARIMA 3–6 bulan sebelum masa berlaku STR/SIP habis.\n\n\n2. Pendampingan administrasi pengurusan STR/SIP terintegrasi dengan organisasi profesi.\n\n\n3. Pembatasan kewenangan klinis otomatis di SIMRS jika SIP telah kadaluarsa."
+  },
+  {
+    "table_idx": 7,
+    "no": "4",
+    "unit_kerja": "Subbag Rekrutmen & Administrasi Kepegawaian (3.2.1.1)",
+    "pj": "Kasubbag Rekrutmen & Admin Kepegawaian",
+    "unit_terkait": "• Seluruh Unit Kerja (Menu 3 & 4)",
+    "indikator": "Ketepatan Waktu Pelaksanaan Evaluasi Kinerja Pegawai (Penilaian Kinerja / SKP) 100% (Manajerial)",
+    "rencana_aksi": "1. Implementasi penilaian kinerja pegawai bulanan/tahunan secara online via Modul SDM ARIMA.\n\n\n2. Sosialisasi indikator kinerja individu (IKI) yang selaras dengan IKU unit kerja.\n\n\n3. Pemberian rekomendasi pengembangan atau sanksi administratif berdasarkan hasil evaluasi."
+  },
+  {
+    "table_idx": 7,
+    "no": "5",
+    "unit_kerja": "Subbag Rekrutmen & Administrasi Kepegawaian (3.2.1.1)",
+    "pj": "Kasubbag Rekrutmen & Admin Kepegawaian",
+    "unit_terkait": "• Subbag Perbendaharaan & Kas (3.3.1.2)\n\n\n• Seluruh Unit Kerja",
+    "indikator": "Ketepatan Waktu Pemrosesan Gaji, Tunjangan, & Insentif Pegawai 100% (Manajerial)",
+    "rencana_aksi": "1. Integrasi data presensi elektronik (biometrik) dengan modul penggajian SIMRS.\n\n\n2. Verifikasi data lembur, tunjangan, dan rekapan kinerja sebelum tanggal 25 setiap bulan.\n\n\n3. Distribusi slip gaji digital secara aman kepada seluruh pegawai."
+  },
+  {
+    "table_idx": 8,
+    "no": "1",
+    "unit_kerja": "Subbag Pengembangan SDM, Kredensial & Etika Profesi (3.2.1.2)",
+    "pj": "Kasubbag Pengembangan SDM & Kredensial",
+    "unit_terkait": "• Komite Medik, Keperawatan, & Nakes Lain\n\n\n• Direktur Utama (2.1)",
+    "indikator": "Persentase Staf Medis dan Nakes yang Memiliki SPK & RKK Aktif 100% (Governance / Mutu)",
+    "rencana_aksi": "1. Pelaksanaan proses kredensial/rekredensial tepat waktu sebelum masa SPK-RKK berakhir.\n\n\n2. Pemetaan Clinical Privilege (Rincian Kewenangan Klinis) berbasis kompetensi terbaru.\n\n\n3. Penerbitan Surat Penugasan Klinis (SPK) oleh Direktur Utama via sistem ARIMA."
+  },
+  {
+    "table_idx": 8,
+    "no": "2",
+    "unit_kerja": "Subbag Pengembangan SDM, Kredensial & Etika Profesi (3.2.1.2)",
+    "pj": "Kasubbag Pengembangan SDM & Kredensial",
+    "unit_terkait": "• Subbag Pelatihan Staf (3.2.3.1)\n\n\n• Seluruh Unit Kerja",
+    "indikator": "Rata-rata Jam Pelatihan Pegawai Minimal 20 Jam/Pegawai/Tahun ≥ 90% (Manajerial)",
+    "rencana_aksi": "1. Penyusunan Training Needs Analysis (TNA) tahunan untuk seluruh kelompok staf.\n\n\n2. Pelaksanaan program In-House Training dan memfasilitasi Ex-House Training prioritas.\n\n\n3. Pencatatan otomatis jam pelatihan pegawai pada e-file SDM ARIMA."
+  },
+  {
+    "table_idx": 8,
+    "no": "3",
+    "unit_kerja": "Subbag Pengembangan SDM, Kredensial & Etika Profesi (3.2.1.2)",
+    "pj": "Kasubbag Pengembangan SDM & Kredensial",
+    "unit_terkait": "• KSM / Komite Medik (4.7)\n\n\n• Sub-Tim Mutu (2.1.2.1)",
+    "indikator": "Pelaksanaan Evaluasi Praktik Profesional Berkelanjutan (OPPE / FPPE) Staf Medis 100% (Klinis / Governance)",
+    "rencana_aksi": "1. Pengumpulan data kinerja klinis harian DPJP secara otomatis dari RME SIMRS.\n\n\n2. Pembahasan hasil evaluasi OPPE bersama Komite Medik per semester.\n\n\n3. Penyusunan rekomendasi pembaruan kewenangan klinis berdasarkan data OPPE."
+  },
+  {
+    "table_idx": 8,
+    "no": "4",
+    "unit_kerja": "Subbag Pengembangan SDM, Kredensial & Etika Profesi (3.2.1.2)",
+    "pj": "Kasubbag Pengembangan SDM & Kredensial",
+    "unit_terkait": "• Subbag Hukum & Etika (2.1.3.1)\n\n\n• Komite Etik & Hukum",
+    "indikator": "Tingkat Kepatuhan Pengisian Orientasi Pegawai Baru (General & Khusus) 100% (Manajerial)",
+    "rencana_aksi": "1. Penyelenggaraan Program Orientasi Umum (PPM, K3RS, PPI, Mutu) untuk seluruh pegawai baru.\n\n\n2. Pelaksanaan orientasi khusus unit kerja minimal 2 minggu sebelum penugasan mandiri.\n\n\n3. Evaluasi pasca-orientasi dan penandatanganan komitmen etik kerja."
+  },
+  {
+    "table_idx": 8,
+    "no": "5",
+    "unit_kerja": "Subbag Pengembangan SDM, Kredensial & Etika Profesi (3.2.1.2)",
+    "pj": "Kasubbag Pengembangan SDM & Kredensial",
+    "unit_terkait": "• Komite Etik & Disiplin\n\n\n• Subbag Rekrutmen (3.2.1.1)",
+    "indikator": "Persentase Penanganan Laporan Pelanggaran Etik Profesi Tepat Waktu (< 7 Hari) 100% (Governance)",
+    "rencana_aksi": "1. Pembentukan alur penanganan aduan etika dan disiplin pegawai yang transparan.\n\n\n2. Pelaksanaan sidang komite etik profesi untuk merumuskan rekomendasi penanganan.\n\n\n3. Dokumentasi dan evaluasi berkala tren pelanggaran etika staf di rumah sakit."
+  },
+  {
+    "table_idx": 9,
+    "no": "1",
+    "unit_kerja": "Subbag Rumah Tangga, Logistik & Aset (3.2.2.1)",
+    "pj": "Kasubbag Rumah Tangga, Logistik & Aset",
+    "unit_terkait": "• Seluruh Unit Kerja Operasional (Menu 4)",
+    "indikator": "Pemenuhan Permintaan Logistik Non-Medis Unit Kerja Tepat Waktu (≤ 24 Jam) ≥ 95% (Manajerial)",
+    "rencana_aksi": "1. Digitalisasi amprah logistik non-medis melalui modul Inventory System ARIMA.\n\n\n2. Penetapan batas stok aman (minimum/maximum stock) di gudang rumah tangga.\n\n\n3. Evaluasi dan pembaharuan berkala daftar vendor/supplier barang non-medis."
+  },
+  {
+    "table_idx": 9,
+    "no": "2",
+    "unit_kerja": "Subbag Rumah Tangga, Logistik & Aset (3.2.2.1)",
+    "pj": "Kasubbag Rumah Tangga, Logistik & Aset",
+    "unit_terkait": "• Subbag IPSRS (3.2.2.2)\n\n\n• Subbag Perbendaharaan (3.3.1.2)",
+    "indikator": "Persentase Aset Rumah Sakit yang Terlabel Barcode & Terdaftar dalam Inventaris 100% (Manajerial)",
+    "rencana_aksi": "1. Pelaksanaan Stock Opname aset sarana dan prasarana secara berkala per semester.\n\n\n2. Pemasangan stiker barcode/QR-code inventaris pada seluruh barang aset baru.\n\n\n3. Integrasi SIM-Aset dengan modul pemeliharaan IPSRS di sistem ARIMA."
+  },
+  {
+    "table_idx": 9,
+    "no": "3",
+    "unit_kerja": "Subbag Rumah Tangga, Logistik & Aset (3.2.2.1)",
+    "pj": "Kasubbag Rumah Tangga, Logistik & Aset",
+    "unit_terkait": "• CSSD & Laundry (4.6.6.1)\n\n\n• Bangsal Rawat Inap (4.5)",
+    "indikator": "Ketepatan Waktu & Ketersediaan Distribusi Linen Clean/Steril ke Bangsal ≥ 95% (Pelayanan)",
+    "rencana_aksi": "1. Pengaturan jadwal rutin pengiriman linen bersih dan penarikan linen kotor per unit.\n\n\n2. Pemantauan standar berat dan kecukupan par-stock linen di setiap bangsal.\n\n\n3. Monitoring kebersihan dan kelayakan kondisi fisik linen rumah sakit."
+  },
+  {
+    "table_idx": 9,
+    "no": "4",
+    "unit_kerja": "Subbag Rumah Tangga, Logistik & Aset (3.2.2.1)",
+    "pj": "Kasubbag Rumah Tangga, Logistik & Aset",
+    "unit_terkait": "• Subbag K3RS & Sanitasi (3.2.2.3)\n\n\n• Vendor Outsource",
+    "indikator": "Tingkat Kebersihan Lingkungan Area Pelayanan (Housekeeping Audit) ≥ 85% (Manajerial)",
+    "rencana_aksi": "1. Pelaksanaan audit kebersihan harian menggunakan checklist kebersihan area.\n\n\n2. Pengawasan ketat kinerja penyedia jasa kebersihan (cleaning service) pihak ketiga.\n\n\n3. Evaluasi berkala kecukupan dan kualitas bahan pembersih desinfektan."
+  },
+  {
+    "table_idx": 9,
+    "no": "5",
+    "unit_kerja": "Subbag Rumah Tangga, Logistik & Aset (3.2.2.1)",
+    "pj": "Kasubbag Rumah Tangga, Logistik & Aset",
+    "unit_terkait": "• Subbag Hukum & Humas (2.1.3.1)\n\n\n• Unit Keamanan (Satpam)",
+    "indikator": "Tingkat Keamanan dan Ketertiban Area Rumah Sakit (Zero Incident Kehilangan) 100% (Keselamatan)",
+    "rencana_aksi": "1. Penataan sistem akses pengunjung dan kartu penunggu pasien di rawat inap.\n\n\n2. Pemantauan area berisiko tinggi secara 24 jam melalui sistem kamera CCTV.\n\n\n3. Patroli rutin keamanan gedung dan lingkungan parkir rumah sakit secara terjadwal."
+  },
+  {
+    "table_idx": 10,
+    "no": "1",
+    "unit_kerja": "Subbag Sarana Prasarana & IPSRS (3.2.2.2)",
+    "pj": "Kasubbag Sarana Prasarana & IPSRS",
+    "unit_terkait": "• Seluruh Unit Pelayanan (Menu 4)\n\n\n• Subbag SIMRS (3.3.3.1)",
+    "indikator": "Respon Time Perbaikan Kerusakan Sarana Prasarana (< 15 Menit untuk Emergency) ≥ 90% (Manajerial)",
+    "rencana_aksi": "1. Penggunaan modul Work Order (WO) perbaikan fasilitas terintegrasi di ARIMA.\n\n\n2. Pembentukan tim piket teknisi IPSRS 24 jam untuk penanganan kerusakan mendesak.\n\n\n3. Evaluasi waktu tanggap dan waktu penyelesaian (repair time) secara bulanan."
+  },
+  {
+    "table_idx": 10,
+    "no": "2",
+    "unit_kerja": "Subbag Sarana Prasarana & IPSRS (3.2.2.2)",
+    "pj": "Kasubbag Sarana Prasarana & IPSRS",
+    "unit_terkait": "• Penunjang Diagnostik (3.1.3.1)\n\n\n• IBS & ICU (4.3, 4.4)",
+    "indikator": "Kepatuhan Pelaksanaan Kalibrasi Alat Medis Tepat Waktu 100% (Keselamatan / Legal)",
+    "rencana_aksi": "1. Penyusunan jadwal induk kalibrasi tahunan untuk seluruh peralatan medis.\n\n\n2. Kerjasama dengan BFKAM / Balai Kalibrasi terakreditasi untuk pengujian berkala.\n\n\n3. Penempelan label/stiker lapor kalibrasi yang sah pada setiap fisik alat medis."
+  },
+  {
+    "table_idx": 10,
+    "no": "3",
+    "unit_kerja": "Subbag Sarana Prasarana & IPSRS (3.2.2.2)",
+    "pj": "Kasubbag Sarana Prasarana & IPSRS",
+    "unit_terkait": "• IBS, ICU, IGD, & Lab (4.2 s/d 4.6)",
+    "indikator": "Ketersediaan & Keandalan Pasokan Listrik (Genset/UPS) & Air Bersih 24 Jam 100% (Keselamatan)",
+    "rencana_aksi": "1. Uji pembebanan harian/mingguan generator set (genset) dan sistem pemindah otomatis (ATS).\n\n\n2. Pemeliharaan berkala baterai UPS di area kritis (OK, ICU, Laboratorium).\n\n\n3. Pengujian kualitas fisik dan kimiawi air bersih cadangan secara berkala."
+  },
+  {
+    "table_idx": 10,
+    "no": "4",
+    "unit_kerja": "Subbag Sarana Prasarana & IPSRS (3.2.2.2)",
+    "pj": "Kasubbag Sarana Prasarana & IPSRS",
+    "unit_terkait": "• Seluruh Bangsal & Unit Kerja",
+    "indikator": "Kepatuhan Pelaksanaan Pemeliharaan Preventif (Preventive Maintenance) Facility 100% (Manajerial)",
+    "rencana_aksi": "1. Pelaksanaan jadwal pemeliharaan berkala sistem AC, lift, pemipaan, dan kelistrikan.\n\n\n2. Inspeksi rutin kondisi fisik gedung, atap, serta fasilitas umum pasien.\n\n\n3. Pengisian kartu kontrol pemeliharaan fisik pada setiap mesin/fasilitas utama."
+  },
+  {
+    "table_idx": 10,
+    "no": "5",
+    "unit_kerja": "Subbag Sarana Prasarana & IPSRS (3.2.2.2)",
+    "pj": "Kasubbag Sarana Prasarana & IPSRS",
+    "unit_terkait": "• Subbag K3RS (3.2.2.3)\n\n\n• IBS / Gas Medis (4.3)",
+    "indikator": "Inspeksi dan Keamanan Instalasi Gas Medis & Vakum Sentral 100% (Keselamatan)",
+    "rencana_aksi": "1. Pemantauan harian tekanan tabung dan sentral oksigen/gas medis.\n\n\n2. Pemeliharaan berkala sistem alarm otomatis gas medis di setiap lantai/bangsal.\n\n\n3. Pelaksanaan simulasi emergency kebocoran atau kegagalan sistem gas medis."
+  },
+  {
+    "table_idx": 11,
+    "no": "1",
+    "unit_kerja": "Subbag Kesling, Sanitasi, & K3RS (3.2.2.3)",
+    "pj": "Kasubbag Kesling, Sanitasi & K3RS",
+    "unit_terkait": "• Tim PPI (2.1.2.3)\n\n\n• Pihak Pengolah Limbah (Transporter)",
+    "indikator": "Baku Mutu Pengolahan Limbah Cair (IPAL) Sesuai Standar Lingkungan 100% (Lingkungan / Legal)",
+    "rencana_aksi": "1. Pemeriksaan berkala indikator harian IPAL (pH, DO, Debit) dan uji laboratorium bulanan.\n\n\n2. Pemeliharaan rutin mesin pompa, blower, dan sistem klorinasi IPAL.\n\n\n3. Pelaporan hasil pengujian IPAL secara berkala ke Dinas Lingkungan Hidup via SIMRS."
+  },
+  {
+    "table_idx": 11,
+    "no": "2",
+    "unit_kerja": "Subbag Kesling, Sanitasi, & K3RS (3.2.2.3)",
+    "pj": "Kasubbag Kesling, Sanitasi & K3RS",
+    "unit_terkait": "• Seluruh Unit Pelayanan (Menu 4)\n\n\n• Tim PPI (2.1.2.3)",
+    "indikator": "Kepatuhan Pemilahan Limbah Medis B3 dan Non-Medis di Point of Care 100% (Keselamatan)",
+    "rencana_aksi": "1. Penyediaan tempat sampah medis (kuning), non-medis (hitam), dan safety box memadai.\n\n\n2. Audit harian kepatuhan pemilahan limbah medis oleh petugas sanitasi.\n\n\n3. Edukasi dan pembaruan stiker petunjuk pemilahan limbah di seluruh unit."
+  },
+  {
+    "table_idx": 11,
+    "no": "3",
+    "unit_kerja": "Subbag Kesling, Sanitasi, & K3RS (3.2.2.3)",
+    "pj": "Kasubbag Kesling, Sanitasi & K3RS",
+    "unit_terkait": "• Subbag IPSRS (3.2.2.2)\n\n\n• Seluruh Unit Kerja",
+    "indikator": "Ketersediaan & Keandalan Alat Pemadam Api Ringan (APAR) Siap Pakai 100% (K3RS / Safety)",
+    "rencana_aksi": "1. Inspeksi bulanan kondisi fisik, tekanan manometer, dan masa berlaku APAR.\n\n\n2. Pembaharuan kartu kontrol inspeksi pada setiap tabung APAR yang terpasang.\n\n\n3. Pelatihan dan simulasi penggunaan APAR bagi seluruh pegawai RS secara berkala."
+  },
+  {
+    "table_idx": 11,
+    "no": "4",
+    "unit_kerja": "Subbag Kesling, Sanitasi, & K3RS (3.2.2.3)",
+    "pj": "Kasubbag Kesling, Sanitasi & K3RS",
+    "unit_terkait": "• Subbag Rekrutmen/SDM (3.2.1.1)\n\n\n• Sub-Tim K3RS (2.1.2.2)",
+    "indikator": "Persentase Pegawai di Area Risikottinggi yang Menjalani Pemeriksaan Kesehatan Berkala 100% (K3RS)",
+    "rencana_aksi": "1. Pelaksanaan Medical Check-Up (MCU) berkala bagi pegawai laboratorium, radiologi, CSSD, dan sanitasi.\n\n\n2. Pemberian vaksinasi (misal: Hepatitis B) bagi nakes berisiko tinggi paparan.\n\n\n3. Evaluasi data kesehatan pegawai dan tindak lanjut intervensi kecelakaan kerja."
+  },
+  {
+    "table_idx": 11,
+    "no": "5",
+    "unit_kerja": "Subbag Kesling, Sanitasi, & K3RS (3.2.2.3)",
+    "pj": "Kasubbag Kesling, Sanitasi & K3RS",
+    "unit_terkait": "• Sub-Tim K3RS (2.1.2.2)\n\n\n• Seluruh Unit Kerja",
+    "indikator": "Angka Kejadian Kecelakaan Kerja (K3RS) dan Paparan Jarum Suntik (Needlestick Injury) ≤ 0% (Keselamatan)",
+    "rencana_aksi": "1. Sosialisasi SPO penanganan benda tajam dan penggunaan alat suntik aman (safety needle).\n\n\n2. Pelaksanaan investigasi < 24 jam dan pengerjaan profilaksis pasca-paparan (PPP) jika terjadi kecelakaan.\n\n\n3. Pencatatan dan analisis tren kejadian kecelakaan kerja bulanan pada ARIMA."
+  },
+  {
+    "table_idx": 12,
+    "no": "1",
+    "unit_kerja": "Subbag Pelatihan Staf & Pasien (3.2.3.1)",
+    "pj": "Kasubbag Pelatihan Staf & Pasien",
+    "unit_terkait": "• Subbag Pengembangan SDM (3.2.1.2)\n\n\n• Seluruh Unit Kerja",
+    "indikator": "Capaian Realisasi Rencana Pelatihan Staf (In-House Training) Tepat Waktu ≥ 90% (Manajerial)",
+    "rencana_aksi": "1. Menyusun Kalender Pelatihan Tahunan terintegrasi berdasarkan usulan TNA unit.\n\n\n2. Koordinasi penyelenggaraan pelatihan wajib (BCLS, K3, PPI, Mutu, Komunikasi).\n\n\n3. Evaluasi kelulusan (post-test) dan kepuasan peserta pelatihan via sistem ARIMA."
+  },
+  {
+    "table_idx": 12,
+    "no": "2",
+    "unit_kerja": "Subbag Pelatihan Staf & Pasien (3.2.3.1)",
+    "pj": "Kasubbag Pelatihan Staf & Pasien",
+    "unit_terkait": "• Tim PKRS / Humas (2.1.3.1)\n\n\n• Poliklinik & Bangsal (4.1, 4.5)",
+    "indikator": "Kepatuhan Pemberian Edukasi Terintegrasi kepada Pasien & Keluarga ≥ 90% (Klinis / Edukasi)",
+    "rencana_aksi": "1. Pengisian lembar Edukasi Pasien Terintegrasi pada RME ARIMA oleh Nakes (DPJP, Perawat, Gizi, Farmasi).\n\n\n2. Penyediaan materi edukasi/leaflet digital dan video informasi kesehatan di area tunggu.\n\n\n3. Evaluasi pemahaman pasien/keluarga terhadap materi edukasi yang disampaikan."
+  },
+  {
+    "table_idx": 12,
+    "no": "3",
+    "unit_kerja": "Subbag Pelatihan Staf & Pasien (3.2.3.1)",
+    "pj": "Kasubbag Pelatihan Staf & Pasien",
+    "unit_terkait": "• Institusi Pendidikan Mitra\n\n\n• KSM / Komite Medik (4.7)",
+    "indikator": "Tingkat Kepuasan Institusi Pendidikan Mitra terhadap Pelayanan Bimbingan Klinik ≥ 85% (Manajerial)",
+    "rencana_aksi": "1. Orientasi dan pembekalan tata tertib RS bagi mahasiswa/peserta didik klinis baru.\n\n\n2. Pemantauan rasio Pembimbing Klinik (Clinical Instructor / CI) yang bersertifikat.\n\n\n3. Evaluasi berkala pelaksanaan bimbingan klinis bersama pimpinan institusi pendidikan."
+  },
+  {
+    "table_idx": 12,
+    "no": "4",
+    "unit_kerja": "Subbag Pelatihan Staf & Pasien (3.2.3.1)",
+    "pj": "Kasubbag Pelatihan Staf & Pasien",
+    "unit_terkait": "• Seluruh Staf Medis & Keperawatan",
+    "indikator": "Persentase Staf Pelayanan Utama yang Tersertifikasi Resusitasi (BCLS/ACLS/GALS) 100% (Klinis / Safety)",
+    "rencana_aksi": "1. Pemetaan masa berlaku sertifikat resusitasi dasar/lanjut bagi perawat dan dokter.\n\n\n2. Penyelenggaraan pelatihan refreshment BCLS/ACLS berkala di rumah sakit.\n\n\n3. Pemblokiran tugas di area kritis bagi staf yang sertifikat resusitasinya belum diperbarui."
+  },
+  {
+    "table_idx": 12,
+    "no": "5",
+    "unit_kerja": "Subbag Pelatihan Staf & Pasien (3.2.3.1)",
+    "pj": "Kasubbag Pelatihan Staf & Pasien",
+    "unit_terkait": "• Subbag Pengembangan SDM (3.2.1.2)\n\n\n• SIMRS (3.3.3.1)",
+    "indikator": "Kelengkapan Evaluasi Efektivitas Pelatihan Staf (Level 3 Kirkpatrick) ≥ 80% (Manajerial)",
+    "rencana_aksi": "1. Pelaksanaan evaluasi perubahan perilaku kerja staf 3 bulan pasca-pelatihan.\n\n\n2. Penilaian langsung oleh atasan langsung terhadap penerapan hasil pelatihan.\n\n\n3. Rekapitulasi dan pelaporan tren efektivitas pelatihan kepada Direktur Utama."
+  },
+  {
+    "table_idx": 13,
+    "no": "1",
+    "unit_kerja": "Subbag Penelitian & Pengem. Service Line (3.2.3.2)",
+    "pj": "Kasubbag Litbang Service Line",
+    "unit_terkait": "• Komite Etik Penelitian Kesehatan\n\n\n• Subbag Hukum (2.1.3.1)",
+    "indikator": "Penerbitan Ethical Clearance Penelitian Kesehatan Tepat Waktu (< 14 Hari) 100% (Governance / Research)",
+    "rencana_aksi": "1. Digitalisasi pendaftaran usulan penelitian dan penelaahan etik via modul Litbang ARIMA.\n\n\n2. Jadwal sidang komite etik penelitian kesehatan yang teratur setiap bulan.\n\n\n3. Transparansi lacak status (tracking status) proses ethical clearance bagi peneliti."
+  },
+  {
+    "table_idx": 13,
+    "no": "2",
+    "unit_kerja": "Subbag Penelitian & Pengem. Service Line (3.2.3.2)",
+    "pj": "Kasubbag Litbang Service Line",
+    "unit_terkait": "• Seluruh KSM & Komite Medik (4.7)\n\n\n• Direktur Utama (2.1)",
+    "indikator": "Realisasi Publikasi/Hasil Penelitian Internal RS Minimal 5 Penelitian/Tahun (Inovasi)",
+    "rencana_aksi": "1. Penyediaan dana stimulan/hibah penelitian internal bagi staf medis dan nakes.\n\n\n2. Pendampingan penyusunan naskah publikasi (scientific writing workshop).\n\n\n3. Memfasilitasi publikasi pada jurnal ilmiah terakreditasi nasional/internasional."
+  },
+  {
+    "table_idx": 13,
+    "no": "3",
+    "unit_kerja": "Subbag Penelitian & Pengem. Service Line (3.2.3.2)",
+    "pj": "Kasubbag Litbang Service Line",
+    "unit_terkait": "• Subbag Pengembangan Service Line\n\n\n• Direktorat Pelayanan (3.1)",
+    "indikator": "Pengembangan / Peluncuran Layanan Unggulan (Service Line) Baru Minimal 1 Proposal/Tahun (Manajerial / Bisnis)",
+    "rencana_aksi": "1. Analisis kebutuhan pasar kesehatan (market survey) dan peta kompetisi pelayanan.\n\n\n2. Penyusunan Studi Kelayakan (Feasibility Study) dan rencana bisnis layanan baru.\n\n\n3. Koordinasi lintas direktorat untuk kesiapan operasional dan promosi layanan baru."
+  },
+  {
+    "table_idx": 13,
+    "no": "4",
+    "unit_kerja": "Subbag Penelitian & Pengem. Service Line (3.2.3.2)",
+    "pj": "Kasubbag Litbang Service Line",
+    "unit_terkait": "• Komite Etik Penelitian\n\n\n• Seluruh Instalasi (Menu 4)",
+    "indikator": "Kepatuhan Peneliti terhadap Etika Penelitian dan Keselamatan Subjek Penelitian 100% (Ethics)",
+    "rencana_aksi": "1. Verifikasi lembar persetujuan setelah penjelasan (Informed Consent) seluruh subjek penelitian.\n\n\n2. Monitoring berkala pelaksanaan penelitian di lapangan oleh tim Litbang.\n\n\n3. Evaluasi dan penghentian penelitian jika ditemukan potensi bahaya bagi pasien."
+  },
+  {
+    "table_idx": 13,
+    "no": "5",
+    "unit_kerja": "Subbag Penelitian & Pengem. Service Line (3.2.3.2)",
+    "pj": "Kasubbag Litbang Service Line",
+    "unit_terkait": "• Subbag SIMRS & Analisis Data (3.3.3.1)\n\n\n• Tim Mutu (2.1.2.1)",
+    "indikator": "Pemanfaatan Data Klinis SIMRS untuk Kajian Evaluasi Pelayanan / Health Technology Assessment (HTA) (Inovasi)",
+    "rencana_aksi": "1. Eksplorasi data sekunder RME ARIMA untuk kajian efisiensi biaya dan hasil klinis (clinical outcome).\n\n\n2. Penyusunan laporan kajian HTA sederhana sebagai dasar pengambilan keputusan direksi.\n\n\n3. Diseminasi hasil riset internal pada forum ilmiah bulanan rumah sakit."
+  },
+  {
+    "table_idx": 14,
+    "no": "1",
+    "unit_kerja": "Subbag Perencanaan Anggaran & Mobilisasi Dana (3.3.1.1)",
+    "pj": "Kasubbag Perencanaan Anggaran & Mobilisasi Dana",
+    "unit_terkait": "• Seluruh Direktorat & Unit Kerja (Menu 2, 3, & 4)",
+    "indikator": "Kepatuhan Penyerapan Anggaran Operasional Sesuai RBA/RKA (Variance ≤ ±5%) (Manajerial)",
+    "rencana_aksi": "1. Monitoring dan evaluasi bulanan realisasi anggaran unit kerja via Modul Anggaran ARIMA.\n\n\n2. Pelaksanaan revisi anggaran secara terpimpin per semester sesuai dinamika operasional.\n\n\n3. Pendampingan unit kerja dalam penyusunan usulan anggaran berbasis Analisis Beban Kerja dan unit cost."
+  },
+  {
+    "table_idx": 14,
+    "no": "2",
+    "unit_kerja": "Subbag Perencanaan Anggaran & Mobilisasi Dana (3.3.1.1)",
+    "pj": "Kasubbag Perencanaan Anggaran & Mobilisasi Dana",
+    "unit_terkait": "• Subbag Akuntansi Keuangan (3.3.2.1)\n\n\n• Direktur Keuangan (3.3)",
+    "indikator": "Ketepatan Waktu Penyusunan Rencana Bisnis & Anggaran (RBA) Tahunan 100% (Manajerial)",
+    "rencana_aksi": "1. Penyusunan timeline dan petunjuk teknis pengusulan anggaran tahunan bagi seluruh unit kerja.\n\n\n2. Konsolidasi usulan belanja modal (Capex) dan belanja operasional (Opex) dengan skala prioritas.\n\n\n3. Penyajian draf RBA kepada Direksi dan Dewan Pengawas tepat waktu."
+  },
+  {
+    "table_idx": 14,
+    "no": "3",
+    "unit_kerja": "Subbag Perencanaan Anggaran & Mobilisasi Dana (3.3.1.1)",
+    "pj": "Kasubbag Perencanaan Anggaran & Mobilisasi Dana",
+    "unit_terkait": "• Subbag Verifikasi & Klaim (3.3.2.2)\n\n\n• Tim Marketing / PKS",
+    "indikator": "Capaian Mobilisasi Dana dari Pendapatan Non-BPJS (Pasien Umum/Asuransi Swasta) ≥ 100% dari Target (Finansial)",
+    "rencana_aksi": "1. Analisis tren pendapatan dan identifikasi potensi pertumbuhan service line prioritas.\n\n\n2. Evaluasi kemitraan tarif dan cakupan jaminan kerja sama dengan perasuransian swasta/perusahaan.\n\n\n3. Diversifikasi paket layanan kesehatan eksklusif (MCU, VVIP, Telemedis)."
+  },
+  {
+    "table_idx": 14,
+    "no": "4",
+    "unit_kerja": "Subbag Perencanaan Anggaran & Mobilisasi Dana (3.3.1.1)",
+    "pj": "Kasubbag Perencanaan Anggaran & Mobilisasi Dana",
+    "unit_terkait": "• Subbag Logistik & Aset (3.2.2.1)\n\n\n• Subbag Farmasi (3.1.3.2)",
+    "indikator": "Rasio Efisiensi Biaya Operasional terhadap Pendapatan Operasional (Cost-to-Revenue Ratio) ≤ 85% (Finansial)",
+    "rencana_aksi": "1. Penerapan kendali mutu dan kendali biaya (cost control) pada belanja bahan medis dan non-medis.\n\n\n2. Analisis pemborosan (waste analysis) pada proses bisnis pelayanan.\n\n\n3. Evaluasi rasio Cost-Benefit Analysis (CBA) sebelum pengadaan alat kesehatan berbiaya tinggi."
+  },
+  {
+    "table_idx": 14,
+    "no": "5",
+    "unit_kerja": "Subbag Perencanaan Anggaran & Mobilisasi Dana (3.3.1.1)",
+    "pj": "Kasubbag Perencanaan Anggaran & Mobilisasi Dana",
+    "unit_terkait": "• Subbag Perbendaharaan & Kas (3.3.1.2)",
+    "indikator": "Akurasi Proyeksi Arus Kas (Cash Flow Forecasting Accuracy) ≥ 90% (Finansial)",
+    "rencana_aksi": "1. Pembuatan model proyeksi penerimaan dan pengeluaran kas bulanan dan triwulanan.\n\n\n2. Penyelarasan skenario penerimaan klaim BPJS dengan jadwal kewajiban pembayaran supplier.\n\n\n3. Evaluasi berkala deviasi antara estimasi dan realisasi arus kas harian."
+  },
+  {
+    "table_idx": 15,
+    "no": "1",
+    "unit_kerja": "Subbag Perbendaharaan & Kas (3.3.1.2)",
+    "pj": "Kasubbag Perbendaharaan & Kas",
+    "unit_terkait": "• Subbag Rekrutmen & Admin Kepegawaian (3.2.1.1)\n\n\n• Seluruh Unit Kerja",
+    "indikator": "Ketepatan Waktu Pembayaran Gaji, Tunjangan, & Insentif Pegawai 100% (Manajerial)",
+    "rencana_aksi": "1. Integrasi data rekapitulasi gaji dari Subbag SDM dengan Modul Perbendaharaan ARIMA.\n\n\n2. Pelaksanaan jadwal pendaftaran dan transfering payroll tepat tanggal 25/akhir bulan.\n\n\n3. Rekonsiliasi bulanan atas pemotongan BPJS Ketenagakerjaan dan Kesehatan pegawai."
+  },
+  {
+    "table_idx": 15,
+    "no": "2",
+    "unit_kerja": "Subbag Perbendaharaan & Kas (3.3.1.2)",
+    "pj": "Kasubbag Perbendaharaan & Kas",
+    "unit_terkait": "• Subbag Logistik (3.2.2.1)\n\n\n• Subbag Farmasi (3.1.3.2)\n\n\n• Vendor/Mitra",
+    "indikator": "Ketepatan Waktu Pembayaran Tagihan Pihak Ketiga (Vendor/Supplier) Sesuai Jatuh Tempo ≥ 95% (Manajerial)",
+    "rencana_aksi": "1. Digitalisasi alur pendaftaran invoice masuk (accounts payable) via ARIMA.\n\n\n2. Penyusunan skala prioritas pembayaran berdasarkan umur utang (aging schedule).\n\n\n3. Minimasi denda keterlambatan dan pembinaan hubungan baik dengan penyedia barang/jasa."
+  },
+  {
+    "table_idx": 15,
+    "no": "3",
+    "unit_kerja": "Subbag Perbendaharaan & Kas (3.3.1.2)",
+    "pj": "Kasubbag Perbendaharaan & Kas",
+    "unit_terkait": "• Kasir Pelayanan (Poliklinik, IGD, Rawat Inap)",
+    "indikator": "Kesesuaian Setoran Kasir Harian dengan Laporan Penerimaan Rekening Bank 100% (Manajerial)",
+    "rencana_aksi": "1. Pelaksanaan cash opname harian dan rekonsiliasi setoran kasir fisik dengan entry SIMRS.\n\n\n2. Mendorong metode pembayaran non-tunai (cashless/QRIS/EDC) pada seluruh titik kasir.\n\n\n3. Penerapan SPO penyetoran dana kasir ke bank mitra sebelum batas akhir cutoff harian."
+  },
+  {
+    "table_idx": 15,
+    "no": "4",
+    "unit_kerja": "Subbag Perbendaharaan & Kas (3.3.1.2)",
+    "pj": "Kasubbag Perbendaharaan & Kas",
+    "unit_terkait": "• Subbag Perencanaan Anggaran (3.3.1.1)",
+    "indikator": "Tingkat Kecukupan Likuiditas (Days Sales Outstanding / DSO) Kas Utama RS ≥ 30 Hari (Finansial)",
+    "rencana_aksi": "1. Menjaga cadangan kas minimal untuk kelancaran operasional pelayanan kesehatan.\n\n\n2. Optimalisasi pengelolaan dana bergulir (petty cash) di unit-unit pelayanan.\n\n\n3. Koordinasi aktif mengenai pencairan piutang klaim untuk menjaga kestabilan likuiditas."
+  },
+  {
+    "table_idx": 15,
+    "no": "5",
+    "unit_kerja": "Subbag Perbendaharaan & Kas (3.3.1.2)",
+    "pj": "Kasubbag Perbendaharaan & Kas",
+    "unit_terkait": "• Subbag Akuntansi Keuangan (3.3.2.1)\n\n\n• Bank Mitra",
+    "indikator": "Ketepatan Waktu & Kelengkapan Rekonsiliasi Bank Bulanan 100% (Manajerial)",
+    "rencana_aksi": "1. Pengunduhan rekening koran digital harian dari seluruh rekening operasional RS.\n\n\n2. Pencocokan otomatis (auto-reconciliation) transaksi kas di ARIMA dengan mutasi bank.\n\n\n3. Penanganan segera atas selisih pencatatan atau pending items dalam waktu < 3 hari kerja."
+  },
+  {
+    "table_idx": 16,
+    "no": "1",
+    "unit_kerja": "Subbag Akuntansi Keuangan & Manajemen (3.3.2.1)",
+    "pj": "Kasubbag Akuntansi Keuangan & Manajemen",
+    "unit_terkait": "• Seluruh Bagian Keuangan (3.3.1 & 3.3.2)\n\n\n• Direktur Utama (2.1)",
+    "indikator": "Ketepatan Waktu Penyajian Laporan Keuangan Bulanan (Tanggal 10 Bulan Berikutnya) 100% (Manajerial)",
+    "rencana_aksi": "1. Menerapkan closing date jurnal akuntansi otomatis pada Modul Keuangan ARIMA.\n\n\n2. Verifikasi keterhubungan Journal Ledger dari seluruh transaksi operasional dan kas.\n\n\n3. Menyajikan Laporan Laba Rugi, Neraca, dan Arus Kas secara sistematis untuk Direksi."
+  },
+  {
+    "table_idx": 16,
+    "no": "2",
+    "unit_kerja": "Subbag Akuntansi Keuangan & Manajemen (3.3.2.1)",
+    "pj": "Kasubbag Akuntansi Keuangan & Manajemen",
+    "unit_terkait": "• Satuan Pemeriksa Internal (2.1.1)\n\n\n• Auditor Eksternal (KAP)",
+    "indikator": "Opini Laporan Keuangan Wajar Tanpa Pengecualian (WTP) dari KAP / Auditor Eksternal 100% (Governance)",
+    "rencana_aksi": "1. Penerapan Standar Akuntansi Keuangan (SAK) yang konsisten pada seluruh pos pencatatan.\n\n\n2. Pembentukan sistem internal control akuntansi untuk mencegah kekeliruan material.\n\n\n3. Penyiapan working papers dan bukti pendukung transaksi secara rapi dan akuntabel."
+  },
+  {
+    "table_idx": 16,
+    "no": "3",
+    "unit_kerja": "Subbag Akuntansi Keuangan & Manajemen (3.3.2.1)",
+    "pj": "Kasubbag Akuntansi Keuangan & Manajemen",
+    "unit_terkait": "• Subbag SIMRS (3.3.3.1)\n\n\n• Seluruh Unit Pelayanan (Menu 4)",
+    "indikator": "Kelengkapan Pembaruan Perhitungan Unit Cost Layanan Kesehatan (Tarif RS) 100% (Manajerial)",
+    "rencana_aksi": "1. Pelaksanaan perhitungan unit cost berbasis metode Activity-Based Costing (ABC) tahunan.\n\n\n2. Evaluasi kesesuaian tarif pelayanan RS dengan perkembangan inflasi dan biaya operasional.\n\n\n3. Penyediaan rekomendasi penyesuaian tarif layanan kepada Direksi dan Pemilik."
+  },
+  {
+    "table_idx": 16,
+    "no": "4",
+    "unit_kerja": "Subbag Akuntansi Keuangan & Manajemen (3.3.2.1)",
+    "pj": "Kasubbag Akuntansi Keuangan & Manajemen",
+    "unit_terkait": "• Subbag Aset & Logistik (3.2.2.1)",
+    "indikator": "Kesesuaian Hasil Stock Opname Persediaan (Farmasi & Logistik) dengan Catatan Akuntansi ≥ 98% (Manajerial)",
+    "rencana_aksi": "1. Pelaksanaan audit fisik persediaan (Stock Opname) bersama tim logistik per bulan/semester.\n\n\n2. Penyelidikan dan analisis penyebab terjadinya selisih stok (stock variance).\n\n\n3. Penyesuaian nilai persediaan dan pencatatan depresiasi aset tetap secara akurat."
+  },
+  {
+    "table_idx": 16,
+    "no": "5",
+    "unit_kerja": "Subbag Akuntansi Keuangan & Manajemen (3.3.2.1)",
+    "pj": "Kasubbag Akuntansi Keuangan & Manajemen",
+    "unit_terkait": "• Kantor Pelayanan Pajak (KPP)\n\n\n• Subbag Perbendaharaan (3.3.1.2)",
+    "indikator": "Ketepatan Waktu Pelaporan dan Penyetoran Pajak RS (PPh 21, PPh 23, PPN, dll) 100% (Legal / Compliance)",
+    "rencana_aksi": "1. Rekonsiliasi obyek pajak atas seluruh pembayaran transaksi belanja dan gaji.\n\n\n2. Pembuatan e-Bupot dan e-Faktur pajak secara terintegrasi via aplikasi perpajakan.\n\n\n3. Pelaporan SPT Masa dan SPT Tahunan tepat waktu untuk mencegah denda administrasi."
+  },
+  {
+    "table_idx": 17,
+    "no": "1",
+    "unit_kerja": "Subbag Verifikasi, Billing, & Klaim BPJS/Asuransi (3.3.2.2)",
+    "pj": "Kasubbag Verifikasi, Billing & Klaim",
+    "unit_terkait": "• BPJS Kesehatan / Asuransi Mitra\n\n\n• Casemix / Coder / DPJP",
+    "indikator": "Ketepatan Waktu Pengajuan Berkas Klaim BPJS Kesehatan (Maksimal Tanggal 10) 100% (Finansial)",
+    "rencana_aksi": "1. Digitalisasi alur pemberkasan klaim (e-Klaim) langsung dari RME SIMRS.\n\n\n2. Penetapan target kuota dan deadline harian coding diagnosa/tindakan bagi Tim Casemix.\n\n\n3. Pelaksanaan pre-submission audit berkas klaim sebelum diajukan ke Verifikator BPJS."
+  },
+  {
+    "table_idx": 17,
+    "no": "2",
+    "unit_kerja": "Subbag Verifikasi, Billing, & Klaim BPJS/Asuransi (3.3.2.2)",
+    "pj": "Kasubbag Verifikasi, Billing & Klaim",
+    "unit_terkait": "• KSM / DPJP (4.7)\n\n\n• Perekam Medis (3.1.3.3)\n\n\n• Tim Casemix",
+    "indikator": "Persentase Pengembalian Berkas Klaim (Pending/Dispute Claim) BPJS Kesehatan ≤ 3% (Klinis / Governance)",
+    "rencana_aksi": "1. Audit Kepatuhan Kelengkapan Resume Medis dan Penunjang oleh DPJP sebelum pasien pulang.\n\n\n2. Peningkatan kompetensi Coder terkait aturan INA-CBGs dan ICD-10/ICD-9-CM terbaru.\n\n\n3. Rekonsiliasi berkala bersama Verifikator BPJS untuk menyelesaikan berkas dispute."
+  },
+  {
+    "table_idx": 17,
+    "no": "3",
+    "unit_kerja": "Subbag Verifikasi, Billing, & Klaim BPJS/Asuransi (3.3.2.2)",
+    "pj": "Kasubbag Verifikasi, Billing & Klaim",
+    "unit_terkait": "• Kasir Pelayanan\n\n\n• Admisi & Rawat Inap (4.1, 4.5)",
+    "indikator": "Kecepatan Waktu Penyelesaian Billing Pasien Pulang Rawat Inap (≤ 2 Jam) ≥ 90% (Pelayanan)",
+    "rencana_aksi": "1. Penghentian entry tindakan berulang secara manual dengan otomasi rincian biaya di ARIMA.\n\n\n2. Pengiriman notifikasi otomatis rencana pulang pasien dari DPJP/Keperawatan ke bagian Billing.\n\n\n3. Penguatan verifikasi rincian obat dan tindakan secara real-time selama masa perawatan."
+  },
+  {
+    "table_idx": 17,
+    "no": "4",
+    "unit_kerja": "Subbag Verifikasi, Billing, & Klaim BPJS/Asuransi (3.3.2.2)",
+    "pj": "Kasubbag Verifikasi, Billing & Klaim",
+    "unit_terkait": "• KSM / DPJP (4.7)\n\n\n• Subbag Farmasi (3.1.3.2)",
+    "indikator": "Persentase Kerugian Akibat Selisih Tarif INA-CBGs vs Hospital Cost (Unbilled Cost) ≤ 5% (Finansial)",
+    "rencana_aksi": "1. Analisis varians biaya per Kode INA-CBG terhadap clinical pathway yang berjalan.\n\n\n2. Sosialisasi batasan cost-efficiency pelayanan kepada DPJP untuk kasus-kasus berbiaya tinggi.\n\n\n3. Evaluasi berkala penggunaan obat DPHO/FORNAS pada pasien BPJS."
+  },
+  {
+    "table_idx": 17,
+    "no": "5",
+    "unit_kerja": "Subbag Verifikasi, Billing, & Klaim BPJS/Asuransi (3.3.2.2)",
+    "pj": "Kasubbag Verifikasi, Billing & Klaim",
+    "unit_terkait": "• Subbag Perbendaharaan (3.3.1.2)\n\n\n• Penjamin Asuransi Swasta",
+    "indikator": "Persentase Piutang Pasien / Asuransi Non-BPJS Tertagih Tepat Waktu ≥ 95% (Finansial)",
+    "rencana_aksi": "1. Pengiriman tagihan (invoice) ke penjamin asuransi/perusahaan maksimal 3 hari pasca pasien pulang.\n\n\n2. Penjadwalan konfirmasi penagihan (penyelidikan umur piutang) secara intensif.\n\n\n3. Penerapan sistem konfirmasi jaminan otomatis pada saat pendaftaran awal pasien."
+  },
+  {
+    "table_idx": 18,
+    "no": "1",
+    "unit_kerja": "Subbag SIMRS, Infrastruktur IT & Analisis Data (3.3.3.1)",
+    "pj": "Kasubbag SIMRS & Analisis Data",
+    "unit_terkait": "• Seluruh Unit Pelayanan & Operasional (Menu 3 & 4)",
+    "indikator": "Tingkat Ketersediaan Operasional Sistem SIMRS/ARIMA (System Uptime) ≥ 99,5% (Teknologi)",
+    "rencana_aksi": "1. Penerapan arsitektur high availability dengan server redundancy dan failover otomatis.\n\n\n2. Pemeliharaan rutin server, database, serta perangkat jaringan backbone harian/mingguan.\n\n\n3. Pengawasan penggunaan bandwidth internet dan lalu lintas jaringan secara 24 jam."
+  },
+  {
+    "table_idx": 18,
+    "no": "2",
+    "unit_kerja": "Subbag SIMRS, Infrastruktur IT & Analisis Data (3.3.3.1)",
+    "pj": "Kasubbag SIMRS & Analisis Data",
+    "unit_terkait": "• Perekam Medis (3.1.3.3)\n\n\n• Seluruh DPJP & Keperawatan",
+    "indikator": "Tingkat Kepatuhan Pengisian Rekam Medis Elektronik (RME) Terintegrasi 100% (Klinis / Digitalisasi)",
+    "rencana_aksi": "1. Optimasi user-interface (UI/UX) RME ARIMA agar cepat dan user-friendly bagi DPJP/Perawat.\n\n\n2. Otomasi sistem validasi fields wajib sebelum dokumen RME disimpan/ditutup.\n\n\n3. Pemantauan dan pemberian laporan kepatuhan pengisian RME harian ke komite mutu."
+  },
+  {
+    "table_idx": 18,
+    "no": "3",
+    "unit_kerja": "Subbag SIMRS, Infrastruktur IT & Analisis Data (3.3.3.1)",
+    "pj": "Kasubbag SIMRS & Analisis Data",
+    "unit_terkait": "• Kementerian Kesehatan (SATUSEHAT)\n\n\n• BPJS (V-Claim / I-Care)",
+    "indikator": "Kepatuhan Integrasi Data SIMRS dengan Platform SATUSEHAT & BPJS Kesehatan 100% (Legal / Digitalisasi)",
+    "rencana_aksi": "1. Pembaruan dan penyelarasan API Interoperabilitas Kemenkes SATUSEHAT secara berkala.\n\n\n2. Monitoring keberhasilan pengiriman data transaksi klinis (encounter, TTV, resep, kondisi) per hari.\n\n\n3. Penanganan segera kendala bridging data dengan sistem eksternal regulator."
+  },
+  {
+    "table_idx": 18,
+    "no": "4",
+    "unit_kerja": "Subbag SIMRS, Infrastruktur IT & Analisis Data (3.3.3.1)",
+    "pj": "Kasubbag SIMRS & Analisis Data",
+    "unit_terkait": "• Subbag Hukum (2.1.3.1)\n\n\n• Seluruh Pengguna SIMRS",
+    "indikator": "Keamanan Data Pasien & Perlindungan Informasi (Zero Data Breach Incident) 100% (Keamanan Informasi)",
+    "rencana_aksi": "1. Penerapan enkripsi data RME, otentikasi bertingkat (Role-Based Access Control), dan two-factor authentication.\n\n\n2. Pembuatan cadangan data (backup database) otomatis secara harian ke lokasi terpisah (off-site/cloud).\n\n\n3. Pelaksanaan vulnerability assessment dan penetration testing berkala pada infrastruktur IT."
+  },
+  {
+    "table_idx": 18,
+    "no": "5",
+    "unit_kerja": "Subbag SIMRS, Infrastruktur IT & Analisis Data (3.3.3.1)",
+    "pj": "Kasubbag SIMRS & Analisis Data",
+    "unit_terkait": "• Seluruh Unit Kerja (Menu 2, 3, 4)",
+    "indikator": "Respon Time Penanganan Keluhan/Troubleshooting IT (< 15 Menit) ≥ 90% (Pelayanan)",
+    "rencana_aksi": "1. Penyediaan platform IT Helpdesk System terintegrasi untuk penerimaan laporan kendala teknis.\n\n\n2. Penempatan staf dukungan IT (on-site support) 24 jam untuk area pelayanan kritis.\n\n\n3. Pelaksanaan inventarisasi dan preventive maintenance perangkat komputer/printer unit kerja."
+  },
+  {
+    "table_idx": 19,
+    "no": "1",
+    "unit_kerja": "Poliklinik Penyakit Dalam (4.1.1)",
+    "pj": "Ka. Poliklinik Penyakit Dalam / KSM Penyakit Dalam",
+    "unit_terkait": "• Subbag SIMRS (3.3.3.1)\n\n\n• Rekam Medis (3.1.3.3)",
+    "indikator": "Waktu Tunggu Pelayanan Rawat Jalan Penyakit Dalam (≤ 60 Menit) ≥ 85% (Pelayanan)",
+    "rencana_aksi": "1. Implementasi sistem antrean online terintegrasi dengan SIMRS ARIMA.\n\n\n2. Penetapan jadwal praktik DPJP yang presisi dan pembatasan kuota per jam.\n\n\n3. Pemantauan waktu tanggap dokter (response time) pada dashboard rawat jalan."
+  },
+  {
+    "table_idx": 19,
+    "no": "2",
+    "unit_kerja": "Poliklinik Penyakit Dalam (4.1.1)",
+    "pj": "Ka. Poliklinik Penyakit Dalam / DPJP",
+    "unit_terkait": "• Subbag Farmasi (3.1.3.2)\n\n\n• Sub-Tim Mutu (2.1.2.1)",
+    "indikator": "Kepatuhan Penggunaan Formularium Nasional / RS pada Pasien Kronis ≥ 95% (Klinis / Cost Control)",
+    "rencana_aksi": "1. Sosialisasi update Formularium RS secara berkala kepada seluruh DPJP Penyakit Dalam.\n\n\n2. Locking system otomatis pada E-Resep ARIMA untuk obat di luar formularium.\n\n\n3. Evaluasi bulanan oleh Komite Medik dan Subbag Farmasi terhadap pola resep."
+  },
+  {
+    "table_idx": 19,
+    "no": "3",
+    "unit_kerja": "Poliklinik Penyakit Dalam (4.1.1)",
+    "pj": "Ka. Poliklinik Penyakit Dalam / Perekam Medis",
+    "unit_terkait": "• Penunjang Diagnostik (3.1.3.1)\n\n\n• Subbag SIMRS (3.3.3.1)",
+    "indikator": "Kelengkapan Pengisian Assessment Awal & RME Pasien Dalam 24 Jam 100% (Klinis / Digitalisasi)",
+    "rencana_aksi": "1. Validasi sistem RME yang mewajibkan pengisian anamnesis, pemeriksaan fisik, dan SOAP sebelum resep/penunjang diterbitkan.\n\n\n2. Monitoring kepatuhan pengisian RME secara real-time via ARIMA.\n\n\n3. Umpan balik mingguan kepada DPJP yang belum melengkapi RME."
+  },
+  {
+    "table_idx": 19,
+    "no": "4",
+    "unit_kerja": "Poliklinik Penyakit Dalam (4.1.1)",
+    "pj": "Ka. Poliklinik Penyakit Dalam / Edukator",
+    "unit_terkait": "• Subbag Pelatihan Pasien (3.2.3.1)\n\n\n• Instalasi Gizi (3.1.3.4)",
+    "indikator": "Capaian Edukasi Terintegrasi pada Pasien Diabetes Melitus & Hipertensi ≥ 90% (Klinis / Edukasi)",
+    "rencana_aksi": "1. Pemberian edukasi terstruktur mengenai gaya hidup, diet, dan kepatuhan minum obat.\n\n\n2. Dokumentasi edukasi pada lembar Edukasi Terintegrasi RME ARIMA.\n\n\n3. Evaluasi pemahaman pasien melalui post-test singkat atau konfirmasi balik."
+  },
+  {
+    "table_idx": 19,
+    "no": "5",
+    "unit_kerja": "Poliklinik Penyakit Dalam (4.1.1)",
+    "pj": "Ka. Poliklinik Penyakit Dalam / Keperawatan",
+    "unit_terkait": "• Tim PPI (2.1.2.3)\n\n\n• Sub-Tim Safety (2.1.2.2)",
+    "indikator": "Kepatuhan Identifikasi Pasien & Kebersihan Tangan (Hand Hygiene) Petugas 100% (Keselamatan Pasien)",
+    "rencana_aksi": "1. Audit kepatuhan verifikasi minimal 2 identitas (Nama & Tanggal Lahir) sebelum tindakan/ambil spesimen.\n\n\n2. Penyediaan handrub berbasis alkohol di setiap meja periksa.\n\n\n3. Supervisi berkala oleh Infection Control Risk Assessment (ICRA) dan Tim PPI."
+  },
+  {
+    "table_idx": 20,
+    "no": "1",
+    "unit_kerja": "Poliklinik Bedah (4.1.2)",
+    "pj": "Ka. Poliklinik Bedah / KSM Bedah",
+    "unit_terkait": "• Instalasi Bedah Sentral / IBS (4.3)\n\n\n• Subbag SIMRS (3.3.3.1)",
+    "indikator": "Ketepatan Penjadwalan Operasi Elektif dari Poliklinik Bedah ≥ 90% (Pelayanan / Efisiensi)",
+    "rencana_aksi": "1. Pendaftaran jadwal operasi elektif secara online langsung dari RME Poliklinik Bedah ke SIMRS IBS.\n\n\n2. Skrining pra-bedah lengkap (Poliklinik Anestesi, Lab, Radiologi) sebelum penetapan jadwal.\n\n\n3. Konfirmasi H-1 kepada pasien terkait kesiapan operasi dan instruksi puasa."
+  },
+  {
+    "table_idx": 20,
+    "no": "2",
+    "unit_kerja": "Poliklinik Bedah (4.1.2)",
+    "pj": "Ka. Poliklinik Bedah / DPJP Bedah",
+    "unit_terkait": "• Perekam Medis (3.1.3.3)\n\n\n• Subbag Verifikasi Klaim (3.3.2.2)",
+    "indikator": "Kelengkapan Inform Consent Tindakan Bedah / Invasif Rawat Jalan 100% (Klinis / Legal)",
+    "rencana_aksi": "1. Pemberian informasi risiko, komplikasi, dan alternatif tindakan oleh DPJP Bedah.\n\n\n2. Pengisian lembar Informed Consent digital yang ditandatangani pasien/keluarga di ARIMA.\n\n\n3. Verifikasi ketersediaan persetujuan sebelum tindakan bedah minor di poliklinik."
+  },
+  {
+    "table_idx": 20,
+    "no": "3",
+    "unit_kerja": "Poliklinik Bedah (4.1.2)",
+    "pj": "Ka. Poliklinik Bedah / Keperawatan",
+    "unit_terkait": "• Subbag Kesling & K3RS (3.2.2.3)\n\n\n• Tim PPI (2.1.2.3)",
+    "indikator": "Kepatuhan Prosedur Steril Dressing Change & Pencegahan Infeksi Luka Operasi (ILO) ≥ 95% (Klinis / Safety)",
+    "rencana_aksi": "1. Penerapan teknik aseptik yang ketat pada tindakan perawatan luka di poliklinik.\n\n\n2. Penggunaan instrumen steril yang terekam kode sterilisasi CSSD.\n\n\n3. Edukasi perawatan luka mandiri dan pengenalan tanda infeksi kepada pasien/keluarga."
+  },
+  {
+    "table_idx": 20,
+    "no": "4",
+    "unit_kerja": "Poliklinik Bedah (4.1.2)",
+    "pj": "Ka. Poliklinik Bedah / DPJP Bedah",
+    "unit_terkait": "• Subbag SIMRS (3.3.3.1)\n\n\n• Rekam Medis (3.1.3.3)",
+    "indikator": "Waktu Tunggu Pelayanan Rawat Jalan Poliklinik Bedah (≤ 60 Menit) ≥ 85% (Pelayanan)",
+    "rencana_aksi": "1. Koordinasi jadwal pra-operasi agar tidak bertabrakan dengan jam operasional IBS.\n\n\n2. Penataan alur pemeriksaan fisik dan tindakan bedah minor di poli.\n\n\n3. Integrasi pemanggilan antrean otomatis berbasis layar panggil di ruang tunggu."
+  },
+  {
+    "table_idx": 20,
+    "no": "5",
+    "unit_kerja": "Poliklinik Bedah (4.1.2)",
+    "pj": "Ka. Poliklinik Bedah / Keperawatan",
+    "unit_terkait": "• Sub-Tim Safety (2.1.2.2)\n\n\n• Tim Mutu (2.1.2.1)",
+    "indikator": "Insiden Kesalahan Lokasi / Prosedur Tindakan Bedah Minor Rawat Jalan (Zero Incident) 100% (Keselamatan Pasien)",
+    "rencana_aksi": "1. Pelaksanaan Sign In dan verifikasi penandaan lokasi operasi (site marking) sebelum tindakan.\n\n\n2. Konfirmasi ulang nama pasien, jenis tindakan, dan lokasi luka bersama perawat.\n\n\n3. Pelaporan segera insiden keselamatan pasien jika terjadi kriteria near miss."
+  },
+  {
+    "table_idx": 21,
+    "no": "1",
+    "unit_kerja": "Poliklinik Kesehatan Anak (4.1.3)",
+    "pj": "Ka. Poliklinik Anak / KSM Anak",
+    "unit_terkait": "• Subbag Farmasi (3.1.3.2)\n\n\n• Sub-Tim Safety (2.1.2.2)",
+    "indikator": "Ketepatan Penimbangan Berat Badan & Perhitungan Dosis Obat Pasien Anak 100% (Keselamatan Pasien)",
+    "rencana_aksi": "1. Penimbangan BB dan pengukuran TB wajib bagi seluruh pasien anak pada saat triase awal.\n\n\n2. Otomasi kalkulator dosis obat berbasis BB anak pada fitur E-Resep ARIMA.\n\n\n3. Verifikasi ganda (double check) oleh farmasi untuk resep racikan anak."
+  },
+  {
+    "table_idx": 21,
+    "no": "2",
+    "unit_kerja": "Poliklinik Kesehatan Anak (4.1.3)",
+    "pj": "Ka. Poliklinik Anak / DPJP Anak",
+    "unit_terkait": "• Subbag Kesling & K3RS (3.2.2.3)\n\n\n• Tim PPI (2.1.2.3)",
+    "indikator": "Pencegahan Penularan Infeksi Saluran Napas (Penyediaan Area Triase Khusus Infeksius) 100% (K3RS / Safety)",
+    "rencana_aksi": "1. Pemisahan ruang tunggu pasien anak infeksius (batuk/demam) dan non-infeksius/imunisasi.\n\n\n2. Penerapan skoring triase cepat di pintu masuk poliklinik anak.\n\n\n3. Edukasi etika batuk dan penyediaan masker ukuran anak di area penerimaan."
+  },
+  {
+    "table_idx": 21,
+    "no": "3",
+    "unit_kerja": "Poliklinik Kesehatan Anak (4.1.3)",
+    "pj": "Ka. Poliklinik Anak / Edukator",
+    "unit_terkait": "• Subbag Pelatihan Pasien (3.2.3.1)\n\n\n• Instalasi Gizi (3.1.3.4)",
+    "indikator": "Capaian Pelaksanaan Edukasi Tumbuh Kembang & Imunisasi Dasar Lengkap ≥ 90% (Pelayanan / Edukasi)",
+    "rencana_aksi": "1. Pengisian grafik KMT (Kartu Menuju Sehat) / Kurva WHO secara digital pada RME.\n\n\n2. Pemberian konseling gizi dan imunisasi secara komprehensif oleh dokter/perawat.\n\n\n3. Penyediaan buklet dan media informasi visual tumbuh kembang anak."
+  },
+  {
+    "table_idx": 21,
+    "no": "4",
+    "unit_kerja": "Poliklinik Kesehatan Anak (4.1.3)",
+    "pj": "Ka. Poliklinik Anak / DPJP",
+    "unit_terkait": "• Subbag SIMRS (3.3.3.1)\n\n\n• Rekam Medis (3.1.3.3)",
+    "indikator": "Waktu Tunggu Pelayanan Poliklinik Kesehatan Anak (≤ 60 Menit) ≥ 85% (Pelayanan)",
+    "rencana_aksi": "1. Pengaturan slot antrean terpisah untuk Poli Imunisasi/Tumbuh Kembang dan Poli Sakit.\n\n\n2. Kehadiran DPJP Anak tepat waktu sesuai jadwal praktik yang dipublikasikan.\n\n\n3. Evaluasi harian hambatan alur pelayanan poliklinik anak."
+  },
+  {
+    "table_idx": 21,
+    "no": "5",
+    "unit_kerja": "Poliklinik Kesehatan Anak (4.1.3)",
+    "pj": "Ka. Poliklinik Anak / Keperawatan",
+    "unit_terkait": "• Sub-Tim Safety (2.1.2.2)\n\n\n• Tim PPI (2.1.2.3)",
+    "indikator": "Angka Kejadian Jatuh pada Pasien Anak di Area Poliklinik (Zero Incident) 100% (Keselamatan Pasien)",
+    "rencana_aksi": "1. Pengasesan risiko jatuh pasien anak menggunakan Skala Humpty Dumpty Rawat Jalan.\n\n\n2. Pemasangan pita kuning pada anak berisiko tinggi jatuh dan edukasi pengawasan kepada orang tua.\n\n\n3. Penyediaan sarana tempat duduk dan arena bermain yang ramah serta aman bagi anak."
+  },
+  {
+    "table_idx": 22,
+    "no": "1",
+    "unit_kerja": "Poliklinik Obgyn (4.1.4)",
+    "pj": "Ka. Poliklinik Obgyn / KSM Obgyn",
+    "unit_terkait": "• VK / Mawar (4.5.3)\n\n\n• IGD (4.2)",
+    "indikator": "Kelengkapan Skrining Risiko Tinggi Kehamilan (Skor Poedji Rochjati / KSPR) ≥ 95% (Klinis / Safety)",
+    "rencana_aksi": "1. Pengisian mandiri atau pendampingan skoring KSPR pada RME Obgyn ARIMA.\n\n\n2. Penandaan otomatis pada RME untuk kasus kehamilan risiko tinggi (KRT).\n\n\n3. Rujukan internal cepat ke Poliklinik Spesialis terkait (Jantung/Internal) jika ditemukan komplikasi."
+  },
+  {
+    "table_idx": 22,
+    "no": "2",
+    "unit_kerja": "Poliklinik Obgyn (4.1.4)",
+    "pj": "Ka. Poliklinik Obgyn / DPJP Obgyn",
+    "unit_terkait": "• Penunjang Diagnostik / USG (3.1.3.1)\n\n\n• Rekam Medis (3.1.3.3)",
+    "indikator": "Kepatuhan Dokumentasi Pemeriksaan USG Kebidanan pada RME 100% (Klinis)",
+    "rencana_aksi": "1. Integrasi/lampiran foto dan interpretasi hasil USG ke dalam berkas RME pasien.\n\n\n2. Standardisasi format pelaporan USG trimester I, II, dan III.\n\n\n3. Audit klinis berkala terhadap kesesuaian diagnosis USG dan tindakan."
+  },
+  {
+    "table_idx": 22,
+    "no": "3",
+    "unit_kerja": "Poliklinik Obgyn (4.1.4)",
+    "pj": "Ka. Poliklinik Obgyn / DPJP Obgyn",
+    "unit_terkait": "• Subbag SIMRS (3.3.3.1)\n\n\n• Rekam Medis (3.1.3.3)",
+    "indikator": "Waktu Tunggu Pelayanan Poliklinik Obgyn (≤ 60 Menit) ≥ 85% (Pelayanan)",
+    "rencana_aksi": "1. Pembagian jadwal pemeriksaan ANC rutin dan konsultasi ginekologi/Tindakan.\n\n\n2. Efisiensi alur administrasi dan pendaftaran USG di poliklinik.\n\n\n3. Pengawasan jam mulai praktik DPJP Obgyn via presensi SIMRS."
+  },
+  {
+    "table_idx": 22,
+    "no": "4",
+    "unit_kerja": "Poliklinik Obgyn (4.1.4)",
+    "pj": "Ka. Poliklinik Obgyn / Edukator",
+    "unit_terkait": "• Subbag Pelatihan Pasien (3.2.3.1)\n\n\n• Tim PKRS (2.1.3.1)",
+    "indikator": "Capaian Pelaksanaan Edukasi Perencanaan Persalinan & Bimbingan ASI Eksklusif ≥ 90% (Edukasi / Pelayanan)",
+    "rencana_aksi": "1. Konseling P4K (Program Perencanaan Persalinan dan Pencegahan Komplikasi) pada usia kehamilan > 28 minggu.\n\n\n2. Edukasi teknik menyusui dan persiapan IMD oleh Bidan konselor ASI.\n\n\n3. Pembagian media edukasi kesehatan ibu dan anak (maternal care kit)."
+  },
+  {
+    "table_idx": 22,
+    "no": "5",
+    "unit_kerja": "Poliklinik Obgyn (4.1.4)",
+    "pj": "Ka. Poliklinik Obgyn / Keperawatan",
+    "unit_terkait": "• Subbag Hukum & Humas (2.1.3.1)\n\n\n• Sub-Tim Safety (2.1.2.2)",
+    "indikator": "Kepatuhan Menjaga Privasi & Kerahasiaan Pasien Saat Pemeriksaan Kebidanan 100% (Pelayanan / Etika)",
+    "rencana_aksi": "1. Penggunaan gorden/partisi penutup dan penyiapan pendamping perawat wanita saat pemeriksaan ginekologi.\n\n\n2. Pembatasan akses masuk ruang periksa hanya untuk pasien dan 1 keluarga pendamping.\n\n\n3. Evaluasi kepuasan pasien terhadap pemenuhan privasi pelayanan."
+  },
+  {
+    "table_idx": 23,
+    "no": "1",
+    "unit_kerja": "Poliklinik Spesialis Lain (4.1.5)",
+    "pj": "Ka. Poliklinik Spesialis / DPJP",
+    "unit_terkait": "• Penunjang Diagnostik (3.1.3.1)\n\n\n• Subbag SIMRS (3.3.3.1)",
+    "indikator": "Kepatuhan Waktu Ekspertisi & Pencatatan Hasil Penunjang Khusus (EKG/Spiometri/Audiometri) ≤ 24 Jam 100% (Klinis)",
+    "rencana_aksi": "1. Digitalisasi pencatatan dan upload hasil pemeriksaan penunjang ke RME ARIMA.\n\n\n2. Pembacaan dan ekspertisi langsung oleh DPJP pada hari pemeriksaan berjalan.\n\n\n3. Verifikasi ulang kelengkapan berkas penunjang sebelum penyampaian ke pasien."
+  },
+  {
+    "table_idx": 23,
+    "no": "2",
+    "unit_kerja": "Poliklinik Spesialis Lain (4.1.5)",
+    "pj": "Ka. Poliklinik Spesialis / DPJP",
+    "unit_terkait": "• Subbag SIMRS (3.3.3.1)\n\n\n• Rekam Medis (3.1.3.3)",
+    "indikator": "Waktu Tunggu Pelayanan Poliklinik Spesialis (≤ 60 Menit) ≥ 85% (Pelayanan)",
+    "rencana_aksi": "1. Penerapan jadwal kedatangan berbasis jam (time-slot booking) via aplikasi pendaftaran.\n\n\n2. Distribusi pemerataan beban antrean pasien antar-DPJP spesialis.\n\n\n3. Pemantauan berkala jam buka layanan poliklinik spesialis."
+  },
+  {
+    "table_idx": 23,
+    "no": "3",
+    "unit_kerja": "Poliklinik Spesialis Lain (4.1.5)",
+    "pj": "Ka. Poliklinik Spesialis / Keperawatan",
+    "unit_terkait": "• Tim PPI (2.1.2.3)\n\n\n• Subbag Kesling (3.2.2.3)",
+    "indikator": "Kepatuhan Desinfeksi Perangkat Pemeriksaan Spesialis (THT, Mata, Paru) Antar-Pasien 100% (Keselamatan / PPI)",
+    "rencana_aksi": "1. Penerapan SPO dekontaminasi dan desinfeksi tingkat tinggi (DTT) untuk alat re-use (laringoskop, lensa, mouthpiece).\n\n\n2. Penggunaan single-use disposable accessories untuk pemeriksaan paru/spiometri.\n\n\n3. Audit harian ketersediaan cairan desinfektan standar medis di poli."
+  },
+  {
+    "table_idx": 23,
+    "no": "4",
+    "unit_kerja": "Poliklinik Spesialis Lain (4.1.5)",
+    "pj": "Ka. Poliklinik Spesialis / DPJP",
+    "unit_terkait": "• Subbag Farmasi (3.1.3.2)\n\n\n• Subbag Verifikasi Klaim (3.3.2.2)",
+    "indikator": "Kepatuhan Protokol Peresepan Obat Spesialis Sesuai Restriksi BPJS/Formularium ≥ 95% (Cost Control / Legal)",
+    "rencana_aksi": "1. Integrasi aturan restriksi obat spesialis (kuota/kriteria diagnosis) pada E-Resep ARIMA.\n\n\n2. Edukasi berkelanjutan mengenai substitusi obat generik berkhasiat sama.\n\n\n3. Monitoring dan pembahasan berkala berkas klaim obat spesialistik."
+  },
+  {
+    "table_idx": 23,
+    "no": "5",
+    "unit_kerja": "Poliklinik Spesialis Lain (4.1.5)",
+    "pj": "Ka. Poliklinik Spesialis / DPJP Jiwa",
+    "unit_terkait": "• Subbag Hukum & Etika (2.1.3.1)\n\n\n• Subbag Pelatihan Pasien (3.2.3.1)",
+    "indikator": "Kepatuhan Pelaksanaan Informed Consent & Perlindungan Privasi Pasien Kesehatan Jiwa 100% (Governance / Etika)",
+    "rencana_aksi": "1. Kerahasiaan rekam medis psikiatri dengan pembatasan hak akses (restricted RME access).\n\n\n2. Pelaksanaan konseling terintegrasi dalam ruang periksa kedap suara.\n\n\n3. Pemberian persetujuan tindakan khusus medis/psikoterapi secara sah."
+  },
+  {
+    "table_idx": 24,
+    "no": "1",
+    "unit_kerja": "Poliklinik Gigi & Mulut Spesialis (4.1.6)",
+    "pj": "Ka. Poliklinik Gigi / Dokter Gigi Spesialis",
+    "unit_terkait": "• Tim PPI (2.1.2.3)\n\n\n• CSSD (4.6.6.1)",
+    "indikator": "Kepatuhan Sterilisasi & Pengemasan Instrumen Dental Handpiece 100% (Keselamatan Pasien / PPI)",
+    "rencana_aksi": "1. Pengiriman instrumen dental handpiece ke CSSD menggunakan kantong autoclave pouch terindikator.\n\n\n2. Verifikasi fisik dan indikator sterilitas sebelum instrumen digunakan pada pasien.\n\n\n3. Pemenuhan rasio jumlah ketersediaan handpiece sesuai volume pasien harian."
+  },
+  {
+    "table_idx": 24,
+    "no": "2",
+    "unit_kerja": "Poliklinik Gigi & Mulut Spesialis (4.1.6)",
+    "pj": "Ka. Poliklinik Gigi / Dokter Gigi Spesialis",
+    "unit_terkait": "• Penunjang Diagnostik / Dental X-Ray (3.1.3.1)\n\n\n• Rekam Medis (3.1.3.3)",
+    "indikator": "Kelengkapan Pencatatan Odontogram Digital pada RME Pasien Gigi 100% (Klinis / Digitalisasi)",
+    "rencana_aksi": "1. Pengisian Odontogram digital secara wajib pada Modul Dental RME ARIMA sebelum tindakan.\n\n\n2. Integrasi foto Radiologi Dental (Periapikal/Panoramic) ke dalam file RME pasien.\n\n\n3. Audit berkala akurasi dan kelengkapan rekam medis odontogram."
+  },
+  {
+    "table_idx": 24,
+    "no": "3",
+    "unit_kerja": "Poliklinik Gigi & Mulut Spesialis (4.1.6)",
+    "pj": "Ka. Poliklinik Gigi / Keperawatan Gigi",
+    "unit_terkait": "• Subbag Kesling & K3RS (3.2.2.3)\n\n\n• Subbag IPSRS (3.2.2.2)",
+    "indikator": "Kepatuhan Penggunaan APD Lengkap (Level 2/Aerosol Minimal) Petugas Poli Gigi 100% (K3RS / Safety)",
+    "rencana_aksi": "1. Penyediaan APD standar (Face Shield, Masker N95/KN95, Gown, Sarung Tangan) memadai.\n\n\n2. Operasionalisasi suction aerosol ekstra-oral dan pemeliharaan Dental Unit berkala.\n\n\n3. Evaluasi dan penggantian filter HEPA di ruang tindakan gigi secara teratur."
+  },
+  {
+    "table_idx": 24,
+    "no": "4",
+    "unit_kerja": "Poliklinik Gigi & Mulut Spesialis (4.1.6)",
+    "pj": "Ka. Poliklinik Gigi / Dokter Gigi Spesialis",
+    "unit_terkait": "• Subbag SIMRS (3.3.3.1)\n\n\n• Rekam Medis (3.1.3.3)",
+    "indikator": "Waktu Tunggu Pelayanan Poliklinik Gigi & Mulut (≤ 60 Menit) ≥ 85% (Pelayanan)",
+    "rencana_aksi": "1. Penjadwalan alokasi durasi tindakan per pasien berdasarkan tingkat kerumitan kasus gigi.\n\n\n2. Pengaturan antrean khusus untuk tindakan observasi/pencabutan ringan.\n\n\n3. Pemantauan ketepatan waktu hadir Dokter Gigi Spesialis."
+  },
+  {
+    "table_idx": 24,
+    "no": "5",
+    "unit_kerja": "Poliklinik Gigi & Mulut Spesialis (4.1.6)",
+    "pj": "Ka. Poliklinik Gigi / Dokter Gigi Spesialis",
+    "unit_terkait": "• Sub-Tim Safety (2.1.2.2)\n\n\n• Subbag Hukum (2.1.3.1)",
+    "indikator": "Pelaksanaan Informed Consent Tindakan Ekstraksi/Beda Molar / Invasif Gigi 100% (Legal / Safety)",
+    "rencana_aksi": "1. Penjelasan komplikasi tindakan (perdarahan, cedera saraf, infeksi) sebelum pencabutan/bedah mulut.\n\n\n2. Penandatanganan berkas Informed Consent digital pada SIMRS.\n\n\n3. Pemantauan instruksi pasca-ekstraksi dan pemberian kartu kontak darurat kepada pasien."
+  },
+  {
+    "table_idx": 25,
+    "no": "1",
+    "unit_kerja": "Unit Rehabilitasi Medik & Fisioterapi (4.1.7)",
+    "pj": "Ka. Unit Rehab Medik / Sp.KFR",
+    "unit_terkait": "• Poliklinik Saraf, Orthopedi, Penyakit Dalam (4.1.1, 4.1.2, 4.1.5)\n\n\n• Rekam Medis (3.1.3.3)",
+    "indikator": "Kelengkapan Lembar Asesmen Protokol Terapi Fisik oleh Dokter Sp.KFR 100% (Klinis)",
+    "rencana_aksi": "1. Pemeriksaan awal dan perumusan protokol terapi oleh Sp.KFR sebelum tindakan fisioterapi dimulai.\n\n\n2. Evaluasi bertahap setiap 4–6 kali sesi latihan fisio pada RME ARIMA.\n\n\n3. Penyelarasan rujukan internal antar-spesialis secara efisien."
+  },
+  {
+    "table_idx": 25,
+    "no": "2",
+    "unit_kerja": "Unit Rehabilitasi Medik & Fisioterapi (4.1.7)",
+    "pj": "Ka. Unit Rehab Medik / Fisioterapis",
+    "unit_terkait": "• Subbag SIMRS (3.3.3.1)\n\n\n• Rekam Medis (3.1.3.3)",
+    "indikator": "Ketepatan Waktu Pelaksanaan Sesi Fisioterapi Sesuai Jadwal Perjanjian ≥ 90% (Pelayanan)",
+    "rencana_aksi": "1. Penerapan sistem penjadwalan sesi (slot time) harian via ARIMA agar tidak terjadi penumpukan.\n\n\n2. Persiapan alat modalities (MWD, TENS, Ultrasound) 15 menit sebelum sesi dimulai.\n\n\n3. Notifikasi pengingat jadwal terapi via WhatsApp/SMS ke nomor pasien."
+  },
+  {
+    "table_idx": 25,
+    "no": "3",
+    "unit_kerja": "Unit Rehabilitasi Medik & Fisioterapi (4.1.7)",
+    "pj": "Ka. Unit Rehab Medik / Fisioterapis",
+    "unit_terkait": "• Sub-Tim Safety (2.1.2.2)\n\n\n• Subbag IPSRS (3.2.2.2)",
+    "indikator": "Angka Kejadian Cedera / Terjatuh Saat Sesi Latihan Rehabilitasi (Zero Incident) 100% (Keselamatan Pasien)",
+    "rencana_aksi": "1. Penilaian ulang risiko jatuh menggunakan metode standar sebelum latihan fisik dimulai.\n\n\n2. Pendampingan melekat (one-on-one) oleh fisioterapis selama penggunaan alat latihan beban/paralel bar.\n\n\n3. Inspeksi keamanan dan uji kelayakan fungsional peralatan terapi secara rutin."
+  },
+  {
+    "table_idx": 25,
+    "no": "4",
+    "unit_kerja": "Unit Rehabilitasi Medik & Fisioterapi (4.1.7)",
+    "pj": "Ka. Unit Rehab Medik / Sp.KFR",
+    "unit_terkait": "• Subbag Pelatihan Pasien (3.2.3.1)\n\n\n• Tim PKRS (2.1.3.1)",
+    "indikator": "Capaian Pemberian Edukasi Program Latihan Mandiri di Rumah (Home Exercise) ≥ 90% (Edukasi / Klinis)",
+    "rencana_aksi": "1. Pemberian lembar panduan bergambar/video peragamaan Home Exercise kepada pasien/keluarga.\n\n\n2. Evaluasi kemampuan pasien memperagakan kembali gerakan latihan saat kontrol berikutnya.\n\n\n3. Dokumentasi pemberian edukasi pada lembar RME Terintegrasi."
+  },
+  {
+    "table_idx": 25,
+    "no": "5",
+    "unit_kerja": "Unit Rehabilitasi Medik & Fisioterapi (4.1.7)",
+    "pj": "Ka. Unit Rehab Medik / Fisioterapis",
+    "unit_terkait": "• Tim Mutu (2.1.2.1)\n\n\n• Subbag Verifikasi Klaim (3.3.2.2)",
+    "indikator": "Persentase Perbaikan Fungsional Pasien Pasca 6 Sesi Terapi (Berdasarkan Barthel Index) ≥ 80% (Klinis / Outcome)",
+    "rencana_aksi": "1. Pengukuran skor kemampuan fungsional (Barthel Index / Indeks Nyeri VAS) pada awal dan akhir sesi.\n\n\n2. Pencatatan statistik kemajuan klinis pasien secara terstruktur di ARIMA.\n\n\n3. Pembahasan kasus sulit (case conference) bersama tim medis interdisiplin."
+  }
+]

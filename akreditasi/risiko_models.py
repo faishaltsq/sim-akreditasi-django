@@ -240,6 +240,8 @@ class IndikatorMutu(models.Model):
     target_nilai   = models.DecimalField('Target Nilai', max_digits=5, decimal_places=2)
     satuan         = models.CharField('Satuan', max_length=20, default='%')
     ep_terkait     = models.ForeignKey(StandardItem, on_delete=models.SET_NULL, null=True, blank=True, related_name='indikator_mutu', verbose_name='EP Terkait')
+    rencana_aksi   = models.TextField('Rencana Aksi (Preset)', blank=True, default='')
+    pj             = models.CharField('Penanggung Jawab', max_length=200, blank=True, default='')
     aktif          = models.BooleanField('Aktif', default=True)
 
     class Meta:
