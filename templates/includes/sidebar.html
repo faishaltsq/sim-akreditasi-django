@@ -201,6 +201,13 @@
             <span class="nav-desc">INM Kemenkes & IMP-RS</span>
         </span>
     </a>
+    <a href="{% url 'akreditasi:indikator_dashboard' %}?add=1" class="nav-link {% if request.resolver_match.url_name == 'indikator_tambah' %}active{% endif %}">
+        <span class="nav-icon"><i class="bi bi-plus-circle-fill"></i></span>
+        <span class="nav-text">
+            <span class="nav-title">Tambah Indikator Mutu</span>
+            <span class="nav-desc">INM / IMP-RS / IMP-Unit</span>
+        </span>
+    </a>
 
     <!-- 4. LAPORAN (HANYA ADMIN/DIREKTUR) -->
     {% if not request.user.profile.is_unit_scoped %}

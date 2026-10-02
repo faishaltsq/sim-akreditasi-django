@@ -143,6 +143,8 @@ def risiko_input(request):
 
     if request.method == 'POST':
         try:
+            indikator_id = request.POST.get('indikator_mutu_terkait') or None
+            target_capaian = request.POST.get('target_capaian_indikator') or None
             risiko = RisikoUnit(
                 unit_id=int(request.POST['unit']),
                 tahun=int(request.POST['tahun']),
@@ -152,6 +154,8 @@ def risiko_input(request):
                 deskripsi_risiko=request.POST['deskripsi_risiko'],
                 dampak=int(request.POST['dampak']),
                 probabilitas=int(request.POST['probabilitas']),
+                indikator_mutu_terkait_id=int(indikator_id) if indikator_id else None,
+                target_capaian_indikator=float(target_capaian) if target_capaian else None,
                 strategi_mitigasi=request.POST['strategi_mitigasi'],
                 rencana_aksi=request.POST['rencana_aksi'],
                 pj_mitigasi=request.POST['pj_mitigasi'],
@@ -168,12 +172,16 @@ def risiko_input(request):
         except Exception as e:
             messages.error(request, f'Gagal menyimpan: {e}')
 
+    from .risiko_models import IndikatorMutu
+    indikator_list = IndikatorMutu.objects.filter(aktif=True).order_by('jenis', 'kode_indikator')
+
     ctx = {
         'units': units,
         'default_unit_id': default_unit_id,
         'periode_choices': RisikoUnit.PERIODE_CHOICES,
         'kategori_choices': RisikoUnit.KATEGORI_CHOICES,
         'strategi_choices': RisikoUnit.STRATEGI_CHOICES,
+        'indikator_list': indikator_list,
     }
     return render(request, 'akreditasi/risiko_form.html', ctx)
 

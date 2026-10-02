@@ -81,6 +81,26 @@
                             <p class="p-2 rounded" style="background:#f8fafc; font-size:.82rem; color:#0f172a;">{{ risiko.rencana_aksi|linebreaksbr }}</p>
                         </div>
                     </div>
+
+                    {% if risiko.indikator_mutu_terkait %}
+                    <div class="mt-3 p-3 rounded" style="background:#eff6ff; border-left:3px solid #3b82f6;">
+                        <h6 class="fw-bold mb-2" style="font-size:.8rem; color:#1e40af;">
+                            <i class="bi bi-graph-up-arrow me-1"></i>Indikator Mutu Terkait
+                        </h6>
+                        <div class="row g-2" style="font-size:.8rem;">
+                            <div class="col-sm-4 text-muted">Kode</div>
+                            <div class="col-sm-8 fw-semibold">
+                                <a href="{% url 'akreditasi:indikator_detail' risiko.indikator_mutu_terkait.id %}" style="color:#2563eb;">
+                                    [{{ risiko.indikator_mutu_terkait.kode_indikator }}] {{ risiko.indikator_mutu_terkait.nama_indikator }}
+                                </a>
+                            </div>
+                            {% if risiko.target_capaian_indikator %}
+                            <div class="col-sm-4 text-muted">Target Capaian</div>
+                            <div class="col-sm-8 fw-semibold text-success">{{ risiko.target_capaian_indikator }}%</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endif %}
                 </div>
             </div>
 

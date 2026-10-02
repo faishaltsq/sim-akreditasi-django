@@ -65,6 +65,16 @@ class RisikoUnit(models.Model):
     dampak_residual      = models.IntegerField('Dampak Residual (1–5)', null=True, blank=True, validators=DAMPAK_VALIDATORS)
     probabilitas_residual = models.IntegerField('Probabilitas Residual (1–5)', null=True, blank=True, validators=DAMPAK_VALIDATORS)
 
+    # Integrasi Indikator Mutu (Section C dokumen permintaan user)
+    indikator_mutu_terkait   = models.ForeignKey(
+        'IndikatorMutu', on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='risiko_terkait', verbose_name='Indikator Mutu Terkait'
+    )
+    target_capaian_indikator = models.DecimalField(
+        'Target Capaian Indikator (%)', max_digits=5, decimal_places=2,
+        null=True, blank=True
+    )
+
     status     = models.CharField('Status PDCA', max_length=12, choices=STATUS_CHOICES, default='IDENTIFIKASI')
     created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='risiko_dibuat')
     created_at = models.DateTimeField(auto_now_add=True)
