@@ -166,6 +166,14 @@ def api_indikator_by_unit(request):
 
     data = []
     for ind in qs:
+        # Prioritas: ambil rencana aksi dari field DB jika ada
+        if hasattr(ind, 'rencana_aksi') and ind.rencana_aksi and ind.rencana_aksi.strip():
+            import re as _re
+            presets = [l.strip() for l in ind.rencana_aksi.splitlines() if l.strip() and not l.strip().isdigit()]
+            presets = [_re.sub(r'^\d+[\.\)]\s*', '', p) for p in presets]
+        else:
+            presets = _get_preset_rencana_aksi(ind.kode_indikator)
+
         data.append({
             'id': ind.id,
             'kode': ind.kode_indikator,
@@ -174,7 +182,8 @@ def api_indikator_by_unit(request):
             'target': float(ind.target_nilai),
             'satuan': ind.satuan,
             'unit_name': ind.unit.name if ind.unit else 'Global / Nasional',
-            'preset_rencana_aksi': _get_preset_rencana_aksi(ind.kode_indikator),
+            'pj': getattr(ind, 'pj', '') or '',
+            'preset_rencana_aksi': presets,
         })
     return JsonResponse({'indikator': data})
 
