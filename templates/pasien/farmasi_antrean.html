@@ -1,0 +1,360 @@
+{% extends "base.html" %}
+{% load akreditasi_tags %}
+
+{% block title %}Farmasi & Dispensing Obat — ARIMA{% endblock %}
+{% block page_title %}Farmasi & Dispensing Obat{% endblock %}
+{% block page_subtitle %}Antrean Resep Elektronik{% endblock %}
+
+{% block content %}
+<div class="container-fluid p-0">
+
+    <!-- HEADER -->
+    <div class="card border-0 shadow-sm mb-4" style="background:linear-gradient(135deg,#0d9488 0%,#0f766e 100%);">
+        <div class="card-body p-4">
+            <div class="d-flex align-items-center gap-3">
+                <div class="rounded-circle d-flex align-items-center justify-content-center"
+                     style="width:56px;height:56px;background:rgba(255,255,255,.15);">
+                    <i class="bi bi-capsule text-white" style="font-size:1.6rem;"></i>
+                </div>
+                <div>
+                    <h4 class="fw-bold text-white mb-0">Farmasi &amp; Dispensing Obat</h4>
+                    <div class="text-white opacity-75" style="font-size:.85rem;">
+                        <i class="bi bi-list-ul me-1"></i>Antrean Resep Elektronik
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- STAT CARDS -->
+    <div class="row g-3 mb-4">
+        <div class="col-6 col-md-3">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body p-3 d-flex align-items-center gap-3">
+                    <div class="rounded-circle d-flex align-items-center justify-content-center"
+                         style="width:44px;height:44px;background:#f0fdfa;flex-shrink:0;">
+                        <i class="bi bi-file-medical" style="color:#0d9488;font-size:1.2rem;"></i>
+                    </div>
+                    <div>
+                        <div class="text-muted" style="font-size:.7rem;font-weight:600;">TOTAL RESEP</div>
+                        <div class="fw-bold font-monospace" style="font-size:1.5rem;color:#0d9488;">
+                            {{ counts.total }}
+                        </div>
+                        <span class="badge" style="background:#ccfbf1;color:#0f766e;font-size:.65rem;">Semua</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body p-3 d-flex align-items-center gap-3">
+                    <div class="rounded-circle d-flex align-items-center justify-content-center"
+                         style="width:44px;height:44px;background:#fefce8;flex-shrink:0;">
+                        <i class="bi bi-hourglass-split" style="color:#ca8a04;font-size:1.2rem;"></i>
+                    </div>
+                    <div>
+                        <div class="text-muted" style="font-size:.7rem;font-weight:600;">MENUNGGU</div>
+                        <div class="fw-bold font-monospace" style="font-size:1.5rem;color:#ca8a04;">
+                            {{ counts.dikirim }}
+                        </div>
+                        <span class="badge bg-warning text-dark" style="font-size:.65rem;">DIKIRIM</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body p-3 d-flex align-items-center gap-3">
+                    <div class="rounded-circle d-flex align-items-center justify-content-center"
+                         style="width:44px;height:44px;background:#eff6ff;flex-shrink:0;">
+                        <i class="bi bi-activity" style="color:#2563eb;font-size:1.2rem;"></i>
+                    </div>
+                    <div>
+                        <div class="text-muted" style="font-size:.7rem;font-weight:600;">DISPENSING</div>
+                        <div class="fw-bold font-monospace" style="font-size:1.5rem;color:#2563eb;">
+                            {{ counts.dispensing }}
+                        </div>
+                        <span class="badge bg-info" style="font-size:.65rem;">DIRACIK</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body p-3 d-flex align-items-center gap-3">
+                    <div class="rounded-circle d-flex align-items-center justify-content-center"
+                         style="width:44px;height:44px;background:#f0fdf4;flex-shrink:0;">
+                        <i class="bi bi-check2-circle" style="color:#16a34a;font-size:1.2rem;"></i>
+                    </div>
+                    <div>
+                        <div class="text-muted" style="font-size:.7rem;font-weight:600;">SELESAI</div>
+                        <div class="fw-bold font-monospace" style="font-size:1.5rem;color:#16a34a;">
+                            {{ counts.selesai }}
+                        </div>
+                        <span class="badge bg-success" style="font-size:.65rem;">SELESAI</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- FILTER TABS + SEARCH -->
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-body p-3">
+            <div class="d-flex flex-column flex-md-row gap-3 align-items-md-center justify-content-between">
+
+                <!-- Filter tab buttons -->
+                <div class="d-flex flex-wrap gap-2">
+                    <a href="?status=AKTIF{% if q %}&q={{ q }}{% endif %}"
+                       class="btn btn-sm fw-semibold {% if status_filter == 'AKTIF' %}btn-primary{% else %}btn-outline-secondary{% endif %}"
+                       style="{% if status_filter == 'AKTIF' %}background:#0d9488;border-color:#0d9488;{% endif %}font-size:.8rem;">
+                        <i class="bi bi-activity me-1"></i>Semua Aktif
+                    </a>
+                    <a href="?status=DIKIRIM{% if q %}&q={{ q }}{% endif %}"
+                       class="btn btn-sm fw-semibold {% if status_filter == 'DIKIRIM' %}btn-primary{% else %}btn-outline-secondary{% endif %}"
+                       style="{% if status_filter == 'DIKIRIM' %}background:#0d9488;border-color:#0d9488;{% endif %}font-size:.8rem;">
+                        <i class="bi bi-hourglass-split me-1"></i>Menunggu
+                    </a>
+                    <a href="?status=DISPENSING{% if q %}&q={{ q }}{% endif %}"
+                       class="btn btn-sm fw-semibold {% if status_filter == 'DISPENSING' %}btn-primary{% else %}btn-outline-secondary{% endif %}"
+                       style="{% if status_filter == 'DISPENSING' %}background:#0d9488;border-color:#0d9488;{% endif %}font-size:.8rem;">
+                        <i class="bi bi-capsule me-1"></i>Sedang Diracik
+                    </a>
+                    <a href="?status=SELESAI{% if q %}&q={{ q }}{% endif %}"
+                       class="btn btn-sm fw-semibold {% if status_filter == 'SELESAI' %}btn-primary{% else %}btn-outline-secondary{% endif %}"
+                       style="{% if status_filter == 'SELESAI' %}background:#0d9488;border-color:#0d9488;{% endif %}font-size:.8rem;">
+                        <i class="bi bi-check2-all me-1"></i>Selesai
+                    </a>
+                    <a href="?status=BATAL{% if q %}&q={{ q }}{% endif %}"
+                       class="btn btn-sm fw-semibold {% if status_filter == 'BATAL' %}btn-primary{% else %}btn-outline-secondary{% endif %}"
+                       style="{% if status_filter == 'BATAL' %}background:#0d9488;border-color:#0d9488;{% endif %}font-size:.8rem;">
+                        <i class="bi bi-x-circle me-1"></i>Dibatalkan
+                    </a>
+                </div>
+
+                <!-- Search bar -->
+                <form method="get" class="d-flex gap-2" style="min-width:280px;">
+                    <input type="hidden" name="status" value="{{ status_filter }}">
+                    <input type="text" name="q" value="{{ q }}"
+                           class="form-control form-control-sm"
+                           placeholder="Cari No. Resep / Nama Pasien / No. RM"
+                           style="font-size:.82rem;">
+                    <button type="submit" class="btn btn-sm fw-semibold"
+                            style="background:#0d9488;color:#fff;white-space:nowrap;">
+                        <i class="bi bi-search me-1"></i>Cari
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- RESEP TABLE -->
+    <div class="card border-0 shadow-sm">
+        <div class="card-body p-0">
+            {% if resep_list %}
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0" style="font-size:.82rem;">
+                    <thead class="table-light">
+                        <tr>
+                            <th style="font-size:.78rem;width:1%;">#</th>
+                            <th style="font-size:.78rem;">No. Resep</th>
+                            <th style="font-size:.78rem;">Pasien (No. RM)</th>
+                            <th style="font-size:.78rem;">Dokter</th>
+                            <th style="font-size:.78rem;">Jenis</th>
+                            <th style="font-size:.78rem;">Tgl Masuk</th>
+                            <th style="font-size:.78rem;">Status</th>
+                            <th class="text-center" style="font-size:.78rem;">Jml Obat</th>
+                            <th style="font-size:.78rem;">Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    {% for r in resep_list %}
+                        <!-- ROW UTAMA -->
+                        <tr>
+                            <td class="text-muted font-monospace" style="font-size:.72rem;">{{ forloop.counter }}</td>
+                            <td>
+                                <button class="btn btn-link p-0 fw-bold font-monospace text-decoration-none"
+                                        style="color:#0d9488;font-size:.82rem;"
+                                        type="button"
+                                        data-bs-toggle="collapse"
+                                        data-bs-target="#row-detail-{{ r.pk }}"
+                                        aria-expanded="false">
+                                    <i class="bi bi-chevron-right me-1" style="font-size:.65rem;"></i>{{ r.no_resep }}
+                                </button>
+                            </td>
+                            <td>
+                                <div class="fw-semibold">{{ r.kunjungan.pasien.nama_lengkap }}</div>
+                                <div class="font-monospace text-muted" style="font-size:.72rem;">{{ r.kunjungan.pasien.no_rm }}</div>
+                            </td>
+                            <td class="text-muted">{{ r.dokter_peresep.get_full_name|default:r.dokter_peresep.username }}</td>
+                            <td>
+                                <span class="badge bg-light text-dark border" style="font-size:.7rem;">{{ r.jenis_resep }}</span>
+                            </td>
+                            <td class="font-monospace text-muted" style="font-size:.75rem;">
+                                {{ r.tanggal_resep|date:"d/m/Y H:i" }}
+                            </td>
+                            <td>
+                                {% if r.status == 'DIKIRIM' %}
+                                    <span class="badge bg-warning text-dark">Menunggu</span>
+                                {% elif r.status == 'DISPENSING' %}
+                                    <span class="badge bg-info">Dispensing</span>
+                                {% elif r.status == 'SELESAI' %}
+                                    <span class="badge bg-success">Selesai</span>
+                                {% elif r.status == 'BATAL' %}
+                                    <span class="badge bg-secondary">Batal</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-center">
+                                <span class="badge bg-light text-dark border font-monospace">{{ r.items.count }}</span>
+                            </td>
+                            <td>
+                                <div class="d-flex gap-1 flex-wrap">
+                                    {% if r.status == 'DIKIRIM' %}
+                                    <form method="post" action="{% url 'pasien:resep_update_status' resep_pk=r.pk %}" class="d-inline">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="aksi" value="dispensing">
+                                        <input type="hidden" name="next" value="{{ request.path }}?status={{ status_filter }}{% if q %}&q={{ q }}{% endif %}">
+                                        <button type="submit" class="btn btn-sm btn-primary fw-semibold"
+                                                style="background:#0d9488;border-color:#0d9488;font-size:.75rem;">
+                                            <i class="bi bi-capsule me-1"></i>Proses
+                                        </button>
+                                    </form>
+                                    {% elif r.status == 'DISPENSING' %}
+                                    <form method="post" action="{% url 'pasien:resep_update_status' resep_pk=r.pk %}" class="d-inline">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="aksi" value="selesai">
+                                        <input type="hidden" name="next" value="{{ request.path }}?status={{ status_filter }}{% if q %}&q={{ q }}{% endif %}">
+                                        <button type="submit" class="btn btn-sm btn-success fw-semibold" style="font-size:.75rem;">
+                                            <i class="bi bi-check2-circle me-1"></i>Selesaikan
+                                        </button>
+                                    </form>
+                                    <button type="button" class="btn btn-sm btn-outline-secondary fw-semibold"
+                                            style="font-size:.75rem;"
+                                            data-bs-toggle="collapse"
+                                            data-bs-target="#row-detail-{{ r.pk }}">
+                                        <i class="bi bi-eye me-1"></i>Obat
+                                    </button>
+                                    {% endif %}
+
+                                    {% if r.status != 'SELESAI' and r.status != 'BATAL' %}
+                                    <button type="button" class="btn btn-sm btn-outline-danger fw-semibold"
+                                            style="font-size:.75rem;"
+                                            data-bs-toggle="modal"
+                                            data-bs-target="#modalBatal{{ r.pk }}">
+                                        <i class="bi bi-x-circle me-1"></i>Batal
+                                    </button>
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+
+                        <!-- EXPANDABLE DETAIL ROW -->
+                        <tr class="collapse" id="row-detail-{{ r.pk }}">
+                            <td colspan="9" class="p-0">
+                                <div class="p-3" style="background:#f8fafc;border-top:2px solid #0d9488;">
+                                    {% if r.catatan_dokter %}
+                                    <div class="mb-2">
+                                        <small class="text-muted fw-semibold">Catatan Dokter:</small>
+                                        <span class="ms-1" style="font-size:.8rem;">{{ r.catatan_dokter }}</span>
+                                    </div>
+                                    {% endif %}
+                                    <div class="table-responsive">
+                                        <table class="table table-sm table-bordered mb-0 bg-white" style="font-size:.78rem;">
+                                            <thead class="table-light">
+                                                <tr>
+                                                    <th>Nama Obat</th>
+                                                    <th>Bentuk</th>
+                                                    <th>Dosis</th>
+                                                    <th>Aturan Pakai</th>
+                                                    <th class="text-center">Jml</th>
+                                                    <th class="text-end">Harga Satuan</th>
+                                                    <th class="text-end">Subtotal</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {% for item in r.items.all %}
+                                                <tr>
+                                                    <td class="fw-semibold">{{ item.nama_obat }}</td>
+                                                    <td>{{ item.bentuk_sediaan }}</td>
+                                                    <td>{{ item.dosis }}</td>
+                                                    <td>{{ item.aturan_pakai }}</td>
+                                                    <td class="text-center font-monospace">{{ item.jumlah }}</td>
+                                                    <td class="text-end font-monospace">{{ item.harga_satuan|rupiah }}</td>
+                                                    <td class="text-end font-monospace fw-bold" style="color:#0d9488;">{{ item.subtotal|rupiah }}</td>
+                                                </tr>
+                                                {% empty %}
+                                                <tr><td colspan="7" class="text-center text-muted">Tidak ada item obat.</td></tr>
+                                                {% endfor %}
+                                                <tr class="table-light">
+                                                    <th colspan="6" class="text-end">Total Resep:</th>
+                                                    <th class="text-end font-monospace" style="color:#0d9488;">{{ r.total_biaya|rupiah }}</th>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                    {% if r.catatan_apoteker %}
+                                    <div class="mt-2">
+                                        <small class="text-muted fw-semibold">Catatan Apoteker:</small>
+                                        <span class="ms-1" style="font-size:.8rem;">{{ r.catatan_apoteker }}</span>
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+
+                        <!-- MODAL BATAL -->
+                        <div class="modal fade" id="modalBatal{{ r.pk }}" tabindex="-1" aria-hidden="true">
+                            <div class="modal-dialog modal-dialog-centered">
+                                <div class="modal-content border-0 shadow">
+                                    <div class="modal-header border-0 pb-0">
+                                        <h6 class="modal-title fw-bold">
+                                            <i class="bi bi-x-circle-fill text-danger me-2"></i>Batalkan Resep
+                                        </h6>
+                                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                    </div>
+                                    <div class="modal-body pt-2">
+                                        <div class="alert alert-warning py-2 mb-3" style="font-size:.82rem;">
+                                            <i class="bi bi-exclamation-triangle me-1"></i>
+                                            Resep <strong>{{ r.no_resep }}</strong> untuk <strong>{{ r.kunjungan.pasien.nama_lengkap }}</strong> akan dibatalkan.
+                                        </div>
+                                        <form method="post" action="{% url 'pasien:resep_update_status' resep_pk=r.pk %}" id="formBatal{{ r.pk }}">
+                                            {% csrf_token %}
+                                            <input type="hidden" name="aksi" value="batal">
+                                            <input type="hidden" name="next" value="{{ request.path }}?status={{ status_filter }}{% if q %}&q={{ q }}{% endif %}">
+                                            <div class="mb-3">
+                                                <label class="form-label fw-semibold" style="font-size:.82rem;">Alasan Pembatalan (opsional)</label>
+                                                <textarea name="catatan_apoteker" rows="3"
+                                                          class="form-control form-control-sm"
+                                                          placeholder="Tulis alasan pembatalan resep..."
+                                                          style="font-size:.82rem;"></textarea>
+                                            </div>
+                                        </form>
+                                    </div>
+                                    <div class="modal-footer border-0 pt-0">
+                                        <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal">Batal</button>
+                                        <button type="submit" form="formBatal{{ r.pk }}"
+                                                class="btn btn-sm btn-danger fw-bold">
+                                            <i class="bi bi-x-circle me-1"></i>Konfirmasi Batalkan
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <!-- EMPTY STATE -->
+            <div class="text-center py-5 text-muted">
+                <i class="bi bi-capsule fs-1 d-block mb-2 text-secondary opacity-50"></i>
+                <div class="fw-semibold mb-1">Tidak ada resep ditemukan</div>
+                <small>{% if q %}Tidak ada resep yang cocok dengan pencarian "{{ q }}".{% else %}Belum ada resep masuk untuk filter ini.{% endif %}</small>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+</div>
+{% endblock %}

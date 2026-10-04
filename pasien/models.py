@@ -24,6 +24,9 @@ class Pasien(models.Model):
     no_bpjs        = models.CharField('No. BPJS', max_length=20, blank=True)
     alergi_obat    = models.TextField('Alergi Obat', blank=True, help_text='Pisahkan dengan koma')
     alergi_lain    = models.TextField('Alergi Lain', blank=True)
+    # ── SatuSehat Kemenkes ──
+    satusehat_id       = models.CharField('SatuSehat Patient ID', max_length=64, blank=True, null=True)
+    satusehat_sync_at  = models.DateTimeField('Waktu Sync SatuSehat', null=True, blank=True)
     created_at     = models.DateTimeField(auto_now_add=True)
     updated_at     = models.DateTimeField(auto_now=True)
 
@@ -142,6 +145,12 @@ class KunjunganPasien(models.Model):
     discharge_planning_aktif   = models.BooleanField('Discharge Planning Aktif', default=False)
     discharge_planning_catatan = models.TextField('Catatan Discharge Planning', blank=True)
     discharge_planning_tgl     = models.DateField('Target Tanggal Pulang', null=True, blank=True)
+
+    # ── SatuSehat Kemenkes Encounter ──
+    satusehat_encounter_id = models.CharField('SatuSehat Encounter ID', max_length=64, blank=True, null=True)
+    satusehat_status       = models.CharField('Status Sync SatuSehat', max_length=15,
+                                choices=[('NOT_SYNCED','Belum Disinkronkan'),('SYNCED','Tersinkronisasi'),('FAILED','Gagal Sync')],
+                                default='NOT_SYNCED')
 
     class Meta:
         verbose_name = 'Kunjungan Pasien'
@@ -301,3 +310,77 @@ class DischargeRecord(models.Model):
 
     def __str__(self):
         return f'Discharge [{self.kunjungan.pasien.nama_lengkap}] {self.tanggal_discharge.strftime("%d/%m/%Y")}'
+
+
+# ── 8. E-Prescribing & Farmasi ────────────────────────────────────────────────
+
+class ResepElektronik(models.Model):
+    STATUS_RESEP = [
+        ('DRAFT',       'Draft Dokter'),
+        ('DIKIRIM',     'Terkirim ke Farmasi'),
+        ('DISPENSING',  'Sedang Diracik / Dispensing'),
+        ('SELESAI',     'Selesai & Diserahkan'),
+        ('BATAL',       'Dibatalkan'),
+    ]
+    JENIS_RESEP = [
+        ('RAWAT_INAP',  'Rawat Inap (Depo Ranap)'),
+        ('RAWAT_JALAN', 'Rawat Jalan (Depo Rajal)'),
+        ('IGD',         'IGD Cito'),
+        ('PULANG',      'Obat Pulang / Discharge'),
+    ]
+
+    no_resep         = models.CharField('No. Resep', max_length=30, unique=True)
+    kunjungan        = models.ForeignKey(KunjunganPasien, on_delete=models.CASCADE, related_name='resep_list')
+    dokter_peresep   = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='resep_dibuat')
+    tanggal_resep    = models.DateTimeField('Waktu Dibuat', auto_now_add=True)
+    jenis_resep      = models.CharField('Jenis Resep', max_length=15, choices=JENIS_RESEP, default='RAWAT_INAP')
+    status           = models.CharField('Status Farmasi', max_length=15, choices=STATUS_RESEP, default='DIKIRIM')
+    catatan_dokter   = models.CharField('Catatan Dokter / Iter', max_length=250, blank=True)
+    catatan_apoteker = models.CharField('Catatan / Telaah Apoteker', max_length=250, blank=True)
+    apoteker         = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='resep_diproses')
+    waktu_selesai    = models.DateTimeField('Waktu Selesai Penyerahan', null=True, blank=True)
+
+    class Meta:
+        verbose_name = 'Resep Elektronik'
+        verbose_name_plural = 'Resep Elektronik (Farmasi)'
+        ordering = ['-tanggal_resep']
+
+    def __str__(self):
+        return f'{self.no_resep} — {self.kunjungan.pasien.nama_lengkap} ({self.get_status_display()})'
+
+    @property
+    def total_biaya(self):
+        return sum(item.subtotal for item in self.items.all())
+
+
+class ResepDetail(models.Model):
+    BENTUK_SEDIAAN = [
+        ('TABLET',  'Tablet / Kaplet'),
+        ('KAPSUL',  'Kapsul'),
+        ('SIRUP',   'Sirup / Suspensi'),
+        ('INJEKSI', 'Injeksi / Ampul / Vial'),
+        ('INFUS',   'Cairan Infus'),
+        ('SALEP',   'Salep / Krim / Tetes'),
+        ('PUYER',   'Puyer / Racikan'),
+    ]
+
+    resep          = models.ForeignKey(ResepElektronik, on_delete=models.CASCADE, related_name='items')
+    nama_obat      = models.CharField('Nama Obat / Alkes', max_length=150)
+    bentuk_sediaan = models.CharField('Bentuk', max_length=10, choices=BENTUK_SEDIAAN, default='TABLET')
+    dosis          = models.CharField('Dosis', max_length=50, help_text='Contoh: 500 mg, 1 gr, 100 ml')
+    aturan_pakai   = models.CharField('Signa / Aturan Pakai', max_length=100, help_text='Contoh: 3x1 tablet sesudah makan')
+    jumlah         = models.PositiveIntegerField('Jumlah', default=1)
+    harga_satuan   = models.DecimalField('Harga Satuan (Rp)', max_digits=12, decimal_places=2, default=0)
+    catatan_khusus = models.CharField('Catatan Khusus (Sebelum/Sesudah Makan, dll)', max_length=150, blank=True)
+
+    class Meta:
+        verbose_name = 'Detail Obat Resep'
+        verbose_name_plural = 'Detail Obat Resep'
+
+    def __str__(self):
+        return f'{self.nama_obat} ({self.aturan_pakai}) x {self.jumlah}'
+
+    @property
+    def subtotal(self):
+        return self.jumlah * self.harga_satuan
+

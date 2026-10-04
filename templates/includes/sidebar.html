@@ -312,7 +312,14 @@
         <span class="nav-icon"><i class="bi bi-grid-3x3-gap-fill"></i></span>
         <span class="nav-text">
             <span class="nav-title">Bed Management</span>
-            <span class="nav-desc">Ketersediaan & BOR</span>
+            <span class="nav-desc">Ketersediaan &amp; BOR</span>
+        </span>
+    </a>
+    <a href="{% url 'pasien:farmasi_antrean' %}" class="nav-link {% if request.resolver_match.url_name == 'farmasi_antrean' %}active{% endif %}">
+        <span class="nav-icon"><i class="bi bi-capsule"></i></span>
+        <span class="nav-text">
+            <span class="nav-title">Farmasi &amp; Dispensing</span>
+            <span class="nav-desc">Antrean Resep Elektronik</span>
         </span>
     </a>
 

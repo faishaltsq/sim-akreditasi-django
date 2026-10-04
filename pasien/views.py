@@ -7,8 +7,9 @@ from django.http import HttpResponse, JsonResponse
 from django.utils import timezone
 from datetime import timedelta
 
-from .models import Pasien, KunjunganPasien, Bed, Ruangan, CPPT, AsesmenRisikoKlinis, BillingItem, DischargeRecord
+from .models import Pasien, KunjunganPasien, Bed, Ruangan, CPPT, AsesmenRisikoKlinis, BillingItem, DischargeRecord, ResepElektronik, ResepDetail
 from .pdf_utils import generate_resume_pdf
+from .satusehat import sync_encounter_satusehat, parse_qr_medis
 
 
 # ── ICD-10 Quick Reference (80+ common inpatient codes) ──────────────────────
@@ -229,6 +230,7 @@ def kunjungan_detail(request, pk):
     ctx = {
         'k': k, 'cppt_list': k.cppt.all(), 'asesmen_list': k.asesmen_risiko.all(),
         'billing_list': billing_list, 'total_billing': total_billing,
+        'resep_list': k.resep_list.prefetch_related('items').all(),
         'discharge': getattr(k, 'discharge', None),
         'profesi_choices': CPPT.PROFESI,
         'asesmen_choices': AsesmenRisikoKlinis.JENIS_ASESMEN,
@@ -401,3 +403,192 @@ def resume_pdf(request, kunjungan_pk):
     response = HttpResponse(pdf_bytes, content_type='application/pdf')
     response['Content-Disposition'] = 'attachment; filename=Resume_Medis_download.pdf'
     return response
+
+
+# ── GAP 4: E-Prescribing & Farmasi Views ──────────────────────────────────────
+
+@login_required
+def resep_buat(request, kunjungan_pk):
+    """Dokter membuat resep elektronik dari kunjungan detail."""
+    kunjungan = get_object_or_404(KunjunganPasien, pk=kunjungan_pk)
+    if request.method == 'POST':
+        jenis_resep = request.POST.get('jenis_resep', 'RAWAT_INAP')
+        catatan_dokter = request.POST.get('catatan_dokter', '').strip()
+
+        # Nomor resep unik
+        today_str = timezone.now().strftime('%Y%m%d')
+        count = ResepElektronik.objects.filter(no_resep__startswith=f'RSP-{today_str}').count() + 1
+        no_resep = f'RSP-{today_str}-{count:04d}'
+
+        resep = ResepElektronik.objects.create(
+            no_resep=no_resep,
+            kunjungan=kunjungan,
+            dokter_peresep=request.user,
+            jenis_resep=jenis_resep,
+            status='DIKIRIM',
+            catatan_dokter=catatan_dokter,
+        )
+
+        # Simpan list obat
+        nama_obat_list = request.POST.getlist('nama_obat[]')
+        sediaan_list = request.POST.getlist('bentuk_sediaan[]')
+        dosis_list = request.POST.getlist('dosis[]')
+        aturan_list = request.POST.getlist('aturan_pakai[]')
+        jumlah_list = request.POST.getlist('jumlah[]')
+        harga_list = request.POST.getlist('harga_satuan[]')
+
+        items_created = 0
+        for i in range(len(nama_obat_list)):
+            nama = nama_obat_list[i].strip()
+            if not nama:
+                continue
+            sediaan = sediaan_list[i] if i < len(sediaan_list) else 'TABLET'
+            dosis = dosis_list[i] if i < len(dosis_list) else '-'
+            aturan = aturan_list[i] if i < len(aturan_list) else 'Sesuai Petunjuk'
+            try:
+                jml = max(int(jumlah_list[i]), 1)
+            except (IndexError, ValueError):
+                jml = 1
+            try:
+                hrg = max(float(harga_list[i]), 0)
+            except (IndexError, ValueError):
+                hrg = 0
+
+            ResepDetail.objects.create(
+                resep=resep,
+                nama_obat=nama,
+                bentuk_sediaan=sediaan,
+                dosis=dosis,
+                aturan_pakai=aturan,
+                jumlah=jml,
+                harga_satuan=hrg,
+            )
+            items_created += 1
+
+        if items_created == 0:
+            resep.delete()
+            messages.error(request, 'Resep gagal dibuat: minimal harus ada 1 obat yang dimasukkan.')
+        else:
+            messages.success(request, f'Resep {no_resep} berhasil dikirim ke Farmasi ({items_created} obat).')
+
+    return redirect('pasien:kunjungan_detail', pk=kunjungan_pk)
+
+
+@login_required
+def farmasi_antrean(request):
+    """Halaman operasional Farmasi/Depo: Antrean Resep, Telaah, Dispensing & Penyerahan."""
+    status_filter = request.GET.get('status', 'AKTIF')
+    q = request.GET.get('q', '').strip()
+
+    resep_qs = ResepElektronik.objects.select_related('kunjungan__pasien', 'dokter_peresep', 'apoteker').prefetch_related('items')
+
+    if status_filter == 'AKTIF':
+        resep_qs = resep_qs.filter(status__in=['DIKIRIM', 'DISPENSING'])
+    elif status_filter in ['DIKIRIM', 'DISPENSING', 'SELESAI', 'BATAL']:
+        resep_qs = resep_qs.filter(status=status_filter)
+
+    if q:
+        resep_qs = resep_qs.filter(
+            Q(no_resep__icontains=q) |
+            Q(kunjungan__pasien__nama_lengkap__icontains=q) |
+            Q(kunjungan__pasien__no_rm__icontains=q)
+        )
+
+    counts = {
+        'total': ResepElektronik.objects.count(),
+        'dikirim': ResepElektronik.objects.filter(status='DIKIRIM').count(),
+        'dispensing': ResepElektronik.objects.filter(status='DISPENSING').count(),
+        'selesai': ResepElektronik.objects.filter(status='SELESAI').count(),
+    }
+
+    context = {
+        'resep_list': resep_qs[:50],
+        'status_filter': status_filter,
+        'q': q,
+        'counts': counts,
+    }
+    return render(request, 'pasien/farmasi_antrean.html', context)
+
+
+@login_required
+def resep_update_status(request, resep_pk):
+    """Apoteker memproses status resep: DISPENSING, SELESAI, BATAL.
+    Saat SELESAI, otomatis membuat BillingItem 'FARMASI' ke tagihan kunjungan!
+    """
+    resep = get_object_or_404(ResepElektronik, pk=resep_pk)
+    if request.method == 'POST':
+        aksi = request.POST.get('aksi')
+        catatan_apoteker = request.POST.get('catatan_apoteker', '').strip()
+        if catatan_apoteker:
+            resep.catatan_apoteker = catatan_apoteker
+
+        if aksi == 'dispensing':
+            resep.status = 'DISPENSING'
+            resep.apoteker = request.user
+            resep.save(update_fields=['status', 'apoteker', 'catatan_apoteker'])
+            messages.info(request, f'Resep {resep.no_resep} sedang dalam proses dispensing/peracikan.')
+
+        elif aksi == 'selesai':
+            resep.status = 'SELESAI'
+            resep.apoteker = request.user
+            resep.waktu_selesai = timezone.now()
+            resep.save(update_fields=['status', 'apoteker', 'waktu_selesai', 'catatan_apoteker'])
+
+            # Otomatis catat ke BillingItem kunjungan pasien
+            total_nominal = 0
+            for item in resep.items.all():
+                if item.harga_satuan > 0:
+                    BillingItem.objects.create(
+                        kunjungan=resep.kunjungan,
+                        kategori='OBAT',
+                        nama_item=f'Obat: {item.nama_obat} ({item.dosis})',
+                        kuantitas=item.jumlah,
+                        harga_satuan=item.harga_satuan,
+                        dicatat_oleh=request.user,
+                    )
+                    total_nominal += item.subtotal
+
+            messages.success(request, f'Resep {resep.no_resep} selesai diserahkan. Otomatis masuk tagihan billing: Rp {total_nominal:,.0f}')
+
+        elif aksi == 'batal':
+            resep.status = 'BATAL'
+            resep.save(update_fields=['status', 'catatan_apoteker'])
+            messages.warning(request, f'Resep {resep.no_resep} telah dibatalkan.')
+
+    next_url = request.POST.get('next') or request.META.get('HTTP_REFERER') or 'pasien:farmasi_antrean'
+    return redirect(next_url)
+
+
+# ── GAP 5: SatuSehat Kemenkes & QR Scanner Views ──────────────────────────────
+
+@login_required
+def satusehat_sync_view(request, kunjungan_pk):
+    """Kirim encounter FHIR R4 ke SatuSehat Kemenkes."""
+    kunjungan = get_object_or_404(KunjunganPasien, pk=kunjungan_pk)
+    result = sync_encounter_satusehat(kunjungan)
+
+    if request.headers.get('x-requested-with') == 'XMLHttpRequest' or request.GET.get('format') == 'json':
+        return JsonResponse(result)
+
+    if result['success']:
+        messages.success(request, result['message'])
+    else:
+        messages.error(request, f"Gagal SatuSehat: {result['message']}")
+    return redirect('pasien:kunjungan_detail', pk=kunjungan_pk)
+
+
+@login_required
+def api_parse_qr(request):
+    """Parse text hasil scan QR KTP/BPJS/SatuSehat."""
+    if request.method == 'POST':
+        import json
+        try:
+            body = json.loads(request.body)
+            raw = body.get('qr_text', '')
+        except Exception:
+            raw = request.POST.get('qr_text', '')
+
+        parsed = parse_qr_medis(raw)
+        return JsonResponse(parsed)
+    return JsonResponse({'error': 'POST method required'}, status=405)
+
