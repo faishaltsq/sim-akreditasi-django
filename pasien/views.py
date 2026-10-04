@@ -7,7 +7,7 @@ from django.http import HttpResponse, JsonResponse
 from django.utils import timezone
 from datetime import timedelta
 
-from .models import Pasien, KunjunganPasien, Bed, Ruangan, CPPT, AsesmenRisikoKlinis, BillingItem, DischargeRecord, ResepElektronik, ResepDetail
+from .models import Pasien, KunjunganPasien, Bed, Ruangan, CPPT, AsesmenRisikoKlinis, BillingItem, DischargeRecord, ResepElektronik, ResepDetail, POLIKLINIK_CHOICES
 from .pdf_utils import generate_resume_pdf
 from .satusehat import sync_encounter_satusehat, parse_qr_medis
 
@@ -591,4 +591,184 @@ def api_parse_qr(request):
         parsed = parse_qr_medis(raw)
         return JsonResponse(parsed)
     return JsonResponse({'error': 'POST method required'}, status=405)
+
+
+# ── DASBOR KHUSUS PENDAFTARAN ─────────────────────────────────────────────────
+
+@login_required
+def pendaftaran_dashboard(request):
+    """Dedicated Front-Office Registration & Routing Desk."""
+    today = timezone.localdate()
+    qs_today = KunjunganPasien.objects.filter(tanggal_masuk__date=today).select_related('pasien', 'created_by')
+
+    ctx = {
+        'kunjungan_hari_ini':  qs_today.order_by('-tanggal_masuk')[:100],
+        'total_hari_ini':      qs_today.count(),
+        'ke_igd':              qs_today.filter(jenis_kunjungan='IGD').count(),
+        'ke_rajal':            qs_today.filter(jenis_kunjungan='RAJAL').count(),
+        'ke_ranap':            qs_today.filter(jenis_kunjungan='RANAP').count(),
+        'poliklinik_choices':  POLIKLINIK_CHOICES,
+        'triage_choices':      KunjunganPasien.TRIAGE_CHOICES,
+        'penjamin_choices':    KunjunganPasien.TIPE_PENJAMIN,
+        'pasien_recent':       Pasien.objects.order_by('-created_at')[:10],
+        'pasien_list':         Pasien.objects.order_by('nama_lengkap'),
+    }
+    return render(request, 'pasien/pendaftaran_dashboard.html', ctx)
+
+
+@login_required
+def pendaftaran_route(request, pk):
+    """Route a registered visit to IGD or Poli Rawat Jalan."""
+    k = get_object_or_404(KunjunganPasien, pk=pk)
+    if request.method == 'POST':
+        tujuan = request.POST.get('tujuan')
+        dpjp = request.POST.get('dpjp', '')
+        try:
+            if tujuan == 'IGD':
+                k.jenis_kunjungan = 'IGD'
+                k.triage = request.POST.get('triage', 'HIJAU')
+                k.status = 'TRIAGE'
+                if dpjp:
+                    k.dpjp = dpjp
+                k.save()
+                messages.success(request, f'Pasien {k.pasien.nama_lengkap} diarahkan ke IGD ({k.get_triage_display()}).')
+                return redirect('pasien:igd_dashboard')
+            elif tujuan == 'RAJAL':
+                poli_dict = dict(POLIKLINIK_CHOICES)
+                poli_key = request.POST.get('poliklinik', '')
+                k.jenis_kunjungan = 'RAJAL'
+                k.poliklinik = poli_dict.get(poli_key, poli_key)
+                k.status = 'DAFTAR'
+                if dpjp:
+                    k.dpjp = dpjp
+                k.save()
+                messages.success(request, f'Pasien {k.pasien.nama_lengkap} diarahkan ke {k.poliklinik}.')
+                return redirect('pasien:rajal_dashboard')
+            else:
+                messages.error(request, 'Pilih tujuan: IGD atau Poli Rawat Jalan.')
+        except Exception as e:
+            messages.error(request, f'Gagal routing: {e}')
+    return redirect('pasien:pendaftaran_dashboard')
+
+
+# ── DASBOR IGD ───────────────────────────────────────────────────────────────
+
+@login_required
+def igd_dashboard(request):
+    """Dedicated Emergency Department (IGD) Clinical Dashboard."""
+    triage_filter = request.GET.get('triage', '')
+    qs = KunjunganPasien.objects.filter(
+        jenis_kunjungan='IGD',
+        status__in=['TRIAGE', 'ASESMEN', 'DAFTAR']
+    ).select_related('pasien', 'bed')
+
+    if triage_filter:
+        qs = qs.filter(triage=triage_filter)
+    qs = qs.order_by('triage', 'tanggal_masuk')
+
+    def _cnt(t):
+        return KunjunganPasien.objects.filter(jenis_kunjungan='IGD', status__in=['TRIAGE', 'ASESMEN', 'DAFTAR'], triage=t).count()
+
+    available_beds = (
+        Bed.objects.filter(status='TERSEDIA')
+        .select_related('ruangan')
+        .order_by('ruangan__kelas', 'ruangan__kode', 'kode_bed')
+    )
+    ctx = {
+        'pasien_igd_list':    qs,
+        'triage_filter':      triage_filter,
+        'count_merah':        _cnt('MERAH'),
+        'count_kuning':       _cnt('KUNING'),
+        'count_hijau':        _cnt('HIJAU'),
+        'count_hitam':        _cnt('HITAM'),
+        'available_beds':     available_beds,
+        'triage_choices':     KunjunganPasien.TRIAGE_CHOICES,
+        'kondisi_choices':    DischargeRecord.KONDISI_PULANG,
+    }
+    return render(request, 'pasien/igd_dashboard.html', ctx)
+
+
+# ── DASBOR POLI RAWAT JALAN ───────────────────────────────────────────────────
+
+@login_required
+def rajal_dashboard(request):
+    """Dedicated Outpatient Clinics (Poli Rawat Jalan) Dashboard."""
+    poli_filter = request.GET.get('poli', '')
+    qs = KunjunganPasien.objects.filter(
+        jenis_kunjungan='RAJAL',
+        status__in=['DAFTAR', 'ASESMEN']
+    ).select_related('pasien')
+
+    if poli_filter:
+        qs = qs.filter(poliklinik__icontains=poli_filter)
+    qs = qs.order_by('poliklinik', 'tanggal_masuk')
+
+    available_beds = (
+        Bed.objects.filter(status='TERSEDIA')
+        .select_related('ruangan')
+        .order_by('ruangan__kelas', 'ruangan__kode', 'kode_bed')
+    )
+
+    poli_counts = {}
+    for code, label in POLIKLINIK_CHOICES:
+        poli_counts[code] = {
+            'label': label,
+            'count': KunjunganPasien.objects.filter(
+                jenis_kunjungan='RAJAL',
+                status__in=['DAFTAR', 'ASESMEN'],
+                poliklinik__icontains=label[:15]
+            ).count()
+        }
+
+    ctx = {
+        'pasien_rajal_list':   qs,
+        'poli_filter':         poli_filter,
+        'poliklinik_choices':  POLIKLINIK_CHOICES,
+        'poli_counts':         poli_counts,
+        'available_beds':      available_beds,
+        'kondisi_choices':     DischargeRecord.KONDISI_PULANG,
+    }
+    return render(request, 'pasien/rajal_dashboard.html', ctx)
+
+
+# ── DISPOSISI KLINIS (Pulang / Rawat Inap) ───────────────────────────────────
+
+@login_required
+def kunjungan_disposisi(request, pk):
+    """Unified disposition handler — Pulang (Discharge) or Rawat Inap admission."""
+    k = get_object_or_404(KunjunganPasien, pk=pk)
+    # Determine where to redirect back to based on visit type
+    back = 'pasien:igd_dashboard' if k.jenis_kunjungan == 'IGD' else 'pasien:rajal_dashboard'
+    back = request.POST.get('next_url', back)
+
+    if request.method == 'POST':
+        aksi = request.POST.get('aksi')
+        try:
+            if aksi == 'PULANG':
+                k.discharge_patient(
+                    kondisi=request.POST.get('kondisi_pulang', 'MEMBAIK'),
+                    resume=request.POST.get('resume_medis', 'Pelayanan selesai.'),
+                    user=request.user,
+                    edukasi=request.POST.get('edukasi_pulang', ''),
+                    obat=request.POST.get('obat_pulang', ''),
+                    kontrol=request.POST.get('jadwal_kontrol') or None,
+                )
+                messages.success(request, f'Pasien {k.pasien.nama_lengkap} berhasil dipulangkan.')
+            elif aksi == 'RANAP':
+                bed_id = request.POST.get('bed_id')
+                if not bed_id:
+                    raise ValueError('Pilih Bed rawat inap terlebih dahulu.')
+                bed_obj = get_object_or_404(Bed, pk=bed_id)
+                k.admit_to_ranap(
+                    bed=bed_obj,
+                    dpjp=request.POST.get('dpjp', k.dpjp),
+                    catatan=request.POST.get('catatan_admisi', ''),
+                )
+                messages.success(request, f'Pasien {k.pasien.nama_lengkap} masuk Rawat Inap di {bed_obj}.')
+                back = 'pasien:bed_management'
+            else:
+                messages.error(request, 'Aksi disposisi tidak dikenali.')
+        except Exception as e:
+            messages.error(request, f'Gagal disposisi: {e}')
+    return redirect(back)
 

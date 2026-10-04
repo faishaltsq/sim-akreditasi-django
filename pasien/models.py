@@ -96,6 +96,21 @@ class Bed(models.Model):
 
 # ── 3. Kunjungan Pasien ──────────────────────────────────────────────────────
 
+POLIKLINIK_CHOICES = [
+    ('POLI_JANTUNG', 'Poli Jantung & Pembuluh Darah'),
+    ('POLI_PARU', 'Poli Paru & Respirasi'),
+    ('POLI_PENYAKIT_DALAM', 'Poli Penyakit Dalam (Interna)'),
+    ('POLI_ANAK', 'Poli Anak (Pediatri)'),
+    ('POLI_BEDAH', 'Poli Bedah Umum'),
+    ('POLI_OBGYN', 'Poli Kebidanan & Kandungan (Obgyn)'),
+    ('POLI_MATA', 'Poli Mata'),
+    ('POLI_SARAF', 'Poli Saraf (Neurologi)'),
+    ('POLI_GIGI', 'Poli Gigi & Mulut'),
+    ('POLI_THT', 'Poli THT-KL'),
+    ('POLI_UMUM', 'Poli Umum'),
+]
+
+
 class KunjunganPasien(models.Model):
     JENIS_KUNJUNGAN = [
         ('IGD',   'Gawat Darurat (IGD)'),
@@ -171,6 +186,53 @@ class KunjunganPasien(models.Model):
     @property
     def is_aktif(self):
         return self.status not in ('PULANG', 'RUJUK', 'MENINGGAL')
+
+    def admit_to_ranap(self, bed, dpjp=None, catatan=''):
+        """Transfer / admit patient to Inpatient (RANAP) and lock the bed."""
+        from django.db import transaction
+        with transaction.atomic():
+            if bed.status != 'TERSEDIA':
+                raise ValueError(f"Bed {bed} sedang berstatus {bed.get_status_display()}, tidak dapat ditempati.")
+            self.jenis_kunjungan = 'RANAP'
+            self.status = 'RANAP'
+            self.bed = bed
+            if dpjp:
+                self.dpjp = dpjp
+            if catatan:
+                self.catatan_admisi = f"{self.catatan_admisi}\n[Admisi Ranap] {catatan}".strip()
+            self.save()
+            bed.status = 'TERISI'
+            bed.save()
+
+    def discharge_patient(self, kondisi='MEMBAIK', resume='', user=None, tanggal=None, edukasi='', obat='', kontrol=None):
+        """Discharge patient, release bed to sterilisation, and create DischargeRecord."""
+        from django.utils import timezone
+        from django.db import transaction
+        with transaction.atomic():
+            tgl = tanggal or timezone.now()
+            self.status = 'PULANG'
+            self.tanggal_keluar = tgl
+            old_bed = self.bed
+            self.bed = None
+            self.save()
+            if old_bed:
+                old_bed.status = 'STERILISASI'
+                old_bed.save()
+            total = sum(b.subtotal for b in self.billing.all())
+            DischargeRecord.objects.update_or_create(
+                kunjungan=self,
+                defaults={
+                    'tanggal_discharge': tgl,
+                    'kondisi_pulang':    kondisi,
+                    'resume_medis':      resume or 'Pelayanan selesai.',
+                    'edukasi_pulang':    edukasi,
+                    'obat_pulang':       obat,
+                    'jadwal_kontrol':    kontrol,
+                    'total_tagihan':     total,
+                    'status_clearance':  'CLEARANCE',
+                    'dibuat_oleh':       user,
+                }
+            )
 
 
 # ── 4. Asesmen Risiko Klinis ─────────────────────────────────────────────────

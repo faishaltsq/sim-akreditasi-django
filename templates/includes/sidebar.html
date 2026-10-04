@@ -291,27 +291,34 @@
         <span class="nav-icon"><i class="bi bi-speedometer2"></i></span>
         <span class="nav-text">
             <span class="nav-title">Dashboard Pasien</span>
-            <span class="nav-desc">KPI & Statistik SIMRS</span>
+            <span class="nav-desc">KPI &amp; Statistik SIMRS</span>
         </span>
     </a>
-    <a href="{% url 'pasien:pasien_daftar' %}" class="nav-link {% if request.resolver_match.url_name == 'pasien_daftar' or request.resolver_match.url_name == 'pasien_baru' %}active{% endif %}">
-        <span class="nav-icon"><i class="bi bi-person-lines-fill"></i></span>
+    <a href="{% url 'pasien:pendaftaran_dashboard' %}" class="nav-link {% if request.resolver_match.url_name == 'pendaftaran_dashboard' %}active{% endif %}">
+        <span class="nav-icon"><i class="bi bi-person-badge"></i></span>
         <span class="nav-text">
-            <span class="nav-title">Data Pasien</span>
-            <span class="nav-desc">Master & Pendaftaran</span>
+            <span class="nav-title">Pendaftaran &amp; Admisi</span>
+            <span class="nav-desc">Loket &amp; Routing Pasien</span>
         </span>
     </a>
-    <a href="{% url 'pasien:kunjungan_daftar' %}" class="nav-link {% if request.resolver_match.url_name == 'kunjungan_daftar' or request.resolver_match.url_name == 'kunjungan_baru' %}active{% endif %}">
-        <span class="nav-icon"><i class="bi bi-clipboard2-pulse-fill"></i></span>
+    <a href="{% url 'pasien:igd_dashboard' %}" class="nav-link {% if request.resolver_match.url_name == 'igd_dashboard' %}active{% endif %}">
+        <span class="nav-icon"><i class="bi bi-heart-pulse-fill text-danger"></i></span>
         <span class="nav-text">
-            <span class="nav-title">Kunjungan Pasien</span>
-            <span class="nav-desc">IGD / Rajal / Ranap</span>
+            <span class="nav-title">Gawat Darurat (IGD)</span>
+            <span class="nav-desc">Triage &amp; Disposisi</span>
+        </span>
+    </a>
+    <a href="{% url 'pasien:rajal_dashboard' %}" class="nav-link {% if request.resolver_match.url_name == 'rajal_dashboard' %}active{% endif %}">
+        <span class="nav-icon"><i class="bi bi-hospital-fill text-primary"></i></span>
+        <span class="nav-text">
+            <span class="nav-title">Poli Rawat Jalan</span>
+            <span class="nav-desc">Antrean Spesialis</span>
         </span>
     </a>
     <a href="{% url 'pasien:bed_management' %}" class="nav-link {% if request.resolver_match.url_name == 'bed_management' %}active{% endif %}">
-        <span class="nav-icon"><i class="bi bi-grid-3x3-gap-fill"></i></span>
+        <span class="nav-icon"><i class="bi bi-grid-3x3-gap-fill text-success"></i></span>
         <span class="nav-text">
-            <span class="nav-title">Bed Management</span>
+            <span class="nav-title">Rawat Inap &amp; Bed</span>
             <span class="nav-desc">Ketersediaan &amp; BOR</span>
         </span>
     </a>
@@ -320,6 +327,20 @@
         <span class="nav-text">
             <span class="nav-title">Farmasi &amp; Dispensing</span>
             <span class="nav-desc">Antrean Resep Elektronik</span>
+        </span>
+    </a>
+    <a href="{% url 'pasien:pasien_daftar' %}" class="nav-link {% if request.resolver_match.url_name == 'pasien_daftar' or request.resolver_match.url_name == 'pasien_baru' %}active{% endif %}">
+        <span class="nav-icon"><i class="bi bi-person-lines-fill"></i></span>
+        <span class="nav-text">
+            <span class="nav-title">Master Pasien</span>
+            <span class="nav-desc">Database Rekam Medis</span>
+        </span>
+    </a>
+    <a href="{% url 'pasien:kunjungan_daftar' %}" class="nav-link {% if request.resolver_match.url_name == 'kunjungan_daftar' or request.resolver_match.url_name == 'kunjungan_baru' %}active{% endif %}">
+        <span class="nav-icon"><i class="bi bi-clipboard2-pulse"></i></span>
+        <span class="nav-text">
+            <span class="nav-title">Riwayat Kunjungan</span>
+            <span class="nav-desc">Semua Pelayanan</span>
         </span>
     </a>
 

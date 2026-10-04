@@ -23,4 +23,10 @@ urlpatterns = [
     path('resep/<int:resep_pk>/proses/', views.resep_update_status, name='resep_update_status'),
     path('farmasi/', views.farmasi_antrean, name='farmasi_antrean'),
     path('bed-management/', views.bed_management, name='bed_management'),
+    # ── Clinical Workflow Dashboards ──
+    path('pendaftaran/', views.pendaftaran_dashboard, name='pendaftaran_dashboard'),
+    path('pendaftaran/<int:pk>/route/', views.pendaftaran_route, name='pendaftaran_route'),
+    path('igd/', views.igd_dashboard, name='igd_dashboard'),
+    path('rajal/', views.rajal_dashboard, name='rajal_dashboard'),
+    path('kunjungan/<int:pk>/disposisi/', views.kunjungan_disposisi, name='kunjungan_disposisi'),
 ]
