@@ -3,10 +3,100 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.db.models import Count, Avg, Sum, Q
+from django.http import HttpResponse, JsonResponse
 from django.utils import timezone
 from datetime import timedelta
 
 from .models import Pasien, KunjunganPasien, Bed, Ruangan, CPPT, AsesmenRisikoKlinis, BillingItem, DischargeRecord
+from .pdf_utils import generate_resume_pdf
+
+
+# ── ICD-10 Quick Reference (80+ common inpatient codes) ──────────────────────
+ICD10_CODES = [
+    ('A01.0', 'Demam Tifoid'),
+    ('A09', 'Gastroenteritis Akut (GEA)'),
+    ('A15.0', 'Tuberkulosis Paru (TB Paru)'),
+    ('A90', 'Demam Dengue (DD)'),
+    ('A91', 'Demam Berdarah Dengue (DHF)'),
+    ('B15.9', 'Hepatitis A Akut'),
+    ('B16.9', 'Hepatitis B Akut'),
+    ('B20', 'HIV / AIDS'),
+    ('B34.9', 'Infeksi Virus Akut, Tidak Spesifik'),
+    ('C18.9', 'Kanker Kolon'),
+    ('C50.9', 'Kanker Payudara'),
+    ('D50.9', 'Anemia Defisiensi Besi'),
+    ('D64.9', 'Anemia, Tidak Spesifik'),
+    ('E10.9', 'Diabetes Melitus Tipe 1'),
+    ('E11.2', 'DM Tipe 2 dengan Nefropati'),
+    ('E11.5', 'DM Tipe 2 dengan Ulkus Diabetikum'),
+    ('E11.9', 'Diabetes Melitus Tipe 2'),
+    ('E14.9', 'Diabetes Melitus Tidak Spesifik'),
+    ('E86', 'Dehidrasi'),
+    ('E87.1', 'Hiponatremia'),
+    ('G40.9', 'Epilepsi'),
+    ('G43.9', 'Migrain'),
+    ('G44.2', 'Tension-type Headache'),
+    ('H10.9', 'Konjungtivitis'),
+    ('H66.9', 'Otitis Media'),
+    ('I10', 'Hipertensi Esensial'),
+    ('I11.9', 'Penyakit Jantung Hipertensi'),
+    ('I20.9', 'Angina Pectoris'),
+    ('I21.9', 'Infark Miokard Akut (IMA / STEMI)'),
+    ('I50.9', 'Gagal Jantung Kongestif (CHF)'),
+    ('I61.9', 'Stroke Hemoragik'),
+    ('I63.9', 'Stroke Iskemik'),
+    ('I64', 'Stroke, Tidak Spesifik'),
+    ('J06.9', 'ISPA (Infeksi Saluran Napas Atas)'),
+    ('J18.9', 'Pneumonia'),
+    ('J44.9', 'PPOK (Penyakit Paru Obstruktif Kronik)'),
+    ('J45.9', 'Asma Bronkial'),
+    ('K21.9', 'GERD (Refluks Gastroesofageal)'),
+    ('K25.9', 'Ulkus Peptikum / Tukak Lambung'),
+    ('K29.7', 'Gastritis'),
+    ('K35.8', 'Apendisitis Akut'),
+    ('K80.2', 'Kolelitiasis (Batu Empedu)'),
+    ('K81.0', 'Kolesistitis Akut'),
+    ('K92.2', 'Perdarahan Saluran Cerna'),
+    ('L02.9', 'Abses Kulit'),
+    ('L03.9', 'Selulitis'),
+    ('M54.5', 'Nyeri Punggung Bawah (LBP)'),
+    ('N17.9', 'Gagal Ginjal Akut (AKI)'),
+    ('N18.9', 'Gagal Ginjal Kronik (CKD)'),
+    ('N20.1', 'Ureterolitiasis (Batu Ureter)'),
+    ('N39.0', 'Infeksi Saluran Kemih (ISK)'),
+    ('N40', 'Benign Prostatic Hyperplasia (BPH)'),
+    ('O03', 'Abortus Spontan'),
+    ('O14.9', 'Preeklampsia'),
+    ('O60', 'Persalinan Prematur'),
+    ('O80', 'Persalinan Normal Spontan'),
+    ('R00.0', 'Takikardia'),
+    ('R04.0', 'Epistaksis (Mimisan)'),
+    ('R05', 'Batuk'),
+    ('R06.0', 'Sesak Napas (Dyspnoea)'),
+    ('R07.4', 'Nyeri Dada'),
+    ('R10.4', 'Nyeri Perut / Kolik Abdomen'),
+    ('R11', 'Mual dan Muntah'),
+    ('R50.9', 'Demam, Tidak Spesifik'),
+    ('R51', 'Sefalgia (Nyeri Kepala)'),
+    ('R53', 'Malaise / Kelelahan'),
+    ('R55', 'Sinkop (Pingsan)'),
+    ('R56.0', 'Kejang Demam'),
+    ('S00.9', 'Cedera Kepala Ringan (CKR)'),
+    ('S02.9', 'Fraktur Tulang Tengkorak'),
+    ('S06.0', 'Cedera Kepala Sedang (CKS / Commotio)'),
+    ('S22.3', 'Fraktur Kosta (Tulang Rusuk)'),
+    ('S42.0', 'Fraktur Klavikula'),
+    ('S42.3', 'Fraktur Humerus'),
+    ('S52.5', 'Fraktur Radius Distal (Colles)'),
+    ('S72.0', 'Fraktur Collum Femur'),
+    ('S82.2', 'Fraktur Tibia'),
+    ('S82.4', 'Fraktur Fibula'),
+    ('S92.9', 'Fraktur Tulang Kaki'),
+    ('Z00.0', 'Pemeriksaan Kesehatan Umum (MCU)'),
+    ('Z38.0', 'Bayi Baru Lahir Normal di RS'),
+    ('Z48.0', 'Perawatan Luka Pasca Bedah'),
+    ('Z51.1', 'Sesi Kemoterapi'),
+]
 
 
 def _kpi():
@@ -266,3 +356,48 @@ def bed_management(request):
         'ruangan_list': ruangan_list, 'total_bed': total_bed,
         'bed_terisi': bed_terisi, 'bor': bor,
     })
+
+
+@login_required
+def discharge_planning_set(request, kunjungan_pk):
+    """GAP 2: Set/update discharge planning H-1 on a KunjunganPasien."""
+    if request.method != 'POST':
+        return redirect('pasien:kunjungan_detail', pk=kunjungan_pk)
+    k = get_object_or_404(KunjunganPasien, pk=kunjungan_pk)
+    try:
+        k.discharge_planning_aktif = bool(request.POST.get('discharge_planning_aktif'))
+        k.discharge_planning_catatan = request.POST.get('discharge_planning_catatan', '').strip()
+        tgl = request.POST.get('discharge_planning_tgl', '').strip()
+        k.discharge_planning_tgl = tgl if tgl else None
+        k.save(update_fields=['discharge_planning_aktif', 'discharge_planning_catatan', 'discharge_planning_tgl'])
+        messages.success(request, 'Discharge Planning berhasil diperbarui.')
+    except Exception as e:
+        messages.error(request, f'Gagal: {e}')
+    return redirect('pasien:kunjungan_detail', pk=kunjungan_pk)
+
+
+@login_required
+def api_icd10(request):
+    """GAP 3: AJAX ICD-10 quick picker — returns max 10 matches as JSON."""
+    q = request.GET.get('q', '').strip().lower()
+    if len(q) < 2:
+        return JsonResponse([], safe=False)
+    results = [
+        {'kode': kode, 'nama': nama}
+        for kode, nama in ICD10_CODES
+        if q in kode.lower() or q in nama.lower()
+    ][:10]
+    return JsonResponse(results, safe=False)
+
+
+@login_required
+def resume_pdf(request, kunjungan_pk):
+    k = get_object_or_404(KunjunganPasien, pk=kunjungan_pk)
+    if not hasattr(k, 'discharge'):
+        messages.error(request, 'Pasien belum memiliki data discharge / resume medis.')
+        return redirect('pasien:kunjungan_detail', pk=kunjungan_pk)
+
+    pdf_bytes = generate_resume_pdf(kunjungan_pk)
+    response = HttpResponse(pdf_bytes, content_type='application/pdf')
+    response['Content-Disposition'] = 'attachment; filename=Resume_Medis_download.pdf'
+    return response

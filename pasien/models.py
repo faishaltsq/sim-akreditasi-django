@@ -138,6 +138,11 @@ class KunjunganPasien(models.Model):
     created_by      = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
     created_at      = models.DateTimeField(auto_now_add=True)
 
+    # ── Discharge Planning H-1 ──
+    discharge_planning_aktif   = models.BooleanField('Discharge Planning Aktif', default=False)
+    discharge_planning_catatan = models.TextField('Catatan Discharge Planning', blank=True)
+    discharge_planning_tgl     = models.DateField('Target Tanggal Pulang', null=True, blank=True)
+
     class Meta:
         verbose_name = 'Kunjungan Pasien'
         verbose_name_plural = 'Kunjungan Pasien'

@@ -14,5 +14,8 @@ urlpatterns = [
     path('kunjungan/<int:kunjungan_pk>/cppt/', views.cppt_tambah, name='cppt_tambah'),
     path('kunjungan/<int:kunjungan_pk>/billing/', views.billing_tambah, name='billing_tambah'),
     path('kunjungan/<int:kunjungan_pk>/discharge/', views.discharge_proses, name='discharge_proses'),
+    path('kunjungan/<int:kunjungan_pk>/discharge-planning/', views.discharge_planning_set, name='discharge_planning_set'),
+    path('kunjungan/<int:kunjungan_pk>/resume-pdf/', views.resume_pdf, name='resume_pdf'),
+    path('api/icd10/', views.api_icd10, name='api_icd10'),
     path('bed-management/', views.bed_management, name='bed_management'),
 ]
