@@ -141,7 +141,9 @@ def _log_ai_call(user, modul: str, prompt_summary: str, success: bool):
         status = 'SUKSES' if success else 'GAGAL'
         AuditLog.objects.create(
             user=user,
-            action='AI_GENERATE',
+            aksi='CREATE',
+            model_name='AI_DEEPSEEK',
+            object_repr=f'AI Generate ({modul})',
             detail=f'[{status}] Modul: {modul} | {prompt_summary[:120]}',
         )
     except Exception as e:
