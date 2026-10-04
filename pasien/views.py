@@ -126,10 +126,13 @@ def _kpi():
         tanggal_masuk__gte=now - timedelta(days=7)
     ).count()
 
-    risiko_tinggi = AsesmenRisikoKlinis.objects.filter(
-        grade__in=['TINGGI', 'SANGAT_TINGGI'],
-        kunjungan__status__in=['DAFTAR','TRIAGE','ASESMEN','RANAP']
-    ).count()
+    try:
+        risiko_tinggi = AsesmenRisikoKlinis.objects.filter(
+            grade__in=['TINGGI', 'SANGAT_TINGGI'],
+            kunjungan__status__in=['DAFTAR','TRIAGE','ASESMEN','RANAP']
+        ).count()
+    except Exception:
+        risiko_tinggi = 0
 
     return {
         'total_pasien': total_pasien, 'pasien_aktif': pasien_aktif,
@@ -143,10 +146,21 @@ def _kpi():
 
 @login_required
 def dashboard(request):
-    kpi = _kpi()
-    ruangan_list     = Ruangan.objects.prefetch_related('beds').order_by('jenis', 'kelas')
-    kunjungan_terbaru = KunjunganPasien.objects.select_related('pasien', 'bed__ruangan').order_by('-created_at')[:10]
-    penjamin_dist    = KunjunganPasien.objects.values('penjamin').annotate(n=Count('id')).order_by('-n')
+    try:
+        kpi = _kpi()
+    except Exception:
+        kpi = {'total_pasien': 0, 'pasien_aktif': 0, 'pasien_ranap': 0,
+               'pasien_igd': 0, 'pasien_rajal': 0, 'total_bed': 0,
+               'bed_terisi': 0, 'bor': 0, 'los_avg': 0, 'kunjungan_week': 0,
+               'risiko_tinggi': 0}
+    try:
+        ruangan_list = Ruangan.objects.prefetch_related('beds').order_by('jenis', 'kelas')
+        kunjungan_terbaru = KunjunganPasien.objects.select_related('pasien', 'bed__ruangan').order_by('-created_at')[:10]
+        penjamin_dist = KunjunganPasien.objects.values('penjamin').annotate(n=Count('id')).order_by('-n')
+    except Exception:
+        ruangan_list = []
+        kunjungan_terbaru = []
+        penjamin_dist = []
 
     now = timezone.now()
     tren = []
@@ -752,22 +766,29 @@ def igd_dashboard(request):
         .select_related('ruangan')
         .order_by('ruangan__kelas', 'ruangan__kode', 'kode_bed')
     )
-    critical_orders = (
-        OrderPenunjang.objects.filter(
-            kunjungan__jenis_kunjungan='IGD',
-            is_critical_value=True
+    try:
+        critical_orders = (
+            OrderPenunjang.objects.filter(
+                kunjungan__jenis_kunjungan='IGD',
+                is_critical_value=True
+            )
+            .select_related('kunjungan__pasien')
+            .order_by('-created_at')[:5]
         )
-        .select_related('kunjungan__pasien')
-        .order_by('-created_at')[:5]
-    )
-    active_bookings = (
-        BookingKamar.objects.filter(
-            status='BOOKED',
-            batas_waktu__gte=timezone.now()
+        critical_orders = list(critical_orders)  # force eval now
+    except Exception:
+        critical_orders = []
+    try:
+        active_bookings = list(
+            BookingKamar.objects.filter(
+                status='BOOKED',
+                batas_waktu__gte=timezone.now()
+            )
+            .select_related('pasien', 'bed__ruangan')
+            .order_by('-waktu_booking')[:10]
         )
-        .select_related('pasien', 'bed__ruangan')
-        .order_by('-waktu_booking')[:10]
-    )
+    except Exception:
+        active_bookings = []
     ctx = {
         'pasien_igd_list':    qs,
         'triage_filter':      triage_filter,
@@ -839,22 +860,28 @@ def rajal_dashboard(request):
             ).count()
         }
 
-    active_bookings = (
-        BookingKamar.objects.filter(
-            status='BOOKED',
-            batas_waktu__gte=timezone.now()
+    try:
+        active_bookings = list(
+            BookingKamar.objects.filter(
+                status='BOOKED',
+                batas_waktu__gte=timezone.now()
+            )
+            .select_related('pasien', 'bed__ruangan')
+            .order_by('-waktu_booking')[:10]
         )
-        .select_related('pasien', 'bed__ruangan')
-        .order_by('-waktu_booking')[:10]
-    )
-    critical_orders = (
-        OrderPenunjang.objects.filter(
-            kunjungan__jenis_kunjungan='RAJAL',
-            is_critical_value=True
+    except Exception:
+        active_bookings = []
+    try:
+        critical_orders = list(
+            OrderPenunjang.objects.filter(
+                kunjungan__jenis_kunjungan='RAJAL',
+                is_critical_value=True
+            )
+            .select_related('kunjungan__pasien')
+            .order_by('-created_at')[:5]
         )
-        .select_related('kunjungan__pasien')
-        .order_by('-created_at')[:5]
-    )
+    except Exception:
+        critical_orders = []
 
     ctx = {
         'pasien_rajal_list':   qs,
