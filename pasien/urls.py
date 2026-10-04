@@ -33,6 +33,14 @@ urlpatterns = [
     path('rajal/kunjungan/<int:pk>/soap/', views.rajal_soap_simpan, name='rajal_soap_simpan'),
     path('kunjungan/<int:pk>/disposisi/', views.kunjungan_disposisi, name='kunjungan_disposisi'),
     path('kunjungan/<int:pk>/order-penunjang/', views.order_penunjang_buat, name='order_penunjang_buat'),
+    # ── Bed Reservation & Room Booking ──
+    path('kunjungan/<int:kunjungan_id>/booking-kamar/', views.booking_kamar_buat, name='booking_kamar_buat'),
+    path('booking-kamar/<int:booking_id>/batal/', views.booking_kamar_batal, name='booking_kamar_batal'),
+    path('booking-kamar/<int:booking_id>/checkin/', views.booking_kamar_checkin, name='booking_kamar_checkin'),
+    path('api/bed-tersedia/', views.api_bed_tersedia, name='api_bed_tersedia'),
+    # ── General Consent Rawat Inap ──
+    path('kunjungan/<int:kunjungan_id>/general-consent/', views.general_consent_simpan, name='general_consent_simpan'),
+    path('kunjungan/<int:pk>/cetak-general-consent/', views.cetak_general_consent, name='cetak_general_consent'),
     # ── Print / Cetak Views ──
     path('api/cek-nik/', views.api_cek_nik, name='api_cek_nik'),
     path('kunjungan/<int:pk>/cetak-gelang/', views.cetak_gelang, name='cetak_gelang'),

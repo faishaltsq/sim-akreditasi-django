@@ -1,7 +1,11 @@
 from django.db import migrations
 
 
+import sys
+
 def run_seed_demo(apps, schema_editor):
+    if 'test' in sys.argv:
+        return
     from django.core.management import call_command
     call_command('seed_demo_data')
 

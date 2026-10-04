@@ -7,7 +7,7 @@ from django.http import HttpResponse, JsonResponse
 from django.utils import timezone
 from datetime import timedelta
 
-from .models import Pasien, KunjunganPasien, Bed, Ruangan, CPPT, AsesmenRisikoKlinis, BillingItem, DischargeRecord, ResepElektronik, ResepDetail, OrderPenunjang, POLIKLINIK_CHOICES
+from .models import Pasien, KunjunganPasien, Bed, Ruangan, CPPT, AsesmenRisikoKlinis, BillingItem, DischargeRecord, ResepElektronik, ResepDetail, OrderPenunjang, POLIKLINIK_CHOICES, BookingKamar, GeneralConsentRawatInap
 from .pdf_utils import generate_resume_pdf
 from .satusehat import sync_encounter_satusehat, parse_qr_medis
 
@@ -752,6 +752,22 @@ def igd_dashboard(request):
         .select_related('ruangan')
         .order_by('ruangan__kelas', 'ruangan__kode', 'kode_bed')
     )
+    critical_orders = (
+        OrderPenunjang.objects.filter(
+            kunjungan__jenis_kunjungan='IGD',
+            is_critical_value=True
+        )
+        .select_related('kunjungan__pasien')
+        .order_by('-created_at')[:5]
+    )
+    active_bookings = (
+        BookingKamar.objects.filter(
+            status='BOOKED',
+            batas_waktu__gte=timezone.now()
+        )
+        .select_related('pasien', 'bed__ruangan')
+        .order_by('-waktu_booking')[:10]
+    )
     ctx = {
         'pasien_igd_list':    qs,
         'triage_filter':      triage_filter,
@@ -760,6 +776,8 @@ def igd_dashboard(request):
         'count_hijau':        _cnt('HIJAU'),
         'count_hitam':        _cnt('HITAM'),
         'available_beds':     available_beds,
+        'critical_orders':    critical_orders,
+        'active_bookings':    active_bookings,
         'triage_choices':     KunjunganPasien.TRIAGE_CHOICES,
         'kondisi_choices':    DischargeRecord.KONDISI_PULANG,
     }
@@ -778,6 +796,8 @@ def igd_ttv_update(request, pk):
             k.ttv_rr = int(request.POST['ttv_rr']) if request.POST.get('ttv_rr') else None
             k.ttv_suhu = float(request.POST['ttv_suhu']) if request.POST.get('ttv_suhu') else None
             k.ttv_spo2 = int(request.POST['ttv_spo2']) if request.POST.get('ttv_spo2') else None
+            k.ttv_gcs = request.POST.get('ttv_gcs', '').strip()
+            k.ttv_skala_nyeri = int(request.POST['ttv_skala_nyeri']) if request.POST.get('ttv_skala_nyeri') else None
             k.icd9_tindakan = request.POST.get('icd9_tindakan', '').strip()
             k.status = 'ASESMEN'
             k.save()
@@ -819,12 +839,31 @@ def rajal_dashboard(request):
             ).count()
         }
 
+    active_bookings = (
+        BookingKamar.objects.filter(
+            status='BOOKED',
+            batas_waktu__gte=timezone.now()
+        )
+        .select_related('pasien', 'bed__ruangan')
+        .order_by('-waktu_booking')[:10]
+    )
+    critical_orders = (
+        OrderPenunjang.objects.filter(
+            kunjungan__jenis_kunjungan='RAJAL',
+            is_critical_value=True
+        )
+        .select_related('kunjungan__pasien')
+        .order_by('-created_at')[:5]
+    )
+
     ctx = {
         'pasien_rajal_list':   qs,
         'poli_filter':         poli_filter,
         'poliklinik_choices':  POLIKLINIK_CHOICES,
         'poli_counts':         poli_counts,
         'available_beds':      available_beds,
+        'active_bookings':     active_bookings,
+        'critical_orders':     critical_orders,
         'kondisi_choices':     DischargeRecord.KONDISI_PULANG,
     }
     return render(request, 'pasien/rajal_dashboard.html', ctx)
@@ -854,6 +893,8 @@ def order_penunjang_buat(request, pk):
         nama = request.POST.get('nama_pemeriksaan', '').strip()
         catatan = request.POST.get('catatan_klinis', '').strip()
         prioritas = request.POST.get('prioritas', 'RUTIN')
+        is_critical = request.POST.get('is_critical_value') in ('1', 'true', 'True', 'on')
+        critical_catatan = request.POST.get('critical_value_catatan', '').strip()
         if nama:
             OrderPenunjang.objects.create(
                 kunjungan=k,
@@ -862,6 +903,8 @@ def order_penunjang_buat(request, pk):
                 catatan_klinis=catatan,
                 prioritas=prioritas,
                 dokter_pengirim=request.user.get_full_name() or request.user.username,
+                is_critical_value=is_critical,
+                critical_value_catatan=critical_catatan,
             )
             # Automatic billing item
             base_price = 150000 if jenis == 'LAB' else 250000
@@ -1058,5 +1101,160 @@ def cetak_skdp(request, pk):
     k = get_object_or_404(KunjunganPasien.objects.select_related('pasien'), pk=pk)
     discharge = getattr(k, 'discharge', None)
     return render(request, 'pasien/cetak_skdp.html', {'k': k, 'p': k.pasien, 'discharge': discharge})
+
+
+# ── PEMESANAN KAMAR (BOOKING BED) & GENERAL CONSENT RANAP ─────────────────────
+
+@login_required
+def booking_kamar_buat(request, kunjungan_id):
+    """Pesan / booking tempat tidur rawat inap dari IGD atau Poliklinik."""
+    k = get_object_or_404(KunjunganPasien.objects.select_related('pasien'), pk=kunjungan_id)
+    back = request.META.get('HTTP_REFERER') or (
+        'pasien:igd_dashboard' if k.jenis_kunjungan == 'IGD' else 'pasien:rajal_dashboard'
+    )
+    if request.method == 'POST':
+        bed_id = request.POST.get('bed_id')
+        durasi_jam = int(request.POST.get('durasi_jam', 2))
+        catatan = request.POST.get('catatan', '').strip()
+
+        if not bed_id:
+            messages.error(request, 'Pilih bed / tempat tidur yang tersedia terlebih dahulu.')
+            return redirect(back)
+
+        bed = get_object_or_404(Bed, pk=bed_id)
+        if bed.status != 'TERSEDIA':
+            messages.error(request, f'Tempat tidur {bed.ruangan.nama} - {bed.kode_bed} tidak tersedia (status: {bed.get_status_display()}).')
+            return redirect(back)
+
+        now = timezone.now()
+        nomor_booking = f"BK-{now.strftime('%Y%m%d')}-{k.pk:04d}-{bed.pk}"
+        batas_waktu = now + timedelta(hours=durasi_jam)
+
+        BookingKamar.objects.create(
+            nomor_booking=nomor_booking,
+            pasien=k.pasien,
+            kunjungan=k,
+            bed=bed,
+            batas_waktu=batas_waktu,
+            catatan=catatan,
+            petugas=request.user
+        )
+        messages.success(
+            request,
+            f'Tempat tidur {bed.ruangan.nama} ({bed.kode_bed}) berhasil dipesan/dibooking '
+            f'untuk {k.pasien.nama_lengkap}. No. Booking: {nomor_booking}. Berlaku hingga {batas_waktu.strftime("%H:%M WIB")}.'
+        )
+    return redirect(back)
+
+
+@login_required
+def booking_kamar_batal(request, booking_id):
+    """Batalkan pemesanan tempat tidur dan lepaskan bed ke status TERSEDIA."""
+    booking = get_object_or_404(BookingKamar.objects.select_related('bed', 'kunjungan'), pk=booking_id)
+    alasan = request.POST.get('alasan_batal', request.GET.get('alasan', 'Dibatalkan oleh petugas/keluarga pasien'))
+    booking.batalkan(alasan=alasan)
+    messages.info(request, f'Pemesanan kamar {booking.nomor_booking} telah dibatalkan. Bed {booking.bed} kini TERSEDIA.')
+    back = request.META.get('HTTP_REFERER') or 'pasien:bed_management'
+    return redirect(back)
+
+
+@login_required
+def booking_kamar_checkin(request, booking_id):
+    """Check-in pasien ke kamar ranap dari reservasi booking."""
+    booking = get_object_or_404(BookingKamar.objects.select_related('bed', 'kunjungan', 'pasien'), pk=booking_id)
+    booking.checkin()
+    messages.success(request, f'Pasien {booking.pasien.nama_lengkap} resmi masuk (check-in) ke {booking.bed.ruangan.nama} - {booking.bed.kode_bed}.')
+    if booking.kunjungan:
+        return redirect('pasien:kunjungan_detail', pk=booking.kunjungan.pk)
+    return redirect('pasien:bed_management')
+
+
+@login_required
+def api_bed_tersedia(request):
+    """JSON API untuk memuat daftar tempat tidur TERSEDIA (bisa difilter kelas)."""
+    kelas = request.GET.get('kelas')
+    qs = Bed.objects.filter(status='TERSEDIA').select_related('ruangan')
+    if kelas:
+        qs = qs.filter(ruangan__kelas=kelas)
+    qs = qs.order_by('ruangan__kelas', 'ruangan__nama', 'kode_bed')
+    data = [
+        {
+            'id': b.id,
+            'kode_bed': b.kode_bed,
+            'ruangan_nama': b.ruangan.nama,
+            'kelas': b.ruangan.kelas,
+            'kelas_display': b.ruangan.get_kelas_display(),
+            'label': f"{b.ruangan.nama} — Bed {b.kode_bed} ({b.ruangan.get_kelas_display()})"
+        }
+        for b in qs
+    ]
+    return JsonResponse({'status': 'ok', 'beds': data})
+
+
+@login_required
+def general_consent_simpan(request, kunjungan_id):
+    """Simpan / perbarui Formulir Persetujuan Rawat Inap (General Consent Ranap STARKES HPK)."""
+    k = get_object_or_404(KunjunganPasien.objects.select_related('pasien'), pk=kunjungan_id)
+    back = request.META.get('HTTP_REFERER') or (
+        'pasien:igd_dashboard' if k.jenis_kunjungan == 'IGD' else 'pasien:rajal_dashboard'
+    )
+    if request.method == 'POST':
+        nama_pj = request.POST.get('nama_pj', '').strip()
+        nik_pj = request.POST.get('nik_pj', '').strip()
+        hubungan = request.POST.get('hubungan', 'DIRI_SENDIRI')
+        telepon_pj = request.POST.get('telepon_pj', '').strip()
+        alamat_pj = request.POST.get('alamat_pj', '').strip()
+
+        setuju_perawatan = request.POST.get('setuju_perawatan_umum') in ('1', 'true', 'True', 'on')
+        setuju_informasi = request.POST.get('setuju_pelepasan_informasi') in ('1', 'true', 'True', 'on')
+        setuju_tatatertib = request.POST.get('setuju_tata_tertib') in ('1', 'true', 'True', 'on')
+        nama_anggota = request.POST.get('nama_anggota_akses_info', '').strip()
+
+        jaminan = request.POST.get('jaminan_biaya', 'BPJS')
+        selisih = request.POST.get('pernyataan_selisih_biaya') in ('1', 'true', 'True', 'on')
+
+        if not nama_pj or not nik_pj:
+            messages.error(request, 'Nama dan NIK Penanggung Jawab wajib diisi.')
+            return redirect(back)
+
+        GeneralConsentRawatInap.objects.update_or_create(
+            kunjungan=k,
+            defaults={
+                'nama_pj': nama_pj,
+                'nik_pj': nik_pj,
+                'hubungan': hubungan,
+                'telepon_pj': telepon_pj,
+                'alamat_pj': alamat_pj,
+                'setuju_perawatan_umum': setuju_perawatan,
+                'setuju_pelepasan_informasi': setuju_informasi,
+                'setuju_tata_tertib': setuju_tatatertib,
+                'nama_anggota_akses_info': nama_anggota,
+                'jaminan_biaya': jaminan,
+                'pernyataan_selisih_biaya': selisih,
+                'petugas_saksi': request.user
+            }
+        )
+        k.general_consent = True
+        k.save(update_fields=['general_consent'])
+        messages.success(request, f'General Consent Rawat Inap untuk {k.pasien.nama_lengkap} berhasil disimpan dan ditandatangani.')
+    return redirect(back)
+
+
+@login_required
+def cetak_general_consent(request, pk):
+    """Cetak Dokumen Akreditasi Standar STARKES HPK: Formulir General Consent Rawat Inap (A4)."""
+    k = get_object_or_404(
+        KunjunganPasien.objects.select_related('pasien', 'bed__ruangan', 'dpjp'),
+        pk=pk
+    )
+    consent = getattr(k, 'general_consent_doc', None)
+    return render(request, 'pasien/cetak_general_consent.html', {
+        'k': k,
+        'p': k.pasien,
+        'consent': consent,
+        'petugas': request.user,
+        'now': timezone.now()
+    })
+
 
 

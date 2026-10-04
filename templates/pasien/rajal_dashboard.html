@@ -55,6 +55,23 @@
         </div>
     </div>
 
+    {% if critical_orders %}
+    <!-- CRITICAL VALUE ALERT BANNER -->
+    <div class="alert border-0 shadow-sm mb-4 d-flex align-items-start gap-3" style="background:#fee2e2; border-radius:.75rem; border-left:5px solid #dc2626 !important;" role="alert">
+        <i class="bi bi-exclamation-octagon-fill text-danger fs-4 mt-1 flex-shrink-0"></i>
+        <div>
+            <div class="fw-bold text-danger mb-1" style="font-size:.95rem;">⚠️ CRITICAL VALUE ALERT — Nilai Lab Kritis Terdeteksi di Poli</div>
+            {% for o in critical_orders %}
+            <div class="small mb-1">
+                <strong>{{ o.kunjungan.pasien.nama_lengkap }}</strong> (RM: {{ o.kunjungan.pasien.no_rm }}) &mdash;
+                <span class="badge bg-danger">{{ o.nama_pemeriksaan }}</span>
+                {% if o.critical_value_catatan %}<span class="text-danger fw-semibold">: {{ o.critical_value_catatan }}</span>{% endif %}
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
     <!-- PILL NAVIGATION PER POLIKLINIK -->
     <div class="card border-0 shadow-sm mb-4" style="border-radius: .75rem;">
         <div class="card-body py-3">
@@ -162,6 +179,16 @@
                                             <li>
                                                 <a class="dropdown-item text-primary" href="#" data-bs-toggle="modal" data-bs-target="#modalRanapR{{ k.pk }}">
                                                     <i class="bi bi-hospital me-1"></i> Admisi Rawat Inap (SPRI)
+                                                </a>
+                                            </li>
+                                            <li>
+                                                <a class="dropdown-item text-primary" href="#" data-bs-toggle="modal" data-bs-target="#modalBookingR{{ k.pk }}">
+                                                    <i class="bi bi-calendar-plus me-1"></i> Pesan / Booking Kamar
+                                                </a>
+                                            </li>
+                                            <li>
+                                                <a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#modalConsentR{{ k.pk }}" style="color:#0d9488;">
+                                                    <i class="bi bi-file-earmark-check me-1"></i> General Consent Ranap
                                                 </a>
                                             </li>
                                             <li>
@@ -431,6 +458,117 @@
                                         <div class="modal-footer">
                                             <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Batal</button>
                                             <button type="submit" class="btn btn-warning btn-sm text-dark px-3 fw-bold">Transfer Antrean Konsul</button>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- MODAL BOOKING KAMAR (RAJAL) -->
+                        <div class="modal fade" id="modalBookingR{{ k.pk }}" tabindex="-1">
+                            <div class="modal-dialog modal-dialog-centered">
+                                <div class="modal-content">
+                                    <form method="POST" action="{% url 'pasien:booking_kamar_buat' k.pk %}">
+                                        {% csrf_token %}
+                                        <div class="modal-header bg-primary-subtle">
+                                            <h6 class="modal-title fw-bold text-primary"><i class="bi bi-calendar-plus me-1"></i> Pesan / Booking Kamar Rawat Inap — {{ k.pasien.nama_lengkap }}</h6>
+                                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                        </div>
+                                        <div class="modal-body">
+                                            <div class="mb-3">
+                                                <label class="form-label small fw-semibold">Pilih Tempat Tidur Tersedia <span class="text-danger">*</span></label>
+                                                <select name="bed_id" class="form-select form-select-sm" required>
+                                                    <option value="">— Pilih Bed —</option>
+                                                    {% for bed in available_beds %}
+                                                    <option value="{{ bed.id }}">{{ bed.ruangan.nama }} — Bed {{ bed.kode_bed }} (Kelas {{ bed.ruangan.get_kelas_display }})</option>
+                                                    {% endfor %}
+                                                </select>
+                                            </div>
+                                            <div class="mb-3">
+                                                <label class="form-label small fw-semibold">Durasi Booking (Jam)</label>
+                                                <select name="durasi_jam" class="form-select form-select-sm">
+                                                    <option value="2" selected>2 Jam</option>
+                                                    <option value="4">4 Jam</option>
+                                                    <option value="6">6 Jam</option>
+                                                </select>
+                                            </div>
+                                            <div class="mb-3">
+                                                <label class="form-label small fw-semibold">Catatan / Indikasi</label>
+                                                <textarea name="catatan" class="form-control form-control-sm" rows="2" placeholder="Rencana transfer ranap, kebutuhan isolasi, indikasi klinis..."></textarea>
+                                            </div>
+                                        </div>
+                                        <div class="modal-footer">
+                                            <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Batal</button>
+                                            <button type="submit" class="btn btn-primary btn-sm px-3"><i class="bi bi-calendar-check me-1"></i> Pesan Sekarang</button>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- MODAL GENERAL CONSENT RAWAT INAP (RAJAL) -->
+                        <div class="modal fade" id="modalConsentR{{ k.pk }}" tabindex="-1">
+                            <div class="modal-dialog modal-lg modal-dialog-centered">
+                                <div class="modal-content">
+                                    <form method="POST" action="{% url 'pasien:general_consent_simpan' k.pk %}">
+                                        {% csrf_token %}
+                                        <div class="modal-header" style="background:#ccfbf1;">
+                                            <h6 class="modal-title fw-bold" style="color:#0d9488;"><i class="bi bi-file-earmark-check me-1"></i> Formulir General Consent Rawat Inap — {{ k.pasien.nama_lengkap }}</h6>
+                                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                        </div>
+                                        <div class="modal-body">
+                                            <div class="row g-2 mb-3">
+                                                <div class="col-6">
+                                                    <label class="form-label small fw-semibold">Nama Penanggung Jawab / Wali <span class="text-danger">*</span></label>
+                                                    <input type="text" name="nama_pj" class="form-control form-control-sm" required placeholder="Nama lengkap PJ">
+                                                </div>
+                                                <div class="col-6">
+                                                    <label class="form-label small fw-semibold">NIK Penanggung Jawab <span class="text-danger">*</span></label>
+                                                    <input type="text" name="nik_pj" class="form-control form-control-sm" required maxlength="20" placeholder="16 digit NIK KTP">
+                                                </div>
+                                                <div class="col-4">
+                                                    <label class="form-label small fw-semibold">Hubungan dgn Pasien</label>
+                                                    <select name="hubungan" class="form-select form-select-sm">
+                                                        <option value="DIRI_SENDIRI">Diri Sendiri (Pasien)</option>
+                                                        <option value="SUAMI_ISTRI">Suami / Istri</option>
+                                                        <option value="ORANG_TUA">Orang Tua</option>
+                                                        <option value="ANAK">Anak Kandung</option>
+                                                        <option value="SAUDARA">Saudara Kandung</option>
+                                                        <option value="WALI">Wali / Lainnya</option>
+                                                    </select>
+                                                </div>
+                                                <div class="col-4">
+                                                    <label class="form-label small fw-semibold">No. Telepon / HP</label>
+                                                    <input type="text" name="telepon_pj" class="form-control form-control-sm" placeholder="0812xxxxxxxx">
+                                                </div>
+                                                <div class="col-4">
+                                                    <label class="form-label small fw-semibold">Penjamin Biaya</label>
+                                                    <select name="jaminan_biaya" class="form-select form-select-sm">
+                                                        <option value="BPJS">BPJS Kesehatan / KIS</option>
+                                                        <option value="UMUM">Biaya Pribadi (Umum)</option>
+                                                        <option value="ASURANSI">Asuransi Swasta</option>
+                                                    </select>
+                                                </div>
+                                                <div class="col-12">
+                                                    <label class="form-label small fw-semibold">Alamat Lengkap</label>
+                                                    <textarea name="alamat_pj" class="form-control form-control-sm" rows="1" placeholder="Jl. Contoh No. 10 RT01/RW02 Kel. X Kec. Y Kota Z"></textarea>
+                                                </div>
+                                            </div>
+                                            <hr class="my-2">
+                                            <div class="small fw-bold mb-2" style="color:#0d9488;"><i class="bi bi-shield-check me-1"></i> Persetujuan (STARKES HPK 1.1)</div>
+                                            <div class="form-check mb-1"><input class="form-check-input" type="checkbox" name="setuju_perawatan_umum" value="1" checked id="conRPerawatan{{ k.pk }}"><label class="form-check-label small" for="conRPerawatan{{ k.pk }}">Setuju Perawatan & Tindakan Medis Umum</label></div>
+                                            <div class="form-check mb-1"><input class="form-check-input" type="checkbox" name="setuju_pelepasan_informasi" value="1" checked id="conRInfo{{ k.pk }}"><label class="form-check-label small" for="conRInfo{{ k.pk }}">Setuju Pelepasan Informasi Medis & Privasi</label></div>
+                                            <div class="form-check mb-1"><input class="form-check-input" type="checkbox" name="setuju_tata_tertib" value="1" checked id="conRTatib{{ k.pk }}"><label class="form-check-label small" for="conRTatib{{ k.pk }}">Setuju Tata Tertib Rawat Inap & Jam Besuk</label></div>
+                                            <div class="form-check mb-2"><input class="form-check-input" type="checkbox" name="pernyataan_selisih_biaya" value="1" checked id="conRSelisih{{ k.pk }}"><label class="form-check-label small" for="conRSelisih{{ k.pk }}">Bersedia Menanggung Selisih Biaya (Naik Kelas)</label></div>
+                                            <div class="mb-2">
+                                                <label class="form-label small fw-semibold">Keluarga yang Boleh Menerima Informasi Medis</label>
+                                                <input type="text" name="nama_anggota_akses_info" class="form-control form-control-sm" placeholder="Nama keluarga yang diperbolehkan (opsional)">
+                                            </div>
+                                        </div>
+                                        <div class="modal-footer">
+                                            <a href="{% url 'pasien:cetak_general_consent' k.pk %}" class="btn btn-outline-secondary btn-sm me-auto" target="_blank"><i class="bi bi-printer me-1"></i> Cetak A4</a>
+                                            <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Batal</button>
+                                            <button type="submit" class="btn btn-sm px-3 fw-semibold" style="background:#0d9488; color:#fff; border:none;"><i class="bi bi-check-circle me-1"></i> Simpan Consent</button>
                                         </div>
                                     </form>
                                 </div>

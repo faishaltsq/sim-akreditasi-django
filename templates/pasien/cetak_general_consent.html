@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <title>Persetujuan Umum Rawat Inap (General Consent) — {{ p.nama_lengkap }}</title>
+    <style>
+        @page { size: A4; margin: 12mm 15mm; }
+        body { font-family: Arial, Helvetica, sans-serif; font-size: 9.5pt; line-height: 1.35; color: #111; margin: 0; padding: 15px; background: #fff; }
+        .header { text-align: center; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 3px double #000; position: relative; }
+        .header h2 { margin: 0; font-size: 13pt; text-transform: uppercase; letter-spacing: 0.5px; }
+        .header h3 { margin: 3px 0 0; font-size: 10.5pt; font-weight: normal; color: #333; }
+        .header p { margin: 3px 0 0; font-size: 8pt; color: #555; }
+        .badge-starkes { position: absolute; right: 0; top: 0; font-size: 7.5pt; border: 1px solid #0056b3; color: #0056b3; padding: 2px 6px; font-weight: bold; border-radius: 3px; }
+        table.grid { width: 100%; border-collapse: collapse; margin-bottom: 10px; font-size: 9pt; }
+        table.grid td { padding: 3px 6px; vertical-align: top; }
+        table.grid .label { width: 170px; font-weight: bold; color: #222; }
+        table.grid .sep { width: 8px; text-align: center; }
+        .box-section { border: 1px solid #bbb; padding: 8px 10px; margin-bottom: 8px; border-radius: 3px; background: #fafafa; }
+        .section-title { font-weight: bold; font-size: 9pt; margin: 0 0 4px; color: #003366; text-transform: uppercase; }
+        ol.clauses { margin: 0; padding-left: 18px; font-size: 8.5pt; }
+        ol.clauses li { margin-bottom: 4px; text-align: justify; }
+        .check-box { font-weight: bold; color: #047857; }
+        .ttd-container { display: flex; justify-content: space-between; margin-top: 25px; page-break-inside: avoid; }
+        .ttd-box { text-align: center; width: 45%; }
+        .ttd-line { margin-top: 55px; border-top: 1px solid #000; padding-top: 4px; font-weight: bold; }
+        @media print {
+            .no-print { display: none !important; }
+            body { padding: 0; }
+        }
+    </style>
+</head>
+<body>
+    <div class="no-print" style="background:#e0f2fe; border: 1px solid #7dd3fc; padding:8px 15px; text-align:center; margin-bottom:12px; font-size:12px; border-radius:4px;">
+        <strong>Preview Cetak Dokumen Akreditasi STARKES: Formulir General Consent Rawat Inap</strong>
+        <button onclick="window.print()" style="margin-left:15px; padding:4px 14px; background:#0284c7; color:#fff; border:none; border-radius:3px; cursor:pointer; font-weight:bold;">🖨️ Cetak Formulir (A4)</button>
+        <button onclick="window.close()" style="margin-left:8px; padding:4px 12px; background:#e2e8f0; border:1px solid #cbd5e1; border-radius:3px; cursor:pointer;">✕ Tutup</button>
+    </div>
+
+    <div class="header">
+        <span class="badge-starkes">STARKES KMK 1128/2022 — HPK 1.1</span>
+        <h2>RUMAH SAKIT MONSISKAMI</h2>
+        <h3>FORMULIR PERSETUJUAN UMUM RAWAT INAP (GENERAL CONSENT)</h3>
+        <p>Jl. Kesehatan No. 10 Jakarta Pusat | Telp: (021) 555-0123 | Sistem Terpadu ARIMA</p>
+    </div>
+
+    <div style="display: flex; gap: 10px; margin-bottom: 8px;">
+        <div class="box-section" style="flex: 1; margin-bottom: 0;">
+            <div class="section-title">I. IDENTITAS PASIEN</div>
+            <table class="grid" style="margin-bottom:0;">
+                <tr><td class="label">Nama Pasien</td><td class="sep">:</td><td><strong>{{ p.nama_lengkap }}</strong></td></tr>
+                <tr><td class="label">No. Rekam Medis (RM)</td><td class="sep">:</td><td><strong style="font-family:monospace; font-size:10pt;">{{ p.no_rm }}</strong></td></tr>
+                <tr><td class="label">NIK / KTP</td><td class="sep">:</td><td>{{ p.nik|default:"-" }}</td></tr>
+                <tr><td class="label">Tanggal Lahir / JK</td><td class="sep">:</td><td>{{ p.tanggal_lahir|date:"d/m/Y" }} / {{ p.get_jenis_kelamin_display }}</td></tr>
+                <tr><td class="label">Penjamin Biaya</td><td class="sep">:</td><td><strong>{{ k.get_penjamin_display }}</strong></td></tr>
+            </table>
+        </div>
+        <div class="box-section" style="flex: 1; margin-bottom: 0;">
+            <div class="section-title">II. PENANGGUNG JAWAB / WALI PASIEN</div>
+            <table class="grid" style="margin-bottom:0;">
+                <tr><td class="label">Nama Penanggung Jawab</td><td class="sep">:</td><td><strong>{{ consent.nama_pj|default:p.nama_lengkap }}</strong></td></tr>
+                <tr><td class="label">NIK Wali / PJ</td><td class="sep">:</td><td>{{ consent.nik_pj|default:p.nik|default:"-" }}</td></tr>
+                <tr><td class="label">Hubungan dgn Pasien</td><td class="sep">:</td><td>{{ consent.get_hubungan_display|default:"Diri Sendiri (Pasien)" }}</td></tr>
+                <tr><td class="label">No. Telepon / HP</td><td class="sep">:</td><td>{{ consent.telepon_pj|default:p.no_hp|default:"-" }}</td></tr>
+                <tr><td class="label">Alamat Lengkap</td><td class="sep">:</td><td>{{ consent.alamat_pj|default:p.alamat|default:"-" }}</td></tr>
+            </table>
+        </div>
+    </div>
+
+    <div class="box-section">
+        <div class="section-title">III. KETENTUAN DAN KESEPAKATAN PELAYANAN RAWAT INAP</div>
+        <ol class="clauses">
+            <li>
+                <strong>Persetujuan Perawatan dan Pengobatan Medis Umum:</strong> 
+                Saya menyetujui pelaksanaan pemeriksaan fisik, tindakan medis standar, prosedur diagnostik (laboratorium, radiologi/imaging), asuhan keperawatan, dan pemberian obat-obatan sesuai instruksi Dokter Penanggung Jawab Pelayanan (DPJP) demi keselamatan pasien.
+                <span class="check-box">[{% if consent.setuju_perawatan_umum %}✔ SETUJU{% else %}TIDAK{% endif %}]</span>
+            </li>
+            <li>
+                <strong>Pelepasan Informasi Medis dan Privasi (Kemenkes & UU No 17/2023):</strong> 
+                Saya memberikan izin kepada Rumah Sakit untuk membagikan rekam medis dan data kesehatan pasien kepada penjamin biaya (BPJS Kesehatan/Asuransi Swasta), instansi rujukan, dan platform SatuSehat Kemenkes RI.
+                <span class="check-box">[{% if consent.setuju_pelepasan_informasi %}✔ SETUJU{% else %}TIDAK{% endif %}]</span>
+                <br><em>Keluarga yang diberi izin menerima penjelasan medis:</em> 
+                <strong>{{ consent.nama_anggota_akses_info|default:"Seluruh keluarga inti yang mendampingi" }}</strong>
+            </li>
+            <li>
+                <strong>Tata Tertib Ruang Rawat Inap & Jam Besuk:</strong> 
+                Saya memahami dan bersedia mematuhi aturan jam kunjungan besuk pasien, larangan merokok di area RS, pembatasan jumlah penunggu pasien (maksimal 1-2 orang dengan tanda pengenal/gelang penunggu), serta menjaga ketenangan dan kebersihan bangsal perawatan.
+                <span class="check-box">[{% if consent.setuju_tata_tertib %}✔ SETUJU{% else %}TIDAK{% endif %}]</span>
+            </li>
+            <li>
+                <strong>Jaminan Finansial & Ketentuan Selisih Biaya:</strong> 
+                Penjaminan biaya perawatan rawat inap menggunakan fasilitas <strong>{{ consent.get_jaminan_biaya_display|default:k.get_penjamin_display }}</strong>. Apabila pasien atas permintaan sendiri naik ke kelas perawatan yang lebih tinggi dari hak kepesertaan, penanggung jawab bersedia menanggung selisih biaya (iur biaya) sesuai Peraturan Menteri Kesehatan RI.
+                <span class="check-box">[{% if consent.pernyataan_selisih_biaya %}✔ BERSEDIA MEMENUHI{% else %}TIDAK{% endif %}]</span>
+            </li>
+            <li>
+                <strong>Barang-Barang Pribadi Berharga:</strong> 
+                Rumah Sakit tidak bertanggung jawab atas kehilangan, kerusakan, atau pencurian perhiasan/uang tunai/barang elektronik berharga yang dibawa ke ruang perawatan tanpa dititipkan pada loker resmi rumah sakit.
+            </li>
+        </ol>
+    </div>
+
+    <div style="font-size: 8.5pt; text-align: justify; margin: 6px 0; color: #333;">
+        <em>Dengan menandatangani lembar ini, saya menyatakan telah membaca, memahami secara sadar dan sukarela, serta menerima seluruh penjelasan Hak dan Kewajiban Pasien serta tata tertib yang berlaku di RS MonsisKami tanpa paksaan dari pihak mana pun.</em>
+    </div>
+
+    <div class="ttd-container">
+        <div class="ttd-box">
+            <div>Semarang, {{ now|date:"d F Y H:i" }} WIB</div>
+            <div>Yang Membuat Persetujuan,<br><small style="color:#555;">(Pasien / Wali / Penanggung Jawab)</small></div>
+            <div class="ttd-line">
+                ( {{ consent.nama_pj|default:p.nama_lengkap }} )
+            </div>
+        </div>
+        <div class="ttd-box">
+            <div>Petugas Admisi / Saksi RS,</div>
+            <div><small style="color:#555;">Unit Admisi & Rekam Medis</small></div>
+            <div class="ttd-line">
+                ( {{ consent.petugas_saksi.get_full_name|default:consent.petugas_saksi.username|default:request.user.get_full_name|default:request.user.username|default:"Petugas Admisi RS" }} )
+            </div>
+        </div>
+    </div>
+</body>
+</html>

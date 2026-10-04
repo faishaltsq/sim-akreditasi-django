@@ -7,6 +7,7 @@ Setup Tenaga Kesehatan Lainnya:
 """
 from django.core.management.base import BaseCommand
 from django.contrib.auth.hashers import make_password
+from django.utils import timezone
 
 KPS_NAKES_LAIN_ITEMS = [
     {
@@ -153,6 +154,7 @@ class Command(BaseCommand):
                 'password': make_password('Unit@1234'),
                 'is_active': True,
                 'is_staff': False,
+                'last_login': timezone.now(),
             }
         )
         UserProfile.objects.update_or_create(

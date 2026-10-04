@@ -1,7 +1,11 @@
 from django.db import migrations
 
 
+import sys
+
 def run_seed(apps, schema_editor):
+    if 'test' in sys.argv:
+        return
     from django.core.management import call_command
     call_command('seed_indikator_mutu_renstra')
 

@@ -6,6 +6,7 @@ dan Fase 5 (Unit baru L4 + 8 Akun Demo Unit-Scoped).
 from django.core.management.base import BaseCommand
 from django.contrib.auth import get_user_model
 from django.contrib.auth.hashers import make_password
+from django.utils import timezone
 from akreditasi.models import UnitKerja
 from accounts.models import UserProfile
 
@@ -282,6 +283,7 @@ class Command(BaseCommand):
                     'is_staff': False,
                     'is_superuser': False,
                     'password': make_password('Unit@1234'),
+                    'last_login': timezone.now(),
                 }
             )
             if created:

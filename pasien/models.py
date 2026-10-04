@@ -74,6 +74,7 @@ class Ruangan(models.Model):
 class Bed(models.Model):
     STATUS = [
         ('TERSEDIA', 'Tersedia'),
+        ('DIBOOKING', 'Dibooking / Dipesan'),
         ('TERISI',   'Terisi'),
         ('STERILISASI', 'Proses Sterilisasi'),
         ('TIDAK_AKTIF', 'Tidak Aktif'),
@@ -184,13 +185,15 @@ class KunjunganPasien(models.Model):
     status_antrean  = models.CharField('Status Antrean', max_length=20, choices=STATUS_ANTREAN_CHOICES, default='MENUNGGU')
 
     # ── Tanda-Tanda Vital (TTV) ──
-    ttv_sistole   = models.PositiveSmallIntegerField('Tekanan Darah Sistole (mmHg)', null=True, blank=True)
-    ttv_diastole  = models.PositiveSmallIntegerField('Tekanan Darah Diastole (mmHg)', null=True, blank=True)
-    ttv_nadi      = models.PositiveSmallIntegerField('Nadi (bpm)', null=True, blank=True)
-    ttv_rr        = models.PositiveSmallIntegerField('Laju Napas / RR (x/menit)', null=True, blank=True)
-    ttv_suhu      = models.DecimalField('Suhu (°C)', max_digits=4, decimal_places=1, null=True, blank=True)
-    ttv_spo2      = models.PositiveSmallIntegerField('SpO2 (%)', null=True, blank=True)
-    icd9_tindakan = models.CharField('Tindakan Medis (ICD-9-CM)', max_length=300, blank=True)
+    ttv_sistole     = models.PositiveSmallIntegerField('Tekanan Darah Sistole (mmHg)', null=True, blank=True)
+    ttv_diastole    = models.PositiveSmallIntegerField('Tekanan Darah Diastole (mmHg)', null=True, blank=True)
+    ttv_nadi        = models.PositiveSmallIntegerField('Nadi (bpm)', null=True, blank=True)
+    ttv_rr          = models.PositiveSmallIntegerField('Laju Napas / RR (x/menit)', null=True, blank=True)
+    ttv_suhu        = models.DecimalField('Suhu (°C)', max_digits=4, decimal_places=1, null=True, blank=True)
+    ttv_spo2        = models.PositiveSmallIntegerField('SpO2 (%)', null=True, blank=True)
+    ttv_gcs         = models.CharField('Glasgow Coma Scale (GCS)', max_length=30, blank=True, help_text='Contoh: E4V5M6 (15) atau Somnolen')
+    ttv_skala_nyeri = models.PositiveSmallIntegerField('Skala Nyeri (NRS 0-10)', null=True, blank=True, help_text='0 (Tidak Nyeri) s.d 10 (Sangat Hebat)')
+    icd9_tindakan   = models.CharField('Tindakan Medis (ICD-9-CM)', max_length=300, blank=True)
 
     # ── Rujukan & Konsultasi ──
     sisrute_rs_tujuan = models.CharField('RS Tujuan Rujukan (SISRUTE)', max_length=200, blank=True)
@@ -441,9 +444,11 @@ class OrderPenunjang(models.Model):
     catatan_klinis    = models.TextField('Catatan Klinis / Indikasi', blank=True)
     prioritas         = models.CharField('Prioritas', max_length=10, choices=PRIORITAS_CHOICES, default='RUTIN')
     status            = models.CharField('Status Order', max_length=15, choices=STATUS_CHOICES, default='ORDERED')
-    dokter_pengirim   = models.CharField('Dokter Pengirim', max_length=150, blank=True)
-    hasil_pemeriksaan = models.TextField('Hasil Pemeriksaan', blank=True)
-    created_at        = models.DateTimeField(auto_now_add=True)
+    dokter_pengirim        = models.CharField('Dokter Pengirim', max_length=150, blank=True)
+    hasil_pemeriksaan      = models.TextField('Hasil Pemeriksaan', blank=True)
+    is_critical_value      = models.BooleanField('Critical Value Alert', default=False)
+    critical_value_catatan = models.CharField('Catatan Nilai Kritis', max_length=200, blank=True)
+    created_at             = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         verbose_name = 'Order Penunjang'
@@ -525,4 +530,112 @@ class ResepDetail(models.Model):
     @property
     def subtotal(self):
         return self.jumlah * self.harga_satuan
+
+
+# ── 10. Pemesanan Kamar (Bed Booking) ────────────────────────────────────────
+
+class BookingKamar(models.Model):
+    STATUS_BOOKING = [
+        ('BOOKED',  'Dipesan (Menunggu Check-in)'),
+        ('CHECKIN', 'Sudah Masuk Kamar'),
+        ('BATAL',   'Dibatalkan'),
+        ('EXPIRED', 'Kedaluwarsa'),
+    ]
+
+    nomor_booking = models.CharField('Nomor Booking', max_length=30, unique=True)
+    pasien        = models.ForeignKey(Pasien, on_delete=models.CASCADE, related_name='room_bookings')
+    kunjungan     = models.ForeignKey('KunjunganPasien', on_delete=models.SET_NULL, null=True, blank=True, related_name='room_bookings')
+    bed           = models.ForeignKey(Bed, on_delete=models.CASCADE, related_name='bookings')
+    waktu_booking = models.DateTimeField('Waktu Pesan', auto_now_add=True)
+    batas_waktu   = models.DateTimeField('Batas Waktu Tunggu')
+    status        = models.CharField('Status Booking', max_length=15, choices=STATUS_BOOKING, default='BOOKED')
+    catatan       = models.TextField('Catatan / Indikasi', blank=True)
+    alasan_batal  = models.TextField('Alasan Pembatalan', blank=True)
+    petugas       = models.ForeignKey('auth.User', on_delete=models.SET_NULL, null=True, blank=True)
+
+    class Meta:
+        verbose_name = 'Pemesanan Kamar (Booking Bed)'
+        verbose_name_plural = 'Pemesanan Kamar (Booking Bed)'
+        ordering = ['-waktu_booking']
+
+    def __str__(self):
+        return f'{self.nomor_booking} - {self.pasien.nama_lengkap} -> {self.bed}'
+
+    def save(self, *args, **kwargs):
+        is_new = self.pk is None
+        super().save(*args, **kwargs)
+        if is_new and self.status == 'BOOKED':
+            self.bed.status = 'DIBOOKING'
+            self.bed.save(update_fields=['status'])
+
+    def batalkan(self, alasan=''):
+        self.status = 'BATAL'
+        self.alasan_batal = alasan
+        self.save(update_fields=['status', 'alasan_batal'])
+        if self.bed.status == 'DIBOOKING':
+            self.bed.status = 'TERSEDIA'
+            self.bed.save(update_fields=['status'])
+
+    def checkin(self):
+        self.status = 'CHECKIN'
+        self.save(update_fields=['status'])
+        self.bed.status = 'TERISI'
+        self.bed.save(update_fields=['status'])
+        if self.kunjungan:
+            self.kunjungan.bed = self.bed
+            self.kunjungan.jenis_kunjungan = 'RANAP'
+            self.kunjungan.status = 'RANAP'
+            self.kunjungan.save(update_fields=['bed', 'jenis_kunjungan', 'status'])
+
+
+# ── 11. General Consent Rawat Inap (STARKES HPK) ───────────────────────────
+
+class GeneralConsentRawatInap(models.Model):
+    HUBUNGAN_CHOICES = [
+        ('DIRI_SENDIRI', 'Diri Sendiri (Pasien)'),
+        ('SUAMI_ISTRI',  'Suami / Istri'),
+        ('ORANG_TUA',    'Orang Tua / Ayah / Ibu'),
+        ('ANAK',         'Anak Kandung'),
+        ('SAUDARA',      'Saudara Kandung'),
+        ('WALI',         'Wali / Penanggung Jawab Lainnya'),
+    ]
+
+    JAMINAN_CHOICES = [
+        ('BPJS',     'BPJS Kesehatan / KIS'),
+        ('UMUM',     'Biaya Pribadi (Umum / Tunai)'),
+        ('ASURANSI', 'Asuransi Swasta / Perusahaan'),
+    ]
+
+    kunjungan                  = models.OneToOneField('KunjunganPasien', on_delete=models.CASCADE, related_name='general_consent_doc')
+    nama_pj                    = models.CharField('Nama Penanggung Jawab / Wali', max_length=150)
+    nik_pj                     = models.CharField('NIK Penanggung Jawab', max_length=20)
+    hubungan                   = models.CharField('Hubungan dengan Pasien', max_length=20, choices=HUBUNGAN_CHOICES)
+    telepon_pj                 = models.CharField('Nomor Telepon / WhatsApp', max_length=25)
+    alamat_pj                  = models.TextField('Alamat Lengkap')
+
+    # STARKES HPK Consent Checkboxes
+    setuju_perawatan_umum      = models.BooleanField('Persetujuan Tindakan & Perawatan Medis Umum', default=True)
+    setuju_pelepasan_informasi = models.BooleanField('Persetujuan Pelepasan Informasi Medis & Privasi', default=True)
+    setuju_tata_tertib         = models.BooleanField('Persetujuan Tata Tertib Rawat Inap & Jam Besuk', default=True)
+    nama_anggota_akses_info    = models.TextField('Nama Anggota Keluarga yang Diberi Akses Informasi', blank=True, help_text='Daftar nama keluarga yang diperbolehkan menerima informasi perkembangan medis pasien.')
+
+    # Billing & Financial Responsibility
+    jaminan_biaya              = models.CharField('Penjamin / Penanggung Biaya', max_length=15, choices=JAMINAN_CHOICES, default='BPJS')
+    pernyataan_selisih_biaya   = models.BooleanField('Setuju Ketentuan Selisih Biaya (Bila Naik Kelas)', default=True)
+
+    waktu_persetujuan          = models.DateTimeField('Waktu Persetujuan', auto_now_add=True)
+    petugas_saksi              = models.ForeignKey('auth.User', on_delete=models.SET_NULL, null=True, blank=True)
+
+    class Meta:
+        verbose_name = 'General Consent Rawat Inap'
+        verbose_name_plural = 'General Consent Rawat Inap'
+
+    def __str__(self):
+        return f'General Consent Ranap - {self.kunjungan.pasien.nama_lengkap} (Wali: {self.nama_pj})'
+
+    @property
+    def is_lengkap(self):
+        return bool(self.nama_pj and self.nik_pj and self.setuju_perawatan_umum and self.setuju_pelepasan_informasi)
+
+
 
