@@ -283,7 +283,8 @@
     </a>
     {% endif %}
 
-    <!-- MANAJEMEN PASIEN (SIMRS) — tampil untuk semua user -->
+    <!-- MANAJEMEN PASIEN (SIMRS) — disaring berdasarkan unit kerja & hak akses -->
+    {% with allowed_mods=request.user.profile.get_allowed_patient_modules %}
     <div class="nav-section mt-2" style="border-top:1px solid #e2e8f0; padding-top:10px; margin-top:8px;">
         <i class="bi bi-people-fill me-1" style="font-size:0.6rem;"></i> Manajemen Pasien
     </div>
@@ -294,6 +295,8 @@
             <span class="nav-desc">KPI &amp; Statistik SIMRS</span>
         </span>
     </a>
+
+    {% if 'pendaftaran' in allowed_mods %}
     <a href="{% url 'pasien:pendaftaran_dashboard' %}" class="nav-link {% if request.resolver_match.url_name == 'pendaftaran_dashboard' %}active{% endif %}">
         <span class="nav-icon"><i class="bi bi-person-badge"></i></span>
         <span class="nav-text">
@@ -301,6 +304,9 @@
             <span class="nav-desc">Loket &amp; Routing Pasien</span>
         </span>
     </a>
+    {% endif %}
+
+    {% if 'igd' in allowed_mods %}
     <a href="{% url 'pasien:igd_dashboard' %}" class="nav-link {% if request.resolver_match.url_name == 'igd_dashboard' %}active{% endif %}">
         <span class="nav-icon"><i class="bi bi-heart-pulse-fill text-danger"></i></span>
         <span class="nav-text">
@@ -308,6 +314,9 @@
             <span class="nav-desc">Triage &amp; Disposisi</span>
         </span>
     </a>
+    {% endif %}
+
+    {% if 'rajal' in allowed_mods %}
     <a href="{% url 'pasien:rajal_dashboard' %}" class="nav-link {% if request.resolver_match.url_name == 'rajal_dashboard' %}active{% endif %}">
         <span class="nav-icon"><i class="bi bi-hospital-fill text-primary"></i></span>
         <span class="nav-text">
@@ -315,6 +324,9 @@
             <span class="nav-desc">Antrean Spesialis</span>
         </span>
     </a>
+    {% endif %}
+
+    {% if 'ranap' in allowed_mods %}
     <a href="{% url 'pasien:bed_management' %}" class="nav-link {% if request.resolver_match.url_name == 'bed_management' %}active{% endif %}">
         <span class="nav-icon"><i class="bi bi-grid-3x3-gap-fill text-success"></i></span>
         <span class="nav-text">
@@ -322,6 +334,19 @@
             <span class="nav-desc">Ketersediaan &amp; BOR</span>
         </span>
     </a>
+    {% endif %}
+
+    {% if 'laboratorium' in allowed_mods %}
+    <a href="{% url 'pasien:laboratorium_dashboard' %}" class="nav-link {% if request.resolver_match.url_name == 'laboratorium_dashboard' %}active{% endif %}">
+        <span class="nav-icon"><i class="bi bi-moisture text-warning"></i></span>
+        <span class="nav-text">
+            <span class="nav-title">Laboratorium &amp; LIS</span>
+            <span class="nav-desc">Order Penunjang &amp; Nilai Kritis</span>
+        </span>
+    </a>
+    {% endif %}
+
+    {% if 'farmasi' in allowed_mods %}
     <a href="{% url 'pasien:farmasi_antrean' %}" class="nav-link {% if request.resolver_match.url_name == 'farmasi_antrean' %}active{% endif %}">
         <span class="nav-icon"><i class="bi bi-capsule"></i></span>
         <span class="nav-text">
@@ -329,6 +354,9 @@
             <span class="nav-desc">Antrean Resep Elektronik</span>
         </span>
     </a>
+    {% endif %}
+
+    {% if 'master_pasien' in allowed_mods %}
     <a href="{% url 'pasien:pasien_daftar' %}" class="nav-link {% if request.resolver_match.url_name == 'pasien_daftar' or request.resolver_match.url_name == 'pasien_baru' %}active{% endif %}">
         <span class="nav-icon"><i class="bi bi-person-lines-fill"></i></span>
         <span class="nav-text">
@@ -336,6 +364,9 @@
             <span class="nav-desc">Database Rekam Medis</span>
         </span>
     </a>
+    {% endif %}
+
+    {% if 'riwayat' in allowed_mods %}
     <a href="{% url 'pasien:kunjungan_daftar' %}" class="nav-link {% if request.resolver_match.url_name == 'kunjungan_daftar' or request.resolver_match.url_name == 'kunjungan_baru' %}active{% endif %}">
         <span class="nav-icon"><i class="bi bi-clipboard2-pulse"></i></span>
         <span class="nav-text">
@@ -343,6 +374,8 @@
             <span class="nav-desc">Semua Pelayanan</span>
         </span>
     </a>
+    {% endif %}
+    {% endwith %}
 
     <!-- PUSAT KONTROL ADMIN — hanya muncul jika user memiliki izin -->
     {% if request.user.is_superuser or request.user.profile.role == 'SUPER_ADMIN' or request.user.profile.role == 'ADMIN_RS' %}

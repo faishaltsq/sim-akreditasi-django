@@ -1,0 +1,201 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Laboratorium & LIS — ARIMA{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-3 pt-2 pb-5">
+
+  <!-- Header -->
+  <div class="d-flex align-items-center justify-content-between mb-3">
+    <div>
+      <h5 class="mb-0 fw-bold"><i class="bi bi-moisture text-warning me-2"></i>Dashboard Laboratorium & LIS</h5>
+      <small class="text-muted">Worklist Order Penunjang Lab — Nilai Kritis & Verifikasi Hasil</small>
+    </div>
+    <div class="d-flex gap-2">
+      <a href="?status=ORDERED" class="btn btn-sm {% if status_filter == 'ORDERED' %}btn-warning{% else %}btn-outline-warning{% endif %}">
+        <i class="bi bi-hourglass-split"></i> Pending <span class="badge bg-danger ms-1">{{ total_pending }}</span>
+      </a>
+      <a href="?status=PROSES" class="btn btn-sm {% if status_filter == 'PROSES' %}btn-primary{% else %}btn-outline-primary{% endif %}">
+        <i class="bi bi-arrow-repeat"></i> Proses <span class="badge bg-secondary ms-1">{{ total_proses }}</span>
+      </a>
+      <a href="?status=SELESAI" class="btn btn-sm {% if status_filter == 'SELESAI' %}btn-success{% else %}btn-outline-success{% endif %}">
+        <i class="bi bi-check-circle"></i> Selesai <span class="badge bg-success ms-1">{{ total_selesai }}</span>
+      </a>
+      <a href="?" class="btn btn-sm btn-outline-secondary">Semua</a>
+    </div>
+  </div>
+
+  <!-- Banner Nilai Kritis -->
+  {% if critical_orders %}
+  <div class="alert alert-danger border-danger d-flex align-items-start gap-2 mb-3 py-2" role="alert">
+    <i class="bi bi-exclamation-triangle-fill fs-5 mt-1 flex-shrink-0"></i>
+    <div>
+      <strong>⚠ {{ critical_orders|length }} Order dengan Nilai Kritis Belum Ditangani</strong>
+      <ul class="mb-0 mt-1 small">
+        {% for o in critical_orders %}
+        <li>
+          <strong>{{ o.kunjungan.pasien.nama_lengkap }}</strong> — {{ o.nama_pemeriksaan }}
+          {% if o.critical_value_catatan %}<span class="text-danger"> ({{ o.critical_value_catatan }})</span>{% endif %}
+          <a href="#update-{{ o.pk }}" data-bs-toggle="modal" data-bs-target="#updateModal" 
+             data-order-id="{{ o.pk }}" data-order-nama="{{ o.nama_pemeriksaan }}"
+             data-order-status="{{ o.status }}" data-order-hasil="{{ o.hasil_pemeriksaan }}"
+             data-order-critical="{{ o.is_critical_value|yesno:'1,0' }}"
+             data-order-catatan="{{ o.critical_value_catatan }}"
+             class="btn btn-xs btn-outline-danger ms-2 py-0 px-1" style="font-size:0.7rem;">Update</a>
+        </li>
+        {% endfor %}
+      </ul>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Tabel Worklist -->
+  <div class="card border-0 shadow-sm">
+    <div class="card-body p-0">
+      <table class="table table-hover table-sm mb-0 align-middle">
+        <thead class="table-light">
+          <tr>
+            <th style="width:40px;">#</th>
+            <th>Pemeriksaan</th>
+            <th>Pasien</th>
+            <th>No RM</th>
+            <th>Prioritas</th>
+            <th>Status</th>
+            <th>Critical</th>
+            <th>Waktu Order</th>
+            <th style="width:80px;">Aksi</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for o in orders %}
+          <tr {% if o.is_critical_value and o.status != 'SELESAI' %}class="table-danger"{% endif %}>
+            <td class="text-muted" style="font-size:0.75rem;">{{ forloop.counter }}</td>
+            <td>
+              <span class="fw-semibold" style="font-size:0.85rem;">{{ o.nama_pemeriksaan }}</span>
+              {% if o.catatan_klinis %}
+              <div class="text-muted" style="font-size:0.72rem;">{{ o.catatan_klinis|truncatechars:60 }}</div>
+              {% endif %}
+            </td>
+            <td style="font-size:0.85rem;">{{ o.kunjungan.pasien.nama_lengkap }}</td>
+            <td class="font-monospace" style="font-size:0.75rem;">{{ o.kunjungan.pasien.no_rm }}</td>
+            <td>
+              {% if o.prioritas == 'CITO' %}
+              <span class="badge bg-danger">CITO</span>
+              {% else %}
+              <span class="badge bg-secondary">Rutin</span>
+              {% endif %}
+            </td>
+            <td>
+              {% if o.status == 'ORDERED' %}
+                <span class="badge bg-warning text-dark">Pending</span>
+              {% elif o.status == 'PROSES' %}
+                <span class="badge bg-primary">Proses</span>
+              {% else %}
+                <span class="badge bg-success">Selesai</span>
+              {% endif %}
+            </td>
+            <td class="text-center">
+              {% if o.is_critical_value %}
+              <i class="bi bi-exclamation-triangle-fill text-danger" title="{{ o.critical_value_catatan }}"></i>
+              {% else %}
+              <span class="text-muted">—</span>
+              {% endif %}
+            </td>
+            <td class="text-muted" style="font-size:0.75rem;">{{ o.created_at|date:"d/m H:i" }}</td>
+            <td>
+              <button type="button" class="btn btn-xs btn-outline-primary py-0 px-2"
+                      style="font-size:0.72rem;"
+                      data-bs-toggle="modal" data-bs-target="#updateModal"
+                      data-order-id="{{ o.pk }}"
+                      data-order-nama="{{ o.nama_pemeriksaan }}"
+                      data-order-status="{{ o.status }}"
+                      data-order-hasil="{{ o.hasil_pemeriksaan }}"
+                      data-order-critical="{{ o.is_critical_value|yesno:'1,0' }}"
+                      data-order-catatan="{{ o.critical_value_catatan }}">
+                <i class="bi bi-pencil-square"></i>
+              </button>
+            </td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="9" class="text-center text-muted py-4">Tidak ada order laboratorium{% if status_filter %} dengan status ini{% endif %}.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<!-- Modal Update Order -->
+<div class="modal fade" id="updateModal" tabindex="-1" aria-labelledby="updateModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <form id="updateOrderForm" method="post" action="">
+        {% csrf_token %}
+        <div class="modal-header py-2">
+          <h6 class="modal-title" id="updateModalLabel"><i class="bi bi-clipboard2-pulse-fill text-warning me-1"></i> Update Hasil Lab</h6>
+          <button type="button" class="btn-close btn-sm" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <p class="fw-semibold mb-2" id="updateOrderNama"></p>
+
+          <div class="mb-3">
+            <label class="form-label form-label-sm">Status Order</label>
+            <select name="status" class="form-select form-select-sm" id="updateStatus">
+              <option value="ORDERED">Pending / Terkirim</option>
+              <option value="PROSES">Dalam Pemeriksaan</option>
+              <option value="SELESAI">Selesai / Hasil Tersedia</option>
+            </select>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label form-label-sm">Hasil Pemeriksaan</label>
+            <textarea name="hasil_pemeriksaan" class="form-control form-control-sm" id="updateHasil" rows="3"
+                      placeholder="Isi nilai hasil, satuan, rentang normal..."></textarea>
+          </div>
+
+          <div class="mb-2">
+            <div class="form-check form-switch">
+              <input class="form-check-input" type="checkbox" name="is_critical_value" value="1"
+                     id="updateCritical" role="switch">
+              <label class="form-check-label small" for="updateCritical">
+                <i class="bi bi-exclamation-triangle-fill text-danger"></i> Tandai sebagai Nilai Kritis
+              </label>
+            </div>
+          </div>
+
+          <div class="mb-0" id="catatanKritisWrapper" style="display:none;">
+            <label class="form-label form-label-sm">Catatan Nilai Kritis</label>
+            <input type="text" name="critical_value_catatan" class="form-control form-control-sm" 
+                   id="updateCatatan" placeholder="Contoh: Hb 5.2 g/dL — krisis">
+          </div>
+        </div>
+        <div class="modal-footer py-2">
+          <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal">Batal</button>
+          <button type="submit" class="btn btn-sm btn-primary"><i class="bi bi-check-lg me-1"></i>Simpan</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+const updateModal = document.getElementById('updateModal');
+updateModal.addEventListener('show.bs.modal', function(e) {
+  const btn = e.relatedTarget;
+  const pk = btn.dataset.orderId;
+  document.getElementById('updateOrderForm').action = `/pasien/order-penunjang/${pk}/update/`;
+  document.getElementById('updateOrderNama').textContent = btn.dataset.orderNama;
+  document.getElementById('updateStatus').value = btn.dataset.orderStatus;
+  document.getElementById('updateHasil').value = btn.dataset.orderHasil;
+  const isCritical = btn.dataset.orderCritical === '1';
+  document.getElementById('updateCritical').checked = isCritical;
+  document.getElementById('updateCatatan').value = btn.dataset.orderCatatan || '';
+  document.getElementById('catatanKritisWrapper').style.display = isCritical ? 'block' : 'none';
+});
+document.getElementById('updateCritical').addEventListener('change', function() {
+  document.getElementById('catatanKritisWrapper').style.display = this.checked ? 'block' : 'none';
+});
+</script>
+{% endblock %}

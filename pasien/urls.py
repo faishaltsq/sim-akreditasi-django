@@ -47,4 +47,7 @@ urlpatterns = [
     path('kunjungan/<int:pk>/cetak-sep/', views.cetak_sep, name='cetak_sep'),
     path('kunjungan/<int:pk>/cetak-spri/', views.cetak_spri, name='cetak_spri'),
     path('kunjungan/<int:pk>/cetak-skdp/', views.cetak_skdp, name='cetak_skdp'),
+    # ── Laboratorium & LIS ──
+    path('laboratorium/', views.laboratorium_dashboard, name='laboratorium_dashboard'),
+    path('order-penunjang/<int:pk>/update/', views.order_penunjang_update, name='order_penunjang_update'),
 ]

@@ -1,9 +1,11 @@
 """Views Manajemen Pasien — Dashboard, Daftar, Detail, Form."""
 from django.shortcuts import render, redirect, get_object_or_404
+from django.urls import reverse
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.db.models import Count, Avg, Sum, Q
 from django.http import HttpResponse, JsonResponse
+from .decorators import require_patient_module
 from django.utils import timezone
 from datetime import timedelta
 
@@ -363,6 +365,7 @@ def discharge_proses(request, kunjungan_pk):
 
 
 @login_required
+@require_patient_module('ranap')
 def bed_management(request):
     ruangan_list = Ruangan.objects.prefetch_related('beds').order_by('jenis', 'kelas', 'kode')
     total_bed    = Bed.objects.exclude(status='TIDAK_AKTIF').count()
@@ -489,6 +492,7 @@ def resep_buat(request, kunjungan_pk):
 
 
 @login_required
+@require_patient_module('farmasi')
 def farmasi_antrean(request):
     """Halaman operasional Farmasi/Depo: Antrean Resep, Telaah, Dispensing & Penyerahan."""
     status_filter = request.GET.get('status', 'AKTIF')
@@ -635,6 +639,7 @@ def generate_nomor_antrean(jenis, poliklinik=''):
 # ── DASBOR KHUSUS PENDAFTARAN ─────────────────────────────────────────────────
 
 @login_required
+@require_patient_module('pendaftaran')
 def pendaftaran_dashboard(request):
     """Dedicated Front-Office Registration & Routing Desk."""
     today = timezone.localdate()
@@ -746,6 +751,7 @@ def pendaftaran_route(request, pk):
 # ── DASBOR IGD ───────────────────────────────────────────────────────────────
 
 @login_required
+@require_patient_module('igd')
 def igd_dashboard(request):
     """Dedicated Emergency Department (IGD) Clinical Dashboard with Dwell-Time."""
     triage_filter = request.GET.get('triage', '')
@@ -831,6 +837,7 @@ def igd_ttv_update(request, pk):
 # ── DASBOR POLI RAWAT JALAN ───────────────────────────────────────────────────
 
 @login_required
+@require_patient_module('rajal')
 def rajal_dashboard(request):
     """Dedicated Outpatient Clinics (Poli Rawat Jalan) Dashboard."""
     poli_filter = request.GET.get('poli', '')
@@ -1282,6 +1289,52 @@ def cetak_general_consent(request, pk):
         'petugas': request.user,
         'now': timezone.now()
     })
+
+
+# ── DASBOR LABORATORIUM & LIS ────────────────────────────────────────────────
+
+@login_required
+@require_patient_module('laboratorium')
+def laboratorium_dashboard(request):
+    """Dashboard Worklist Laboratorium: order penunjang, nilai kritis, verifikasi hasil."""
+    status_filter = request.GET.get('status', '')
+    orders_qs = OrderPenunjang.objects.filter(
+        jenis='LAB'
+    ).select_related('kunjungan__pasien').order_by('-created_at')
+
+    if status_filter:
+        orders_qs = orders_qs.filter(status=status_filter)
+
+    try:
+        critical_orders = list(OrderPenunjang.objects.filter(
+            jenis='LAB', is_critical_value=True
+        ).exclude(status='SELESAI').select_related('kunjungan__pasien'))
+    except Exception:
+        critical_orders = []
+
+    return render(request, 'pasien/laboratorium_dashboard.html', {
+        'orders': orders_qs[:100],
+        'critical_orders': critical_orders,
+        'total_pending': orders_qs.filter(status='ORDERED').count(),
+        'total_proses': orders_qs.filter(status='PROSES').count(),
+        'total_selesai': orders_qs.filter(status='SELESAI').count(),
+        'status_filter': status_filter,
+    })
+
+
+@login_required
+@require_patient_module('laboratorium')
+def order_penunjang_update(request, pk):
+    """Update status, hasil, dan flag critical value order penunjang Lab."""
+    order = get_object_or_404(OrderPenunjang, pk=pk)
+    if request.method == 'POST':
+        order.status = request.POST.get('status', order.status)
+        order.hasil_pemeriksaan = request.POST.get('hasil_pemeriksaan', order.hasil_pemeriksaan)
+        order.is_critical_value = request.POST.get('is_critical_value') == '1'
+        order.critical_value_catatan = request.POST.get('critical_value_catatan', '')
+        order.save()
+        messages.success(request, f'Order #{order.pk} ({order.nama_pemeriksaan}) berhasil diperbarui.')
+    return redirect(request.META.get('HTTP_REFERER', reverse('pasien:laboratorium_dashboard')))
 
 
 
