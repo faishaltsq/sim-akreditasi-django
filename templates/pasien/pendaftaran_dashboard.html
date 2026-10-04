@@ -1,0 +1,444 @@
+{% extends "base.html" %}
+
+{% block title %}Dasbor Pendaftaran & Admisi — ARIMA{% endblock %}
+{% block page_title %}Dasbor Pendaftaran & Admisi{% endblock %}
+{% block page_subtitle %}Front Office & Routing Pelayanan Klinis — RS MonsisKami{% endblock %}
+
+{% block extra_css %}
+<style>
+    .kpi-card {
+        background: #fff; border: 1px solid #e2e8f0; border-radius: .75rem;
+        padding: 1.1rem 1.2rem; box-shadow: 0 1px 3px rgba(0,0,0,.04);
+        height: 100%; position: relative; overflow: hidden;
+    }
+    .kpi-card::before {
+        content: ''; position: absolute; top: 0; left: 0;
+        width: 4px; height: 100%; background: #0d9488;
+    }
+    .kpi-card.border-red::before { background: #dc2626; }
+    .kpi-card.border-blue::before { background: #2563eb; }
+    .kpi-card.border-green::before { background: #16a34a; }
+    .kpi-label { font-size: .68rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: #64748b; }
+    .kpi-value { font-size: 1.85rem; font-weight: 800; font-family: 'JetBrains Mono', monospace; color: #0f172a; line-height: 1.1; margin: .3rem 0; }
+    .kpi-sub { font-size: .72rem; color: #64748b; }
+    .dest-card {
+        border: 2px solid #e2e8f0; border-radius: .75rem; padding: 1rem; cursor: pointer; transition: all .2s;
+    }
+    .dest-card:hover { border-color: #cbd5e1; background: #f8fafc; }
+    .dest-card.selected-igd { border-color: #dc2626; background: #fef2f2; }
+    .dest-card.selected-rajal { border-color: #2563eb; background: #eff6ff; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid p-0">
+
+    <!-- HERO BANNER -->
+    <div class="card border-0 shadow-sm mb-4 overflow-hidden" style="border-radius: 1rem;">
+        <div class="card-body p-0">
+            <div class="d-flex align-items-center" style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0d9488 100%); min-height: 105px;">
+                <div class="d-flex align-items-center justify-content-center flex-shrink-0 px-4 px-md-5" style="min-height:105px;">
+                    <i class="bi bi-person-badge text-white" style="font-size: 2.8rem; opacity: .9;"></i>
+                </div>
+                <div class="py-3 pe-4">
+                    <h2 class="fw-bold text-white mb-1" style="font-size: 1.7rem; letter-spacing: -.03em; line-height: 1.1;">
+                        Dasbor Pendaftaran &amp; Admisi
+                    </h2>
+                    <p class="text-white-50 mb-0" style="font-size: .82rem;">
+                        Registrasi Pasien Baru &bull; Routing Langsung ke IGD atau Poliklinik Rawat Jalan &bull; RS MonsisKami
+                    </p>
+                </div>
+                <div class="ms-auto pe-4 d-none d-md-block">
+                    <a href="{% url 'pasien:pasien_baru' %}" class="btn btn-light btn-sm fw-semibold shadow-sm">
+                        <i class="bi bi-person-plus-fill me-1 text-primary"></i> Master Pasien Baru
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 4 KPI CARDS ROW -->
+    <div class="row g-3 mb-4">
+        <div class="col-6 col-lg-3">
+            <div class="kpi-card">
+                <div class="kpi-label">Total Terdaftar Hari Ini</div>
+                <div class="kpi-value">{{ total_hari_ini }}</div>
+                <div class="kpi-sub">Seluruh Kunjungan Hari Ini</div>
+            </div>
+        </div>
+        <div class="col-6 col-lg-3">
+            <div class="kpi-card border-red">
+                <div class="kpi-label">Diarahkan ke IGD</div>
+                <div class="kpi-value text-danger">{{ ke_igd }}</div>
+                <div class="kpi-sub">Gawat Darurat / Triage</div>
+            </div>
+        </div>
+        <div class="col-6 col-lg-3">
+            <div class="kpi-card border-blue">
+                <div class="kpi-label">Diarahkan ke Rajal</div>
+                <div class="kpi-value text-primary">{{ ke_rajal }}</div>
+                <div class="kpi-sub">Poli Spesialis / Umum</div>
+            </div>
+        </div>
+        <div class="col-6 col-lg-3">
+            <div class="kpi-card border-green">
+                <div class="kpi-label">Masuk Rawat Inap</div>
+                <div class="kpi-value text-success">{{ ke_ranap }}</div>
+                <div class="kpi-sub">Admisi Bangsal / ICU</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- REGISTRASI & ROUTING CEPAT -->
+    <div class="card border-0 shadow-sm mb-4" style="border-radius: .75rem;">
+        <div class="card-header bg-white py-3 border-bottom d-flex align-items-center justify-content-between">
+            <div class="d-flex align-items-center gap-2">
+                <i class="bi bi-ui-checks-grid text-primary fs-5"></i>
+                <h5 class="mb-0 fw-bold" style="font-size: 1.05rem;">Registrasi Kunjungan &amp; Routing Cepat</h5>
+            </div>
+            <span class="badge bg-light text-muted border">Loket Pendaftaran</span>
+        </div>
+        <div class="card-body p-4">
+            <form method="POST" action="{% url 'pasien:kunjungan_baru' %}">
+                {% csrf_token %}
+                <div class="row g-3 mb-3">
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold small">Pilih Pasien <span class="text-danger">*</span></label>
+                        <select name="pasien_id" class="form-select form-select-sm" required id="selectPasien">
+                            <option value="">-- Cari Nama / No. RM Pasien --</option>
+                            {% for p in pasien_list %}
+                            <option value="{{ p.pk }}">{{ p.no_rm }} — {{ p.nama_lengkap }} ({{ p.tanggal_lahir|date:"d/m/Y" }})</option>
+                            {% endfor %}
+                        </select>
+                        <div class="form-text small">Belum terdaftar? <a href="{% url 'pasien:pasien_baru' %}">Tambah Pasien Baru</a></div>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label fw-semibold small">No. Kunjungan <span class="text-danger">*</span></label>
+                        <input type="text" name="no_kunjungan" class="form-control form-control-sm font-monospace"
+                               id="noKunjunganInput" required placeholder="KUNJ-YYYYMMDD-XXXX">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label fw-semibold small">Penjamin <span class="text-danger">*</span></label>
+                        <select name="penjamin" class="form-select form-select-sm" required>
+                            {% for code, label in penjamin_choices %}
+                            <option value="{{ code }}">{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+
+                <div class="row g-3 mb-4">
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold small">Tanggal &amp; Waktu Masuk <span class="text-danger">*</span></label>
+                        <input type="datetime-local" name="tanggal_masuk" class="form-control form-control-sm" id="tglMasukInput" required>
+                    </div>
+                    <div class="col-md-8">
+                        <label class="form-label fw-semibold small">Keluhan Utama / Alasan Masuk</label>
+                        <input type="text" name="catatan_admisi" class="form-control form-control-sm" placeholder="Contoh: Nyeri dada menjalar, demam 3 hari, kontrol rutin...">
+                    </div>
+                </div>
+
+                <!-- PILIHAN ROUTING KLINIS: 1. IGD vs 2. POLI RAWAT JALAN -->
+                <div class="p-3 rounded-3 mb-4" style="background: #f8fafc; border: 1px dashed #cbd5e1;">
+                    <label class="form-label fw-bold text-dark d-block mb-3" style="font-size: .95rem;">
+                        <i class="bi bi-signpost-split-fill me-1 text-primary"></i> Tentukan Alur Pelayanan Pasien:
+                    </label>
+                    <div class="row g-3">
+                        <!-- Pilihan 1: IGD -->
+                        <div class="col-md-6">
+                            <div class="dest-card" id="cardDestIGD" onclick="setRouting('IGD')">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="jenis_kunjungan" id="radioIGD" value="IGD" required onchange="updateRoutingUI()">
+                                    <label class="form-check-label fw-bold text-danger d-block" for="radioIGD">
+                                        <i class="bi bi-heart-pulse-fill me-1"></i> 1. Ke Gawat Darurat (IGD)
+                                    </label>
+                                    <small class="text-muted d-block mt-1">Kondisi darurat, observasi cepat, triage klinis, resusitasi.</small>
+                                </div>
+                                <div id="panelIGD" class="mt-3 pt-3 border-top" style="display: none;">
+                                    <div class="row g-2">
+                                        <div class="col-6">
+                                            <label class="form-label small fw-semibold">Triage Awal</label>
+                                            <select name="triage" class="form-select form-select-sm" id="triageSelect">
+                                                <option value="MERAH">Merah — P1 (Kritis)</option>
+                                                <option value="KUNING" selected>Kuning — P2 (Urgent)</option>
+                                                <option value="HIJAU">Hijau — P3 (Non-Urgent)</option>
+                                                <option value="HITAM">Hitam — P4 (Meninggal)</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-6">
+                                            <label class="form-label small fw-semibold">Dokter Jaga IGD</label>
+                                            <input type="text" name="dpjp" class="form-control form-control-sm" placeholder="dr. Jaga IGD">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Pilihan 2: Poli Rawat Jalan -->
+                        <div class="col-md-6">
+                            <div class="dest-card" id="cardDestRajal" onclick="setRouting('RAJAL')">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="jenis_kunjungan" id="radioRajal" value="RAJAL" onchange="updateRoutingUI()">
+                                    <label class="form-check-label fw-bold text-primary d-block" for="radioRajal">
+                                        <i class="bi bi-hospital-fill me-1"></i> 2. Ke Poli Rawat Jalan (Spesialis)
+                                    </label>
+                                    <small class="text-muted d-block mt-1">Konsultasi dokter spesialis terjadwal, pemeriksaan berkala, kontrol rawat jalan.</small>
+                                </div>
+                                <div id="panelRajal" class="mt-3 pt-3 border-top" style="display: none;">
+                                    <div class="row g-2">
+                                        <div class="col-7">
+                                            <label class="form-label small fw-semibold">Pilih Poliklinik</label>
+                                            <select name="poliklinik" class="form-select form-select-sm" id="poliSelect">
+                                                {% for code, label in poliklinik_choices %}
+                                                <option value="{{ label }}">{{ label }}</option>
+                                                {% endfor %}
+                                            </select>
+                                        </div>
+                                        <div class="col-5">
+                                            <label class="form-label small fw-semibold">DPJP Spesialis</label>
+                                            <input type="text" name="dpjp" class="form-control form-control-sm" placeholder="dr. Spesialis...">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="d-flex align-items-center justify-content-between">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" name="general_consent" value="1" id="consentCheck" checked>
+                        <label class="form-check-label small text-muted" for="consentCheck">
+                            General Consent dan Persetujuan Umum telah ditandatangani pasien / wali
+                        </label>
+                    </div>
+                    <button type="submit" class="btn btn-primary px-4 fw-semibold shadow-sm">
+                        <i class="bi bi-check2-circle me-1"></i> Daftarkan &amp; Teruskan ke Antrean
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- TABEL KUNJUNGAN HARI INI -->
+    <div class="card border-0 shadow-sm" style="border-radius: .75rem;">
+        <div class="card-header bg-white py-3 border-bottom d-flex align-items-center justify-content-between">
+            <div class="d-flex align-items-center gap-2">
+                <i class="bi bi-clock-history text-secondary fs-5"></i>
+                <h5 class="mb-0 fw-bold" style="font-size: 1.05rem;">Daftar Pasien Terdaftar Hari Ini</h5>
+            </div>
+            <span class="badge bg-primary-subtle text-primary fw-semibold">{{ total_hari_ini }} Pasien</span>
+        </div>
+        <div class="card-body p-0">
+            {% if kunjungan_hari_ini %}
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0" style="font-size: .85rem;">
+                    <thead class="table-light text-muted small">
+                        <tr>
+                            <th class="ps-3" style="width: 50px;">No</th>
+                            <th>No. Kunjungan / RM</th>
+                            <th>Nama Pasien</th>
+                            <th>Tujuan Pelayanan</th>
+                            <th>Triage / Poli</th>
+                            <th>Penjamin</th>
+                            <th>DPJP</th>
+                            <th>Jam Masuk</th>
+                            <th>Status</th>
+                            <th class="text-end pe-3">Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for k in kunjungan_hari_ini %}
+                        <tr>
+                            <td class="ps-3 text-muted">{{ forloop.counter }}</td>
+                            <td>
+                                <div class="font-monospace fw-semibold">{{ k.no_kunjungan }}</div>
+                                <small class="text-muted">RM: {{ k.pasien.no_rm }}</small>
+                            </td>
+                            <td>
+                                <a href="{% url 'pasien:pasien_detail' k.pasien.pk %}" class="fw-bold text-decoration-none text-dark">
+                                    {{ k.pasien.nama_lengkap }}
+                                </a>
+                                <div class="small text-muted">{{ k.pasien.get_jenis_kelamin_display }}, {{ k.pasien.usia }} th</div>
+                            </td>
+                            <td>
+                                {% if k.jenis_kunjungan == 'IGD' %}
+                                <span class="badge bg-danger-subtle text-danger fw-semibold px-2 py-1">
+                                    <i class="bi bi-heart-pulse me-1"></i>IGD
+                                </span>
+                                {% elif k.jenis_kunjungan == 'RAJAL' %}
+                                <span class="badge bg-primary-subtle text-primary fw-semibold px-2 py-1">
+                                    <i class="bi bi-hospital me-1"></i>Rawat Jalan
+                                </span>
+                                {% else %}
+                                <span class="badge bg-success-subtle text-success fw-semibold px-2 py-1">
+                                    <i class="bi bi-door-open me-1"></i>Rawat Inap
+                                </span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if k.jenis_kunjungan == 'IGD' and k.triage %}
+                                <span class="badge {% if k.triage == 'MERAH' %}bg-danger{% elif k.triage == 'KUNING' %}bg-warning text-dark{% elif k.triage == 'HIJAU' %}bg-success{% else %}bg-dark{% endif %}">
+                                    {{ k.get_triage_display }}
+                                </span>
+                                {% elif k.poliklinik %}
+                                <span class="text-dark fw-medium">{{ k.poliklinik }}</span>
+                                {% else %}
+                                <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                            <td><span class="badge bg-light text-dark border">{{ k.get_penjamin_display }}</span></td>
+                            <td><small class="text-muted">{{ k.dpjp|default:"-" }}</small></td>
+                            <td><small class="font-monospace text-muted">{{ k.tanggal_masuk|date:"H:i" }}</small></td>
+                            <td>
+                                <span class="badge {% if k.status == 'PULANG' %}bg-secondary{% elif k.status == 'RANAP' %}bg-success{% elif k.status == 'TRIAGE' %}bg-warning text-dark{% else %}bg-info text-dark{% endif %}">
+                                    {{ k.get_status_display }}
+                                </span>
+                            </td>
+                            <td class="text-end pe-3">
+                                <div class="btn-group btn-group-sm">
+                                    <a href="{% url 'pasien:kunjungan_detail' k.pk %}" class="btn btn-outline-secondary" title="Detail Rekam Medis">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+                                    <button class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#modalRoute{{ k.pk }}" title="Ubah Routing">
+                                        <i class="bi bi-arrow-left-right"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+
+                        <!-- MODAL ROUTING ULANG -->
+                        <div class="modal fade" id="modalRoute{{ k.pk }}" tabindex="-1">
+                            <div class="modal-dialog modal-dialog-centered">
+                                <div class="modal-content">
+                                    <form method="POST" action="{% url 'pasien:pendaftaran_route' k.pk %}">
+                                        {% csrf_token %}
+                                        <div class="modal-header">
+                                            <h6 class="modal-title fw-bold">Routing Ulang — {{ k.pasien.nama_lengkap }}</h6>
+                                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                        </div>
+                                        <div class="modal-body">
+                                            <p class="small text-muted mb-3">Arahkan ulang pasien ini ke instalasi gawat darurat atau poliklinik spesialis yang sesuai.</p>
+                                            <div class="mb-3">
+                                                <label class="form-label small fw-semibold">Pilih Unit Tujuan</label>
+                                                <div class="form-check mb-2">
+                                                    <input class="form-check-input" type="radio" name="tujuan" value="IGD" id="modTujuanIGD{{ k.pk }}" {% if k.jenis_kunjungan == 'IGD' %}checked{% endif %} onchange="toggleModalRoute('{{ k.pk }}', 'IGD')">
+                                                    <label class="form-check-label fw-bold text-danger" for="modTujuanIGD{{ k.pk }}">
+                                                        1. Gawat Darurat (IGD)
+                                                    </label>
+                                                </div>
+                                                <div class="form-check">
+                                                    <input class="form-check-input" type="radio" name="tujuan" value="RAJAL" id="modTujuanRajal{{ k.pk }}" {% if k.jenis_kunjungan == 'RAJAL' %}checked{% endif %} onchange="toggleModalRoute('{{ k.pk }}', 'RAJAL')">
+                                                    <label class="form-check-label fw-bold text-primary" for="modTujuanRajal{{ k.pk }}">
+                                                        2. Poli Rawat Jalan
+                                                    </label>
+                                                </div>
+                                            </div>
+                                            <div id="modGroupIGD{{ k.pk }}" class="mb-3" {% if k.jenis_kunjungan != 'IGD' %}style="display:none;"{% endif %}>
+                                                <label class="form-label small fw-semibold">Triage IGD</label>
+                                                <select name="triage" class="form-select form-select-sm">
+                                                    {% for code, label in triage_choices %}
+                                                    <option value="{{ code }}" {% if k.triage == code %}selected{% endif %}>{{ label }}</option>
+                                                    {% endfor %}
+                                                </select>
+                                            </div>
+                                            <div id="modGroupRajal{{ k.pk }}" class="mb-3" {% if k.jenis_kunjungan == 'IGD' %}style="display:none;"{% endif %}>
+                                                <label class="form-label small fw-semibold">Poliklinik Spesialis</label>
+                                                <select name="poliklinik" class="form-select form-select-sm">
+                                                    {% for code, label in poliklinik_choices %}
+                                                    <option value="{{ code }}" {% if k.poliklinik == label %}selected{% endif %}>{{ label }}</option>
+                                                    {% endfor %}
+                                                </select>
+                                            </div>
+                                            <div class="mb-3">
+                                                <label class="form-label small fw-semibold">DPJP / Dokter Jaga</label>
+                                                <input type="text" name="dpjp" class="form-control form-control-sm" value="{{ k.dpjp }}">
+                                            </div>
+                                        </div>
+                                        <div class="modal-footer">
+                                            <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Batal</button>
+                                            <button type="submit" class="btn btn-primary btn-sm">Simpan &amp; Arahkan</button>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="text-center py-5">
+                <i class="bi bi-inbox text-muted" style="font-size: 2.5rem;"></i>
+                <p class="text-muted mt-2 mb-0">Belum ada pendaftaran pasien untuk hari ini.</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+</div>
+
+<script>
+    // Auto-generate No. Kunjungan format
+    document.addEventListener('DOMContentLoaded', function() {
+        const now = new Date();
+        const yyyy = now.getFullYear();
+        const mm = String(now.getMonth() + 1).padStart(2, '0');
+        const dd = String(now.getDate()).padStart(2, '0');
+        const rand = Math.floor(1000 + Math.random() * 9000);
+        const prefix = 'KUNJ-' + yyyy + mm + dd + '-' + rand;
+        const input = document.getElementById('noKunjunganInput');
+        if (input && !input.value) {
+            input.value = prefix;
+        }
+
+        // Set default datetime-local
+        const localIso = now.toISOString().slice(0, 16);
+        const tglInput = document.getElementById('tglMasukInput');
+        if (tglInput && !tglInput.value) {
+            tglInput.value = localIso;
+        }
+    });
+
+    function setRouting(type) {
+        if (type === 'IGD') {
+            document.getElementById('radioIGD').checked = true;
+        } else {
+            document.getElementById('radioRajal').checked = true;
+        }
+        updateRoutingUI();
+    }
+
+    function updateRoutingUI() {
+        const isIGD = document.getElementById('radioIGD').checked;
+        const panelIGD = document.getElementById('panelIGD');
+        const panelRajal = document.getElementById('panelRajal');
+        const cardIGD = document.getElementById('cardDestIGD');
+        const cardRajal = document.getElementById('cardDestRajal');
+
+        if (isIGD) {
+            panelIGD.style.display = 'block';
+            panelRajal.style.display = 'none';
+            cardIGD.classList.add('selected-igd');
+            cardRajal.classList.remove('selected-rajal');
+        } else {
+            panelIGD.style.display = 'none';
+            panelRajal.style.display = 'block';
+            cardRajal.classList.add('selected-rajal');
+            cardIGD.classList.remove('selected-igd');
+        }
+    }
+
+    function toggleModalRoute(pk, type) {
+        const groupIGD = document.getElementById('modGroupIGD' + pk);
+        const groupRajal = document.getElementById('modGroupRajal' + pk);
+        if (type === 'IGD') {
+            groupIGD.style.display = 'block';
+            groupRajal.style.display = 'none';
+        } else {
+            groupIGD.style.display = 'none';
+            groupRajal.style.display = 'block';
+        }
+    }
+</script>
+{% endblock %}

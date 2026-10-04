@@ -1,0 +1,295 @@
+{% extends "base.html" %}
+
+{% block title %}Dasbor Gawat Darurat (IGD) — ARIMA{% endblock %}
+{% block page_title %}Dasbor Gawat Darurat (IGD){% endblock %}
+{% block page_subtitle %}Triage, Pelayanan Cito &amp; Disposisi Pasien — RS MonsisKami{% endblock %}
+
+{% block extra_css %}
+<style>
+    .triage-card {
+        border-radius: .75rem; padding: 1.1rem 1.2rem; color: #fff;
+        transition: transform .15s, box-shadow .15s; text-decoration: none; display: block;
+    }
+    .triage-card:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,.15); color: #fff; }
+    .triage-card.active-ring { ring: 3px solid rgba(0,0,0,.3); outline: 3px solid #0f172a; }
+    .triage-val { font-size: 2rem; font-weight: 800; font-family: 'JetBrains Mono', monospace; line-height: 1; }
+    .triage-lbl { font-size: .75rem; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; opacity: .9; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid p-0">
+
+    <!-- HERO BANNER -->
+    <div class="card border-0 shadow-sm mb-4 overflow-hidden" style="border-radius: 1rem;">
+        <div class="card-body p-0">
+            <div class="d-flex align-items-center" style="background: linear-gradient(135deg, #450a0a 0%, #7f1d1d 40%, #b91c1c 100%); min-height: 105px;">
+                <div class="d-flex align-items-center justify-content-center flex-shrink-0 px-4 px-md-5" style="min-height:105px;">
+                    <i class="bi bi-heart-pulse-fill text-white" style="font-size: 2.8rem; opacity: .95;"></i>
+                </div>
+                <div class="py-3 pe-4">
+                    <h2 class="fw-bold text-white mb-1" style="font-size: 1.7rem; letter-spacing: -.03em; line-height: 1.1;">
+                        Dasbor Pelayanan Gawat Darurat (IGD)
+                    </h2>
+                    <p class="text-white-50 mb-0" style="font-size: .82rem;">
+                        Triage Klinis 4 Level &bull; Keputusan Disposisi: Pulang (Discharge) atau Admisi Rawat Inap &bull; RS MonsisKami
+                    </p>
+                </div>
+                <div class="ms-auto pe-4 d-none d-md-block">
+                    <a href="{% url 'pasien:pendaftaran_dashboard' %}" class="btn btn-outline-light btn-sm fw-semibold">
+                        <i class="bi bi-plus-circle me-1"></i> Pendaftaran Baru
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 4 LEVEL TRIAGE KPI -->
+    <div class="row g-3 mb-4">
+        <div class="col-6 col-lg-3">
+            <a href="?triage=MERAH" class="triage-card bg-danger shadow-sm {% if triage_filter == 'MERAH' %}active-ring{% endif %}">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <span class="triage-lbl">P1 — Resusitasi (Kritis)</span>
+                    <i class="bi bi-lightning-charge-fill fs-5"></i>
+                </div>
+                <div class="triage-val">{{ count_merah }}</div>
+                <small class="opacity-75" style="font-size: .72rem;">Ancaman Nyawa Segera</small>
+            </a>
+        </div>
+        <div class="col-6 col-lg-3">
+            <a href="?triage=KUNING" class="triage-card bg-warning text-dark shadow-sm {% if triage_filter == 'KUNING' %}active-ring{% endif %}">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <span class="triage-lbl text-dark">P2 — Urgent (Darurat)</span>
+                    <i class="bi bi-exclamation-triangle-fill fs-5 text-dark"></i>
+                </div>
+                <div class="triage-val text-dark">{{ count_kuning }}</div>
+                <small class="text-dark opacity-75" style="font-size: .72rem;">Potensi Perburukan Cepat</small>
+            </a>
+        </div>
+        <div class="col-6 col-lg-3">
+            <a href="?triage=HIJAU" class="triage-card bg-success shadow-sm {% if triage_filter == 'HIJAU' %}active-ring{% endif %}">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <span class="triage-lbl">P3 — Non-Urgent</span>
+                    <i class="bi bi-shield-check fs-5"></i>
+                </div>
+                <div class="triage-val">{{ count_hijau }}</div>
+                <small class="opacity-75" style="font-size: .72rem;">Kondisi Stabil / Ringan</small>
+            </a>
+        </div>
+        <div class="col-6 col-lg-3">
+            <a href="?triage=HITAM" class="triage-card bg-dark shadow-sm {% if triage_filter == 'HITAM' %}active-ring{% endif %}">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <span class="triage-lbl">P4 — Expectant</span>
+                    <i class="bi bi-x-circle-fill fs-5"></i>
+                </div>
+                <div class="triage-val">{{ count_hitam }}</div>
+                <small class="opacity-75" style="font-size: .72rem;">Meninggal / DoA</small>
+            </a>
+        </div>
+    </div>
+
+    <!-- FILTER TABS & DAFTAR PASIEN AKTIF DI IGD -->
+    <div class="card border-0 shadow-sm" style="border-radius: .75rem;">
+        <div class="card-header bg-white py-3 border-bottom d-flex align-items-center justify-content-between flex-wrap gap-2">
+            <div class="d-flex align-items-center gap-2">
+                <i class="bi bi-person-lines-fill text-danger fs-5"></i>
+                <h5 class="mb-0 fw-bold" style="font-size: 1.05rem;">Pasien Sedang Berada di IGD</h5>
+            </div>
+            <div class="btn-group btn-group-sm">
+                <a href="{% url 'pasien:igd_dashboard' %}" class="btn {% if not triage_filter %}btn-dark{% else %}btn-outline-secondary{% endif %}">
+                    Semua Triage ({{ pasien_igd_list|length }})
+                </a>
+                <a href="?triage=MERAH" class="btn {% if triage_filter == 'MERAH' %}btn-danger{% else %}btn-outline-danger{% endif %}">
+                    Merah ({{ count_merah }})
+                </a>
+                <a href="?triage=KUNING" class="btn {% if triage_filter == 'KUNING' %}btn-warning text-dark{% else %}btn-outline-warning text-dark{% endif %}">
+                    Kuning ({{ count_kuning }})
+                </a>
+                <a href="?triage=HIJAU" class="btn {% if triage_filter == 'HIJAU' %}btn-success{% else %}btn-outline-success{% endif %}">
+                    Hijau ({{ count_hijau }})
+                </a>
+            </div>
+        </div>
+        <div class="card-body p-0">
+            {% if pasien_igd_list %}
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0" style="font-size: .85rem;">
+                    <thead class="table-light text-muted small">
+                        <tr>
+                            <th class="ps-3">Triage</th>
+                            <th>No. Kunjungan / RM</th>
+                            <th>Nama Pasien</th>
+                            <th>Keluhan Awal / Diagnosa Masuk</th>
+                            <th>DPJP Jaga</th>
+                            <th>Waktu Masuk</th>
+                            <th class="text-center" style="min-width: 250px;">Keputusan Disposisi Klinis</th>
+                            <th class="text-end pe-3">Detail</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for k in pasien_igd_list %}
+                        <tr>
+                            <td class="ps-3">
+                                {% if k.triage == 'MERAH' %}
+                                <span class="badge bg-danger px-2 py-1"><i class="bi bi-exclamation-octagon-fill me-1"></i>MERAH (P1)</span>
+                                {% elif k.triage == 'KUNING' %}
+                                <span class="badge bg-warning text-dark px-2 py-1"><i class="bi bi-exclamation-triangle-fill me-1"></i>KUNING (P2)</span>
+                                {% elif k.triage == 'HIJAU' %}
+                                <span class="badge bg-success px-2 py-1"><i class="bi bi-check-circle-fill me-1"></i>HIJAU (P3)</span>
+                                {% else %}
+                                <span class="badge bg-dark px-2 py-1">HITAM (P4)</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="font-monospace fw-semibold">{{ k.no_kunjungan }}</div>
+                                <small class="text-muted">RM: {{ k.pasien.no_rm }}</small>
+                            </td>
+                            <td>
+                                <a href="{% url 'pasien:pasien_detail' k.pasien.pk %}" class="fw-bold text-decoration-none text-dark">
+                                    {{ k.pasien.nama_lengkap }}
+                                </a>
+                                <div class="small text-muted">{{ k.pasien.get_jenis_kelamin_display }}, {{ k.pasien.usia }} th</div>
+                            </td>
+                            <td>
+                                <span class="text-dark">{{ k.catatan_admisi|default:k.diagnosa_masuk|default:"Observasi IGD" }}</span>
+                            </td>
+                            <td><small class="text-muted">{{ k.dpjp|default:"dr. Jaga IGD" }}</small></td>
+                            <td>
+                                <div class="font-monospace text-muted">{{ k.tanggal_masuk|date:"H:i" }}</div>
+                                <small class="text-muted">{{ k.tanggal_masuk|timesince }} lalu</small>
+                            </td>
+                            <td class="text-center">
+                                <div class="d-inline-flex gap-2">
+                                    <!-- PILIHAN 1: PULANG (DISCHARGE) -->
+                                    <button class="btn btn-outline-success btn-sm fw-semibold" data-bs-toggle="modal" data-bs-target="#modalPulang{{ k.pk }}">
+                                        <i class="bi bi-box-arrow-right me-1"></i> 1. Pulang
+                                    </button>
+
+                                    <!-- PILIHAN 2: RAWAT INAP (RANAP) -->
+                                    <button class="btn btn-primary btn-sm fw-semibold" data-bs-toggle="modal" data-bs-target="#modalRanap{{ k.pk }}">
+                                        <i class="bi bi-hospital me-1"></i> 2. Rawat Inap
+                                    </button>
+                                </div>
+                            </td>
+                            <td class="text-end pe-3">
+                                <a href="{% url 'pasien:kunjungan_detail' k.pk %}" class="btn btn-sm btn-outline-secondary" title="Buka Rekam Medis">
+                                    <i class="bi bi-folder2-open"></i>
+                                </a>
+                            </td>
+                        </tr>
+
+                        <!-- MODAL DISPOSISI: 1. PULANG (DISCHARGE) -->
+                        <div class="modal fade" id="modalPulang{{ k.pk }}" tabindex="-1">
+                            <div class="modal-dialog modal-dialog-centered">
+                                <div class="modal-content">
+                                    <form method="POST" action="{% url 'pasien:kunjungan_disposisi' k.pk %}">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="aksi" value="PULANG">
+                                        <input type="hidden" name="next_url" value="pasien:igd_dashboard">
+                                        <div class="modal-header bg-success-subtle">
+                                            <h6 class="modal-title fw-bold text-success">
+                                                <i class="bi bi-box-arrow-right me-1"></i> Disposisi Pulang — {{ k.pasien.nama_lengkap }}
+                                            </h6>
+                                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                        </div>
+                                        <div class="modal-body">
+                                            <div class="mb-3">
+                                                <label class="form-label small fw-semibold">Kondisi Saat Pulang <span class="text-danger">*</span></label>
+                                                <select name="kondisi_pulang" class="form-select form-select-sm" required>
+                                                    <option value="MEMBAIK" selected>Kondisi Membaik / Stabil</option>
+                                                    <option value="SEMBUH">Sembuh</option>
+                                                    <option value="APS">Atas Permintaan Sendiri (APS)</option>
+                                                    <option value="RUJUK">Dirujuk ke RS Lain</option>
+                                                    <option value="MENINGGAL">Meninggal Dunia</option>
+                                                </select>
+                                            </div>
+                                            <div class="mb-3">
+                                                <label class="form-label small fw-semibold">Resume Medis Singkat / Terapi IGD <span class="text-danger">*</span></label>
+                                                <textarea name="resume_medis" class="form-control form-control-sm" rows="3" required placeholder="Keluhan teratasi, observasi TTV stabil, obat simptomatik diberikan..."></textarea>
+                                            </div>
+                                            <div class="mb-3">
+                                                <label class="form-label small fw-semibold">Obat Pulang (Resep)</label>
+                                                <input type="text" name="obat_pulang" class="form-control form-control-sm" placeholder="Contoh: Paracetamol 3x500mg, Antasida 3x1...">
+                                            </div>
+                                            <div class="mb-3">
+                                                <label class="form-label small fw-semibold">Edukasi &amp; Anjuran Kontrol</label>
+                                                <input type="text" name="edukasi_pulang" class="form-control form-control-sm" placeholder="Istirahat cukup, segera ke IGD bila demam tinggi / sesak bertambah">
+                                            </div>
+                                        </div>
+                                        <div class="modal-footer">
+                                            <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Batal</button>
+                                            <button type="submit" class="btn btn-success btn-sm px-3">
+                                                <i class="bi bi-check-lg me-1"></i> Proses Pulangkan Pasien
+                                            </button>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- MODAL DISPOSISI: 2. RAWAT INAP (RANAP) -->
+                        <div class="modal fade" id="modalRanap{{ k.pk }}" tabindex="-1">
+                            <div class="modal-dialog modal-dialog-centered">
+                                <div class="modal-content">
+                                    <form method="POST" action="{% url 'pasien:kunjungan_disposisi' k.pk %}">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="aksi" value="RANAP">
+                                        <input type="hidden" name="next_url" value="pasien:igd_dashboard">
+                                        <div class="modal-header bg-primary-subtle">
+                                            <h6 class="modal-title fw-bold text-primary">
+                                                <i class="bi bi-hospital me-1"></i> Admisi Rawat Inap — {{ k.pasien.nama_lengkap }}
+                                            </h6>
+                                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                        </div>
+                                        <div class="modal-body">
+                                            <div class="mb-3">
+                                                <label class="form-label small fw-semibold">Pilih Kamar &amp; Bed Tersedia <span class="text-danger">*</span></label>
+                                                <select name="bed_id" class="form-select form-select-sm" required>
+                                                    <option value="">-- Pilih Ruangan / Bed --</option>
+                                                    {% for b in available_beds %}
+                                                    <option value="{{ b.pk }}">
+                                                        [{{ b.ruangan.get_kelas_display }}] {{ b.ruangan.nama }} — Bed {{ b.kode_bed }}
+                                                    </option>
+                                                    {% empty %}
+                                                    <option value="" disabled>Tidak ada bed kosong saat ini!</option>
+                                                    {% endfor %}
+                                                </select>
+                                                <div class="form-text small text-muted">
+                                                    Bed yang dipilih akan otomatis terkunci menjadi status <strong>TERISI</strong>.
+                                                </div>
+                                            </div>
+                                            <div class="mb-3">
+                                                <label class="form-label small fw-semibold">DPJP Rawat Inap</label>
+                                                <input type="text" name="dpjp" class="form-control form-control-sm" value="{{ k.dpjp }}" placeholder="dr. Penanggung Jawab Ruangan...">
+                                            </div>
+                                            <div class="mb-3">
+                                                <label class="form-label small fw-semibold">Catatan Admisi &amp; Indikasi Rawat Inap</label>
+                                                <textarea name="catatan_admisi" class="form-control form-control-sm" rows="3" placeholder="Indikasi ranap, instruksi awal ruangan, infus/oksigen, puasa..."></textarea>
+                                            </div>
+                                        </div>
+                                        <div class="modal-footer">
+                                            <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Batal</button>
+                                            <button type="submit" class="btn btn-primary btn-sm px-3">
+                                                <i class="bi bi-door-open-fill me-1"></i> Transfer ke Rawat Inap
+                                            </button>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="text-center py-5">
+                <i class="bi bi-heart-pulse text-muted" style="font-size: 2.5rem;"></i>
+                <p class="text-muted mt-2 mb-0">Tidak ada pasien aktif di IGD saat ini.</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+</div>
+{% endblock %}
