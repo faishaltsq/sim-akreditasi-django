@@ -7,7 +7,7 @@ from django.http import HttpResponse, JsonResponse
 from django.utils import timezone
 from datetime import timedelta
 
-from .models import Pasien, KunjunganPasien, Bed, Ruangan, CPPT, AsesmenRisikoKlinis, BillingItem, DischargeRecord, ResepElektronik, ResepDetail, POLIKLINIK_CHOICES
+from .models import Pasien, KunjunganPasien, Bed, Ruangan, CPPT, AsesmenRisikoKlinis, BillingItem, DischargeRecord, ResepElektronik, ResepDetail, OrderPenunjang, POLIKLINIK_CHOICES
 from .pdf_utils import generate_resume_pdf
 from .satusehat import sync_encounter_satusehat, parse_qr_medis
 
@@ -593,6 +593,31 @@ def api_parse_qr(request):
     return JsonResponse({'error': 'POST method required'}, status=405)
 
 
+# ── HELPER ANTREAN ────────────────────────────────────────────────────────────
+
+def generate_nomor_antrean(jenis, poliklinik=''):
+    """Generate daily queue number: IGD-001 or JTG-001, etc."""
+    today = timezone.localdate()
+    if jenis == 'IGD':
+        cnt = KunjunganPasien.objects.filter(tanggal_masuk__date=today, jenis_kunjungan='IGD').count() + 1
+        return f"IGD-{cnt:03d}"
+    
+    # Prefix mapping for clinics
+    prefix_map = {
+        'Jantung': 'JTG', 'Paru': 'PAR', 'Penyakit Dalam': 'INT',
+        'Anak': 'PED', 'Bedah': 'BDH', 'Kandungan': 'OBG',
+        'Mata': 'MTA', 'Saraf': 'SRF', 'Gigi': 'GGI',
+        'THT': 'THT', 'Umum': 'UMM',
+    }
+    pfx = 'POL'
+    for k, v in prefix_map.items():
+        if k.lower() in poliklinik.lower():
+            pfx = v
+            break
+    cnt = KunjunganPasien.objects.filter(tanggal_masuk__date=today, poliklinik__icontains=k if 'k' in locals() else '').count() + 1
+    return f"{pfx}-{cnt:03d}"
+
+
 # ── DASBOR KHUSUS PENDAFTARAN ─────────────────────────────────────────────────
 
 @login_required
@@ -600,6 +625,21 @@ def pendaftaran_dashboard(request):
     """Dedicated Front-Office Registration & Routing Desk."""
     today = timezone.localdate()
     qs_today = KunjunganPasien.objects.filter(tanggal_masuk__date=today).select_related('pasien', 'created_by')
+
+    # Bed availability summary matrix
+    ruangan_list = Ruangan.objects.filter(jenis='RANAP').prefetch_related('beds')
+    bed_matrix = []
+    for r in ruangan_list:
+        total = r.beds.exclude(status='TIDAK_AKTIF').count()
+        tersedia = r.beds.filter(status='TERSEDIA').count()
+        terisi = r.beds.filter(status='TERISI').count()
+        bed_matrix.append({
+            'ruangan': r,
+            'total': total,
+            'tersedia': tersedia,
+            'terisi': terisi,
+            'persen': round((terisi / total) * 100) if total else 0
+        })
 
     ctx = {
         'kunjungan_hari_ini':  qs_today.order_by('-tanggal_masuk')[:100],
@@ -612,8 +652,37 @@ def pendaftaran_dashboard(request):
         'penjamin_choices':    KunjunganPasien.TIPE_PENJAMIN,
         'pasien_recent':       Pasien.objects.order_by('-created_at')[:10],
         'pasien_list':         Pasien.objects.order_by('nama_lengkap'),
+        'bed_matrix':          bed_matrix,
     }
     return render(request, 'pasien/pendaftaran_dashboard.html', ctx)
+
+
+@login_required
+def api_cek_nik(request):
+    """API endpoint to check duplicate NIK / No RM."""
+    nik = request.GET.get('nik', '').strip()
+    no_rm = request.GET.get('no_rm', '').strip()
+    p = None
+    if nik:
+        p = Pasien.objects.filter(nik=nik).first()
+    elif no_rm:
+        p = Pasien.objects.filter(no_rm=no_rm).first()
+    
+    if p:
+        return JsonResponse({
+            'exists': True,
+            'pasien': {
+                'id': p.pk,
+                'no_rm': p.no_rm,
+                'nama': p.nama_lengkap,
+                'nik': p.nik,
+                'tanggal_lahir': p.tanggal_lahir.strftime('%Y-%m-%d'),
+                'jenis_kelamin': p.get_jenis_kelamin_display(),
+                'no_bpjs': p.no_bpjs,
+                'alamat': p.alamat,
+            }
+        })
+    return JsonResponse({'exists': False})
 
 
 @login_required
@@ -623,26 +692,35 @@ def pendaftaran_route(request, pk):
     if request.method == 'POST':
         tujuan = request.POST.get('tujuan')
         dpjp = request.POST.get('dpjp', '')
+        flag = request.POST.get('flag_khusus', 'NORMAL')
         try:
             if tujuan == 'IGD':
                 k.jenis_kunjungan = 'IGD'
                 k.triage = request.POST.get('triage', 'HIJAU')
+                k.flag_khusus = flag
                 k.status = 'TRIAGE'
+                k.status_antrean = 'MENUNGGU'
+                if not k.nomor_antrean:
+                    k.nomor_antrean = generate_nomor_antrean('IGD')
                 if dpjp:
                     k.dpjp = dpjp
                 k.save()
-                messages.success(request, f'Pasien {k.pasien.nama_lengkap} diarahkan ke IGD ({k.get_triage_display()}).')
+                messages.success(request, f'Pasien {k.pasien.nama_lengkap} diarahkan ke IGD ({k.get_triage_display()}) — Antrean: {k.nomor_antrean}.')
                 return redirect('pasien:igd_dashboard')
             elif tujuan == 'RAJAL':
                 poli_dict = dict(POLIKLINIK_CHOICES)
                 poli_key = request.POST.get('poliklinik', '')
                 k.jenis_kunjungan = 'RAJAL'
                 k.poliklinik = poli_dict.get(poli_key, poli_key)
+                k.flag_khusus = flag
                 k.status = 'DAFTAR'
+                k.status_antrean = 'MENUNGGU'
+                if not k.nomor_antrean:
+                    k.nomor_antrean = generate_nomor_antrean('RAJAL', k.poliklinik)
                 if dpjp:
                     k.dpjp = dpjp
                 k.save()
-                messages.success(request, f'Pasien {k.pasien.nama_lengkap} diarahkan ke {k.poliklinik}.')
+                messages.success(request, f'Pasien {k.pasien.nama_lengkap} diarahkan ke {k.poliklinik} — Antrean: {k.nomor_antrean}.')
                 return redirect('pasien:rajal_dashboard')
             else:
                 messages.error(request, 'Pilih tujuan: IGD atau Poli Rawat Jalan.')
@@ -655,7 +733,7 @@ def pendaftaran_route(request, pk):
 
 @login_required
 def igd_dashboard(request):
-    """Dedicated Emergency Department (IGD) Clinical Dashboard."""
+    """Dedicated Emergency Department (IGD) Clinical Dashboard with Dwell-Time."""
     triage_filter = request.GET.get('triage', '')
     qs = KunjunganPasien.objects.filter(
         jenis_kunjungan='IGD',
@@ -688,6 +766,27 @@ def igd_dashboard(request):
     return render(request, 'pasien/igd_dashboard.html', ctx)
 
 
+@login_required
+def igd_ttv_update(request, pk):
+    """Quick TTV & Tindakan ICD-9-CM entry from IGD dashboard."""
+    k = get_object_or_404(KunjunganPasien, pk=pk)
+    if request.method == 'POST':
+        try:
+            k.ttv_sistole = int(request.POST['ttv_sistole']) if request.POST.get('ttv_sistole') else None
+            k.ttv_diastole = int(request.POST['ttv_diastole']) if request.POST.get('ttv_diastole') else None
+            k.ttv_nadi = int(request.POST['ttv_nadi']) if request.POST.get('ttv_nadi') else None
+            k.ttv_rr = int(request.POST['ttv_rr']) if request.POST.get('ttv_rr') else None
+            k.ttv_suhu = float(request.POST['ttv_suhu']) if request.POST.get('ttv_suhu') else None
+            k.ttv_spo2 = int(request.POST['ttv_spo2']) if request.POST.get('ttv_spo2') else None
+            k.icd9_tindakan = request.POST.get('icd9_tindakan', '').strip()
+            k.status = 'ASESMEN'
+            k.save()
+            messages.success(request, f'TTV Pasien {k.pasien.nama_lengkap} berhasil diperbarui.')
+        except Exception as e:
+            messages.error(request, f'Gagal update TTV: {e}')
+    return redirect('pasien:igd_dashboard')
+
+
 # ── DASBOR POLI RAWAT JALAN ───────────────────────────────────────────────────
 
 @login_required
@@ -701,7 +800,7 @@ def rajal_dashboard(request):
 
     if poli_filter:
         qs = qs.filter(poliklinik__icontains=poli_filter)
-    qs = qs.order_by('poliklinik', 'tanggal_masuk')
+    qs = qs.order_by('status_antrean', 'tanggal_masuk')
 
     available_beds = (
         Bed.objects.filter(status='TERSEDIA')
@@ -731,13 +830,89 @@ def rajal_dashboard(request):
     return render(request, 'pasien/rajal_dashboard.html', ctx)
 
 
-# ── DISPOSISI KLINIS (Pulang / Rawat Inap) ───────────────────────────────────
+@login_required
+def rajal_antrean_status(request, pk):
+    """Update Outpatient queue caller status (MENUNGGU/DIPANGGIL/SEDANG_DILAYANI/SELESAI)."""
+    k = get_object_or_404(KunjunganPasien, pk=pk)
+    if request.method == 'POST':
+        st = request.POST.get('status_antrean')
+        if st in ['MENUNGGU', 'DIPANGGIL', 'SEDANG_DILAYANI', 'SELESAI']:
+            k.status_antrean = st
+            if st == 'SEDANG_DILAYANI':
+                k.status = 'ASESMEN'
+            k.save()
+            messages.info(request, f'Status Antrean {k.nomor_antrean} ({k.pasien.nama_lengkap}) diubah ke {k.get_status_antrean_display()}.')
+    return redirect('pasien:rajal_dashboard')
+
+
+@login_required
+def order_penunjang_buat(request, pk):
+    """Direct-entry diagnostic order (Lab / Radiologi) from doctor's desk."""
+    k = get_object_or_404(KunjunganPasien, pk=pk)
+    if request.method == 'POST':
+        jenis = request.POST.get('jenis', 'LAB')
+        nama = request.POST.get('nama_pemeriksaan', '').strip()
+        catatan = request.POST.get('catatan_klinis', '').strip()
+        prioritas = request.POST.get('prioritas', 'RUTIN')
+        if nama:
+            OrderPenunjang.objects.create(
+                kunjungan=k,
+                jenis=jenis,
+                nama_pemeriksaan=nama,
+                catatan_klinis=catatan,
+                prioritas=prioritas,
+                dokter_pengirim=request.user.get_full_name() or request.user.username,
+            )
+            # Automatic billing item
+            base_price = 150000 if jenis == 'LAB' else 250000
+            BillingItem.objects.create(
+                kunjungan=k,
+                kategori='LAB' if jenis == 'LAB' else 'RADIOLOGI',
+                nama_item=f'Pemeriksaan {jenis}: {nama}',
+                kuantitas=1,
+                harga_satuan=base_price,
+                dicatat_oleh=request.user,
+            )
+            messages.success(request, f'Order {jenis} "{nama}" berhasil dikirim & ditambahkan ke billing.')
+        else:
+            messages.error(request, 'Nama pemeriksaan tidak boleh kosong.')
+    back = 'pasien:igd_dashboard' if k.jenis_kunjungan == 'IGD' else 'pasien:rajal_dashboard'
+    return redirect(back)
+
+
+@login_required
+def rajal_soap_simpan(request, pk):
+    """Direct entry SOAP note -> saves into integrated CPPT."""
+    k = get_object_or_404(KunjunganPasien, pk=pk)
+    if request.method == 'POST':
+        s = request.POST.get('subjektif', '').strip()
+        o = request.POST.get('objektif', '').strip()
+        a = request.POST.get('asesmen', '').strip()
+        p = request.POST.get('plan', '').strip()
+        if s or o or a or p:
+            CPPT.objects.create(
+                kunjungan=k,
+                profesi='DOKTER',
+                nama_ppa=request.user.get_full_name() or request.user.username,
+                tanggal=timezone.now(),
+                subjektif=s or '-',
+                objektif=o or '-',
+                asesmen=a or '-',
+                plan=p or '-',
+                verifikasi_dpjp=True,
+            )
+            messages.success(request, f'Catatan SOAP untuk {k.pasien.nama_lengkap} berhasil disimpan ke CPPT.')
+        else:
+            messages.error(request, 'Harap isi minimal salah satu elemen SOAP.')
+    return redirect('pasien:rajal_dashboard')
+
+
+# ── DISPOSISI KLINIS COMPREHENSIVE (IGD & RAJAL) ──────────────────────────────
 
 @login_required
 def kunjungan_disposisi(request, pk):
-    """Unified disposition handler — Pulang (Discharge) or Rawat Inap admission."""
+    """Comprehensive disposition handler — Sembuh, PAPS, Ranap (SPRI), SISRUTE, Meninggal, Konsul."""
     k = get_object_or_404(KunjunganPasien, pk=pk)
-    # Determine where to redirect back to based on visit type
     back = 'pasien:igd_dashboard' if k.jenis_kunjungan == 'IGD' else 'pasien:rajal_dashboard'
     back = request.POST.get('next_url', back)
 
@@ -747,13 +922,37 @@ def kunjungan_disposisi(request, pk):
             if aksi == 'PULANG':
                 k.discharge_patient(
                     kondisi=request.POST.get('kondisi_pulang', 'MEMBAIK'),
-                    resume=request.POST.get('resume_medis', 'Pelayanan selesai.'),
+                    resume=request.POST.get('resume_medis', 'Pelayanan rawat jalan / IGD selesai.'),
                     user=request.user,
                     edukasi=request.POST.get('edukasi_pulang', ''),
                     obat=request.POST.get('obat_pulang', ''),
                     kontrol=request.POST.get('jadwal_kontrol') or None,
                 )
+                k.status_antrean = 'SELESAI'
+                # If SKDP requested
+                if request.POST.get('jadwal_kontrol'):
+                    today_str = timezone.localdate().strftime('%Y%m%d')
+                    k.discharge.skdp_nomor = f"SKDP-{today_str}-{k.pk:04d}"
+                    k.discharge.skdp_diagnosa = request.POST.get('resume_medis', '')[:200]
+                    k.discharge.skdp_terapi = request.POST.get('obat_pulang', '')
+                    k.discharge.save()
+                k.save()
                 messages.success(request, f'Pasien {k.pasien.nama_lengkap} berhasil dipulangkan.')
+
+            elif aksi == 'PAPS':
+                k.discharge_patient(
+                    kondisi='APS',
+                    resume=request.POST.get('resume_medis', 'Pulang Atas Permintaan Sendiri (PAPS).'),
+                    user=request.user,
+                    edukasi='Telah diedukasi risiko perburukan dan penolakan rawat.',
+                )
+                k.status_antrean = 'SELESAI'
+                k.discharge.paps_alasan = request.POST.get('paps_alasan', '')
+                k.discharge.paps_nama_penolak = request.POST.get('paps_nama_penolak', '')
+                k.discharge.save()
+                k.save()
+                messages.warning(request, f'Pasien {k.pasien.nama_lengkap} dipulangkan PAPS (Refusal recorded).')
+
             elif aksi == 'RANAP':
                 bed_id = request.POST.get('bed_id')
                 if not bed_id:
@@ -764,11 +963,100 @@ def kunjungan_disposisi(request, pk):
                     dpjp=request.POST.get('dpjp', k.dpjp),
                     catatan=request.POST.get('catatan_admisi', ''),
                 )
-                messages.success(request, f'Pasien {k.pasien.nama_lengkap} masuk Rawat Inap di {bed_obj}.')
-                back = 'pasien:bed_management'
+                k.status_antrean = 'SELESAI'
+                k.save()
+                messages.success(request, f'Pasien {k.pasien.nama_lengkap} berhasil masuk Rawat Inap di {bed_obj}.')
+                return redirect('pasien:cetak_spri', pk=k.pk)
+
+            elif aksi == 'RUJUK_EKSTERNAL':
+                k.status = 'RUJUK'
+                k.status_antrean = 'SELESAI'
+                k.sisrute_rs_tujuan = request.POST.get('sisrute_rs_tujuan', '')
+                k.sisrute_alasan = request.POST.get('sisrute_alasan', '')
+                if k.bed:
+                    k.bed.status = 'STERILISASI'
+                    k.bed.save()
+                    k.bed = None
+                k.save()
+                messages.info(request, f'Pasien {k.pasien.nama_lengkap} dirujuk keluar ke {k.sisrute_rs_tujuan} (SISRUTE).')
+
+            elif aksi == 'MENINGGAL':
+                from django.utils.dateparse import parse_datetime
+                k.status = 'MENINGGAL'
+                k.status_antrean = 'SELESAI'
+                waktu_str = request.POST.get('waktu_kematian')
+                k.waktu_kematian = parse_datetime(waktu_str) if waktu_str else timezone.now()
+                k.penyebab_kematian = request.POST.get('penyebab_kematian', '')
+                if k.bed:
+                    k.bed.status = 'STERILISASI'
+                    k.bed.save()
+                    k.bed = None
+                k.save()
+                # Create discharge record for mortuary
+                DischargeRecord.objects.update_or_create(
+                    kunjungan=k,
+                    defaults={
+                        'tanggal_discharge': k.waktu_kematian,
+                        'kondisi_pulang': 'MENINGGAL',
+                        'resume_medis': f"Penyebab kematian: {k.penyebab_kematian}",
+                        'status_clearance': 'CLEARANCE',
+                        'dibuat_oleh': request.user,
+                    }
+                )
+                messages.error(request, f'Protokol Pasien Meninggal Dunia tercatat untuk {k.pasien.nama_lengkap}. Notifikasi kamar jenazah diteruskan.')
+
+            elif aksi == 'KONSUL_INTERNAL':
+                target_poli = request.POST.get('konsul_ke_poli')
+                if not target_poli:
+                    raise ValueError('Pilih Poliklinik tujuan konsul.')
+                k.konsul_ke_poli = target_poli
+                k.konsul_catatan = request.POST.get('konsul_catatan', '')
+                k.poliklinik = target_poli
+                k.status_antrean = 'MENUNGGU'
+                k.nomor_antrean = generate_nomor_antrean('RAJAL', target_poli)
+                k.status = 'DAFTAR'
+                k.save()
+                messages.success(request, f'Pasien {k.pasien.nama_lengkap} berhasil dialihkan antrean ke {target_poli} ({k.nomor_antrean}).')
+
             else:
                 messages.error(request, 'Aksi disposisi tidak dikenali.')
         except Exception as e:
             messages.error(request, f'Gagal disposisi: {e}')
     return redirect(back)
+
+
+# ── PRINTABLE VIEWS ───────────────────────────────────────────────────────────
+
+@login_required
+def cetak_gelang(request, pk):
+    """Printable patient identity wristband (thermal standard 25x280mm)."""
+    k = get_object_or_404(KunjunganPasien.objects.select_related('pasien'), pk=pk)
+    return render(request, 'pasien/cetak_gelang.html', {'k': k, 'p': k.pasien})
+
+
+@login_required
+def cetak_sep(request, pk):
+    """Printable BPJS Surat Eligibilitas Peserta (SEP)."""
+    k = get_object_or_404(KunjunganPasien.objects.select_related('pasien'), pk=pk)
+    today_str = timezone.localdate().strftime('%Y%m%d')
+    no_sep = f"0123R001{today_str}000{k.pk}"
+    return render(request, 'pasien/cetak_sep.html', {'k': k, 'p': k.pasien, 'no_sep': no_sep})
+
+
+@login_required
+def cetak_spri(request, pk):
+    """Printable Surat Perintah Rawat Inap (SPRI)."""
+    k = get_object_or_404(KunjunganPasien.objects.select_related('pasien', 'bed__ruangan'), pk=pk)
+    today_str = timezone.localdate().strftime('%Y%m%d')
+    no_spri = f"SPRI-{today_str}-{k.pk:04d}"
+    return render(request, 'pasien/cetak_spri.html', {'k': k, 'p': k.pasien, 'no_spri': no_spri})
+
+
+@login_required
+def cetak_skdp(request, pk):
+    """Printable Surat Keterangan Dalam Perawatan (SKDP / Surat Kontrol)."""
+    k = get_object_or_404(KunjunganPasien.objects.select_related('pasien'), pk=pk)
+    discharge = getattr(k, 'discharge', None)
+    return render(request, 'pasien/cetak_skdp.html', {'k': k, 'p': k.pasien, 'discharge': discharge})
+
 

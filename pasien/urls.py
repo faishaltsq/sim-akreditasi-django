@@ -27,6 +27,16 @@ urlpatterns = [
     path('pendaftaran/', views.pendaftaran_dashboard, name='pendaftaran_dashboard'),
     path('pendaftaran/<int:pk>/route/', views.pendaftaran_route, name='pendaftaran_route'),
     path('igd/', views.igd_dashboard, name='igd_dashboard'),
+    path('igd/kunjungan/<int:pk>/ttv/', views.igd_ttv_update, name='igd_ttv_update'),
     path('rajal/', views.rajal_dashboard, name='rajal_dashboard'),
+    path('rajal/kunjungan/<int:pk>/antrean/', views.rajal_antrean_status, name='rajal_antrean_status'),
+    path('rajal/kunjungan/<int:pk>/soap/', views.rajal_soap_simpan, name='rajal_soap_simpan'),
     path('kunjungan/<int:pk>/disposisi/', views.kunjungan_disposisi, name='kunjungan_disposisi'),
+    path('kunjungan/<int:pk>/order-penunjang/', views.order_penunjang_buat, name='order_penunjang_buat'),
+    # ── Print / Cetak Views ──
+    path('api/cek-nik/', views.api_cek_nik, name='api_cek_nik'),
+    path('kunjungan/<int:pk>/cetak-gelang/', views.cetak_gelang, name='cetak_gelang'),
+    path('kunjungan/<int:pk>/cetak-sep/', views.cetak_sep, name='cetak_sep'),
+    path('kunjungan/<int:pk>/cetak-spri/', views.cetak_spri, name='cetak_spri'),
+    path('kunjungan/<int:pk>/cetak-skdp/', views.cetak_skdp, name='cetak_skdp'),
 ]

@@ -18,6 +18,13 @@
     .poli-pill .badge { font-size: .65rem; }
     .poli-scroll { overflow-x: auto; white-space: nowrap; -ms-overflow-style: none; scrollbar-width: none; }
     .poli-scroll::-webkit-scrollbar { display: none; }
+
+    /* Queue Status Badges */
+    .q-menunggu { background: #fef3c7; color: #92400e; border: 1px solid #fcd34d; padding: .25rem .55rem; border-radius: .35rem; font-size: .72rem; font-weight: 600; }
+    .q-dipanggil { background: #dbeafe; color: #1e40af; border: 1px solid #93c5fd; padding: .25rem .55rem; border-radius: .35rem; font-size: .72rem; font-weight: 600; animation: pulse-q 1.5s infinite; }
+    .q-dilayani { background: #d1fae5; color: #065f46; border: 1px solid #6ee7b7; padding: .25rem .55rem; border-radius: .35rem; font-size: .72rem; font-weight: 600; }
+    .q-selesai { background: #f3f4f6; color: #6b7280; border: 1px solid #d1d5db; padding: .25rem .55rem; border-radius: .35rem; font-size: .72rem; font-weight: 600; text-decoration: line-through; }
+    @keyframes pulse-q { 0%,100%{opacity:1;} 50%{opacity:.5;} }
 </style>
 {% endblock %}
 
@@ -83,15 +90,15 @@
                 <table class="table table-hover align-middle mb-0" style="font-size: .85rem;">
                     <thead class="table-light text-muted small">
                         <tr>
-                            <th class="ps-3" style="width: 50px;">No</th>
-                            <th>No. Kunjungan / RM</th>
+                            <th>No</th>
+                            <th>No. Antrean</th>
                             <th>Nama Pasien</th>
                             <th>Poliklinik</th>
                             <th>Penjamin</th>
-                            <th>Diagnosa / Keluhan</th>
+                            <th>Status Antrean</th>
                             <th>DPJP</th>
                             <th>Waktu Daftar</th>
-                            <th class="text-center" style="min-width: 240px;">Disposisi Klinis</th>
+                            <th class="text-center" style="min-width: 280px;">Aksi Klinis</th>
                             <th class="text-end pe-3">Detail</th>
                         </tr>
                     </thead>
@@ -100,14 +107,17 @@
                         <tr>
                             <td class="ps-3 text-muted">{{ forloop.counter }}</td>
                             <td>
-                                <div class="font-monospace fw-semibold">{{ k.no_kunjungan }}</div>
-                                <small class="text-muted">RM: {{ k.pasien.no_rm }}</small>
+                                <span class="badge bg-dark font-monospace fs-6 px-2 py-1">{{ k.nomor_antrean|default:"-" }}</span>
+                                <div><small class="text-muted font-monospace">{{ k.no_kunjungan }}</small></div>
                             </td>
                             <td>
                                 <a href="{% url 'pasien:pasien_detail' k.pasien.pk %}" class="fw-bold text-decoration-none text-dark">
                                     {{ k.pasien.nama_lengkap }}
                                 </a>
-                                <div class="small text-muted">{{ k.pasien.get_jenis_kelamin_display }}, {{ k.pasien.usia }} th</div>
+                                <div class="small text-muted">RM: <strong>{{ k.pasien.no_rm }}</strong> &bull; {{ k.pasien.get_jenis_kelamin_display }}, {{ k.pasien.usia }} th</div>
+                                {% if k.flag_khusus != 'NORMAL' %}
+                                <span class="badge bg-danger text-white small mt-1">⚡ {{ k.get_flag_khusus_display }}</span>
+                                {% endif %}
                             </td>
                             <td>
                                 <span class="badge bg-primary-subtle text-primary fw-semibold px-2 py-1">
@@ -116,7 +126,15 @@
                             </td>
                             <td><span class="badge bg-light text-dark border small">{{ k.get_penjamin_display }}</span></td>
                             <td>
-                                <span class="text-dark">{{ k.catatan_admisi|default:k.diagnosa_masuk|default:"-" }}</span>
+                                <form method="POST" action="{% url 'pasien:rajal_antrean_status' k.pk %}" class="d-inline-flex align-items-center gap-1">
+                                    {% csrf_token %}
+                                    <select name="status_antrean" class="form-select form-select-sm py-0 px-2" style="font-size: .75rem; width: auto;" onchange="this.form.submit()">
+                                        <option value="MENUNGGU" {% if k.status_antrean == 'MENUNGGU' %}selected{% endif %}>⏳ Menunggu</option>
+                                        <option value="DIPANGGIL" {% if k.status_antrean == 'DIPANGGIL' %}selected{% endif %}>📢 Dipanggil</option>
+                                        <option value="SEDANG_DILAYANI" {% if k.status_antrean == 'SEDANG_DILAYANI' %}selected{% endif %}>🩺 Dilayani</option>
+                                        <option value="SELESAI" {% if k.status_antrean == 'SELESAI' %}selected{% endif %}>✅ Selesai</option>
+                                    </select>
+                                </form>
                             </td>
                             <td><small class="text-muted">{{ k.dpjp|default:"-" }}</small></td>
                             <td>
@@ -124,15 +142,53 @@
                                 <small class="text-muted">{{ k.tanggal_masuk|timesince }} lalu</small>
                             </td>
                             <td class="text-center">
-                                <div class="d-inline-flex gap-2">
-                                    <!-- 1. PULANG / SELESAI -->
-                                    <button class="btn btn-outline-success btn-sm fw-semibold" data-bs-toggle="modal" data-bs-target="#modalPulangR{{ k.pk }}">
-                                        <i class="bi bi-check-circle me-1"></i> 1. Pulang
+                                <div class="btn-group btn-group-sm">
+                                    <!-- 1. SOAP CPPT -->
+                                    <button class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#modalSoap{{ k.pk }}" title="Catat SOAP Medis">
+                                        <i class="bi bi-pencil-square me-1"></i>SOAP
                                     </button>
-                                    <!-- 2. RAWAT INAP (RANAP) -->
-                                    <button class="btn btn-primary btn-sm fw-semibold" data-bs-toggle="modal" data-bs-target="#modalRanapR{{ k.pk }}">
-                                        <i class="bi bi-hospital me-1"></i> 2. Rawat Inap
+                                    <!-- 2. ORDER PENUNJANG (LAB/RAD) -->
+                                    <button class="btn btn-outline-info text-dark" data-bs-toggle="modal" data-bs-target="#modalOrderR{{ k.pk }}" title="Order Lab / Radiologi">
+                                        <i class="bi bi-radioactive me-1"></i>Penunjang
                                     </button>
+                                    <!-- 3. DISPOSISI PULANG -->
+                                    <button class="btn btn-outline-success" data-bs-toggle="modal" data-bs-target="#modalPulangR{{ k.pk }}" title="Selesai & SKDP">
+                                        <i class="bi bi-check-circle me-1"></i>Pulang
+                                    </button>
+                                    <!-- 4. MORE DROPDOWN (RANAP, KONSUL, CETAK) -->
+                                    <div class="btn-group btn-group-sm">
+                                        <button type="button" class="btn btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown"></button>
+                                        <ul class="dropdown-menu dropdown-menu-end shadow-sm" style="font-size: .82rem;">
+                                            <li>
+                                                <a class="dropdown-item text-primary" href="#" data-bs-toggle="modal" data-bs-target="#modalRanapR{{ k.pk }}">
+                                                    <i class="bi bi-hospital me-1"></i> Admisi Rawat Inap (SPRI)
+                                                </a>
+                                            </li>
+                                            <li>
+                                                <a class="dropdown-item text-warning" href="#" data-bs-toggle="modal" data-bs-target="#modalKonsulR{{ k.pk }}">
+                                                    <i class="bi bi-arrow-left-right me-1"></i> Konsul Antar-Poli
+                                                </a>
+                                            </li>
+                                            <li><hr class="dropdown-divider"></li>
+                                            <li>
+                                                <a class="dropdown-item text-secondary" href="{% url 'pasien:cetak_gelang' k.pasien.pk %}" target="_blank">
+                                                    <i class="bi bi-tag me-1"></i> Cetak Gelang Identitas
+                                                </a>
+                                            </li>
+                                            {% if k.penjamin == 'BPJS' %}
+                                            <li>
+                                                <a class="dropdown-item text-secondary" href="{% url 'pasien:cetak_sep' k.pk %}" target="_blank">
+                                                    <i class="bi bi-file-earmark-text me-1"></i> Cetak SEP BPJS
+                                                </a>
+                                            </li>
+                                            {% endif %}
+                                            <li>
+                                                <a class="dropdown-item text-secondary" href="{% url 'pasien:cetak_skdp' k.pk %}" target="_blank">
+                                                    <i class="bi bi-calendar-check me-1"></i> Cetak SKDP (Surat Kontrol)
+                                                </a>
+                                            </li>
+                                        </ul>
+                                    </div>
                                 </div>
                             </td>
                             <td class="text-end pe-3">
@@ -141,6 +197,96 @@
                                 </a>
                             </td>
                         </tr>
+
+                        <!-- MODAL SOAP / RME CPPT -->
+                        <div class="modal fade" id="modalSoap{{ k.pk }}" tabindex="-1">
+                            <div class="modal-dialog modal-lg modal-dialog-centered">
+                                <div class="modal-content">
+                                    <form method="POST" action="{% url 'pasien:rajal_soap_simpan' k.pk %}">
+                                        {% csrf_token %}
+                                        <div class="modal-header bg-primary-subtle">
+                                            <h6 class="modal-title fw-bold text-primary">
+                                                <i class="bi bi-journal-medical me-1"></i> Catatan Perkembangan Pasien Terintegrasi (CPPT / SOAP) — {{ k.pasien.nama_lengkap }}
+                                            </h6>
+                                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                        </div>
+                                        <div class="modal-body">
+                                            <div class="row g-2 mb-3">
+                                                <div class="col-md-6">
+                                                    <label class="form-label small fw-bold">S — Subjective (Anamnesa / Keluhan Pasien)</label>
+                                                    <textarea name="soap_s" class="form-control form-control-sm" rows="3" placeholder="Keluhan utama, riwayat penyakit sekarang/dahulu, alergi..."></textarea>
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <label class="form-label small fw-bold">O — Objective (Pemeriksaan Fisik &amp; TTV)</label>
+                                                    <textarea name="soap_o" class="form-control form-control-sm" rows="3" placeholder="Keadaan umum, tensi, nadi, respirasi, suhu, status lokalis..."></textarea>
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <label class="form-label small fw-bold">A — Assessment (Diagnosa Medis / Masalah)</label>
+                                                    <textarea name="soap_a" class="form-control form-control-sm" rows="3" placeholder="Diagnosa kerja, diagnosa banding..."></textarea>
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <label class="form-label small fw-bold">P — Plan (Instruksi / Rencana Terapi / Edukasi)</label>
+                                                    <textarea name="soap_p" class="form-control form-control-sm" rows="3" placeholder="Rencana pengobatan, tindakan lanjutan, jadwal kontrol..."></textarea>
+                                                </div>
+                                                <div class="col-12 mt-2">
+                                                    <label class="form-label small fw-semibold">Kode Diagnosa ICD-10</label>
+                                                    <input type="text" name="icd10_kode" class="form-control form-control-sm" placeholder="Contoh: I10 - Essential (primary) hypertension, E11 - Type 2 diabetes...">
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="modal-footer">
+                                            <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Batal</button>
+                                            <button type="submit" class="btn btn-primary btn-sm px-3">
+                                                <i class="bi bi-save me-1"></i> Simpan Catatan CPPT
+                                            </button>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- MODAL ORDER PENUNJANG (LAB/RAD) -->
+                        <div class="modal fade" id="modalOrderR{{ k.pk }}" tabindex="-1">
+                            <div class="modal-dialog modal-dialog-centered">
+                                <div class="modal-content">
+                                    <form method="POST" action="{% url 'pasien:order_penunjang_buat' k.pk %}">
+                                        {% csrf_token %}
+                                        <div class="modal-header bg-info-subtle">
+                                            <h6 class="modal-title fw-bold text-info"><i class="bi bi-radioactive me-1"></i> Order Pemeriksaan Penunjang</h6>
+                                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                        </div>
+                                        <div class="modal-body">
+                                            <div class="mb-3">
+                                                <label class="form-label small fw-semibold">Jenis Penunjang <span class="text-danger">*</span></label>
+                                                <select name="jenis" class="form-select form-select-sm" required>
+                                                    <option value="LAB">Laboratorium Klinik</option>
+                                                    <option value="RADIOLOGI">Radiologi / Rontgen / USG</option>
+                                                </select>
+                                            </div>
+                                            <div class="mb-3">
+                                                <label class="form-label small fw-semibold">Prioritas <span class="text-danger">*</span></label>
+                                                <select name="prioritas" class="form-select form-select-sm" required>
+                                                    <option value="RUTIN" selected>RUTIN (Sesuai Antrean Poli)</option>
+                                                    <option value="CITO">⚡ CITO (Gawat Darurat)</option>
+                                                </select>
+                                            </div>
+                                            <div class="mb-3">
+                                                <label class="form-label small fw-semibold">Nama Pemeriksaan <span class="text-danger">*</span></label>
+                                                <input type="text" name="nama_pemeriksaan" class="form-control form-control-sm" required placeholder="Contoh: Glukosa Darah Sewaktu, Profil Lipid, Rontgen Genu AP/Lat...">
+                                            </div>
+                                            <div class="mb-3">
+                                                <label class="form-label small fw-semibold">Catatan Klinis / Indikasi</label>
+                                                <textarea name="catatan_klinis" class="form-control form-control-sm" rows="2" placeholder="Evaluasi nyeri lutut, monitoring DM tipe 2..."></textarea>
+                                            </div>
+                                        </div>
+                                        <div class="modal-footer">
+                                            <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Batal</button>
+                                            <button type="submit" class="btn btn-info btn-sm text-white">Kirim Permintaan Order</button>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
 
                         <!-- MODAL DISPOSISI: 1. PULANG (SELESAI PELAYANAN) -->
                         <div class="modal fade" id="modalPulangR{{ k.pk }}" tabindex="-1">
@@ -152,7 +298,7 @@
                                         <input type="hidden" name="next_url" value="pasien:rajal_dashboard">
                                         <div class="modal-header bg-success-subtle">
                                             <h6 class="modal-title fw-bold text-success">
-                                                <i class="bi bi-check-circle me-1"></i> Selesai Pelayanan — {{ k.pasien.nama_lengkap }}
+                                                <i class="bi bi-check-circle me-1"></i> Selesai Pelayanan &amp; SKDP — {{ k.pasien.nama_lengkap }}
                                             </h6>
                                             <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                                         </div>
@@ -175,19 +321,19 @@
                                                     <input type="text" name="obat_pulang" class="form-control form-control-sm" placeholder="Paracetamol 3x500mg...">
                                                 </div>
                                                 <div class="col-6">
-                                                    <label class="form-label small fw-semibold">Jadwal Kontrol Ulang</label>
+                                                    <label class="form-label small fw-semibold">Jadwal Kontrol Ulang (SKDP)</label>
                                                     <input type="date" name="jadwal_kontrol" class="form-control form-control-sm">
                                                 </div>
                                             </div>
                                             <div class="mb-3">
                                                 <label class="form-label small fw-semibold">Edukasi Pasien</label>
-                                                <input type="text" name="edukasi_pulang" class="form-control form-control-sm" placeholder="Pola makan, gejala bahaya yang perlu diwaspadai...">
+                                                <input type="text" name="edukasi_pulang" class="form-control form-control-sm" placeholder="Pola makan, minum obat teratur, pantau tensi rutin...">
                                             </div>
                                         </div>
                                         <div class="modal-footer">
                                             <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Batal</button>
                                             <button type="submit" class="btn btn-success btn-sm px-3">
-                                                <i class="bi bi-check-lg me-1"></i> Selesaikan &amp; Pulangkan Pasien
+                                                <i class="bi bi-check-lg me-1"></i> Selesaikan &amp; Terbitkan SKDP
                                             </button>
                                         </div>
                                     </form>
@@ -205,7 +351,7 @@
                                         <input type="hidden" name="next_url" value="pasien:rajal_dashboard">
                                         <div class="modal-header bg-primary-subtle">
                                             <h6 class="modal-title fw-bold text-primary">
-                                                <i class="bi bi-hospital me-1"></i> Admisi Rawat Inap — {{ k.pasien.nama_lengkap }}
+                                                <i class="bi bi-hospital me-1"></i> Admisi Rawat Inap &amp; SPRI — {{ k.pasien.nama_lengkap }}
                                             </h6>
                                             <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                                         </div>
@@ -222,7 +368,7 @@
                                                     <option value="" disabled>Tidak ada bed kosong saat ini!</option>
                                                     {% endfor %}
                                                 </select>
-                                                <div class="form-text small text-muted">Bed akan otomatis terkunci saat admisi diproses.</div>
+                                                <div class="form-text small text-muted">Bed akan otomatis terkunci dan SPRI terbit saat admisi diproses.</div>
                                             </div>
                                             <div class="mb-3">
                                                 <label class="form-label small fw-semibold">DPJP Rawat Inap</label>
@@ -236,8 +382,55 @@
                                         <div class="modal-footer">
                                             <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Batal</button>
                                             <button type="submit" class="btn btn-primary btn-sm px-3">
-                                                <i class="bi bi-door-open-fill me-1"></i> Transfer ke Rawat Inap
+                                                <i class="bi bi-door-open-fill me-1"></i> Admisi Ranap &amp; SPRI
                                             </button>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- MODAL DISPOSISI: 3. KONSUL ANTAR-POLI -->
+                        <div class="modal fade" id="modalKonsulR{{ k.pk }}" tabindex="-1">
+                            <div class="modal-dialog modal-dialog-centered">
+                                <div class="modal-content">
+                                    <form method="POST" action="{% url 'pasien:kunjungan_disposisi' k.pk %}">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="aksi" value="KONSUL_INTERNAL">
+                                        <input type="hidden" name="next_url" value="pasien:rajal_dashboard">
+                                        <div class="modal-header bg-warning-subtle">
+                                            <h6 class="modal-title fw-bold text-dark"><i class="bi bi-arrow-left-right me-1"></i> Konsul Antar-Poli — {{ k.pasien.nama_lengkap }}</h6>
+                                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                        </div>
+                                        <div class="modal-body">
+                                            <div class="mb-3">
+                                                <label class="form-label small fw-semibold">Poli Tujuan Konsul <span class="text-danger">*</span></label>
+                                                <select name="poli_tujuan" class="form-select form-select-sm" required>
+                                                    <option value="">-- Pilih Poli Tujuan --</option>
+                                                    <option value="Poli Umum">Poli Umum</option>
+                                                    <option value="Poli Penyakit Dalam">Poli Penyakit Dalam</option>
+                                                    <option value="Poli Anak">Poli Anak</option>
+                                                    <option value="Poli Bedah">Poli Bedah</option>
+                                                    <option value="Poli Kebidanan &amp; Kandungan">Poli Kebidanan &amp; Kandungan</option>
+                                                    <option value="Poli Saraf">Poli Saraf</option>
+                                                    <option value="Poli Jantung">Poli Jantung</option>
+                                                    <option value="Poli Mata">Poli Mata</option>
+                                                    <option value="Poli THT">Poli THT</option>
+                                                    <option value="Poli Gigi &amp; Mulut">Poli Gigi &amp; Mulut</option>
+                                                    <option value="Poli Paru">Poli Paru</option>
+                                                    <option value="Poli Kulit &amp; Kelamin">Poli Kulit &amp; Kelamin</option>
+                                                    <option value="Poli Jiwa">Poli Jiwa</option>
+                                                    <option value="Poli Orthopedi">Poli Orthopedi</option>
+                                                </select>
+                                            </div>
+                                            <div class="mb-3">
+                                                <label class="form-label small fw-semibold">Alasan Konsul / Permohonan Konsultasi</label>
+                                                <textarea name="catatan_konsul" class="form-control form-control-sm" rows="3" placeholder="Mohon evaluasi lanjutan dari segi spesialisasi terkait..."></textarea>
+                                            </div>
+                                        </div>
+                                        <div class="modal-footer">
+                                            <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Batal</button>
+                                            <button type="submit" class="btn btn-warning btn-sm text-dark px-3 fw-bold">Transfer Antrean Konsul</button>
                                         </div>
                                     </form>
                                 </div>

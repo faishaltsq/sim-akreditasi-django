@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <title>Cetak Gelang Pasien — {{ p.nama_lengkap }} ({{ p.no_rm }})</title>
+    <style>
+        @page {
+            size: 280mm 25mm;
+            margin: 0;
+        }
+        body {
+            font-family: Arial, Helvetica, sans-serif;
+            margin: 0;
+            padding: 3mm 8mm;
+            width: 280mm;
+            height: 25mm;
+            box-sizing: border-box;
+            background: #fff;
+            color: #000;
+        }
+        .gelang-container {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            height: 100%;
+        }
+        .logo-box {
+            font-size: 8pt;
+            font-weight: bold;
+            border-right: 1px solid #000;
+            padding-right: 4mm;
+            line-height: 1.1;
+        }
+        .info-box {
+            flex-grow: 1;
+            padding-left: 5mm;
+            font-size: 9pt;
+            line-height: 1.25;
+        }
+        .nama-pasien {
+            font-size: 11pt;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+        .rm-box {
+            font-family: monospace;
+            font-size: 11pt;
+            font-weight: bold;
+        }
+        .barcode-box {
+            text-align: right;
+            padding-left: 4mm;
+        }
+        .barcode-sim {
+            font-family: 'Courier New', monospace;
+            font-size: 16pt;
+            letter-spacing: 2px;
+            font-weight: bold;
+        }
+        @media print {
+            .no-print { display: none; }
+        }
+    </style>
+</head>
+<body onload="window.print()">
+    <div class="no-print" style="background:#fee2e2; padding:6px; margin-bottom:5px; font-size:11px; text-align:center;">
+        Printer Thermal Gelang: Pastikan ukuran kertas diset ke <strong>280mm x 25mm</strong>.
+        <button onclick="window.print()" style="margin-left:10px; padding:2px 8px; font-weight:bold; cursor:pointer;">Cetak Sekarang</button>
+    </div>
+
+    <div class="gelang-container">
+        <div class="logo-box">
+            <div>RS MONSISKAMI</div>
+            <div style="font-size:7pt; font-weight:normal;">GELANG IDENTITAS</div>
+        </div>
+        <div class="info-box">
+            <div class="nama-pasien">{{ p.nama_lengkap }}</div>
+            <div>
+                No. RM: <span class="rm-box">{{ p.no_rm }}</span> &bull; 
+                Tgl Lahir: <strong>{{ p.tanggal_lahir|date:"d/m/Y" }}</strong> ({{ p.umur }} th) &bull; 
+                JK: <strong>{{ p.get_jenis_kelamin_display }}</strong>
+            </div>
+            <div style="font-size:7.5pt; color:#333;">
+                Admisi: {{ k.tanggal_masuk|date:"d/m/Y H:i" }} &bull; Penjamin: {{ k.get_penjamin_display }} &bull; Antrean: {{ k.nomor_antrean|default:"-" }}
+            </div>
+        </div>
+        <div class="barcode-box">
+            <div class="barcode-sim">|||||||||||||||||||||||||</div>
+            <div style="font-size:7pt; font-family:monospace;">*{{ p.no_rm }}*</div>
+        </div>
+    </div>
+</body>
+</html>

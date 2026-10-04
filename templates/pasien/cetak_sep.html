@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <title>Surat Eligibilitas Peserta (SEP) — {{ p.nama_lengkap }}</title>
+    <style>
+        @page { size: A4; margin: 15mm 20mm; }
+        body { font-family: Arial, Helvetica, sans-serif; font-size: 10pt; color: #000; margin: 0; padding: 20px; background: #fff; }
+        .header { text-align: center; margin-bottom: 15px; padding-bottom: 10px; border-bottom: 2px solid #000; }
+        .header h2 { margin: 0; font-size: 14pt; }
+        .header h3 { margin: 4px 0 0; font-weight: normal; font-size: 11pt; }
+        .sep-table { width: 100%; border-collapse: collapse; margin-bottom: 12px; }
+        .sep-table td { padding: 5px 8px; vertical-align: top; }
+        .sep-table .label { width: 200px; font-weight: bold; }
+        .sep-table .separator { width: 10px; text-align: center; }
+        .box { border: 1px solid #000; padding: 10px 12px; margin: 10px 0; }
+        .ttd { display: flex; justify-content: space-between; margin-top: 40px; }
+        .ttd div { text-align: center; width: 200px; }
+        .ttd .line { margin-top: 60px; border-top: 1px solid #000; padding-top: 4px; }
+        @media print { .no-print { display: none !important; } }
+    </style>
+</head>
+<body>
+    <div class="no-print" style="background:#dbeafe; padding:8px; text-align:center; margin-bottom:10px; font-size:11px;">
+        <strong>Preview Cetak SEP BPJS (Simulasi)</strong>
+        <button onclick="window.print()" style="margin-left:10px; padding:3px 12px; cursor:pointer;">🖨️ Cetak</button>
+        <button onclick="window.close()" style="margin-left:5px; padding:3px 12px; cursor:pointer;">✕ Tutup</button>
+    </div>
+
+    <div class="header">
+        <div style="font-size:9pt; color:#555;">BPJS KESEHATAN</div>
+        <h2>SURAT ELIGIBILITAS PESERTA (SEP)</h2>
+        <h3>RS MonsisKami — Simulasi Klaim</h3>
+    </div>
+
+    <div class="box">
+        <table class="sep-table">
+            <tr><td class="label">No. SEP</td><td class="separator">:</td><td><strong style="font-size:12pt; font-family:monospace;">{{ no_sep }}</strong></td></tr>
+            <tr><td class="label">Tgl. SEP</td><td class="separator">:</td><td>{{ k.tanggal_masuk|date:"d/m/Y" }}</td></tr>
+        </table>
+    </div>
+
+    <h4 style="margin:12px 0 6px; border-bottom:1px solid #ccc; padding-bottom:4px;">Data Peserta</h4>
+    <table class="sep-table">
+        <tr><td class="label">No. Kartu BPJS</td><td class="separator">:</td><td>{{ p.no_bpjs|default:"(Belum Terisi)" }}</td></tr>
+        <tr><td class="label">NIK</td><td class="separator">:</td><td>{{ p.nik|default:"-" }}</td></tr>
+        <tr><td class="label">Nama Peserta</td><td class="separator">:</td><td><strong>{{ p.nama_lengkap }}</strong></td></tr>
+        <tr><td class="label">No. Rekam Medis</td><td class="separator">:</td><td>{{ p.no_rm }}</td></tr>
+        <tr><td class="label">Tanggal Lahir</td><td class="separator">:</td><td>{{ p.tanggal_lahir|date:"d/m/Y" }} ({{ p.umur }} tahun)</td></tr>
+        <tr><td class="label">Jenis Kelamin</td><td class="separator">:</td><td>{{ p.get_jenis_kelamin_display }}</td></tr>
+        <tr><td class="label">Alamat</td><td class="separator">:</td><td>{{ p.alamat|default:"-" }}</td></tr>
+    </table>
+
+    <h4 style="margin:12px 0 6px; border-bottom:1px solid #ccc; padding-bottom:4px;">Data Pelayanan</h4>
+    <table class="sep-table">
+        <tr><td class="label">Jenis Pelayanan</td><td class="separator">:</td><td>{{ k.get_jenis_kunjungan_display }}</td></tr>
+        <tr><td class="label">Poli Tujuan</td><td class="separator">:</td><td>{{ k.poliklinik|default:"IGD" }}</td></tr>
+        <tr><td class="label">DPJP</td><td class="separator">:</td><td>{{ k.dpjp|default:"-" }}</td></tr>
+        <tr><td class="label">Diagnosa Awal</td><td class="separator">:</td><td>{{ k.diagnosa_masuk|default:k.catatan_admisi|default:"-" }}</td></tr>
+        <tr><td class="label">Penjamin</td><td class="separator">:</td><td>{{ k.get_penjamin_display }}</td></tr>
+    </table>
+
+    <div class="ttd">
+        <div>
+            <div>Peserta / Keluarga,</div>
+            <div class="line">({{ p.nama_lengkap }})</div>
+        </div>
+        <div>
+            <div>Petugas Pendaftaran,</div>
+            <div class="line">( .......................... )</div>
+        </div>
+    </div>
+
+    <div style="text-align:center; margin-top:20px; font-size:8pt; color:#888;">
+        Dicetak dari sistem ARIMA RS MonsisKami — {{ k.tanggal_masuk|date:"d/m/Y H:i" }}
+    </div>
+</body>
+</html>

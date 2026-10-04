@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <title>Surat Keterangan Dalam Perawatan (SKDP) — {{ p.nama_lengkap }}</title>
+    <style>
+        @page { size: A4; margin: 15mm 20mm; }
+        body { font-family: Arial, Helvetica, sans-serif; font-size: 10pt; color: #000; margin: 0; padding: 20px; background: #fff; }
+        .header { text-align: center; margin-bottom: 15px; padding-bottom: 10px; border-bottom: 2px solid #000; }
+        .header h2 { margin: 0; font-size: 14pt; }
+        .header p { margin: 4px 0 0; font-size: 9pt; color:#444; }
+        table.info { width: 100%; border-collapse: collapse; margin: 10px 0; }
+        table.info td { padding: 5px 8px; vertical-align: top; }
+        table.info .label { width: 180px; font-weight: bold; }
+        table.info .sep { width: 10px; text-align: center; }
+        .box-highlight { border: 2px solid #0284c7; padding: 12px; margin: 15px 0; background: #f0f9ff; border-radius: 4px; }
+        .box-highlight h4 { margin: 0 0 6px; color: #0369a1; }
+        .ttd-row { display: flex; justify-content: flex-end; margin-top: 50px; }
+        .ttd-row div { text-align: center; width: 220px; }
+        .ttd-row .line { margin-top: 60px; border-top: 1px solid #000; padding-top: 4px; }
+        @media print { .no-print { display: none !important; } }
+    </style>
+</head>
+<body>
+    <div class="no-print" style="background:#e0f2fe; padding:8px; text-align:center; margin-bottom:10px; font-size:11px;">
+        <strong>Preview Cetak SKDP / Surat Kontrol</strong>
+        <button onclick="window.print()" style="margin-left:10px; padding:3px 12px; cursor:pointer;">🖨️ Cetak</button>
+        <button onclick="window.close()" style="margin-left:5px; padding:3px 12px; cursor:pointer;">✕ Tutup</button>
+    </div>
+
+    <div class="header">
+        <h2>SURAT KETERANGAN DALAM PERAWATAN (SKDP)</h2>
+        <p>Surat Rencana Kontrol Rawat Jalan — RS MonsisKami</p>
+    </div>
+
+    <table class="info">
+        <tr><td class="label">No. SKDP</td><td class="sep">:</td><td><strong style="font-family:monospace; font-size:12pt;">{{ discharge.skdp_nomor|default:"SKDP-AUTO" }}</strong></td></tr>
+        <tr><td class="label">Tanggal Kunjungan</td><td class="sep">:</td><td>{{ k.tanggal_masuk|date:"d/m/Y" }}</td></tr>
+    </table>
+
+    <h4 style="margin: 14px 0 6px; border-bottom:1px solid #ccc; padding-bottom:4px;">Identitas Pasien</h4>
+    <table class="info">
+        <tr><td class="label">Nama Pasien</td><td class="sep">:</td><td><strong>{{ p.nama_lengkap }}</strong></td></tr>
+        <tr><td class="label">No. Rekam Medis</td><td class="sep">:</td><td>{{ p.no_rm }}</td></tr>
+        <tr><td class="label">Tanggal Lahir / Usia</td><td class="sep">:</td><td>{{ p.tanggal_lahir|date:"d/m/Y" }} ({{ p.umur }} th)</td></tr>
+        <tr><td class="label">Jenis Kelamin</td><td class="sep">:</td><td>{{ p.get_jenis_kelamin_display }}</td></tr>
+        <tr><td class="label">Diagnosa</td><td class="sep">:</td><td>{{ discharge.skdp_diagnosa|default:k.diagnosa_masuk|default:"-" }}</td></tr>
+    </table>
+
+    <div class="box-highlight">
+        <h4>Rencana Kontrol Berikutnya</h4>
+        <table class="info" style="margin:0;">
+            <tr><td class="label" style="width:140px;">Tanggal Kontrol</td><td class="sep">:</td><td><strong style="font-size:12pt; color:#0369a1;">{{ discharge.jadwal_kontrol|date:"d F Y"|default:"Belum ditentukan" }}</strong></td></tr>
+            <tr><td class="label">Poliklinik Tujuan</td><td class="sep">:</td><td>{{ k.poliklinik|default:"Poli Spesialis" }}</td></tr>
+            <tr><td class="label">Dokter (DPJP)</td><td class="sep">:</td><td>dr. {{ k.dpjp|default:"Spesialis Terkait" }}</td></tr>
+            <tr><td class="label">Terapi Lanjutan</td><td class="sep">:</td><td>{{ discharge.skdp_terapi|default:discharge.obat_pulang|default:"Melanjutkan terapi tertera pada resep obat pulang." }}</td></tr>
+        </table>
+    </div>
+
+    <div style="font-size:8.5pt; color:#444; margin-top:15px; border-left:3px solid #0284c7; padding-left:10px;">
+        Surat ini berlaku untuk 1 (satu) kali kunjungan ulang ke Poliklinik sesuai tanggal tertera. Harap dibawa bersamaan dengan kartu identitas / BPJS pada saat hari H kontrol.
+    </div>
+
+    <div class="ttd-row">
+        <div>
+            <div>Dokter Penanggung Jawab Pelayanan,</div>
+            <div class="line">dr. {{ k.dpjp|default:"____________" }}</div>
+        </div>
+    </div>
+
+    <div style="text-align:center; margin-top:30px; font-size:8pt; color:#888;">
+        Dicetak dari sistem ARIMA RS MonsisKami — {{ k.tanggal_masuk|date:"d/m/Y H:i" }}
+    </div>
+</body>
+</html>

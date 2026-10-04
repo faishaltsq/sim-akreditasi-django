@@ -167,6 +167,41 @@ class KunjunganPasien(models.Model):
                                 choices=[('NOT_SYNCED','Belum Disinkronkan'),('SYNCED','Tersinkronisasi'),('FAILED','Gagal Sync')],
                                 default='NOT_SYNCED')
 
+    # ── Antrean & Status Klinis ──
+    FLAG_KHUSUS_CHOICES = [
+        ('NORMAL',   'Normal'),
+        ('AMBULANS', 'Rujukan Ambulans'),
+        ('KRITIS',   'Kondisi Kritis / Resusitasi'),
+    ]
+    STATUS_ANTREAN_CHOICES = [
+        ('MENUNGGU',        'Menunggu'),
+        ('DIPANGGIL',       'Dipanggil'),
+        ('SEDANG_DILAYANI', 'Sedang Dilayani'),
+        ('SELESAI',         'Selesai'),
+    ]
+    nomor_antrean   = models.CharField('No. Antrean', max_length=25, blank=True)
+    flag_khusus     = models.CharField('Flag Kondisi Khusus', max_length=10, choices=FLAG_KHUSUS_CHOICES, default='NORMAL')
+    status_antrean  = models.CharField('Status Antrean', max_length=20, choices=STATUS_ANTREAN_CHOICES, default='MENUNGGU')
+
+    # ── Tanda-Tanda Vital (TTV) ──
+    ttv_sistole   = models.PositiveSmallIntegerField('Tekanan Darah Sistole (mmHg)', null=True, blank=True)
+    ttv_diastole  = models.PositiveSmallIntegerField('Tekanan Darah Diastole (mmHg)', null=True, blank=True)
+    ttv_nadi      = models.PositiveSmallIntegerField('Nadi (bpm)', null=True, blank=True)
+    ttv_rr        = models.PositiveSmallIntegerField('Laju Napas / RR (x/menit)', null=True, blank=True)
+    ttv_suhu      = models.DecimalField('Suhu (°C)', max_digits=4, decimal_places=1, null=True, blank=True)
+    ttv_spo2      = models.PositiveSmallIntegerField('SpO2 (%)', null=True, blank=True)
+    icd9_tindakan = models.CharField('Tindakan Medis (ICD-9-CM)', max_length=300, blank=True)
+
+    # ── Rujukan & Konsultasi ──
+    sisrute_rs_tujuan = models.CharField('RS Tujuan Rujukan (SISRUTE)', max_length=200, blank=True)
+    sisrute_alasan    = models.TextField('Alasan Rujukan Eksternal', blank=True)
+    konsul_ke_poli    = models.CharField('Konsul ke Poliklinik', max_length=100, blank=True)
+    konsul_catatan    = models.TextField('Catatan Konsultasi Internal', blank=True)
+
+    # ── Meninggal Dunia ──
+    waktu_kematian    = models.DateTimeField('Waktu Kematian', null=True, blank=True)
+    penyebab_kematian = models.TextField('Penyebab Kematian', blank=True)
+
     class Meta:
         verbose_name = 'Kunjungan Pasien'
         verbose_name_plural = 'Kunjungan Pasien'
@@ -366,12 +401,57 @@ class DischargeRecord(models.Model):
     dibuat_oleh       = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
     created_at        = models.DateTimeField(auto_now_add=True)
 
+    # ── PAPS (Pulang Atas Permintaan Sendiri) ──
+    paps_alasan       = models.TextField('Alasan PAPS', blank=True)
+    paps_nama_penolak = models.CharField('Nama Pasien / Keluarga Penolak', max_length=150, blank=True)
+
+    # ── SKDP (Surat Keterangan Dalam Perawatan) ──
+    skdp_nomor        = models.CharField('Nomor SKDP', max_length=50, blank=True)
+    skdp_diagnosa     = models.CharField('Diagnosa SKDP', max_length=250, blank=True)
+    skdp_terapi       = models.TextField('Rencana Terapi Lanjutan', blank=True)
+
     class Meta:
         verbose_name = 'Discharge Record'
         verbose_name_plural = 'Discharge Records'
 
     def __str__(self):
         return f'Discharge [{self.kunjungan.pasien.nama_lengkap}] {self.tanggal_discharge.strftime("%d/%m/%Y")}'
+
+
+# ── 7b. Order Penunjang (Laboratorium & Radiologi) ───────────────────────────
+
+class OrderPenunjang(models.Model):
+    JENIS_CHOICES = [
+        ('LAB',       'Laboratorium'),
+        ('RADIOLOGI', 'Radiologi / Imaging'),
+    ]
+    PRIORITAS_CHOICES = [
+        ('CITO',  'CITO / Segera'),
+        ('RUTIN', 'Rutin'),
+    ]
+    STATUS_CHOICES = [
+        ('ORDERED', 'Terkirim'),
+        ('PROSES',  'Dalam Pemeriksaan'),
+        ('SELESAI', 'Selesai / Hasil Tersedia'),
+    ]
+
+    kunjungan         = models.ForeignKey(KunjunganPasien, on_delete=models.CASCADE, related_name='order_penunjang')
+    jenis             = models.CharField('Jenis Penunjang', max_length=15, choices=JENIS_CHOICES)
+    nama_pemeriksaan  = models.CharField('Nama Pemeriksaan / Tindakan', max_length=255)
+    catatan_klinis    = models.TextField('Catatan Klinis / Indikasi', blank=True)
+    prioritas         = models.CharField('Prioritas', max_length=10, choices=PRIORITAS_CHOICES, default='RUTIN')
+    status            = models.CharField('Status Order', max_length=15, choices=STATUS_CHOICES, default='ORDERED')
+    dokter_pengirim   = models.CharField('Dokter Pengirim', max_length=150, blank=True)
+    hasil_pemeriksaan = models.TextField('Hasil Pemeriksaan', blank=True)
+    created_at        = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = 'Order Penunjang'
+        verbose_name_plural = 'Order Penunjang (Lab / Radiologi)'
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f'[{self.get_jenis_display()}] {self.nama_pemeriksaan} — {self.kunjungan.pasien.nama_lengkap}'
 
 
 # ── 8. E-Prescribing & Farmasi ────────────────────────────────────────────────

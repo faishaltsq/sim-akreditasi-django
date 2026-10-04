@@ -14,6 +14,10 @@
     .triage-card.active-ring { ring: 3px solid rgba(0,0,0,.3); outline: 3px solid #0f172a; }
     .triage-val { font-size: 2rem; font-weight: 800; font-family: 'JetBrains Mono', monospace; line-height: 1; }
     .triage-lbl { font-size: .75rem; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; opacity: .9; }
+    .dwell-ok { background: #dcfce7; color: #166534; font-weight: 700; padding: 2px 6px; border-radius: 4px; font-size: .72rem; }
+    .dwell-warn { background: #fef3c7; color: #92400e; font-weight: 700; padding: 2px 6px; border-radius: 4px; font-size: .72rem; }
+    .dwell-alert { background: #fee2e2; color: #991b1b; font-weight: 800; padding: 2px 6px; border-radius: 4px; font-size: .72rem; animation: blink-dwell 1s step-start infinite; }
+    @keyframes blink-dwell { 50% { opacity: 0.4; } }
 </style>
 {% endblock %}
 
@@ -119,10 +123,11 @@
                             <th class="ps-3">Triage</th>
                             <th>No. Kunjungan / RM</th>
                             <th>Nama Pasien</th>
-                            <th>Keluhan Awal / Diagnosa Masuk</th>
+                            <th>Keluhan Awal</th>
+                            <th>TTV / ICD-9</th>
                             <th>DPJP Jaga</th>
-                            <th>Waktu Masuk</th>
-                            <th class="text-center" style="min-width: 250px;">Keputusan Disposisi Klinis</th>
+                            <th>Dwell Time</th>
+                            <th class="text-center" style="min-width: 360px;">Keputusan Disposisi Klinis</th>
                             <th class="text-end pe-3">Detail</th>
                         </tr>
                     </thead>
@@ -153,21 +158,52 @@
                             <td>
                                 <span class="text-dark">{{ k.catatan_admisi|default:k.diagnosa_masuk|default:"Observasi IGD" }}</span>
                             </td>
+                            <td>
+                                {% if k.ttv_sistole or k.ttv_suhu or k.ttv_spo2 %}
+                                <div style="font-size:.78rem; line-height:1.2;">
+                                    {% if k.ttv_sistole %}<strong>TD:</strong> {{ k.ttv_sistole }}/{{ k.ttv_diastole|default:"-" }} mmHg<br>{% endif %}
+                                    {% if k.ttv_suhu %}<strong>Suhu:</strong> {{ k.ttv_suhu }}&deg;C {% endif %}
+                                    {% if k.ttv_spo2 %}<strong>SpO2:</strong> {{ k.ttv_spo2 }}%{% endif %}
+                                </div>
+                                {% else %}
+                                <span class="text-muted small"><em>Belum input</em></span>
+                                {% endif %}
+                                <button class="btn btn-link btn-sm p-0 text-primary small d-block mt-1" data-bs-toggle="modal" data-bs-target="#modalTTV{{ k.pk }}">
+                                    <i class="bi bi-pencil-square"></i> Input TTV
+                                </button>
+                            </td>
                             <td><small class="text-muted">{{ k.dpjp|default:"dr. Jaga IGD" }}</small></td>
                             <td>
                                 <div class="font-monospace text-muted">{{ k.tanggal_masuk|date:"H:i" }}</div>
-                                <small class="text-muted">{{ k.tanggal_masuk|timesince }} lalu</small>
+                                <span class="dwell-badge" data-masuk="{{ k.tanggal_masuk|date:'c' }}">
+                                    <span class="dwell-ok">{{ k.tanggal_masuk|timesince }}</span>
+                                </span>
                             </td>
                             <td class="text-center">
-                                <div class="d-inline-flex gap-2">
-                                    <!-- PILIHAN 1: PULANG (DISCHARGE) -->
-                                    <button class="btn btn-outline-success btn-sm fw-semibold" data-bs-toggle="modal" data-bs-target="#modalPulang{{ k.pk }}">
-                                        <i class="bi bi-box-arrow-right me-1"></i> 1. Pulang
+                                <div class="btn-group btn-group-sm">
+                                    <!-- ORDER PENUNJANG -->
+                                    <button class="btn btn-outline-info" data-bs-toggle="modal" data-bs-target="#modalOrder{{ k.pk }}" title="Order Lab / Radiologi">
+                                        <i class="bi bi-radioactive"></i> Penunjang
                                     </button>
-
+                                    <!-- PILIHAN 1: PULANG (DISCHARGE) -->
+                                    <button class="btn btn-outline-success fw-semibold" data-bs-toggle="modal" data-bs-target="#modalPulang{{ k.pk }}" title="Pulang Sembuh">
+                                        <i class="bi bi-box-arrow-right"></i> Pulang
+                                    </button>
+                                    <!-- PAPS -->
+                                    <button class="btn btn-outline-warning text-dark fw-semibold" data-bs-toggle="modal" data-bs-target="#modalPaps{{ k.pk }}" title="Pulang Atas Permintaan Sendiri (PAPS)">
+                                        <i class="bi bi-shield-slash"></i> PAPS
+                                    </button>
                                     <!-- PILIHAN 2: RAWAT INAP (RANAP) -->
-                                    <button class="btn btn-primary btn-sm fw-semibold" data-bs-toggle="modal" data-bs-target="#modalRanap{{ k.pk }}">
-                                        <i class="bi bi-hospital me-1"></i> 2. Rawat Inap
+                                    <button class="btn btn-primary fw-semibold" data-bs-toggle="modal" data-bs-target="#modalRanap{{ k.pk }}" title="Masuk Rawat Inap (SPRI)">
+                                        <i class="bi bi-hospital"></i> Ranap
+                                    </button>
+                                    <!-- SISRUTE RUJUK -->
+                                    <button class="btn btn-outline-dark" data-bs-toggle="modal" data-bs-target="#modalRujuk{{ k.pk }}" title="Rujuk Eksternal SISRUTE">
+                                        <i class="bi bi-send"></i> Rujuk
+                                    </button>
+                                    <!-- PROTOKOL MENINGGAL -->
+                                    <button class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#modalMeninggal{{ k.pk }}" title="Protokol Meninggal Dunia">
+                                        <i class="bi bi-x-circle"></i>
                                     </button>
                                 </div>
                             </td>
@@ -177,6 +213,118 @@
                                 </a>
                             </td>
                         </tr>
+
+                        <!-- MODAL INPUT TTV & ICD-9 -->
+                        <div class="modal fade" id="modalTTV{{ k.pk }}" tabindex="-1">
+                            <div class="modal-dialog modal-dialog-centered">
+                                <div class="modal-content">
+                                    <form method="POST" action="{% url 'pasien:igd_ttv_update' k.pk %}">
+                                        {% csrf_token %}
+                                        <div class="modal-header">
+                                            <h6 class="modal-title fw-bold">Input Tanda Vital &amp; Tindakan — {{ k.pasien.nama_lengkap }}</h6>
+                                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                        </div>
+                                        <div class="modal-body">
+                                            <div class="row g-2 mb-3">
+                                                <div class="col-6">
+                                                    <label class="form-label small fw-semibold">Tekanan Darah (Sistole)</label>
+                                                    <div class="input-group input-group-sm">
+                                                        <input type="number" name="ttv_sistole" class="form-control" value="{{ k.ttv_sistole|default:'' }}" placeholder="120">
+                                                        <span class="input-group-text">mmHg</span>
+                                                    </div>
+                                                </div>
+                                                <div class="col-6">
+                                                    <label class="form-label small fw-semibold">Tekanan Darah (Diastole)</label>
+                                                    <div class="input-group input-group-sm">
+                                                        <input type="number" name="ttv_diastole" class="form-control" value="{{ k.ttv_diastole|default:'' }}" placeholder="80">
+                                                        <span class="input-group-text">mmHg</span>
+                                                    </div>
+                                                </div>
+                                                <div class="col-4">
+                                                    <label class="form-label small fw-semibold">Nadi</label>
+                                                    <div class="input-group input-group-sm">
+                                                        <input type="number" name="ttv_nadi" class="form-control" value="{{ k.ttv_nadi|default:'' }}" placeholder="80">
+                                                        <span class="input-group-text">x/m</span>
+                                                    </div>
+                                                </div>
+                                                <div class="col-4">
+                                                    <label class="form-label small fw-semibold">Laju Nafas (RR)</label>
+                                                    <div class="input-group input-group-sm">
+                                                        <input type="number" name="ttv_rr" class="form-control" value="{{ k.ttv_rr|default:'' }}" placeholder="20">
+                                                        <span class="input-group-text">x/m</span>
+                                                    </div>
+                                                </div>
+                                                <div class="col-4">
+                                                    <label class="form-label small fw-semibold">Suhu Badan</label>
+                                                    <div class="input-group input-group-sm">
+                                                        <input type="number" step="0.1" name="ttv_suhu" class="form-control" value="{{ k.ttv_suhu|default:'' }}" placeholder="36.5">
+                                                        <span class="input-group-text">&deg;C</span>
+                                                    </div>
+                                                </div>
+                                                <div class="col-12 mt-2">
+                                                    <label class="form-label small fw-semibold">Saturasi Oksigen (SpO2)</label>
+                                                    <div class="input-group input-group-sm">
+                                                        <input type="number" name="ttv_spo2" class="form-control" value="{{ k.ttv_spo2|default:'' }}" placeholder="98">
+                                                        <span class="input-group-text">%</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="mb-2">
+                                                <label class="form-label small fw-semibold">Tindakan Cito / ICD-9-CM</label>
+                                                <input type="text" name="icd9_tindakan" class="form-control form-control-sm" value="{{ k.icd9_tindakan|default:'' }}" placeholder="Contoh: Pasang Infus RL, Nebulisasi, Jahit Luka, EKG...">
+                                            </div>
+                                        </div>
+                                        <div class="modal-footer">
+                                            <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Batal</button>
+                                            <button type="submit" class="btn btn-primary btn-sm">Simpan TTV</button>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- MODAL ORDER PENUNJANG (LAB/RAD) -->
+                        <div class="modal fade" id="modalOrder{{ k.pk }}" tabindex="-1">
+                            <div class="modal-dialog modal-dialog-centered">
+                                <div class="modal-content">
+                                    <form method="POST" action="{% url 'pasien:order_penunjang_buat' k.pk %}">
+                                        {% csrf_token %}
+                                        <div class="modal-header bg-info-subtle">
+                                            <h6 class="modal-title fw-bold text-info"><i class="bi bi-radioactive me-1"></i> Order Pemeriksaan Penunjang</h6>
+                                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                        </div>
+                                        <div class="modal-body">
+                                            <div class="mb-3">
+                                                <label class="form-label small fw-semibold">Jenis Penunjang <span class="text-danger">*</span></label>
+                                                <select name="jenis" class="form-select form-select-sm" required>
+                                                    <option value="LAB">Laboratorium PK / Mikrobiologi</option>
+                                                    <option value="RADIOLOGI">Radiologi / Rontgen / CT-Scan</option>
+                                                </select>
+                                            </div>
+                                            <div class="mb-3">
+                                                <label class="form-label small fw-semibold">Prioritas <span class="text-danger">*</span></label>
+                                                <select name="prioritas" class="form-select form-select-sm" required>
+                                                    <option value="CITO" selected>⚡ CITO (Gawat Darurat / Hasil Cepat)</option>
+                                                    <option value="RUTIN">RUTIN</option>
+                                                </select>
+                                            </div>
+                                            <div class="mb-3">
+                                                <label class="form-label small fw-semibold">Nama Pemeriksaan <span class="text-danger">*</span></label>
+                                                <input type="text" name="nama_pemeriksaan" class="form-control form-control-sm" required placeholder="Contoh: Darah Lengkap, Elektrolit, Rontgen Thorax AP, CT Scan Kepala...">
+                                            </div>
+                                            <div class="mb-3">
+                                                <label class="form-label small fw-semibold">Catatan Klinis / Indikasi</label>
+                                                <textarea name="catatan_klinis" class="form-control form-control-sm" rows="2" placeholder="Kecurigaan infeksi paru, evaluasi stroke akut, trauma thorax..."></textarea>
+                                            </div>
+                                        </div>
+                                        <div class="modal-footer">
+                                            <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Batal</button>
+                                            <button type="submit" class="btn btn-info btn-sm text-white">Kirim Permintaan &amp; Billing</button>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
 
                         <!-- MODAL DISPOSISI: 1. PULANG (DISCHARGE) -->
                         <div class="modal fade" id="modalPulang{{ k.pk }}" tabindex="-1">
@@ -198,9 +346,6 @@
                                                 <select name="kondisi_pulang" class="form-select form-select-sm" required>
                                                     <option value="MEMBAIK" selected>Kondisi Membaik / Stabil</option>
                                                     <option value="SEMBUH">Sembuh</option>
-                                                    <option value="APS">Atas Permintaan Sendiri (APS)</option>
-                                                    <option value="RUJUK">Dirujuk ke RS Lain</option>
-                                                    <option value="MENINGGAL">Meninggal Dunia</option>
                                                 </select>
                                             </div>
                                             <div class="mb-3">
@@ -227,7 +372,45 @@
                             </div>
                         </div>
 
-                        <!-- MODAL DISPOSISI: 2. RAWAT INAP (RANAP) -->
+                        <!-- MODAL DISPOSISI: 2. PAPS (PENOLAKAN RAWAT) -->
+                        <div class="modal fade" id="modalPaps{{ k.pk }}" tabindex="-1">
+                            <div class="modal-dialog modal-dialog-centered">
+                                <div class="modal-content">
+                                    <form method="POST" action="{% url 'pasien:kunjungan_disposisi' k.pk %}">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="aksi" value="PAPS">
+                                        <input type="hidden" name="next_url" value="pasien:igd_dashboard">
+                                        <div class="modal-header bg-warning-subtle">
+                                            <h6 class="modal-title fw-bold text-dark"><i class="bi bi-shield-x me-1"></i> Formulir PAPS (Pulang Atas Permintaan Sendiri)</h6>
+                                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                        </div>
+                                        <div class="modal-body">
+                                            <div class="alert alert-danger py-2 small mb-3">
+                                                <i class="bi bi-exclamation-triangle-fill me-1"></i> Pasien/Keluarga menolak rawat inap meskipun ada indikasi medis. Catat pernyataan penolakan di bawah.
+                                            </div>
+                                            <div class="mb-3">
+                                                <label class="form-label small fw-semibold">Nama Lengkap Penolak / Penanggung Jawab <span class="text-danger">*</span></label>
+                                                <input type="text" name="paps_nama_penolak" class="form-control form-control-sm" required placeholder="Nama keluarga/wali pasien">
+                                            </div>
+                                            <div class="mb-3">
+                                                <label class="form-label small fw-semibold">Alasan Penolakan Rawat Inap <span class="text-danger">*</span></label>
+                                                <textarea name="paps_alasan" class="form-control form-control-sm" rows="3" required placeholder="Contoh: Masalah biaya, memilih pengobatan alternatif, ingin dirawat di rumah sakit lain..."></textarea>
+                                            </div>
+                                            <div class="mb-3">
+                                                <label class="form-label small fw-semibold">Resume Medis Saat Meninggalkan IGD</label>
+                                                <textarea name="resume_medis" class="form-control form-control-sm" rows="2" placeholder="Pasien telah diedukasi risiko perburukan namun tetap memilih pulang..."></textarea>
+                                            </div>
+                                        </div>
+                                        <div class="modal-footer">
+                                            <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Batal</button>
+                                            <button type="submit" class="btn btn-warning btn-sm text-dark px-3 fw-bold">Simpan Berita Acara PAPS</button>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- MODAL DISPOSISI: 3. RAWAT INAP (RANAP) -->
                         <div class="modal fade" id="modalRanap{{ k.pk }}" tabindex="-1">
                             <div class="modal-dialog modal-dialog-centered">
                                 <div class="modal-content">
@@ -255,7 +438,7 @@
                                                     {% endfor %}
                                                 </select>
                                                 <div class="form-text small text-muted">
-                                                    Bed yang dipilih akan otomatis terkunci menjadi status <strong>TERISI</strong>.
+                                                    Bed yang dipilih akan otomatis terkunci menjadi status <strong>TERISI</strong> dan otomatis terbit SPRI.
                                                 </div>
                                             </div>
                                             <div class="mb-3">
@@ -270,8 +453,73 @@
                                         <div class="modal-footer">
                                             <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Batal</button>
                                             <button type="submit" class="btn btn-primary btn-sm px-3">
-                                                <i class="bi bi-door-open-fill me-1"></i> Transfer ke Rawat Inap
+                                                <i class="bi bi-door-open-fill me-1"></i> Transfer ke Rawat Inap &amp; SPRI
                                             </button>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- MODAL DISPOSISI: 4. RUJUK SISRUTE -->
+                        <div class="modal fade" id="modalRujuk{{ k.pk }}" tabindex="-1">
+                            <div class="modal-dialog modal-dialog-centered">
+                                <div class="modal-content">
+                                    <form method="POST" action="{% url 'pasien:kunjungan_disposisi' k.pk %}">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="aksi" value="RUJUK_EKSTERNAL">
+                                        <input type="hidden" name="next_url" value="pasien:igd_dashboard">
+                                        <div class="modal-header bg-secondary-subtle">
+                                            <h6 class="modal-title fw-bold text-dark"><i class="bi bi-send me-1"></i> Rujukan Keluar (SISRUTE)</h6>
+                                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                        </div>
+                                        <div class="modal-body">
+                                            <div class="mb-3">
+                                                <label class="form-label small fw-semibold">Rumah Sakit Tujuan Rujukan <span class="text-danger">*</span></label>
+                                                <input type="text" name="sisrute_rs_tujuan" class="form-control form-control-sm" required placeholder="Contoh: RSUP Dr. Kariadi Semarang, RSUP Persahabatan...">
+                                            </div>
+                                            <div class="mb-3">
+                                                <label class="form-label small fw-semibold">Alasan Rujukan / Keterbatasan Fasilitas <span class="text-danger">*</span></label>
+                                                <textarea name="sisrute_alasan" class="form-control form-control-sm" rows="3" required placeholder="Memerlukan ICU bed, tindakan Cath Lab darurat, tidak ada dokter spesialis terkait..."></textarea>
+                                            </div>
+                                        </div>
+                                        <div class="modal-footer">
+                                            <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Batal</button>
+                                            <button type="submit" class="btn btn-dark btn-sm px-3">Kirim Rujukan SISRUTE</button>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- MODAL DISPOSISI: 5. PROTOKOL MENINGGAL DUNIA -->
+                        <div class="modal fade" id="modalMeninggal{{ k.pk }}" tabindex="-1">
+                            <div class="modal-dialog modal-dialog-centered">
+                                <div class="modal-content">
+                                    <form method="POST" action="{% url 'pasien:kunjungan_disposisi' k.pk %}">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="aksi" value="MENINGGAL">
+                                        <input type="hidden" name="next_url" value="pasien:igd_dashboard">
+                                        <div class="modal-header bg-danger-subtle">
+                                            <h6 class="modal-title fw-bold text-danger"><i class="bi bi-x-circle-fill me-1"></i> Protokol Pasien Meninggal Dunia (DoA / Death in ER)</h6>
+                                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                        </div>
+                                        <div class="modal-body">
+                                            <div class="mb-3">
+                                                <label class="form-label small fw-semibold">Waktu Dinyatakan Meninggal <span class="text-danger">*</span></label>
+                                                <input type="datetime-local" name="waktu_kematian" class="form-control form-control-sm" required id="deathTimeInput{{ k.pk }}">
+                                            </div>
+                                            <div class="mb-3">
+                                                <label class="form-label small fw-semibold">Penyebab Kematian (Cause of Death) <span class="text-danger">*</span></label>
+                                                <textarea name="penyebab_kematian" class="form-control form-control-sm" rows="3" required placeholder="Henti jantung mendadak, syok kardiogenik, henti nafas post-resusitasi..."></textarea>
+                                            </div>
+                                            <div class="alert alert-secondary py-2 small mb-0">
+                                                Status bed akan dialihkan ke <strong>STERILISASI</strong> dan berkas akan ditransfer ke Kamar Jenazah.
+                                            </div>
+                                        </div>
+                                        <div class="modal-footer">
+                                            <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Batal</button>
+                                            <button type="submit" class="btn btn-danger btn-sm px-3">Catat Kematian &amp; Transfer Jenazah</button>
                                         </div>
                                     </form>
                                 </div>
@@ -292,4 +540,30 @@
     </div>
 
 </div>
+
+<script>
+    // Dwell Time Dynamic Badge Color Calculator (<2h green, 2-4h warn, >4h blink alert)
+    document.addEventListener('DOMContentLoaded', function() {
+        const now = new Date();
+        document.querySelectorAll('.dwell-badge').forEach(function(el) {
+            const entryStr = el.getAttribute('data-masuk');
+            if (entryStr) {
+                const entry = new Date(entryStr);
+                const diffHours = (now - entry) / (1000 * 60 * 60);
+                const inner = el.firstElementChild;
+                if (inner) {
+                    if (diffHours >= 4) {
+                        inner.className = 'dwell-alert';
+                        inner.innerHTML = '<i class="bi bi-exclamation-octagon-fill me-1"></i>> 4 Jam';
+                    } else if (diffHours >= 2) {
+                        inner.className = 'dwell-warn';
+                        inner.innerHTML = '<i class="bi bi-clock-history me-1"></i>2-4 Jam';
+                    } else {
+                        inner.className = 'dwell-ok';
+                    }
+                }
+            }
+        });
+    });
+</script>
 {% endblock %}
