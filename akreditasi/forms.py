@@ -21,7 +21,7 @@ class UnitKerjaForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields['parent'].queryset = UnitKerja.objects.filter(level__in=[1, 2]).order_by('level', 'code')
+        self.fields['parent'].queryset = UnitKerja.objects.order_by('level', 'code')
         self.helper = FormHelper()
         self.helper.layout = Layout(
             Row(
