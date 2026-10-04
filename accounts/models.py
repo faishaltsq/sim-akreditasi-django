@@ -206,6 +206,56 @@ class UserProfile(models.Model):
         cfg = RolePermissionConfig.get_config_for_role(self.role)
         return getattr(cfg, perm_code, False)
 
+    def get_allowed_patient_modules(self) -> set:
+        """
+        Return set of allowed patient submodules for this user based on their role,
+        assigned unit kerja, and clinical profession.
+        Keys: 'pendaftaran', 'igd', 'rajal', 'ranap', 'farmasi', 'laboratorium', 'master_pasien', 'riwayat'
+        """
+        if self.user.is_superuser or self.role in ['SUPER_ADMIN', 'ADMIN_RS', 'DIREKTUR']:
+            return {'pendaftaran', 'igd', 'rajal', 'ranap', 'farmasi', 'laboratorium', 'master_pasien', 'riwayat'}
+
+        if not self.unit_kerja:
+            return {'master_pasien', 'riwayat'}
+
+        code = (self.unit_kerja.code or '').upper()
+        parent_code = (self.unit_kerja.parent.code or '').upper() if self.unit_kerja.parent else ''
+        all_codes = {code, parent_code}
+
+        allowed = {'master_pasien', 'riwayat'}
+
+        # 1. Laboratorium & Bank Darah
+        if any('LAB' in c for c in all_codes) or self.profesi == 'ANALIS_LAB':
+            allowed.add('laboratorium')
+            return allowed
+
+        # 2. Farmasi & Depo
+        if any('FARM' in c or 'APOTEK' in c or 'DEPO' in c for c in all_codes) or self.profesi == 'APOTEKER':
+            allowed.add('farmasi')
+            return allowed
+
+        # 3. IGD (Gawat Darurat)
+        if any('IGD' in c for c in all_codes):
+            allowed.update({'igd', 'pendaftaran', 'ranap'})
+            return allowed
+
+        # 4. Rawat Jalan (IRJ, Poliklinik)
+        if any('IRJ' in c or 'POLI' in c for c in all_codes):
+            allowed.update({'rajal', 'ranap'})
+            return allowed
+
+        # 5. Rawat Inap & Kritis (IRIN, Bangsal, ICU, ICCU, HCU, VK)
+        if any('IRIN' in c or 'BANGSAL' in c or 'INTENSIF' in c or 'RUANG' in c for c in all_codes):
+            allowed.update({'ranap'})
+            return allowed
+
+        # 6. Rekam Medis / Pendaftaran / Admisi
+        if any('ADMISI' in c or 'PENDAFTARAN' in c or 'REKAM-MEDIS' in c for c in all_codes):
+            allowed.update({'pendaftaran', 'ranap'})
+            return allowed
+
+        return allowed
+
     # --- Backward-compatible properties ---
     @property
     def can_edit(self):
