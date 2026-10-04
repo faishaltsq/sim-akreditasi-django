@@ -8,3 +8,4 @@ gunicorn>=22.0
 whitenoise>=6.5
 requests>=2.31
 python-decouple>=3.8
+reportlab>=4.0
