@@ -102,20 +102,27 @@ def _is_manager_role(user) -> bool:
 def dashboard(request):
     profile = getattr(request.user, 'profile', None)
 
-    # Renstra 2026–2030: kalkulasi ringkasan indikator mutu per tahun (shared)
-    from .risiko_models import IndikatorMutu, CatatanIndikator
+    # Renstra 2026–2030: kalkulasi ringkasan indikator mutu per tahun (dynamic DB)
+    from .risiko_models import IndikatorMutu, CatatanIndikator, RenstraRoadmap
     from django.db.models import ExpressionWrapper, DecimalField
     renstra_years = []
-    RENSTRA_LABELS = {
-        2026: ('Consolidation & Digital Foundation', 'bi-cpu', '#0d6efd'),
-        2027: ('Service Modernization & Cost Containment', 'bi-gear-wide-connected', '#6f42c1'),
-        2028: ('Capacity Expansion & Clinical Excellence', 'bi-hospital', '#198754'),
-        2029: ('Market Leadership & Sustainability', 'bi-tree', '#20c997'),
-        2030: ('Regional Benchmark & Well-being', 'bi-trophy', '#fd7e14'),
-    }
     total_indikator = IndikatorMutu.objects.filter(aktif=True).count()
-    for yr in range(2026, 2031):
-        label, icon, color = RENSTRA_LABELS[yr]
+
+    # DB-driven roadmap with fallback to static defaults
+    db_roadmaps = list(RenstraRoadmap.objects.filter(aktif=True).order_by('urutan', 'tahun'))
+    if db_roadmaps:
+        year_sources = [(rm.tahun, rm.isu_strategis, rm.ikon, rm.warna_hex) for rm in db_roadmaps]
+    else:
+        # ponytail: static fallback — remove when DB is always seeded
+        year_sources = [
+            (2026, 'Consolidation & Digital Foundation', 'bi-cpu', '#0d6efd'),
+            (2027, 'Service Modernization & Cost Containment', 'bi-gear-wide-connected', '#6f42c1'),
+            (2028, 'Capacity Expansion & Clinical Excellence', 'bi-hospital', '#198754'),
+            (2029, 'Market Leadership & Sustainability', 'bi-tree', '#20c997'),
+            (2030, 'Regional Benchmark & Well-being', 'bi-trophy', '#fd7e14'),
+        ]
+
+    for yr, label, icon, color in year_sources:
         catatan_yr = CatatanIndikator.objects.filter(tahun=yr)
         total_catatan = catatan_yr.count()
         tercapai = catatan_yr.filter(

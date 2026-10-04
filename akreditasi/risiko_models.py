@@ -283,6 +283,55 @@ class CatatanIndikator(models.Model):
             return (self.nilai_numerator / self.nilai_denominator) * Decimal('100')
         return Decimal('0')
 
+
     @property
     def tercapai(self):
         return self.nilai_capaian >= self.indikator.target_nilai
+
+
+# ── 6. Renstra RS Roadmap (Dynamic Admin CRUD) ────────────────────────────────
+
+class RenstraRoadmap(models.Model):
+    tahun = models.PositiveIntegerField('Tahun Renstra', unique=True, db_index=True)
+    isu_strategis = models.CharField('Isu Strategis', max_length=200)
+    sub_tema = models.CharField('Sub-Tema / Fokus Utama', max_length=250, blank=True)
+    deskripsi = models.TextField('Deskripsi Rencana Strategis', blank=True)
+    ikon = models.CharField('Class Bootstrap Icon', max_length=50, default='bi-flag',
+                            help_text='Contoh: bi-cpu, bi-gear-wide-connected, bi-hospital, bi-tree, bi-trophy')
+    warna_hex = models.CharField('Kode Warna Hex', max_length=20, default='#0d6efd',
+                                 help_text='Contoh: #0d6efd, #6f42c1, #198754, #20c997, #fd7e14')
+    urutan = models.PositiveSmallIntegerField('Urutan Tampil', default=1)
+    aktif = models.BooleanField('Aktif Ditampilkan', default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = 'Roadmap Renstra Tahunan'
+        verbose_name_plural = 'Roadmap Renstra RS (2026–2030)'
+        ordering = ['urutan', 'tahun']
+
+    def __str__(self):
+        return f'Renstra {self.tahun} — {self.isu_strategis}'
+
+
+class RenstraFokusItem(models.Model):
+    roadmap = models.ForeignKey(RenstraRoadmap, on_delete=models.CASCADE, related_name='fokus_items')
+    nomor = models.PositiveSmallIntegerField('Nomor Urut Fokus', default=1)
+    nama_fokus = models.CharField('Nama Indikator / Program Fokus', max_length=255)
+    indikator_mutu = models.ForeignKey('IndikatorMutu', on_delete=models.SET_NULL, null=True, blank=True,
+                                       related_name='renstra_fokus',
+                                       help_text='Tautkan ke Master Indikator Mutu (opsional)')
+    kode_ref = models.CharField('Kode Ref Cadangan', max_length=50, blank=True,
+                                help_text='Contoh: IMP-RM-01, INM-08')
+    target_label = models.CharField('Target Label Teks', max_length=100, default='100%')
+    target_nilai = models.DecimalField('Nilai Target Numerik', max_digits=8, decimal_places=2, default=100.0)
+    satuan = models.CharField('Satuan', max_length=30, default='%')
+    unit_kerja_label = models.CharField('Unit Kerja Penanggung Jawab', max_length=150, blank=True)
+
+    class Meta:
+        verbose_name = 'Butir Fokus Indikator Renstra'
+        verbose_name_plural = 'Butir Fokus Indikator Renstra'
+        ordering = ['nomor']
+
+    def __str__(self):
+        return f'{self.roadmap.tahun} #{self.nomor}: {self.nama_fokus}'

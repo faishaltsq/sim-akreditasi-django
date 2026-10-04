@@ -71,6 +71,43 @@ RENSTRA_ANNUAL_FOCUS = {
 }
 
 
+def get_dynamic_renstra_dict():
+    """Load Renstra data from DB with safe fallback to RENSTRA_ANNUAL_FOCUS static dict."""
+    try:
+        from .risiko_models import RenstraRoadmap
+        roadmaps = list(
+            RenstraRoadmap.objects.filter(aktif=True)
+            .prefetch_related('fokus_items__indikator_mutu')
+            .order_by('urutan', 'tahun')
+        )
+        if not roadmaps:
+            return RENSTRA_ANNUAL_FOCUS
+        result = {}
+        for rm in roadmaps:
+            fokus_list = []
+            for item in rm.fokus_items.order_by('nomor'):
+                kode = item.indikator_mutu.kode_indikator if item.indikator_mutu else item.kode_ref
+                fokus_list.append({
+                    'nomor':       item.nomor,
+                    'nama':        item.nama_fokus,
+                    'target':      item.target_label,
+                    'target_val':  float(item.target_nilai),
+                    'satuan':      item.satuan,
+                    'kode_ref':    kode,
+                    'unit_name':   item.unit_kerja_label,
+                })
+            result[rm.tahun] = {
+                'tahun':          rm.tahun,
+                'isu_strategis':  rm.isu_strategis,
+                'sub_tema':       rm.sub_tema,
+                'deskripsi':      rm.deskripsi,
+                'fokus_items':    fokus_list,
+            }
+        return result
+    except Exception:
+        return RENSTRA_ANNUAL_FOCUS
+
+
 def _log(user, aksi, obj, detail=''):
     AuditLog.objects.create(
         user=user, aksi=aksi,
@@ -123,8 +160,10 @@ def indikator_dashboard(request):
 
     # Ambil catatan capaian terakhir untuk tahun ini per indikator
     indikators = qs.order_by('jenis', 'kode_indikator')
-    current_renstra = RENSTRA_ANNUAL_FOCUS.get(tahun_int, RENSTRA_ANNUAL_FOCUS[2026])
-    fokus_kode_set = {item['kode_ref'] for item in current_renstra['fokus_items']}
+    _renstra_data = get_dynamic_renstra_dict()
+    _fallback_year = next(iter(_renstra_data.keys())) if _renstra_data else 2026
+    current_renstra = _renstra_data.get(tahun_int, _renstra_data.get(_fallback_year, {}))
+    fokus_kode_set = {item['kode_ref'] for item in current_renstra.get('fokus_items', []) if item.get('kode_ref')}
 
     # Ringkasan dan pembagian grup indikator
     summary = {}
@@ -167,14 +206,14 @@ def indikator_dashboard(request):
         'fokus_renstra_list': fokus_renstra_list,
         'imp_rs_other_list': imp_rs_other_list,
         'current_renstra': current_renstra,
-        'renstra_all': RENSTRA_ANNUAL_FOCUS,
+        'renstra_all': _renstra_data,
         'summary': summary,
         'jenis_choices': IndikatorMutu.JENIS_CHOICES,
         'units': units,
         'filter_jenis': jenis,
         'filter_unit': unit_id,
         'filter_tahun': tahun_int,
-        'tahun_choices': [2026, 2027, 2028, 2029, 2030],
+        'tahun_choices': list(_renstra_data.keys()) if _renstra_data else [2026, 2027, 2028, 2029, 2030],
         'is_manager': _is_manager(request.user),
     }
     return render(request, 'akreditasi/indikator_dashboard.html', ctx)
