@@ -229,7 +229,13 @@ class KunjunganPasien(models.Model):
     ttv_skala_nyeri = models.PositiveSmallIntegerField('Skala Nyeri (NRS 0-10)', null=True, blank=True, help_text='0 (Tidak Nyeri) s.d 10 (Sangat Hebat)')
     icd9_tindakan   = models.CharField('Tindakan Medis (ICD-9-CM)', max_length=300, blank=True)
 
-    # ── Asesmen Awal IGD (Revisi 02 — Biopsikososiospiritual) ──
+    # ── Asesmen Awal IGD (Revisi 02 & Formulir Standar 3.09) ──
+    keadaan_umum        = models.CharField('Keadaan Umum', max_length=30, blank=True, help_text='Baik / Sedang / Lemah / Buruk')
+    kesadaran           = models.CharField('Tingkat Kesadaran', max_length=30, blank=True, help_text='Compos Mentis / Apatis / Somnolen / Sopor / Koma')
+    nyeri_karakteristik = models.CharField('Karakteristik Nyeri', max_length=50, blank=True, help_text='Tumpul / Tajam/Tusuk / Terbakar / Denyut / Hilang-Timbul')
+    fungsional_adl      = models.CharField('Aktivitas Sehari-hari (ADL)', max_length=50, blank=True, help_text='Mandiri / Bantuan Parsial / Ketergantungan Total')
+    fisik_head_to_toe   = models.JSONField('Pemeriksaan Fisik Head-To-Toe (Standar 3.09)', default=dict, blank=True)
+
     anamnesis_rps          = models.TextField('Riwayat Penyakit Sekarang (RPS)', blank=True)
     anamnesis_rpd          = models.TextField('Riwayat Penyakit Dahulu (RPD)', blank=True)
     anamnesis_rpk          = models.TextField('Riwayat Penyakit Keluarga (RPK)', blank=True)

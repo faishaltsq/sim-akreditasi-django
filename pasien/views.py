@@ -1524,43 +1524,111 @@ def cetak_tracer(request, pk):
 
 @login_required
 def igd_asesmen_awal_save(request, pk):
-    """Save comprehensive initial clinical assessment (Biopsikososiospiritual, Physical, 3S)."""
+    """Save comprehensive initial clinical assessment (Biopsikososiospiritual, Physical, 3S, Standar 3.09)."""
     k = get_object_or_404(KunjunganPasien, pk=pk)
     if request.method == 'POST':
+        # Keadaan Umum & Kesadaran (Standar 3.09)
+        if request.POST.get('keadaan_umum'):
+            k.keadaan_umum = request.POST.get('keadaan_umum', '').strip()
+        if request.POST.get('kesadaran'):
+            k.kesadaran = request.POST.get('kesadaran', '').strip()
+        if request.POST.get('nyeri_karakteristik'):
+            k.nyeri_karakteristik = request.POST.get('nyeri_karakteristik', '').strip()
+        if request.POST.get('fungsional_adl'):
+            k.fungsional_adl = request.POST.get('fungsional_adl', '').strip()
+
+        # TTV update if provided
+        if request.POST.get('ttv_sistole'):
+            k.ttv_sistole = int(request.POST['ttv_sistole']) if request.POST['ttv_sistole'].isdigit() else None
+        if request.POST.get('ttv_diastole'):
+            k.ttv_diastole = int(request.POST['ttv_diastole']) if request.POST['ttv_diastole'].isdigit() else None
+        if request.POST.get('ttv_nadi'):
+            k.ttv_nadi = int(request.POST['ttv_nadi']) if request.POST['ttv_nadi'].isdigit() else None
+        if request.POST.get('ttv_rr'):
+            k.ttv_rr = int(request.POST['ttv_rr']) if request.POST['ttv_rr'].isdigit() else None
+        if request.POST.get('ttv_suhu'):
+            try:
+                k.ttv_suhu = float(request.POST['ttv_suhu'])
+            except (ValueError, TypeError):
+                pass
+        if request.POST.get('ttv_spo2'):
+            k.ttv_spo2 = int(request.POST['ttv_spo2']) if request.POST['ttv_spo2'].isdigit() else None
+        if request.POST.get('ttv_gcs'):
+            k.ttv_gcs = request.POST.get('ttv_gcs', '').strip()
+        if request.POST.get('ttv_skala_nyeri'):
+            val = request.POST['ttv_skala_nyeri'].strip()
+            k.ttv_skala_nyeri = int(val) if val.isdigit() else None
+
         # Anamnesis
-        k.anamnesis_rps = request.POST.get('anamnesis_rps', '').strip()
-        k.anamnesis_rpd = request.POST.get('anamnesis_rpd', '').strip()
-        k.anamnesis_rpk = request.POST.get('anamnesis_rpk', '').strip()
-        k.anamnesis_obat = request.POST.get('anamnesis_obat', '').strip()
+        if request.POST.get('anamnesis_rps'):
+            k.anamnesis_rps = request.POST.get('anamnesis_rps', '').strip()
+        if request.POST.get('anamnesis_rpd'):
+            k.anamnesis_rpd = request.POST.get('anamnesis_rpd', '').strip()
+        if request.POST.get('anamnesis_rpk'):
+            k.anamnesis_rpk = request.POST.get('anamnesis_rpk', '').strip()
+        if request.POST.get('anamnesis_obat'):
+            k.anamnesis_obat = request.POST.get('anamnesis_obat', '').strip()
+
         # Fisik ABCDE
-        k.fisik_airway = request.POST.get('fisik_airway', '').strip()
-        k.fisik_breathing = request.POST.get('fisik_breathing', '').strip()
-        k.fisik_circulation = request.POST.get('fisik_circulation', '').strip()
-        k.fisik_disability = request.POST.get('fisik_disability', '').strip()
-        k.fisik_exposure = request.POST.get('fisik_exposure', '').strip()
+        if request.POST.get('fisik_airway'):
+            k.fisik_airway = request.POST.get('fisik_airway', '').strip()
+        if request.POST.get('fisik_breathing'):
+            k.fisik_breathing = request.POST.get('fisik_breathing', '').strip()
+        if request.POST.get('fisik_circulation'):
+            k.fisik_circulation = request.POST.get('fisik_circulation', '').strip()
+        if request.POST.get('fisik_disability'):
+            k.fisik_disability = request.POST.get('fisik_disability', '').strip()
+        if request.POST.get('fisik_exposure'):
+            k.fisik_exposure = request.POST.get('fisik_exposure', '').strip()
+
+        # Fisik Head-To-Toe (Standar 3.09)
+        htt = k.fisik_head_to_toe or {}
+        for part in ['kepala_leher', 'toraks_dada', 'abdomen', 'ekstremitas', 'genitalia_anus', 'integumen_kulit']:
+            val = request.POST.get(f'fisik_{part}', '').strip()
+            if val:
+                htt[part] = val
+        k.fisik_head_to_toe = htt
+
         # Bio-Psiko-Sosial-Spiritual
-        k.status_psikososial = request.POST.get('status_psikososial', '').strip()
-        k.status_spiritual = request.POST.get('status_spiritual', '').strip()
+        if request.POST.get('status_psikososial'):
+            k.status_psikososial = request.POST.get('status_psikososial', '').strip()
+        if request.POST.get('status_spiritual'):
+            k.status_spiritual = request.POST.get('status_spiritual', '').strip()
+
         # Skrining Risiko
         skor_jatuh = request.POST.get('skrining_jatuh_skor')
-        k.skrining_jatuh_skor = int(skor_jatuh) if skor_jatuh and skor_jatuh.isdigit() else None
-        k.skrining_jatuh_grade = request.POST.get('skrining_jatuh_grade', '').strip()
+        if skor_jatuh and skor_jatuh.isdigit():
+            k.skrining_jatuh_skor = int(skor_jatuh)
+        if request.POST.get('skrining_jatuh_grade'):
+            k.skrining_jatuh_grade = request.POST.get('skrining_jatuh_grade', '').strip()
+
         skor_gizi = request.POST.get('skrining_gizi_mst')
-        k.skrining_gizi_mst = int(skor_gizi) if skor_gizi and skor_gizi.isdigit() else None
+        if skor_gizi and skor_gizi.isdigit():
+            k.skrining_gizi_mst = int(skor_gizi)
+
         # Diagnosis Medis & Keperawatan 3S
         if request.POST.get('diagnosa_masuk'):
             k.diagnosa_masuk = request.POST.get('diagnosa_masuk', '').strip()
         if request.POST.get('icd9_tindakan'):
             k.icd9_tindakan = request.POST.get('icd9_tindakan', '').strip()
-        k.diagnosa_keperawatan_sdki = request.POST.get('diagnosa_keperawatan_sdki', '').strip()
-        k.luaran_keperawatan_slki = request.POST.get('luaran_keperawatan_slki', '').strip()
-        k.intervensi_keperawatan_siki = request.POST.get('intervensi_keperawatan_siki', '').strip()
+        if request.POST.get('diagnosa_keperawatan_sdki'):
+            k.diagnosa_keperawatan_sdki = request.POST.get('diagnosa_keperawatan_sdki', '').strip()
+        if request.POST.get('luaran_keperawatan_slki'):
+            k.luaran_keperawatan_slki = request.POST.get('luaran_keperawatan_slki', '').strip()
+        if request.POST.get('intervensi_keperawatan_siki'):
+            k.intervensi_keperawatan_siki = request.POST.get('intervensi_keperawatan_siki', '').strip()
+
         # Alergi pada pasien
         if request.POST.get('alergi_obat'):
             k.pasien.alergi_obat = request.POST.get('alergi_obat', '').strip()
             k.pasien.save(update_fields=['alergi_obat'])
+
         k.save()
-        messages.success(request, f'Asesmen awal IGD untuk {k.pasien.nama_lengkap} berhasil disimpan.')
+        messages.success(request, f'Asesmen awal pasien {k.pasien.nama_lengkap} berhasil diperbarui.')
+
+        next_url = request.POST.get('next_url')
+        if next_url:
+            return redirect(next_url)
     return redirect('pasien:igd_dashboard')
 
 

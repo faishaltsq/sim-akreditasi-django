@@ -127,16 +127,420 @@
     <!-- MAIN SECTIONS: ACCORDION / TABS -->
     <div class="accordion mb-4" id="kunjunganAccordion">
 
-        <!-- 1. CPPT SECTION -->
+        <!-- 1. ASESMEN AWAL PASIEN & SKRINING RISIKO (STANDAR 3.09) -->
+        <div class="accordion-item border-0 shadow-sm mb-3 rounded overflow-hidden">
+            <h2 class="accordion-header" id="headingAsesmenAwal">
+                <button class="accordion-button bg-white fw-bold py-3" type="button" data-bs-toggle="collapse" data-bs-target="#collapseAsesmenAwal" aria-expanded="true" aria-controls="collapseAsesmenAwal" style="font-size:.88rem; color:#0f172a;">
+                    <i class="bi bi-clipboard2-pulse-fill me-2" style="color:#0d9488;"></i>
+                    Asesmen Awal Pasien &amp; Skrining Risiko (IGD / Rawat Inap)
+                    {% if k.is_asesmen_awal_lengkap %}
+                    <span class="badge bg-success-subtle text-success border border-success ms-2 font-monospace" style="font-size:.72rem;">
+                        <i class="bi bi-check-circle-fill me-1"></i>Asesmen Lengkap
+                    </span>
+                    {% else %}
+                    <span class="badge bg-warning-subtle text-warning-emphasis border border-warning ms-2 font-monospace" style="font-size:.72rem;">
+                        <i class="bi bi-clock-history me-1"></i>Asesmen Belum Lengkap
+                    </span>
+                    {% endif %}
+                    <span class="badge bg-light text-dark border ms-2 font-monospace" style="font-size:.72rem;">{{ asesmen_list.count }} Skrining Risiko</span>
+                </button>
+            </h2>
+            <div id="collapseAsesmenAwal" class="accordion-collapse collapse show" aria-labelledby="headingAsesmenAwal">
+                <div class="accordion-body p-3 p-md-4 bg-light-subtle">
+
+                    <!-- ACTION HEADER: EDIT ASESMEN AWAL & INFO -->
+                    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+                        <div>
+                            <span class="fw-bold text-dark" style="font-size: .88rem;">Formulir Asesmen Awal Medis &amp; Keperawatan (Standar Akreditasi 3.09)</span>
+                            <div class="small text-muted">Evaluasi holistik: Keadaan Umum, Nyeri, MST Gizi, Fungsional ADL, Head-To-Toe, &amp; Skrining Risiko</div>
+                        </div>
+                        <div class="d-flex gap-2">
+                            <button type="button" class="btn btn-sm btn-primary fw-semibold" data-bs-toggle="modal" data-bs-target="#modalEditAsesmenAwal">
+                                <i class="bi bi-pencil-square me-1"></i> Edit / Lengkapi Asesmen Awal
+                            </button>
+                            <a href="{% url 'pasien:cetak_resume_igd' k.pk %}" target="_blank" class="btn btn-sm btn-outline-dark">
+                                <i class="bi bi-printer me-1"></i> Cetak Asesmen / Resume
+                            </a>
+                        </div>
+                    </div>
+
+                    <!-- RINGKASAN ASESMEN KLINIS & BIOPSIKOSOSIAL (STANDAR 3.09) -->
+                    <div class="row g-3 mb-3">
+                        <!-- 1. Keadaan Umum & Kesadaran -->
+                        <div class="col-md-3">
+                            <div class="card h-100 border shadow-xs bg-white p-3">
+                                <div class="text-muted small fw-bold text-uppercase mb-1" style="font-size:.72rem;">1. Keadaan Umum &amp; Kesadaran</div>
+                                <div class="d-flex align-items-center justify-content-between mb-1">
+                                    <span class="small text-muted">Keadaan Umum:</span>
+                                    <span class="badge {% if k.keadaan_umum == 'Baik' %}bg-success{% elif k.keadaan_umum == 'Sedang' %}bg-warning text-dark{% elif k.keadaan_umum %}bg-danger{% else %}bg-secondary{% endif %}">
+                                        {{ k.keadaan_umum|default:"Baik" }}
+                                    </span>
+                                </div>
+                                <div class="d-flex align-items-center justify-content-between mb-2">
+                                    <span class="small text-muted">Kesadaran:</span>
+                                    <span class="fw-semibold text-dark small">{{ k.kesadaran|default:k.ttv_gcs|default:"Compos Mentis" }}</span>
+                                </div>
+                                <hr class="my-1">
+                                <div class="small text-muted mt-1" style="font-size:.72rem;">
+                                    TD: <strong>{{ k.ttv_sistole|default:"-" }}/{{ k.ttv_diastole|default:"-" }} mmHg</strong><br>
+                                    Nadi: <strong>{{ k.ttv_nadi|default:"-" }} x/m</strong> | RR: <strong>{{ k.ttv_rr|default:"-" }} x/m</strong><br>
+                                    Suhu: <strong>{{ k.ttv_suhu|default:"-" }} &deg;C</strong> | SpO2: <strong>{{ k.ttv_spo2|default:"-" }}%</strong>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 2. Asesmen Nyeri (NRS 0-10) -->
+                        <div class="col-md-3">
+                            <div class="card h-100 border shadow-xs bg-white p-3">
+                                <div class="text-muted small fw-bold text-uppercase mb-1" style="font-size:.72rem;">2. Asesmen Nyeri (Skala 0–10)</div>
+                                <div class="d-flex align-items-center justify-content-between mb-1">
+                                    <span class="small text-muted">Intensitas Nyeri:</span>
+                                    <span class="badge {% if k.ttv_skala_nyeri >= 7 %}bg-danger{% elif k.ttv_skala_nyeri >= 4 %}bg-warning text-dark{% elif k.ttv_skala_nyeri > 0 %}bg-info text-dark{% else %}bg-success{% endif %} fs-6">
+                                        {{ k.ttv_skala_nyeri|default:"0" }} / 10
+                                    </span>
+                                </div>
+                                <div class="small fw-semibold mt-1">
+                                    {% if k.ttv_skala_nyeri >= 7 %}<span class="text-danger">Nyeri Berat (7–10)</span>
+                                    {% elif k.ttv_skala_nyeri >= 4 %}<span class="text-warning">Nyeri Sedang (4–6)</span>
+                                    {% elif k.ttv_skala_nyeri > 0 %}<span class="text-info">Nyeri Ringan (1–3)</span>
+                                    {% else %}<span class="text-success">Tidak Ada Nyeri (0)</span>
+                                    {% endif %}
+                                </div>
+                                <div class="small text-muted mt-2">
+                                    Karakteristik: <strong>{{ k.nyeri_karakteristik|default:"Tumpul / Hilang-Timbul" }}</strong>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 3. Skrining Gizi (MST) -->
+                        <div class="col-md-3">
+                            <div class="card h-100 border shadow-xs bg-white p-3">
+                                <div class="text-muted small fw-bold text-uppercase mb-1" style="font-size:.72rem;">3. Skrining Gizi (Malnutrition Screening Tool)</div>
+                                <div class="d-flex align-items-center justify-content-between mb-1">
+                                    <span class="small text-muted">Total Skor MST:</span>
+                                    <span class="badge {% if k.skrining_gizi_mst >= 2 %}bg-danger{% else %}bg-success{% endif %} fs-6 font-monospace">
+                                        Skor {{ k.skrining_gizi_mst|default:"0" }}
+                                    </span>
+                                </div>
+                                <div class="small mt-1">
+                                    {% if k.skrining_gizi_mst >= 2 %}
+                                    <span class="badge bg-danger-subtle text-danger border border-danger">⚠️ Skor &ge; 2: Konsul Ahli Gizi</span>
+                                    {% else %}
+                                    <span class="badge bg-success-subtle text-success border border-success">✓ Risiko Malnutrisi Rendah</span>
+                                    {% endif %}
+                                </div>
+                                <div class="small text-muted mt-2" style="font-size:.72rem;">
+                                    Penurunan BB: {% if k.skrining_gizi_mst >= 2 %}Ada{% else %}Tidak Ada{% endif %}<br>
+                                    Asupan Makan: {% if k.skrining_gizi_mst >= 1 %}Menurun{% else %}Cukup / Normal{% endif %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 4. Fungsional & Psikososial -->
+                        <div class="col-md-3">
+                            <div class="card h-100 border shadow-xs bg-white p-3">
+                                <div class="text-muted small fw-bold text-uppercase mb-1" style="font-size:.72rem;">4. Fungsional &amp; Psikososial</div>
+                                <div class="small mb-1">
+                                    <span class="text-muted">Aktivitas (ADL):</span><br>
+                                    <strong>{{ k.fungsional_adl|default:"Mandiri" }}</strong>
+                                </div>
+                                <div class="small mb-1">
+                                    <span class="text-muted">Psikologis:</span><br>
+                                    <strong>{{ k.status_psikososial|default:"Tenang / Kooperatif" }}</strong>
+                                </div>
+                                <div class="small" style="font-size:.72rem;">
+                                    <span class="text-muted">Pembiayaan:</span> <strong>{{ k.get_penjamin_display }}</strong>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- PEMERIKSAAN FISIK HEAD-TO-TOE (STANDAR 3.09) -->
+                    <div class="card border shadow-xs bg-white mb-3">
+                        <div class="card-header bg-white py-2.5 d-flex justify-content-between align-items-center border-bottom">
+                            <span class="fw-bold small text-dark">
+                                <i class="bi bi-person-arms-spread me-1 text-primary"></i> PEMERIKSAAN FISIK HEAD-TO-TOE (SISTEM ORGAN)
+                            </span>
+                            <span class="badge bg-light text-muted border">Standar 3.09</span>
+                        </div>
+                        <div class="card-body p-3">
+                            <div class="row g-2" style="font-size: .82rem;">
+                                <div class="col-md-4">
+                                    <div class="p-2 border rounded bg-light-subtle h-100">
+                                        <div class="fw-bold text-primary mb-1"><i class="bi bi-person-bounding-box me-1"></i>1. KEPALA &amp; LEHER</div>
+                                        <p class="mb-0 text-secondary" style="white-space: pre-line;">{{ k.fisik_head_to_toe.kepala_leher|default:k.fisik_airway|default:"Kepala: Normosefali / Simetris
+Mata: Konjungtiva Anemis (-/-), Sklera Ikterik (-/-), Pupil Isokor
+Telinga & Hidung: Normal, Tidak ada sekret
+Mulut: Mukosa lembap
+Leher: Pembesaran KGB (-), JVP Normal" }}</p>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="p-2 border rounded bg-light-subtle h-100">
+                                        <div class="fw-bold text-danger mb-1"><i class="bi bi-lungs me-1"></i>2. DADA &amp; TORAKS (PARU &amp; JANTUNG)</div>
+                                        <p class="mb-0 text-secondary" style="white-space: pre-line;">{{ k.fisik_head_to_toe.toraks_dada|default:k.fisik_breathing|default:"Dinding Dada: Simetris, Retraksi (-)
+Paru: Suara napas vesikuler (+/+), Wheezing (-/-), Ronkhi (-/-)
+Jantung: BJ I/II murni reguler, Murmur (-), Gallop (-)" }}</p>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="p-2 border rounded bg-light-subtle h-100">
+                                        <div class="fw-bold text-success mb-1"><i class="bi bi-capsule me-1"></i>3. ABDOMEN (PERUT)</div>
+                                        <p class="mb-0 text-secondary" style="white-space: pre-line;">{{ k.fisik_head_to_toe.abdomen|default:k.fisik_circulation|default:"Inspeksi: Datar, simetris
+Auskultasi: Bising usus normal (5-30 x/m)
+Palpasi: Supel, Nyeri tekan (-), Defans (-)
+Hepatosplenomegali (-), Timpani (+)" }}</p>
+                                    </div>
+                                </div>
+                                <div class="col-md-4 mt-2">
+                                    <div class="p-2 border rounded bg-light-subtle h-100">
+                                        <div class="fw-bold text-warning-emphasis mb-1"><i class="bi bi-hand-index me-1"></i>4. EKSTREMITAS (GERAK &amp; PERFUSI)</div>
+                                        <p class="mb-0 text-secondary" style="white-space: pre-line;">{{ k.fisik_head_to_toe.ekstremitas|default:k.fisik_disability|default:"Akral: Hangat, CRT < 2 detik
+Edema: Ekstremitas (-/-), Pitting (-)
+Deformitas / Fraktur (-)
+Kekuatan Otot: 5/5/5/5 (Normal)" }}</p>
+                                    </div>
+                                </div>
+                                <div class="col-md-4 mt-2">
+                                    <div class="p-2 border rounded bg-light-subtle h-100">
+                                        <div class="fw-bold text-secondary mb-1"><i class="bi bi-shield me-1"></i>5. GENITALIA &amp; ANUS</div>
+                                        <p class="mb-0 text-secondary" style="white-space: pre-line;">{{ k.fisik_head_to_toe.genitalia_anus|default:"Tidak diperiksa (atas indikasi klinis)" }}</p>
+                                    </div>
+                                </div>
+                                <div class="col-md-4 mt-2">
+                                    <div class="p-2 border rounded bg-light-subtle h-100">
+                                        <div class="fw-bold text-info-emphasis mb-1"><i class="bi bi-droplet-half me-1"></i>6. INTEGUMEN &amp; KULIT</div>
+                                        <p class="mb-0 text-secondary" style="white-space: pre-line;">{{ k.fisik_head_to_toe.integumen_kulit|default:k.fisik_exposure|default:"Turgor Kulit: Cepat kembali (baik)
+Integritas: Utuh, Normal
+Tidak ada luka dekubitus / ruam" }}</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- RIWAYAT SKRINING RISIKO KLINIS PASIEN -->
+                    <div class="card border shadow-xs bg-white">
+                        <div class="card-header bg-white py-2.5 d-flex justify-content-between align-items-center border-bottom">
+                            <span class="fw-bold small text-dark">
+                                <i class="bi bi-shield-check me-1 text-warning"></i> SKRINING RISIKO KLINIS (JATUH / DEKUBITUS / NUTRISI)
+                            </span>
+                            <span class="badge bg-light text-dark border font-monospace">{{ asesmen_list.count }} Entri Terdaftar</span>
+                        </div>
+                        <div class="card-body p-0">
+                            <div class="table-responsive">
+                                <table class="table table-hover align-middle mb-0" style="font-size:.82rem;">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th style="font-size:.8rem;">Jenis Asesmen</th>
+                                            <th style="font-size:.8rem;">Skor</th>
+                                            <th style="font-size:.8rem;">Grade Risiko</th>
+                                            <th style="font-size:.8rem;">Temuan</th>
+                                            <th style="font-size:.8rem;">Intervensi</th>
+                                            <th style="font-size:.8rem;">Penilai</th>
+                                            <th style="font-size:.8rem;">Tanggal</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for a in asesmen_list %}
+                                        <tr>
+                                            <td class="fw-semibold">{{ a.get_jenis_display }}</td>
+                                            <td class="font-monospace fw-bold">{{ a.skor }}</td>
+                                            <td>
+                                                {% if a.grade == 'RENDAH' %}<span class="badge bg-success">Rendah</span>
+                                                {% elif a.grade == 'SEDANG' %}<span class="badge bg-warning text-dark">Sedang</span>
+                                                {% elif a.grade == 'TINGGI' %}<span class="badge bg-danger">Tinggi</span>
+                                                {% elif a.grade == 'SANGAT_TINGGI' %}<span class="badge bg-dark">Sangat Tinggi</span>
+                                                {% else %}<span class="badge bg-secondary">-</span>
+                                                {% endif %}
+                                            </td>
+                                            <td style="max-width:200px;">{{ a.temuan|default:"-" }}</td>
+                                            <td style="max-width:200px;">{{ a.intervensi|default:"-" }}</td>
+                                            <td class="text-muted">{{ a.dinilai_oleh|default:"-" }}</td>
+                                            <td class="font-monospace text-muted" style="font-size:.75rem;">{{ a.tanggal|date:"d/m/Y H:i" }}</td>
+                                        </tr>
+                                        {% empty %}
+                                        <tr>
+                                            <td colspan="7" class="text-center py-3 text-muted">
+                                                <i class="bi bi-shield-check fs-3 d-block mb-1 text-secondary"></i>
+                                                Belum ada entri khusus asesmen risiko klinis untuk kunjungan ini.
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+
+        <!-- MODAL EDIT / LENGKAPI ASESMEN AWAL (STANDAR 3.09) -->
+        <div class="modal fade" id="modalEditAsesmenAwal" tabindex="-1">
+            <div class="modal-dialog modal-xl modal-dialog-scrollable">
+                <div class="modal-content">
+                    <form method="POST" action="{% url 'pasien:igd_asesmen_awal_save' k.pk %}">
+                        {% csrf_token %}
+                        <input type="hidden" name="next_url" value="{% url 'pasien:kunjungan_detail' k.pk %}">
+                        <div class="modal-header bg-primary text-white">
+                            <h6 class="modal-title fw-bold">
+                                <i class="bi bi-clipboard2-pulse me-2"></i> Formulir Asesmen Awal Pasien (Standar 3.09) — {{ k.pasien.nama_lengkap }}
+                            </h6>
+                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body p-4">
+                            <!-- A. Keadaan Umum & Kesadaran -->
+                            <div class="card border mb-3">
+                                <div class="card-header bg-light py-2 fw-bold small text-primary">A. Keadaan Umum &amp; Kesadaran</div>
+                                <div class="card-body p-3">
+                                    <div class="row g-3">
+                                        <div class="col-md-6">
+                                            <label class="form-label small fw-semibold">Keadaan Umum:</label>
+                                            <div class="d-flex gap-3">
+                                                <div class="form-check">
+                                                    <input class="form-check-input" type="radio" name="keadaan_umum" value="Baik" id="kuBaik" {% if k.keadaan_umum == 'Baik' or not k.keadaan_umum %}checked{% endif %}>
+                                                    <label class="form-check-label small" for="kuBaik">Baik</label>
+                                                </div>
+                                                <div class="form-check">
+                                                    <input class="form-check-input" type="radio" name="keadaan_umum" value="Sedang" id="kuSedang" {% if k.keadaan_umum == 'Sedang' %}checked{% endif %}>
+                                                    <label class="form-check-label small" for="kuSedang">Sedang</label>
+                                                </div>
+                                                <div class="form-check">
+                                                    <input class="form-check-input" type="radio" name="keadaan_umum" value="Lemah / Buruk" id="kuLemah" {% if k.keadaan_umum == 'Lemah / Buruk' %}checked{% endif %}>
+                                                    <label class="form-check-label small" for="kuLemah">Lemah / Buruk</label>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label small fw-semibold">Tingkat Kesadaran:</label>
+                                            <select name="kesadaran" class="form-select form-select-sm">
+                                                <option value="Compos Mentis" {% if k.kesadaran == 'Compos Mentis' or not k.kesadaran %}selected{% endif %}>Compos Mentis</option>
+                                                <option value="Apatis" {% if k.kesadaran == 'Apatis' %}selected{% endif %}>Apatis</option>
+                                                <option value="Somnolen" {% if k.kesadaran == 'Somnolen' %}selected{% endif %}>Somnolen</option>
+                                                <option value="Sopor" {% if k.kesadaran == 'Sopor' %}selected{% endif %}>Sopor</option>
+                                                <option value="Koma" {% if k.kesadaran == 'Koma' %}selected{% endif %}>Koma</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- B. Asesmen Nyeri (NRS 0-10) -->
+                            <div class="card border mb-3">
+                                <div class="card-header bg-light py-2 fw-bold small text-danger">B. Asesmen Nyeri (Skala 0–10)</div>
+                                <div class="card-body p-3">
+                                    <div class="row g-3">
+                                        <div class="col-md-6">
+                                            <label class="form-label small fw-semibold">Skala Nyeri (0-10):</label>
+                                            <input type="number" name="ttv_skala_nyeri" class="form-control form-control-sm" min="0" max="10" value="{{ k.ttv_skala_nyeri|default:0 }}" placeholder="0 = Tidak nyeri, 1-3 = Ringan, 4-6 = Sedang, 7-10 = Berat">
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label small fw-semibold">Karakteristik Nyeri:</label>
+                                            <select name="nyeri_karakteristik" class="form-select form-select-sm">
+                                                <option value="Tidak Nyeri" {% if not k.nyeri_karakteristik or k.nyeri_karakteristik == 'Tidak Nyeri' %}selected{% endif %}>Tidak Nyeri</option>
+                                                <option value="Tumpul" {% if k.nyeri_karakteristik == 'Tumpul' %}selected{% endif %}>Tumpul</option>
+                                                <option value="Tajam/Tusuk" {% if k.nyeri_karakteristik == 'Tajam/Tusuk' %}selected{% endif %}>Tajam / Tusuk</option>
+                                                <option value="Terbakar" {% if k.nyeri_karakteristik == 'Terbakar' %}selected{% endif %}>Terbakar</option>
+                                                <option value="Denyut" {% if k.nyeri_karakteristik == 'Denyut' %}selected{% endif %}>Denyut</option>
+                                                <option value="Hilang-Timbul" {% if k.nyeri_karakteristik == 'Hilang-Timbul' %}selected{% endif %}>Hilang-Timbul</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- C. Skrining Gizi (MST) -->
+                            <div class="card border mb-3">
+                                <div class="card-header bg-light py-2 fw-bold small text-success">C. Skrining Gizi (Malnutrition Screening Tool - MST)</div>
+                                <div class="card-body p-3">
+                                    <div class="row g-3">
+                                        <div class="col-md-6">
+                                            <label class="form-label small fw-semibold">Total Skor MST Gizi:</label>
+                                            <input type="number" name="skrining_gizi_mst" class="form-control form-control-sm" min="0" max="5" value="{{ k.skrining_gizi_mst|default:0 }}" placeholder="0 - 5 (Skor >= 2: Konsul Ahli Gizi)">
+                                            <div class="form-text small text-muted">Penurunan BB tidak diinginkan + Asupan makan berkurang.</div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label small fw-semibold">Kemampuan Aktivitas Sehari-hari (ADL):</label>
+                                            <select name="fungsional_adl" class="form-select form-select-sm">
+                                                <option value="Mandiri" {% if k.fungsional_adl == 'Mandiri' or not k.fungsional_adl %}selected{% endif %}>Mandiri</option>
+                                                <option value="Bantuan Parsial / Sebagian" {% if k.fungsional_adl == 'Bantuan Parsial / Sebagian' %}selected{% endif %}>Bantuan Parsial / Sebagian</option>
+                                                <option value="Ketergantungan Total" {% if k.fungsional_adl == 'Ketergantungan Total' %}selected{% endif %}>Ketergantungan Total</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- D. Pemeriksaan Fisik Head-To-Toe (Standar 3.09) -->
+                            <div class="card border mb-3">
+                                <div class="card-header bg-light py-2 fw-bold small text-dark">D. Pemeriksaan Fisik Head-To-Toe (6 Sistem)</div>
+                                <div class="card-body p-3">
+                                    <div class="row g-2">
+                                        <div class="col-md-6">
+                                            <label class="form-label small fw-semibold">1. Kepala &amp; Leher:</label>
+                                            <textarea name="fisik_kepala_leher" rows="2" class="form-control form-control-sm" placeholder="Kepala simetris, konjungtiva anemis (-/-), sklera ikterik (-/-), mukosa lembap...">{{ k.fisik_head_to_toe.kepala_leher|default:k.fisik_airway }}</textarea>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label small fw-semibold">2. Dada &amp; Toraks (Paru &amp; Jantung):</label>
+                                            <textarea name="fisik_toraks_dada" rows="2" class="form-control form-control-sm" placeholder="Simetris, retraksi (-), suara napas vesikuler (+/+), BJ I/II murni...">{{ k.fisik_head_to_toe.toraks_dada|default:k.fisik_breathing }}</textarea>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label small fw-semibold">3. Abdomen (Perut):</label>
+                                            <textarea name="fisik_abdomen" rows="2" class="form-control form-control-sm" placeholder="Datar, supel, bising usus normal, nyeri tekan (-), hepatomegali (-)...">{{ k.fisik_head_to_toe.abdomen|default:k.fisik_circulation }}</textarea>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label small fw-semibold">4. Ekstremitas (Gerak &amp; Perfusi):</label>
+                                            <textarea name="fisik_ekstremitas" rows="2" class="form-control form-control-sm" placeholder="Akral hangat, CRT < 2s, edema (-/-), deformitas (-), kekuatan 5/5/5/5...">{{ k.fisik_head_to_toe.ekstremitas|default:k.fisik_disability }}</textarea>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label small fw-semibold">5. Genitalia &amp; Anus:</label>
+                                            <textarea name="fisik_genitalia_anus" rows="1" class="form-control form-control-sm" placeholder="Tidak diperiksa / normal / kateter urin...">{{ k.fisik_head_to_toe.genitalia_anus|default:"Tidak diperiksa (atas indikasi)" }}</textarea>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label small fw-semibold">6. Integumen &amp; Kulit:</label>
+                                            <textarea name="fisik_integumen_kulit" rows="1" class="form-control form-control-sm" placeholder="Turgor baik, integritas utuh, tidak ada ulkus dekubitus...">{{ k.fisik_head_to_toe.integumen_kulit|default:k.fisik_exposure }}</textarea>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- E. Diagnosis Medis & Asuhan 3S -->
+                            <div class="card border mb-3">
+                                <div class="card-header bg-light py-2 fw-bold small text-dark">E. Diagnosis Medis &amp; Asuhan Keperawatan (3S)</div>
+                                <div class="card-body p-3">
+                                    <div class="row g-2">
+                                        <div class="col-md-6">
+                                            <label class="form-label small fw-semibold">Diagnosis Medis Masuk (ICD-10):</label>
+                                            <input type="text" name="diagnosa_masuk" class="form-control form-control-sm" value="{{ k.diagnosa_masuk }}">
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label small fw-semibold">Diagnosis Keperawatan (SDKI):</label>
+                                            <input type="text" name="diagnosa_keperawatan_sdki" class="form-control form-control-sm" value="{{ k.diagnosa_keperawatan_sdki }}">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="modal-footer bg-light">
+                            <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Batal</button>
+                            <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-save me-1"></i> Simpan Asesmen Awal</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        <!-- 2. CPPT SECTION -->
         <div class="accordion-item border-0 shadow-sm mb-3 rounded overflow-hidden">
             <h2 class="accordion-header" id="headingCppt">
-                <button class="accordion-button bg-white fw-bold py-3" type="button" data-bs-toggle="collapse" data-bs-target="#collapseCppt" aria-expanded="true" aria-controls="collapseCppt" style="font-size:.88rem; color:#0f172a;">
+                <button class="accordion-button collapsed bg-white fw-bold py-3" type="button" data-bs-toggle="collapse" data-bs-target="#collapseCppt" aria-expanded="false" aria-controls="collapseCppt" style="font-size:.88rem; color:#0f172a;">
                     <i class="bi bi-journal-medical me-2" style="color:#0d9488;"></i>
                     CPPT — Catatan Perkembangan Pasien Terintegrasi
                     <span class="badge bg-light text-dark border ms-2 font-monospace">{{ cppt_list.count }} Catatan</span>
                 </button>
             </h2>
-            <div id="collapseCppt" class="accordion-collapse collapse show" aria-labelledby="headingCppt">
+            <div id="collapseCppt" class="accordion-collapse collapse" aria-labelledby="headingCppt">
                 <div class="accordion-body p-3 p-md-4 bg-light-subtle">
 
                     <!-- CPPT TIMELINE / LIST -->
@@ -260,63 +664,6 @@
                         </div>
                     </div>
 
-                </div>
-            </div>
-        </div>
-
-        <!-- 2. ASESMEN RISIKO SECTION (DISPLAY ONLY) -->
-        <div class="accordion-item border-0 shadow-sm mb-3 rounded overflow-hidden">
-            <h2 class="accordion-header" id="headingAsesmen">
-                <button class="accordion-button collapsed bg-white fw-bold py-3" type="button" data-bs-toggle="collapse" data-bs-target="#collapseAsesmen" aria-expanded="false" aria-controls="collapseAsesmen" style="font-size:.88rem; color:#0f172a;">
-                    <i class="bi bi-shield-exclamation me-2" style="color:#f59e0b;"></i>
-                    Asesmen Risiko Klinis Pasien
-                    <span class="badge bg-light text-dark border ms-2 font-monospace">{{ asesmen_list.count }} Asesmen</span>
-                </button>
-            </h2>
-            <div id="collapseAsesmen" class="accordion-collapse collapse" aria-labelledby="headingAsesmen">
-                <div class="accordion-body p-3 p-md-4">
-                    <div class="table-responsive">
-                        <table class="table table-hover align-middle mb-0" style="font-size:.82rem;">
-                            <thead class="table-light">
-                                <tr>
-                                    <th style="font-size:.8rem;">Jenis Asesmen</th>
-                                    <th style="font-size:.8rem;">Skor</th>
-                                    <th style="font-size:.8rem;">Grade Risiko</th>
-                                    <th style="font-size:.8rem;">Temuan</th>
-                                    <th style="font-size:.8rem;">Intervensi</th>
-                                    <th style="font-size:.8rem;">Penilai</th>
-                                    <th style="font-size:.8rem;">Tanggal</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for a in asesmen_list %}
-                                <tr>
-                                    <td class="fw-semibold">{{ a.get_jenis_display }}</td>
-                                    <td class="font-monospace fw-bold">{{ a.skor }}</td>
-                                    <td>
-                                        {% if a.grade == 'RENDAH' %}<span class="badge bg-success">Rendah</span>
-                                        {% elif a.grade == 'SEDANG' %}<span class="badge bg-warning text-dark">Sedang</span>
-                                        {% elif a.grade == 'TINGGI' %}<span class="badge bg-danger">Tinggi</span>
-                                        {% elif a.grade == 'SANGAT_TINGGI' %}<span class="badge bg-dark">Sangat Tinggi</span>
-                                        {% else %}<span class="badge bg-secondary">-</span>
-                                        {% endif %}
-                                    </td>
-                                    <td style="max-width:200px;">{{ a.temuan|default:"-" }}</td>
-                                    <td style="max-width:200px;">{{ a.intervensi|default:"-" }}</td>
-                                    <td class="text-muted">{{ a.dinilai_oleh|default:"-" }}</td>
-                                    <td class="font-monospace text-muted" style="font-size:.75rem;">{{ a.tanggal|date:"d/m/Y H:i" }}</td>
-                                </tr>
-                                {% empty %}
-                                <tr>
-                                    <td colspan="7" class="text-center py-4 text-muted">
-                                        <i class="bi bi-shield-check fs-2 d-block mb-1 text-secondary"></i>
-                                        Belum ada data asesmen risiko klinis untuk kunjungan ini.
-                                    </td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
                 </div>
             </div>
         </div>
