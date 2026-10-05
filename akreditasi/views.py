@@ -917,6 +917,8 @@ def unit_list_create(request):
             )
             messages.success(request, f"✅ Unit Kerja '{u.name}' (Level {u.level}) berhasil ditambahkan!")
             return redirect('akreditasi:unit_list')
+        else:
+            messages.error(request, f"❌ Gagal menyimpan unit: {form.errors.as_text()}")
     else:
         form = UnitKerjaForm(initial=initial)
 

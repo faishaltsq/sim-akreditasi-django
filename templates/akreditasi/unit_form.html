@@ -303,10 +303,11 @@
         });
     }
 
-    // Auto-switch to Form tab jika ada ?parent_id= di URL
+    // Auto-switch to Form tab jika ada ?parent_id= di URL ATAU form memiliki error
     window.addEventListener('DOMContentLoaded', () => {
         const urlParams = new URLSearchParams(window.location.search);
-        if (urlParams.has('parent_id')) {
+        const hasFormErrors = document.querySelectorAll('#tab-form .is-invalid, #tab-form .invalid-feedback, #tab-form .errorlist').length > 0;
+        if (urlParams.has('parent_id') || hasFormErrors) {
             const formTabBtn = document.getElementById('tab-form-btn');
             if (formTabBtn) {
                 const tab = new bootstrap.Tab(formTabBtn);
