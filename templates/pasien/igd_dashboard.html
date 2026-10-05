@@ -109,6 +109,42 @@
     </div>
     {% endif %}
 
+    <!-- BED AVAILABILITY MATRIX (Revisi 02 — "Tampilkan manajemen bed") -->
+    {% if bed_matrix %}
+    <div class="card border-0 shadow-sm mb-4" style="border-radius: .75rem;">
+        <div class="card-header bg-white py-2 px-3 border-bottom d-flex align-items-center justify-content-between">
+            <div class="d-flex align-items-center gap-2">
+                <i class="bi bi-grid-3x3-gap-fill text-success"></i>
+                <span class="fw-bold small">Ketersediaan Bed Rawat Inap / ICU — Pilih Kamar untuk Admisi</span>
+            </div>
+            <a href="{% url 'pasien:bed_management' %}" class="small text-decoration-none">Kelola Bed &raquo;</a>
+        </div>
+        <div class="card-body p-3">
+            <div class="row g-2">
+                {% for b in bed_matrix %}
+                <div class="col-6 col-md-4 col-lg-2">
+                    <div class="p-2 border rounded bg-white shadow-sm">
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <span class="fw-bold small text-truncate" title="{{ b.ruangan.nama }}">{{ b.ruangan.kode }}</span>
+                            <span class="badge {% if b.tersedia > 0 %}bg-success{% else %}bg-danger{% endif %}" style="font-size:.65rem;">
+                                {{ b.tersedia }} Kosong
+                            </span>
+                        </div>
+                        <div style="height:8px;border-radius:4px;background:#e2e8f0;overflow:hidden;">
+                            <div style="height:100%;border-radius:4px;width:{{ b.persen }}%;background:{% if b.persen > 85 %}#dc2626{% elif b.persen > 60 %}#f59e0b{% else %}#16a34a{% endif %};transition:width .4s;"></div>
+                        </div>
+                        <div class="d-flex justify-content-between small text-muted mt-1" style="font-size:.68rem;">
+                            <span>{{ b.terisi }}/{{ b.total }} Terisi</span>
+                            <span>{{ b.persen }}%</span>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
     <!-- FILTER TABS & DAFTAR PASIEN AKTIF DI IGD -->
     <div class="card border-0 shadow-sm" style="border-radius: .75rem;">
         <div class="card-header bg-white py-3 border-bottom d-flex align-items-center justify-content-between flex-wrap gap-2">
@@ -223,6 +259,10 @@
                                     <!-- ORDER PENUNJANG -->
                                     <button class="btn btn-outline-info" data-bs-toggle="modal" data-bs-target="#modalOrder{{ k.pk }}" title="Order Lab / Radiologi">
                                         <i class="bi bi-radioactive"></i> Penunjang
+                                    </button>
+                                    <!-- VISUALISASI ERM (Revisi 02) -->
+                                    <button class="btn btn-outline-dark" data-bs-toggle="modal" data-bs-target="#modalERM{{ k.pk }}" title="Lihat Rekam Medis Elektronik (ERM)">
+                                        <i class="bi bi-journal-medical"></i> ERM
                                     </button>
                                     <!-- BOOKING KAMAR -->
                                     <button class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#modalBooking{{ k.pk }}" title="Pesan / Booking Tempat Tidur Ranap">
@@ -355,7 +395,7 @@
                                         <div class="modal-body">
                                             <div class="mb-3">
                                                 <label class="form-label small fw-semibold">Jenis Penunjang <span class="text-danger">*</span></label>
-                                                <select name="jenis" class="form-select form-select-sm" required>
+                                                <select name="jenis" class="form-select form-select-sm" id="jenisSelect{{ k.pk }}" required onchange="updatePemeriksaanList('{{ k.pk }}')">
                                                     <option value="LAB">Laboratorium PK / Mikrobiologi</option>
                                                     <option value="RADIOLOGI">Radiologi / Rontgen / CT-Scan</option>
                                                 </select>
@@ -368,8 +408,18 @@
                                                 </select>
                                             </div>
                                             <div class="mb-3">
-                                                <label class="form-label small fw-semibold">Nama Pemeriksaan <span class="text-danger">*</span></label>
-                                                <input type="text" name="nama_pemeriksaan" class="form-control form-control-sm" required placeholder="Contoh: Darah Lengkap, Elektrolit, Rontgen Thorax AP, CT Scan Kepala...">
+                                                <label class="form-label small fw-semibold">Pilih Pemeriksaan <span class="text-danger">*</span></label>
+                                                <!-- Preset checklist (Revisi 02 — pilihan semua jenis/nama pemeriksaan) -->
+                                                <div id="presetPemeriksaan{{ k.pk }}" class="border rounded p-2 mb-2 bg-light" style="max-height:180px;overflow-y:auto;">
+                                                    {% for nama in pemeriksaan_presets.LAB %}
+                                                    <div class="form-check form-check-sm py-0">
+                                                        <input class="form-check-input preset-check-{{ k.pk }}" type="checkbox" value="{{ nama }}" id="pc_{{ k.pk }}_{{ forloop.counter }}" onchange="syncPemeriksaanInput('{{ k.pk }}')">
+                                                        <label class="form-check-label small" for="pc_{{ k.pk }}_{{ forloop.counter }}">{{ nama }}</label>
+                                                    </div>
+                                                    {% endfor %}
+                                                </div>
+                                                <input type="text" name="nama_pemeriksaan" id="namaInput{{ k.pk }}" class="form-control form-control-sm" required placeholder="Atau ketik manual / edit pilihan di atas...">
+                                                <div class="form-text" style="font-size:.68rem;">Centang dari daftar standar, atau ketik manual jika pemeriksaan tidak tercantum.</div>
                                             </div>
                                             <div class="mb-3">
                                                 <label class="form-label small fw-semibold">Catatan Klinis / Indikasi</label>
@@ -388,6 +438,143 @@
                                             <button type="submit" class="btn btn-info btn-sm text-white">Kirim Permintaan &amp; Billing</button>
                                         </div>
                                     </form>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- MODAL VISUALISASI ERM (Revisi 02 — Rekam Medis Elektronik Terpadu) -->
+                        <div class="modal fade" id="modalERM{{ k.pk }}" tabindex="-1">
+                            <div class="modal-dialog modal-xl modal-dialog-scrollable">
+                                <div class="modal-content">
+                                    <div class="modal-header bg-dark text-white">
+                                        <div class="d-flex align-items-center gap-2">
+                                            <i class="bi bi-journal-medical fs-4"></i>
+                                            <div>
+                                                <h6 class="modal-title fw-bold mb-0">ERM Terpadu — {{ k.pasien.nama_lengkap }}</h6>
+                                                <small class="text-white-50">No. RM: {{ k.pasien.no_rm }} &bull; NIK: {{ k.pasien.nik|default:"-" }} &bull; {{ k.pasien.get_jenis_kelamin_display }}, {{ k.pasien.usia }} th</small>
+                                            </div>
+                                        </div>
+                                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                                    </div>
+                                    <div class="modal-body p-4">
+                                        <!-- Ringkasan Klinis & Triage Saat Ini -->
+                                        <div class="row g-3 mb-4">
+                                            <div class="col-md-3">
+                                                <div class="border rounded p-3 bg-light">
+                                                    <div class="text-muted small fw-bold">STATUS TRIAGE IGD</div>
+                                                    <span class="badge {% if k.triage == 'MERAH' %}bg-danger{% elif k.triage == 'KUNING' %}bg-warning text-dark{% elif k.triage == 'HIJAU' %}bg-success{% else %}bg-dark{% endif %} fs-6 mt-1">
+                                                        {{ k.get_triage_display }}
+                                                    </span>
+                                                    <div class="text-muted mt-2" style="font-size:.72rem;">Jam Masuk: {{ k.tanggal_masuk|date:"d/m/Y H:i" }}</div>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-5">
+                                                <div class="border rounded p-3 bg-light">
+                                                    <div class="text-muted small fw-bold">KELUHAN &amp; DIAGNOSA MASUK</div>
+                                                    <div class="fw-semibold text-dark mt-1">{{ k.catatan_admisi|default:"(Keluhan tidak dicatat)" }}</div>
+                                                    <div class="small text-primary mt-1">
+                                                        <i class="bi bi-tag-fill me-1"></i>ICD-10: <strong>{{ k.diagnosa_masuk|default:"(Belum ditegakkan)" }}</strong>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <div class="border rounded p-3 bg-light">
+                                                    <div class="text-muted small fw-bold">RIWAYAT ALERGI &amp; PENYAKIT</div>
+                                                    <div class="small text-danger fw-bold mt-1">
+                                                        <i class="bi bi-shield-exclamation me-1"></i>Alergi: {{ k.pasien.riwayat_alergi|default:"Tidak ada data alergi" }}
+                                                    </div>
+                                                    <div class="small text-muted mt-1">
+                                                        Penyakit: {{ k.pasien.riwayat_penyakit|default:"-" }}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- TTV Saat Ini (7 Parameter) -->
+                                        <div class="card border mb-4">
+                                            <div class="card-header bg-light py-2 fw-bold small">
+                                                <i class="bi bi-heart-pulse-fill text-danger me-1"></i> Tanda-Tanda Vital (TTV) Terakhir
+                                            </div>
+                                            <div class="card-body py-2">
+                                                <div class="row text-center g-2">
+                                                    <div class="col">
+                                                        <div class="small text-muted">Tekanan Darah</div>
+                                                        <div class="fw-bold fs-6">{% if k.ttv_sistole and k.ttv_diastole %}{{ k.ttv_sistole }}/{{ k.ttv_diastole }} <small class="text-muted">mmHg</small>{% else %}-{% endif %}</div>
+                                                    </div>
+                                                    <div class="col">
+                                                        <div class="small text-muted">Nadi</div>
+                                                        <div class="fw-bold fs-6 {% if k.ttv_nadi > 100 or k.ttv_nadi < 60 %}text-danger{% endif %}">{{ k.ttv_nadi|default:"-" }} <small class="text-muted">x/m</small></div>
+                                                    </div>
+                                                    <div class="col">
+                                                        <div class="small text-muted">Pernapasan (RR)</div>
+                                                        <div class="fw-bold fs-6 {% if k.ttv_rr > 20 or k.ttv_rr < 12 %}text-warning{% endif %}">{{ k.ttv_rr|default:"-" }} <small class="text-muted">x/m</small></div>
+                                                    </div>
+                                                    <div class="col">
+                                                        <div class="small text-muted">Suhu Tubuh</div>
+                                                        <div class="fw-bold fs-6 {% if k.ttv_suhu > 37.5 %}text-danger{% endif %}">{{ k.ttv_suhu|default:"-" }} <small class="text-muted">&deg;C</small></div>
+                                                    </div>
+                                                    <div class="col">
+                                                        <div class="small text-muted">SpO2</div>
+                                                        <div class="fw-bold fs-6 {% if k.ttv_spo2 < 95 %}text-danger{% endif %}">{{ k.ttv_spo2|default:"-" }} <small class="text-muted">%</small></div>
+                                                    </div>
+                                                    <div class="col">
+                                                        <div class="small text-muted">GCS</div>
+                                                        <div class="fw-bold fs-6">{{ k.ttv_gcs|default:"-" }}</div>
+                                                    </div>
+                                                    <div class="col">
+                                                        <div class="small text-muted">Skala Nyeri</div>
+                                                        <div class="fw-bold fs-6">{{ k.ttv_skala_nyeri|default:"-" }} / 10</div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- Hasil Pemeriksaan Penunjang (Lab & Radiologi) -->
+                                        <div class="card border mb-4">
+                                            <div class="card-header bg-light py-2 d-flex justify-content-between align-items-center">
+                                                <span class="fw-bold small"><i class="bi bi-radioactive text-info me-1"></i> Pemeriksaan Penunjang (Lab &amp; Radiologi)</span>
+                                                <span class="badge bg-secondary">{{ k.order_penunjang.all|length }} Order</span>
+                                            </div>
+                                            <div class="card-body p-0">
+                                                <table class="table table-sm mb-0 align-middle">
+                                                    <thead class="table-light small">
+                                                        <tr>
+                                                            <th>Jenis</th>
+                                                            <th>Nama Pemeriksaan</th>
+                                                            <th>Prioritas</th>
+                                                            <th>Status</th>
+                                                            <th>Hasil</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        {% for o in k.order_penunjang.all %}
+                                                        <tr {% if o.is_critical_value %}class="table-danger"{% endif %}>
+                                                            <td><span class="badge {% if o.jenis == 'LAB' %}bg-primary{% else %}bg-secondary{% endif %}">{{ o.get_jenis_display }}</span></td>
+                                                            <td class="fw-semibold">{{ o.nama_pemeriksaan }}</td>
+                                                            <td><span class="badge {% if o.prioritas == 'CITO' %}bg-danger{% else %}bg-light text-dark border{% endif %}">{{ o.get_prioritas_display }}</span></td>
+                                                            <td><span class="badge bg-info-subtle text-info">{{ o.get_status_display }}</span></td>
+                                                            <td>
+                                                                {% if o.is_critical_value %}
+                                                                <span class="badge bg-danger">🚨 CRITICAL</span> {{ o.critical_value_catatan }}
+                                                                {% else %}
+                                                                <small class="text-muted">{{ o.hasil_pemeriksaan|default:"Dalam proses analisis" }}</small>
+                                                                {% endif %}
+                                                            </td>
+                                                        </tr>
+                                                        {% empty %}
+                                                        <tr><td colspan="5" class="text-center text-muted small py-3">Belum ada order penunjang untuk kunjungan ini.</td></tr>
+                                                        {% endfor %}
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        </div>
+
+                                        <div class="text-end">
+                                            <a href="{% url 'pasien:kunjungan_detail' k.pk %}" class="btn btn-primary btn-sm">
+                                                <i class="bi bi-box-arrow-up-right me-1"></i> Buka ERM Lengkap (CPPT, Resep &amp; Tindakan) &raquo;
+                                            </a>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -744,5 +931,48 @@
             }
         });
     });
+
+    // Revisi 02: Penunjang preset list — switch LAB/RADIOLOGI presets dynamically
+    const PRESETS = {
+        LAB: [
+            'Darah Lengkap (DL)', 'Glukosa Darah Sewaktu (GDS)', 'Elektrolit (Na/K/Cl)',
+            'Fungsi Ginjal (Ureum/Kreatinin)', 'Kimia Darah (SGOT/SGPT)', 'Hemostasis (PT/APTT/INR)',
+            'Troponin I/T (CKMB)', 'Laktat Darah', 'Analisa Gas Darah (AGD)',
+            'Urinalisis Lengkap', 'Tes Kehamilan (HCG Urin)', 'Widal / Malaria RDT',
+            'CRP / PCT (Prokalsitonin)', 'Golongan Darah + Crossmatch'
+        ],
+        RADIOLOGI: [
+            'Rontgen Thorax AP', 'Rontgen Pelvis AP', 'Rontgen Ekstremitas (Pilih)',
+            'USG Abdomen', 'USG FAST (FAST Trauma)', 'CT Scan Kepala Non-Kontras',
+            'CT Scan Thorax', 'CT Scan Abdomen-Pelvis', 'CT Angiografi (Pilih Organ)',
+            'EKG 12 Lead', 'Ekokardiografi Bedside'
+        ]
+    };
+
+    function updatePemeriksaanList(pk) {
+        const jenisEl = document.getElementById('jenisSelect' + pk);
+        if (!jenisEl) return;
+        const jenis = jenisEl.value;
+        const container = document.getElementById('presetPemeriksaan' + pk);
+        if (!container) return;
+        container.innerHTML = '';
+        (PRESETS[jenis] || []).forEach(function(nama, i) {
+            const div = document.createElement('div');
+            div.className = 'form-check form-check-sm py-0';
+            const id = 'pc_' + pk + '_' + i;
+            div.innerHTML = '<input class="form-check-input preset-check-' + pk + '" type="checkbox" value="' + nama + '" id="' + id + '" onchange="syncPemeriksaanInput(\'' + pk + '\')">' +
+                '<label class="form-check-label small" for="' + id + '">' + nama + '</label>';
+            container.appendChild(div);
+        });
+        // Clear input & uncheck
+        const inp = document.getElementById('namaInput' + pk);
+        if (inp) inp.value = '';
+    }
+
+    function syncPemeriksaanInput(pk) {
+        const checked = Array.from(document.querySelectorAll('.preset-check-' + pk + ':checked')).map(cb => cb.value);
+        const inp = document.getElementById('namaInput' + pk);
+        if (inp) inp.value = checked.join(', ');
+    }
 </script>
 {% endblock %}

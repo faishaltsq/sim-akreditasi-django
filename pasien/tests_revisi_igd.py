@@ -118,3 +118,40 @@ class IGDDashboardRevisiTestCase(TestCase):
         res = self.client.get(reverse('pasien:igd_dashboard'))
         self.assertEqual(res.status_code, 200)
         self.assertContains(res, 'CRITICAL')
+
+    def test_critical_value_auto_upgrades_triage_to_merah(self):
+        """Revisi 02: Ordering a critical-value penunjang on non-MERAH patient auto-upgrades triage."""
+        # Create a KUNING patient
+        pasien_k = Pasien.objects.create(no_rm='RM-IGD-KUNING', nama_lengkap='Pasien Kuning', tanggal_lahir='1990-03-15', jenis_kelamin='L')
+        kunjungan_k = KunjunganPasien.objects.create(
+            pasien=pasien_k, no_kunjungan='KUNJ-IGD-KUNING',
+            jenis_kunjungan='IGD', status='TRIAGE', triage='KUNING', tanggal_masuk=timezone.now()
+        )
+        url = reverse('pasien:order_penunjang_buat', kwargs={'pk': kunjungan_k.pk})
+        res = self.client.post(url, {
+            'jenis': 'LAB',
+            'nama_pemeriksaan': 'Troponin I (CITO)',
+            'prioritas': 'CITO',
+            'is_critical_value': '1',
+            'critical_value_catatan': 'Troponin 1.2 ng/mL TINGGI',
+        })
+        self.assertEqual(res.status_code, 302)
+        kunjungan_k.refresh_from_db()
+        self.assertEqual(kunjungan_k.triage, 'MERAH', 'Triage harus di-upgrade ke MERAH saat critical value diorder')
+
+    def test_igd_dashboard_contains_bed_matrix(self):
+        """Revisi 02: IGD dashboard should pass bed_matrix context and render bed panel."""
+        res = self.client.get(reverse('pasien:igd_dashboard'))
+        self.assertEqual(res.status_code, 200)
+        self.assertIn('bed_matrix', res.context)
+
+    def test_igd_dashboard_pemeriksaan_presets_in_context(self):
+        """Revisi 02: pemeriksaan_presets context should contain LAB and RADIOLOGI lists."""
+        res = self.client.get(reverse('pasien:igd_dashboard'))
+        self.assertEqual(res.status_code, 200)
+        self.assertIn('pemeriksaan_presets', res.context)
+        presets = res.context['pemeriksaan_presets']
+        self.assertIn('LAB', presets)
+        self.assertIn('RADIOLOGI', presets)
+        self.assertGreater(len(presets['LAB']), 5)
+        self.assertGreater(len(presets['RADIOLOGI']), 5)

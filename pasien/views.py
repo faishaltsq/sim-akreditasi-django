@@ -799,6 +799,56 @@ def igd_dashboard(request):
         )
     except Exception:
         active_bookings = []
+    # Bed matrix for IGD (Revisi 02 — "Tampilkan manajemen bed")
+    ruangan_list = Ruangan.objects.prefetch_related('beds').order_by('kode')
+    bed_matrix = []
+    for r in ruangan_list:
+        total = r.beds.exclude(status='TIDAK_AKTIF').count()
+        if total == 0:
+            continue
+        tersedia = r.beds.filter(status='TERSEDIA').count()
+        terisi = r.beds.filter(status='TERISI').count()
+        bed_matrix.append({
+            'ruangan': r,
+            'total': total,
+            'tersedia': tersedia,
+            'terisi': terisi,
+            'persen': round((terisi / total) * 100) if total else 0,
+        })
+
+    # Predefined exam presets (Revisi 02 — "PILIHAN pemeriksaan penunjang")
+    PEMERIKSAAN_PRESETS = {
+        'LAB': [
+            'Darah Lengkap (DL)',
+            'Glukosa Darah Sewaktu (GDS)',
+            'Elektrolit (Na/K/Cl)',
+            'Fungsi Ginjal (Ureum/Kreatinin)',
+            'Kimia Darah (SGOT/SGPT)',
+            'Hemostasis (PT/APTT/INR)',
+            'Troponin I/T (CKMB)',
+            'Laktat Darah',
+            'Analisa Gas Darah (AGD)',
+            'Urinalisis Lengkap',
+            'Tes Kehamilan (HCG Urin)',
+            'Widal / Malaria RDT',
+            'CRP / PCT (Prokalsitonin)',
+            'Golongan Darah + Crossmatch',
+        ],
+        'RADIOLOGI': [
+            'Rontgen Thorax AP',
+            'Rontgen Pelvis AP',
+            'Rontgen Ekstremitas (Pilih)',
+            'USG Abdomen',
+            'USG FAST (FAST Trauma)',
+            'CT Scan Kepala Non-Kontras',
+            'CT Scan Thorax',
+            'CT Scan Abdomen-Pelvis',
+            'CT Angiografi (Pilih Organ)',
+            'EKG 12 Lead',
+            'Ekokardiografi Bedside',
+        ],
+    }
+
     ctx = {
         'pasien_igd_list':    qs,
         'triage_filter':      triage_filter,
@@ -807,6 +857,8 @@ def igd_dashboard(request):
         'count_hijau':        _cnt('HIJAU'),
         'count_hitam':        _cnt('HITAM'),
         'available_beds':     available_beds,
+        'bed_matrix':         bed_matrix,
+        'pemeriksaan_presets': PEMERIKSAAN_PRESETS,
         'critical_orders':    critical_orders,
         'active_bookings':    active_bookings,
         'triage_choices':     KunjunganPasien.TRIAGE_CHOICES,
@@ -936,7 +988,7 @@ def order_penunjang_buat(request, pk):
         is_critical = request.POST.get('is_critical_value') in ('1', 'true', 'True', 'on')
         critical_catatan = request.POST.get('critical_value_catatan', '').strip()
         if nama:
-            OrderPenunjang.objects.create(
+            order = OrderPenunjang.objects.create(
                 kunjungan=k,
                 jenis=jenis,
                 nama_pemeriksaan=nama,
@@ -946,6 +998,12 @@ def order_penunjang_buat(request, pk):
                 is_critical_value=is_critical,
                 critical_value_catatan=critical_catatan,
             )
+            # Auto-upgrade triage to MERAH when critical value flagged (Revisi 02 IGD)
+            if is_critical and k.jenis_kunjungan == 'IGD' and k.triage != 'MERAH':
+                old_triage = k.get_triage_display()
+                k.triage = 'MERAH'
+                k.save(update_fields=['triage'])
+                messages.warning(request, f'⚠️ CRITICAL VALUE — Triage otomatis di-eskalasi dari {old_triage} → Merah (P1).')
             # Automatic billing item
             base_price = 150000 if jenis == 'LAB' else 250000
             BillingItem.objects.create(
