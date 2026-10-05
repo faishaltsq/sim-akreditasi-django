@@ -188,6 +188,15 @@ class DashboardUIClinicalTestCase(TestCase):
         self.assertContains(res, 'modalCPPT')
         self.assertContains(res, 'modalDisposisi')
 
+    def test_kunjungan_baru_renders_poliklinik_choices(self):
+        """Kunjungan Baru form provides poliklinik options (Jantung, Paru, etc.)."""
+        res = self.client.get(reverse('pasien:kunjungan_baru'))
+        self.assertEqual(res.status_code, 200)
+        self.assertIn('poliklinik_choices', res.context)
+        self.assertContains(res, 'Poli Jantung &amp; Pembuluh Darah')
+        self.assertContains(res, 'Poli Paru &amp; Respirasi')
+        self.assertContains(res, 'poliDropdownWrapper')
+
     def test_dashboard_contains_news_score_in_context(self):
         """IGD dashboard context includes ews_data dict keyed by visit PK."""
         res = self.client.get(reverse('pasien:igd_dashboard'))

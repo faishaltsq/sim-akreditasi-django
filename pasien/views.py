@@ -290,6 +290,7 @@ def kunjungan_baru(request):
         'jenis_choices': KunjunganPasien.JENIS_KUNJUNGAN,
         'penjamin_choices': KunjunganPasien.TIPE_PENJAMIN,
         'triage_choices': KunjunganPasien.TRIAGE_CHOICES,
+        'poliklinik_choices': POLIKLINIK_CHOICES,
     }
     return render(request, 'pasien/kunjungan_form.html', ctx)
 

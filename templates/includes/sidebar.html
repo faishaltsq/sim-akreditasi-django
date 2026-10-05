@@ -323,13 +323,53 @@
     {% endif %}
 
     {% if 'rajal' in allowed_mods %}
-    <a href="{% url 'pasien:rajal_dashboard' %}" class="nav-link {% if request.resolver_match.url_name == 'rajal_dashboard' %}active{% endif %}">
-        <span class="nav-icon"><i class="bi bi-hospital-fill text-primary"></i></span>
-        <span class="nav-text">
-            <span class="nav-title">Poli Rawat Jalan</span>
-            <span class="nav-desc">Antrean Spesialis</span>
-        </span>
-    </a>
+    <div class="sidebar-rajal mb-1">
+        <a href="{% url 'pasien:rajal_dashboard' %}" class="nav-link d-flex align-items-center justify-content-between {% if request.resolver_match.url_name == 'rajal_dashboard' and not request.GET.poli %}active{% endif %}">
+            <span class="d-flex align-items-center gap-2">
+                <span class="nav-icon"><i class="bi bi-hospital-fill text-primary"></i></span>
+                <span class="nav-text">
+                    <span class="nav-title">Poli Rawat Jalan</span>
+                    <span class="nav-desc">Antrean Spesialis</span>
+                </span>
+            </span>
+            <span class="badge bg-light text-primary border" title="Lihat Pilihan Poliklinik"
+                  data-bs-toggle="collapse" data-bs-target="#submenuPoliRajal" role="button"
+                  style="font-size:0.65rem; cursor:pointer;" onclick="event.preventDefault(); bootstrap.Collapse.getOrCreateInstance(document.getElementById('submenuPoliRajal')).toggle();">
+                <i class="bi bi-chevron-down"></i>
+            </span>
+        </a>
+        <div class="collapse {% if request.resolver_match.url_name == 'rajal_dashboard' and request.GET.poli %}show{% endif %}" id="submenuPoliRajal">
+            <div class="py-1 ps-3" style="background:#f8fafc; border-radius:6px; margin:2px 0 6px 0;">
+                <a href="{% url 'pasien:rajal_dashboard' %}" class="nav-link py-1 px-2 d-flex align-items-center gap-2 {% if not request.GET.poli %}fw-bold text-primary{% endif %}" style="font-size:0.75rem;">
+                    <i class="bi bi-grid-fill" style="font-size:0.7rem;"></i> Semua Poli
+                </a>
+                <a href="{% url 'pasien:rajal_dashboard' %}?poli=Jantung" class="nav-link py-1 px-2 d-flex align-items-center gap-2 {% if request.GET.poli == 'Jantung' %}fw-bold text-primary{% endif %}" style="font-size:0.75rem;">
+                    <i class="bi bi-heart-pulse-fill text-danger" style="font-size:0.7rem;"></i> Poli Jantung
+                </a>
+                <a href="{% url 'pasien:rajal_dashboard' %}?poli=Paru" class="nav-link py-1 px-2 d-flex align-items-center gap-2 {% if request.GET.poli == 'Paru' %}fw-bold text-primary{% endif %}" style="font-size:0.75rem;">
+                    <i class="bi bi-lungs-fill text-info" style="font-size:0.7rem;"></i> Poli Paru
+                </a>
+                <a href="{% url 'pasien:rajal_dashboard' %}?poli=Penyakit+Dalam" class="nav-link py-1 px-2 d-flex align-items-center gap-2 {% if 'Penyakit' in request.GET.poli %}fw-bold text-primary{% endif %}" style="font-size:0.75rem;">
+                    <i class="bi bi-bandaid-fill text-warning" style="font-size:0.7rem;"></i> Poli Penyakit Dalam
+                </a>
+                <a href="{% url 'pasien:rajal_dashboard' %}?poli=Bedah" class="nav-link py-1 px-2 d-flex align-items-center gap-2 {% if 'Bedah' in request.GET.poli %}fw-bold text-primary{% endif %}" style="font-size:0.75rem;">
+                    <i class="bi bi-scissors" style="font-size:0.7rem;"></i> Poli Bedah Umum
+                </a>
+                <a href="{% url 'pasien:rajal_dashboard' %}?poli=Anak" class="nav-link py-1 px-2 d-flex align-items-center gap-2 {% if 'Anak' in request.GET.poli %}fw-bold text-primary{% endif %}" style="font-size:0.75rem;">
+                    <i class="bi bi-emoji-smile-fill text-success" style="font-size:0.7rem;"></i> Poli Anak
+                </a>
+                <a href="{% url 'pasien:rajal_dashboard' %}?poli=Obgyn" class="nav-link py-1 px-2 d-flex align-items-center gap-2 {% if 'Obgyn' in request.GET.poli %}fw-bold text-primary{% endif %}" style="font-size:0.75rem;">
+                    <i class="bi bi-gender-female text-danger" style="font-size:0.7rem;"></i> Poli Kandungan (Obgyn)
+                </a>
+                <a href="{% url 'pasien:rajal_dashboard' %}?poli=Mata" class="nav-link py-1 px-2 d-flex align-items-center gap-2 {% if 'Mata' in request.GET.poli %}fw-bold text-primary{% endif %}" style="font-size:0.75rem;">
+                    <i class="bi bi-eye-fill text-dark" style="font-size:0.7rem;"></i> Poli Mata
+                </a>
+                <a href="{% url 'pasien:rajal_dashboard' %}?poli=Saraf" class="nav-link py-1 px-2 d-flex align-items-center gap-2 {% if 'Saraf' in request.GET.poli %}fw-bold text-primary{% endif %}" style="font-size:0.75rem;">
+                    <i class="bi bi-activity text-primary" style="font-size:0.7rem;"></i> Poli Saraf
+                </a>
+            </div>
+        </div>
+    </div>
     {% endif %}
 
     {% if 'ranap' in allowed_mods %}

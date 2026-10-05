@@ -73,9 +73,30 @@
                         <label class="form-label" style="font-size:.8rem; font-weight:600;">Dokter Penanggung Jawab (DPJP)</label>
                         <input type="text" name="dpjp" class="form-control form-control-sm" placeholder="dr. ..." style="font-size:.82rem;">
                     </div>
-                    <div class="col-md-6">
-                        <label class="form-label" style="font-size:.8rem; font-weight:600;">Poliklinik / Ruang Pelayanan</label>
-                        <input type="text" name="poliklinik" class="form-control form-control-sm" placeholder="cth. Poli Penyakit Dalam / IGD" style="font-size:.82rem;">
+                    <div class="col-md-6" id="poliklinikContainer">
+                        <label class="form-label" style="font-size:.8rem; font-weight:600;">
+                            <span id="poliklinikLabel">Poliklinik / Ruang Pelayanan</span>
+                            <span id="poliRequiredStar" class="text-danger" style="display:none;">*</span>
+                        </label>
+                        <!-- Pilihan Dropdown Spesifik Poliklinik (Otomatis tampil saat pilih Rawat Jalan / Poliklinik) -->
+                        <div id="poliDropdownWrapper">
+                            <select name="poliklinik" id="poliSelect" class="form-select form-select-sm" style="font-size:.82rem;">
+                                <option value="">— Pilih Jenis Poliklinik —</option>
+                                {% for val, label in poliklinik_choices %}
+                                <option value="{{ label }}">{{ label }}</option>
+                                {% endfor %}
+                                <option value="MANUAL_INPUT">➕ Ketik Nama Poliklinik Lainnya...</option>
+                            </select>
+                        </div>
+                        <!-- Input Manual Fallback (untuk IGD / Ranap / Custom) -->
+                        <div id="poliTextWrapper" style="display:none;">
+                            <div class="input-group input-group-sm">
+                                <input type="text" id="poliTextInput" class="form-control" placeholder="cth. Poli Penyakit Dalam / IGD" style="font-size:.82rem;">
+                                <button class="btn btn-outline-secondary" type="button" id="btnBackToPoliList" title="Pilih dari daftar poliklinik">
+                                    <i class="bi bi-list-check"></i>
+                                </button>
+                            </div>
+                        </div>
                     </div>
 
                     <!-- TRIAGE (IGD ONLY) -->
@@ -140,23 +161,120 @@ document.addEventListener('DOMContentLoaded', function() {
         noKunjunganInput.value = `REG-${ymd}-${rand}`;
     }
 
-    // Toggle Triage on IGD selection
+    // Toggle Triage on IGD selection & Toggle Poliklinik options on RAJAL
     const jenisSelect = document.getElementById('jenisKunjungan');
     const triageBox   = document.getElementById('triageContainer');
     const triageSelect= document.getElementById('triageSelect');
 
-    function toggleTriage() {
-        if (jenisSelect.value === 'IGD') {
+    const poliklinikLabel     = document.getElementById('poliklinikLabel');
+    const poliRequiredStar   = document.getElementById('poliRequiredStar');
+    const poliDropdownWrapper= document.getElementById('poliDropdownWrapper');
+    const poliSelect         = document.getElementById('poliSelect');
+    const poliTextWrapper    = document.getElementById('poliTextWrapper');
+    const poliTextInput      = document.getElementById('poliTextInput');
+    const btnBackToPoliList  = document.getElementById('btnBackToPoliList');
+
+    function updateJenisKunjungan() {
+        const val = jenisSelect.value;
+        if (val === 'IGD') {
             triageBox.style.display = 'block';
             triageSelect.required = true;
+            if (poliklinikLabel) poliklinikLabel.textContent = 'Ruang Pelayanan IGD';
+            if (poliRequiredStar) poliRequiredStar.style.display = 'none';
+            if (poliDropdownWrapper) poliDropdownWrapper.style.display = 'none';
+            if (poliSelect) {
+                poliSelect.removeAttribute('name');
+                poliSelect.required = false;
+            }
+            if (poliTextWrapper) poliTextWrapper.style.display = 'block';
+            if (poliTextInput) {
+                poliTextInput.setAttribute('name', 'poliklinik');
+                poliTextInput.value = 'Instalasi Gawat Darurat (IGD)';
+                poliTextInput.readOnly = true;
+            }
+        } else if (val === 'RAJAL') {
+            triageBox.style.display = 'none';
+            triageSelect.required = false;
+            if (poliklinikLabel) poliklinikLabel.textContent = 'Pilih Jenis Poliklinik (Spesialis)';
+            if (poliRequiredStar) poliRequiredStar.style.display = 'inline';
+            if (poliDropdownWrapper) poliDropdownWrapper.style.display = 'block';
+            if (poliSelect) {
+                poliSelect.setAttribute('name', 'poliklinik');
+                poliSelect.required = true;
+                if (poliSelect.value === 'MANUAL_INPUT') {
+                    poliSelect.value = '';
+                }
+            }
+            if (poliTextWrapper) poliTextWrapper.style.display = 'none';
+            if (poliTextInput) {
+                poliTextInput.removeAttribute('name');
+                poliTextInput.readOnly = false;
+                poliTextInput.value = '';
+            }
+        } else if (val === 'RANAP') {
+            triageBox.style.display = 'none';
+            triageSelect.required = false;
+            if (poliklinikLabel) poliklinikLabel.textContent = 'Ruang Rawat Inap / Bangsal';
+            if (poliRequiredStar) poliRequiredStar.style.display = 'none';
+            if (poliDropdownWrapper) poliDropdownWrapper.style.display = 'none';
+            if (poliSelect) {
+                poliSelect.removeAttribute('name');
+                poliSelect.required = false;
+            }
+            if (poliTextWrapper) poliTextWrapper.style.display = 'block';
+            if (poliTextInput) {
+                poliTextInput.setAttribute('name', 'poliklinik');
+                poliTextInput.value = 'Rawat Inap';
+                poliTextInput.readOnly = false;
+            }
         } else {
             triageBox.style.display = 'none';
             triageSelect.required = false;
+            if (poliklinikLabel) poliklinikLabel.textContent = 'Poliklinik / Ruang Pelayanan';
+            if (poliRequiredStar) poliRequiredStar.style.display = 'none';
+            if (poliDropdownWrapper) poliDropdownWrapper.style.display = 'block';
+            if (poliSelect) {
+                poliSelect.setAttribute('name', 'poliklinik');
+                poliSelect.required = false;
+            }
+            if (poliTextWrapper) poliTextWrapper.style.display = 'none';
+            if (poliTextInput) {
+                poliTextInput.removeAttribute('name');
+                poliTextInput.readOnly = false;
+            }
         }
     }
 
-    jenisSelect.addEventListener('change', toggleTriage);
-    toggleTriage();
+    if (poliSelect) {
+        poliSelect.addEventListener('change', function() {
+            if (this.value === 'MANUAL_INPUT') {
+                poliDropdownWrapper.style.display = 'none';
+                poliSelect.removeAttribute('name');
+                poliSelect.required = false;
+                poliTextWrapper.style.display = 'block';
+                poliTextInput.setAttribute('name', 'poliklinik');
+                poliTextInput.required = true;
+                poliTextInput.readOnly = false;
+                poliTextInput.value = '';
+                poliTextInput.focus();
+            }
+        });
+    }
+
+    if (btnBackToPoliList) {
+        btnBackToPoliList.addEventListener('click', function() {
+            poliTextWrapper.style.display = 'none';
+            poliTextInput.removeAttribute('name');
+            poliTextInput.required = false;
+            poliDropdownWrapper.style.display = 'block';
+            poliSelect.setAttribute('name', 'poliklinik');
+            poliSelect.value = '';
+            poliSelect.focus();
+        });
+    }
+
+    jenisSelect.addEventListener('change', updateJenisKunjungan);
+    updateJenisKunjungan();
 });
 </script>
 {% endblock %}
