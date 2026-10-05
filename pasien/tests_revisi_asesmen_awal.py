@@ -61,6 +61,21 @@ class AsesmenAwalDetailTestCase(TestCase):
         self.assertContains(res, 'DADA &amp; TORAKS')
         self.assertContains(res, 'ABDOMEN')
         self.assertContains(res, 'EKSTREMITAS')
+        # Check that interactive checkboxes exist (tinggal mencentang)
+        self.assertContains(res, 'kd_normo')
+        self.assertContains(res, 'dt_simetris')
+        self.assertContains(res, 'ab_datar')
+        self.assertContains(res, 'ek_hangat')
+
+    def test_igd_dashboard_modal_renders_interactive_checkboxes(self):
+        """IGD dashboard Asesmen Awal modal renders interactive checklists per Word doc."""
+        res = self.client.get(reverse('pasien:igd_dashboard'))
+        self.assertEqual(res.status_code, 200)
+        self.assertContains(res, 'aw_paten_')
+        self.assertContains(res, 'br_spontan_')
+        self.assertContains(res, 'cr_akral_h_')
+        self.assertContains(res, 'ds_cm_')
+        self.assertContains(res, 'ex_utuh_')
 
     def test_save_asesmen_awal_from_kunjungan_detail(self):
         """POST to igd_asesmen_awal_save with next_url redirects back to kunjungan_detail and updates fields."""

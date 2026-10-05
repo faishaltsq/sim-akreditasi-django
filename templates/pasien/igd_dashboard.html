@@ -1042,69 +1042,314 @@
                                                     </div>
                                                 </div>
 
-                                                <!-- TAB 2: PEMERIKSAAN FISIK ABCDE -->
+                                                <!-- TAB 2: PEMERIKSAAN FISIK (ABCDE & HEAD-TO-TOE) -->
                                                 <div class="tab-pane fade" id="tabFisik{{ k.pk }}">
-                                                    <div class="row g-3">
-                                                        <div class="col-md-6">
-                                                            <label class="form-label fw-semibold text-danger">A - Airway (Jalan Napas):</label>
-                                                            <input type="text" name="fisik_airway" class="form-control form-control-sm" value="{{ k.fisik_airway }}" placeholder="Paten, Bebas, Stridor, Gargling, Snoring...">
+                                                    <div class="alert alert-info py-2 px-3 small d-flex align-items-center mb-3">
+                                                        <i class="bi bi-check2-square fs-5 me-2"></i>
+                                                        <span>Centang temuan pemeriksaan fisik berikut (otomatis terangkum ke data rekam medis):</span>
+                                                    </div>
+
+                                                    <!-- 1. AIRWAY -->
+                                                    <div class="p-2.5 border rounded mb-2 bg-light">
+                                                        <label class="form-label fw-bold text-danger mb-1 small"><i class="bi bi-wind me-1"></i>A - Airway (Jalan Napas):</label>
+                                                        <div class="d-flex flex-wrap gap-3 py-1">
+                                                            <div class="form-check form-check-inline mb-0">
+                                                                <input class="form-check-input" type="checkbox" id="aw_paten_{{ k.pk }}" value="Paten" onchange="toggleCheckValue('#input_airway_{{ k.pk }}', 'Paten', this.checked)" {% if 'Paten' in k.fisik_airway or not k.fisik_airway %}checked{% endif %}>
+                                                                <label class="form-check-label small fw-semibold" for="aw_paten_{{ k.pk }}">Paten / Bebas</label>
+                                                            </div>
+                                                            <div class="form-check form-check-inline mb-0">
+                                                                <input class="form-check-input" type="checkbox" id="aw_stridor_{{ k.pk }}" value="Stridor" onchange="toggleCheckValue('#input_airway_{{ k.pk }}', 'Stridor', this.checked)" {% if 'Stridor' in k.fisik_airway %}checked{% endif %}>
+                                                                <label class="form-check-label small text-danger" for="aw_stridor_{{ k.pk }}">Stridor</label>
+                                                            </div>
+                                                            <div class="form-check form-check-inline mb-0">
+                                                                <input class="form-check-input" type="checkbox" id="aw_gargling_{{ k.pk }}" value="Gargling" onchange="toggleCheckValue('#input_airway_{{ k.pk }}', 'Gargling', this.checked)" {% if 'Gargling' in k.fisik_airway %}checked{% endif %}>
+                                                                <label class="form-check-label small text-danger" for="aw_gargling_{{ k.pk }}">Gargling</label>
+                                                            </div>
+                                                            <div class="form-check form-check-inline mb-0">
+                                                                <input class="form-check-input" type="checkbox" id="aw_snoring_{{ k.pk }}" value="Snoring" onchange="toggleCheckValue('#input_airway_{{ k.pk }}', 'Snoring', this.checked)" {% if 'Snoring' in k.fisik_airway %}checked{% endif %}>
+                                                                <label class="form-check-label small text-danger" for="aw_snoring_{{ k.pk }}">Snoring</label>
+                                                            </div>
+                                                            <div class="form-check form-check-inline mb-0">
+                                                                <input class="form-check-input" type="checkbox" id="aw_ett_{{ k.pk }}" value="Intubasi / ETT" onchange="toggleCheckValue('#input_airway_{{ k.pk }}', 'Intubasi / ETT', this.checked)" {% if 'Intubasi' in k.fisik_airway %}checked{% endif %}>
+                                                                <label class="form-check-label small text-primary" for="aw_ett_{{ k.pk }}">Intubasi ETT</label>
+                                                            </div>
                                                         </div>
-                                                        <div class="col-md-6">
-                                                            <label class="form-label fw-semibold text-primary">B - Breathing (Pernapasan):</label>
-                                                            <input type="text" name="fisik_breathing" class="form-control form-control-sm" value="{{ k.fisik_breathing }}" placeholder="Spontan, Simetris, Retraksi dada, Suara napas vesikuler/ronkhi/wheezing...">
+                                                        <input type="text" name="fisik_airway" id="input_airway_{{ k.pk }}" class="form-control form-control-sm mt-1 bg-white" value="{{ k.fisik_airway|default:'Paten' }}">
+                                                    </div>
+
+                                                    <!-- 2. BREATHING -->
+                                                    <div class="p-2.5 border rounded mb-2 bg-light">
+                                                        <label class="form-label fw-bold text-primary mb-1 small"><i class="bi bi-lungs me-1"></i>B - Breathing (Pernapasan):</label>
+                                                        <div class="d-flex flex-wrap gap-3 py-1">
+                                                            <div class="form-check form-check-inline mb-0">
+                                                                <input class="form-check-input" type="checkbox" id="br_spontan_{{ k.pk }}" value="Spontan" onchange="toggleCheckValue('#input_breathing_{{ k.pk }}', 'Spontan', this.checked)" {% if 'Spontan' in k.fisik_breathing or not k.fisik_breathing %}checked{% endif %}>
+                                                                <label class="form-check-label small fw-semibold" for="br_spontan_{{ k.pk }}">Spontan</label>
+                                                            </div>
+                                                            <div class="form-check form-check-inline mb-0">
+                                                                <input class="form-check-input" type="checkbox" id="br_simetris_{{ k.pk }}" value="Simetris Kiri & Kanan" onchange="toggleCheckValue('#input_breathing_{{ k.pk }}', 'Simetris Kiri & Kanan', this.checked)" {% if 'Simetris' in k.fisik_breathing or not k.fisik_breathing %}checked{% endif %}>
+                                                                <label class="form-check-label small fw-semibold" for="br_simetris_{{ k.pk }}">Simetris Kiri &amp; Kanan</label>
+                                                            </div>
+                                                            <div class="form-check form-check-inline mb-0">
+                                                                <input class="form-check-input" type="checkbox" id="br_retraksi_min_{{ k.pk }}" value="Retraksi Dinding Dada (-)" onchange="toggleCheckValue('#input_breathing_{{ k.pk }}', 'Retraksi Dinding Dada (-)', this.checked)" {% if 'Retraksi Dinding Dada (-)' in k.fisik_breathing or not k.fisik_breathing %}checked{% endif %}>
+                                                                <label class="form-check-label small" for="br_retraksi_min_{{ k.pk }}">Retraksi (-)</label>
+                                                            </div>
+                                                            <div class="form-check form-check-inline mb-0">
+                                                                <input class="form-check-input" type="checkbox" id="br_retraksi_plus_{{ k.pk }}" value="Retraksi Dinding Dada (+)" onchange="toggleCheckValue('#input_breathing_{{ k.pk }}', 'Retraksi Dinding Dada (+)', this.checked)" {% if 'Retraksi Dinding Dada (+)' in k.fisik_breathing %}checked{% endif %}>
+                                                                <label class="form-check-label small text-danger" for="br_retraksi_plus_{{ k.pk }}">Retraksi (+)</label>
+                                                            </div>
+                                                            <div class="form-check form-check-inline mb-0">
+                                                                <input class="form-check-input" type="checkbox" id="br_vesikuler_{{ k.pk }}" value="Vesikuler (+/+)" onchange="toggleCheckValue('#input_breathing_{{ k.pk }}', 'Vesikuler (+/+)', this.checked)" {% if 'Vesikuler' in k.fisik_breathing or not k.fisik_breathing %}checked{% endif %}>
+                                                                <label class="form-check-label small fw-semibold" for="br_vesikuler_{{ k.pk }}">Vesikuler (+/+)</label>
+                                                            </div>
+                                                            <div class="form-check form-check-inline mb-0">
+                                                                <input class="form-check-input" type="checkbox" id="br_ronkhi_{{ k.pk }}" value="Ronkhi (+/+)" onchange="toggleCheckValue('#input_breathing_{{ k.pk }}', 'Ronkhi (+/+)', this.checked)" {% if 'Ronkhi' in k.fisik_breathing %}checked{% endif %}>
+                                                                <label class="form-check-label small text-danger" for="br_ronkhi_{{ k.pk }}">Ronkhi (+/+)</label>
+                                                            </div>
+                                                            <div class="form-check form-check-inline mb-0">
+                                                                <input class="form-check-input" type="checkbox" id="br_wheezing_{{ k.pk }}" value="Wheezing (+/+)" onchange="toggleCheckValue('#input_breathing_{{ k.pk }}', 'Wheezing (+/+)', this.checked)" {% if 'Wheezing' in k.fisik_breathing %}checked{% endif %}>
+                                                                <label class="form-check-label small text-danger" for="br_wheezing_{{ k.pk }}">Wheezing (+/+)</label>
+                                                            </div>
                                                         </div>
-                                                        <div class="col-md-6">
-                                                            <label class="form-label fw-semibold text-success">C - Circulation (Sirkulasi):</label>
-                                                            <input type="text" name="fisik_circulation" class="form-control form-control-sm" value="{{ k.fisik_circulation }}" placeholder="Akral hangat/dingin, CRT < 2 detik, Nadi kuat/lemah, Perdarahan aktif...">
+                                                        <input type="text" name="fisik_breathing" id="input_breathing_{{ k.pk }}" class="form-control form-control-sm mt-1 bg-white" value="{{ k.fisik_breathing|default:'Spontan, Simetris Kiri & Kanan, Vesikuler (+/+)' }}">
+                                                    </div>
+
+                                                    <!-- 3. CIRCULATION -->
+                                                    <div class="p-2.5 border rounded mb-2 bg-light">
+                                                        <label class="form-label fw-bold text-success mb-1 small"><i class="bi bi-heart-pulse me-1"></i>C - Circulation (Sirkulasi):</label>
+                                                        <div class="d-flex flex-wrap gap-3 py-1">
+                                                            <div class="form-check form-check-inline mb-0">
+                                                                <input class="form-check-input" type="checkbox" id="cr_akral_h_{{ k.pk }}" value="Akral Hangat" onchange="toggleCheckValue('#input_circ_{{ k.pk }}', 'Akral Hangat', this.checked)" {% if 'Akral Hangat' in k.fisik_circulation or not k.fisik_circulation %}checked{% endif %}>
+                                                                <label class="form-check-label small fw-semibold" for="cr_akral_h_{{ k.pk }}">Akral Hangat</label>
+                                                            </div>
+                                                            <div class="form-check form-check-inline mb-0">
+                                                                <input class="form-check-input" type="checkbox" id="cr_akral_d_{{ k.pk }}" value="Akral Dingin / Pucat" onchange="toggleCheckValue('#input_circ_{{ k.pk }}', 'Akral Dingin / Pucat', this.checked)" {% if 'Akral Dingin' in k.fisik_circulation %}checked{% endif %}>
+                                                                <label class="form-check-label small text-danger" for="cr_akral_d_{{ k.pk }}">Akral Dingin / Pucat</label>
+                                                            </div>
+                                                            <div class="form-check form-check-inline mb-0">
+                                                                <input class="form-check-input" type="checkbox" id="cr_crt2_{{ k.pk }}" value="CRT < 2 detik" onchange="toggleCheckValue('#input_circ_{{ k.pk }}', 'CRT < 2 detik', this.checked)" {% if 'CRT < 2' in k.fisik_circulation or not k.fisik_circulation %}checked{% endif %}>
+                                                                <label class="form-check-label small fw-semibold" for="cr_crt2_{{ k.pk }}">CRT &lt; 2 detik</label>
+                                                            </div>
+                                                            <div class="form-check form-check-inline mb-0">
+                                                                <input class="form-check-input" type="checkbox" id="cr_crt_gt_{{ k.pk }}" value="CRT > 2 detik" onchange="toggleCheckValue('#input_circ_{{ k.pk }}', 'CRT > 2 detik', this.checked)" {% if 'CRT > 2' in k.fisik_circulation %}checked{% endif %}>
+                                                                <label class="form-check-label small text-danger" for="cr_crt_gt_{{ k.pk }}">CRT &gt; 2 detik</label>
+                                                            </div>
+                                                            <div class="form-check form-check-inline mb-0">
+                                                                <input class="form-check-input" type="checkbox" id="cr_nadi_k_{{ k.pk }}" value="Nadi Kuat / Teraba" onchange="toggleCheckValue('#input_circ_{{ k.pk }}', 'Nadi Kuat / Teraba', this.checked)" {% if 'Nadi Kuat' in k.fisik_circulation or not k.fisik_circulation %}checked{% endif %}>
+                                                                <label class="form-check-label small" for="cr_nadi_k_{{ k.pk }}">Nadi Kuat</label>
+                                                            </div>
+                                                            <div class="form-check form-check-inline mb-0">
+                                                                <input class="form-check-input" type="checkbox" id="cr_nadi_l_{{ k.pk }}" value="Nadi Lemah / Halus" onchange="toggleCheckValue('#input_circ_{{ k.pk }}', 'Nadi Lemah / Halus', this.checked)" {% if 'Nadi Lemah' in k.fisik_circulation %}checked{% endif %}>
+                                                                <label class="form-check-label small text-danger" for="cr_nadi_l_{{ k.pk }}">Nadi Lemah</label>
+                                                            </div>
+                                                            <div class="form-check form-check-inline mb-0">
+                                                                <input class="form-check-input" type="checkbox" id="cr_perdarahan_{{ k.pk }}" value="Perdarahan Aktif (-)" onchange="toggleCheckValue('#input_circ_{{ k.pk }}', 'Perdarahan Aktif (-)', this.checked)" {% if 'Perdarahan Aktif (-)' in k.fisik_circulation or not k.fisik_circulation %}checked{% endif %}>
+                                                                <label class="form-check-label small" for="cr_perdarahan_{{ k.pk }}">Perdarahan (-)</label>
+                                                            </div>
                                                         </div>
-                                                        <div class="col-md-6">
-                                                            <label class="form-label fw-semibold text-warning text-dark">D - Disability (Neurologis):</label>
-                                                            <input type="text" name="fisik_disability" class="form-control form-control-sm" value="{{ k.fisik_disability }}" placeholder="GCS {{ k.ttv_gcs|default:'15' }}, Refleks pupil isokor (+/+), Paresis...">
+                                                        <input type="text" name="fisik_circulation" id="input_circ_{{ k.pk }}" class="form-control form-control-sm mt-1 bg-white" value="{{ k.fisik_circulation|default:'Akral Hangat, CRT < 2 detik, Nadi Kuat' }}">
+                                                    </div>
+
+                                                    <!-- 4. DISABILITY -->
+                                                    <div class="p-2.5 border rounded mb-2 bg-light">
+                                                        <label class="form-label fw-bold text-warning text-dark mb-1 small"><i class="bi bi-activity me-1"></i>D - Disability (Neurologis):</label>
+                                                        <div class="d-flex flex-wrap gap-3 py-1">
+                                                            <div class="form-check form-check-inline mb-0">
+                                                                <input class="form-check-input" type="checkbox" id="ds_cm_{{ k.pk }}" value="Compos Mentis (GCS 15)" onchange="toggleCheckValue('#input_dis_{{ k.pk }}', 'Compos Mentis (GCS 15)', this.checked)" {% if 'Compos Mentis' in k.fisik_disability or not k.fisik_disability %}checked{% endif %}>
+                                                                <label class="form-check-label small fw-semibold" for="ds_cm_{{ k.pk }}">Compos Mentis (GCS 15)</label>
+                                                            </div>
+                                                            <div class="form-check form-check-inline mb-0">
+                                                                <input class="form-check-input" type="checkbox" id="ds_isokor_{{ k.pk }}" value="Pupil Isokor (2 mm / 2 mm)" onchange="toggleCheckValue('#input_dis_{{ k.pk }}', 'Pupil Isokor (2 mm / 2 mm)', this.checked)" {% if 'Isokor' in k.fisik_disability or not k.fisik_disability %}checked{% endif %}>
+                                                                <label class="form-check-label small fw-semibold" for="ds_isokor_{{ k.pk }}">Pupil Isokor (2mm/2mm)</label>
+                                                            </div>
+                                                            <div class="form-check form-check-inline mb-0">
+                                                                <input class="form-check-input" type="checkbox" id="ds_anisokor_{{ k.pk }}" value="Anisokor" onchange="toggleCheckValue('#input_dis_{{ k.pk }}', 'Anisokor', this.checked)" {% if 'Anisokor' in k.fisik_disability %}checked{% endif %}>
+                                                                <label class="form-check-label small text-danger" for="ds_anisokor_{{ k.pk }}">Anisokor</label>
+                                                            </div>
+                                                            <div class="form-check form-check-inline mb-0">
+                                                                <input class="form-check-input" type="checkbox" id="ds_rc_{{ k.pk }}" value="Refleks Cahaya (+/+)" onchange="toggleCheckValue('#input_dis_{{ k.pk }}', 'Refleks Cahaya (+/+)', this.checked)" {% if 'Refleks Cahaya (+/+)' in k.fisik_disability or not k.fisik_disability %}checked{% endif %}>
+                                                                <label class="form-check-label small" for="ds_rc_{{ k.pk }}">Refleks Cahaya (+/+)</label>
+                                                            </div>
+                                                            <div class="form-check form-check-inline mb-0">
+                                                                <input class="form-check-input" type="checkbox" id="ds_paresis_{{ k.pk }}" value="Defisit Motorik / Paresis" onchange="toggleCheckValue('#input_dis_{{ k.pk }}', 'Defisit Motorik / Paresis', this.checked)" {% if 'Paresis' in k.fisik_disability %}checked{% endif %}>
+                                                                <label class="form-check-label small text-danger" for="ds_paresis_{{ k.pk }}">Paresis / Kelemahan</label>
+                                                            </div>
                                                         </div>
-                                                        <div class="col-md-12">
-                                                            <label class="form-label fw-semibold text-secondary">E - Exposure / Kulit / Deformitas:</label>
-                                                            <input type="text" name="fisik_exposure" class="form-control form-control-sm" value="{{ k.fisik_exposure }}" placeholder="Luka, Deformitas tulang, Ruam, Suhu lingkungan...">
+                                                        <input type="text" name="fisik_disability" id="input_dis_{{ k.pk }}" class="form-control form-control-sm mt-1 bg-white" value="{{ k.fisik_disability|default:'Compos Mentis (GCS 15), Pupil Isokor (2 mm / 2 mm)' }}">
+                                                    </div>
+
+                                                    <!-- 5. EXPOSURE -->
+                                                    <div class="p-2.5 border rounded mb-2 bg-light">
+                                                        <label class="form-label fw-bold text-secondary mb-1 small"><i class="bi bi-shield me-1"></i>E - Exposure (Integritas Kulit & Deformitas):</label>
+                                                        <div class="d-flex flex-wrap gap-3 py-1">
+                                                            <div class="form-check form-check-inline mb-0">
+                                                                <input class="form-check-input" type="checkbox" id="ex_utuh_{{ k.pk }}" value="Kulit Utuh / Normal" onchange="toggleCheckValue('#input_exp_{{ k.pk }}', 'Kulit Utuh / Normal', this.checked)" {% if 'Kulit Utuh' in k.fisik_exposure or not k.fisik_exposure %}checked{% endif %}>
+                                                                <label class="form-check-label small fw-semibold" for="ex_utuh_{{ k.pk }}">Kulit Utuh / Normal</label>
+                                                            </div>
+                                                            <div class="form-check form-check-inline mb-0">
+                                                                <input class="form-check-input" type="checkbox" id="ex_turgor_{{ k.pk }}" value="Turgor Cepat Kembali (Baik)" onchange="toggleCheckValue('#input_exp_{{ k.pk }}', 'Turgor Cepat Kembali (Baik)', this.checked)" {% if 'Turgor' in k.fisik_exposure or not k.fisik_exposure %}checked{% endif %}>
+                                                                <label class="form-check-label small" for="ex_turgor_{{ k.pk }}">Turgor Baik</label>
+                                                            </div>
+                                                            <div class="form-check form-check-inline mb-0">
+                                                                <input class="form-check-input" type="checkbox" id="ex_luka_{{ k.pk }}" value="Luka Lecet / Sayat" onchange="toggleCheckValue('#input_exp_{{ k.pk }}', 'Luka Lecet / Sayat', this.checked)" {% if 'Luka Lecet' in k.fisik_exposure %}checked{% endif %}>
+                                                                <label class="form-check-label small text-danger" for="ex_luka_{{ k.pk }}">Luka Lecet / Sayat</label>
+                                                            </div>
+                                                            <div class="form-check form-check-inline mb-0">
+                                                                <input class="form-check-input" type="checkbox" id="ex_fraktur_{{ k.pk }}" value="Deformitas / Fraktur" onchange="toggleCheckValue('#input_exp_{{ k.pk }}', 'Deformitas / Fraktur', this.checked)" {% if 'Deformitas' in k.fisik_exposure %}checked{% endif %}>
+                                                                <label class="form-check-label small text-danger" for="ex_fraktur_{{ k.pk }}">Deformitas / Fraktur</label>
+                                                            </div>
+                                                            <div class="form-check form-check-inline mb-0">
+                                                                <input class="form-check-input" type="checkbox" id="ex_dekubitus_{{ k.pk }}" value="Ulkus Dekubitus (-)" onchange="toggleCheckValue('#input_exp_{{ k.pk }}', 'Ulkus Dekubitus (-)', this.checked)" {% if 'Dekubitus' in k.fisik_exposure or not k.fisik_exposure %}checked{% endif %}>
+                                                                <label class="form-check-label small" for="ex_dekubitus_{{ k.pk }}">Dekubitus (-)</label>
+                                                            </div>
                                                         </div>
+                                                        <input type="text" name="fisik_exposure" id="input_exp_{{ k.pk }}" class="form-control form-control-sm mt-1 bg-white" value="{{ k.fisik_exposure|default:'Kulit Utuh / Normal, Turgor Cepat Kembali (Baik)' }}">
                                                     </div>
                                                 </div>
 
-                                                <!-- TAB 3: BIOPSIKOSOSIAL & SKRINING -->
+                                                <!-- TAB 3: BIOPSIKOSOSIAL & SKRINING (STANDAR 3.09 CHECKLIST) -->
                                                 <div class="tab-pane fade" id="tabBio{{ k.pk }}">
-                                                    <div class="row g-3">
-                                                        <div class="col-md-6">
-                                                            <label class="form-label fw-semibold">Status Psikologis & Sosial-Ekonomi:</label>
-                                                            <textarea name="status_psikososial" rows="3" class="form-control form-control-sm" placeholder="Kondisi emosi (tenang/cemas/depresi), hubungan keluarga, pekerjaan/pembiayaan...">{{ k.status_psikososial }}</textarea>
-                                                        </div>
-                                                        <div class="col-md-6">
-                                                            <label class="form-label fw-semibold">Status Spiritual & Nilai Kepercayaan:</label>
-                                                            <textarea name="status_spiritual" rows="3" class="form-control form-control-sm" placeholder="Agama, nilai spiritual khusus, penolakan tindakan medis (misal darah)...">{{ k.status_spiritual }}</textarea>
-                                                        </div>
-                                                        <div class="col-md-6">
-                                                            <div class="p-2 border rounded bg-light">
-                                                                <label class="form-label fw-semibold mb-1">Skrining Risiko Jatuh (Morse / Humpty Dumpty):</label>
-                                                                <div class="row g-2">
-                                                                    <div class="col-6">
-                                                                        <input type="number" name="skrining_jatuh_skor" class="form-control form-control-sm" value="{{ k.skrining_jatuh_skor|default:'' }}" placeholder="Skor Total">
+                                                    <!-- Keadaan Umum & Kesadaran -->
+                                                    <div class="p-2.5 border rounded mb-2 bg-light">
+                                                        <div class="row g-2">
+                                                            <div class="col-md-6">
+                                                                <label class="form-label small fw-bold text-primary mb-1">Keadaan Umum:</label>
+                                                                <div class="d-flex gap-3">
+                                                                    <div class="form-check">
+                                                                        <input class="form-check-input" type="radio" name="keadaan_umum" value="Baik" id="kuBaik_{{ k.pk }}" {% if k.keadaan_umum == 'Baik' or not k.keadaan_umum %}checked{% endif %}>
+                                                                        <label class="form-check-label small" for="kuBaik_{{ k.pk }}">Baik</label>
                                                                     </div>
-                                                                    <div class="col-6">
-                                                                        <select name="skrining_jatuh_grade" class="form-select form-select-sm">
-                                                                            <option value="" {% if not k.skrining_jatuh_grade %}selected{% endif %}>-- Kategori --</option>
-                                                                            <option value="RENDAH" {% if k.skrining_jatuh_grade == 'RENDAH' %}selected{% endif %}>Rendah (0-24)</option>
-                                                                            <option value="SEDANG" {% if k.skrining_jatuh_grade == 'SEDANG' %}selected{% endif %}>Sedang (25-44)</option>
-                                                                            <option value="TINGGI" {% if k.skrining_jatuh_grade == 'TINGGI' %}selected{% endif %}>Tinggi (>=45)</option>
-                                                                        </select>
+                                                                    <div class="form-check">
+                                                                        <input class="form-check-input" type="radio" name="keadaan_umum" value="Sedang" id="kuSedang_{{ k.pk }}" {% if k.keadaan_umum == 'Sedang' %}checked{% endif %}>
+                                                                        <label class="form-check-label small" for="kuSedang_{{ k.pk }}">Sedang</label>
+                                                                    </div>
+                                                                    <div class="form-check">
+                                                                        <input class="form-check-input" type="radio" name="keadaan_umum" value="Lemah / Buruk" id="kuLemah_{{ k.pk }}" {% if k.keadaan_umum == 'Lemah / Buruk' %}checked{% endif %}>
+                                                                        <label class="form-check-label small" for="kuLemah_{{ k.pk }}">Lemah / Buruk</label>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                            <div class="col-md-6">
+                                                                <label class="form-label small fw-bold text-primary mb-1">Tingkat Kesadaran:</label>
+                                                                <div class="d-flex flex-wrap gap-2">
+                                                                    <div class="form-check form-check-inline">
+                                                                        <input class="form-check-input" type="radio" name="kesadaran" value="Compos Mentis" id="ksCm_{{ k.pk }}" {% if k.kesadaran == 'Compos Mentis' or not k.kesadaran %}checked{% endif %}>
+                                                                        <label class="form-check-label small" for="ksCm_{{ k.pk }}">Compos Mentis</label>
+                                                                    </div>
+                                                                    <div class="form-check form-check-inline">
+                                                                        <input class="form-check-input" type="radio" name="kesadaran" value="Apatis" id="ksAp_{{ k.pk }}" {% if k.kesadaran == 'Apatis' %}checked{% endif %}>
+                                                                        <label class="form-check-label small" for="ksAp_{{ k.pk }}">Apatis</label>
+                                                                    </div>
+                                                                    <div class="form-check form-check-inline">
+                                                                        <input class="form-check-input" type="radio" name="kesadaran" value="Somnolen" id="ksSm_{{ k.pk }}" {% if k.kesadaran == 'Somnolen' %}checked{% endif %}>
+                                                                        <label class="form-check-label small" for="ksSm_{{ k.pk }}">Somnolen</label>
+                                                                    </div>
+                                                                    <div class="form-check form-check-inline">
+                                                                        <input class="form-check-input" type="radio" name="kesadaran" value="Sopor" id="ksSp_{{ k.pk }}" {% if k.kesadaran == 'Sopor' %}checked{% endif %}>
+                                                                        <label class="form-check-label small" for="ksSp_{{ k.pk }}">Sopor</label>
+                                                                    </div>
+                                                                    <div class="form-check form-check-inline">
+                                                                        <input class="form-check-input" type="radio" name="kesadaran" value="Koma" id="ksKm_{{ k.pk }}" {% if k.kesadaran == 'Koma' %}checked{% endif %}>
+                                                                        <label class="form-check-label small" for="ksKm_{{ k.pk }}">Koma</label>
                                                                     </div>
                                                                 </div>
                                                             </div>
                                                         </div>
-                                                        <div class="col-md-6">
-                                                            <div class="p-2 border rounded bg-light">
-                                                                <label class="form-label fw-semibold mb-1">Skrining Nutrisi Awal (MST - Malnutrition Screening Tool):</label>
+                                                    </div>
+
+                                                    <!-- Asesmen Nyeri (NRS 0-10) -->
+                                                    <div class="p-2.5 border rounded mb-2 bg-light">
+                                                        <label class="form-label small fw-bold text-danger mb-1">Asesmen Nyeri (Skala 0–10):</label>
+                                                        <div class="row g-2 align-items-center">
+                                                            <div class="col-md-5">
+                                                                <div class="input-group input-group-sm">
+                                                                    <span class="input-group-text">Skor Nyeri:</span>
+                                                                    <input type="number" name="ttv_skala_nyeri" class="form-control" min="0" max="10" value="{{ k.ttv_skala_nyeri|default:0 }}">
+                                                                    <span class="input-group-text">/ 10</span>
+                                                                </div>
+                                                            </div>
+                                                            <div class="col-md-7">
+                                                                <div class="d-flex flex-wrap gap-2">
+                                                                    <div class="form-check form-check-inline">
+                                                                        <input class="form-check-input" type="radio" name="nyeri_karakteristik" value="Tumpul" id="nyTumpul_{{ k.pk }}" {% if k.nyeri_karakteristik == 'Tumpul' %}checked{% endif %}>
+                                                                        <label class="form-check-label small" for="nyTumpul_{{ k.pk }}">Tumpul</label>
+                                                                    </div>
+                                                                    <div class="form-check form-check-inline">
+                                                                        <input class="form-check-input" type="radio" name="nyeri_karakteristik" value="Tajam/Tusuk" id="nyTajam_{{ k.pk }}" {% if k.nyeri_karakteristik == 'Tajam/Tusuk' %}checked{% endif %}>
+                                                                        <label class="form-check-label small" for="nyTajam_{{ k.pk }}">Tajam / Tusuk</label>
+                                                                    </div>
+                                                                    <div class="form-check form-check-inline">
+                                                                        <input class="form-check-input" type="radio" name="nyeri_karakteristik" value="Terbakar" id="nyBakar_{{ k.pk }}" {% if k.nyeri_karakteristik == 'Terbakar' %}checked{% endif %}>
+                                                                        <label class="form-check-label small" for="nyBakar_{{ k.pk }}">Terbakar</label>
+                                                                    </div>
+                                                                    <div class="form-check form-check-inline">
+                                                                        <input class="form-check-input" type="radio" name="nyeri_karakteristik" value="Denyut" id="nyDenyut_{{ k.pk }}" {% if k.nyeri_karakteristik == 'Denyut' %}checked{% endif %}>
+                                                                        <label class="form-check-label small" for="nyDenyut_{{ k.pk }}">Denyut</label>
+                                                                    </div>
+                                                                    <div class="form-check form-check-inline">
+                                                                        <input class="form-check-input" type="radio" name="nyeri_karakteristik" value="Hilang-Timbul" id="nyHilang_{{ k.pk }}" {% if k.nyeri_karakteristik == 'Hilang-Timbul' or not k.nyeri_karakteristik %}checked{% endif %}>
+                                                                        <label class="form-check-label small" for="nyHilang_{{ k.pk }}">Hilang-Timbul</label>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+
+                                                    <!-- Skrining Gizi (MST) -->
+                                                    <div class="p-2.5 border rounded mb-2 bg-light">
+                                                        <div class="d-flex justify-content-between align-items-center mb-1">
+                                                            <label class="form-label small fw-bold text-success mb-0">Skrining Gizi (Malnutrition Screening Tool - MST):</label>
+                                                            <small class="text-muted">Skor &ge; 2: Konsul Ahli Gizi</small>
+                                                        </div>
+                                                        <div class="row g-2 align-items-center">
+                                                            <div class="col-md-5">
                                                                 <div class="input-group input-group-sm">
                                                                     <span class="input-group-text">Skor MST:</span>
-                                                                    <input type="number" name="skrining_gizi_mst" class="form-control" value="{{ k.skrining_gizi_mst|default:'' }}" min="0" max="5" placeholder="0-5 (>=2: Risiko Malnutrisi)">
+                                                                    <input type="number" name="skrining_gizi_mst" class="form-control" min="0" max="5" value="{{ k.skrining_gizi_mst|default:0 }}">
                                                                 </div>
-                                                                <small class="text-muted">Skor >= 2: Rujuk dietisien / ahli gizi klinis.</small>
+                                                            </div>
+                                                            <div class="col-md-7">
+                                                                <div class="d-flex flex-wrap gap-2">
+                                                                    <div class="form-check form-check-inline">
+                                                                        <input class="form-check-input" type="radio" name="fungsional_adl" value="Mandiri" id="adlM_{{ k.pk }}" {% if k.fungsional_adl == 'Mandiri' or not k.fungsional_adl %}checked{% endif %}>
+                                                                        <label class="form-check-label small" for="adlM_{{ k.pk }}">ADL Mandiri</label>
+                                                                    </div>
+                                                                    <div class="form-check form-check-inline">
+                                                                        <input class="form-check-input" type="radio" name="fungsional_adl" value="Bantuan Parsial" id="adlP_{{ k.pk }}" {% if k.fungsional_adl == 'Bantuan Parsial' %}checked{% endif %}>
+                                                                        <label class="form-check-label small" for="adlP_{{ k.pk }}">Bantuan Parsial</label>
+                                                                    </div>
+                                                                    <div class="form-check form-check-inline">
+                                                                        <input class="form-check-input" type="radio" name="fungsional_adl" value="Ketergantungan Total" id="adlT_{{ k.pk }}" {% if k.fungsional_adl == 'Ketergantungan Total' %}checked{% endif %}>
+                                                                        <label class="form-check-label small" for="adlT_{{ k.pk }}">Total</label>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+
+                                                    <!-- Status Psikologis & Risiko Jatuh -->
+                                                    <div class="row g-2">
+                                                        <div class="col-md-6">
+                                                            <label class="form-label small fw-semibold">Status Psikologis:</label>
+                                                            <select name="status_psikososial" class="form-select form-select-sm">
+                                                                <option value="Tenang / Kooperatif" {% if k.status_psikososial == 'Tenang / Kooperatif' or not k.status_psikososial %}selected{% endif %}>Tenang / Kooperatif</option>
+                                                                <option value="Cemas / Gelisah" {% if k.status_psikososial == 'Cemas / Gelisah' %}selected{% endif %}>Cemas / Gelisah</option>
+                                                                <option value="Depresi / Sedih" {% if k.status_psikososial == 'Depresi / Sedih' %}selected{% endif %}>Depresi / Sedih</option>
+                                                                <option value="Marah / Agresif" {% if k.status_psikososial == 'Marah / Agresif' %}selected{% endif %}>Marah / Agresif</option>
+                                                            </select>
+                                                        </div>
+                                                        <div class="col-md-6">
+                                                            <label class="form-label small fw-semibold">Skrining Risiko Jatuh:</label>
+                                                            <div class="row g-1">
+                                                                <div class="col-5">
+                                                                    <input type="number" name="skrining_jatuh_skor" class="form-control form-control-sm" value="{{ k.skrining_jatuh_skor|default:'' }}" placeholder="Skor">
+                                                                </div>
+                                                                <div class="col-7">
+                                                                    <select name="skrining_jatuh_grade" class="form-select form-select-sm">
+                                                                        <option value="RENDAH" {% if k.skrining_jatuh_grade == 'RENDAH' or not k.skrining_jatuh_grade %}selected{% endif %}>Rendah (0-24)</option>
+                                                                        <option value="SEDANG" {% if k.skrining_jatuh_grade == 'SEDANG' %}selected{% endif %}>Sedang (25-44)</option>
+                                                                        <option value="TINGGI" {% if k.skrining_jatuh_grade == 'TINGGI' %}selected{% endif %}>Tinggi (&ge;45)</option>
+                                                                    </select>
+                                                                </div>
                                                             </div>
                                                         </div>
                                                     </div>
@@ -1481,6 +1726,18 @@
         const checked = Array.from(document.querySelectorAll('.preset-check-' + pk + ':checked')).map(cb => cb.value);
         const inp = document.getElementById('namaInput' + pk);
         if (inp) inp.value = checked.join(', ');
+    }
+
+    function toggleCheckValue(inputSelector, val, isChecked) {
+        const input = document.querySelector(inputSelector);
+        if (!input) return;
+        let items = input.value ? input.value.split(',').map(s => s.trim()).filter(Boolean) : [];
+        if (isChecked) {
+            if (!items.includes(val)) items.push(val);
+        } else {
+            items = items.filter(s => s !== val);
+        }
+        input.value = items.join(', ');
     }
 </script>
 {% endblock %}
