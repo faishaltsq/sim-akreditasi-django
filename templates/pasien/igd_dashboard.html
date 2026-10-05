@@ -7,12 +7,12 @@
 {% block extra_css %}
 <style>
     .triage-card {
-        border-radius: .75rem; padding: 1.1rem 1.2rem; color: #fff;
+        border-radius: .75rem; padding: .75rem 1rem; color: #fff;
         transition: transform .15s, box-shadow .15s; text-decoration: none; display: block;
     }
     .triage-card:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,.15); color: #fff; }
     .triage-card.active-ring { ring: 3px solid rgba(0,0,0,.3); outline: 3px solid #0f172a; }
-    .triage-val { font-size: 2rem; font-weight: 800; font-family: 'JetBrains Mono', monospace; line-height: 1; }
+    .triage-val { font-size: 1.6rem; font-weight: 800; font-family: 'JetBrains Mono', monospace; line-height: 1; }
     .triage-lbl { font-size: .75rem; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; opacity: .9; }
     .dwell-ok { background: #dcfce7; color: #166534; font-weight: 700; padding: 2px 6px; border-radius: 4px; font-size: .72rem; }
     .dwell-warn { background: #fef3c7; color: #92400e; font-weight: 700; padding: 2px 6px; border-radius: 4px; font-size: .72rem; }
@@ -25,9 +25,9 @@
 <div class="container-fluid p-0">
 
     <!-- HERO BANNER -->
-    <div class="card border-0 shadow-sm mb-4 overflow-hidden" style="border-radius: var(--radius-xl);">
+    <div class="card border-0 shadow-sm mb-3 overflow-hidden" style="border-radius: var(--radius-xl);">
         <div class="card-body p-0">
-            <div class="d-flex align-items-center" style="background: linear-gradient(135deg, #450a0a 0%, #7f1d1d 40%, #b91c1c 100%); min-height: 105px;">
+            <div class="d-flex align-items-center" style="background: linear-gradient(135deg, #450a0a 0%, #7f1d1d 40%, #b91c1c 100%); min-height: 80px;">
                 <div class="d-flex align-items-center justify-content-center flex-shrink-0 px-4 px-md-5" style="min-height:105px;">
                     <i class="bi bi-heart-pulse-fill text-white" style="font-size: 2.8rem; opacity: .95;"></i>
                 </div>
@@ -49,7 +49,7 @@
     </div>
 
     <!-- 4 LEVEL TRIAGE KPI -->
-    <div class="row g-3 mb-4">
+    <div class="row g-3 mb-3">
         <div class="col-6 col-lg-3">
             <a href="?triage=MERAH" class="triage-card shadow-sm {% if triage_filter == 'MERAH' %}active-ring{% endif %}" style="background: linear-gradient(135deg, #991b1b, #ef4444); border-radius: var(--radius-xl);">
                 <div class="d-flex justify-content-between align-items-center mb-2">
@@ -94,7 +94,7 @@
 
     {% if critical_orders %}
     <!-- CRITICAL VALUE ALERT BANNER -->
-    <div class="alert border-0 shadow-sm mb-4 d-flex align-items-start gap-3" style="background:#fee2e2; border-radius:.75rem; border-left:5px solid #dc2626 !important;" role="alert">
+    <div class="alert border-0 shadow-sm mb-3 d-flex align-items-start gap-3" style="background:#fee2e2; border-radius:.75rem; border-left:5px solid #dc2626 !important;" role="alert">
         <i class="bi bi-exclamation-octagon-fill text-danger fs-4 mt-1 flex-shrink-0" style="animation: blink-dwell 0.8s step-start infinite;"></i>
         <div>
             <div class="fw-bold text-danger mb-1" style="font-size:.95rem;">⚠️ CRITICAL VALUE ALERT — Nilai Lab Kritis Terdeteksi</div>
@@ -111,7 +111,7 @@
 
     <!-- BED AVAILABILITY MATRIX (Revisi 02 — "Tampilkan manajemen bed") -->
     {% if bed_matrix %}
-    <div class="card border-0 shadow-sm mb-4" style="border-radius: .75rem;">
+    <div class="card border-0 shadow-sm mb-3" style="border-radius: .75rem;">
         <div class="card-header bg-white py-2 px-3 border-bottom d-flex align-items-center justify-content-between">
             <div class="d-flex align-items-center gap-2">
                 <i class="bi bi-grid-3x3-gap-fill text-success"></i>
@@ -173,7 +173,7 @@
         <div class="card-body p-0">
             {% if pasien_igd_list %}
             <div class="table-responsive">
-                <table class="table table-hover align-middle mb-0" style="font-size: .85rem; min-width: 1200px;">
+                <table class="table table-hover align-middle mb-0" style="font-size: .85rem; min-width: 960px;">
                     <thead class="table-light text-muted small">
                         <tr>
                             <th class="ps-3">Triage</th>
@@ -184,7 +184,7 @@
                             <th style="min-width: 140px;">Diagnosa / Tindakan</th>
                             <th>DPJP Jaga</th>
                             <th>Dwell Time</th>
-                            <th class="text-center" style="min-width: 360px;">Keputusan Disposisi Klinis</th>
+                            <th class="text-center" style="min-width: 250px;">Keputusan Disposisi Klinis</th>
                             <th class="text-end pe-3">Detail</th>
                         </tr>
                     </thead>
@@ -277,54 +277,74 @@
                             <td><small class="text-muted">{{ k.dpjp|default:"dr. Jaga IGD" }}</small></td>
                             <td>
                                 <div class="font-monospace text-muted">{{ k.tanggal_masuk|date:"H:i" }}</div>
-                                <span class="dwell-badge" data-masuk="{{ k.tanggal_masuk|date:'c' }}">
-                                    <span class="dwell-ok">{{ k.tanggal_masuk|timesince }}</span>
-                                </span>
-                            </td>
-                            <td class="text-center">
-                                <div class="btn-group btn-group-sm">
+                            <td class="text-center" style="white-space: nowrap;">
+                                <div class="btn-group btn-group-sm shadow-sm" role="group">
                                     <!-- ASESMEN AWAL (Revisi 02) -->
-                                    <button class="btn btn-outline-primary fw-semibold" data-bs-toggle="modal" data-bs-target="#modalAsesmenAwal{{ k.pk }}" title="Asesmen Awal IGD & 3S Keperawatan">
-                                        <i class="bi bi-clipboard-pulse"></i> Asesmen
+                                    <button class="btn btn-primary fw-semibold" data-bs-toggle="modal" data-bs-target="#modalAsesmenAwal{{ k.pk }}" title="Asesmen Awal IGD &amp; 3S Keperawatan">
+                                        <i class="bi bi-clipboard-pulse me-1"></i>Asesmen
                                     </button>
                                     <!-- CPPT OBSERVASI (Revisi 02) -->
                                     <button class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#modalCPPT{{ k.pk }}" title="Catatan Perkembangan Pasien Terintegrasi (CPPT SOAP)">
-                                        <i class="bi bi-journal-text"></i> CPPT
+                                        <i class="bi bi-journal-text me-1"></i>CPPT
                                     </button>
                                     <!-- ORDER PENUNJANG -->
-                                    <button class="btn btn-outline-info" data-bs-toggle="modal" data-bs-target="#modalOrder{{ k.pk }}" title="Order Lab / Radiologi">
-                                        <i class="bi bi-radioactive"></i> Penunjang
+                                    <button class="btn btn-outline-info text-dark" data-bs-toggle="modal" data-bs-target="#modalOrder{{ k.pk }}" title="Order Lab / Radiologi">
+                                        <i class="bi bi-radioactive me-1 text-info"></i>Penunjang
                                     </button>
-                                    <!-- VISUALISASI ERM (Revisi 02) -->
-                                    <button class="btn btn-outline-dark" data-bs-toggle="modal" data-bs-target="#modalERM{{ k.pk }}" title="Lihat Rekam Medis Elektronik (ERM)">
-                                        <i class="bi bi-journal-medical"></i> ERM
+                                    <!-- DISPOSISI &amp; RTL UNIFIED MODAL (Revisi 02) -->
+                                    <button class="btn btn-success fw-semibold" data-bs-toggle="modal" data-bs-target="#modalDisposisi{{ k.pk }}" title="Disposisi &amp; Rencana Tindak Lanjut (Ranap / Rujuk / Pulang / PAPS / DoA)">
+                                        <i class="bi bi-box-arrow-up-right me-1"></i>Disposisi
                                     </button>
-                                    <!-- DISPOSISI & RTL UNIFIED MODAL (Revisi 02) -->
-                                    <button class="btn btn-primary fw-semibold" data-bs-toggle="modal" data-bs-target="#modalDisposisi{{ k.pk }}" title="Disposisi & Rencana Tindak Lanjut (Ranap / Rujuk / Pulang / PAPS / DoA)">
-                                        <i class="bi bi-box-arrow-up-right"></i> Disposisi
-                                    </button>
-                                    <!-- RESUME MEDIS IGD (Revisi 02) -->
-                                    <a href="{% url 'pasien:cetak_resume_igd' k.pk %}" target="_blank" class="btn btn-outline-dark" title="Cetak Resume Medis IGD">
-                                        <i class="bi bi-printer"></i>
-                                    </a>
-                                    <!-- BOOKING KAMAR -->
-                                    <button class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#modalBooking{{ k.pk }}" title="Pesan / Booking Tempat Tidur Ranap">
-                                        <i class="bi bi-calendar-plus"></i>
-                                    </button>
-                                    <!-- GENERAL CONSENT -->
-                                    <button class="btn btn-outline-teal" data-bs-toggle="modal" data-bs-target="#modalConsent{{ k.pk }}" title="Form General Consent Rawat Inap (STARKES HPK)" style="border-color:#0d9488; color:#0d9488;">
-                                        <i class="bi bi-file-earmark-check"></i>
-                                    </button>
-                                    <!-- QUICK ACTIONS SHORTCUTS -->
-                                    <button class="btn btn-outline-success fw-semibold" data-bs-toggle="modal" data-bs-target="#modalPulang{{ k.pk }}" title="Pulang Sembuh">
-                                        <i class="bi bi-box-arrow-right"></i>
-                                    </button>
-                                    <button class="btn btn-outline-warning text-dark fw-semibold" data-bs-toggle="modal" data-bs-target="#modalPaps{{ k.pk }}" title="Pulang Atas Permintaan Sendiri (PAPS)">
-                                        <i class="bi bi-shield-slash"></i>
-                                    </button>
-                                    <button class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#modalMeninggal{{ k.pk }}" title="Protokol Meninggal Dunia">
-                                        <i class="bi bi-x-circle"></i>
-                                    </button>
+                                    <!-- DROPDOWN LAINNYA -->
+                                    <div class="btn-group btn-group-sm" role="group">
+                                        <button type="button" class="btn btn-outline-secondary dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown" aria-expanded="false" title="Menu Pelayanan Lainnya">
+                                            <span class="visually-hidden">Toggle Dropdown</span>
+                                        </button>
+                                        <ul class="dropdown-menu dropdown-menu-end shadow border-0" style="font-size: .82rem;">
+                                            <li>
+                                                <a class="dropdown-item py-2" href="{% url 'pasien:cetak_resume_igd' k.pk %}" target="_blank">
+                                                    <i class="bi bi-printer text-dark me-2"></i> Cetak Resume Medis IGD
+                                                </a>
+                                            </li>
+                                            <li>
+                                                <a class="dropdown-item py-2" href="#" data-bs-toggle="modal" data-bs-target="#modalERM{{ k.pk }}">
+                                                    <i class="bi bi-journal-medical text-primary me-2"></i> Rekam Medis Elektronik (ERM)
+                                                </a>
+                                            </li>
+                                            <li>
+                                                <a class="dropdown-item py-2" href="#" data-bs-toggle="modal" data-bs-target="#modalConsent{{ k.pk }}">
+                                                    <i class="bi bi-file-earmark-check text-success me-2"></i> General Consent Rawat Inap
+                                                </a>
+                                            </li>
+                                            <li>
+                                                <a class="dropdown-item py-2" href="#" data-bs-toggle="modal" data-bs-target="#modalBooking{{ k.pk }}">
+                                                    <i class="bi bi-calendar-plus text-info me-2"></i> Pesan Kamar / Booking Bed
+                                                </a>
+                                            </li>
+                                            <li><hr class="dropdown-divider my-1"></li>
+                                            <li>
+                                                <a class="dropdown-item py-2 text-success" href="#" data-bs-toggle="modal" data-bs-target="#modalPulang{{ k.pk }}">
+                                                    <i class="bi bi-box-arrow-right me-2"></i> Pulang Sembuh
+                                                </a>
+                                            </li>
+                                            <li>
+                                                <a class="dropdown-item py-2 text-warning" href="#" data-bs-toggle="modal" data-bs-target="#modalPaps{{ k.pk }}">
+                                                    <i class="bi bi-shield-slash me-2"></i> Pulang Permintaan Sendiri (PAPS)
+                                                </a>
+                                            </li>
+                                            <li>
+                                                <a class="dropdown-item py-2 text-danger" href="#" data-bs-toggle="modal" data-bs-target="#modalMeninggal{{ k.pk }}">
+                                                    <i class="bi bi-x-circle me-2"></i> Protokol Meninggal Dunia
+                                                </a>
+                                            </li>
+                                            <li><hr class="dropdown-divider my-1"></li>
+                                            <li>
+                                                <a class="dropdown-item py-2 text-primary" href="{% url 'pasien:kunjungan_detail' k.pk %}">
+                                                    <i class="bi bi-folder2-open me-2"></i> Buka Rekam Medis Lengkap
+                                                </a>
+                                            </li>
+                                        </ul>
+                                    </div>
                                 </div>
                             </td>
                             <td class="text-end pe-3">
@@ -333,7 +353,24 @@
                                 </a>
                             </td>
                         </tr>
+                        {% endwith %}
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="text-center py-5">
+                <i class="bi bi-heart-pulse text-muted" style="font-size: 2.5rem;"></i>
+                <p class="text-muted mt-2 mb-0">Tidak ada pasien aktif di IGD saat ini.</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
 
+    <!-- ======================================================== -->
+    <!-- MODALS SECTION (Outside <table> to prevent DOM corruption) -->
+    <!-- ======================================================== -->
+    {% for k in pasien_igd_list %}
                         <!-- MODAL INPUT TTV & ICD-9 -->
                         <div class="modal fade" id="modalTTV{{ k.pk }}" tabindex="-1">
                             <div class="modal-dialog modal-dialog-centered">
@@ -491,7 +528,7 @@
                                     </div>
                                     <div class="modal-body p-4">
                                         <!-- Ringkasan Klinis & Triage Saat Ini -->
-                                        <div class="row g-3 mb-4">
+                                        <div class="row g-3 mb-3">
                                             <div class="col-md-3">
                                                 <div class="border rounded p-3 bg-light">
                                                     <div class="text-muted small fw-bold">STATUS TRIAGE IGD</div>
@@ -524,7 +561,7 @@
                                         </div>
 
                                         <!-- TTV Saat Ini (7 Parameter) -->
-                                        <div class="card border mb-4">
+                                        <div class="card border mb-3">
                                             <div class="card-header bg-light py-2 fw-bold small">
                                                 <i class="bi bi-heart-pulse-fill text-danger me-1"></i> Tanda-Tanda Vital (TTV) Terakhir
                                             </div>
@@ -563,7 +600,7 @@
                                         </div>
 
                                         <!-- Hasil Pemeriksaan Penunjang (Lab & Radiologi) -->
-                                        <div class="card border mb-4">
+                                        <div class="card border mb-3">
                                             <div class="card-header bg-light py-2 d-flex justify-content-between align-items-center">
                                                 <span class="fw-bold small"><i class="bi bi-radioactive text-info me-1"></i> Pemeriksaan Penunjang (Lab &amp; Radiologi)</span>
                                                 <span class="badge bg-secondary">{{ k.order_penunjang.all|length }} Order</span>
@@ -1372,22 +1409,12 @@
                         </div>
 
                         <!-- End Modals for k -->
-                        {% endwith %}
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-            {% else %}
-            <div class="text-center py-5">
-                <i class="bi bi-heart-pulse text-muted" style="font-size: 2.5rem;"></i>
-                <p class="text-muted mt-2 mb-0">Tidak ada pasien aktif di IGD saat ini.</p>
-            </div>
-            {% endif %}
-        </div>
-    </div>
+    {% endfor %}
 
 </div>
+{% endblock %}
 
+{% block extra_js %}
 <script>
     // Dwell Time Dynamic Badge Color Calculator (<2h green, 2-4h warn, >4h blink alert)
     document.addEventListener('DOMContentLoaded', function() {
