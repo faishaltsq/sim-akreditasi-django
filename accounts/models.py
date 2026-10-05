@@ -218,9 +218,13 @@ class UserProfile(models.Model):
         if not self.unit_kerja:
             return {'master_pasien', 'riwayat'}
 
-        code = (self.unit_kerja.code or '').upper()
-        parent_code = (self.unit_kerja.parent.code or '').upper() if self.unit_kerja.parent else ''
-        all_codes = {code, parent_code}
+        # Collect all ancestor codes (full hierarchy walk)
+        all_codes = set()
+        curr = self.unit_kerja
+        while curr:
+            if curr.code:
+                all_codes.add(curr.code.upper())
+            curr = curr.parent
 
         allowed = {'master_pasien', 'riwayat'}
 
