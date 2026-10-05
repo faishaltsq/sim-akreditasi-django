@@ -139,6 +139,20 @@ class ClinicalEndpointTestCase(TestCase):
         self.assertContains(res, 'Resume Medis IGD')
         self.assertContains(res, self.pasien.nama_lengkap)
 
+    def test_igd_eksekusi_tindakan(self):
+        """POST to igd_eksekusi_tindakan logs real-time executed care directly into CPPT."""
+        url = reverse('pasien:igd_eksekusi_tindakan', kwargs={'pk': self.kunjungan.pk})
+        res = self.client.post(url, {
+            'tindakan_nama': 'Pemasangan Infus IV Line RL 20 tpm',
+            'profesi': 'PERAWAT',
+        })
+        self.assertEqual(res.status_code, 302)
+        self.assertEqual(self.kunjungan.cppt.count(), 1)
+        entry = self.kunjungan.cppt.first()
+        self.assertEqual(entry.profesi, 'PERAWAT')
+        self.assertIn('Pemasangan Infus IV Line', entry.plan)
+        self.assertIn('EKSEKUSI REAL-TIME', entry.plan)
+
 
 class DashboardUIClinicalTestCase(TestCase):
     def setUp(self):

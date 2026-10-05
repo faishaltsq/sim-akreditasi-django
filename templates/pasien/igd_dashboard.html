@@ -223,10 +223,15 @@
                                 <small class="text-muted">RM: {{ k.pasien.no_rm }}</small>
                             </td>
                             <td>
-                                <a href="{% url 'pasien:pasien_detail' k.pasien.pk %}" class="fw-bold text-decoration-none text-dark">
+                                <a href="{% url 'pasien:pasien_detail' k.pasien.pk %}" class="fw-bold text-decoration-none text-dark"
+                                   data-bs-toggle="tooltip" data-bs-html="true"
+                                   title="<strong>{{ k.pasien.nama_lengkap }}</strong><br>TTV: {{ k.ttv_sistole|default:'-' }}/{{ k.ttv_diastole|default:'-' }} mmHg, HR: {{ k.ttv_nadi|default:'-' }} bpm, SpO2: {{ k.ttv_spo2|default:'-' }}%<br>Nyeri: {{ k.ttv_skala_nyeri|default:'0' }}/10 | Jatuh: {{ k.skrining_jatuh_grade|default:'RENDAH' }}<br>Alergi: {{ k.pasien.alergi_obat|default:'Tidak ada' }}">
                                     {{ k.pasien.nama_lengkap }}
                                 </a>
                                 <div class="small text-muted">{{ k.pasien.get_jenis_kelamin_display }}, {{ k.pasien.usia }} th</div>
+                                {% if k.pasien.alergi_obat %}
+                                <span class="badge bg-danger text-white mt-1" title="Alergi Obat: {{ k.pasien.alergi_obat }}"><i class="bi bi-exclamation-triangle-fill me-1"></i>Alergi: {{ k.pasien.alergi_obat|truncatechars:18 }}</span>
+                                {% endif %}
                             </td>
                             <td>
                                 <span class="text-dark">{{ k.catatan_admisi|default:k.diagnosa_masuk|default:"Observasi IGD" }}</span>
@@ -250,13 +255,23 @@
                                 </button>
                             </td>
                             <td style="font-size:.78rem;">
+                                <!-- Medis ICD-10 -->
                                 {% if k.diagnosa_masuk %}
-                                <span class="text-dark d-block">{{ k.diagnosa_masuk|truncatechars:40 }}</span>
+                                <span class="text-dark d-block fw-semibold" title="Diagnosis Medis Utama (ICD-10)">
+                                    <i class="bi bi-bandaid text-primary me-1"></i>{{ k.diagnosa_masuk|truncatechars:40 }}
+                                </span>
                                 {% else %}
-                                <span class="text-muted"><em>—</em></span>
+                                <span class="text-muted d-block"><em>Belum ada ICD-10</em></span>
                                 {% endif %}
+                                <!-- Keperawatan SDKI -->
+                                {% if k.diagnosa_keperawatan_sdki %}
+                                <span class="badge bg-info-subtle text-info-emphasis border border-info-subtle mt-1 d-block text-truncate text-start" title="SDKI: {{ k.diagnosa_keperawatan_sdki }}">
+                                    <i class="bi bi-person-heart me-1"></i>{{ k.diagnosa_keperawatan_sdki|truncatechars:35 }}
+                                </span>
+                                {% endif %}
+                                <!-- Prosedur ICD-9-CM -->
                                 {% if k.icd9_tindakan %}
-                                <span class="badge bg-secondary mt-1" title="Kode Tindakan ICD-9-CM">{{ k.icd9_tindakan|truncatechars:25 }}</span>
+                                <span class="badge bg-secondary-subtle text-secondary-emphasis border mt-1" title="Kode Tindakan ICD-9-CM">{{ k.icd9_tindakan|truncatechars:25 }}</span>
                                 {% endif %}
                             </td>
                             <td><small class="text-muted">{{ k.dpjp|default:"dr. Jaga IGD" }}</small></td>
@@ -1111,7 +1126,7 @@
                                     <div class="modal-body p-3">
                                         <!-- Timeline CPPT Pasien -->
                                         <h6 class="fw-bold mb-2 text-dark"><i class="bi bi-clock-history me-1"></i>Catatan Perkembangan Pasien Terintegrasi (CPPT)</h6>
-                                        <div class="border rounded p-2 mb-3 bg-light" style="max-height: 220px; overflow-y: auto;">
+                                        <div class="border rounded p-2 mb-3 bg-light" style="max-height: 200px; overflow-y: auto;">
                                             {% for c in k.cppt.all %}
                                             <div class="mb-2 p-2 bg-white border rounded">
                                                 <div class="d-flex justify-content-between align-items-center mb-1">
@@ -1128,6 +1143,98 @@
                                             {% empty %}
                                             <p class="text-muted small text-center mb-0 py-3">Belum ada catatan CPPT terdaftar.</p>
                                             {% endfor %}
+                                        </div>
+
+                                        <!-- Quick Action / Lembar Pelaksanaan Asuhan 1-Click (Revisi 02) -->
+                                        <div class="border rounded p-2 mb-3 bg-white">
+                                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                                <span class="fw-bold small text-success">
+                                                    <i class="bi bi-lightning-charge-fill me-1"></i>Pelaksanaan Asuhan Cepat (One-Click Care Execution)
+                                                </span>
+                                                <span class="badge bg-success-subtle text-success-emphasis border border-success-subtle" style="font-size:0.7rem;">Otomatis Tercatat ke CPPT</span>
+                                            </div>
+                                            <div class="row g-2">
+                                                <div class="col-md-3 col-6">
+                                                    <form method="post" action="{% url 'pasien:igd_eksekusi_tindakan' k.pk %}" class="d-inline">
+                                                        {% csrf_token %}
+                                                        <input type="hidden" name="tindakan_nama" value="Pemasangan Infus IV Line RL 20 tpm (Akses Vaskuler)">
+                                                        <input type="hidden" name="profesi" value="PERAWAT">
+                                                        <button type="submit" class="btn btn-outline-success btn-sm w-100 text-truncate text-start" title="Pasang Infus IV Line RL 20 tpm">
+                                                            <i class="bi bi-droplet me-1"></i>Pasang Infus RL
+                                                        </button>
+                                                    </form>
+                                                </div>
+                                                <div class="col-md-3 col-6">
+                                                    <form method="post" action="{% url 'pasien:igd_eksekusi_tindakan' k.pk %}" class="d-inline">
+                                                        {% csrf_token %}
+                                                        <input type="hidden" name="tindakan_nama" value="Pemberian Terapi O2 Nasal Kanul 3-4 Lpm (Manajemen Respirasi)">
+                                                        <input type="hidden" name="profesi" value="PERAWAT">
+                                                        <button type="submit" class="btn btn-outline-info btn-sm w-100 text-truncate text-start text-dark" title="Pemberian O2 Nasal Kanul">
+                                                            <i class="bi bi-lungs me-1 text-primary"></i>Terapi O₂ Nasal
+                                                        </button>
+                                                    </form>
+                                                </div>
+                                                <div class="col-md-3 col-6">
+                                                    <form method="post" action="{% url 'pasien:igd_eksekusi_tindakan' k.pk %}" class="d-inline">
+                                                        {% csrf_token %}
+                                                        <input type="hidden" name="tindakan_nama" value="Pengambilan Sampel Darah Rutin & Gula Darah Sewaktu">
+                                                        <input type="hidden" name="profesi" value="PERAWAT">
+                                                        <button type="submit" class="btn btn-outline-danger btn-sm w-100 text-truncate text-start" title="Sampling Darah & GDS">
+                                                            <i class="bi bi-eyedropper me-1"></i>Sample Darah/GDS
+                                                        </button>
+                                                    </form>
+                                                </div>
+                                                <div class="col-md-3 col-6">
+                                                    <form method="post" action="{% url 'pasien:igd_eksekusi_tindakan' k.pk %}" class="d-inline">
+                                                        {% csrf_token %}
+                                                        <input type="hidden" name="tindakan_nama" value="Pasang Pagar Pengaman Bed (Bedrail) & Edukasi Risiko Jatuh">
+                                                        <input type="hidden" name="profesi" value="PERAWAT">
+                                                        <button type="submit" class="btn btn-outline-warning text-dark btn-sm w-100 text-truncate text-start" title="Pasang Bedrail (Safety Jatuh)">
+                                                            <i class="bi bi-shield-check me-1 text-warning"></i>Safety Bedrail
+                                                        </button>
+                                                    </form>
+                                                </div>
+                                                <div class="col-md-3 col-6">
+                                                    <form method="post" action="{% url 'pasien:igd_eksekusi_tindakan' k.pk %}" class="d-inline">
+                                                        {% csrf_token %}
+                                                        <input type="hidden" name="tindakan_nama" value="Pemberian Posisi Semi-Fowler / Relaksasi Nyeri">
+                                                        <input type="hidden" name="profesi" value="PERAWAT">
+                                                        <button type="submit" class="btn btn-outline-secondary btn-sm w-100 text-truncate text-start" title="Posisi Semi-Fowler">
+                                                            <i class="bi bi-person-wheelchair me-1"></i>Semi-Fowler
+                                                        </button>
+                                                    </form>
+                                                </div>
+                                                <div class="col-md-3 col-6">
+                                                    <form method="post" action="{% url 'pasien:igd_eksekusi_tindakan' k.pk %}" class="d-inline">
+                                                        {% csrf_token %}
+                                                        <input type="hidden" name="tindakan_nama" value="Perekaman Elektrokardiografi (EKG) 12 Lead">
+                                                        <input type="hidden" name="profesi" value="PERAWAT">
+                                                        <button type="submit" class="btn btn-outline-primary btn-sm w-100 text-truncate text-start" title="Perekaman EKG 12 Lead">
+                                                            <i class="bi bi-activity me-1"></i>EKG 12-Lead
+                                                        </button>
+                                                    </form>
+                                                </div>
+                                                <div class="col-md-3 col-6">
+                                                    <form method="post" action="{% url 'pasien:igd_eksekusi_tindakan' k.pk %}" class="d-inline">
+                                                        {% csrf_token %}
+                                                        <input type="hidden" name="tindakan_nama" value="Pemasangan Kateter Urine / Foley Catheter">
+                                                        <input type="hidden" name="profesi" value="PERAWAT">
+                                                        <button type="submit" class="btn btn-outline-dark btn-sm w-100 text-truncate text-start" title="Pemasangan Kateter Urine">
+                                                            <i class="bi bi-funnel me-1"></i>Kateter Urine
+                                                        </button>
+                                                    </form>
+                                                </div>
+                                                <div class="col-md-3 col-6">
+                                                    <form method="post" action="{% url 'pasien:igd_eksekusi_tindakan' k.pk %}" class="d-inline">
+                                                        {% csrf_token %}
+                                                        <input type="hidden" name="tindakan_nama" value="Injeksi Terapi Medis Cito Sesuai Instruksi DPJP (6 Benar Obat)">
+                                                        <input type="hidden" name="profesi" value="PERAWAT">
+                                                        <button type="submit" class="btn btn-outline-success btn-sm w-100 text-truncate text-start" title="Injeksi Terapi Cito Sesuai Instruksi">
+                                                            <i class="bi bi-check2-circle me-1"></i>Injeksi Obat Cito
+                                                        </button>
+                                                    </form>
+                                                </div>
+                                            </div>
                                         </div>
 
                                         <!-- Form Tambah Catatan CPPT Cepat -->
@@ -1207,6 +1314,16 @@
                                             </div>
                                             <div class="col-md-4">
                                                 <div class="border rounded p-3 text-center h-100 hover-shadow bg-light">
+                                                    <i class="bi bi-scissors fs-1 text-danger mb-2 d-block"></i>
+                                                    <h6 class="fw-bold">Operasi CITO (OK Sentral)</h6>
+                                                    <p class="small text-muted mb-2">Jadwalkan tindakan bedah cito di Kamar Operasi (IBS).</p>
+                                                    <a href="{% url 'pasien:kunjungan_detail' k.pk %}" class="btn btn-danger btn-sm w-100">
+                                                        Jadwalkan OK CITO
+                                                    </a>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <div class="border rounded p-3 text-center h-100 hover-shadow bg-light">
                                                     <i class="bi bi-send fs-1 text-info mb-2 d-block"></i>
                                                     <h6 class="fw-bold">Rujuk SISRUTE</h6>
                                                     <p class="small text-muted mb-2">Rujukan antar-faskes terintegrasi SISRUTE Kemenkes.</p>
@@ -1215,7 +1332,7 @@
                                                     </button>
                                                 </div>
                                             </div>
-                                            <div class="col-md-4">
+                                            <div class="col-md-4 mt-2">
                                                 <div class="border rounded p-3 text-center h-100 hover-shadow bg-light">
                                                     <i class="bi bi-box-arrow-right fs-1 text-success mb-2 d-block"></i>
                                                     <h6 class="fw-bold">Pulang Sembuh</h6>
@@ -1225,21 +1342,21 @@
                                                     </button>
                                                 </div>
                                             </div>
-                                            <div class="col-md-6 mt-2">
+                                            <div class="col-md-4 mt-2">
                                                 <div class="border rounded p-3 text-center h-100 hover-shadow bg-light">
                                                     <i class="bi bi-shield-slash fs-1 text-warning mb-2 d-block"></i>
-                                                    <h6 class="fw-bold">Pulang Permintaan Sendiri (PAPS)</h6>
+                                                    <h6 class="fw-bold">PAPS</h6>
                                                     <p class="small text-muted mb-2">Pasien/keluarga menolak rawat lanjutan dengan surat pernyataan.</p>
                                                     <button type="button" class="btn btn-outline-warning text-dark btn-sm w-100" data-bs-toggle="modal" data-bs-target="#modalPaps{{ k.pk }}" data-bs-dismiss="modal">
                                                         Form PAPS
                                                     </button>
                                                 </div>
                                             </div>
-                                            <div class="col-md-6 mt-2">
+                                            <div class="col-md-4 mt-2">
                                                 <div class="border rounded p-3 text-center h-100 hover-shadow bg-light">
                                                     <i class="bi bi-x-circle fs-1 text-danger mb-2 d-block"></i>
-                                                    <h6 class="fw-bold">Protokol Kematian (DoA / Meninggal)</h6>
-                                                    <p class="small text-muted mb-2">Pencatatan waktu kematian, surat kematian, pemulasaraan jenazah.</p>
+                                                    <h6 class="fw-bold">Protokol Kematian</h6>
+                                                    <p class="small text-muted mb-2">Pencatatan waktu kematian, surat kematian, pemulasaraan.</p>
                                                     <button type="button" class="btn btn-outline-danger btn-sm w-100" data-bs-toggle="modal" data-bs-target="#modalMeninggal{{ k.pk }}" data-bs-dismiss="modal">
                                                         Protokol Meninggal
                                                     </button>

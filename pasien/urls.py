@@ -58,5 +58,6 @@ urlpatterns = [
     # ── IGD Clinical Assessment (Revisi 02) ──
     path('kunjungan/<int:pk>/asesmen-awal-igd/', views.igd_asesmen_awal_save, name='igd_asesmen_awal_save'),
     path('kunjungan/<int:pk>/cppt-quick/', views.igd_cppt_quick_add, name='igd_cppt_quick_add'),
+    path('kunjungan/<int:pk>/eksekusi-tindakan/', views.igd_eksekusi_tindakan, name='igd_eksekusi_tindakan'),
     path('kunjungan/<int:pk>/cetak-resume-igd/', views.cetak_resume_igd, name='cetak_resume_igd'),
 ]

@@ -1591,6 +1591,33 @@ def igd_cppt_quick_add(request, pk):
 
 
 @login_required
+def igd_eksekusi_tindakan(request, pk):
+    """One-click execution of standard nursing/medical interventions in IGD."""
+    k = get_object_or_404(KunjunganPasien, pk=pk)
+    if request.method == 'POST':
+        tindakan = request.POST.get('tindakan_nama', '').strip()
+        profesi = request.POST.get('profesi', 'PERAWAT')
+        nama_ppa = request.user.get_full_name() or request.user.username
+        waktu_str = timezone.now().strftime('%H:%M WIB')
+        if tindakan:
+            CPPT.objects.create(
+                kunjungan=k,
+                profesi=profesi,
+                nama_ppa=nama_ppa,
+                tanggal=timezone.now(),
+                subjektif='Realisasi instruksi klinis / rencana asuhan',
+                objektif=f'TTV: TD {k.ttv_sistole or "-"}/{k.ttv_diastole or "-"} mmHg, Nadi {k.ttv_nadi or "-"} x/m, SpO2 {k.ttv_spo2 or "-"}%',
+                asesmen='Tindakan asuhan IGD dieksekusi',
+                plan=f'[{waktu_str}] [EKSEKUSI REAL-TIME] {tindakan} telah dilaksanakan oleh {nama_ppa}.',
+                verifikasi_dpjp=(profesi == 'DOKTER'),
+            )
+            messages.success(request, f'Tindakan "{tindakan}" berhasil dieksekusi dan dicatat ke CPPT.')
+        else:
+            messages.error(request, 'Nama tindakan tidak boleh kosong.')
+    return redirect('pasien:igd_dashboard')
+
+
+@login_required
 def cetak_resume_igd(request, pk):
     """Print-ready Emergency Department Clinical Resume (Resume Medis IGD)."""
     k = get_object_or_404(
