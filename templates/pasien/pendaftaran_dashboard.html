@@ -227,7 +227,11 @@
                                             </div>
                                             <div class="col-6">
                                                 <label class="form-label small fw-semibold">Dokter Jaga IGD</label>
-                                                <input type="text" name="dpjp" class="form-control form-control-sm" placeholder="dr. Jaga IGD">
+                                                <select name="dpjp" id="dpjpIgdInput" class="form-select form-select-sm">
+                                                    <option value="dr. Jaga IGD" selected>dr. Jaga IGD</option>
+                                                    <option value="dr. Pratama">dr. Pratama — Dokter Umum</option>
+                                                    <option value="dr. Intan">dr. Intan — Dokter Umum</option>
+                                                </select>
                                             </div>
                                             <div class="col-12">
                                                 <label class="form-label small fw-semibold">Flag Kondisi Khusus</label>
@@ -254,7 +258,7 @@
                                     </div>
                                     <div id="panelRajal" class="mt-3 pt-3 border-top" style="display: none;">
                                         <div class="row g-2">
-                                            <div class="col-7">
+                                            <div class="col-6">
                                                 <label class="form-label small fw-semibold">Pilih Poliklinik</label>
                                                 <select name="poliklinik" class="form-select form-select-sm" id="poliSelect">
                                                     {% for code, label in poliklinik_choices %}
@@ -262,9 +266,25 @@
                                                     {% endfor %}
                                                 </select>
                                             </div>
-                                            <div class="col-5">
-                                                <label class="form-label small fw-semibold">DPJP Spesialis</label>
-                                                <input type="text" name="dpjp" class="form-control form-control-sm" placeholder="dr. Spesialis...">
+                                            <div class="col-6">
+                                                <label class="form-label small fw-semibold">DPJP Dokter Spesialis</label>
+                                                <div id="dpjpSelectWrapperRajal">
+                                                    <select name="dpjp" id="dpjpSelect" class="form-select form-select-sm">
+                                                        <option value="">— Pilih Dokter DPJP —</option>
+                                                        {% for val, label in dpjp_choices %}
+                                                        <option value="{{ val }}">{{ label }}</option>
+                                                        {% endfor %}
+                                                        <option value="MANUAL_DPJP">➕ Ketik Dokter Lainnya...</option>
+                                                    </select>
+                                                </div>
+                                                <div id="dpjpManualWrapperRajal" style="display:none;" class="mt-1">
+                                                    <div class="input-group input-group-sm">
+                                                        <input type="text" id="dpjpManualInputRajal" class="form-control" placeholder="dr. Nama Spesialis...">
+                                                        <button class="btn btn-outline-secondary" type="button" id="btnBackToDpjpListRajal" title="Kembali ke pilihan dokter">
+                                                            <i class="bi bi-list-check"></i>
+                                                        </button>
+                                                    </div>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
@@ -621,6 +641,9 @@
                             </td>
                             <td class="text-end pe-3">
                                 <div class="btn-group btn-group-sm">
+                                    <a href="{% url 'pasien:cetak_formulir_pendaftaran' k.pk %}" target="_blank" class="btn btn-outline-primary" title="Cetak Formulir Pendaftaran Pasien (A4)">
+                                        <i class="bi bi-file-earmark-person"></i>
+                                    </a>
                                     <a href="{% url 'pasien:cetak_tracer' k.pk %}" target="_blank" class="btn btn-outline-dark" title="Cetak Tracer RM">
                                         <i class="bi bi-file-earmark-arrow-up"></i>
                                     </a>
@@ -755,18 +778,95 @@
         const panelRajal = document.getElementById('panelRajal');
         const cardIGD = document.getElementById('cardDestIGD');
         const cardRajal = document.getElementById('cardDestRajal');
+        const dpjpIgdInput = document.getElementById('dpjpIgdInput');
+        const dpjpSelect = document.getElementById('dpjpSelect');
+        const dpjpManualInputRajal = document.getElementById('dpjpManualInputRajal');
 
         if (isIGD) {
             panelIGD.style.display = 'block';
             panelRajal.style.display = 'none';
             cardIGD.classList.add('selected-igd');
             cardRajal.classList.remove('selected-rajal');
+            if (dpjpIgdInput) dpjpIgdInput.disabled = false;
+            if (dpjpSelect) dpjpSelect.disabled = true;
+            if (dpjpManualInputRajal) dpjpManualInputRajal.disabled = true;
         } else {
             panelIGD.style.display = 'none';
             panelRajal.style.display = 'block';
             cardRajal.classList.add('selected-rajal');
             cardIGD.classList.remove('selected-igd');
+            if (dpjpIgdInput) dpjpIgdInput.disabled = true;
+            if (dpjpSelect) dpjpSelect.disabled = false;
+            if (dpjpManualInputRajal) dpjpManualInputRajal.disabled = false;
         }
+    }
+
+    // Auto-select DPJP when Poliklinik changes
+    const POLI_DPJP_MAP = {
+        'Jantung': 'dr. Faisal, Sp.JP',
+        'Paru': 'dr. Indah, Sp.P',
+        'Penyakit Dalam': 'dr. Budi Santoso, Sp.PD',
+        'Bedah': 'dr. Hendra, Sp.B',
+        'Anak': 'dr. Nurul, Sp.A',
+        'Kebidanan': 'dr. Rina, Sp.OG',
+        'Obgyn': 'dr. Rina, Sp.OG',
+        'Mata': 'dr. Farida, Sp.M',
+        'Saraf': 'dr. Eko, Sp.S',
+        'THT': 'dr. Haryanto, Sp.THT-KL',
+        'Gigi': 'drg. Amanda, Sp.KG',
+        'Ortho': 'dr. Kevin, Sp.OT',
+        'Kulit': 'dr. Citra, Sp.DV',
+        'Jiwa': 'dr. Hadi, Sp.KJ',
+        'Rehab': 'dr. Lina, Sp.KFR',
+        'Umum': 'dr. Pratama',
+    };
+
+    const poliSelect = document.getElementById('poliSelect');
+    const dpjpSelect = document.getElementById('dpjpSelect');
+    const dpjpSelectWrapperRajal = document.getElementById('dpjpSelectWrapperRajal');
+    const dpjpManualWrapperRajal = document.getElementById('dpjpManualWrapperRajal');
+    const dpjpManualInputRajal   = document.getElementById('dpjpManualInputRajal');
+    const btnBackToDpjpListRajal = document.getElementById('btnBackToDpjpListRajal');
+
+    if (poliSelect && dpjpSelect) {
+        poliSelect.addEventListener('change', function() {
+            const chosen = this.value;
+            for (let [key, drName] of Object.entries(POLI_DPJP_MAP)) {
+                if (chosen.includes(key)) {
+                    for (let opt of dpjpSelect.options) {
+                        if (opt.value === drName) {
+                            opt.selected = true;
+                            break;
+                        }
+                    }
+                    break;
+                }
+            }
+        });
+    }
+
+    if (dpjpSelect) {
+        dpjpSelect.addEventListener('change', function() {
+            if (this.value === 'MANUAL_DPJP') {
+                dpjpSelectWrapperRajal.style.display = 'none';
+                dpjpSelect.removeAttribute('name');
+                dpjpManualWrapperRajal.style.display = 'block';
+                dpjpManualInputRajal.setAttribute('name', 'dpjp');
+                dpjpManualInputRajal.value = '';
+                dpjpManualInputRajal.focus();
+            }
+        });
+    }
+
+    if (btnBackToDpjpListRajal) {
+        btnBackToDpjpListRajal.addEventListener('click', function() {
+            dpjpManualWrapperRajal.style.display = 'none';
+            dpjpManualInputRajal.removeAttribute('name');
+            dpjpSelectWrapperRajal.style.display = 'block';
+            dpjpSelect.setAttribute('name', 'dpjp');
+            dpjpSelect.value = '';
+            dpjpSelect.focus();
+        });
     }
 
     function toggleModalRoute(pk, type) {

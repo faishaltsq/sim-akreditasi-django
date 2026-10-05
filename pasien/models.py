@@ -117,6 +117,33 @@ POLIKLINIK_CHOICES = [
     ('POLI_UMUM', 'Poli Umum'),
 ]
 
+DPJP_CHOICES = [
+    ('dr. Faisal, Sp.JP', 'dr. Faisal, Sp.JP — Spesialis Jantung & Pembuluh Darah'),
+    ('dr. Bambang, Sp.JP, FIHA', 'dr. Bambang, Sp.JP, FIHA — Spesialis Jantung & Pembuluh Darah'),
+    ('dr. Indah, Sp.P', 'dr. Indah, Sp.P — Spesialis Paru & Respirasi'),
+    ('dr. Gunawan, Sp.P, FAPSR', 'dr. Gunawan, Sp.P, FAPSR — Spesialis Paru'),
+    ('dr. Budi Santoso, Sp.PD', 'dr. Budi Santoso, Sp.PD — Spesialis Penyakit Dalam'),
+    ('dr. Siti Rahma, Sp.PD-KGEH', 'dr. Siti Rahma, Sp.PD-KGEH — Spesialis Penyakit Dalam'),
+    ('dr. Hendra, Sp.B', 'dr. Hendra, Sp.B — Spesialis Bedah Umum'),
+    ('dr. Ahmad, Sp.B, FICS', 'dr. Ahmad, Sp.B, FICS — Spesialis Bedah'),
+    ('dr. Nurul, Sp.A', 'dr. Nurul, Sp.A — Spesialis Anak (Pediatri)'),
+    ('dr. Maya, Sp.A, M.Biomed', 'dr. Maya, Sp.A, M.Biomed — Spesialis Anak'),
+    ('dr. Rina, Sp.OG', 'dr. Rina, Sp.OG — Spesialis Kebidanan & Kandungan'),
+    ('dr. Dewi, Sp.OG(K)', 'dr. Dewi, Sp.OG(K) — Spesialis Kebidanan & Kandungan'),
+    ('dr. Farida, Sp.M', 'dr. Farida, Sp.M — Spesialis Mata'),
+    ('dr. Eko, Sp.S', 'dr. Eko, Sp.S — Spesialis Saraf (Neurologi)'),
+    ('dr. Haryanto, Sp.THT-KL', 'dr. Haryanto, Sp.THT-KL — Spesialis THT-KL'),
+    ('drg. Amanda, Sp.KG', 'drg. Amanda, Sp.KG — Dokter Gigi Spesialis'),
+    ('drg. Rizki', 'drg. Rizki — Dokter Gigi'),
+    ('dr. Kevin, Sp.OT', 'dr. Kevin, Sp.OT — Spesialis Orthopedi & Traumatologi'),
+    ('dr. Citra, Sp.DV', 'dr. Citra, Sp.DV — Spesialis Kulit & Kelamin'),
+    ('dr. Hadi, Sp.KJ', 'dr. Hadi, Sp.KJ — Spesialis Kedokteran Jiwa'),
+    ('dr. Lina, Sp.KFR', 'dr. Lina, Sp.KFR — Spesialis Rehabilitasi Medik'),
+    ('dr. Jaga IGD', 'dr. Jaga IGD — Dokter Jaga Gawat Darurat'),
+    ('dr. Pratama', 'dr. Pratama — Dokter Umum'),
+    ('dr. Intan', 'dr. Intan — Dokter Umum'),
+]
+
 
 class KunjunganPasien(models.Model):
     JENIS_KUNJUNGAN = [

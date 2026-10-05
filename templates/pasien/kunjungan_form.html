@@ -71,7 +71,23 @@
                     </div>
                     <div class="col-md-6">
                         <label class="form-label" style="font-size:.8rem; font-weight:600;">Dokter Penanggung Jawab (DPJP)</label>
-                        <input type="text" name="dpjp" class="form-control form-control-sm" placeholder="dr. ..." style="font-size:.82rem;">
+                        <div id="dpjpSelectWrapper">
+                            <select name="dpjp" id="dpjpSelect" class="form-select form-select-sm" style="font-size:.82rem;">
+                                <option value="">— Pilih DPJP Dokter —</option>
+                                {% for val, label in dpjp_choices %}
+                                <option value="{{ val }}">{{ label }}</option>
+                                {% endfor %}
+                                <option value="MANUAL_DPJP">➕ Dokter Lainnya / Ketik Manual...</option>
+                            </select>
+                        </div>
+                        <div id="dpjpManualWrapper" style="display:none;" class="mt-1">
+                            <div class="input-group input-group-sm">
+                                <input type="text" id="dpjpManualInput" class="form-control" placeholder="dr. Nama Dokter..." style="font-size:.82rem;">
+                                <button class="btn btn-outline-secondary" type="button" id="btnBackToDpjpList" title="Pilih dari daftar dokter">
+                                    <i class="bi bi-list-check"></i>
+                                </button>
+                            </div>
+                        </div>
                     </div>
                     <div class="col-md-6" id="poliklinikContainer">
                         <label class="form-label" style="font-size:.8rem; font-weight:600;">
@@ -270,6 +286,37 @@ document.addEventListener('DOMContentLoaded', function() {
             poliSelect.setAttribute('name', 'poliklinik');
             poliSelect.value = '';
             poliSelect.focus();
+        });
+    }
+
+    // DPJP Toggle
+    const dpjpSelectWrapper = document.getElementById('dpjpSelectWrapper');
+    const dpjpSelect        = document.getElementById('dpjpSelect');
+    const dpjpManualWrapper = document.getElementById('dpjpManualWrapper');
+    const dpjpManualInput   = document.getElementById('dpjpManualInput');
+    const btnBackToDpjpList = document.getElementById('btnBackToDpjpList');
+
+    if (dpjpSelect) {
+        dpjpSelect.addEventListener('change', function() {
+            if (this.value === 'MANUAL_DPJP') {
+                dpjpSelectWrapper.style.display = 'none';
+                dpjpSelect.removeAttribute('name');
+                dpjpManualWrapper.style.display = 'block';
+                dpjpManualInput.setAttribute('name', 'dpjp');
+                dpjpManualInput.value = '';
+                dpjpManualInput.focus();
+            }
+        });
+    }
+
+    if (btnBackToDpjpList) {
+        btnBackToDpjpList.addEventListener('click', function() {
+            dpjpManualWrapper.style.display = 'none';
+            dpjpManualInput.removeAttribute('name');
+            dpjpSelectWrapper.style.display = 'block';
+            dpjpSelect.setAttribute('name', 'dpjp');
+            dpjpSelect.value = '';
+            dpjpSelect.focus();
         });
     }
 

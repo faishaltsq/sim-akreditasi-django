@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <title>Formulir Pendaftaran Pasien — {{ pasien.no_rm }} — {{ kunjungan.no_kunjungan }}</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+  <style>
+    @media print {
+      .no-print { display: none !important; }
+      body { font-size: 10pt; line-height: 1.25; margin: 0; padding: 0; }
+      @page { size: A4 portrait; margin: 10mm 12mm 10mm 12mm; }
+    }
+    body { background: #fff; color: #1e293b; font-family: 'Segoe UI', Arial, sans-serif; font-size: 10pt; }
+    .header-box { border-bottom: 2.5px double #0f172a; padding-bottom: 6px; margin-bottom: 10px; }
+    .form-title { font-size: 13pt; font-weight: 800; letter-spacing: 0.5px; text-transform: uppercase; color: #0f172a; }
+    .section-header {
+      background: #f1f5f9; border-left: 4px solid #0d9488;
+      font-weight: 700; font-size: 9.5pt; text-transform: uppercase;
+      padding: 3px 8px; margin-top: 8px; margin-bottom: 6px;
+      letter-spacing: 0.3px; color: #0f172a;
+    }
+    .table-clean th, .table-clean td {
+      padding: 3px 6px; vertical-align: top; font-size: 9.5pt; border: none;
+    }
+    .table-bordered-thin th, .table-bordered-thin td {
+      border: 1px solid #cbd5e1; padding: 3px 6px; font-size: 9pt;
+    }
+    .nik-box {
+      display: inline-block; width: 17px; height: 21px; line-height: 20px;
+      border: 1px solid #475569; text-align: center; font-family: 'JetBrains Mono', monospace;
+      font-weight: 700; font-size: 10pt; margin-right: 2px; background: #fff;
+    }
+    .check-box {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 14px; height: 14px; border: 1.5px solid #334155;
+      font-size: 9pt; font-weight: 900; line-height: 1; vertical-align: middle;
+      margin-right: 4px; border-radius: 2px;
+    }
+    .check-box.checked { background: #0f172a; color: #fff; }
+    .signature-line {
+      border-bottom: 1px solid #000; width: 220px; margin: 45px auto 4px auto;
+    }
+  </style>
+</head>
+<body class="p-3">
+
+<!-- Print Controls -->
+<div class="no-print mb-3 d-flex gap-2 align-items-center bg-light p-2 border rounded">
+  <button onclick="window.print()" class="btn btn-primary btn-sm px-3 fw-bold">
+    <i class="bi bi-printer me-1"></i> Cetak Formulir Pendaftaran (A4)
+  </button>
+  <button onclick="window.close()" class="btn btn-outline-secondary btn-sm px-3">
+    Tutup
+  </button>
+  <span class="text-muted small ms-auto">
+    <i class="bi bi-info-circle me-1"></i> Format resmi pendaftaran pasien masuk RS MonsisKami (ARIMA)
+  </span>
+</div>
+
+<!-- Header RS & Sistem ARIMA -->
+<div class="header-box d-flex justify-content-between align-items-center">
+  <div class="d-flex align-items-center gap-3">
+    <div style="width: 48px; height: 48px; border-radius: 8px; background: #0d9488; color:#fff; display:flex; align-items:center; justify-content:center; font-size: 22pt; font-weight:bold;">
+      <i class="bi bi-hospital"></i>
+    </div>
+    <div>
+      <h5 class="mb-0 fw-bold" style="color: #0f172a; letter-spacing: -0.3px;">RUMAH SAKIT MONSISKAMI</h5>
+      <small class="text-muted fw-semibold" style="font-size: 8pt;">
+        SISTEM INFORMASI &amp; MANAJEMEN RISIKO TERINTEGRASI (ARIMA)
+      </small><br>
+      <small class="text-secondary" style="font-size: 7.5pt;">
+        Jl. Health Avenue No. 1, Telp: (021) 555-0199 | Email: pendaftaran@monsiskami.rs.id
+      </small>
+    </div>
+  </div>
+  <div class="text-end border p-2 rounded bg-light" style="min-width: 200px;">
+    <div class="form-title" style="font-size: 10pt;">FORMULIR PENDAFTARAN PASIEN</div>
+    <div class="small fw-bold text-primary">{{ kunjungan.no_kunjungan }}</div>
+    <small class="text-muted" style="font-size: 7.5pt;">Tgl: {{ kunjungan.tanggal_masuk|date:"d/m/Y H:i" }} WIB</small>
+  </div>
+</div>
+
+<!-- A. KATEGORI PENDAFTARAN -->
+<div class="section-header">A. Kategori Pendaftaran</div>
+<div class="p-2 border rounded mb-2" style="background: #fafafa;">
+  <div class="row g-2 align-items-center" style="font-size: 9pt;">
+    <div class="col-6">
+      <strong>Status Pasien:</strong>&nbsp;&nbsp;
+      <span class="check-box {% if is_pasien_baru %}checked{% endif %}">{% if is_pasien_baru %}✓{% endif %}</span> Pasien Baru &nbsp;&nbsp;&nbsp;
+      <span class="check-box {% if not is_pasien_baru %}checked{% endif %}">{% if not is_pasien_baru %}✓{% endif %}</span> Pasien Lama
+      <span class="ms-2 text-dark font-monospace fw-bold">(No. RM: {{ pasien.no_rm }})</span>
+    </div>
+    <div class="col-6 text-end">
+      <strong>Jenis Layanan:</strong>&nbsp;&nbsp;
+      <span class="check-box {% if kunjungan.jenis_kunjungan == 'RAJAL' %}checked{% endif %}">{% if kunjungan.jenis_kunjungan == 'RAJAL' %}✓{% endif %}</span> Rawat Jalan &nbsp;&nbsp;
+      <span class="check-box {% if kunjungan.jenis_kunjungan == 'RANAP' %}checked{% endif %}">{% if kunjungan.jenis_kunjungan == 'RANAP' %}✓{% endif %}</span> Rawat Inap &nbsp;&nbsp;
+      <span class="check-box {% if kunjungan.jenis_kunjungan == 'IGD' %}checked{% endif %}">{% if kunjungan.jenis_kunjungan == 'IGD' %}✓{% endif %}</span> UGD (Gawat Darurat)
+    </div>
+  </div>
+</div>
+
+<!-- B. IDENTITAS PRIBADI PASIEN -->
+<div class="section-header">B. Identitas Pribadi Pasien</div>
+<table class="table-clean w-100 mb-1">
+  <tr>
+    <td style="width: 26%;"><strong>Nama Lengkap (KTP/KIA)</strong></td>
+    <td style="width: 2%;">:</td>
+    <td colspan="4" class="fw-bold fs-6 text-dark">{{ pasien.nama_lengkap|upper }}</td>
+  </tr>
+  <tr>
+    <td><strong>Nomor Induk Kependudukan (NIK)</strong></td>
+    <td>:</td>
+    <td colspan="4">
+      {% for digit in nik_boxes %}
+      <span class="nik-box">{{ digit }}</span>
+      {% endfor %}
+      <small class="text-muted ms-2">(16 Digit)</small>
+    </td>
+  </tr>
+  <tr>
+    <td><strong>Tempat, Tanggal Lahir / Usia</strong></td>
+    <td>:</td>
+    <td style="width: 35%;">{{ pasien.tanggal_lahir|date:"d F Y" }} ({{ pasien.umur }} Tahun)</td>
+    <td style="width: 15%;"><strong>Jenis Kelamin</strong></td>
+    <td style="width: 2%;">:</td>
+    <td>
+      <span class="check-box {% if pasien.jenis_kelamin == 'L' %}checked{% endif %}">{% if pasien.jenis_kelamin == 'L' %}✓{% endif %}</span> Laki-laki &nbsp;&nbsp;
+      <span class="check-box {% if pasien.jenis_kelamin == 'P' %}checked{% endif %}">{% if pasien.jenis_kelamin == 'P' %}✓{% endif %}</span> Perempuan
+    </td>
+  </tr>
+  <tr>
+    <td><strong>Golongan Darah / Agama</strong></td>
+    <td>:</td>
+    <td>Gol. Darah: <strong>{{ pasien.golongan_darah|default:"-" }}</strong> &nbsp;|&nbsp; Agama: Islam / Kristen / Lainnya</td>
+    <td><strong>Status Perkawinan</strong></td>
+    <td>:</td>
+    <td>Belum Menikah / Menikah / Duda / Janda</td>
+  </tr>
+  <tr>
+    <td><strong>Alamat Domisili Lengkap</strong></td>
+    <td>:</td>
+    <td colspan="4">{{ pasien.alamat|default:"-" }}</td>
+  </tr>
+  <tr>
+    <td><strong>No. Telepon / WhatsApp</strong></td>
+    <td>:</td>
+    <td>{{ pasien.no_hp|default:"-" }}</td>
+    <td><strong>No. BPJS Kesehatan</strong></td>
+    <td>:</td>
+    <td class="font-monospace fw-semibold">{{ pasien.no_bpjs|default:"-" }}</td>
+  </tr>
+</table>
+
+<!-- C. PENANGGUNG JAWAB PASIEN (EMERGENCY CONTACT) -->
+<div class="section-header">C. Penanggung Jawab Pasien (Emergency Contact)</div>
+<table class="table-clean w-100 mb-1">
+  <tr>
+    <td style="width: 26%;"><strong>Nama Penanggung Jawab</strong></td>
+    <td style="width: 2%;">:</td>
+    <td style="width: 35%;" class="fw-semibold">
+      {% if consent %}{{ consent.nama_pj }}{% else %}{{ pasien.nama_lengkap }} (Pasien Sendiri){% endif %}
+    </td>
+    <td style="width: 15%;"><strong>Hubungan</strong></td>
+    <td style="width: 2%;">:</td>
+    <td>
+      {% if consent %}{{ consent.get_hubungan_display }}{% else %}Diri Sendiri{% endif %}
+    </td>
+  </tr>
+  <tr>
+    <td><strong>No. Telp / WhatsApp PJ</strong></td>
+    <td>:</td>
+    <td>{% if consent %}{{ consent.telepon_pj }}{% else %}{{ pasien.no_hp|default:"-" }}{% endif %}</td>
+    <td><strong>Alamat PJ</strong></td>
+    <td>:</td>
+    <td>{% if consent %}{{ consent.alamat_pj|truncatechars:45 }}{% else %}Sama dengan pasien{% endif %}</td>
+  </tr>
+</table>
+
+<!-- D. JAMINAN / CARA PEMBAYARAN -->
+<div class="section-header">D. Jaminan / Pembayaran</div>
+<div class="p-2 border rounded mb-2" style="font-size: 9pt;">
+  <div class="d-flex justify-content-between align-items-center">
+    <div>
+      <span class="check-box {% if kunjungan.penjamin == 'UMUM' %}checked{% endif %}">{% if kunjungan.penjamin == 'UMUM' %}✓{% endif %}</span> <strong>Umum / Mandiri / Tunai</strong>
+    </div>
+    <div>
+      <span class="check-box {% if kunjungan.penjamin == 'BPJS' %}checked{% endif %}">{% if kunjungan.penjamin == 'BPJS' %}✓{% endif %}</span> <strong>BPJS Kesehatan / KIS</strong> (No: {{ pasien.no_bpjs|default:"Terlampir" }})
+    </div>
+    <div>
+      <span class="check-box {% if kunjungan.penjamin == 'ASURANSI' %}checked{% endif %}">{% if kunjungan.penjamin == 'ASURANSI' %}✓{% endif %}</span> <strong>Asuransi Swasta / Korporasi</strong>
+    </div>
+  </div>
+</div>
+
+<!-- E. TUJUAN PELAYANAN (KLINIK / POLIKLINIK) -->
+<div class="section-header">E. Tujuan Pelayanan (Klinik / Poliklinik)</div>
+<table class="table-clean w-100 mb-1">
+  <tr>
+    <td style="width: 26%;"><strong>Poliklinik / Ruang Tujuan</strong></td>
+    <td style="width: 2%;">:</td>
+    <td style="width: 35%;" class="fw-bold text-primary">
+      {{ kunjungan.poliklinik|default:kunjungan.get_jenis_kunjungan_display }}
+    </td>
+    <td style="width: 15%;"><strong>Dokter DPJP</strong></td>
+    <td style="width: 2%;">:</td>
+    <td class="fw-bold text-dark">
+      {{ kunjungan.dpjp|default:"dr. Jaga Pelayanan" }}
+    </td>
+  </tr>
+  <tr>
+    <td><strong>Jadwal Pelayanan Masuk</strong></td>
+    <td>:</td>
+    <td>Tanggal {{ kunjungan.tanggal_masuk|date:"d F Y" }} &nbsp;|&nbsp; Jam {{ kunjungan.tanggal_masuk|date:"H:i" }} WIB</td>
+    <td><strong>Keluhan / Admisi</strong></td>
+    <td>:</td>
+    <td>{{ kunjungan.catatan_admisi|default:kunjungan.diagnosa_masuk|default:"Pemeriksaan / Konsultasi"|truncatechars:45 }}</td>
+  </tr>
+</table>
+
+<!-- F. INFORMASI RISIKO & SKRINING AWAL (ARIMA SYSTEM) -->
+<div class="section-header">F. Informasi Risiko &amp; Skrining Awal (Khusus Sistem ARIMA)</div>
+<div class="row g-2 mb-2" style="font-size: 8.5pt;">
+  <div class="col-4">
+    <div class="border p-2 rounded h-100 bg-light">
+      <strong>Riwayat Alergi (Obat/Makanan):</strong><br>
+      {% if pasien.alergi_obat or pasien.alergi_lain %}
+      <span class="text-danger fw-bold"><span class="check-box checked">✓</span> ADA: {{ pasien.alergi_obat }} {{ pasien.alergi_lain }}</span>
+      {% else %}
+      <span class="text-success fw-semibold"><span class="check-box checked">✓</span> Tidak Ada Alergi Teridentifikasi</span>
+      {% endif %}
+    </div>
+  </div>
+  <div class="col-5">
+    <div class="border p-2 rounded h-100 bg-light">
+      <strong>Kebutuhan Khusus &amp; Risiko Jatuh:</strong><br>
+      <span class="check-box {% if pasien.umur >= 60 %}checked{% endif %}">{% if pasien.umur >= 60 %}✓{% endif %}</span> Lansia (&ge; 60 Th) &nbsp;
+      <span class="check-box"></span> Kursi Roda/Tongkat &nbsp;
+      <span class="check-box {% if pasien.umur < 60 %}checked{% endif %}">{% if pasien.umur < 60 %}✓{% endif %}</span> Mandiri
+    </div>
+  </div>
+  <div class="col-3">
+    <div class="border p-2 rounded h-100 bg-light">
+      <strong>Bahasa Utama:</strong><br>
+      <span class="check-box checked">✓</span> Indonesia &nbsp;
+      <span class="check-box"></span> Daerah / Asing
+    </div>
+  </div>
+</div>
+
+<!-- G. PERNYATAAN & PERSETUJUAN (GENERAL CONSENT) -->
+<div class="section-header">G. Pernyataan &amp; Persetujuan (General Consent)</div>
+<p style="font-size: 8pt; text-align: justify; margin-bottom: 8px;" class="text-secondary">
+  Dengan menandatangani formulir ini, saya menyatakan bahwa data yang saya berikan adalah benar dan dapat dipertanggungjawabkan. Saya menyetujui data pribadi dan medis ini disimpan serta dikelola secara aman dalam Sistem ARIMA RS MonsisKami sesuai dengan ketentuan privasi pasien, etika kedokteran, dan regulasi Rekam Medis Elektronik (Permenkes 24/2022) yang berlaku.
+</p>
+
+<div class="row text-center mt-2" style="font-size: 8.5pt;">
+  <div class="col-6">
+    <small class="text-muted">Petugas Pendaftaran / Admisi ARIMA,</small>
+    <div class="signature-line"></div>
+    <div class="fw-bold">{% if kunjungan.created_by %}{{ kunjungan.created_by.get_full_name|default:kunjungan.created_by.username }}{% else %}Petugas Admisi RS{% endif %}</div>
+    <small class="text-muted">NIP / ID Petugas</small>
+  </div>
+  <div class="col-6">
+    <small class="text-muted">Pasien / Penanggung Jawab Pasien,</small>
+    <div class="signature-line"></div>
+    <div class="fw-bold">
+      {% if consent %}{{ consent.nama_pj }}{% else %}{{ pasien.nama_lengkap }}{% endif %}
+    </div>
+    <small class="text-muted">Tanda Tangan &amp; Nama Terang</small>
+  </div>
+</div>
+
+<!-- KHUSUS PETUGAS ADMISI / ARIMA SYSTEM -->
+<div class="mt-3 pt-2 border-top">
+  <table class="table-bordered-thin w-100 text-center" style="font-size: 8pt; background: #f8fafc;">
+    <thead>
+      <tr class="table-light">
+        <th style="width: 25%;">No. Rekam Medis (RM)</th>
+        <th style="width: 25%;">Waktu Pendaftaran Masuk</th>
+        <th style="width: 25%;">Petugas Registrasi</th>
+        <th style="width: 25%;">Status Verifikasi Sistem</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="fw-bold font-monospace fs-6">{{ pasien.no_rm }}</td>
+        <td>{{ kunjungan.tanggal_masuk|date:"d/m/Y — H:i" }} WIB</td>
+        <td>{% if kunjungan.created_by %}{{ kunjungan.created_by.username }}{% else %}admisi{% endif %}</td>
+        <td><span class="badge bg-success">TERVERIFIKASI ARIMA</span></td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+</body>
+</html>

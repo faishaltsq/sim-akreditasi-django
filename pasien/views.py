@@ -9,7 +9,7 @@ from .decorators import require_patient_module
 from django.utils import timezone
 from datetime import timedelta
 
-from .models import Pasien, KunjunganPasien, Bed, Ruangan, CPPT, AsesmenRisikoKlinis, BillingItem, DischargeRecord, ResepElektronik, ResepDetail, OrderPenunjang, POLIKLINIK_CHOICES, BookingKamar, GeneralConsentRawatInap
+from .models import Pasien, KunjunganPasien, Bed, Ruangan, CPPT, AsesmenRisikoKlinis, BillingItem, DischargeRecord, ResepElektronik, ResepDetail, OrderPenunjang, POLIKLINIK_CHOICES, DPJP_CHOICES, BookingKamar, GeneralConsentRawatInap
 from .pdf_utils import generate_resume_pdf
 from .satusehat import sync_encounter_satusehat, parse_qr_medis
 
@@ -291,6 +291,7 @@ def kunjungan_baru(request):
         'penjamin_choices': KunjunganPasien.TIPE_PENJAMIN,
         'triage_choices': KunjunganPasien.TRIAGE_CHOICES,
         'poliklinik_choices': POLIKLINIK_CHOICES,
+        'dpjp_choices': DPJP_CHOICES,
     }
     return render(request, 'pasien/kunjungan_form.html', ctx)
 
@@ -669,6 +670,7 @@ def pendaftaran_dashboard(request):
         'ke_ranap':            qs_today.filter(jenis_kunjungan='RANAP').count(),
         'ke_batal':            qs_today.filter(status='BATAL').count(),
         'poliklinik_choices':  POLIKLINIK_CHOICES,
+        'dpjp_choices':        DPJP_CHOICES,
         'triage_choices':      KunjunganPasien.TRIAGE_CHOICES,
         'penjamin_choices':    KunjunganPasien.TIPE_PENJAMIN,
         'pasien_recent':       Pasien.objects.order_by('-created_at')[:10],
@@ -1632,5 +1634,30 @@ def cetak_resume_igd(request, pk):
         'pasien': k.pasien,
         'news_score': news_score,
         'news_category': news_cat,
+        'printed_at': timezone.now(),
+    })
+
+
+@login_required
+def cetak_formulir_pendaftaran(request, pk):
+    """
+    Official Patient Admission & Registration Form (Formulir Pendaftaran Pasien Masuk ARIMA).
+    Prefilled with patient identity, visit, emergency contact, guarantor, and clinic/DPJP data.
+    """
+    k = get_object_or_404(
+        KunjunganPasien.objects.select_related('pasien', 'created_by'),
+        pk=pk
+    )
+    consent = getattr(k, 'general_consent_doc', None)
+    is_pasien_baru = bool(k.pasien.created_at and k.tanggal_masuk and k.pasien.created_at.date() == k.tanggal_masuk.date())
+    nik_str = (k.pasien.nik or '').strip()
+    nik_boxes = [nik_str[i] if i < len(nik_str) else '' for i in range(16)]
+
+    return render(request, 'pasien/cetak_formulir_pendaftaran.html', {
+        'kunjungan': k,
+        'pasien': k.pasien,
+        'consent': consent,
+        'is_pasien_baru': is_pasien_baru,
+        'nik_boxes': nik_boxes,
         'printed_at': timezone.now(),
     })

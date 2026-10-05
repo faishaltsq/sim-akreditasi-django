@@ -48,6 +48,7 @@ urlpatterns = [
     path('kunjungan/<int:pk>/cetak-spri/', views.cetak_spri, name='cetak_spri'),
     path('kunjungan/<int:pk>/cetak-skdp/', views.cetak_skdp, name='cetak_skdp'),
     path('kunjungan/<int:pk>/cetak-tracer/', views.cetak_tracer, name='cetak_tracer'),
+    path('kunjungan/<int:pk>/cetak-formulir-pendaftaran/', views.cetak_formulir_pendaftaran, name='cetak_formulir_pendaftaran'),
     # ── Registration & Admission Utilities ──
     path('fast-track-igd/', views.fast_track_igd, name='fast_track_igd'),
     path('api/cek-bpjs/', views.api_cek_bpjs, name='api_cek_bpjs'),

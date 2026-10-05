@@ -101,6 +101,24 @@
                         <i class="bi bi-check-all me-1"></i>Kunjungan Selesai
                     </span>
                     {% endif %}
+
+                    <!-- CETAK DOKUMEN ADMISI & KLINIS -->
+                    <div class="d-flex gap-1 flex-wrap mt-2 justify-content-lg-end">
+                        <a href="{% url 'pasien:cetak_formulir_pendaftaran' k.pk %}" target="_blank" class="btn btn-sm btn-outline-primary" style="font-size:.75rem;" title="Cetak Formulir Pendaftaran Pasien Masuk (A4)">
+                            <i class="bi bi-file-earmark-person me-1"></i>Formulir Pendaftaran
+                        </a>
+                        <a href="{% url 'pasien:cetak_tracer' k.pk %}" target="_blank" class="btn btn-sm btn-outline-dark" style="font-size:.75rem;" title="Cetak Tracer Rekam Medis">
+                            <i class="bi bi-printer me-1"></i>Tracer
+                        </a>
+                        <a href="{% url 'pasien:cetak_gelang' k.pk %}" target="_blank" class="btn btn-sm btn-outline-info" style="font-size:.75rem;" title="Cetak Gelang Identitas">
+                            <i class="bi bi-tag me-1"></i>Gelang
+                        </a>
+                        {% if k.jenis_kunjungan == 'IGD' %}
+                        <a href="{% url 'pasien:cetak_resume_igd' k.pk %}" target="_blank" class="btn btn-sm btn-outline-danger" style="font-size:.75rem;" title="Cetak Resume Medis IGD">
+                            <i class="bi bi-file-earmark-medical me-1"></i>Resume IGD
+                        </a>
+                        {% endif %}
+                    </div>
                 </div>
             </div>
         </div>
