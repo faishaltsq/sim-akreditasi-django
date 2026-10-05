@@ -8,18 +8,21 @@
 {% block extra_css %}
 <style>
     .matriks-table th {
-        background-color: #f1f5f9;
-        color: #0f172a;
-        font-size: 0.75rem;
+        background-color: #f8fafc;
+        color: #334155;
+        font-size: 0.72rem;
+        font-weight: 700;
         text-transform: uppercase;
         letter-spacing: 0.05em;
         vertical-align: middle;
         padding: 0.75rem 0.6rem;
+        border-bottom: 2px solid #e2e8f0;
     }
     .matriks-table td {
         font-size: 0.78rem;
         vertical-align: top;
-        padding: 0.6rem;
+        padding: 0.65rem 0.6rem;
+        border-bottom: 1px solid #f1f5f9;
     }
     .col-ep-code { width: 9%; }
     .col-ep-desc { width: 21%; }
@@ -27,24 +30,25 @@
     .col-score { width: 10%; }
     
     .pdca-cell-content {
-        min-height: 65px;
+        min-height: 68px;
         cursor: pointer;
-        padding: 0.4rem;
-        border-radius: 4px;
-        background: #F8FAFC;
-        border: 1px dashed #CBD5E1;
+        padding: 0.5rem;
+        border-radius: var(--radius);
+        background: #f8fafc;
+        border: 1px dashed #cbd5e1;
         transition: all 0.15s ease-in-out;
         display: flex;
         flex-direction: column;
         justify-content: space-between;
     }
     .pdca-cell-content:hover {
-        background: #EFF6FF;
-        border-color: #3B82F6;
+        background: #f0fdfa;
+        border-color: var(--primary);
+        box-shadow: var(--shadow-xs);
     }
     .cell-text {
         font-size: 0.74rem;
-        line-height: 1.35;
+        line-height: 1.4;
         color: #334155;
         white-space: pre-wrap;
         word-break: break-word;
@@ -53,9 +57,9 @@
         display: flex;
         justify-content: space-between;
         align-items: center;
-        margin-top: 0.4rem;
-        padding-top: 0.3rem;
-        border-top: 1px dotted #E2E8F0;
+        margin-top: 0.45rem;
+        padding-top: 0.35rem;
+        border-top: 1px dotted #e2e8f0;
     }
     .score-select {
         font-family: 'JetBrains Mono', monospace;
@@ -66,15 +70,15 @@
         min-width: 105px;
         transition: background-color 0.2s;
     }
-    .score-10 { background-color: #D1FAE5 !important; color: #065F46 !important; border-color: #10B981 !important; }
-    .score-5  { background-color: #FEF3C7 !important; color: #92400E !important; border-color: #F59E0B !important; }
-    .score-0  { background-color: #FEE2E2 !important; color: #991B1B !important; border-color: #EF4444 !important; }
+    .score-10 { background-color: #ecfdf5 !important; color: #047857 !important; border: 1px solid #a7f3d0 !important; }
+    .score-5  { background-color: #fffbeb !important; color: #b45309 !important; border: 1px solid #fde68a !important; }
+    .score-0  { background-color: #fff1f2 !important; color: #be123c !important; border: 1px solid #fecdd3 !important; }
 
-    .badge-rdwos-r { background-color: #DBEAFE; color: #1E40AF; }
-    .badge-rdwos-d { background-color: #DCFCE7; color: #166534; }
-    .badge-rdwos-w { background-color: #FEF9C3; color: #854D0E; }
-    .badge-rdwos-o { background-color: #F3E8FF; color: #6B21A8; }
-    .badge-rdwos-s { background-color: #FFE4E6; color: #9F1239; }
+    .badge-rdwos-r { background-color: #eff6ff !important; color: #1d4ed8 !important; border: 1px solid #bfdbfe; font-weight: 700; }
+    .badge-rdwos-d { background-color: #ecfdf5 !important; color: #047857 !important; border: 1px solid #a7f3d0; font-weight: 700; }
+    .badge-rdwos-w { background-color: #fffbeb !important; color: #b45309 !important; border: 1px solid #fde68a; font-weight: 700; }
+    .badge-rdwos-o { background-color: #faf5ff !important; color: #6b21a8 !important; border: 1px solid #e9d5ff; font-weight: 700; }
+    .badge-rdwos-s { background-color: #fff1f2 !important; color: #be123c !important; border: 1px solid #fecdd3; font-weight: 700; }
 </style>
 {% endblock %}
 

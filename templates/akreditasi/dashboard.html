@@ -128,21 +128,40 @@
     <!-- HERO BANNER GLOBAL: ARIMA — RS MonsisKami (SEMUA USER)                    -->
     <!-- ========================================================================= -->
     {% if not unit_dashboard %}
-    <div class="card border-0 shadow-sm mb-4 overflow-hidden" style="border-radius: 1rem;">
-        <div class="card-body p-0">
-            <div class="d-flex align-items-center" style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f766e 100%); min-height: 120px;">
-                <!-- Ikon Gedung RS Besar -->
-                <div class="d-flex align-items-center justify-content-center flex-shrink-0 px-4 px-md-5" style="min-height:120px;">
-                    <i class="bi bi-building-fill" style="font-size: 3.5rem; color: rgba(255,255,255,0.85);"></i>
+    <div class="card border-0 shadow-sm mb-4 overflow-hidden" style="border-radius: var(--radius-xl); background: linear-gradient(135deg, #0f172a 0%, #1e293b 55%, #0f766e 100%);">
+        <div class="card-body p-4 p-md-4 text-white">
+            <div class="d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-3">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="d-none d-sm-flex align-items-center justify-content-center rounded-3 flex-shrink-0" style="width: 58px; height: 58px; background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.2);">
+                        <i class="bi bi-hospital text-white fs-2"></i>
+                    </div>
+                    <div>
+                        <div class="d-flex flex-wrap align-items-center gap-2 mb-1">
+                            <span class="badge bg-white/20 text-white border border-white/30 px-2 py-0.5" style="font-size:0.68rem; font-weight:600;">
+                                <i class="bi bi-patch-check-fill me-1 text-warning"></i>STARKES {{ rs_profile.akreditasi_tahun|default:"2026" }}
+                            </span>
+                            <span class="badge bg-white/10 text-white-50 px-2 py-0.5" style="font-size:0.68rem;">
+                                RS Tipe B &bull; Paripurna Target
+                            </span>
+                        </div>
+                        <h2 class="fw-bold text-white mb-1" style="font-size: 1.65rem; letter-spacing: -0.02em; line-height: 1.2;">
+                            {{ rs_profile.nama_rs|default:"RS MonsisKami" }}
+                        </h2>
+                        <p class="text-white-50 mb-0" style="font-size: 0.8rem; max-width: 620px;">
+                            ARIMA — Sistem Manajemen Risiko Klinis, Tata Kelola Mutu &amp; Kesiapan Dokumen Akreditasi 16 Pokja
+                        </p>
+                    </div>
                 </div>
-                <!-- Teks Brand Besar -->
-                <div class="py-4 pe-4">
-                    <h2 class="fw-bold text-white mb-1" style="font-size: 2rem; letter-spacing: -0.03em; line-height: 1.1;">
-                        ARIMA <span class="text-white-50 fw-semibold" style="font-size:1.1rem;">—</span> RS MonsisKami
-                    </h2>
-                    <p class="text-white-50 mb-0" style="font-size: 0.82rem; line-height: 1.5; max-width: 600px;">
-                        Aplikasi Terpadu Manajemen Risiko dan Tata Kelola Dokumen Akreditasi &bull; Rumah Sakit Tipe B &bull; STARKES {{ rs_profile.akreditasi_tahun }}
-                    </p>
+                <div class="d-flex flex-wrap align-items-center gap-2">
+                    <a href="{% url 'akreditasi:matriks_pdca' %}" class="btn btn-light btn-sm fw-bold px-3 shadow-sm text-teal" style="color: #0f766e !important;">
+                        <i class="bi bi-table me-1"></i>Matriks PDCA
+                    </a>
+                    <a href="{% url 'akreditasi:risiko_input' %}" class="btn btn-outline-light btn-sm fw-semibold px-3">
+                        <i class="bi bi-shield-plus me-1"></i>Input Risiko
+                    </a>
+                    <a href="{% url 'akreditasi:insiden_lapor' %}" class="btn btn-outline-light btn-sm fw-semibold px-3">
+                        <i class="bi bi-exclamation-triangle me-1"></i>Lapor Insiden
+                    </a>
                 </div>
             </div>
         </div>
@@ -598,30 +617,31 @@
             <div class="row g-3">
                 {% for cat in categories %}
                 <div class="col-12 col-md-6 col-xl-4">
-                    <div class="border rounded p-3 bg-light-subtle h-100 d-flex flex-column justify-content-between">
+                    <div class="card h-100 border p-3 d-flex flex-column justify-content-between transition-all" style="border-radius: var(--radius-lg); background: #ffffff; box-shadow: var(--shadow-xs);">
                         <div>
-                            <div class="d-flex justify-content-between align-items-center mb-1">
-                                <div class="d-flex align-items-center gap-1">
-                                    <span class="badge bg-primary font-mono fw-bold">{{ cat.code }}</span>
-                                    <span class="badge bg-white text-muted border font-mono" style="font-size:0.6rem;">{{ cat.get_kelompok_display }}</span>
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <div class="d-flex align-items-center gap-1.5">
+                                    <span class="badge bg-teal font-mono fw-bold px-2 py-1" style="font-size:0.75rem;">{{ cat.code }}</span>
+                                    <span class="badge bg-slate-100 text-slate-600 border border-slate-200 font-mono" style="font-size:0.6rem;">{{ cat.get_kelompok_display }}</span>
                                 </div>
-                                <span class="badge bg-{{ cat.status_level.badge }}">{{ cat.status_level.label }}</span>
+                                <span class="badge bg-{{ cat.status_level.badge }}-subtle text-{{ cat.status_level.badge }} border border-{{ cat.status_level.badge }}-subtle" style="font-size:0.65rem; font-weight:700;">{{ cat.status_level.label }}</span>
                             </div>
-                            <h6 class="fw-bold mb-1" style="font-size:0.85rem;">{{ cat.name }}</h6>
-                            <p class="text-muted small mb-2" style="font-size:0.72rem; line-height:1.4;">
+                            <h6 class="fw-bold mb-1 text-slate-800" style="font-size:0.86rem; line-height:1.35;">{{ cat.name }}</h6>
+                            <p class="text-muted small mb-3" style="font-size:0.72rem; line-height:1.45;">
                                 {{ cat.description|truncatechars:85 }}
                             </p>
                         </div>
-                        <div>
-                            <div class="d-flex justify-content-between small font-mono mb-1" style="font-size:0.7rem;">
-                                <span>Skor Capaian: <strong>{{ cat.total_score }}/{{ cat.max_possible_score }}</strong></span>
+                        <div class="pt-2 border-top border-slate-100">
+                            <div class="d-flex justify-content-between small font-mono mb-1.5" style="font-size:0.72rem;">
+                                <span class="text-muted">Skor: <strong class="text-dark">{{ cat.total_score }}/{{ cat.max_possible_score }}</strong></span>
                                 <span class="fw-bold text-{{ cat.status_level.badge }}">{{ cat.percentage }}%</span>
                             </div>
-                            <div class="progress" style="height: 6px; border-radius: 6px; background: #E2E8F0;">
+                            <div class="progress" style="height: 6px; border-radius: 6px; background: #f1f5f9;">
                                 <div class="progress-bar bg-{{ cat.status_level.badge }}" role="progressbar" style="width: {{ cat.percentage }}%;"></div>
                             </div>
-                            <div class="mt-2 text-end">
-                                <a href="{% url 'akreditasi:matriks_pdca' %}?cat={{ cat.id }}" class="btn btn-sm btn-outline-primary py-0 px-2" style="font-size:0.7rem;">
+                            <div class="mt-2.5 d-flex justify-content-between align-items-center">
+                                <span class="text-muted font-mono" style="font-size:0.68rem;">{{ cat.ep_total }} EP</span>
+                                <a href="{% url 'akreditasi:matriks_pdca' %}?cat={{ cat.id }}" class="btn btn-sm btn-outline-teal py-0.5 px-2.5" style="font-size:0.72rem;">
                                     Buka Matriks &rarr;
                                 </a>
                             </div>

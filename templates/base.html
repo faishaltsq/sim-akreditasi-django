@@ -71,11 +71,16 @@
     <div class="main-content">
         <!-- TOP NAVBAR -->
         <header class="d-none d-md-flex top-bar">
-            <div class="page-heading flex-fill text-center">
-                <h5 style="font-size:1.35rem; font-weight:800; letter-spacing:-0.02em;">{% block page_title %}Dashboard{% endblock %}</h5>
-                <small class="text-muted">{% block page_subtitle %}ARIMA — Aplikasi Terpadu Manajemen Risiko dan Tata Kelola Dokumen Akreditasi RS MonsisKami{% endblock %}</small>
+            <div class="page-heading flex-fill text-start">
+                <div class="d-flex align-items-center gap-2">
+                    <h5 style="font-size:1.15rem; font-weight:800; letter-spacing:-0.02em; margin:0;">{% block page_title %}Dashboard{% endblock %}</h5>
+                    <span class="badge bg-slate-100 text-slate-700 border border-slate-200 px-2 py-0.5" style="font-size:0.62rem; font-weight:600;">
+                        <i class="bi bi-hospital me-1 text-teal"></i>RS MonsisKami
+                    </span>
+                </div>
+                <small class="text-muted" style="font-size:0.72rem;">{% block page_subtitle %}ARIMA — Aplikasi Terpadu Manajemen Risiko dan Tata Kelola Dokumen Akreditasi{% endblock %}</small>
             </div>
-            <div class="user-pill" style="padding-right: 1rem;">
+            <div class="user-pill d-flex align-items-center gap-2">
                 <div class="user-info">
                     <div class="user-avatar">
                         {{ request.user.username|first|upper }}
@@ -93,9 +98,9 @@
                         </span>
                     </div>
                 </div>
-                <form method="post" action="{% url 'accounts:logout' %}" class="d-inline">
+                <form method="post" action="{% url 'accounts:logout' %}" class="d-inline m-0">
                     {% csrf_token %}
-                    <button type="submit" class="btn-logout" title="Keluar">
+                    <button type="submit" class="btn-logout" title="Keluar dari akun">
                         <i class="bi bi-box-arrow-right"></i>
                     </button>
                 </form>

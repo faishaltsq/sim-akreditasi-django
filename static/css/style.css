@@ -1,9 +1,14 @@
+/* ============================================================
+   ARIMA — MODERN CLINICAL DESIGN SYSTEM & TOKENS
+   Aplikasi Terpadu Manajemen Risiko & Dokumen Akreditasi RS
+   ============================================================ */
+
 /* BADGE R-D-W-O-S (REGULASI, DOKUMEN, WAWANCARA, OBSERVASI, SIMULASI) */
-.badge-rdwos-r { background-color: #dbeafe !important; color: #1e40af !important; border: 1px solid #bfdbfe; font-weight: 700; }
-.badge-rdwos-d { background-color: #dcfce7 !important; color: #166534 !important; border: 1px solid #bbf7d0; font-weight: 700; }
-.badge-rdwos-w { background-color: #fef9c3 !important; color: #854d0e !important; border: 1px solid #fef08a; font-weight: 700; }
-.badge-rdwos-o { background-color: #f3e8ff !important; color: #6b21a8 !important; border: 1px solid #e9d5ff; font-weight: 700; }
-.badge-rdwos-s { background-color: #ffe4e6 !important; color: #9f1239 !important; border: 1px solid #fecdd3; font-weight: 700; }
+.badge-rdwos-r { background-color: #eff6ff !important; color: #1d4ed8 !important; border: 1px solid #bfdbfe; font-weight: 700; }
+.badge-rdwos-d { background-color: #ecfdf5 !important; color: #047857 !important; border: 1px solid #a7f3d0; font-weight: 700; }
+.badge-rdwos-w { background-color: #fffbeb !important; color: #b45309 !important; border: 1px solid #fde68a; font-weight: 700; }
+.badge-rdwos-o { background-color: #faf5ff !important; color: #6b21a8 !important; border: 1px solid #e9d5ff; font-weight: 700; }
+.badge-rdwos-s { background-color: #fff1f2 !important; color: #be123c !important; border: 1px solid #fecdd3; font-weight: 700; }
 
 /* TEMA WARNA ANTARMUKA SISTEM (DINAMIS DARI PUSAT KONTROL) */
 :root, body[data-theme="teal"] {
@@ -51,12 +56,14 @@ body[data-theme="navy"] {
 }
 
 :root {
+    --sidebar-width: 268px;
     --sidebar-bg: #FFFFFF;
     --sidebar-border: #e2e8f0;
     --sidebar-hover: #f0fdfa;
     --body-bg: #f8fafc;
     --surface: #FFFFFF;
     --border: #e2e8f0;
+    --border-light: #f1f5f9;
     --text-primary: #0f172a;
     --text-secondary: #475569;
     --text-muted: #94a3b8;
@@ -69,33 +76,48 @@ body[data-theme="navy"] {
     --danger: #EF4444;
     --danger-light: #FFF1F2;
     --danger-deep: #9F1239;
+    --radius-sm: 0.375rem;
     --radius: 0.5rem;
     --radius-lg: 0.75rem;
-    --shadow: 0 1px 3px rgba(15,23,42,0.06), 0 1px 2px rgba(15,23,42,0.04);
-    --shadow-md: 0 4px 6px -1px rgba(15,23,42,0.07);
+    --radius-xl: 1rem;
+    --shadow-xs: 0 1px 2px 0 rgb(15 23 42 / 0.04);
+    --shadow-sm: 0 1px 3px 0 rgb(15 23 42 / 0.07), 0 1px 2px -1px rgb(15 23 42 / 0.05);
+    --shadow: 0 4px 6px -1px rgb(15 23 42 / 0.05), 0 2px 4px -2px rgb(15 23 42 / 0.04);
+    --shadow-md: 0 6px 12px -2px rgb(15 23 42 / 0.08), 0 3px 6px -3px rgb(15 23 42 / 0.06);
+    --shadow-lg: 0 12px 20px -3px rgb(15 23 42 / 0.09), 0 4px 8px -4px rgb(15 23 42 / 0.04);
 }
 
 *, *::before, *::after { box-sizing: border-box; }
 body {
     background: var(--body-bg);
     color: var(--text-primary);
-    font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+    font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     font-size: 0.875rem;
     line-height: 1.55;
     margin: 0; padding: 0;
+    -webkit-font-smoothing: antialiased;
 }
-h1,h2,h3,h4,h5,h6 { font-family: 'Plus Jakarta Sans', sans-serif; }
-code, .font-mono, .mono { font-family: 'JetBrains Mono', monospace; }
+h1,h2,h3,h4,h5,h6 { font-family: 'Plus Jakarta Sans', sans-serif; font-weight: 700; letter-spacing: -0.02em; }
+code, .font-mono, .mono { font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace; }
+
+/* GLASS & ELEVATION */
+.glass-panel { background: rgba(255,255,255,0.85); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.4); }
+.bg-surface-elevated { background: var(--surface); box-shadow: var(--shadow-sm); border: 1px solid var(--border); }
 
 /* SIDEBAR */
 .sidebar-desktop {
     position: fixed; top: 0; left: 0;
-    width: 260px; height: 100vh;
+    width: var(--sidebar-width); height: 100vh;
     background: var(--sidebar-bg);
     border-right: 1px solid var(--sidebar-border);
     overflow-y: auto; z-index: 1030;
     display: flex; flex-direction: column;
+    box-shadow: var(--shadow-xs);
+    scrollbar-width: thin;
+    scrollbar-color: #cbd5e1 transparent;
 }
+.sidebar-desktop::-webkit-scrollbar { width: 5px; }
+.sidebar-desktop::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 9999px; }
 .sidebar-brand {
     padding: 1.1rem 1.25rem;
     border-bottom: 1px solid var(--sidebar-border);
@@ -167,12 +189,15 @@ code, .font-mono, .mono { font-family: 'JetBrains Mono', monospace; }
 }
 
 /* MAIN CONTENT */
-.main-content { margin-left: 260px; min-height: 100vh; display: flex; flex-direction: column; }
+.main-content { margin-left: var(--sidebar-width); min-height: 100vh; display: flex; flex-direction: column; transition: margin-left 0.2s ease; }
 .top-bar {
-    background: var(--surface); border-bottom: 1px solid var(--border);
-    padding: 0.75rem 1.75rem;
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border-bottom: 1px solid var(--border);
+    padding: 0.85rem 1.75rem;
     display: flex; justify-content: space-between; align-items: center;
-    position: sticky; top: 0; z-index: 1020; box-shadow: var(--shadow);
+    position: sticky; top: 0; z-index: 1020; box-shadow: var(--shadow-xs);
 }
 .top-bar .page-heading { display: flex; align-items: baseline; gap: 0.6rem; margin: 0; }
 .top-bar .page-heading h5 {
@@ -208,21 +233,43 @@ code, .font-mono, .mono { font-family: 'JetBrains Mono', monospace; }
 }
 .btn-logout:hover { background: var(--danger-light); color: var(--danger-deep); border-color: #FECDD3; }
 
-.content-area { padding: 1.5rem 1.75rem; flex: 1; }
+.content-area { padding: 1.75rem 2rem; flex: 1; }
 
-/* METRICS RIBBON */
+/* METRICS RIBBON & KPI CARDS */
 .metric-ribbon {
-    display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.85rem;
-    margin-bottom: 1.25rem;
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem;
+    margin-bottom: 1.5rem;
 }
-.metric-card {
+.metric-card, .kpi-card {
     background: var(--surface); border: 1px solid var(--border);
-    border-radius: var(--radius-lg); padding: 0.9rem 1rem;
-    box-shadow: var(--shadow);
+    border-radius: var(--radius-xl); padding: 1.15rem 1.25rem;
+    box-shadow: var(--shadow-sm); position: relative; overflow: hidden;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
-.metric-label { font-size: 0.65rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.06em; }
-.metric-value { font-size: 1.5rem; font-weight: 800; font-family: 'JetBrains Mono', monospace; color: var(--text-primary); margin-top: 2px; }
-.metric-sub { font-size: 0.65rem; color: var(--text-muted); margin-top: 2px; }
+.metric-card:hover, .kpi-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+}
+.kpi-card::before {
+    content: ''; position: absolute; top: 0; left: 0; width: 4px; height: 100%;
+}
+.kpi-capaian::before { background: var(--success); }
+.kpi-dokumen::before { background: var(--primary); }
+.kpi-evaluasi::before { background: var(--warning); }
+.kpi-anggaran::before { background: #8b5cf6; }
+.kpi-danger::before { background: var(--danger); }
+
+.metric-label, .kpi-label {
+    font-size: 0.68rem; font-weight: 700; color: var(--text-muted);
+    text-transform: uppercase; letter-spacing: 0.06em;
+    display: flex; align-items: center; justify-content: space-between;
+}
+.metric-value, .kpi-value {
+    font-size: 1.85rem; font-weight: 800; font-family: 'JetBrains Mono', monospace;
+    color: var(--text-primary); margin: 0.35rem 0 0.2rem; line-height: 1.1;
+    letter-spacing: -0.03em;
+}
+.metric-sub, .kpi-sub { font-size: 0.72rem; color: var(--text-secondary); margin-top: 2px; }
 
 /* PAGE HEADER */
 .page-header-box {
@@ -256,6 +303,7 @@ code, .font-mono, .mono { font-family: 'JetBrains Mono', monospace; }
 .badge-s { background: #FFF1F2; color: #BE123C; border: 1px solid #FECDD3; font-family: 'JetBrains Mono', monospace; font-size: 0.65rem; font-weight: 700; padding: 2px 7px; border-radius: 4px; }
 
 /* SCORE BADGES */
+.score-badge { display: inline-flex; align-items: center; gap: 5px; border-radius: 6px; padding: 4px 10px; font-weight: 700; font-family: 'JetBrains Mono', monospace; font-size: 0.8rem; }
 .score-10 { background: #ecfdf5; color: #065f46; border: 1px solid #a7f3d0; font-family: 'JetBrains Mono', monospace; font-size: 0.7rem; font-weight: 700; padding: 3px 8px; border-radius: 5px; display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
 .score-5  { background: #FFFBEB; color: #92400E; border: 1px solid #FDE68A; font-family: 'JetBrains Mono', monospace; font-size: 0.7rem; font-weight: 700; padding: 3px 8px; border-radius: 5px; display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
 .score-0  { background: #FFF1F2; color: #9F1239; border: 1px solid #FECDD3; font-family: 'JetBrains Mono', monospace; font-size: 0.7rem; font-weight: 700; padding: 3px 8px; border-radius: 5px; display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }

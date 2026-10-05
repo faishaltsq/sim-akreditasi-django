@@ -114,7 +114,7 @@
                                 {% if reqs %}
                                     <div class="d-flex flex-wrap gap-1">
                                         {% for req in reqs %}
-                                            <span class="badge bg-secondary-subtle text-secondary border font-mono" style="font-size:0.65rem;" title="{{ req.title }}">
+                                            <span class="badge badge-rdwos-{{ req.category_type|lower }} font-mono" style="font-size:0.65rem;" title="{{ req.title }}">
                                                 {{ req.category_type }}: {{ req.files.count }}
                                             </span>
                                         {% endfor %}
@@ -126,11 +126,11 @@
                         </td>
                         <td class="text-center">
                             {% if item.record.score == 10 %}
-                                <span class="badge bg-success font-mono">10</span>
+                                <span class="score-10">10</span>
                             {% elif item.record.score == 5 %}
-                                <span class="badge bg-warning font-mono">5</span>
+                                <span class="score-5">5</span>
                             {% else %}
-                                <span class="badge bg-danger font-mono">0</span>
+                                <span class="score-0">0</span>
                             {% endif %}
                         </td>
                         <td class="font-mono text-muted small" style="font-size:0.72rem;">

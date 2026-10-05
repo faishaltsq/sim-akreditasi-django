@@ -6,18 +6,6 @@
 
 {% block extra_css %}
 <style>
-    .kpi-card {
-        background: #fff; border: 1px solid #e2e8f0; border-radius: .75rem;
-        padding: 1.1rem 1.2rem; box-shadow: 0 1px 3px rgba(0,0,0,.04);
-        height: 100%; position: relative; overflow: hidden;
-    }
-    .kpi-card::before {
-        content: ''; position: absolute; top: 0; left: 0;
-        width: 4px; height: 100%; background: #0d9488;
-    }
-    .kpi-label { font-size: .68rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: #64748b; }
-    .kpi-value { font-size: 1.85rem; font-weight: 800; font-family: 'JetBrains Mono', monospace; color: #0f172a; line-height: 1.1; margin: .3rem 0; }
-    .kpi-sub { font-size: .72rem; color: #64748b; }
     .chart-container { position: relative; height: 220px; width: 100%; }
 </style>
 {% endblock %}
@@ -26,19 +14,40 @@
 <div class="container-fluid p-0">
 
     <!-- HERO BANNER -->
-    <div class="card border-0 shadow-sm mb-4 overflow-hidden" style="border-radius: 1rem;">
-        <div class="card-body p-0">
-            <div class="d-flex align-items-center" style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0d9488 100%); min-height: 110px;">
-                <div class="d-flex align-items-center justify-content-center flex-shrink-0 px-4 px-md-5" style="min-height:110px;">
-                    <i class="bi bi-people-fill" style="font-size: 3rem; color: rgba(255,255,255,.85);"></i>
+    <div class="card border-0 shadow-sm mb-4 overflow-hidden" style="border-radius: var(--radius-xl); background: linear-gradient(135deg, #0f172a 0%, #1e293b 55%, #0f766e 100%);">
+        <div class="card-body p-4 text-white">
+            <div class="d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-3">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="d-none d-sm-flex align-items-center justify-content-center rounded-3 flex-shrink-0" style="width: 54px; height: 54px; background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.2);">
+                        <i class="bi bi-people-fill text-white fs-3"></i>
+                    </div>
+                    <div>
+                        <div class="d-flex flex-wrap align-items-center gap-2 mb-1">
+                            <span class="badge bg-white/20 text-white border border-white/30 px-2 py-0.5" style="font-size:0.68rem; font-weight:600;">
+                                <i class="bi bi-hospital me-1"></i>SIMRS TERPADU
+                            </span>
+                            <span class="badge bg-white/10 text-white-50 px-2 py-0.5" style="font-size:0.68rem;">
+                                RS MonsisKami Tipe B
+                            </span>
+                        </div>
+                        <h2 class="fw-bold text-white mb-1" style="font-size: 1.6rem; letter-spacing: -0.02em; line-height: 1.2;">
+                            Dashboard Manajemen Pasien
+                        </h2>
+                        <p class="text-white-50 mb-0" style="font-size: 0.8rem;">
+                            Monitoring Real-time Admisi, IGD, Poli Rawat Jalan, Bed Management, &amp; Mutu Pelayanan
+                        </p>
+                    </div>
                 </div>
-                <div class="py-3 pe-4">
-                    <h2 class="fw-bold text-white mb-1" style="font-size: 1.8rem; letter-spacing: -.03em; line-height: 1.1;">
-                        Dashboard Manajemen Pasien <span class="text-white-50 fw-semibold" style="font-size:1rem;">—</span> RS MonsisKami
-                    </h2>
-                    <p class="text-white-50 mb-0" style="font-size: .82rem; line-height: 1.5;">
-                        Pendaftaran &bull; Pelayanan &bull; Rawat Inap &bull; Billing &bull; Discharge
-                    </p>
+                <div class="d-flex flex-wrap align-items-center gap-2">
+                    <a href="{% url 'pasien:pasien_baru' %}" class="btn btn-light btn-sm fw-bold px-3 shadow-sm text-teal" style="color:#0f766e !important;">
+                        <i class="bi bi-person-plus me-1"></i>Pasien Baru
+                    </a>
+                    <a href="{% url 'pasien:kunjungan_baru' %}" class="btn btn-outline-light btn-sm fw-semibold px-3">
+                        <i class="bi bi-plus-circle me-1"></i>Kunjungan Baru
+                    </a>
+                    <a href="{% url 'pasien:bed_management' %}" class="btn btn-outline-light btn-sm fw-semibold px-3">
+                        <i class="bi bi-grid-3x3 me-1"></i>Bed Management
+                    </a>
                 </div>
             </div>
         </div>
@@ -165,13 +174,13 @@
                             <td>{{ kj.pasien.nama_lengkap }}</td>
                             <td><span class="badge bg-light text-dark border" style="font-size:.7rem;">{{ kj.get_jenis_kunjungan_display }}</span></td>
                             <td>
-                                {% if kj.status == 'DAFTAR' %}<span class="badge bg-secondary">Terdaftar</span>
-                                {% elif kj.status == 'TRIAGE' %}<span class="badge bg-danger">Triage</span>
-                                {% elif kj.status == 'ASESMEN' %}<span class="badge bg-primary">Asesmen</span>
-                                {% elif kj.status == 'RANAP' %}<span class="badge bg-warning text-dark">Ranap</span>
-                                {% elif kj.status == 'PULANG' %}<span class="badge bg-success">Pulang</span>
-                                {% elif kj.status == 'RUJUK' %}<span class="badge bg-info">Rujuk</span>
-                                {% elif kj.status == 'MENINGGAL' %}<span class="badge bg-dark">Meninggal</span>
+                                {% if kj.status == 'DAFTAR' %}<span class="badge bg-secondary-subtle text-secondary border">Terdaftar</span>
+                                {% elif kj.status == 'TRIAGE' %}<span class="badge bg-danger-subtle text-danger border border-danger-subtle">Triage</span>
+                                {% elif kj.status == 'ASESMEN' %}<span class="badge bg-primary-subtle text-primary border border-primary-subtle">Asesmen</span>
+                                {% elif kj.status == 'RANAP' %}<span class="badge bg-warning-subtle text-warning border border-warning-subtle">Ranap</span>
+                                {% elif kj.status == 'PULANG' %}<span class="badge bg-success-subtle text-success border border-success-subtle">Pulang</span>
+                                {% elif kj.status == 'RUJUK' %}<span class="badge bg-info-subtle text-info border border-info-subtle">Rujuk</span>
+                                {% elif kj.status == 'MENINGGAL' %}<span class="badge bg-dark-subtle text-dark border">Meninggal</span>
                                 {% endif %}
                             </td>
                             <td class="text-muted font-monospace" style="font-size:.75rem;">{{ kj.tanggal_masuk|date:"d/m/Y H:i" }}</td>

@@ -25,14 +25,14 @@
 <div class="container-fluid p-0">
 
     <!-- HERO BANNER -->
-    <div class="card border-0 shadow-sm mb-4 overflow-hidden" style="border-radius: 1rem;">
+    <div class="card border-0 shadow-sm mb-4 overflow-hidden" style="border-radius: var(--radius-xl);">
         <div class="card-body p-0">
             <div class="d-flex align-items-center" style="background: linear-gradient(135deg, #450a0a 0%, #7f1d1d 40%, #b91c1c 100%); min-height: 105px;">
                 <div class="d-flex align-items-center justify-content-center flex-shrink-0 px-4 px-md-5" style="min-height:105px;">
                     <i class="bi bi-heart-pulse-fill text-white" style="font-size: 2.8rem; opacity: .95;"></i>
                 </div>
                 <div class="py-3 pe-4">
-                    <h2 class="fw-bold text-white mb-1" style="font-size: 1.7rem; letter-spacing: -.03em; line-height: 1.1;">
+                    <h2 class="fw-bold text-white mb-1" style="font-size: 1.6rem; letter-spacing: -.02em; line-height: 1.2;">
                         Dasbor Pelayanan Gawat Darurat (IGD)
                     </h2>
                     <p class="text-white-50 mb-0" style="font-size: .82rem;">
@@ -51,7 +51,7 @@
     <!-- 4 LEVEL TRIAGE KPI -->
     <div class="row g-3 mb-4">
         <div class="col-6 col-lg-3">
-            <a href="?triage=MERAH" class="triage-card bg-danger shadow-sm {% if triage_filter == 'MERAH' %}active-ring{% endif %}">
+            <a href="?triage=MERAH" class="triage-card shadow-sm {% if triage_filter == 'MERAH' %}active-ring{% endif %}" style="background: linear-gradient(135deg, #991b1b, #ef4444); border-radius: var(--radius-xl);">
                 <div class="d-flex justify-content-between align-items-center mb-2">
                     <span class="triage-lbl">P1 — Resusitasi (Kritis)</span>
                     <i class="bi bi-lightning-charge-fill fs-5"></i>
@@ -61,17 +61,17 @@
             </a>
         </div>
         <div class="col-6 col-lg-3">
-            <a href="?triage=KUNING" class="triage-card bg-warning text-dark shadow-sm {% if triage_filter == 'KUNING' %}active-ring{% endif %}">
+            <a href="?triage=KUNING" class="triage-card shadow-sm {% if triage_filter == 'KUNING' %}active-ring{% endif %}" style="background: linear-gradient(135deg, #b45309, #f59e0b); border-radius: var(--radius-xl);">
                 <div class="d-flex justify-content-between align-items-center mb-2">
-                    <span class="triage-lbl text-dark">P2 — Urgent (Darurat)</span>
-                    <i class="bi bi-exclamation-triangle-fill fs-5 text-dark"></i>
+                    <span class="triage-lbl">P2 — Urgent (Darurat)</span>
+                    <i class="bi bi-exclamation-triangle-fill fs-5"></i>
                 </div>
-                <div class="triage-val text-dark">{{ count_kuning }}</div>
-                <small class="text-dark opacity-75" style="font-size: .72rem;">Potensi Perburukan Cepat</small>
+                <div class="triage-val">{{ count_kuning }}</div>
+                <small class="opacity-75" style="font-size: .72rem;">Potensi Perburukan Cepat</small>
             </a>
         </div>
         <div class="col-6 col-lg-3">
-            <a href="?triage=HIJAU" class="triage-card bg-success shadow-sm {% if triage_filter == 'HIJAU' %}active-ring{% endif %}">
+            <a href="?triage=HIJAU" class="triage-card shadow-sm {% if triage_filter == 'HIJAU' %}active-ring{% endif %}" style="background: linear-gradient(135deg, #047857, #10b981); border-radius: var(--radius-xl);">
                 <div class="d-flex justify-content-between align-items-center mb-2">
                     <span class="triage-lbl">P3 — Non-Urgent</span>
                     <i class="bi bi-shield-check fs-5"></i>
@@ -81,7 +81,7 @@
             </a>
         </div>
         <div class="col-6 col-lg-3">
-            <a href="?triage=HITAM" class="triage-card bg-dark shadow-sm {% if triage_filter == 'HITAM' %}active-ring{% endif %}">
+            <a href="?triage=HITAM" class="triage-card shadow-sm {% if triage_filter == 'HITAM' %}active-ring{% endif %}" style="background: linear-gradient(135deg, #0f172a, #334155); border-radius: var(--radius-xl);">
                 <div class="d-flex justify-content-between align-items-center mb-2">
                     <span class="triage-lbl">P4 — Expectant</span>
                     <i class="bi bi-x-circle-fill fs-5"></i>

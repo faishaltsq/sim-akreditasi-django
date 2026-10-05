@@ -32,20 +32,23 @@
     </nav>
 
     <!-- BOR HEADER -->
-    <div class="card border-0 shadow-sm mb-4 overflow-hidden">
+    <div class="card border-0 shadow-sm mb-4 overflow-hidden" style="border-radius: var(--radius-xl);">
         <div class="card-body p-0">
-            <div class="d-flex align-items-center px-4 py-3" style="background: linear-gradient(135deg, #0f766e 0%, #0d9488 100%);">
-                <i class="bi bi-grid-3x3-gap-fill text-white me-3" style="font-size:2rem;"></i>
+            <div class="d-flex align-items-center px-4 py-3.5" style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0d9488 100%);">
+                <div class="d-flex align-items-center justify-content-center rounded-3 me-3" style="width: 48px; height: 48px; background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.2);">
+                    <i class="bi bi-grid-3x3-gap-fill text-white fs-4"></i>
+                </div>
                 <div class="flex-fill">
-                    <h5 class="fw-bold text-white mb-0" style="font-size:1.15rem;">Bed Occupancy Rate (BOR)</h5>
-                    <div class="text-white-50" style="font-size:.78rem;">{{ bed_terisi }} terisi dari {{ total_bed }} bed aktif</div>
+                    <h5 class="fw-bold text-white mb-0" style="font-size:1.15rem; letter-spacing:-0.01em;">Bed Occupancy Rate (BOR) RS</h5>
+                    <div class="text-white-50" style="font-size:.78rem;">{{ bed_terisi }} terisi dari {{ total_bed }} bed aktif rawat inap</div>
                 </div>
                 <div class="text-end">
-                    <div class="text-white fw-bold font-monospace" style="font-size:2.2rem;">{{ bor }}%</div>
+                    <div class="text-white fw-bold font-mono" style="font-size:2.2rem; line-height: 1;">{{ bor }}%</div>
+                    <span class="badge bg-white/20 text-white font-mono" style="font-size:0.62rem;">Target Kemenkes: 60-85%</span>
                 </div>
             </div>
-            <div class="progress" style="height:5px; border-radius:0;">
-                <div class="progress-bar" role="progressbar" style="width:{{ bor }}%; background:#0d9488;"></div>
+            <div class="progress" style="height:6px; border-radius:0; background: #e2e8f0;">
+                <div class="progress-bar {% if bor > 85 %}bg-danger{% elif bor >= 60 %}bg-success{% else %}bg-warning{% endif %}" role="progressbar" style="width:{{ bor }}%;"></div>
             </div>
         </div>
     </div>
