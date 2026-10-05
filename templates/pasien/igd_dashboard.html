@@ -205,6 +205,18 @@
                                 {% for o in k.order_penunjang.all %}{% if o.is_critical_value %}
                                 <div class="mt-1"><span class="badge bg-danger" style="animation: pulse 1s infinite;"><i class="bi bi-exclamation-triangle-fill me-1"></i>CRITICAL</span></div>
                                 {% endif %}{% endfor %}
+                                <div class="mt-1">
+                                    <span class="badge {% if k.news_score >= 7 %}bg-danger{% elif k.news_score >= 5 %}bg-warning text-dark{% elif k.news_score >= 1 %}bg-info text-dark{% else %}bg-secondary{% endif %}" title="National Early Warning Score (NEWS-2)">
+                                        NEWS: {{ k.news_score }}
+                                    </span>
+                                </div>
+                                <div class="mt-1">
+                                    {% if k.is_asesmen_awal_lengkap %}
+                                    <span class="badge bg-success text-white" style="font-size:0.7rem;" title="Asesmen Awal & 3S Lengkap"><i class="bi bi-check-circle me-1"></i>Asesmen Lengkap</span>
+                                    {% else %}
+                                    <span class="badge bg-warning text-dark" style="font-size:0.7rem;" title="Asesmen Awal Belum Lengkap"><i class="bi bi-clock-history me-1"></i>Asesmen Belum Lengkap</span>
+                                    {% endif %}
+                                </div>
                             </td>
                             <td>
                                 <div class="font-monospace fw-semibold">{{ k.no_kunjungan }}</div>
@@ -256,6 +268,14 @@
                             </td>
                             <td class="text-center">
                                 <div class="btn-group btn-group-sm">
+                                    <!-- ASESMEN AWAL (Revisi 02) -->
+                                    <button class="btn btn-outline-primary fw-semibold" data-bs-toggle="modal" data-bs-target="#modalAsesmenAwal{{ k.pk }}" title="Asesmen Awal IGD & 3S Keperawatan">
+                                        <i class="bi bi-clipboard-pulse"></i> Asesmen
+                                    </button>
+                                    <!-- CPPT OBSERVASI (Revisi 02) -->
+                                    <button class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#modalCPPT{{ k.pk }}" title="Catatan Perkembangan Pasien Terintegrasi (CPPT SOAP)">
+                                        <i class="bi bi-journal-text"></i> CPPT
+                                    </button>
                                     <!-- ORDER PENUNJANG -->
                                     <button class="btn btn-outline-info" data-bs-toggle="modal" data-bs-target="#modalOrder{{ k.pk }}" title="Order Lab / Radiologi">
                                         <i class="bi bi-radioactive"></i> Penunjang
@@ -264,31 +284,29 @@
                                     <button class="btn btn-outline-dark" data-bs-toggle="modal" data-bs-target="#modalERM{{ k.pk }}" title="Lihat Rekam Medis Elektronik (ERM)">
                                         <i class="bi bi-journal-medical"></i> ERM
                                     </button>
+                                    <!-- DISPOSISI & RTL UNIFIED MODAL (Revisi 02) -->
+                                    <button class="btn btn-primary fw-semibold" data-bs-toggle="modal" data-bs-target="#modalDisposisi{{ k.pk }}" title="Disposisi & Rencana Tindak Lanjut (Ranap / Rujuk / Pulang / PAPS / DoA)">
+                                        <i class="bi bi-box-arrow-up-right"></i> Disposisi
+                                    </button>
+                                    <!-- RESUME MEDIS IGD (Revisi 02) -->
+                                    <a href="{% url 'pasien:cetak_resume_igd' k.pk %}" target="_blank" class="btn btn-outline-dark" title="Cetak Resume Medis IGD">
+                                        <i class="bi bi-printer"></i>
+                                    </a>
                                     <!-- BOOKING KAMAR -->
                                     <button class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#modalBooking{{ k.pk }}" title="Pesan / Booking Tempat Tidur Ranap">
-                                        <i class="bi bi-calendar-plus"></i> Pesan Kamar
+                                        <i class="bi bi-calendar-plus"></i>
                                     </button>
                                     <!-- GENERAL CONSENT -->
                                     <button class="btn btn-outline-teal" data-bs-toggle="modal" data-bs-target="#modalConsent{{ k.pk }}" title="Form General Consent Rawat Inap (STARKES HPK)" style="border-color:#0d9488; color:#0d9488;">
-                                        <i class="bi bi-file-earmark-check"></i> Consent
+                                        <i class="bi bi-file-earmark-check"></i>
                                     </button>
-                                    <!-- PILIHAN 1: PULANG (DISCHARGE) -->
+                                    <!-- QUICK ACTIONS SHORTCUTS -->
                                     <button class="btn btn-outline-success fw-semibold" data-bs-toggle="modal" data-bs-target="#modalPulang{{ k.pk }}" title="Pulang Sembuh">
-                                        <i class="bi bi-box-arrow-right"></i> Pulang
+                                        <i class="bi bi-box-arrow-right"></i>
                                     </button>
-                                    <!-- PAPS -->
                                     <button class="btn btn-outline-warning text-dark fw-semibold" data-bs-toggle="modal" data-bs-target="#modalPaps{{ k.pk }}" title="Pulang Atas Permintaan Sendiri (PAPS)">
-                                        <i class="bi bi-shield-slash"></i> PAPS
+                                        <i class="bi bi-shield-slash"></i>
                                     </button>
-                                    <!-- PILIHAN 2: RAWAT INAP (RANAP) -->
-                                    <button class="btn btn-primary fw-semibold" data-bs-toggle="modal" data-bs-target="#modalRanap{{ k.pk }}" title="Masuk Rawat Inap (SPRI)">
-                                        <i class="bi bi-hospital"></i> Ranap
-                                    </button>
-                                    <!-- SISRUTE RUJUK -->
-                                    <button class="btn btn-outline-dark" data-bs-toggle="modal" data-bs-target="#modalRujuk{{ k.pk }}" title="Rujuk Eksternal SISRUTE">
-                                        <i class="bi bi-send"></i> Rujuk
-                                    </button>
-                                    <!-- PROTOKOL MENINGGAL -->
                                     <button class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#modalMeninggal{{ k.pk }}" title="Protokol Meninggal Dunia">
                                         <i class="bi bi-x-circle"></i>
                                     </button>
@@ -886,6 +904,352 @@
                                             <button type="submit" class="btn btn-sm px-3 fw-semibold" style="background:#0d9488; color:#fff; border:none;"><i class="bi bi-check-circle me-1"></i> Simpan Consent</button>
                                         </div>
                                     </form>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- MODAL ASESMEN AWAL KLINIS & 3S KEPERAWATAN (Revisi 02) -->
+                        <div class="modal fade" id="modalAsesmenAwal{{ k.pk }}" tabindex="-1">
+                            <div class="modal-dialog modal-xl modal-dialog-scrollable">
+                                <div class="modal-content">
+                                    <div class="modal-header bg-primary text-white">
+                                        <h5 class="modal-title fw-bold">
+                                            <i class="bi bi-clipboard-pulse me-2"></i>Asesmen Awal Medis & Keperawatan IGD
+                                        </h5>
+                                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                                    </div>
+                                    <form method="post" action="{% url 'pasien:igd_asesmen_awal_save' k.pk %}">
+                                        {% csrf_token %}
+                                        <div class="modal-body p-3">
+                                            <!-- Patient Summary Banner -->
+                                            <div class="p-2 mb-3 bg-light border rounded d-flex justify-content-between align-items-center">
+                                                <div>
+                                                    <strong>{{ k.pasien.nama_lengkap }}</strong> ({{ k.pasien.no_rm }}) — {{ k.pasien.usia }} th / {{ k.pasien.get_jenis_kelamin_display }}
+                                                    <div class="small text-muted">No. Kunjungan: {{ k.no_kunjungan }} | Masuk: {{ k.tanggal_masuk|date:"d/m/Y H:i" }}</div>
+                                                </div>
+                                                <div class="text-end">
+                                                    <span class="badge {% if k.triage == 'MERAH' %}bg-danger{% elif k.triage == 'KUNING' %}bg-warning text-dark{% elif k.triage == 'HIJAU' %}bg-success{% else %}bg-dark{% endif %}">
+                                                        Triage: {{ k.get_triage_display }}
+                                                    </span>
+                                                    <span class="badge bg-secondary ms-1">NEWS: {{ k.news_score }} ({{ k.news_category }})</span>
+                                                </div>
+                                            </div>
+
+                                            <!-- Nav Tabs for Asesmen Awal -->
+                                            <ul class="nav nav-pills mb-3 border-bottom pb-2" id="asesmenTab{{ k.pk }}" role="tablist">
+                                                <li class="nav-item">
+                                                    <button class="nav-link active btn-sm" data-bs-toggle="pill" data-bs-target="#tabAnamnesis{{ k.pk }}" type="button">
+                                                        1. Anamnesis & Alergi
+                                                    </button>
+                                                </li>
+                                                <li class="nav-item">
+                                                    <button class="nav-link btn-sm" data-bs-toggle="pill" data-bs-target="#tabFisik{{ k.pk }}" type="button">
+                                                        2. Fisik ABCDE
+                                                    </button>
+                                                </li>
+                                                <li class="nav-item">
+                                                    <button class="nav-link btn-sm" data-bs-toggle="pill" data-bs-target="#tabBio{{ k.pk }}" type="button">
+                                                        3. Biopsikososiospiritual & Skrining
+                                                    </button>
+                                                </li>
+                                                <li class="nav-item">
+                                                    <button class="nav-link btn-sm" data-bs-toggle="pill" data-bs-target="#tabDiagnosis{{ k.pk }}" type="button">
+                                                        4. Diagnosis Medis & 3S Keperawatan
+                                                    </button>
+                                                </li>
+                                            </ul>
+
+                                            <div class="tab-content">
+                                                <!-- TAB 1: ANAMNESIS & ALERGI -->
+                                                <div class="tab-pane fade show active" id="tabAnamnesis{{ k.pk }}">
+                                                    <div class="row g-3">
+                                                        <div class="col-md-12">
+                                                            <div class="p-2 border border-danger rounded bg-danger-subtle">
+                                                                <label class="form-label text-danger fw-bold mb-1">
+                                                                    <i class="bi bi-exclamation-triangle-fill me-1"></i>Riwayat Alergi Obat & Makanan (Wajib Diisi):
+                                                                </label>
+                                                                <input type="text" name="alergi_obat" class="form-control form-control-sm border-danger" value="{{ k.pasien.alergi_obat }}" placeholder="Contoh: Penisilin, Sulfa, Makanan Laut (Kosongkan atau ketik 'Tidak Ada' bila tidak memiliki riwayat)">
+                                                            </div>
+                                                        </div>
+                                                        <div class="col-md-12">
+                                                            <label class="form-label fw-semibold">Riwayat Penyakit Sekarang (RPS) / Keluhan Utama:</label>
+                                                            <textarea name="anamnesis_rps" rows="3" class="form-control form-control-sm" placeholder="Jelaskan onset, lokasi, durasi, karakteristik, faktor pemberat/peringan...">{{ k.anamnesis_rps|default:k.catatan_admisi }}</textarea>
+                                                        </div>
+                                                        <div class="col-md-6">
+                                                            <label class="form-label fw-semibold">Riwayat Penyakit Dahulu (RPD):</label>
+                                                            <textarea name="anamnesis_rpd" rows="2" class="form-control form-control-sm" placeholder="Hipertensi, DM, Asma, Jantung, dsb...">{{ k.anamnesis_rpd }}</textarea>
+                                                        </div>
+                                                        <div class="col-md-6">
+                                                            <label class="form-label fw-semibold">Riwayat Penyakit Keluarga (RPK):</label>
+                                                            <textarea name="anamnesis_rpk" rows="2" class="form-control form-control-sm" placeholder="Penyakit menurun dalam keluarga...">{{ k.anamnesis_rpk }}</textarea>
+                                                        </div>
+                                                        <div class="col-md-12">
+                                                            <label class="form-label fw-semibold">Riwayat Pengobatan Saat Ini:</label>
+                                                            <textarea name="anamnesis_obat" rows="2" class="form-control form-control-sm" placeholder="Obat rutin yang dikonsumsi sebelum masuk IGD...">{{ k.anamnesis_obat }}</textarea>
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                <!-- TAB 2: PEMERIKSAAN FISIK ABCDE -->
+                                                <div class="tab-pane fade" id="tabFisik{{ k.pk }}">
+                                                    <div class="row g-3">
+                                                        <div class="col-md-6">
+                                                            <label class="form-label fw-semibold text-danger">A - Airway (Jalan Napas):</label>
+                                                            <input type="text" name="fisik_airway" class="form-control form-control-sm" value="{{ k.fisik_airway }}" placeholder="Paten, Bebas, Stridor, Gargling, Snoring...">
+                                                        </div>
+                                                        <div class="col-md-6">
+                                                            <label class="form-label fw-semibold text-primary">B - Breathing (Pernapasan):</label>
+                                                            <input type="text" name="fisik_breathing" class="form-control form-control-sm" value="{{ k.fisik_breathing }}" placeholder="Spontan, Simetris, Retraksi dada, Suara napas vesikuler/ronkhi/wheezing...">
+                                                        </div>
+                                                        <div class="col-md-6">
+                                                            <label class="form-label fw-semibold text-success">C - Circulation (Sirkulasi):</label>
+                                                            <input type="text" name="fisik_circulation" class="form-control form-control-sm" value="{{ k.fisik_circulation }}" placeholder="Akral hangat/dingin, CRT < 2 detik, Nadi kuat/lemah, Perdarahan aktif...">
+                                                        </div>
+                                                        <div class="col-md-6">
+                                                            <label class="form-label fw-semibold text-warning text-dark">D - Disability (Neurologis):</label>
+                                                            <input type="text" name="fisik_disability" class="form-control form-control-sm" value="{{ k.fisik_disability }}" placeholder="GCS {{ k.ttv_gcs|default:'15' }}, Refleks pupil isokor (+/+), Paresis...">
+                                                        </div>
+                                                        <div class="col-md-12">
+                                                            <label class="form-label fw-semibold text-secondary">E - Exposure / Kulit / Deformitas:</label>
+                                                            <input type="text" name="fisik_exposure" class="form-control form-control-sm" value="{{ k.fisik_exposure }}" placeholder="Luka, Deformitas tulang, Ruam, Suhu lingkungan...">
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                <!-- TAB 3: BIOPSIKOSOSIAL & SKRINING -->
+                                                <div class="tab-pane fade" id="tabBio{{ k.pk }}">
+                                                    <div class="row g-3">
+                                                        <div class="col-md-6">
+                                                            <label class="form-label fw-semibold">Status Psikologis & Sosial-Ekonomi:</label>
+                                                            <textarea name="status_psikososial" rows="3" class="form-control form-control-sm" placeholder="Kondisi emosi (tenang/cemas/depresi), hubungan keluarga, pekerjaan/pembiayaan...">{{ k.status_psikososial }}</textarea>
+                                                        </div>
+                                                        <div class="col-md-6">
+                                                            <label class="form-label fw-semibold">Status Spiritual & Nilai Kepercayaan:</label>
+                                                            <textarea name="status_spiritual" rows="3" class="form-control form-control-sm" placeholder="Agama, nilai spiritual khusus, penolakan tindakan medis (misal darah)...">{{ k.status_spiritual }}</textarea>
+                                                        </div>
+                                                        <div class="col-md-6">
+                                                            <div class="p-2 border rounded bg-light">
+                                                                <label class="form-label fw-semibold mb-1">Skrining Risiko Jatuh (Morse / Humpty Dumpty):</label>
+                                                                <div class="row g-2">
+                                                                    <div class="col-6">
+                                                                        <input type="number" name="skrining_jatuh_skor" class="form-control form-control-sm" value="{{ k.skrining_jatuh_skor|default:'' }}" placeholder="Skor Total">
+                                                                    </div>
+                                                                    <div class="col-6">
+                                                                        <select name="skrining_jatuh_grade" class="form-select form-select-sm">
+                                                                            <option value="" {% if not k.skrining_jatuh_grade %}selected{% endif %}>-- Kategori --</option>
+                                                                            <option value="RENDAH" {% if k.skrining_jatuh_grade == 'RENDAH' %}selected{% endif %}>Rendah (0-24)</option>
+                                                                            <option value="SEDANG" {% if k.skrining_jatuh_grade == 'SEDANG' %}selected{% endif %}>Sedang (25-44)</option>
+                                                                            <option value="TINGGI" {% if k.skrining_jatuh_grade == 'TINGGI' %}selected{% endif %}>Tinggi (>=45)</option>
+                                                                        </select>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        <div class="col-md-6">
+                                                            <div class="p-2 border rounded bg-light">
+                                                                <label class="form-label fw-semibold mb-1">Skrining Nutrisi Awal (MST - Malnutrition Screening Tool):</label>
+                                                                <div class="input-group input-group-sm">
+                                                                    <span class="input-group-text">Skor MST:</span>
+                                                                    <input type="number" name="skrining_gizi_mst" class="form-control" value="{{ k.skrining_gizi_mst|default:'' }}" min="0" max="5" placeholder="0-5 (>=2: Risiko Malnutrisi)">
+                                                                </div>
+                                                                <small class="text-muted">Skor >= 2: Rujuk dietisien / ahli gizi klinis.</small>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                <!-- TAB 4: DIAGNOSIS MEDIS & 3S KEPERAWATAN -->
+                                                <div class="tab-pane fade" id="tabDiagnosis{{ k.pk }}">
+                                                    <div class="row g-3">
+                                                        <div class="col-md-6">
+                                                            <label class="form-label fw-semibold text-primary">Diagnosis Medis Masuk (ICD-10):</label>
+                                                            <input type="text" name="diagnosa_masuk" class="form-control form-control-sm" value="{{ k.diagnosa_masuk }}" placeholder="Kode ICD-10 & Deskripsi (misal: I21.9 - Acute Myocardial Infarction)">
+                                                        </div>
+                                                        <div class="col-md-6">
+                                                            <label class="form-label fw-semibold">Prosedur / Tindakan Medis (ICD-9-CM):</label>
+                                                            <input type="text" name="icd9_tindakan" class="form-control form-control-sm" value="{{ k.icd9_tindakan }}" placeholder="Kode ICD-9-CM (misal: 89.52 - EKG, 96.04 - Intubasi)">
+                                                        </div>
+                                                        <div class="col-md-12">
+                                                            <hr class="my-2">
+                                                            <h6 class="fw-bold text-success mb-2"><i class="bi bi-person-lines-fill me-1"></i>Diagnosis Keperawatan Standar 3S (SDKI / SLKI / SIKI)</h6>
+                                                        </div>
+                                                        <div class="col-md-12">
+                                                            <label class="form-label fw-semibold">1. Diagnosis Keperawatan (SDKI):</label>
+                                                            <input type="text" name="diagnosa_keperawatan_sdki" class="form-control form-control-sm" value="{{ k.diagnosa_keperawatan_sdki }}" placeholder="Pilih / tulis kode SDKI, contoh: D.0077 - Nyeri Akut / D.0005 - Pola Napas Tidak Efektif">
+                                                        </div>
+                                                        <div class="col-md-6">
+                                                            <label class="form-label fw-semibold">2. Luaran Keperawatan (SLKI):</label>
+                                                            <textarea name="luaran_keperawatan_slki" rows="2" class="form-control form-control-sm" placeholder="Contoh: L.08066 - Tingkat Nyeri Menurun, keluhan nyeri menurun, gelisah menurun...">{{ k.luaran_keperawatan_slki }}</textarea>
+                                                        </div>
+                                                        <div class="col-md-6">
+                                                            <label class="form-label fw-semibold">3. Intervensi Keperawatan (SIKI):</label>
+                                                            <textarea name="intervensi_keperawatan_siki" rows="2" class="form-control form-control-sm" placeholder="Contoh: I.08238 - Manajemen Nyeri: Identifikasi lokasi, durasi, berikan teknik non-farmakologis...">{{ k.intervensi_keperawatan_siki }}</textarea>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="modal-footer bg-light">
+                                            <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Batal</button>
+                                            <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-save me-1"></i>Simpan Asesmen Awal</button>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- MODAL CPPT & OBSERVASI SOAP (Revisi 02) -->
+                        <div class="modal fade" id="modalCPPT{{ k.pk }}" tabindex="-1">
+                            <div class="modal-dialog modal-lg modal-dialog-scrollable">
+                                <div class="modal-content">
+                                    <div class="modal-header bg-secondary text-white">
+                                        <h5 class="modal-title fw-bold">
+                                            <i class="bi bi-journal-text me-2"></i>CPPT & Lembar Observasi — {{ k.pasien.nama_lengkap }}
+                                        </h5>
+                                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                                    </div>
+                                    <div class="modal-body p-3">
+                                        <!-- Timeline CPPT Pasien -->
+                                        <h6 class="fw-bold mb-2 text-dark"><i class="bi bi-clock-history me-1"></i>Catatan Perkembangan Pasien Terintegrasi (CPPT)</h6>
+                                        <div class="border rounded p-2 mb-3 bg-light" style="max-height: 220px; overflow-y: auto;">
+                                            {% for c in k.cppt.all %}
+                                            <div class="mb-2 p-2 bg-white border rounded">
+                                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                                    <span class="badge bg-primary">{{ c.get_profesi_display }}</span>
+                                                    <small class="text-muted">{{ c.nama_ppa }} | {{ c.tanggal|date:"d/m/Y H:i" }}</small>
+                                                </div>
+                                                <div style="font-size:0.85rem;">
+                                                    <strong>S:</strong> {{ c.subjektif|default:"-" }}<br>
+                                                    <strong>O:</strong> {{ c.objektif|default:"-" }}<br>
+                                                    <strong>A:</strong> {{ c.asesmen|default:"-" }}<br>
+                                                    <strong>P:</strong> {{ c.plan|default:"-" }}
+                                                </div>
+                                            </div>
+                                            {% empty %}
+                                            <p class="text-muted small text-center mb-0 py-3">Belum ada catatan CPPT terdaftar.</p>
+                                            {% endfor %}
+                                        </div>
+
+                                        <!-- Form Tambah Catatan CPPT Cepat -->
+                                        <form method="post" action="{% url 'pasien:igd_cppt_quick_add' k.pk %}" class="border p-3 rounded bg-light">
+                                            {% csrf_token %}
+                                            <h6 class="fw-bold text-primary mb-2"><i class="bi bi-plus-circle me-1"></i>Tambah Catatan Perkembangan (SOAP)</h6>
+                                            <div class="row g-2 mb-2">
+                                                <div class="col-md-6">
+                                                    <label class="form-label small fw-semibold">Profesi PPA:</label>
+                                                    <select name="profesi" class="form-select form-select-sm" required>
+                                                        <option value="DOKTER">Dokter (DPJP / Dokter Jaga)</option>
+                                                        <option value="PERAWAT" selected>Perawat / PPJA</option>
+                                                        <option value="BIDAN">Bidan</option>
+                                                        <option value="FARMASI">Apoteker / Farmasi Klinis</option>
+                                                        <option value="GIZI">Dietisien / Tenaga Gizi</option>
+                                                    </select>
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <label class="form-label small fw-semibold">Early Warning Score (EWS):</label>
+                                                    <input type="text" class="form-control form-control-sm bg-white" readonly value="NEWS: {{ k.news_score }} ({{ k.news_category }})">
+                                                </div>
+                                            </div>
+                                            <div class="row g-2">
+                                                <div class="col-md-6">
+                                                    <label class="form-label small fw-semibold">Subjektif (S):</label>
+                                                    <textarea name="subjektif" rows="2" class="form-control form-control-sm" placeholder="Keluhan pasien, keluhan saat observasi..."></textarea>
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <label class="form-label small fw-semibold">Objektif (O):</label>
+                                                    <textarea name="objektif" rows="2" class="form-control form-control-sm" placeholder="Hasil TTV terkini, fisik terarah, hasil lab...">TD: {{ k.ttv_sistole|default:"-" }}/{{ k.ttv_diastole|default:"-" }} mmHg, HR: {{ k.ttv_nadi|default:"-" }} x/m, RR: {{ k.ttv_rr|default:"-" }} x/m, SpO2: {{ k.ttv_spo2|default:"-" }}%</textarea>
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <label class="form-label small fw-semibold">Asesmen (A):</label>
+                                                    <textarea name="asesmen" rows="2" class="form-control form-control-sm" placeholder="Analisis kondisi klinis terkini...">{{ k.diagnosa_masuk|default:"" }}</textarea>
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <label class="form-label small fw-semibold">Plan (P):</label>
+                                                    <textarea name="plan" rows="2" class="form-control form-control-sm" placeholder="Rencana tindakan, resep obat, jadwal observasi..."></textarea>
+                                                </div>
+                                            </div>
+                                            <div class="text-end mt-2">
+                                                <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-send me-1"></i>Simpan CPPT</button>
+                                            </div>
+                                        </form>
+                                    </div>
+                                    <div class="modal-footer bg-light">
+                                        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Tutup</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- MODAL UNIFIED DISPOSISI / RTL (Revisi 02) -->
+                        <div class="modal fade" id="modalDisposisi{{ k.pk }}" tabindex="-1">
+                            <div class="modal-dialog modal-lg">
+                                <div class="modal-content">
+                                    <div class="modal-header bg-dark text-white">
+                                        <h5 class="modal-title fw-bold">
+                                            <i class="bi bi-box-arrow-up-right me-2"></i>Disposisi & Rencana Tindak Lanjut (RTL) — {{ k.pasien.nama_lengkap }}
+                                        </h5>
+                                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                                    </div>
+                                    <div class="modal-body p-3">
+                                        <p class="small text-muted mb-3">
+                                            Pilih salah satu jalur kepulangan atau tindak lanjut klinis untuk pasien <strong>{{ k.pasien.nama_lengkap }}</strong> (No. RM: {{ k.pasien.no_rm }}):
+                                        </p>
+                                        <div class="row g-2">
+                                            <div class="col-md-4">
+                                                <div class="border rounded p-3 text-center h-100 hover-shadow bg-light">
+                                                    <i class="bi bi-hospital fs-1 text-primary mb-2 d-block"></i>
+                                                    <h6 class="fw-bold">Rawat Inap (Ranap)</h6>
+                                                    <p class="small text-muted mb-2">Admisi SPRI, alokasi bed, transfer pasien via SBAR.</p>
+                                                    <button type="button" class="btn btn-primary btn-sm w-100" data-bs-toggle="modal" data-bs-target="#modalRanap{{ k.pk }}" data-bs-dismiss="modal">
+                                                        Transfer Ranap
+                                                    </button>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <div class="border rounded p-3 text-center h-100 hover-shadow bg-light">
+                                                    <i class="bi bi-send fs-1 text-info mb-2 d-block"></i>
+                                                    <h6 class="fw-bold">Rujuk SISRUTE</h6>
+                                                    <p class="small text-muted mb-2">Rujukan antar-faskes terintegrasi SISRUTE Kemenkes.</p>
+                                                    <button type="button" class="btn btn-info text-white btn-sm w-100" data-bs-toggle="modal" data-bs-target="#modalRujuk{{ k.pk }}" data-bs-dismiss="modal">
+                                                        Proses SISRUTE
+                                                    </button>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <div class="border rounded p-3 text-center h-100 hover-shadow bg-light">
+                                                    <i class="bi bi-box-arrow-right fs-1 text-success mb-2 d-block"></i>
+                                                    <h6 class="fw-bold">Pulang Sembuh</h6>
+                                                    <p class="small text-muted mb-2">Kondisi membaik, edukasi obat pulang, kontrol ulang.</p>
+                                                    <button type="button" class="btn btn-success btn-sm w-100" data-bs-toggle="modal" data-bs-target="#modalPulang{{ k.pk }}" data-bs-dismiss="modal">
+                                                        Pulangkan Pasien
+                                                    </button>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-6 mt-2">
+                                                <div class="border rounded p-3 text-center h-100 hover-shadow bg-light">
+                                                    <i class="bi bi-shield-slash fs-1 text-warning mb-2 d-block"></i>
+                                                    <h6 class="fw-bold">Pulang Permintaan Sendiri (PAPS)</h6>
+                                                    <p class="small text-muted mb-2">Pasien/keluarga menolak rawat lanjutan dengan surat pernyataan.</p>
+                                                    <button type="button" class="btn btn-outline-warning text-dark btn-sm w-100" data-bs-toggle="modal" data-bs-target="#modalPaps{{ k.pk }}" data-bs-dismiss="modal">
+                                                        Form PAPS
+                                                    </button>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-6 mt-2">
+                                                <div class="border rounded p-3 text-center h-100 hover-shadow bg-light">
+                                                    <i class="bi bi-x-circle fs-1 text-danger mb-2 d-block"></i>
+                                                    <h6 class="fw-bold">Protokol Kematian (DoA / Meninggal)</h6>
+                                                    <p class="small text-muted mb-2">Pencatatan waktu kematian, surat kematian, pemulasaraan jenazah.</p>
+                                                    <button type="button" class="btn btn-outline-danger btn-sm w-100" data-bs-toggle="modal" data-bs-target="#modalMeninggal{{ k.pk }}" data-bs-dismiss="modal">
+                                                        Protokol Meninggal
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="modal-footer bg-light">
+                                        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Tutup</button>
+                                    </div>
                                 </div>
                             </div>
                         </div>

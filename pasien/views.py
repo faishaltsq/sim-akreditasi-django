@@ -863,6 +863,8 @@ def igd_dashboard(request):
         'active_bookings':    active_bookings,
         'triage_choices':     KunjunganPasien.TRIAGE_CHOICES,
         'kondisi_choices':    DischargeRecord.KONDISI_PULANG,
+        'ews_data':           {k.pk: k.hitung_news_score() for k in qs},
+        'profesi_cppt':       CPPT.PROFESI,
     }
     return render(request, 'pasien/igd_dashboard.html', ctx)
 
@@ -1511,5 +1513,96 @@ def cetak_tracer(request, pk):
     return render(request, 'pasien/cetak_tracer.html', {
         'kunjungan': k,
         'pasien': k.pasien,
+        'printed_at': timezone.now(),
+    })
+
+
+# ── REVISI 02 IGD: ASESMEN AWAL, CPPT QUICK-ADD & E-RESUME MEDIS ──
+
+@login_required
+def igd_asesmen_awal_save(request, pk):
+    """Save comprehensive initial clinical assessment (Biopsikososiospiritual, Physical, 3S)."""
+    k = get_object_or_404(KunjunganPasien, pk=pk)
+    if request.method == 'POST':
+        # Anamnesis
+        k.anamnesis_rps = request.POST.get('anamnesis_rps', '').strip()
+        k.anamnesis_rpd = request.POST.get('anamnesis_rpd', '').strip()
+        k.anamnesis_rpk = request.POST.get('anamnesis_rpk', '').strip()
+        k.anamnesis_obat = request.POST.get('anamnesis_obat', '').strip()
+        # Fisik ABCDE
+        k.fisik_airway = request.POST.get('fisik_airway', '').strip()
+        k.fisik_breathing = request.POST.get('fisik_breathing', '').strip()
+        k.fisik_circulation = request.POST.get('fisik_circulation', '').strip()
+        k.fisik_disability = request.POST.get('fisik_disability', '').strip()
+        k.fisik_exposure = request.POST.get('fisik_exposure', '').strip()
+        # Bio-Psiko-Sosial-Spiritual
+        k.status_psikososial = request.POST.get('status_psikososial', '').strip()
+        k.status_spiritual = request.POST.get('status_spiritual', '').strip()
+        # Skrining Risiko
+        skor_jatuh = request.POST.get('skrining_jatuh_skor')
+        k.skrining_jatuh_skor = int(skor_jatuh) if skor_jatuh and skor_jatuh.isdigit() else None
+        k.skrining_jatuh_grade = request.POST.get('skrining_jatuh_grade', '').strip()
+        skor_gizi = request.POST.get('skrining_gizi_mst')
+        k.skrining_gizi_mst = int(skor_gizi) if skor_gizi and skor_gizi.isdigit() else None
+        # Diagnosis Medis & Keperawatan 3S
+        if request.POST.get('diagnosa_masuk'):
+            k.diagnosa_masuk = request.POST.get('diagnosa_masuk', '').strip()
+        if request.POST.get('icd9_tindakan'):
+            k.icd9_tindakan = request.POST.get('icd9_tindakan', '').strip()
+        k.diagnosa_keperawatan_sdki = request.POST.get('diagnosa_keperawatan_sdki', '').strip()
+        k.luaran_keperawatan_slki = request.POST.get('luaran_keperawatan_slki', '').strip()
+        k.intervensi_keperawatan_siki = request.POST.get('intervensi_keperawatan_siki', '').strip()
+        # Alergi pada pasien
+        if request.POST.get('alergi_obat'):
+            k.pasien.alergi_obat = request.POST.get('alergi_obat', '').strip()
+            k.pasien.save(update_fields=['alergi_obat'])
+        k.save()
+        messages.success(request, f'Asesmen awal IGD untuk {k.pasien.nama_lengkap} berhasil disimpan.')
+    return redirect('pasien:igd_dashboard')
+
+
+@login_required
+def igd_cppt_quick_add(request, pk):
+    """Quick CPPT SOAP logging directly from IGD dashboard modal."""
+    k = get_object_or_404(KunjunganPasien, pk=pk)
+    if request.method == 'POST':
+        profesi = request.POST.get('profesi', 'DOKTER')
+        nama_ppa = request.user.get_full_name() or request.user.username
+        subjektif = request.POST.get('subjektif', '').strip()
+        objektif = request.POST.get('objektif', '').strip()
+        asesmen = request.POST.get('asesmen', '').strip()
+        plan = request.POST.get('plan', '').strip()
+        if subjektif or objektif or asesmen or plan:
+            CPPT.objects.create(
+                kunjungan=k,
+                profesi=profesi,
+                nama_ppa=nama_ppa,
+                tanggal=timezone.now(),
+                subjektif=subjektif,
+                objektif=objektif,
+                asesmen=asesmen,
+                plan=plan,
+                verifikasi_dpjp=(profesi == 'DOKTER'),
+            )
+            messages.success(request, f'Catatan CPPT ({profesi}) berhasil dicatat.')
+        else:
+            messages.error(request, 'Isian CPPT tidak boleh kosong.')
+    return redirect('pasien:igd_dashboard')
+
+
+@login_required
+def cetak_resume_igd(request, pk):
+    """Print-ready Emergency Department Clinical Resume (Resume Medis IGD)."""
+    k = get_object_or_404(
+        KunjunganPasien.objects.select_related('pasien', 'bed', 'created_by')
+        .prefetch_related('order_penunjang', 'cppt', 'resep_list__details'),
+        pk=pk
+    )
+    news_score, news_cat = k.hitung_news_score()
+    return render(request, 'pasien/cetak_resume_igd.html', {
+        'kunjungan': k,
+        'pasien': k.pasien,
+        'news_score': news_score,
+        'news_category': news_cat,
         'printed_at': timezone.now(),
     })

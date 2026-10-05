@@ -196,6 +196,27 @@ class KunjunganPasien(models.Model):
     ttv_skala_nyeri = models.PositiveSmallIntegerField('Skala Nyeri (NRS 0-10)', null=True, blank=True, help_text='0 (Tidak Nyeri) s.d 10 (Sangat Hebat)')
     icd9_tindakan   = models.CharField('Tindakan Medis (ICD-9-CM)', max_length=300, blank=True)
 
+    # ── Asesmen Awal IGD (Revisi 02 — Biopsikososiospiritual) ──
+    anamnesis_rps          = models.TextField('Riwayat Penyakit Sekarang (RPS)', blank=True)
+    anamnesis_rpd          = models.TextField('Riwayat Penyakit Dahulu (RPD)', blank=True)
+    anamnesis_rpk          = models.TextField('Riwayat Penyakit Keluarga (RPK)', blank=True)
+    anamnesis_obat         = models.TextField('Riwayat Pengobatan / Obat Saat Ini', blank=True)
+    fisik_airway           = models.TextField('Airway Assessment', blank=True)
+    fisik_breathing        = models.TextField('Breathing Assessment', blank=True)
+    fisik_circulation      = models.TextField('Circulation Assessment', blank=True)
+    fisik_disability       = models.TextField('Disability Assessment (Neuro)', blank=True)
+    fisik_exposure         = models.TextField('Exposure / Environmental', blank=True)
+    status_psikososial     = models.TextField('Status Psikologis & Sosial-Ekonomi', blank=True)
+    status_spiritual       = models.TextField('Status Spiritual & Budaya', blank=True)
+    skrining_jatuh_skor    = models.PositiveSmallIntegerField('Skor Risiko Jatuh', null=True, blank=True)
+    skrining_jatuh_grade   = models.CharField('Grade Risiko Jatuh', max_length=20, blank=True, help_text='RENDAH / SEDANG / TINGGI')
+    skrining_gizi_mst      = models.PositiveSmallIntegerField('Skor Skrining Gizi (MST)', null=True, blank=True)
+
+    # ── Diagnosis Keperawatan 3S (SDKI / SLKI / SIKI) ──
+    diagnosa_keperawatan_sdki   = models.TextField('Diagnosis Keperawatan (SDKI)', blank=True, help_text='Contoh: D.0077 - Nyeri Akut')
+    luaran_keperawatan_slki     = models.TextField('Luaran Keperawatan (SLKI)', blank=True, help_text='Contoh: L.08066 - Tingkat Nyeri Menurun')
+    intervensi_keperawatan_siki = models.TextField('Intervensi Keperawatan (SIKI)', blank=True, help_text='Contoh: I.08238 - Manajemen Nyeri')
+
     # ── Rujukan & Konsultasi ──
     sisrute_rs_tujuan = models.CharField('RS Tujuan Rujukan (SISRUTE)', max_length=200, blank=True)
     sisrute_alasan    = models.TextField('Alasan Rujukan Eksternal', blank=True)
@@ -225,6 +246,86 @@ class KunjunganPasien(models.Model):
     @property
     def is_aktif(self):
         return self.status not in ('PULANG', 'RUJUK', 'MENINGGAL')
+
+    @property
+    def is_asesmen_awal_lengkap(self):
+        """Compliance check: anamnesis, ABCDE airway, diagnosis medis, AND diagnosis keperawatan 3S."""
+        return bool(
+            self.anamnesis_rps.strip()
+            and self.fisik_airway.strip()
+            and self.diagnosa_masuk.strip()
+            and self.diagnosa_keperawatan_sdki.strip()
+        )
+
+    @property
+    def news_score(self):
+        return self.hitung_news_score()[0]
+
+    @property
+    def news_category(self):
+        return self.hitung_news_score()[1]
+
+    def hitung_news_score(self):
+        """
+        National Early Warning Score (NEWS-2) from 5 TTV parameters.
+        Returns: (int score, str category) — ('NORMAL'|'RENDAH'|'SEDANG'|'TINGGI').
+        Gracefully handles None/missing values by treating them as 0 score.
+        """
+        score = 0
+        # Respiratory Rate (RR)
+        rr = self.ttv_rr
+        if rr is not None:
+            if rr <= 8 or rr >= 25:
+                score += 3
+            elif 21 <= rr <= 24:
+                score += 2
+            elif 9 <= rr <= 11:
+                score += 1
+        # SpO2 (saturation)
+        spo2 = self.ttv_spo2
+        if spo2 is not None:
+            if spo2 <= 91:
+                score += 3
+            elif 92 <= spo2 <= 93:
+                score += 2
+            elif 94 <= spo2 <= 95:
+                score += 1
+        # Systolic BP
+        bp = self.ttv_sistole
+        if bp is not None:
+            if bp <= 90 or bp >= 220:
+                score += 3
+            elif 91 <= bp <= 100:
+                score += 2
+            elif 101 <= bp <= 110:
+                score += 1
+        # Heart Rate (Pulse)
+        hr = self.ttv_nadi
+        if hr is not None:
+            if hr <= 40 or hr >= 131:
+                score += 3
+            elif 111 <= hr <= 130:
+                score += 2
+            elif (41 <= hr <= 50) or (91 <= hr <= 110):
+                score += 1
+        # Temperature
+        temp = self.ttv_suhu
+        if temp is not None:
+            if temp <= 35.0:
+                score += 3
+            elif temp >= 39.1:
+                score += 2
+            elif (35.1 <= temp <= 36.0) or (38.1 <= temp <= 39.0):
+                score += 1
+        if score == 0:
+            category = 'NORMAL'
+        elif score <= 4:
+            category = 'RENDAH'
+        elif score <= 6:
+            category = 'SEDANG'
+        else:
+            category = 'TINGGI'
+        return score, category
 
     def admit_to_ranap(self, bed, dpjp=None, catatan=''):
         """Transfer / admit patient to Inpatient (RANAP) and lock the bed."""
