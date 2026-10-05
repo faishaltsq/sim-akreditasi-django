@@ -131,6 +131,7 @@ class KunjunganPasien(models.Model):
         ('PULANG',    'Pulang'),
         ('RUJUK',     'Dirujuk Keluar'),
         ('MENINGGAL', 'Meninggal'),
+        ('BATAL',     'Dibatalkan'),
     ]
     TRIAGE_CHOICES = [
         ('MERAH',  'Merah — Prioritas I (Kritis)'),

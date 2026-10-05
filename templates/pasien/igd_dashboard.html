@@ -87,7 +87,7 @@
                     <i class="bi bi-x-circle-fill fs-5"></i>
                 </div>
                 <div class="triage-val">{{ count_hitam }}</div>
-                <small class="opacity-75" style="font-size: .72rem;">Meninggal / DoA</small>
+                <small class="opacity-75" style="font-size: .72rem;">Cedera Kritis Fatal / Harapan Hidup Minimal / DoA</small>
             </a>
         </div>
     </div>
@@ -129,19 +129,23 @@
                 <a href="?triage=HIJAU" class="btn {% if triage_filter == 'HIJAU' %}btn-success{% else %}btn-outline-success{% endif %}">
                     Hijau ({{ count_hijau }})
                 </a>
+                <a href="?triage=HITAM" class="btn {% if triage_filter == 'HITAM' %}btn-dark{% else %}btn-outline-dark{% endif %}">
+                    <i class="bi bi-x-circle me-1"></i>Hitam ({{ count_hitam }})
+                </a>
             </div>
         </div>
         <div class="card-body p-0">
             {% if pasien_igd_list %}
             <div class="table-responsive">
-                <table class="table table-hover align-middle mb-0" style="font-size: .85rem;">
+                <table class="table table-hover align-middle mb-0" style="font-size: .85rem; min-width: 1200px;">
                     <thead class="table-light text-muted small">
                         <tr>
                             <th class="ps-3">Triage</th>
                             <th>No. Kunjungan / RM</th>
                             <th>Nama Pasien</th>
                             <th>Keluhan Awal</th>
-                            <th>TTV / ICD-9</th>
+                            <th style="min-width: 185px;">TTV (Tanda Vital)</th>
+                            <th style="min-width: 140px;">Diagnosa / Tindakan</th>
                             <th>DPJP Jaga</th>
                             <th>Dwell Time</th>
                             <th class="text-center" style="min-width: 360px;">Keputusan Disposisi Klinis</th>
@@ -150,7 +154,8 @@
                     </thead>
                     <tbody>
                         {% for k in pasien_igd_list %}
-                        <tr>
+                        {% with has_critical=k.order_penunjang.all|dictsort:"is_critical_value" %}
+                        <tr {% if k.order_penunjang.all %}{% for o in k.order_penunjang.all %}{% if o.is_critical_value %}class="table-danger border-danger border-start border-3"{% endif %}{% endfor %}{% endif %}>
                             <td class="ps-3">
                                 {% if k.triage == 'MERAH' %}
                                 <span class="badge bg-danger px-2 py-1"><i class="bi bi-exclamation-octagon-fill me-1"></i>MERAH (P1)</span>
@@ -161,6 +166,9 @@
                                 {% else %}
                                 <span class="badge bg-dark px-2 py-1">HITAM (P4)</span>
                                 {% endif %}
+                                {% for o in k.order_penunjang.all %}{% if o.is_critical_value %}
+                                <div class="mt-1"><span class="badge bg-danger" style="animation: pulse 1s infinite;"><i class="bi bi-exclamation-triangle-fill me-1"></i>CRITICAL</span></div>
+                                {% endif %}{% endfor %}
                             </td>
                             <td>
                                 <div class="font-monospace fw-semibold">{{ k.no_kunjungan }}</div>
@@ -176,11 +184,15 @@
                                 <span class="text-dark">{{ k.catatan_admisi|default:k.diagnosa_masuk|default:"Observasi IGD" }}</span>
                             </td>
                             <td>
-                                {% if k.ttv_sistole or k.ttv_suhu or k.ttv_spo2 %}
-                                <div style="font-size:.78rem; line-height:1.2;">
-                                    {% if k.ttv_sistole %}<strong>TD:</strong> {{ k.ttv_sistole }}/{{ k.ttv_diastole|default:"-" }} mmHg<br>{% endif %}
-                                    {% if k.ttv_suhu %}<strong>Suhu:</strong> {{ k.ttv_suhu }}&deg;C {% endif %}
-                                    {% if k.ttv_spo2 %}<strong>SpO2:</strong> {{ k.ttv_spo2 }}%{% endif %}
+                                {% if k.ttv_sistole or k.ttv_nadi or k.ttv_suhu or k.ttv_spo2 or k.ttv_rr or k.ttv_gcs or k.ttv_skala_nyeri %}
+                                <div style="font-size:.75rem; line-height:1.5;">
+                                    {% if k.ttv_sistole %}<span title="Tekanan Darah"><i class="bi bi-heart-pulse text-danger me-1"></i>{{ k.ttv_sistole }}/{{ k.ttv_diastole|default:"-" }} mmHg</span><br>{% endif %}
+                                    {% if k.ttv_nadi %}<span title="Nadi (Heart Rate)"><i class="bi bi-activity me-1 {% if k.ttv_nadi > 100 or k.ttv_nadi < 60 %}text-danger{% else %}text-success{% endif %}"></i>{{ k.ttv_nadi }} bpm</span><br>{% endif %}
+                                    {% if k.ttv_rr %}<span title="Laju Napas"><i class="bi bi-lungs me-1 {% if k.ttv_rr > 20 or k.ttv_rr < 12 %}text-warning{% else %}text-muted{% endif %}"></i>{{ k.ttv_rr }} x/m</span><br>{% endif %}
+                                    {% if k.ttv_suhu %}<span title="Suhu Badan"><i class="bi bi-thermometer-half me-1 {% if k.ttv_suhu > 37.5 %}text-danger{% else %}text-muted{% endif %}"></i>{{ k.ttv_suhu }}°C</span><br>{% endif %}
+                                    {% if k.ttv_spo2 %}<span title="Saturasi Oksigen" class="{% if k.ttv_spo2 < 95 %}text-danger fw-bold{% endif %}">SpO₂: {{ k.ttv_spo2 }}%</span><br>{% endif %}
+                                    {% if k.ttv_gcs %}<small class="text-muted">GCS: {{ k.ttv_gcs }}</small><br>{% endif %}
+                                    {% if k.ttv_skala_nyeri is not None %}<small class="{% if k.ttv_skala_nyeri >= 7 %}text-danger{% elif k.ttv_skala_nyeri >= 4 %}text-warning{% else %}text-muted{% endif %}">Nyeri: {{ k.ttv_skala_nyeri }}/10</small>{% endif %}
                                 </div>
                                 {% else %}
                                 <span class="text-muted small"><em>Belum input</em></span>
@@ -188,6 +200,16 @@
                                 <button class="btn btn-link btn-sm p-0 text-primary small d-block mt-1" data-bs-toggle="modal" data-bs-target="#modalTTV{{ k.pk }}">
                                     <i class="bi bi-pencil-square"></i> Input TTV
                                 </button>
+                            </td>
+                            <td style="font-size:.78rem;">
+                                {% if k.diagnosa_masuk %}
+                                <span class="text-dark d-block">{{ k.diagnosa_masuk|truncatechars:40 }}</span>
+                                {% else %}
+                                <span class="text-muted"><em>—</em></span>
+                                {% endif %}
+                                {% if k.icd9_tindakan %}
+                                <span class="badge bg-secondary mt-1" title="Kode Tindakan ICD-9-CM">{{ k.icd9_tindakan|truncatechars:25 }}</span>
+                                {% endif %}
                             </td>
                             <td><small class="text-muted">{{ k.dpjp|default:"dr. Jaga IGD" }}</small></td>
                             <td>
@@ -301,6 +323,10 @@
                                                     <label class="form-label small fw-semibold">Skala Nyeri (0-10)</label>
                                                     <input type="number" name="ttv_skala_nyeri" class="form-control form-control-sm" min="0" max="10" value="{{ k.ttv_skala_nyeri|default:'' }}" placeholder="0">
                                                 </div>
+                                            </div>
+                                            <div class="mb-2">
+                                                <label class="form-label small fw-semibold">Diagnosa Awal (ICD-10)</label>
+                                                <input type="text" name="diagnosa_masuk" class="form-control form-control-sm" value="{{ k.diagnosa_masuk|default:'' }}" placeholder="Contoh: I10 - Hipertensi, J18.9 - Pneumonia...">
                                             </div>
                                             <div class="mb-2">
                                                 <label class="form-label small fw-semibold">Tindakan Cito / ICD-9-CM</label>
@@ -677,6 +703,8 @@
                             </div>
                         </div>
 
+                        <!-- End Modals for k -->
+                        {% endwith %}
                         {% endfor %}
                     </tbody>
                 </table>

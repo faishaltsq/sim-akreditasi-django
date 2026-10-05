@@ -666,12 +666,16 @@ def pendaftaran_dashboard(request):
         'ke_igd':              qs_today.filter(jenis_kunjungan='IGD').count(),
         'ke_rajal':            qs_today.filter(jenis_kunjungan='RAJAL').count(),
         'ke_ranap':            qs_today.filter(jenis_kunjungan='RANAP').count(),
+        'ke_batal':            qs_today.filter(status='BATAL').count(),
         'poliklinik_choices':  POLIKLINIK_CHOICES,
         'triage_choices':      KunjunganPasien.TRIAGE_CHOICES,
         'penjamin_choices':    KunjunganPasien.TIPE_PENJAMIN,
         'pasien_recent':       Pasien.objects.order_by('-created_at')[:10],
         'pasien_list':         Pasien.objects.order_by('nama_lengkap'),
         'bed_matrix':          bed_matrix,
+        # Reporting metrics
+        'total_pasien_baru_hari_ini': Pasien.objects.filter(created_at__date=today).count(),
+        'total_pasien_lama_hari_ini': qs_today.exclude(pasien__created_at__date=today).values('pasien').distinct().count(),
     }
     return render(request, 'pasien/pendaftaran_dashboard.html', ctx)
 
@@ -758,7 +762,7 @@ def igd_dashboard(request):
     qs = KunjunganPasien.objects.filter(
         jenis_kunjungan='IGD',
         status__in=['TRIAGE', 'ASESMEN', 'DAFTAR']
-    ).select_related('pasien', 'bed')
+    ).select_related('pasien', 'bed').prefetch_related('order_penunjang')
 
     if triage_filter:
         qs = qs.filter(triage=triage_filter)
@@ -826,6 +830,8 @@ def igd_ttv_update(request, pk):
             k.ttv_gcs = request.POST.get('ttv_gcs', '').strip()
             k.ttv_skala_nyeri = int(request.POST['ttv_skala_nyeri']) if request.POST.get('ttv_skala_nyeri') else None
             k.icd9_tindakan = request.POST.get('icd9_tindakan', '').strip()
+            if request.POST.get('diagnosa_masuk'):
+                k.diagnosa_masuk = request.POST.get('diagnosa_masuk').strip()
             k.status = 'ASESMEN'
             k.save()
             messages.success(request, f'TTV Pasien {k.pasien.nama_lengkap} berhasil diperbarui.')
@@ -1338,3 +1344,114 @@ def order_penunjang_update(request, pk):
 
 
 
+
+
+# ── FAST-TRACK IGD & REGISTRATION UTILITIES ───────────────────────────────────
+
+@login_required
+@require_patient_module('pendaftaran')
+def fast_track_igd(request):
+    """Rapid emergency admission — minimal input for critical patients."""
+    if request.method != 'POST':
+        return redirect('pasien:pendaftaran_dashboard')
+
+    nama = request.POST.get('nama_pasien', '').strip() or 'Mr./Mrs. X'
+    jk = request.POST.get('jenis_kelamin', 'L')
+    usia = int(request.POST.get('estimasi_usia', 30) or 30)
+    triage_val = request.POST.get('triage', 'MERAH')
+    keluhan = request.POST.get('keluhan', '').strip() or 'Observasi IGD'
+
+    import uuid
+    from datetime import date
+    now = timezone.now()
+    rm_suffix = now.strftime('%y%m%d') + str(uuid.uuid4().int)[:4]
+    no_rm = f'RM-IGD-{rm_suffix}'
+    no_kunj = f'IGD-{now.strftime("%Y%m%d%H%M%S")}-{str(uuid.uuid4().int)[:3]}'
+
+    try:
+        tgl_lahir = date(now.year - usia, now.month, now.day)
+    except ValueError:
+        tgl_lahir = date(now.year - usia, now.month, 28)
+
+    pasien = Pasien.objects.create(
+        no_rm=no_rm,
+        nama_lengkap=nama,
+        jenis_kelamin=jk,
+        tanggal_lahir=tgl_lahir,
+    )
+
+    KunjunganPasien.objects.create(
+        pasien=pasien,
+        no_kunjungan=no_kunj,
+        jenis_kunjungan='IGD',
+        status='TRIAGE',
+        triage=triage_val,
+        tanggal_masuk=now,
+        catatan_admisi=keluhan,
+    )
+    messages.success(request, f'✅ Pasien {nama} terdaftar fast-track IGD. RM: {no_rm}')
+    return redirect('pasien:igd_dashboard')
+
+
+@login_required
+def api_cek_bpjs(request):
+    """Mock BPJS V-Claim eligibility check (simulated response)."""
+    no_kartu = request.GET.get('no_kartu', '').strip()
+    nik = request.GET.get('nik', '').strip()
+
+    if not no_kartu and not nik:
+        return JsonResponse({'status': False, 'message': 'Masukkan No Kartu BPJS atau NIK.'}, status=400)
+
+    # Check if patient exists locally
+    p = None
+    if nik:
+        p = Pasien.objects.filter(nik=nik).first()
+    if no_kartu and not p:
+        p = Pasien.objects.filter(no_bpjs=no_kartu).first()
+
+    # Simulated response matching V-Claim format
+    return JsonResponse({
+        'status': True,
+        'message': 'Data peserta ditemukan (SIMULASI)',
+        'peserta': {
+            'no_kartu': no_kartu or (p.no_bpjs if p else '0001234567890'),
+            'nik': nik or (p.nik if p else ''),
+            'nama': p.nama_lengkap if p else 'Data Simulasi',
+            'status_peserta': 'AKTIF',
+            'hak_kelas': '3',
+            'jenis_peserta': 'PBI',
+            'faskes_perujuk': 'Puskesmas Kecamatan',
+            'faskes_rujukan': 'RS MonsisKami',
+            'catatan': 'Ini adalah data simulasi. Integrasi V-Claim BPJS belum terhubung.',
+        }
+    })
+
+
+@login_required
+@require_patient_module('pendaftaran')
+def kunjungan_batal(request, pk):
+    """Cancel a visit — free booked beds and queue numbers."""
+    k = get_object_or_404(KunjunganPasien, pk=pk)
+    if request.method == 'POST':
+        alasan = request.POST.get('alasan_batal', 'Tanpa keterangan').strip()
+        k.status = 'BATAL'
+        k.catatan_admisi = f'[BATAL] {alasan}'
+        k.nomor_antrean = ''
+        k.save()
+
+        # Free any booked beds
+        BookingKamar.objects.filter(pasien=k.pasien, status='BOOKED').update(status='BATAL')
+
+        messages.warning(request, f'Kunjungan {k.no_kunjungan} ({k.pasien.nama_lengkap}) telah DIBATALKAN.')
+    return redirect('pasien:pendaftaran_dashboard')
+
+
+@login_required
+def cetak_tracer(request, pk):
+    """Print medical record tracer slip for archive tracking."""
+    k = get_object_or_404(KunjunganPasien.objects.select_related('pasien'), pk=pk)
+    return render(request, 'pasien/cetak_tracer.html', {
+        'kunjungan': k,
+        'pasien': k.pasien,
+        'printed_at': timezone.now(),
+    })

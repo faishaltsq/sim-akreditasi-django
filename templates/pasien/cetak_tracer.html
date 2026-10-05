@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tracer Rekam Medis — {{ pasien.no_rm }}</title>
+    <style>
+        @page { size: A5 landscape; margin: 8mm; }
+        @media print {
+            body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            .no-print { display: none !important; }
+            .page { box-shadow: none; }
+        }
+        body { font-family: 'Arial', sans-serif; background: #f0f0f0; margin: 0; padding: 10px; }
+        .page {
+            background: #fff;
+            max-width: 200mm;
+            min-height: 120mm;
+            margin: 0 auto;
+            padding: 8mm;
+            box-shadow: 0 2px 8px rgba(0,0,0,.15);
+            border: 2px solid #000;
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            border-bottom: 2px solid #000;
+            padding-bottom: 4mm;
+            margin-bottom: 4mm;
+        }
+        .rs-name { font-size: 13pt; font-weight: bold; }
+        .rs-addr { font-size: 7.5pt; color: #444; }
+        .doc-title {
+            font-size: 14pt;
+            font-weight: 900;
+            text-align: center;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            border: 3px solid #000;
+            padding: 3px 10px;
+            display: inline-block;
+        }
+        .badge-rm {
+            font-size: 18pt;
+            font-weight: 900;
+            font-family: 'Courier New', monospace;
+            color: #000;
+            border: 2px solid #000;
+            padding: 3px 10px;
+            display: inline-block;
+            background: #f5f5f5;
+        }
+        table.info { width: 100%; border-collapse: collapse; margin-top: 4mm; }
+        table.info td { padding: 2.5mm 3mm; font-size: 9pt; vertical-align: top; border: 1px solid #999; }
+        table.info td.label { font-weight: bold; width: 28mm; background: #f5f5f5; }
+        .dest-box {
+            margin-top: 4mm;
+            border: 2.5px solid #000;
+            padding: 3mm;
+            background: #fffbe6;
+        }
+        .dest-label { font-size: 8pt; font-weight: bold; text-transform: uppercase; color: #555; }
+        .dest-value { font-size: 14pt; font-weight: 900; color: #000; margin-top: 1mm; }
+        .footer-row {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 5mm;
+            font-size: 8pt;
+            color: #666;
+        }
+        .sign-box {
+            border: 1px solid #aaa;
+            width: 45mm;
+            min-height: 12mm;
+            padding: 2mm;
+            font-size: 8pt;
+        }
+        .antrean-badge {
+            font-size: 20pt;
+            font-weight: 900;
+            font-family: 'Courier New', monospace;
+            color: #1a56db;
+            border: 2px dashed #1a56db;
+            padding: 2px 10px;
+            display: inline-block;
+        }
+        .btn-print {
+            display: block;
+            margin: 10px auto;
+            padding: 8px 24px;
+            background: #1a56db;
+            color: #fff;
+            border: none;
+            border-radius: 5px;
+            font-size: 13px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <button class="btn-print no-print" onclick="window.print()">🖨️ Cetak Tracer</button>
+
+    <div class="page">
+        <div class="header">
+            <div>
+                <div class="rs-name">RS MonsisKami</div>
+                <div class="rs-addr">Jl. Kesehatan No. 1, Indonesia<br>TRACER REKAM MEDIS</div>
+            </div>
+            <div style="text-align:right;">
+                <div class="doc-title">TRACER REKAM MEDIS</div>
+                <div style="margin-top:4px;">
+                    <div class="badge-rm">{{ pasien.no_rm }}</div>
+                </div>
+            </div>
+        </div>
+
+        <table class="info">
+            <tr>
+                <td class="label">Nama Lengkap</td>
+                <td style="font-size:11pt; font-weight:bold;">{{ pasien.nama_lengkap }}</td>
+                <td class="label">No. Kunjungan</td>
+                <td style="font-family:monospace;">{{ kunjungan.no_kunjungan }}</td>
+            </tr>
+            <tr>
+                <td class="label">NIK</td>
+                <td>{{ pasien.nik|default:"—" }}</td>
+                <td class="label">Jenis Kunjungan</td>
+                <td>{{ kunjungan.get_jenis_kunjungan_display }}</td>
+            </tr>
+            <tr>
+                <td class="label">Tgl Lahir / Usia</td>
+                <td>{{ pasien.tanggal_lahir|date:"d M Y" }} ({{ pasien.usia }} th)</td>
+                <td class="label">Tanggal Masuk</td>
+                <td>{{ kunjungan.tanggal_masuk|date:"d M Y H:i" }}</td>
+            </tr>
+            <tr>
+                <td class="label">Penjamin</td>
+                <td>{{ kunjungan.get_tipe_penjamin_display|default:"—" }}</td>
+                <td class="label">DPJP</td>
+                <td>{{ kunjungan.dpjp|default:"—" }}</td>
+            </tr>
+        </table>
+
+        <div class="dest-box">
+            <div class="dest-label">Tujuan Unit / Poliklinik</div>
+            <div class="dest-value">
+                {% if kunjungan.jenis_kunjungan == 'IGD' %}
+                    🚨 Instalasi Gawat Darurat (IGD)
+                {% elif kunjungan.jenis_kunjungan == 'RANAP' %}
+                    🏥 Rawat Inap — {{ kunjungan.catatan_admisi|default:"" }}
+                {% elif kunjungan.poliklinik %}
+                    🏪 {{ kunjungan.get_poliklinik_display|default:kunjungan.poliklinik }}
+                {% else %}
+                    Poliklinik / Unit Tujuan
+                {% endif %}
+            </div>
+            {% if kunjungan.nomor_antrean %}
+            <div style="margin-top:2mm;">
+                No. Antrean: <span class="antrean-badge">{{ kunjungan.nomor_antrean }}</span>
+            </div>
+            {% endif %}
+        </div>
+
+        <div class="footer-row">
+            <div>
+                <div class="sign-box">
+                    Petugas Pendaftaran<br><br><br>
+                    ________________________
+                </div>
+            </div>
+            <div style="text-align:right; font-size:8pt; color:#999; margin-top:auto;">
+                Dicetak: {{ printed_at|date:"d/m/Y H:i" }}<br>
+                ARIMA — RS MonsisKami<br>
+                <small>Harap kembalikan ke Rekam Medis setelah selesai</small>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
