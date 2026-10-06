@@ -173,10 +173,12 @@
 </table>
 
 <!-- VIII. DIAGNOSIS KERJA -->
-<div class="section-title">VIII. DIAGNOSIS KERJA / DIAGNOSIS DIFERENSIAL</div>
+<div class="section-title">VIII. DIAGNOSIS KERJA & STANDAR 3S KEPERAWATAN</div>
 <table class="table table-bordered table-form mb-1">
-  <tr><th>Diagnosis Utama</th><td>{{ kunjungan.diagnosa_masuk|default:"—" }}</td></tr>
+  <tr><th>Diagnosis Medis (ICD-10)</th><td>{{ kunjungan.diagnosa_masuk|default:"—" }}</td></tr>
   <tr><th>Diagnosis Sekunder</th><td>{{ kunjungan.diagnosa_keluar|default:"—" }}</td></tr>
+  <tr><th>Diagnosis Keperawatan (SDKI)</th><td>{{ kunjungan.diagnosa_keperawatan_sdki|default:"—" }}</td></tr>
+  <tr><th>Tindakan / Prosedur (ICD-9-CM)</th><td>{{ kunjungan.icd9_tindakan|default:"—" }}</td></tr>
 </table>
 
 <!-- IX. TATALAKSANA -->
