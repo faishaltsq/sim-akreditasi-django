@@ -128,38 +128,43 @@
     <!-- HERO BANNER GLOBAL: ARIMA — RS MonsisKami (SEMUA USER)                    -->
     <!-- ========================================================================= -->
     {% if not unit_dashboard %}
-    <div class="card border-0 shadow-sm mb-4 overflow-hidden" style="border-radius: var(--radius-xl); background: linear-gradient(135deg, #092328 0%, #12544F 55%, #2A835F 100%);">
-        <div class="card-body p-4 p-md-4 text-white">
+    <div class="card border-0 mb-4 overflow-hidden" style="border-radius: var(--radius-xl); background: linear-gradient(135deg, #060D0F 0%, #0B1E22 45%, #0D3D30 85%, #0A2E22 100%); border: 1px solid #1A3040; box-shadow: 0 8px 32px rgba(0,0,0,0.35);">
+        <!-- Decorative grid overlay -->
+        <div style="position:absolute; inset:0; background-image: linear-gradient(rgba(16,185,129,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(16,185,129,0.03) 1px, transparent 1px); background-size: 32px 32px; pointer-events:none;"></div>
+        <div class="card-body p-4 p-md-4 text-white position-relative">
             <div class="d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-3">
                 <div class="d-flex align-items-center gap-3">
-                    <div class="d-none d-sm-flex align-items-center justify-content-center rounded-3 flex-shrink-0" style="width: 58px; height: 58px; background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.2);">
-                        <i class="bi bi-hospital text-white fs-2"></i>
+                    <div class="d-none d-sm-flex align-items-center justify-content-center rounded-3 flex-shrink-0" style="width: 54px; height: 54px; background: rgba(16,185,129,0.12); border: 1px solid rgba(16,185,129,0.3); box-shadow: 0 0 24px rgba(16,185,129,0.15);">
+                        <i class="bi bi-hospital text-white" style="font-size:1.5rem;"></i>
                     </div>
                     <div>
                         <div class="d-flex flex-wrap align-items-center gap-2 mb-1">
-                            <span class="badge bg-white/20 text-white border border-white/30 px-2 py-0.5" style="font-size:0.68rem; font-weight:600;">
-                                <i class="bi bi-patch-check-fill me-1 text-warning"></i>STARKES {{ rs_profile.akreditasi_tahun|default:"2026" }}
+                            <span style="font-family:'JetBrains Mono',monospace; font-size:0.62rem; font-weight:600; background:rgba(16,185,129,0.15); border:1px solid rgba(16,185,129,0.3); color:#34D399; padding:2px 8px; border-radius:4px; letter-spacing:0.05em;">
+                                <span class="sidebar-status-dot me-1" style="vertical-align:middle; display:inline-block;"></span>SYSTEM: NOMINAL
                             </span>
-                            <span class="badge bg-white/10 text-white-50 px-2 py-0.5" style="font-size:0.68rem;">
-                                RS Tipe B &bull; Paripurna Target
+                            <span style="font-family:'JetBrains Mono',monospace; font-size:0.62rem; color:rgba(255,255,255,0.35); border:1px solid rgba(255,255,255,0.1); padding:2px 8px; border-radius:4px;">
+                                STARKES {{ rs_profile.akreditasi_tahun|default:"2026" }} &bull; KMK 1128
+                            </span>
+                            <span style="font-family:'JetBrains Mono',monospace; font-size:0.62rem; color:rgba(255,255,255,0.3); padding:2px 8px;">
+                                TARGET: PARIPURNA
                             </span>
                         </div>
-                        <h2 class="fw-bold text-white mb-1" style="font-size: 1.65rem; letter-spacing: -0.02em; line-height: 1.2;">
+                        <h2 class="fw-bold text-white mb-1" style="font-size: 1.55rem; letter-spacing: -0.02em; line-height: 1.2;">
                             {{ rs_profile.nama_rs|default:"RS MonsisKami" }}
                         </h2>
-                        <p class="text-white-50 mb-0" style="font-size: 0.8rem; max-width: 620px;">
-                            ARIMA — Sistem Manajemen Risiko Klinis, Tata Kelola Mutu &amp; Kesiapan Dokumen Akreditasi 16 Pokja
+                        <p class="mb-0" style="font-size: 0.78rem; max-width: 600px; color: rgba(255,255,255,0.45); font-family:'JetBrains Mono',monospace; letter-spacing:0.01em;">
+                            ARIMA // Manajemen Risiko Klinis &amp; Tata Kelola Dokumen Akreditasi 16 Pokja
                         </p>
                     </div>
                 </div>
                 <div class="d-flex flex-wrap align-items-center gap-2">
-                    <a href="{% url 'akreditasi:matriks_pdca' %}" class="btn btn-light btn-sm fw-bold px-3 shadow-sm text-teal" style="color: #12544F !important;">
+                    <a href="{% url 'akreditasi:matriks_pdca' %}" class="btn btn-sm fw-bold px-3" style="background:rgba(16,185,129,0.15); border:1px solid rgba(16,185,129,0.35); color:#34D399; font-family:'JetBrains Mono',monospace; font-size:0.72rem;">
                         <i class="bi bi-table me-1"></i>Matriks PDCA
                     </a>
-                    <a href="{% url 'akreditasi:risiko_input' %}" class="btn btn-outline-light btn-sm fw-semibold px-3">
+                    <a href="{% url 'akreditasi:risiko_input' %}" class="btn btn-outline-light btn-sm fw-semibold px-3" style="border-color:rgba(255,255,255,0.15); color:rgba(255,255,255,0.7); font-size:0.72rem;">
                         <i class="bi bi-shield-plus me-1"></i>Input Risiko
                     </a>
-                    <a href="{% url 'akreditasi:insiden_lapor' %}" class="btn btn-outline-light btn-sm fw-semibold px-3">
+                    <a href="{% url 'akreditasi:insiden_lapor' %}" class="btn btn-outline-light btn-sm fw-semibold px-3" style="border-color:rgba(255,255,255,0.15); color:rgba(255,255,255,0.7); font-size:0.72rem;">
                         <i class="bi bi-exclamation-triangle me-1"></i>Lapor Insiden
                     </a>
                 </div>

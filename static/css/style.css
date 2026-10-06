@@ -504,35 +504,197 @@ code, .font-mono, .mono { font-family: 'JetBrains Mono', ui-monospace, SFMono-Re
 }
 
 /* ============================================================
-   INSTITUTIONAL COMMAND CENTER — PALETTE OVERRIDES
+   INSTITUTIONAL COMMAND CENTER — DARK SIDEBAR CLINICAL THEME
    ============================================================ */
+
+/* --- Root palette --- */
 :root {
-    --sidebar-bg: #ffffff; --sidebar-border: #d9e7dc;
-    --body-bg: #f5f8f5; --surface: #ffffff; --border: #d9e7dc;
-    --border-light: #e9f1ea; --text-primary: #092328;
-    --text-secondary: #496267; --text-muted: #789094;
-    --success: #2A835F; --success-light: #e6f3e9; --success-deep: #12544F;
-    --radius: 0.65rem; --radius-lg: 0.85rem; --radius-xl: 1.1rem;
+    --sidebar-bg: #0B1215;
+    --sidebar-border: #1A2E33;
+    --body-bg: #F0F4F8;
+    --surface: #FFFFFF;
+    --border: #DCE4EA;
+    --border-light: #EDF1F5;
+    --text-primary: #092328;
+    --text-secondary: #496267;
+    --text-muted: #789094;
+    --success: #10B981;
+    --success-light: #d1fae5;
+    --success-deep: #059669;
+    --radius: 0.65rem;
+    --radius-lg: 0.85rem;
+    --radius-xl: 1.1rem;
     --shadow-xs: 0 1px 2px rgb(9 35 40 / 0.04);
     --shadow-sm: 0 2px 8px rgb(9 35 40 / 0.06);
     --shadow: 0 8px 20px rgb(9 35 40 / 0.07);
     --shadow-md: 0 12px 28px rgb(9 35 40 / 0.1);
 }
-.sidebar-desktop { box-shadow: 4px 0 22px rgb(9 35 40 / 0.04); }
-.sidebar-brand { padding: 1.25rem 1.35rem; }
-.sidebar-nav .nav-link { margin: 0.16rem 0.85rem; }
-.sidebar-nav .nav-link.active { background: #12544F; box-shadow: 0 6px 14px rgb(18 84 79 / 0.22); }
-.top-bar { background: rgb(255 255 255 / 0.92); padding: 1rem 2rem; }
+
+/* --- Dark sidebar --- */
+.sidebar-desktop {
+    background: #0B1215;
+    border-right: 1px solid #1A2E33;
+    box-shadow: none;
+    scrollbar-color: #1A2E33 transparent;
+}
+.sidebar-desktop::-webkit-scrollbar { width: 6px; }
+.sidebar-desktop::-webkit-scrollbar-track { background: transparent; }
+.sidebar-desktop::-webkit-scrollbar-thumb { background: #1A2E33; border-radius: 3px; }
+
+/* --- Sidebar brand --- */
+.sidebar-brand {
+    padding: 1.25rem 1.35rem;
+    border-bottom-color: #1A2E33;
+}
+.sidebar-brand-icon {
+    box-shadow: 0 0 12px rgba(16, 185, 129, 0.25);
+}
+.sidebar-brand-text h6 { color: #E2E8F0; }
+.sidebar-brand-text small { color: #5B8A8A; }
+
+/* --- Sidebar section headers --- */
+.sidebar-nav .nav-section,
+.sidebar-section-title {
+    color: #4A6D6D;
+    font-family: 'JetBrains Mono', monospace;
+    text-transform: uppercase;
+    font-size: 0.68rem;
+    letter-spacing: 0.08em;
+}
+
+/* --- Sidebar nav links --- */
+.sidebar-nav .nav-link {
+    margin: 0.16rem 0.85rem;
+    color: #8BA4AB;
+    border-left: 3px solid transparent;
+    transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+.sidebar-nav .nav-link:hover {
+    background: #121F23;
+    color: #CBD5E1;
+}
+.sidebar-nav .nav-link.active {
+    background: #0D3D30;
+    border-left: 3px solid #10B981;
+    color: #E2E8F0;
+    box-shadow: none;
+}
+.sidebar-nav .nav-link i,
+.sidebar-nav .nav-link .nav-icon { color: inherit; }
+
+/* --- Active pokja on dark sidebar --- */
+.nav-pokja.active {
+    background: #0D3D30;
+    color: #E2E8F0;
+    border-left: 3px solid #10B981;
+}
+.nav-pokja.active .nav-pokja-pct { color: #34D399; }
+.nav-pokja.active .progress { background: rgba(255, 255, 255, 0.12); }
+
+/* --- Sidebar footer --- */
+.sidebar-footer {
+    background: #0A0F11;
+    border-top-color: #1A2E33;
+}
+
+/* --- Mobile offcanvas sidebar --- */
+.offcanvas-sidebar,
+.offcanvas.sidebar-mobile {
+    background: #0B1215 !important;
+}
+
+/* --- Inline style overrides for dark sidebar --- */
+.sidebar-desktop a[style*="background:#f8fafc"],
+.sidebar-desktop div[style*="background:#f8fafc"],
+.offcanvas-sidebar a[style*="background:#f8fafc"],
+.offcanvas-sidebar div[style*="background:#f8fafc"] {
+    background: #0e171b !important;
+}
+.sidebar-desktop .badge.bg-white,
+.sidebar-desktop .badge.bg-light,
+.offcanvas-sidebar .badge.bg-white,
+.offcanvas-sidebar .badge.bg-light {
+    background: #162429 !important;
+    color: #8BA4AB !important;
+    border-color: #1F333A !important;
+}
+.sidebar-desktop a[style*="color:#334155"],
+.offcanvas-sidebar a[style*="color:#334155"] {
+    color: #8BA4AB !important;
+}
+.sidebar-desktop #sidebarPokjaSearch,
+.offcanvas-sidebar #sidebarPokjaSearch {
+    background: #0E171B !important;
+    border-color: #1A2E33 !important;
+    color: #E2E8F0 !important;
+}
+.sidebar-desktop .input-group-text,
+.offcanvas-sidebar .input-group-text {
+    background: #0E171B !important;
+    border-color: #1A2E33 !important;
+    color: #5B8A8A !important;
+}
+.sidebar-desktop #sidebarPokjaSearch::placeholder,
+.offcanvas-sidebar #sidebarPokjaSearch::placeholder {
+    color: #4A6D6D !important;
+}
+
+/* --- Top bar --- */
+.top-bar {
+    background: rgba(248, 250, 252, 0.97);
+    border-bottom: 1px solid #E2E8F0;
+    padding: 1.1rem 2rem;
+}
+
+/* --- Content area --- */
 .content-area { padding: 1.85rem 2.1rem; }
-.metric-card, .kpi-card, .table-card, .page-header-box { box-shadow: var(--shadow-sm); }
-.metric-card:hover, .kpi-card:hover { border-color: #8BBB92; }
-.table th { background: #edf5ee; color: #12544F; }
+
+/* --- Cards & metrics --- */
+.metric-card, .kpi-card, .table-card, .page-header-box {
+    box-shadow: var(--shadow-sm);
+    border-color: #DCE4EA;
+}
+.metric-card:hover, .kpi-card:hover {
+    border-color: #10B981;
+    transform: translateY(-1px);
+}
+
+/* --- Tables --- */
+.table th { background: #F1F5F9; color: #334155; }
 .table-hover tbody tr:hover td { background: #f4faf5; }
-.form-control:focus, .form-select:focus { border-color: #2A835F; box-shadow: 0 0 0 0.2rem rgb(42 131 95 / 0.16); }
-.btn-primary { background-color: #2A835F; border-color: #2A835F; }
-.btn-primary:hover, .btn-primary:focus { background-color: #12544F; border-color: #12544F; }
-.btn-outline-primary { color: #12544F; border-color: #2A835F; }
-.btn-outline-primary:hover { background: #12544F; border-color: #12544F; }
-.progress-bar.bg-primary { background-color: #2A835F !important; }
-.badge.bg-teal { background-color: #12544F !important; }
-@media (max-width: 767.98px) { .top-bar { padding: 0.8rem 1rem; } .content-area { padding: 1rem; } }
+
+/* --- Form focus --- */
+.form-control:focus, .form-select:focus {
+    border-color: #10B981;
+    box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.15);
+}
+
+/* --- Buttons --- */
+.btn-primary { background-color: #10B981; border-color: #10B981; }
+.btn-primary:hover, .btn-primary:focus { background-color: #059669; border-color: #059669; }
+.btn-outline-primary { color: #059669; border-color: #10B981; }
+.btn-outline-primary:hover { background: #059669; border-color: #059669; color: #fff; }
+
+/* --- Progress & badges --- */
+.progress-bar.bg-primary { background-color: #10B981 !important; }
+.badge.bg-teal { background-color: #059669 !important; }
+
+/* --- Status dot utility --- */
+.sidebar-status-dot {
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #10B981;
+    animation: pulse-dot 2s infinite;
+}
+@keyframes pulse-dot {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+}
+
+/* --- Responsive --- */
+@media (max-width: 767.98px) {
+    .top-bar { padding: 0.8rem 1rem; }
+    .content-area { padding: 1rem; }
+}
