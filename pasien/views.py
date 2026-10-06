@@ -1020,6 +1020,8 @@ def igd_dashboard(request):
         'kondisi_choices':    DischargeRecord.KONDISI_PULANG,
         'ews_data':           {k.pk: k.hitung_news_score() for k in qs},
         'profesi_cppt':       CPPT.PROFESI,
+        'icd10_codes':        ICD10_CODES,
+        'sdki_codes':         SDKI_CODES,
     }
     return render(request, 'pasien/igd_dashboard.html', ctx)
 

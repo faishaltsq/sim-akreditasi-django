@@ -449,8 +449,12 @@
                                                 </div>
                                             </div>
                                             <div class="mb-2">
-                                                <label class="form-label small fw-semibold">Diagnosa Awal (ICD-10)</label>
-                                                <input type="text" name="diagnosa_masuk" class="form-control form-control-sm" value="{{ k.diagnosa_masuk|default:'' }}" placeholder="Contoh: I10 - Hipertensi, J18.9 - Pneumonia...">
+                                                <label class="form-label small fw-semibold text-primary"><i class="bi bi-tag-fill me-1"></i>Diagnosa Medis Masuk (ICD-10)</label>
+                                                <input type="text" name="diagnosa_masuk" list="globalIcd10List" class="form-control form-control-sm" value="{{ k.diagnosa_masuk|default:'' }}" placeholder="Ketik kode / nama diagnosis ICD-10...">
+                                            </div>
+                                            <div class="mb-2">
+                                                <label class="form-label small fw-semibold text-success"><i class="bi bi-person-lines-fill me-1"></i>Diagnosa Keperawatan (SDKI)</label>
+                                                <input type="text" name="diagnosa_keperawatan_sdki" list="globalSdkiList" class="form-control form-control-sm" value="{{ k.diagnosa_keperawatan_sdki|default:'' }}" placeholder="Ketik kode / nama masalah keperawatan SDKI...">
                                             </div>
                                             <div class="mb-2">
                                                 <label class="form-label small fw-semibold">Tindakan Cito / ICD-9-CM</label>
@@ -1544,8 +1548,8 @@
                                                 <div class="tab-pane fade" id="tabDiagnosis{{ k.pk }}">
                                                     <div class="row g-3">
                                                         <div class="col-md-6">
-                                                            <label class="form-label fw-semibold text-primary">Diagnosis Medis Masuk (ICD-10):</label>
-                                                            <input type="text" name="diagnosa_masuk" class="form-control form-control-sm" value="{{ k.diagnosa_masuk }}" placeholder="Kode ICD-10 & Deskripsi (misal: I21.9 - Acute Myocardial Infarction)">
+                                                            <label class="form-label fw-semibold text-primary"><i class="bi bi-tag-fill me-1"></i>Diagnosis Medis Masuk (ICD-10):</label>
+                                                            <input type="text" name="diagnosa_masuk" list="globalIcd10List" class="form-control form-control-sm" value="{{ k.diagnosa_masuk }}" placeholder="Pilih atau cari kode ICD-10...">
                                                         </div>
                                                         <div class="col-md-6">
                                                             <label class="form-label fw-semibold">Prosedur / Tindakan Medis (ICD-9-CM):</label>
@@ -1556,8 +1560,8 @@
                                                             <h6 class="fw-bold text-success mb-2"><i class="bi bi-person-lines-fill me-1"></i>Diagnosis Keperawatan Standar 3S (SDKI / SLKI / SIKI)</h6>
                                                         </div>
                                                         <div class="col-md-12">
-                                                            <label class="form-label fw-semibold">1. Diagnosis Keperawatan (SDKI):</label>
-                                                            <input type="text" name="diagnosa_keperawatan_sdki" class="form-control form-control-sm" value="{{ k.diagnosa_keperawatan_sdki }}" placeholder="Pilih / tulis kode SDKI, contoh: D.0077 - Nyeri Akut / D.0005 - Pola Napas Tidak Efektif">
+                                                            <label class="form-label fw-semibold text-success">1. Diagnosis Keperawatan (SDKI):</label>
+                                                            <input type="text" name="diagnosa_keperawatan_sdki" list="globalSdkiList" class="form-control form-control-sm" value="{{ k.diagnosa_keperawatan_sdki }}" placeholder="Pilih atau cari diagnosis SDKI (misal: D.0077 - Nyeri Akut)...">
                                                         </div>
                                                         <div class="col-md-6">
                                                             <label class="form-label fw-semibold">2. Luaran Keperawatan (SLKI):</label>
@@ -2135,4 +2139,17 @@
         input.value = items.join(', ');
     }
 </script>
+
+<!-- GLOBAL DATALISTS FOR ICD-10 & SDKI QUICK SEARCH -->
+<datalist id="globalIcd10List">
+    {% for kode, nama in icd10_codes %}
+    <option value="{{ kode }} - {{ nama }}">{{ kode }} - {{ nama }}</option>
+    {% endfor %}
+</datalist>
+
+<datalist id="globalSdkiList">
+    {% for kode, nama in sdki_codes %}
+    <option value="{{ kode }} - {{ nama }}">{{ kode }} - {{ nama }}</option>
+    {% endfor %}
+</datalist>
 {% endblock %}
