@@ -143,168 +143,445 @@
 
         <div class="tab-content" id="pendaftaranTabsContent">
 
-            <!-- TAB 1: PENDAFTARAN PASIEN BARU & LAMA -->
-            <div class="tab-pane fade show active p-4" id="pane-pasien-baru" role="tabpanel">
+            <!-- TAB 1: PENDAFTARAN PASIEN BARU & LAMA (2-BOX LAYOUT) -->
+            <div class="tab-pane fade show active p-3 p-md-4" id="pane-pasien-baru" role="tabpanel">
                 <div class="d-flex justify-content-between align-items-center mb-3">
                     <div>
-                        <h6 class="fw-bold mb-0 text-dark">Form Registrasi Kunjungan Pasien</h6>
-                        <small class="text-muted">Cari NIK/RM pasien lama atau daftarkan pasien baru sebelum melakukan routing</small>
+                        <h5 class="fw-bold mb-1 text-dark"><i class="bi bi-layout-split me-2 text-primary"></i>Loket Pendaftaran &amp; Admisi Pasien</h5>
+                        <p class="text-muted small mb-0">Pilih <strong>Kotak 1</strong> untuk pasien lama yang pernah berobat, atau isi <strong>Kotak 2</strong> untuk pasien baru.</p>
                     </div>
-                    <a href="{% url 'pasien:pasien_baru' %}" class="btn btn-outline-primary btn-sm">
-                        <i class="bi bi-plus-circle me-1"></i> Tambah Identitas Pasien Baru
-                    </a>
+                    <div class="d-none d-md-flex gap-2">
+                        <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-3 py-2"><i class="bi bi-clock-history me-1"></i>Pasien Lama: Cari RM/Nama</span>
+                        <span class="badge bg-success-subtle text-success border border-success-subtle px-3 py-2"><i class="bi bi-person-plus me-1"></i>Pasien Baru: Lengkapi Identitas</span>
+                    </div>
                 </div>
 
-                <form method="POST" action="{% url 'pasien:kunjungan_baru' %}">
-                    {% csrf_token %}
-                    <div class="row g-3 mb-3">
-                        <div class="col-md-3">
-                            <label class="form-label fw-semibold small">Cek NIK Pasien (16 digit)</label>
-                            <input type="text" class="form-control form-control-sm" id="nikCheckInput" placeholder="Ketik NIK KTP..." maxlength="16">
-                            <div id="nikCheckResult" class="nik-check-feedback"></div>
-                        </div>
-                        <div class="col-md-3">
-                            <label class="form-label fw-semibold small">Pilih Pasien <span class="text-danger">*</span></label>
-                            <select name="pasien_id" class="form-select form-select-sm" required id="selectPasien">
-                                <option value="">-- Cari Nama / No. RM Pasien --</option>
-                                {% for p in pasien_list %}
-                                <option value="{{ p.pk }}">{{ p.no_rm }} — {{ p.nama_lengkap }} ({{ p.tanggal_lahir|date:"d/m/Y" }})</option>
-                                {% endfor %}
-                            </select>
-                        </div>
-                        <div class="col-md-3">
-                            <label class="form-label fw-semibold small">No. Kunjungan <span class="text-danger">*</span></label>
-                            <input type="text" name="no_kunjungan" class="form-control form-control-sm font-monospace"
-                                   id="noKunjunganInput" required placeholder="KUNJ-YYYYMMDD-XXXX">
-                        </div>
-                        <div class="col-md-3">
-                            <label class="form-label fw-semibold small">Penjamin <span class="text-danger">*</span></label>
-                            <select name="penjamin" class="form-select form-select-sm" required>
-                                {% for code, label in penjamin_choices %}
-                                <option value="{{ code }}">{{ label }}</option>
-                                {% endfor %}
-                            </select>
-                        </div>
-                    </div>
+                <div class="row g-4">
+                    <!-- ========================================================================= -->
+                    <!-- KOTAK 1: PASIEN LAMA (PERNAH BERKUNJUNG) -->
+                    <!-- ========================================================================= -->
+                    <div class="col-lg-5">
+                        <div class="card h-100 border-primary shadow-sm" style="border-width: 2px; border-radius: .85rem;">
+                            <div class="card-header bg-primary text-white py-2.5 px-3 d-flex justify-content-between align-items-center" style="border-radius: .75rem .75rem 0 0;">
+                                <div class="fw-bold fs-6"><i class="bi bi-person-check-fill me-2"></i>KOTAK 1: PASIEN LAMA</div>
+                                <span class="badge bg-white text-primary fw-bold" style="font-size: .72rem;">Pernah Berkunjung</span>
+                            </div>
+                            <div class="card-body p-3 p-md-4 d-flex flex-column justify-content-between">
+                                <form method="POST" action="{% url 'pasien:kunjungan_baru' %}" id="formPasienLama">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="next_url" value="{% url 'pasien:pendaftaran_dashboard' %}">
+                                    <input type="hidden" name="pasien_id" id="lamaPasienId" required>
 
-                    <div class="row g-3 mb-3">
-                        <div class="col-md-4">
-                            <label class="form-label fw-semibold small">Tanggal &amp; Waktu Masuk <span class="text-danger">*</span></label>
-                            <input type="datetime-local" name="tanggal_masuk" class="form-control form-control-sm" id="tglMasukInput" required>
-                        </div>
-                        <div class="col-md-8">
-                            <label class="form-label fw-semibold small">Keluhan Utama / Alasan Masuk</label>
-                            <input type="text" name="catatan_admisi" class="form-control form-control-sm" placeholder="Contoh: Nyeri dada menjalar, demam 3 hari, kontrol rutin...">
-                        </div>
-                    </div>
-
-                    <!-- PILIHAN ROUTING KLINIS: IGD vs POLI -->
-                    <div class="p-3 rounded-3 mb-4" style="background: #f8fafc; border: 1px dashed #cbd5e1;">
-                        <label class="form-label fw-bold text-dark d-block mb-3" style="font-size: .92rem;">
-                            <i class="bi bi-signpost-split-fill me-1 text-primary"></i> Arahkan Kunjungan Ke:
-                        </label>
-                        <div class="row g-3">
-                            <!-- Opsi 1: IGD -->
-                            <div class="col-md-6">
-                                <div class="dest-card" id="cardDestIGD" onclick="setRouting('IGD')">
-                                    <div class="form-check">
-                                        <input class="form-check-input" type="radio" name="jenis_kunjungan" id="radioIGD" value="IGD" required onchange="updateRoutingUI()">
-                                        <label class="form-check-label fw-bold text-danger d-block" for="radioIGD">
-                                            <i class="bi bi-heart-pulse-fill me-1"></i> Gawat Darurat (IGD)
+                                    <!-- 1. PENCARIAN PASIEN (LIVE SEARCH RM / NAMA / NIK) -->
+                                    <div class="mb-3 position-relative">
+                                        <label class="form-label fw-bold small text-dark mb-1">
+                                            <i class="bi bi-search me-1 text-primary"></i>1. Cari Pasien Lama <span class="text-danger">*</span>
                                         </label>
-                                        <small class="text-muted d-block mt-1">Kondisi darurat, resusitasi, triage klinis P1-P4.</small>
-                                    </div>
-                                    <div id="panelIGD" class="mt-3 pt-3 border-top" style="display: none;">
-                                        <div class="row g-2">
-                                            <div class="col-6">
-                                                <label class="form-label small fw-semibold">Triage Awal</label>
-                                                <select name="triage" class="form-select form-select-sm" id="triageSelect">
-                                                    <option value="MERAH">Merah — P1 (Kritis)</option>
-                                                    <option value="KUNING" selected>Kuning — P2 (Urgent)</option>
-                                                    <option value="HIJAU">Hijau — P3 (Non-Urgent)</option>
-                                                    <option value="HITAM">Hitam — P4 (Fatal / DoA)</option>
-                                                </select>
+                                        <div class="input-group input-group-sm">
+                                            <span class="input-group-text bg-light text-primary"><i class="bi bi-person-search"></i></span>
+                                            <input type="text" id="inputCariPasienLama" class="form-control form-control-sm" placeholder="Ketik No. RM (mis: 001) atau Nama Pasien..." autocomplete="off">
+                                            <button class="btn btn-outline-secondary" type="button" id="btnClearCariLama" title="Reset Cari"><i class="bi bi-x-lg"></i></button>
+                                        </div>
+                                        <small class="text-muted" style="font-size: .72rem;">Ketik minimal 2 karakter untuk melihat daftar pasien.</small>
+                                        
+                                        <!-- Live Search Dropdown -->
+                                        <div id="liveSearchResultsLama" class="list-group shadow-lg position-absolute w-100 mt-1" style="display:none; z-index: 1060; max-height: 240px; overflow-y: auto;"></div>
+
+                                        <!-- Selected Patient Preview Box -->
+                                        <div id="selectedPasienBadgeLama" class="mt-2 p-2.5 rounded border bg-light small" style="display:none;">
+                                            <div class="d-flex justify-content-between align-items-start mb-1">
+                                                <div>
+                                                    <span class="badge bg-primary font-monospace" id="prevLamaNoRm">RM-000000</span>
+                                                    <strong class="text-dark ms-1" id="prevLamaNama">-</strong>
+                                                </div>
+                                                <button type="button" class="btn-close btn-sm" id="btnRemoveSelectedLama" title="Batalkan pilihan"></button>
                                             </div>
-                                            <div class="col-6">
-                                                <label class="form-label small fw-semibold">Dokter Jaga IGD</label>
-                                                <select name="dpjp" id="dpjpIgdInput" class="form-select form-select-sm">
-                                                    <option value="dr. Jaga IGD" selected>dr. Jaga IGD</option>
-                                                    <option value="dr. Pratama">dr. Pratama — Dokter Umum</option>
-                                                    <option value="dr. Intan">dr. Intan — Dokter Umum</option>
-                                                </select>
-                                            </div>
-                                            <div class="col-12">
-                                                <label class="form-label small fw-semibold">Flag Kondisi Khusus</label>
-                                                <select name="flag_khusus" class="form-select form-select-sm">
-                                                    <option value="NORMAL">Normal</option>
-                                                    <option value="AMBULANS">🚑 Ambulans</option>
-                                                    <option value="KRITIS">🔴 Kritis / Prioritas</option>
-                                                </select>
+                                            <div class="text-muted" style="font-size: .75rem;">
+                                                <div><i class="bi bi-card-text me-1"></i>NIK: <span id="prevLamaNik">-</span> | JK: <span id="prevLamaJk">-</span> | Umur: <span id="prevLamaUmur">-</span> thn</div>
+                                                <div><i class="bi bi-geo-alt me-1"></i>Alamat: <span id="prevLamaAlamat">-</span></div>
+                                                <div id="prevLamaBpjsWrap" style="display:none;"><i class="bi bi-shield-check me-1 text-success"></i>No. BPJS: <span id="prevLamaBpjs" class="fw-semibold text-dark">-</span></div>
                                             </div>
                                         </div>
                                     </div>
-                                </div>
-                            </div>
 
-                            <!-- Opsi 2: Poli Rawat Jalan -->
-                            <div class="col-md-6">
-                                <div class="dest-card" id="cardDestRajal" onclick="setRouting('RAJAL')">
-                                    <div class="form-check">
-                                        <input class="form-check-input" type="radio" name="jenis_kunjungan" id="radioRajal" value="RAJAL" onchange="updateRoutingUI()">
-                                        <label class="form-check-label fw-bold text-primary d-block" for="radioRajal">
-                                            <i class="bi bi-hospital-fill me-1"></i> Poli Rawat Jalan (Spesialis)
-                                        </label>
-                                        <small class="text-muted d-block mt-1">Konsultasi terjadwal, kontrol poli, antrean otomatis.</small>
+                                    <!-- 2. NO KUNJUNGAN & PENJAMIN BIAYA -->
+                                    <div class="row g-2 mb-3">
+                                        <div class="col-md-6">
+                                            <label class="form-label fw-semibold small mb-1">No. Kunjungan <span class="badge bg-secondary-subtle text-dark" style="font-size: .65rem;">Otomatis</span></label>
+                                            <input type="text" name="no_kunjungan" id="noKunjunganLama" class="form-control form-control-sm font-monospace bg-light" value="{{ auto_no_kunjungan_rajal }}" readonly>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label fw-semibold small mb-1">Penjamin Biaya <span class="text-danger">*</span></label>
+                                            <select name="penjamin" id="penjaminLama" class="form-select form-select-sm" required>
+                                                <option value="UMUM">Umum / Tunai</option>
+                                                <option value="BPJS">BPJS Kesehatan</option>
+                                                <option value="ASURANSI">Asuransi Lainnya</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-12" id="lamaBpjsInputWrap" style="display:none;">
+                                            <label class="form-label small fw-semibold mb-1">Nomor Kartu BPJS:</label>
+                                            <input type="text" name="no_bpjs" id="lamaNoBpjsInput" class="form-control form-control-sm font-monospace" placeholder="13 digit No. Kartu BPJS...">
+                                        </div>
                                     </div>
-                                    <div id="panelRajal" class="mt-3 pt-3 border-top" style="display: none;">
-                                        <div class="row g-2">
-                                            <div class="col-6">
-                                                <label class="form-label small fw-semibold">Pilih Poliklinik</label>
-                                                <select name="poliklinik" class="form-select form-select-sm" id="poliSelect">
-                                                    {% for code, label in poliklinik_choices %}
-                                                    <option value="{{ label }}">{{ label }}</option>
-                                                    {% endfor %}
-                                                </select>
+
+                                    <!-- 3. KELUHAN PASIEN (ISIAN BEBAS) -->
+                                    <div class="mb-3">
+                                        <label class="form-label fw-semibold small mb-1">Keluhan Pasien <span class="text-muted fw-normal">(Isian Bebas)</span>:</label>
+                                        <textarea name="catatan_admisi" class="form-control form-control-sm" rows="2" placeholder="Contoh: Kontrol tekanan darah, keluhan pusing & nyeri leher sejak 2 hari..."></textarea>
+                                    </div>
+
+                                    <!-- 4. TUJUAN PELAYANAN (IGD vs POLI SPESIALIS) -->
+                                    <div class="p-2.5 rounded border bg-light mb-3">
+                                        <label class="form-label fw-bold small text-dark mb-2"><i class="bi bi-signpost-2-fill me-1 text-primary"></i>Tujuan Pelayanan:</label>
+                                        <div class="d-flex gap-3 mb-2">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="radio" name="jenis_kunjungan" id="tujuanLamaRajal" value="RAJAL" checked onchange="toggleTujuanLama('RAJAL')">
+                                                <label class="form-check-label small fw-bold text-primary" for="tujuanLamaRajal">
+                                                    <i class="bi bi-hospital me-1"></i>2. Poli Spesialis
+                                                </label>
                                             </div>
-                                            <div class="col-6">
-                                                <label class="form-label small fw-semibold">DPJP Dokter Spesialis</label>
-                                                <div id="dpjpSelectWrapperRajal">
-                                                    <select name="dpjp" id="dpjpSelect" class="form-select form-select-sm">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="radio" name="jenis_kunjungan" id="tujuanLamaIGD" value="IGD" onchange="toggleTujuanLama('IGD')">
+                                                <label class="form-check-label small fw-bold text-danger" for="tujuanLamaIGD">
+                                                    <i class="bi bi-heart-pulse me-1"></i>1. IGD
+                                                </label>
+                                            </div>
+                                        </div>
+
+                                        <!-- Panel Rajal Pasien Lama -->
+                                        <div id="routingLamaRajal">
+                                            <div class="row g-2">
+                                                <div class="col-12">
+                                                    <label class="form-label small mb-1">Pilih Poliklinik:</label>
+                                                    <select name="poliklinik" id="poliSelectLama" class="form-select form-select-sm" onchange="syncDpjpLama()">
+                                                        {% for code, label in poliklinik_choices %}
+                                                        <option value="{{ label }}">{{ label }}</option>
+                                                        {% endfor %}
+                                                    </select>
+                                                </div>
+                                                <div class="col-12">
+                                                    <label class="form-label small mb-1">Dokter Spesialis (DPJP):</label>
+                                                    <select name="dpjp" id="dpjpSelectLama" class="form-select form-select-sm">
                                                         <option value="">— Pilih Dokter DPJP —</option>
                                                         {% for val, label in dpjp_choices %}
                                                         <option value="{{ val }}">{{ label }}</option>
                                                         {% endfor %}
-                                                        <option value="MANUAL_DPJP">➕ Ketik Dokter Lainnya...</option>
                                                     </select>
                                                 </div>
-                                                <div id="dpjpManualWrapperRajal" style="display:none;" class="mt-1">
-                                                    <div class="input-group input-group-sm">
-                                                        <input type="text" id="dpjpManualInputRajal" class="form-control" placeholder="dr. Nama Spesialis...">
-                                                        <button class="btn btn-outline-secondary" type="button" id="btnBackToDpjpListRajal" title="Kembali ke pilihan dokter">
-                                                            <i class="bi bi-list-check"></i>
-                                                        </button>
-                                                    </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- Panel IGD Pasien Lama -->
+                                        <div id="routingLamaIGD" style="display:none;">
+                                            <div class="row g-2">
+                                                <div class="col-6">
+                                                    <label class="form-label small mb-1">Triage Awal:</label>
+                                                    <select name="triage" class="form-select form-select-sm">
+                                                        <option value="KUNING" selected>Kuning (Urgent)</option>
+                                                        <option value="MERAH">Merah (Kritis)</option>
+                                                        <option value="HIJAU">Hijau (Non-Urgent)</option>
+                                                        <option value="HITAM">Hitam (Fatal / DoA)</option>
+                                                    </select>
+                                                </div>
+                                                <div class="col-6">
+                                                    <label class="form-label small mb-1">Dokter Jaga IGD:</label>
+                                                    <select name="dpjp_igd_lama" class="form-select form-select-sm">
+                                                        <option value="dr. Jaga IGD" selected>dr. Jaga IGD</option>
+                                                        <option value="dr. Pratama">dr. Pratama</option>
+                                                        <option value="dr. Intan">dr. Intan</option>
+                                                    </select>
                                                 </div>
                                             </div>
                                         </div>
                                     </div>
-                                </div>
+
+                                    <div class="form-check mb-3">
+                                        <input class="form-check-input" type="checkbox" name="general_consent" value="1" id="consentLama" checked>
+                                        <label class="form-check-label small text-muted" for="consentLama" style="font-size: .75rem;">
+                                            General consent telah ditandatangani pasien / keluarga.
+                                        </label>
+                                    </div>
+
+                                    <button type="submit" class="btn btn-primary w-100 fw-bold py-2 shadow-sm" id="btnSubmitLama" disabled>
+                                        <i class="bi bi-check2-circle me-1"></i> Daftarkan Kunjungan Pasien Lama
+                                    </button>
+                                </form>
                             </div>
                         </div>
                     </div>
 
-                    <div class="d-flex align-items-center justify-content-between">
-                        <div class="form-check">
-                            <input class="form-check-input" type="checkbox" name="general_consent" value="1" id="consentCheck" checked>
-                            <label class="form-check-label small text-muted" for="consentCheck">
-                                General Consent telah ditandatangani pasien / keluarga penanggung jawab
-                            </label>
+                    <!-- ========================================================================= -->
+                    <!-- KOTAK 2: PASIEN BARU (PENDAFTARAN LENGKAP STANDAR RS) -->
+                    <!-- ========================================================================= -->
+                    <div class="col-lg-7">
+                        <div class="card h-100 border-success shadow-sm" style="border-width: 2px; border-radius: .85rem;">
+                            <div class="card-header bg-success text-white py-2.5 px-3 d-flex justify-content-between align-items-center" style="border-radius: .75rem .75rem 0 0;">
+                                <div class="fw-bold fs-6"><i class="bi bi-person-plus-fill me-2"></i>KOTAK 2: PASIEN BARU</div>
+                                <span class="badge bg-white text-success fw-bold" style="font-size: .72rem;">Pendaftaran Pertama Kali</span>
+                            </div>
+                            <div class="card-body p-3 p-md-4">
+                                <form method="POST" action="{% url 'pasien:kunjungan_baru' %}" id="formPasienBaru">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="is_pasien_baru" value="1">
+                                    <input type="hidden" name="next_url" value="{% url 'pasien:pendaftaran_dashboard' %}">
+
+                                    <!-- SECTION A: IDENTITAS PRIBADI PASIEN -->
+                                    <div class="p-3 border rounded-3 bg-light mb-3">
+                                        <div class="d-flex justify-content-between align-items-center mb-2">
+                                            <span class="fw-bold small text-success"><i class="bi bi-person-vcard me-1"></i>A. IDENTITAS PRIBADI PASIEN</span>
+                                            <span class="badge bg-secondary-subtle text-dark font-monospace" style="font-size: .7rem;">No. RM: {{ auto_no_rm }} (Otomatis)</span>
+                                        </div>
+                                        <input type="hidden" name="no_rm" value="{{ auto_no_rm }}">
+
+                                        <div class="row g-2 mb-2">
+                                            <div class="col-md-7">
+                                                <label class="form-label small fw-semibold mb-1">Nama Lengkap (sesuai KTP/KIA) <span class="text-danger">*</span>:</label>
+                                                <input type="text" name="nama_lengkap" class="form-control form-control-sm" required placeholder="Nama lengkap pasien tanpa singkatan...">
+                                            </div>
+                                            <div class="col-md-5">
+                                                <label class="form-label small fw-semibold mb-1">NIK (16 Digit):</label>
+                                                <input type="text" name="nik" id="nikBaruInput" class="form-control form-control-sm font-monospace" maxlength="16" placeholder="16 digit NIK KTP...">
+                                                <div id="nikBaruFeedback" class="small mt-0.5"></div>
+                                            </div>
+                                        </div>
+
+                                        <div class="row g-2 mb-2">
+                                            <div class="col-md-4">
+                                                <label class="form-label small fw-semibold mb-1">Tempat Lahir:</label>
+                                                <input type="text" name="tempat_lahir" class="form-control form-control-sm" placeholder="Kota lahir...">
+                                            </div>
+                                            <div class="col-md-4">
+                                                <label class="form-label small fw-semibold mb-1">Tanggal Lahir <span class="text-danger">*</span>:</label>
+                                                <input type="date" name="tanggal_lahir" class="form-control form-control-sm" required>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <label class="form-label small fw-semibold mb-1">Jenis Kelamin <span class="text-danger">*</span>:</label>
+                                                <div class="d-flex gap-2 pt-1">
+                                                    <div class="form-check form-check-inline mb-0">
+                                                        <input class="form-check-input" type="radio" name="jenis_kelamin" id="jkL" value="L" checked>
+                                                        <label class="form-check-label small" for="jkL">Laki-laki</label>
+                                                    </div>
+                                                    <div class="form-check form-check-inline mb-0">
+                                                        <input class="form-check-input" type="radio" name="jenis_kelamin" id="jkP" value="P">
+                                                        <label class="form-check-label small" for="jkP">Perempuan</label>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div class="row g-2 mb-2">
+                                            <div class="col-md-4">
+                                                <label class="form-label small fw-semibold mb-1">Agama:</label>
+                                                <select name="agama" class="form-select form-select-sm">
+                                                    <option value="ISLAM" selected>Islam</option>
+                                                    <option value="KRISTEN">Kristen</option>
+                                                    <option value="KATOLIK">Katolik</option>
+                                                    <option value="HINDU">Hindu</option>
+                                                    <option value="BUDDHA">Buddha</option>
+                                                    <option value="KONGHUCU">Konghucu</option>
+                                                    <option value="LAINNYA">Lainnya</option>
+                                                </select>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <label class="form-label small fw-semibold mb-1">Status Perkawinan:</label>
+                                                <select name="status_perkawinan" class="form-select form-select-sm">
+                                                    <option value="BELUM_MENIKAH">Belum Menikah</option>
+                                                    <option value="MENIKAH" selected>Menikah</option>
+                                                    <option value="DUDA_JANDA">Duda / Janda</option>
+                                                </select>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <label class="form-label small fw-semibold mb-1">Pendidikan Terakhir:</label>
+                                                <select name="pendidikan_terakhir" class="form-select form-select-sm">
+                                                    <option value="SD_SMP_SMA" selected>SD / SMP / SMA</option>
+                                                    <option value="D3_D4">D3 / D4</option>
+                                                    <option value="S1_S2_S3">S1 / S2 / S3</option>
+                                                    <option value="LAINNYA">Lainnya</option>
+                                                </select>
+                                            </div>
+                                        </div>
+
+                                        <div class="row g-2 mb-2">
+                                            <div class="col-md-6">
+                                                <label class="form-label small fw-semibold mb-1">Pekerjaan:</label>
+                                                <input type="text" name="pekerjaan" class="form-control form-control-sm" placeholder="Contoh: Karyawan Swasta, Wiraswasta, PNS, IRT...">
+                                            </div>
+                                            <div class="col-md-3">
+                                                <label class="form-label small fw-semibold mb-1">No. HP / WA:</label>
+                                                <input type="text" name="no_hp" id="hpBaruInput" class="form-control form-control-sm" placeholder="08xxxxxxxxxx">
+                                            </div>
+                                            <div class="col-md-3">
+                                                <label class="form-label small fw-semibold mb-1">Email:</label>
+                                                <input type="email" name="email" class="form-control form-control-sm" placeholder="pasien@email.com">
+                                            </div>
+                                        </div>
+
+                                        <!-- Alamat Domisili -->
+                                        <div class="mb-2">
+                                            <label class="form-label small fw-semibold mb-1">Alamat Domisili Lengkap:</label>
+                                            <input type="text" name="alamat" id="alamatBaruInput" class="form-control form-control-sm" placeholder="Nama Jalan, Gang, Nomor Rumah...">
+                                        </div>
+                                        <div class="row g-2 mb-2">
+                                            <div class="col-md-3">
+                                                <input type="text" name="rt_rw" class="form-control form-control-sm" placeholder="RT / RW (cth: 002/005)">
+                                            </div>
+                                            <div class="col-md-3">
+                                                <input type="text" name="kelurahan" class="form-control form-control-sm" placeholder="Kelurahan / Desa">
+                                            </div>
+                                            <div class="col-md-3">
+                                                <input type="text" name="kecamatan" class="form-control form-control-sm" placeholder="Kecamatan">
+                                            </div>
+                                            <div class="col-md-3">
+                                                <input type="text" name="kota_kabupaten" class="form-control form-control-sm" placeholder="Kota / Kabupaten">
+                                            </div>
+                                        </div>
+
+                                        <!-- Penjamin Biaya Pasien Baru -->
+                                        <div class="row g-2 pt-1 border-top mt-2">
+                                            <div class="col-md-4">
+                                                <label class="form-label small fw-semibold mb-1">Penjamin Biaya <span class="text-danger">*</span>:</label>
+                                                <select name="penjamin" id="penjaminBaru" class="form-select form-select-sm" required onchange="togglePenjaminBaru()">
+                                                    <option value="UMUM">Umum / Tunai</option>
+                                                    <option value="BPJS">BPJS Kesehatan</option>
+                                                    <option value="ASURANSI">Asuransi Lainnya</option>
+                                                </select>
+                                            </div>
+                                            <div class="col-md-8" id="bpjsBaruWrap" style="display:none;">
+                                                <label class="form-label small fw-semibold mb-1">Nomor Kartu BPJS:</label>
+                                                <input type="text" name="no_bpjs" class="form-control form-control-sm font-monospace" placeholder="13 digit nomor kartu BPJS...">
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- SECTION B: PENANGGUNG JAWAB PASIEN (EMERGENCY CONTACT) -->
+                                    <div class="p-3 border rounded-3 bg-light mb-3">
+                                        <div class="d-flex justify-content-between align-items-center mb-2">
+                                            <span class="fw-bold small text-danger"><i class="bi bi-telephone-plus me-1"></i>B. PENANGGUNG JAWAB PASIEN (EMERGENCY CONTACT)</span>
+                                            <div class="form-check mb-0">
+                                                <input class="form-check-input" type="checkbox" id="checkAlamatSamaPj" onchange="copyAlamatToPj(this.checked)">
+                                                <label class="form-check-label small text-muted" for="checkAlamatSamaPj" style="font-size: .75rem;">
+                                                    Alamat sama dengan pasien
+                                                </label>
+                                            </div>
+                                        </div>
+                                        <div class="row g-2 mb-2">
+                                            <div class="col-md-5">
+                                                <label class="form-label small fw-semibold mb-1">Nama Penanggung Jawab:</label>
+                                                <input type="text" name="nama_pj" class="form-control form-control-sm" placeholder="Nama wali / keluarga...">
+                                            </div>
+                                            <div class="col-md-3">
+                                                <label class="form-label small fw-semibold mb-1">Hubungan:</label>
+                                                <select name="hubungan_pj" class="form-select form-select-sm">
+                                                    <option value="SUAMI_ISTRI">Suami / Istri</option>
+                                                    <option value="ORANG_TUA" selected>Orang Tua</option>
+                                                    <option value="ANAK">Anak</option>
+                                                    <option value="KERABAT_LAIN">Kerabat / Lainnya</option>
+                                                </select>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <label class="form-label small fw-semibold mb-1">No. Telp / WhatsApp PJ:</label>
+                                                <input type="text" name="no_hp_pj" class="form-control form-control-sm" placeholder="08xxxxxxxxxx">
+                                            </div>
+                                            <div class="col-12">
+                                                <label class="form-label small fw-semibold mb-1">Alamat Penanggung Jawab:</label>
+                                                <input type="text" name="alamat_pj" id="alamatPjInput" class="form-control form-control-sm" placeholder="Alamat domisili penanggung jawab...">
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- SECTION C: KELUHAN PASIEN -->
+                                    <div class="mb-3">
+                                        <label class="form-label small fw-semibold mb-1 text-dark">
+                                            <i class="bi bi-chat-left-dots me-1 text-primary"></i>C. Keluhan Pasien <span class="text-muted fw-normal">(Isian Bebas)</span>:
+                                        </label>
+                                        <textarea name="catatan_admisi" class="form-control form-control-sm" rows="2" placeholder="Contoh: Nyeri ulu hati menjalar ke dada, lemas, pusing berputar sejak pagi..."></textarea>
+                                    </div>
+
+                                    <!-- SECTION D: TUJUAN PELAYANAN -->
+                                    <div class="p-3 border rounded-3 bg-light mb-3">
+                                        <div class="d-flex justify-content-between align-items-center mb-2">
+                                            <span class="fw-bold small text-primary"><i class="bi bi-hospital me-1"></i>D. TUJUAN PELAYANAN</span>
+                                            <span class="badge bg-secondary-subtle text-dark font-monospace" style="font-size: .7rem;" id="badgeNoKunjunganBaru">No. Kunjungan: {{ auto_no_kunjungan_rajal }}</span>
+                                        </div>
+                                        <input type="hidden" name="no_kunjungan" id="noKunjunganBaru" value="{{ auto_no_kunjungan_rajal }}">
+
+                                        <div class="d-flex gap-3 mb-2">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="radio" name="jenis_kunjungan" id="tujuanBaruRajal" value="RAJAL" checked onchange="toggleTujuanBaru('RAJAL')">
+                                                <label class="form-check-label small fw-bold text-primary" for="tujuanBaruRajal">
+                                                    <i class="bi bi-hospital me-1"></i>2. Poli Spesialis
+                                                </label>
+                                            </div>
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="radio" name="jenis_kunjungan" id="tujuanBaruIGD" value="IGD" onchange="toggleTujuanBaru('IGD')">
+                                                <label class="form-check-label small fw-bold text-danger" for="tujuanBaruIGD">
+                                                    <i class="bi bi-heart-pulse me-1"></i>1. IGD
+                                                </label>
+                                            </div>
+                                        </div>
+
+                                        <!-- Panel Rajal Pasien Baru -->
+                                        <div id="routingBaruRajal">
+                                            <div class="row g-2">
+                                                <div class="col-md-6">
+                                                    <label class="form-label small mb-1">Pilih Poliklinik:</label>
+                                                    <select name="poliklinik" id="poliSelectBaru" class="form-select form-select-sm" onchange="syncDpjpBaru()">
+                                                        {% for code, label in poliklinik_choices %}
+                                                        <option value="{{ label }}">{{ label }}</option>
+                                                        {% endfor %}
+                                                    </select>
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <label class="form-label small mb-1">Dokter DPJP Spesialis:</label>
+                                                    <select name="dpjp" id="dpjpSelectBaru" class="form-select form-select-sm">
+                                                        <option value="">— Pilih Dokter DPJP —</option>
+                                                        {% for val, label in dpjp_choices %}
+                                                        <option value="{{ val }}">{{ label }}</option>
+                                                        {% endfor %}
+                                                    </select>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- Panel IGD Pasien Baru -->
+                                        <div id="routingBaruIGD" style="display:none;">
+                                            <div class="row g-2">
+                                                <div class="col-6">
+                                                    <label class="form-label small mb-1">Triage Awal:</label>
+                                                    <select name="triage" class="form-select form-select-sm">
+                                                        <option value="KUNING" selected>Kuning (Urgent)</option>
+                                                        <option value="MERAH">Merah (Kritis)</option>
+                                                        <option value="HIJAU">Hijau (Non-Urgent)</option>
+                                                        <option value="HITAM">Hitam (Fatal / DoA)</option>
+                                                    </select>
+                                                </div>
+                                                <div class="col-6">
+                                                    <label class="form-label small mb-1">Dokter Jaga IGD:</label>
+                                                    <select name="dpjp_igd_baru" class="form-select form-select-sm">
+                                                        <option value="dr. Jaga IGD" selected>dr. Jaga IGD</option>
+                                                        <option value="dr. Pratama">dr. Pratama</option>
+                                                        <option value="dr. Intan">dr. Intan</option>
+                                                    </select>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="form-check mb-3">
+                                        <input class="form-check-input" type="checkbox" name="general_consent" value="1" id="consentBaru" checked>
+                                        <label class="form-check-label small text-muted" for="consentBaru" style="font-size: .75rem;">
+                                            General consent telah ditandatangani pasien / keluarga.
+                                        </label>
+                                    </div>
+
+                                    <button type="submit" class="btn btn-success w-100 fw-bold py-2 shadow-sm">
+                                        <i class="bi bi-person-check me-1"></i> Simpan Pasien Baru &amp; Daftarkan Kunjungan
+                                    </button>
+                                </form>
+                            </div>
                         </div>
-                        <button type="submit" class="btn btn-primary px-4 fw-semibold shadow-sm">
-                            <i class="bi bi-check2-circle me-1"></i> Daftarkan &amp; Arahkan Pelayanan
-                        </button>
                     </div>
-                </form>
+                </div>
             </div>
 
             <!-- TAB 2: PELAYANAN RAWAT JALAN -->
@@ -954,5 +1231,197 @@
             });
         }
     })();
+
+    // =========================================================================
+    // JAVASCRIPT LOGIKA 2 KOTAK PENDAFTARAN (PASIEN LAMA & PASIEN BARU)
+    // =========================================================================
+
+    // 1. LIVE SEARCH PASIEN LAMA (RM / NAMA / NIK)
+    (function() {
+        const inputCari = document.getElementById('inputCariPasienLama');
+        const resultsBox = document.getElementById('liveSearchResultsLama');
+        const previewBox = document.getElementById('selectedPasienBadgeLama');
+        const hiddenId = document.getElementById('lamaPasienId');
+        const btnSubmit = document.getElementById('btnSubmitLama');
+        const btnClear = document.getElementById('btnClearCariLama');
+        const btnRemove = document.getElementById('btnRemoveSelectedLama');
+        let searchTimeout = null;
+
+        if (!inputCari) return;
+
+        inputCari.addEventListener('input', function() {
+            clearTimeout(searchTimeout);
+            const q = inputCari.value.trim();
+            if (q.length < 2) {
+                resultsBox.style.display = 'none';
+                resultsBox.innerHTML = '';
+                return;
+            }
+            searchTimeout = setTimeout(function() {
+                fetch('{% url "pasien:api_cari_pasien" %}?q=' + encodeURIComponent(q))
+                    .then(r => r.json())
+                    .then(data => {
+                        resultsBox.innerHTML = '';
+                        if (data.results && data.results.length > 0) {
+                            data.results.forEach(p => {
+                                const item = document.createElement('a');
+                                item.href = 'javascript:void(0)';
+                                item.className = 'list-group-item list-group-item-action py-2 px-3';
+                                item.innerHTML = `
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <span class="fw-bold text-primary font-monospace">${p.no_rm}</span>
+                                        <span class="badge bg-light text-dark border">${p.jenis_kelamin} - ${p.umur} th</span>
+                                    </div>
+                                    <div class="fw-semibold text-dark">${p.nama_lengkap}</div>
+                                    <small class="text-muted" style="font-size: .72rem;">NIK: ${p.nik || '-'} | Alamat: ${p.alamat || '-'}</small>
+                                `;
+                                item.addEventListener('click', function() {
+                                    selectPasienLama(p);
+                                });
+                                resultsBox.appendChild(item);
+                            });
+                            resultsBox.style.display = 'block';
+                        } else {
+                            resultsBox.innerHTML = '<div class="list-group-item text-muted small py-2">Tidak ditemukan pasien dengan kata kunci tersebut.</div>';
+                            resultsBox.style.display = 'block';
+                        }
+                    })
+                    .catch(() => {
+                        resultsBox.innerHTML = '<div class="list-group-item text-danger small py-2">Gagal memuat data pencarian.</div>';
+                        resultsBox.style.display = 'block';
+                    });
+            }, 300);
+        });
+
+        function selectPasienLama(p) {
+            hiddenId.value = p.id;
+            document.getElementById('prevLamaNoRm').textContent = p.no_rm;
+            document.getElementById('prevLamaNama').textContent = p.nama_lengkap;
+            document.getElementById('prevLamaNik').textContent = p.nik || '-';
+            document.getElementById('prevLamaJk').textContent = p.jenis_kelamin;
+            document.getElementById('prevLamaUmur').textContent = p.umur;
+            document.getElementById('prevLamaAlamat').textContent = p.alamat || '-';
+
+            if (p.no_bpjs) {
+                document.getElementById('prevLamaBpjsWrap').style.display = 'block';
+                document.getElementById('prevLamaBpjs').textContent = p.no_bpjs;
+                document.getElementById('penjaminLama').value = 'BPJS';
+                document.getElementById('lamaNoBpjsInput').value = p.no_bpjs;
+                document.getElementById('lamaBpjsInputWrap').style.display = 'block';
+            } else {
+                document.getElementById('prevLamaBpjsWrap').style.display = 'none';
+            }
+
+            resultsBox.style.display = 'none';
+            previewBox.style.display = 'block';
+            inputCari.value = p.no_rm + ' - ' + p.nama_lengkap;
+            btnSubmit.removeAttribute('disabled');
+        }
+
+        if (btnClear) {
+            btnClear.addEventListener('click', function() {
+                inputCari.value = '';
+                resultsBox.style.display = 'none';
+                previewBox.style.display = 'none';
+                hiddenId.value = '';
+                btnSubmit.setAttribute('disabled', 'true');
+            });
+        }
+
+        if (btnRemove) {
+            btnRemove.addEventListener('click', function() {
+                inputCari.value = '';
+                previewBox.style.display = 'none';
+                hiddenId.value = '';
+                btnSubmit.setAttribute('disabled', 'true');
+            });
+        }
+
+        // Close dropdown when clicking outside
+        document.addEventListener('click', function(e) {
+            if (!inputCari.contains(e.target) && !resultsBox.contains(e.target)) {
+                resultsBox.style.display = 'none';
+            }
+        });
+    })();
+
+    // 2. TOGGLE TUJUAN PELAYANAN (PASIEN LAMA)
+    function toggleTujuanLama(tujuan) {
+        const rajalPanel = document.getElementById('routingLamaRajal');
+        const igdPanel = document.getElementById('routingLamaIGD');
+        const noKunjInput = document.getElementById('noKunjunganLama');
+        if (tujuan === 'IGD') {
+            rajalPanel.style.display = 'none';
+            igdPanel.style.display = 'block';
+            if (noKunjInput) noKunjInput.value = '{{ auto_no_kunjungan_igd }}';
+        } else {
+            rajalPanel.style.display = 'block';
+            igdPanel.style.display = 'none';
+            if (noKunjInput) noKunjInput.value = '{{ auto_no_kunjungan_rajal }}';
+        }
+    }
+
+    // 3. TOGGLE TUJUAN PELAYANAN (PASIEN BARU)
+    function toggleTujuanBaru(tujuan) {
+        const rajalPanel = document.getElementById('routingBaruRajal');
+        const igdPanel = document.getElementById('routingBaruIGD');
+        const badgeNoKunj = document.getElementById('badgeNoKunjunganBaru');
+        const hiddenNoKunj = document.getElementById('noKunjunganBaru');
+        if (tujuan === 'IGD') {
+            rajalPanel.style.display = 'none';
+            igdPanel.style.display = 'block';
+            if (badgeNoKunj) badgeNoKunj.textContent = 'No. Kunjungan: {{ auto_no_kunjungan_igd }}';
+            if (hiddenNoKunj) hiddenNoKunj.value = '{{ auto_no_kunjungan_igd }}';
+        } else {
+            rajalPanel.style.display = 'block';
+            igdPanel.style.display = 'none';
+            if (badgeNoKunj) badgeNoKunj.textContent = 'No. Kunjungan: {{ auto_no_kunjungan_rajal }}';
+            if (hiddenNoKunj) hiddenNoKunj.value = '{{ auto_no_kunjungan_rajal }}';
+        }
+    }
+
+    // 4. SYNC DPJP PASIEN LAMA & BARU
+    function syncDpjpLama() {
+        const poliVal = document.getElementById('poliSelectLama').value;
+        const dpjpSelect = document.getElementById('dpjpSelectLama');
+        if (!dpjpSelect) return;
+        for (let opt of dpjpSelect.options) {
+            if (poliVal && opt.text.toLowerCase().includes(poliVal.toLowerCase().replace('poli ', ''))) {
+                opt.selected = true;
+                break;
+            }
+        }
+    }
+
+    function syncDpjpBaru() {
+        const poliVal = document.getElementById('poliSelectBaru').value;
+        const dpjpSelect = document.getElementById('dpjpSelectBaru');
+        if (!dpjpSelect) return;
+        for (let opt of dpjpSelect.options) {
+            if (poliVal && opt.text.toLowerCase().includes(poliVal.toLowerCase().replace('poli ', ''))) {
+                opt.selected = true;
+                break;
+            }
+        }
+    }
+
+    // 5. COPY ALAMAT DOMISILI KE PENANGGUNG JAWAB
+    function copyAlamatToPj(isChecked) {
+        const alamatDomisili = document.getElementById('alamatBaruInput');
+        const alamatPj = document.getElementById('alamatPjInput');
+        if (isChecked && alamatDomisili && alamatPj) {
+            alamatPj.value = alamatDomisili.value;
+        }
+    }
+
+    // 6. TOGGLE PENJAMIN BPJS PASIEN BARU
+    function togglePenjaminBaru() {
+        const penjamin = document.getElementById('penjaminBaru').value;
+        const bpjsWrap = document.getElementById('bpjsBaruWrap');
+        if (bpjsWrap) {
+            bpjsWrap.style.display = (penjamin === 'BPJS') ? 'block' : 'none';
+        }
+    }
+
 </script>
 {% endblock %}

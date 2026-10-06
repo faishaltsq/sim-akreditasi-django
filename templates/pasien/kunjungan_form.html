@@ -45,8 +45,8 @@
                 <p class="fw-bold mb-2" style="font-size:.78rem; text-transform:uppercase; letter-spacing:.05em; color:#0d9488;"><i class="bi bi-hospital me-1"></i>Detail Admisi</p>
                 <div class="row g-3 mb-4">
                     <div class="col-md-6">
-                        <label class="form-label" style="font-size:.8rem; font-weight:600;">No. Kunjungan <span class="text-danger">*</span></label>
-                        <input type="text" name="no_kunjungan" id="noKunjungan" class="form-control form-control-sm font-monospace" placeholder="cth. REG-20241001-001" required style="font-size:.82rem;">
+                        <label class="form-label" style="font-size:.8rem; font-weight:600;">No. Kunjungan <span class="text-danger">*</span> <span class="badge bg-secondary-subtle text-dark" style="font-size: .65rem;">Otomatis</span></label>
+                        <input type="text" name="no_kunjungan" id="noKunjungan" class="form-control form-control-sm font-monospace bg-light" value="{{ auto_no_kunjungan_rajal }}" placeholder="cth. REG-20241001-001" required style="font-size:.82rem;">
                     </div>
                     <div class="col-md-6">
                         <label class="form-label" style="font-size:.8rem; font-weight:600;">Jenis Kunjungan <span class="text-danger">*</span></label>

@@ -3,13 +3,19 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.urls import reverse
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
+from django.db import transaction
 from django.db.models import Count, Avg, Sum, Q
 from django.http import HttpResponse, JsonResponse
 from .decorators import require_patient_module
 from django.utils import timezone
 from datetime import timedelta
 
-from .models import Pasien, KunjunganPasien, Bed, Ruangan, CPPT, AsesmenRisikoKlinis, BillingItem, DischargeRecord, ResepElektronik, ResepDetail, OrderPenunjang, POLIKLINIK_CHOICES, DPJP_CHOICES, BookingKamar, GeneralConsentRawatInap
+from .models import (
+    Pasien, KunjunganPasien, Bed, Ruangan, CPPT, AsesmenRisikoKlinis,
+    BillingItem, DischargeRecord, ResepElektronik, ResepDetail,
+    OrderPenunjang, POLIKLINIK_CHOICES, DPJP_CHOICES, BookingKamar,
+    GeneralConsentRawatInap, generate_no_rm, generate_no_kunjungan
+)
 from .pdf_utils import generate_resume_pdf
 from .satusehat import sync_encounter_satusehat, parse_qr_medis
 
@@ -262,27 +268,78 @@ def kunjungan_detail(request, pk):
 def kunjungan_baru(request):
     if request.method == 'POST':
         try:
-            pasien_obj = get_object_or_404(Pasien, pk=request.POST['pasien_id'])
-            k = KunjunganPasien(
-                pasien=pasien_obj,
-                no_kunjungan=request.POST['no_kunjungan'],
-                jenis_kunjungan=request.POST['jenis_kunjungan'],
-                tanggal_masuk=request.POST['tanggal_masuk'],
-                dpjp=request.POST.get('dpjp', ''),
-                poliklinik=request.POST.get('poliklinik', ''),
-                penjamin=request.POST.get('penjamin', 'UMUM'),
-                triage=request.POST.get('triage', ''),
-                catatan_admisi=request.POST.get('catatan_admisi', ''),
-                general_consent=bool(request.POST.get('general_consent')),
-                status='TRIAGE' if request.POST['jenis_kunjungan'] == 'IGD' else 'DAFTAR',
-                created_by=request.user,
-            )
-            k.full_clean()
-            k.save()
-            messages.success(request, f'Kunjungan {k.no_kunjungan} berhasil dibuat.')
+            with transaction.atomic():
+                is_pasien_baru = request.POST.get('is_pasien_baru') in ['1', 'true', 'True', True]
+                
+                if is_pasien_baru:
+                    no_rm = request.POST.get('no_rm', '').strip() or generate_no_rm()
+                    pasien_obj = Pasien(
+                        no_rm=no_rm,
+                        nik=request.POST.get('nik', '').strip(),
+                        nama_lengkap=request.POST['nama_lengkap'].strip(),
+                        tempat_lahir=request.POST.get('tempat_lahir', '').strip(),
+                        tanggal_lahir=request.POST['tanggal_lahir'],
+                        jenis_kelamin=request.POST['jenis_kelamin'],
+                        agama=request.POST.get('agama', ''),
+                        status_perkawinan=request.POST.get('status_perkawinan', ''),
+                        pendidikan_terakhir=request.POST.get('pendidikan_terakhir', ''),
+                        pekerjaan=request.POST.get('pekerjaan', '').strip(),
+                        golongan_darah=request.POST.get('golongan_darah', '-'),
+                        alamat=request.POST.get('alamat', '').strip(),
+                        rt_rw=request.POST.get('rt_rw', '').strip(),
+                        kelurahan=request.POST.get('kelurahan', '').strip(),
+                        kecamatan=request.POST.get('kecamatan', '').strip(),
+                        kota_kabupaten=request.POST.get('kota_kabupaten', '').strip(),
+                        provinsi=request.POST.get('provinsi', '').strip(),
+                        no_hp=request.POST.get('no_hp', '').strip(),
+                        email=request.POST.get('email', '').strip(),
+                        no_bpjs=request.POST.get('no_bpjs', '').strip(),
+                        nama_pj=request.POST.get('nama_pj', '').strip(),
+                        hubungan_pj=request.POST.get('hubungan_pj', ''),
+                        no_hp_pj=request.POST.get('no_hp_pj', '').strip(),
+                        alamat_pj=request.POST.get('alamat_pj', '').strip(),
+                        alergi_obat=request.POST.get('alergi_obat', '').strip(),
+                        alergi_lain=request.POST.get('alergi_lain', '').strip(),
+                    )
+                    pasien_obj.full_clean()
+                    pasien_obj.save()
+                else:
+                    pasien_obj = get_object_or_404(Pasien, pk=request.POST['pasien_id'])
+                    # If patient has updated BPJS number from form, save it
+                    new_bpjs = request.POST.get('no_bpjs', '').strip()
+                    if new_bpjs and pasien_obj.no_bpjs != new_bpjs:
+                        pasien_obj.no_bpjs = new_bpjs
+                        pasien_obj.save(update_fields=['no_bpjs'])
+
+                jenis_kunjungan = request.POST.get('jenis_kunjungan', 'RAJAL')
+                no_kunjungan = request.POST.get('no_kunjungan', '').strip() or generate_no_kunjungan(jenis=jenis_kunjungan)
+                tgl_masuk = request.POST.get('tanggal_masuk') or timezone.now()
+
+                k = KunjunganPasien(
+                    pasien=pasien_obj,
+                    no_kunjungan=no_kunjungan,
+                    jenis_kunjungan=jenis_kunjungan,
+                    tanggal_masuk=tgl_masuk,
+                    dpjp=request.POST.get('dpjp', ''),
+                    poliklinik=request.POST.get('poliklinik', ''),
+                    penjamin=request.POST.get('penjamin', 'UMUM'),
+                    triage=request.POST.get('triage', ''),
+                    catatan_admisi=request.POST.get('catatan_admisi', ''),
+                    general_consent=bool(request.POST.get('general_consent')),
+                    status='TRIAGE' if jenis_kunjungan == 'IGD' else 'DAFTAR',
+                    created_by=request.user,
+                )
+                k.full_clean()
+                k.save()
+
+            messages.success(request, f'✅ Pasien {pasien_obj.nama_lengkap} (RM: {pasien_obj.no_rm}) berhasil didaftarkan. Kunjungan: {k.no_kunjungan}')
+            next_url = request.POST.get('next_url')
+            if next_url:
+                return redirect(next_url)
             return redirect('pasien:kunjungan_detail', pk=k.pk)
         except Exception as e:
-            messages.error(request, f'Gagal: {e}')
+            messages.error(request, f'Gagal mendaftarkan kunjungan: {e}')
+
     pasien_id = request.GET.get('pasien')
     ctx = {
         'pasien_list': Pasien.objects.order_by('nama_lengkap'),
@@ -292,6 +349,15 @@ def kunjungan_baru(request):
         'triage_choices': KunjunganPasien.TRIAGE_CHOICES,
         'poliklinik_choices': POLIKLINIK_CHOICES,
         'dpjp_choices': DPJP_CHOICES,
+        'agama_choices': Pasien.AGAMA_CHOICES,
+        'status_kawin_choices': Pasien.STATUS_KAWIN_CHOICES,
+        'pendidikan_choices': Pasien.PENDIDIKAN_CHOICES,
+        'hubungan_pj_choices': Pasien.HUBUNGAN_PJ_CHOICES,
+        'goldar_choices': Pasien.GOLDAR,
+        'jk_choices': Pasien.JENIS_KELAMIN,
+        'auto_no_rm': generate_no_rm(),
+        'auto_no_kunjungan_rajal': generate_no_kunjungan('RAJAL'),
+        'auto_no_kunjungan_igd': generate_no_kunjungan('IGD'),
     }
     return render(request, 'pasien/kunjungan_form.html', ctx)
 
@@ -676,11 +742,57 @@ def pendaftaran_dashboard(request):
         'pasien_recent':       Pasien.objects.order_by('-created_at')[:10],
         'pasien_list':         Pasien.objects.order_by('nama_lengkap'),
         'bed_matrix':          bed_matrix,
+        'agama_choices':       Pasien.AGAMA_CHOICES,
+        'status_kawin_choices': Pasien.STATUS_KAWIN_CHOICES,
+        'pendidikan_choices':  Pasien.PENDIDIKAN_CHOICES,
+        'hubungan_pj_choices': Pasien.HUBUNGAN_PJ_CHOICES,
+        'goldar_choices':      Pasien.GOLDAR,
+        'jk_choices':          Pasien.JENIS_KELAMIN,
+        'auto_no_rm':          generate_no_rm(),
+        'auto_no_kunjungan_rajal': generate_no_kunjungan('RAJAL'),
+        'auto_no_kunjungan_igd': generate_no_kunjungan('IGD'),
         # Reporting metrics
         'total_pasien_baru_hari_ini': Pasien.objects.filter(created_at__date=today).count(),
         'total_pasien_lama_hari_ini': qs_today.exclude(pasien__created_at__date=today).values('pasien').distinct().count(),
     }
     return render(request, 'pasien/pendaftaran_dashboard.html', ctx)
+
+
+@login_required
+def api_cari_pasien(request):
+    """API endpoint for live search of patients by No. RM, NIK, or Name."""
+    q = request.GET.get('q', '').strip()
+    if not q:
+        return JsonResponse({'results': []})
+
+    qs = Pasien.objects.filter(
+        Q(no_rm__icontains=q) |
+        Q(nama_lengkap__icontains=q) |
+        Q(nik__icontains=q) |
+        Q(no_hp__icontains=q)
+    ).order_by('nama_lengkap')[:20]
+
+    results = []
+    for p in qs:
+        results.append({
+            'id': p.pk,
+            'no_rm': p.no_rm,
+            'nik': p.nik,
+            'nama_lengkap': p.nama_lengkap,
+            'tanggal_lahir': p.tanggal_lahir.strftime('%d/%m/%Y') if p.tanggal_lahir else '',
+            'tanggal_lahir_raw': p.tanggal_lahir.strftime('%Y-%m-%d') if p.tanggal_lahir else '',
+            'umur': p.umur,
+            'jenis_kelamin': p.get_jenis_kelamin_display(),
+            'alamat': p.alamat,
+            'no_hp': p.no_hp,
+            'no_bpjs': p.no_bpjs,
+            'penjamin_default': 'BPJS' if p.no_bpjs else 'UMUM',
+            'nama_pj': p.nama_pj,
+            'hubungan_pj': p.hubungan_pj,
+            'no_hp_pj': p.no_hp_pj,
+            'alamat_pj': p.alamat_pj,
+        })
+    return JsonResponse({'results': results})
 
 
 @login_required

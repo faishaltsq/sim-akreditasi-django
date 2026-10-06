@@ -12,23 +12,66 @@ from django.core.validators import MinValueValidator, MaxValueValidator
 class Pasien(models.Model):
     JENIS_KELAMIN = [('L', 'Laki-laki'), ('P', 'Perempuan')]
     GOLDAR = [('A', 'A'), ('B', 'B'), ('AB', 'AB'), ('O', 'O'), ('-', 'Tidak Diketahui')]
+    AGAMA_CHOICES = [
+        ('ISLAM', 'Islam'),
+        ('KRISTEN', 'Kristen'),
+        ('KATOLIK', 'Katolik'),
+        ('HINDU', 'Hindu'),
+        ('BUDDHA', 'Buddha'),
+        ('KONGHUCU', 'Konghucu'),
+        ('LAINNYA', 'Lainnya'),
+    ]
+    STATUS_KAWIN_CHOICES = [
+        ('BELUM_MENIKAH', 'Belum Menikah'),
+        ('MENIKAH', 'Menikah'),
+        ('DUDA_JANDA', 'Duda / Janda'),
+    ]
+    PENDIDIKAN_CHOICES = [
+        ('SD_SMP_SMA', 'SD / SMP / SMA'),
+        ('D3_D4', 'D3 / D4'),
+        ('S1_S2_S3', 'S1 / S2 / S3'),
+        ('LAINNYA', 'Lainnya'),
+    ]
+    HUBUNGAN_PJ_CHOICES = [
+        ('SUAMI_ISTRI', 'Suami / Istri'),
+        ('ORANG_TUA', 'Orang Tua'),
+        ('ANAK', 'Anak'),
+        ('KERABAT_LAIN', 'Kerabat / Lainnya'),
+    ]
 
-    no_rm          = models.CharField('No. Rekam Medis', max_length=20, unique=True)
-    nik            = models.CharField('NIK', max_length=16, blank=True)
-    nama_lengkap   = models.CharField('Nama Lengkap', max_length=200)
-    tanggal_lahir  = models.DateField('Tanggal Lahir')
-    jenis_kelamin  = models.CharField('Jenis Kelamin', max_length=1, choices=JENIS_KELAMIN)
-    golongan_darah = models.CharField('Golongan Darah', max_length=3, choices=GOLDAR, default='-')
-    alamat         = models.TextField('Alamat', blank=True)
-    no_hp          = models.CharField('No. HP', max_length=20, blank=True)
-    no_bpjs        = models.CharField('No. BPJS', max_length=20, blank=True)
-    alergi_obat    = models.TextField('Alergi Obat', blank=True, help_text='Pisahkan dengan koma')
-    alergi_lain    = models.TextField('Alergi Lain', blank=True)
+    no_rm               = models.CharField('No. Rekam Medis', max_length=20, unique=True)
+    nik                 = models.CharField('NIK', max_length=16, blank=True)
+    nama_lengkap        = models.CharField('Nama Lengkap', max_length=200)
+    tempat_lahir        = models.CharField('Tempat Lahir', max_length=100, blank=True)
+    tanggal_lahir       = models.DateField('Tanggal Lahir')
+    jenis_kelamin       = models.CharField('Jenis Kelamin', max_length=1, choices=JENIS_KELAMIN)
+    agama               = models.CharField('Agama', max_length=20, choices=AGAMA_CHOICES, blank=True)
+    status_perkawinan   = models.CharField('Status Perkawinan', max_length=20, choices=STATUS_KAWIN_CHOICES, blank=True)
+    pendidikan_terakhir = models.CharField('Pendidikan Terakhir', max_length=30, choices=PENDIDIKAN_CHOICES, blank=True)
+    pekerjaan           = models.CharField('Pekerjaan', max_length=100, blank=True)
+    golongan_darah      = models.CharField('Golongan Darah', max_length=3, choices=GOLDAR, default='-')
+    alamat              = models.TextField('Alamat Domisili Lengkap', blank=True)
+    rt_rw               = models.CharField('RT / RW', max_length=20, blank=True)
+    kelurahan           = models.CharField('Kelurahan / Desa', max_length=100, blank=True)
+    kecamatan           = models.CharField('Kecamatan', max_length=100, blank=True)
+    kota_kabupaten      = models.CharField('Kota / Kabupaten', max_length=100, blank=True)
+    provinsi            = models.CharField('Provinsi', max_length=100, blank=True)
+    no_hp               = models.CharField('No. HP / WhatsApp', max_length=30, blank=True)
+    email               = models.EmailField('Email', blank=True)
+    no_bpjs             = models.CharField('No. BPJS', max_length=30, blank=True)
+    # ── Emergency Contact / Penanggung Jawab Pasien ──
+    nama_pj             = models.CharField('Nama Penanggung Jawab', max_length=150, blank=True)
+    hubungan_pj         = models.CharField('Hubungan dengan Pasien', max_length=50, blank=True)
+    no_hp_pj            = models.CharField('No. HP / WA Penanggung Jawab', max_length=30, blank=True)
+    alamat_pj           = models.TextField('Alamat Penanggung Jawab', blank=True)
+
+    alergi_obat         = models.TextField('Alergi Obat', blank=True, help_text='Pisahkan dengan koma')
+    alergi_lain         = models.TextField('Alergi Lain', blank=True)
     # ── SatuSehat Kemenkes ──
-    satusehat_id       = models.CharField('SatuSehat Patient ID', max_length=64, blank=True, null=True)
-    satusehat_sync_at  = models.DateTimeField('Waktu Sync SatuSehat', null=True, blank=True)
-    created_at     = models.DateTimeField(auto_now_add=True)
-    updated_at     = models.DateTimeField(auto_now=True)
+    satusehat_id        = models.CharField('SatuSehat Patient ID', max_length=64, blank=True, null=True)
+    satusehat_sync_at   = models.DateTimeField('Waktu Sync SatuSehat', null=True, blank=True)
+    created_at          = models.DateTimeField(auto_now_add=True)
+    updated_at          = models.DateTimeField(auto_now=True)
 
     class Meta:
         verbose_name = 'Pasien'
@@ -48,6 +91,57 @@ class Pasien(models.Model):
     @property
     def has_alergi(self):
         return bool(self.alergi_obat or self.alergi_lain)
+
+
+def generate_no_rm():
+    """Generate sequential unique RM number, format: RM-YYYYMM-XXXX"""
+    import datetime
+    now = datetime.datetime.now()
+    prefix = f"RM-{now.strftime('%Y%m')}-"
+    last_pasien = Pasien.objects.filter(no_rm__startswith=prefix).order_by('-no_rm').first()
+    if last_pasien and len(last_pasien.no_rm) >= len(prefix) + 4:
+        try:
+            last_seq = int(last_pasien.no_rm[len(prefix):])
+            seq = last_seq + 1
+        except ValueError:
+            seq = Pasien.objects.filter(no_rm__startswith=prefix).count() + 1
+    else:
+        seq = Pasien.objects.filter(no_rm__startswith=prefix).count() + 1
+
+    no_rm = f"{prefix}{seq:04d}"
+    while Pasien.objects.filter(no_rm=no_rm).exists():
+        seq += 1
+        no_rm = f"{prefix}{seq:04d}"
+    return no_rm
+
+
+def generate_no_kunjungan(jenis='RAJAL'):
+    """Generate sequential unique Visit number, format: REG-YYYYMMDD-XXXX or IGD-YYYYMMDD-XXXX"""
+    import datetime
+    now = datetime.datetime.now()
+    date_str = now.strftime('%Y%m%d')
+    if jenis == 'IGD':
+        prefix = f"IGD-{date_str}-"
+    elif jenis == 'RANAP':
+        prefix = f"RNP-{date_str}-"
+    else:
+        prefix = f"REG-{date_str}-"
+
+    last_kunjungan = KunjunganPasien.objects.filter(no_kunjungan__startswith=prefix).order_by('-no_kunjungan').first()
+    if last_kunjungan and len(last_kunjungan.no_kunjungan) >= len(prefix) + 4:
+        try:
+            last_seq = int(last_kunjungan.no_kunjungan[len(prefix):])
+            seq = last_seq + 1
+        except ValueError:
+            seq = KunjunganPasien.objects.filter(no_kunjungan__startswith=prefix).count() + 1
+    else:
+        seq = KunjunganPasien.objects.filter(no_kunjungan__startswith=prefix).count() + 1
+
+    no_kunj = f"{prefix}{seq:04d}"
+    while KunjunganPasien.objects.filter(no_kunjungan=no_kunj).exists():
+        seq += 1
+        no_kunj = f"{prefix}{seq:04d}"
+    return no_kunj
 
 
 # ── 2. Bed Management ────────────────────────────────────────────────────────

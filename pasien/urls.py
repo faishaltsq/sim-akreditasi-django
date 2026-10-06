@@ -42,6 +42,7 @@ urlpatterns = [
     path('kunjungan/<int:kunjungan_id>/general-consent/', views.general_consent_simpan, name='general_consent_simpan'),
     path('kunjungan/<int:pk>/cetak-general-consent/', views.cetak_general_consent, name='cetak_general_consent'),
     # ── Print / Cetak Views ──
+    path('api/cari/', views.api_cari_pasien, name='api_cari_pasien'),
     path('api/cek-nik/', views.api_cek_nik, name='api_cek_nik'),
     path('kunjungan/<int:pk>/cetak-gelang/', views.cetak_gelang, name='cetak_gelang'),
     path('kunjungan/<int:pk>/cetak-sep/', views.cetak_sep, name='cetak_sep'),
