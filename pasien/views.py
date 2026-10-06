@@ -2058,6 +2058,14 @@ def igd_asesmen_medis_save(request, pk):
             'motorik_atas': request.POST.get('ekstremitas_motorik_atas', '5/5'),
             'motorik_bawah': request.POST.get('ekstremitas_motorik_bawah', '5/5'),
         }
+        sec['genitalia'] = {
+            'kondisi': request.POST.get('genitalia_kondisi', 'Tidak Diperiksa (Atas Indikasi)'),
+            'kateter': request.POST.get('genitalia_kateter', 'Tidak Terpasang'),
+        }
+        sec['kulit'] = {
+            'turgor': request.POST.get('kulit_turgor', 'Cepat Kembali (Baik/Normal)'),
+            'integritas': request.POST.get('kulit_integritas', 'Utuh / Normal'),
+        }
         k.secondary_survey_detail = sec
 
         # Section VII: Penunjang (Radiologi, EKG, Hasil Kritis)
