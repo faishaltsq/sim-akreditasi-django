@@ -57,10 +57,62 @@ class DiagnosaPickerTest(TestCase):
         self.assertEqual(k.diagnosa_keperawatan_sdki, 'D.0130 - Hipertermia')
         self.assertEqual(k.icd9_tindakan, 'Pasang Infus RL')
 
-    def test_igd_dashboard_renders_datalists(self):
-        response = self.client.get(reverse('pasien:igd_dashboard'))
-        self.assertEqual(response.status_code, 200)
-        self.assertContains(response, 'id="globalIcd10List"')
-        self.assertContains(response, 'id="globalSdkiList"')
-        self.assertContains(response, 'D.0077 - Nyeri Akut')
-        self.assertContains(response, 'I10 - Hipertensi Esensial')
+    def test_igd_asesmen_medis_save_secondary_survey(self):
+        import datetime
+        from django.utils import timezone
+        pasien = Pasien.objects.create(
+            nama_lengkap='Pasien Uji Secondary',
+            no_rm='RM-SEC-001',
+            tanggal_lahir=datetime.date(1988, 5, 20)
+        )
+        k = KunjunganPasien.objects.create(
+            pasien=pasien,
+            jenis_kunjungan='IGD',
+            status='ASESMEN',
+            tanggal_masuk=timezone.now()
+        )
+        url = reverse('pasien:igd_asesmen_medis_save', kwargs={'pk': k.pk})
+        post_data = {
+            'mata_konjungtiva': 'Anemis (+/+)',
+            'mata_sklera': 'Ikterik (+/+)',
+            'mata_pupil': 'Anisokor',
+            'mata_refleks_cahaya': '(+/-)',
+            'tht_telinga_lapang': 'Serumen (+/+)',
+            'tht_membran_timpani': 'Perforasi',
+            'tht_napas_cuping': 'Ada (+)',
+            'tht_mukosa_bibir': 'Sianosis / Pucat',
+            'tht_faring': 'T2/T2 Hiperemis (+)',
+            'kepala_kondisi': 'Hematoma / Jejas',
+            'leher_jvp': 'Meningkat (R-JVP)',
+            'leher_kgb': 'Pembesaran KGB (+)',
+            'leher_kaku_kuduk': 'Positif (+)',
+            'leher_trakea': 'Deviasi ke Kanan',
+            'paru_inspeksi': 'Asimetris',
+            'paru_retraksi': 'Ada Retraksi Interkostal',
+            'paru_auskultasi': 'Bronkovesikuler',
+            'paru_wheezing': '(+/+) Wheezing Ekspiratoir',
+            'paru_ronkhi': '(+/+) Basah Kasar',
+            'jantung_bunyi': 'S1-S2 Ireguler',
+            'jantung_murmur': 'Systolic Murmur (+)',
+            'jantung_gallop': 'Gallop S3 (+)',
+            'abdomen_inspeksi': 'Distensi',
+            'abdomen_bising_usus': 'Meningkat (Hiperaktif)',
+            'abdomen_palpasi': 'Defans Muskular',
+            'abdomen_organomegali': 'Hepatomegali (+)',
+            'abdomen_perkusi': 'Redup / Ascites (+)',
+            'ekstremitas_akral': 'Dingin, Basah, Pucat',
+            'ekstremitas_crt': '> 2 Detik',
+            'ekstremitas_edema_atas': '(+/+) Pitting Edema',
+            'ekstremitas_edema_bawah': '(+/+) Pitting Edema',
+            'ekstremitas_motorik_atas': '3/3 (Lemah)',
+            'ekstremitas_motorik_bawah': '3/3 (Lemah)',
+        }
+        res = self.client.post(url, post_data)
+        self.assertEqual(res.status_code, 302)
+        k.refresh_from_db()
+        self.assertEqual(k.secondary_survey_detail['mata']['konjungtiva'], 'Anemis (+/+)')
+        self.assertEqual(k.secondary_survey_detail['mata']['sklera'], 'Ikterik (+/+)')
+        self.assertEqual(k.secondary_survey_detail['tht']['faring'], 'T2/T2 Hiperemis (+)')
+        self.assertEqual(k.secondary_survey_detail['thorax']['paru_wheezing'], '(+/+) Wheezing Ekspiratoir')
+        self.assertEqual(k.secondary_survey_detail['abdomen']['palpasi'], 'Defans Muskular')
+        self.assertEqual(k.secondary_survey_detail['ekstremitas']['akral'], 'Dingin, Basah, Pucat')

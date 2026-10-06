@@ -1647,72 +1647,300 @@
                                                     </div>
                                                 </div>
 
-                                                <!-- TAB 6: SECONDARY SURVEY (HEAD TO TOE) -->
+                                                <!-- TAB 6: SECONDARY SURVEY (HEAD TO TOE - SELECTABLE CONTROLS) -->
                                                 <div class="tab-pane fade" id="tabSecondary{{ k.pk }}">
                                                     <div class="row g-3">
+                                                        <!-- 1. MATA -->
                                                         <div class="col-md-6">
-                                                            <div class="card p-2 shadow-none border">
+                                                            <div class="card p-2 shadow-none border h-100">
                                                                 <h6 class="fw-bold text-primary mb-2 border-bottom pb-1"><i class="bi bi-eye me-1"></i>1. Mata</h6>
                                                                 <div class="row g-2">
-                                                                    <div class="col-6"><label class="small text-muted">Konjungtiva</label><input type="text" name="mata_konjungtiva" class="form-control form-control-sm" value="{{ k.secondary_survey_detail.mata.konjungtiva|default:'Normal / Tidak Anemis' }}"></div>
-                                                                    <div class="col-6"><label class="small text-muted">Sklera</label><input type="text" name="mata_sklera" class="form-control form-control-sm" value="{{ k.secondary_survey_detail.mata.sklera|default:'Normal / Tidak Ikterik' }}"></div>
-                                                                    <div class="col-6"><label class="small text-muted">Pupil</label><input type="text" name="mata_pupil" class="form-control form-control-sm" value="{{ k.secondary_survey_detail.mata.pupil|default:'Isokor' }}"></div>
-                                                                    <div class="col-6"><label class="small text-muted">Refleks Cahaya</label><input type="text" name="mata_refleks_cahaya" class="form-control form-control-sm" value="{{ k.secondary_survey_detail.mata.refleks_cahaya|default:'(+/+)' }}"></div>
+                                                                    <div class="col-6">
+                                                                        <label class="small text-muted fw-semibold">Konjungtiva</label>
+                                                                        <select name="mata_konjungtiva" class="form-select form-select-sm">
+                                                                            <option value="Normal / Tidak Anemis" {% if not k.secondary_survey_detail.mata.konjungtiva or k.secondary_survey_detail.mata.konjungtiva == 'Normal / Tidak Anemis' or k.secondary_survey_detail.mata.konjungtiva == 'Normal' %}selected{% endif %}>Normal / Tidak Anemis</option>
+                                                                            <option value="Anemis (+/+)" {% if k.secondary_survey_detail.mata.konjungtiva == 'Anemis (+/+)' %}selected{% endif %}>Anemis (+/+)</option>
+                                                                            <option value="Hiperemis (+/+)" {% if k.secondary_survey_detail.mata.konjungtiva == 'Hiperemis (+/+)' %}selected{% endif %}>Hiperemis (+/+)</option>
+                                                                            <option value="Sekret (+/+)" {% if k.secondary_survey_detail.mata.konjungtiva == 'Sekret (+/+)' %}selected{% endif %}>Sekret (+/+)</option>
+                                                                        </select>
+                                                                    </div>
+                                                                    <div class="col-6">
+                                                                        <label class="small text-muted fw-semibold">Sklera</label>
+                                                                        <select name="mata_sklera" class="form-select form-select-sm">
+                                                                            <option value="Normal / Tidak Ikterik" {% if not k.secondary_survey_detail.mata.sklera or k.secondary_survey_detail.mata.sklera == 'Normal / Tidak Ikterik' or k.secondary_survey_detail.mata.sklera == 'Normal' %}selected{% endif %}>Normal / Tidak Ikterik</option>
+                                                                            <option value="Ikterik (+/+)" {% if k.secondary_survey_detail.mata.sklera == 'Ikterik (+/+)' %}selected{% endif %}>Ikterik (+/+)</option>
+                                                                            <option value="Perdarahan Subkonjungtiva" {% if k.secondary_survey_detail.mata.sklera == 'Perdarahan Subkonjungtiva' %}selected{% endif %}>Perdarahan Subkonjungtiva</option>
+                                                                        </select>
+                                                                    </div>
+                                                                    <div class="col-6">
+                                                                        <label class="small text-muted fw-semibold">Pupil</label>
+                                                                        <select name="mata_pupil" class="form-select form-select-sm">
+                                                                            <option value="Isokor" {% if not k.secondary_survey_detail.mata.pupil or k.secondary_survey_detail.mata.pupil == 'Isokor' %}selected{% endif %}>Isokor</option>
+                                                                            <option value="Anisokor" {% if k.secondary_survey_detail.mata.pupil == 'Anisokor' %}selected{% endif %}>Anisokor</option>
+                                                                            <option value="Pinpoint" {% if k.secondary_survey_detail.mata.pupil == 'Pinpoint' %}selected{% endif %}>Pinpoint</option>
+                                                                            <option value="Midriasis Maksimal" {% if k.secondary_survey_detail.mata.pupil == 'Midriasis Maksimal' %}selected{% endif %}>Midriasis Maksimal</option>
+                                                                        </select>
+                                                                    </div>
+                                                                    <div class="col-6">
+                                                                        <label class="small text-muted fw-semibold">Refleks Cahaya</label>
+                                                                        <select name="mata_refleks_cahaya" class="form-select form-select-sm">
+                                                                            <option value="(+/+)" {% if not k.secondary_survey_detail.mata.refleks_cahaya or k.secondary_survey_detail.mata.refleks_cahaya == '(+/+)' %}selected{% endif %}>(+/+) Positif</option>
+                                                                            <option value="(-/-)" {% if k.secondary_survey_detail.mata.refleks_cahaya == '(-/-)' %}selected{% endif %}>(-/-) Negatif</option>
+                                                                            <option value="(+/-)" {% if k.secondary_survey_detail.mata.refleks_cahaya == '(+/-)' %}selected{% endif %}>(+/-) Kanan Saja</option>
+                                                                            <option value="(-/+)" {% if k.secondary_survey_detail.mata.refleks_cahaya == '(-/+)' %}selected{% endif %}>(-/+) Kiri Saja</option>
+                                                                        </select>
+                                                                    </div>
                                                                 </div>
                                                             </div>
                                                         </div>
+
+                                                        <!-- 2. THT & RONGGA MULUT -->
                                                         <div class="col-md-6">
-                                                            <div class="card p-2 shadow-none border">
+                                                            <div class="card p-2 shadow-none border h-100">
                                                                 <h6 class="fw-bold text-primary mb-2 border-bottom pb-1"><i class="bi bi-soundwave me-1"></i>2. THT & Rongga Mulut</h6>
                                                                 <div class="row g-2">
-                                                                    <div class="col-6"><label class="small text-muted">Telinga</label><input type="text" name="tht_telinga_lapang" class="form-control form-control-sm" value="{{ k.secondary_survey_detail.tht.telinga_lapang|default:'Lapang / Sekret (-/-)' }}"></div>
-                                                                    <div class="col-6"><label class="small text-muted">Hidung / NCH</label><input type="text" name="tht_napas_cuping" class="form-control form-control-sm" value="{{ k.secondary_survey_detail.tht.napas_cuping|default:'Napas Cuping (-) / Epistaksis (-)' }}"></div>
-                                                                    <div class="col-6"><label class="small text-muted">Mukosa Bibir</label><input type="text" name="tht_mukosa_bibir" class="form-control form-control-sm" value="{{ k.secondary_survey_detail.tht.mukosa_bibir|default:'Lembap / Sianosis (-)' }}"></div>
-                                                                    <div class="col-6"><label class="small text-muted">Tonsil / Faring</label><input type="text" name="tht_faring" class="form-control form-control-sm" value="{{ k.secondary_survey_detail.tht.faring|default:'T1/T1 Tenang, Hiperemis (-)' }}"></div>
+                                                                    <div class="col-6">
+                                                                        <label class="small text-muted fw-semibold">Telinga</label>
+                                                                        <select name="tht_telinga_lapang" class="form-select form-select-sm">
+                                                                            <option value="Lapang / Ya" {% if not k.secondary_survey_detail.tht.telinga_lapang or k.secondary_survey_detail.tht.telinga_lapang == 'Lapang / Ya' or k.secondary_survey_detail.tht.telinga_lapang == 'Ya' %}selected{% endif %}>Lapang / Sekret (-/-)</option>
+                                                                            <option value="Tidak Lapang / Sempit" {% if k.secondary_survey_detail.tht.telinga_lapang == 'Tidak Lapang / Sempit' or k.secondary_survey_detail.tht.telinga_lapang == 'Tidak' %}selected{% endif %}>Tidak Lapang / Sempit</option>
+                                                                            <option value="Serumen (+/+)" {% if k.secondary_survey_detail.tht.telinga_lapang == 'Serumen (+/+)' %}selected{% endif %}>Serumen (+/+)</option>
+                                                                            <option value="Otorrhea Darah (+)" {% if k.secondary_survey_detail.tht.telinga_lapang == 'Otorrhea Darah (+)' %}selected{% endif %}>Otorrhea Darah (+)</option>
+                                                                        </select>
+                                                                    </div>
+                                                                    <div class="col-6">
+                                                                        <label class="small text-muted fw-semibold">Membran Timpani</label>
+                                                                        <select name="tht_membran_timpani" class="form-select form-select-sm">
+                                                                            <option value="Intak" {% if not k.secondary_survey_detail.tht.membran_timpani or k.secondary_survey_detail.tht.membran_timpani == 'Intak' %}selected{% endif %}>Intak (Normal)</option>
+                                                                            <option value="Perforasi" {% if k.secondary_survey_detail.tht.membran_timpani == 'Perforasi' %}selected{% endif %}>Perforasi</option>
+                                                                            <option value="Hiperemis / Bulging" {% if k.secondary_survey_detail.tht.membran_timpani == 'Hiperemis / Bulging' %}selected{% endif %}>Hiperemis / Bulging</option>
+                                                                        </select>
+                                                                    </div>
+                                                                    <div class="col-6">
+                                                                        <label class="small text-muted fw-semibold">Hidung & NCH</label>
+                                                                        <select name="tht_napas_cuping" class="form-select form-select-sm">
+                                                                            <option value="Tidak" {% if not k.secondary_survey_detail.tht.napas_cuping or k.secondary_survey_detail.tht.napas_cuping == 'Tidak' or k.secondary_survey_detail.tht.napas_cuping == 'Napas Cuping (-) / Epistaksis (-)' %}selected{% endif %}>Napas Cuping (-) / Epistaksis (-)</option>
+                                                                            <option value="Ada (+)" {% if k.secondary_survey_detail.tht.napas_cuping == 'Ada (+)' or k.secondary_survey_detail.tht.napas_cuping == 'Ya' %}selected{% endif %}>Napas Cuping Hidung (+)</option>
+                                                                            <option value="Epistaksis (+)" {% if k.secondary_survey_detail.tht.napas_cuping == 'Epistaksis (+)' %}selected{% endif %}>Epistaksis (+)</option>
+                                                                            <option value="Deformitas Tulang Hidung" {% if k.secondary_survey_detail.tht.napas_cuping == 'Deformitas Tulang Hidung' %}selected{% endif %}>Deformitas Tulang Hidung (+)</option>
+                                                                        </select>
+                                                                    </div>
+                                                                    <div class="col-6">
+                                                                        <label class="small text-muted fw-semibold">Mukosa Bibir</label>
+                                                                        <select name="tht_mukosa_bibir" class="form-select form-select-sm">
+                                                                            <option value="Lembap" {% if not k.secondary_survey_detail.tht.mukosa_bibir or k.secondary_survey_detail.tht.mukosa_bibir == 'Lembap' or k.secondary_survey_detail.tht.mukosa_bibir == 'Lembap / Sianosis (-)' %}selected{% endif %}>Lembap (Normal)</option>
+                                                                            <option value="Kering / Dehidrasi" {% if k.secondary_survey_detail.tht.mukosa_bibir == 'Kering / Dehidrasi' or k.secondary_survey_detail.tht.mukosa_bibir == 'Kering' %}selected{% endif %}>Kering / Dehidrasi</option>
+                                                                            <option value="Sianosis / Pucat" {% if k.secondary_survey_detail.tht.mukosa_bibir == 'Sianosis / Pucat' or k.secondary_survey_detail.tht.mukosa_bibir == 'Sianosis' %}selected{% endif %}>Sianosis / Pucat</option>
+                                                                            <option value="Stomatitis / Lesi" {% if k.secondary_survey_detail.tht.mukosa_bibir == 'Stomatitis / Lesi' %}selected{% endif %}>Stomatitis / Lesi</option>
+                                                                        </select>
+                                                                    </div>
+                                                                    <div class="col-12">
+                                                                        <label class="small text-muted fw-semibold">Tonsil / Faring</label>
+                                                                        <select name="tht_faring" class="form-select form-select-sm">
+                                                                            <option value="T1/T1 Tenang, Hiperemis (-)" {% if not k.secondary_survey_detail.tht.faring or k.secondary_survey_detail.tht.faring == 'T1/T1 Tenang, Hiperemis (-)' or k.secondary_survey_detail.tht.faring == 'Tenang' %}selected{% endif %}>T1/T1 Tenang, Hiperemis (-)</option>
+                                                                            <option value="T2/T2 Hiperemis (+)" {% if k.secondary_survey_detail.tht.faring == 'T2/T2 Hiperemis (+)' %}selected{% endif %}>T2/T2 Hiperemis (+)</option>
+                                                                            <option value="T3/T3 Detritus (+)" {% if k.secondary_survey_detail.tht.faring == 'T3/T3 Detritus (+)' %}selected{% endif %}>T3/T3 Detritus (+)</option>
+                                                                            <option value="Faring Hiperemis / Granulasi" {% if k.secondary_survey_detail.tht.faring == 'Faring Hiperemis / Granulasi' or k.secondary_survey_detail.tht.faring == 'Hiperemis' %}selected{% endif %}>Faring Hiperemis / Granulasi</option>
+                                                                        </select>
+                                                                    </div>
                                                                 </div>
                                                             </div>
                                                         </div>
+
+                                                        <!-- 3. KEPALA & LEHER -->
                                                         <div class="col-md-6">
-                                                            <div class="card p-2 shadow-none border">
+                                                            <div class="card p-2 shadow-none border h-100">
                                                                 <h6 class="fw-bold text-primary mb-2 border-bottom pb-1"><i class="bi bi-person me-1"></i>3. Kepala & Leher</h6>
                                                                 <div class="row g-2">
-                                                                    <div class="col-6"><label class="small text-muted">Bentuk Kepala</label><input type="text" name="kepala_kondisi" class="form-control form-control-sm" value="{{ k.secondary_survey_detail.kepala_leher.kepala|default:'Normosefali' }}"></div>
-                                                                    <div class="col-6"><label class="small text-muted">JVP</label><input type="text" name="leher_jvp" class="form-control form-control-sm" value="{{ k.secondary_survey_detail.kepala_leher.jvp|default:'Normal (5-2 cmH2O)' }}"></div>
-                                                                    <div class="col-6"><label class="small text-muted">KGB Leher</label><input type="text" name="leher_kgb" class="form-control form-control-sm" value="{{ k.secondary_survey_detail.kepala_leher.kgb|default:'Tidak Ada Pembesaran' }}"></div>
-                                                                    <div class="col-6"><label class="small text-muted">Kaku Kuduk</label><input type="text" name="leher_kaku_kuduk" class="form-control form-control-sm" value="{{ k.secondary_survey_detail.kepala_leher.kaku_kuduk|default:'Negatif (-)' }}"></div>
+                                                                    <div class="col-6">
+                                                                        <label class="small text-muted fw-semibold">Bentuk Kepala</label>
+                                                                        <select name="kepala_kondisi" class="form-select form-select-sm">
+                                                                            <option value="Normosefali" {% if not k.secondary_survey_detail.kepala_leher.kepala or k.secondary_survey_detail.kepala_leher.kepala == 'Normosefali' %}selected{% endif %}>Normosefali</option>
+                                                                            <option value="Hematoma / Jejas" {% if k.secondary_survey_detail.kepala_leher.kepala == 'Hematoma / Jejas' %}selected{% endif %}>Hematoma / Jejas (+)</option>
+                                                                            <option value="Vulnus Laceratum" {% if k.secondary_survey_detail.kepala_leher.kepala == 'Vulnus Laceratum' %}selected{% endif %}>Vulnus Laceratum (Robek)</option>
+                                                                            <option value="Deformitas Tulang" {% if k.secondary_survey_detail.kepala_leher.kepala == 'Deformitas Tulang' %}selected{% endif %}>Deformitas Tulang (+)</option>
+                                                                        </select>
+                                                                    </div>
+                                                                    <div class="col-6">
+                                                                        <label class="small text-muted fw-semibold">JVP</label>
+                                                                        <select name="leher_jvp" class="form-select form-select-sm">
+                                                                            <option value="Normal (5-2 cmH2O)" {% if not k.secondary_survey_detail.kepala_leher.jvp or k.secondary_survey_detail.kepala_leher.jvp == 'Normal (5-2 cmH2O)' or k.secondary_survey_detail.kepala_leher.jvp == 'Normal' %}selected{% endif %}>Normal (5-2 cmH2O)</option>
+                                                                            <option value="Meningkat (R-JVP)" {% if k.secondary_survey_detail.kepala_leher.jvp == 'Meningkat (R-JVP)' or k.secondary_survey_detail.kepala_leher.jvp == 'Meningkat' %}selected{% endif %}>Meningkat (R-JVP)</option>
+                                                                        </select>
+                                                                    </div>
+                                                                    <div class="col-6">
+                                                                        <label class="small text-muted fw-semibold">KGB Leher</label>
+                                                                        <select name="leher_kgb" class="form-select form-select-sm">
+                                                                            <option value="Tidak Ada Pembesaran" {% if not k.secondary_survey_detail.kepala_leher.kgb or k.secondary_survey_detail.kepala_leher.kgb == 'Tidak Ada Pembesaran' or k.secondary_survey_detail.kepala_leher.kgb == 'Tidak' %}selected{% endif %}>Tidak Ada Pembesaran</option>
+                                                                            <option value="Pembesaran KGB (+)" {% if k.secondary_survey_detail.kepala_leher.kgb == 'Pembesaran KGB (+)' or k.secondary_survey_detail.kepala_leher.kgb == 'Ya' %}selected{% endif %}>Pembesaran KGB (+)</option>
+                                                                        </select>
+                                                                    </div>
+                                                                    <div class="col-6">
+                                                                        <label class="small text-muted fw-semibold">Kaku Kuduk</label>
+                                                                        <select name="leher_kaku_kuduk" class="form-select form-select-sm">
+                                                                            <option value="Negatif (-)" {% if not k.secondary_survey_detail.kepala_leher.kaku_kuduk or k.secondary_survey_detail.kepala_leher.kaku_kuduk == 'Negatif (-)' %}selected{% endif %}>Negatif (-) Normal</option>
+                                                                            <option value="Positif (+)" {% if k.secondary_survey_detail.kepala_leher.kaku_kuduk == 'Positif (+)' %}selected{% endif %}>Positif (+) Meningismus</option>
+                                                                        </select>
+                                                                    </div>
+                                                                    <div class="col-12">
+                                                                        <label class="small text-muted fw-semibold">Posisi Trakea</label>
+                                                                        <select name="leher_trakea" class="form-select form-select-sm">
+                                                                            <option value="Ditengah (Normal)" {% if not k.secondary_survey_detail.kepala_leher.trakea or k.secondary_survey_detail.kepala_leher.trakea == 'Ditengah (Normal)' or k.secondary_survey_detail.kepala_leher.trakea == 'Ditengah' %}selected{% endif %}>Ditengah (Normal)</option>
+                                                                            <option value="Deviasi ke Kanan" {% if k.secondary_survey_detail.kepala_leher.trakea == 'Deviasi ke Kanan' %}selected{% endif %}>Deviasi ke Kanan</option>
+                                                                            <option value="Deviasi ke Kiri" {% if k.secondary_survey_detail.kepala_leher.trakea == 'Deviasi ke Kiri' %}selected{% endif %}>Deviasi ke Kiri</option>
+                                                                        </select>
+                                                                    </div>
                                                                 </div>
                                                             </div>
                                                         </div>
+
+                                                        <!-- 4. THORAX (PARU & JANTUNG) -->
                                                         <div class="col-md-6">
-                                                            <div class="card p-2 shadow-none border">
+                                                            <div class="card p-2 shadow-none border h-100">
                                                                 <h6 class="fw-bold text-primary mb-2 border-bottom pb-1"><i class="bi bi-heart-pulse me-1"></i>4. Thorax (Paru & Jantung)</h6>
                                                                 <div class="row g-2">
-                                                                    <div class="col-6"><label class="small text-muted">Auskultasi Paru</label><input type="text" name="paru_auskultasi" class="form-control form-control-sm" value="{{ k.secondary_survey_detail.thorax.paru_auskultasi|default:'Vesikuler (+/+)' }}"></div>
-                                                                    <div class="col-6"><label class="small text-muted">Ronkhi / Wheezing</label><input type="text" name="paru_wheezing" class="form-control form-control-sm" value="{{ k.secondary_survey_detail.thorax.paru_wheezing|default:'Wh (-/-), Rh (-/-)' }}"></div>
-                                                                    <div class="col-6"><label class="small text-muted">Bunyi Jantung</label><input type="text" name="jantung_bunyi" class="form-control form-control-sm" value="{{ k.secondary_survey_detail.thorax.jantung_bunyi|default:'S1-S2 Tunggal Reguler' }}"></div>
-                                                                    <div class="col-6"><label class="small text-muted">Murmur / Gallop</label><input type="text" name="jantung_murmur" class="form-control form-control-sm" value="{{ k.secondary_survey_detail.thorax.jantung_murmur|default:'Murmur (-), Gallop (-)' }}"></div>
+                                                                    <div class="col-6">
+                                                                        <label class="small text-muted fw-semibold">Inspeksi Paru</label>
+                                                                        <select name="paru_inspeksi" class="form-select form-select-sm">
+                                                                            <option value="Simetris" {% if not k.secondary_survey_detail.thorax.paru_inspeksi or k.secondary_survey_detail.thorax.paru_inspeksi == 'Simetris' %}selected{% endif %}>Simetris saat bernapas</option>
+                                                                            <option value="Asimetris" {% if k.secondary_survey_detail.thorax.paru_inspeksi == 'Asimetris' %}selected{% endif %}>Asimetris / Tertinggal</option>
+                                                                            <option value="Jejas / Flail Chest" {% if k.secondary_survey_detail.thorax.paru_inspeksi == 'Jejas / Flail Chest' %}selected{% endif %}>Jejas / Flail Chest (+)</option>
+                                                                        </select>
+                                                                    </div>
+                                                                    <div class="col-6">
+                                                                        <label class="small text-muted fw-semibold">Retraksi Dinding Dada</label>
+                                                                        <select name="paru_retraksi" class="form-select form-select-sm">
+                                                                            <option value="Tidak Ada" {% if not k.secondary_survey_detail.thorax.paru_retraksi or k.secondary_survey_detail.thorax.paru_retraksi == 'Tidak Ada' or k.secondary_survey_detail.thorax.paru_retraksi == 'Tidak' %}selected{% endif %}>Tidak Ada (Normal)</option>
+                                                                            <option value="Ada Retraksi Interkostal" {% if k.secondary_survey_detail.thorax.paru_retraksi == 'Ada Retraksi Interkostal' %}selected{% endif %}>Retraksi Interkostal (+)</option>
+                                                                            <option value="Ada Retraksi Suprasternal" {% if k.secondary_survey_detail.thorax.paru_retraksi == 'Ada Retraksi Suprasternal' %}selected{% endif %}>Retraksi Suprasternal (+)</option>
+                                                                        </select>
+                                                                    </div>
+                                                                    <div class="col-6">
+                                                                        <label class="small text-muted fw-semibold">Auskultasi Paru</label>
+                                                                        <select name="paru_auskultasi" class="form-select form-select-sm">
+                                                                            <option value="Vesikuler (+/+)" {% if not k.secondary_survey_detail.thorax.paru_auskultasi or k.secondary_survey_detail.thorax.paru_auskultasi == 'Vesikuler (+/+)' or k.secondary_survey_detail.thorax.paru_auskultasi == 'Vesikuler' %}selected{% endif %}>Vesikuler (+/+)</option>
+                                                                            <option value="Bronkovesikuler" {% if k.secondary_survey_detail.thorax.paru_auskultasi == 'Bronkovesikuler' %}selected{% endif %}>Bronkovesikuler</option>
+                                                                            <option value="Suara Nafas Menurun" {% if k.secondary_survey_detail.thorax.paru_auskultasi == 'Suara Nafas Menurun' %}selected{% endif %}>Suara Nafas Menurun</option>
+                                                                        </select>
+                                                                    </div>
+                                                                    <div class="col-6">
+                                                                        <label class="small text-muted fw-semibold">Wheezing / Ronkhi</label>
+                                                                        <select name="paru_wheezing" class="form-select form-select-sm">
+                                                                            <option value="Wh (-/-), Rh (-/-)" {% if not k.secondary_survey_detail.thorax.paru_wheezing or k.secondary_survey_detail.thorax.paru_wheezing == 'Wh (-/-), Rh (-/-)' or k.secondary_survey_detail.thorax.paru_wheezing == '(-/-)' %}selected{% endif %}>Wh (-/-), Rh (-/-)</option>
+                                                                            <option value="(+/+) Wheezing Ekspiratoir" {% if k.secondary_survey_detail.thorax.paru_wheezing == '(+/+) Wheezing Ekspiratoir' %}selected{% endif %}>Wheezing (+/+)</option>
+                                                                            <option value="(+/+) Ronkhi Basah Halus" {% if k.secondary_survey_detail.thorax.paru_wheezing == '(+/+) Ronkhi Basah Halus' %}selected{% endif %}>Ronkhi Basah Halus (+/+)</option>
+                                                                            <option value="(+/+) Ronkhi Basah Kasar" {% if k.secondary_survey_detail.thorax.paru_wheezing == '(+/+) Ronkhi Basah Kasar' or k.secondary_survey_detail.thorax.paru_ronkhi == '(+/+) Basah Kasar' %}selected{% endif %}>Ronkhi Basah Kasar (+/+)</option>
+                                                                        </select>
+                                                                    </div>
+                                                                    <div class="col-6">
+                                                                        <label class="small text-muted fw-semibold">Bunyi Jantung</label>
+                                                                        <select name="jantung_bunyi" class="form-select form-select-sm">
+                                                                            <option value="S1-S2 Tunggal Reguler" {% if not k.secondary_survey_detail.thorax.jantung_bunyi or k.secondary_survey_detail.thorax.jantung_bunyi == 'S1-S2 Tunggal Reguler' %}selected{% endif %}>S1-S2 Tunggal Reguler</option>
+                                                                            <option value="S1-S2 Ireguler" {% if k.secondary_survey_detail.thorax.jantung_bunyi == 'S1-S2 Ireguler' %}selected{% endif %}>S1-S2 Ireguler (Aritmia)</option>
+                                                                            <option value="Bunyi Jantung Muffled / Melemah" {% if k.secondary_survey_detail.thorax.jantung_bunyi == 'Bunyi Jantung Muffled / Melemah' %}selected{% endif %}>Bunyi Melemah (Muffled)</option>
+                                                                        </select>
+                                                                    </div>
+                                                                    <div class="col-6">
+                                                                        <label class="small text-muted fw-semibold">Murmur / Gallop</label>
+                                                                        <select name="jantung_murmur" class="form-select form-select-sm">
+                                                                            <option value="Murmur (-), Gallop (-)" {% if not k.secondary_survey_detail.thorax.jantung_murmur or k.secondary_survey_detail.thorax.jantung_murmur == 'Murmur (-), Gallop (-)' or k.secondary_survey_detail.thorax.jantung_murmur == '(-/-)' %}selected{% endif %}>Murmur (-), Gallop (-)</option>
+                                                                            <option value="Systolic Murmur (+)" {% if k.secondary_survey_detail.thorax.jantung_murmur == 'Systolic Murmur (+)' %}selected{% endif %}>Systolic Murmur (+)</option>
+                                                                            <option value="Diastolic Murmur (+)" {% if k.secondary_survey_detail.thorax.jantung_murmur == 'Diastolic Murmur (+)' %}selected{% endif %}>Diastolic Murmur (+)</option>
+                                                                            <option value="Gallop S3 (+)" {% if k.secondary_survey_detail.thorax.jantung_murmur == 'Gallop S3 (+)' or k.secondary_survey_detail.thorax.jantung_gallop == 'Gallop S3 (+)' %}selected{% endif %}>Gallop S3 (+)</option>
+                                                                        </select>
+                                                                    </div>
                                                                 </div>
                                                             </div>
                                                         </div>
+
+                                                        <!-- 5. ABDOMEN -->
                                                         <div class="col-md-6">
-                                                            <div class="card p-2 shadow-none border">
+                                                            <div class="card p-2 shadow-none border h-100">
                                                                 <h6 class="fw-bold text-primary mb-2 border-bottom pb-1"><i class="bi bi-shield me-1"></i>5. Abdomen</h6>
                                                                 <div class="row g-2">
-                                                                    <div class="col-6"><label class="small text-muted">Inspeksi / Bentuk</label><input type="text" name="abdomen_inspeksi" class="form-control form-control-sm" value="{{ k.secondary_survey_detail.abdomen.inspeksi|default:'Datar, Simetris' }}"></div>
-                                                                    <div class="col-6"><label class="small text-muted">Bising Usus</label><input type="text" name="abdomen_bising_usus" class="form-control form-control-sm" value="{{ k.secondary_survey_detail.abdomen.bising_usus|default:'Normal (12x/menit)' }}"></div>
-                                                                    <div class="col-6"><label class="small text-muted">Palpasi / Nyeri Tekan</label><input type="text" name="abdomen_nyeri_tekan" class="form-control form-control-sm" value="{{ k.secondary_survey_detail.abdomen.nyeri_tekan|default:'Supel, Nyeri Tekan (-)' }}"></div>
-                                                                    <div class="col-6"><label class="small text-muted">Organomegali</label><input type="text" name="abdomen_organomegali" class="form-control form-control-sm" value="{{ k.secondary_survey_detail.abdomen.organomegali|default:'Hepatosplenomegali (-)' }}"></div>
+                                                                    <div class="col-6">
+                                                                        <label class="small text-muted fw-semibold">Inspeksi / Bentuk</label>
+                                                                        <select name="abdomen_inspeksi" class="form-select form-select-sm">
+                                                                            <option value="Datar, Simetris" {% if not k.secondary_survey_detail.abdomen.inspeksi or k.secondary_survey_detail.abdomen.inspeksi == 'Datar, Simetris' or k.secondary_survey_detail.abdomen.inspeksi == 'Datar' %}selected{% endif %}>Datar, Simetris</option>
+                                                                            <option value="Distensi" {% if k.secondary_survey_detail.abdomen.inspeksi == 'Distensi' %}selected{% endif %}>Distensi / Kembung</option>
+                                                                            <option value="Skafoid / Cekung" {% if k.secondary_survey_detail.abdomen.inspeksi == 'Skafoid / Cekung' %}selected{% endif %}>Skafoid / Cekung</option>
+                                                                            <option value="Jejas / Bekas Operasi" {% if k.secondary_survey_detail.abdomen.inspeksi == 'Jejas / Bekas Operasi' %}selected{% endif %}>Jejas / Bekas Operasi (+)</option>
+                                                                        </select>
+                                                                    </div>
+                                                                    <div class="col-6">
+                                                                        <label class="small text-muted fw-semibold">Bising Usus</label>
+                                                                        <select name="abdomen_bising_usus" class="form-select form-select-sm">
+                                                                            <option value="Normal (8-12x/menit)" {% if not k.secondary_survey_detail.abdomen.bising_usus or k.secondary_survey_detail.abdomen.bising_usus == 'Normal (8-12x/menit)' or k.secondary_survey_detail.abdomen.bising_usus == 'Normal' or k.secondary_survey_detail.abdomen.bising_usus == 'Normal (12x/menit)' %}selected{% endif %}>Normal (8-12x/menit)</option>
+                                                                            <option value="Meningkat (Hiperaktif)" {% if k.secondary_survey_detail.abdomen.bising_usus == 'Meningkat (Hiperaktif)' or k.secondary_survey_detail.abdomen.bising_usus == 'Meningkat' %}selected{% endif %}>Meningkat (Hiperaktif)</option>
+                                                                            <option value="Menurun / Hilang" {% if k.secondary_survey_detail.abdomen.bising_usus == 'Menurun / Hilang' or k.secondary_survey_detail.abdomen.bising_usus == 'Menurun' %}selected{% endif %}>Menurun / Hilang</option>
+                                                                        </select>
+                                                                    </div>
+                                                                    <div class="col-6">
+                                                                        <label class="small text-muted fw-semibold">Palpasi / Nyeri Tekan</label>
+                                                                        <select name="abdomen_nyeri_tekan" class="form-select form-select-sm">
+                                                                            <option value="Supel, Nyeri Tekan (-)" {% if not k.secondary_survey_detail.abdomen.nyeri_tekan or k.secondary_survey_detail.abdomen.nyeri_tekan == 'Supel, Nyeri Tekan (-)' or k.secondary_survey_detail.abdomen.nyeri_tekan == 'Tidak Ada' %}selected{% endif %}>Supel, Nyeri Tekan (-)</option>
+                                                                            <option value="Nyeri Tekan Epigastrium (+)" {% if k.secondary_survey_detail.abdomen.nyeri_tekan == 'Nyeri Tekan Epigastrium (+)' %}selected{% endif %}>Nyeri Tekan Epigastrium (+)</option>
+                                                                            <option value="Nyeri Tekan RLQ (McBurney) (+)" {% if k.secondary_survey_detail.abdomen.nyeri_tekan == 'Nyeri Tekan RLQ (McBurney) (+)' %}selected{% endif %}>Nyeri Tekan RLQ (+)</option>
+                                                                            <option value="Defans Muskular" {% if k.secondary_survey_detail.abdomen.nyeri_tekan == 'Defans Muskular' or k.secondary_survey_detail.abdomen.palpasi == 'Defans Muskular' %}selected{% endif %}>Defans Muskular (+)</option>
+                                                                        </select>
+                                                                    </div>
+                                                                    <div class="col-6">
+                                                                        <label class="small text-muted fw-semibold">Organomegali</label>
+                                                                        <select name="abdomen_organomegali" class="form-select form-select-sm">
+                                                                            <option value="Hepatosplenomegali (-)" {% if not k.secondary_survey_detail.abdomen.organomegali or k.secondary_survey_detail.abdomen.organomegali == 'Hepatosplenomegali (-)' or k.secondary_survey_detail.abdomen.organomegali == 'Tidak Ada' %}selected{% endif %}>Hepatosplenomegali (-)</option>
+                                                                            <option value="Hepatomegali (+)" {% if k.secondary_survey_detail.abdomen.organomegali == 'Hepatomegali (+)' %}selected{% endif %}>Hepatomegali (+)</option>
+                                                                            <option value="Splenomegali (+)" {% if k.secondary_survey_detail.abdomen.organomegali == 'Splenomegali (+)' %}selected{% endif %}>Splenomegali (+)</option>
+                                                                        </select>
+                                                                    </div>
+                                                                    <div class="col-12">
+                                                                        <label class="small text-muted fw-semibold">Perkusi</label>
+                                                                        <select name="abdomen_perkusi" class="form-select form-select-sm">
+                                                                            <option value="Timpani" {% if not k.secondary_survey_detail.abdomen.perkusi or k.secondary_survey_detail.abdomen.perkusi == 'Timpani' %}selected{% endif %}>Timpani (Normal)</option>
+                                                                            <option value="Hipertimpani / Meteorismus" {% if k.secondary_survey_detail.abdomen.perkusi == 'Hipertimpani / Meteorismus' %}selected{% endif %}>Hipertimpani / Meteorismus</option>
+                                                                            <option value="Redup / Ascites (+)" {% if k.secondary_survey_detail.abdomen.perkusi == 'Redup / Ascites (+)' %}selected{% endif %}>Redup / Ascites (+)</option>
+                                                                        </select>
+                                                                    </div>
                                                                 </div>
                                                             </div>
                                                         </div>
+
+                                                        <!-- 6. EKSTREMITAS & NEUROLOGI -->
                                                         <div class="col-md-6">
-                                                            <div class="card p-2 shadow-none border">
+                                                            <div class="card p-2 shadow-none border h-100">
                                                                 <h6 class="fw-bold text-primary mb-2 border-bottom pb-1"><i class="bi bi-arrows-fullscreen me-1"></i>6. Ekstremitas & Neurologi</h6>
                                                                 <div class="row g-2">
-                                                                    <div class="col-6"><label class="small text-muted">Akral & Suhu</label><input type="text" name="ekstremitas_akral" class="form-control form-control-sm" value="{{ k.secondary_survey_detail.ekstremitas.akral|default:'Hangat, Kering, Merah' }}"></div>
-                                                                    <div class="col-6"><label class="small text-muted">Capillary Refill Time</label><input type="text" name="ekstremitas_crt" class="form-control form-control-sm" value="{{ k.secondary_survey_detail.ekstremitas.crt|default:'< 2 Detik' }}"></div>
-                                                                    <div class="col-6"><label class="small text-muted">Edema Ekstremitas</label><input type="text" name="ekstremitas_edema_atas" class="form-control form-control-sm" value="{{ k.secondary_survey_detail.ekstremitas.edema_atas|default:'Atas (-/-), Bawah (-/-)' }}"></div>
-                                                                    <div class="col-6"><label class="small text-muted">Kekuatan Motorik</label><input type="text" name="ekstremitas_motorik_atas" class="form-control form-control-sm" value="{{ k.secondary_survey_detail.ekstremitas.motorik_atas|default:'5/5 (Normal)' }}"></div>
+                                                                    <div class="col-6">
+                                                                        <label class="small text-muted fw-semibold">Akral & Suhu</label>
+                                                                        <select name="ekstremitas_akral" class="form-select form-select-sm">
+                                                                            <option value="Hangat, Kering, Merah" {% if not k.secondary_survey_detail.ekstremitas.akral or k.secondary_survey_detail.ekstremitas.akral == 'Hangat, Kering, Merah' or k.secondary_survey_detail.ekstremitas.akral == 'Hangat' %}selected{% endif %}>Hangat, Kering, Merah</option>
+                                                                            <option value="Dingin, Basah, Pucat" {% if k.secondary_survey_detail.ekstremitas.akral == 'Dingin, Basah, Pucat' or k.secondary_survey_detail.ekstremitas.akral == 'Dingin' %}selected{% endif %}>Dingin, Basah, Pucat (Syok)</option>
+                                                                            <option value="Sianosis Perifer" {% if k.secondary_survey_detail.ekstremitas.akral == 'Sianosis Perifer' %}selected{% endif %}>Sianosis Perifer</option>
+                                                                        </select>
+                                                                    </div>
+                                                                    <div class="col-6">
+                                                                        <label class="small text-muted fw-semibold">Capillary Refill Time</label>
+                                                                        <select name="ekstremitas_crt" class="form-select form-select-sm">
+                                                                            <option value="< 2 Detik" {% if not k.secondary_survey_detail.ekstremitas.crt or k.secondary_survey_detail.ekstremitas.crt == '< 2 Detik' %}selected{% endif %}>&lt; 2 Detik (Normal)</option>
+                                                                            <option value="> 2 Detik" {% if k.secondary_survey_detail.ekstremitas.crt == '> 2 Detik' %}selected{% endif %}>&gt; 2 Detik (Memanjang)</option>
+                                                                        </select>
+                                                                    </div>
+                                                                    <div class="col-6">
+                                                                        <label class="small text-muted fw-semibold">Edema Ekstremitas</label>
+                                                                        <select name="ekstremitas_edema_atas" class="form-select form-select-sm">
+                                                                            <option value="Atas (-/-), Bawah (-/-)" {% if not k.secondary_survey_detail.ekstremitas.edema_atas or k.secondary_survey_detail.ekstremitas.edema_atas == 'Atas (-/-), Bawah (-/-)' or k.secondary_survey_detail.ekstremitas.edema_atas == '(-/-)' %}selected{% endif %}>Atas (-/-), Bawah (-/-)</option>
+                                                                            <option value="(+/+) Pitting Edema" {% if k.secondary_survey_detail.ekstremitas.edema_atas == '(+/+) Pitting Edema' %}selected{% endif %}>Edema Pretibial (+/+)</option>
+                                                                            <option value="(+/+) Anasarca" {% if k.secondary_survey_detail.ekstremitas.edema_atas == '(+/+) Anasarca' %}selected{% endif %}>Edema Anasarca</option>
+                                                                        </select>
+                                                                    </div>
+                                                                    <div class="col-6">
+                                                                        <label class="small text-muted fw-semibold">Kekuatan Motorik</label>
+                                                                        <select name="ekstremitas_motorik_atas" class="form-select form-select-sm">
+                                                                            <option value="5/5 (Normal)" {% if not k.secondary_survey_detail.ekstremitas.motorik_atas or k.secondary_survey_detail.ekstremitas.motorik_atas == '5/5 (Normal)' or k.secondary_survey_detail.ekstremitas.motorik_atas == '5/5' %}selected{% endif %}>5/5 (Normal Penuh)</option>
+                                                                            <option value="4/4 (Sedang)" {% if k.secondary_survey_detail.ekstremitas.motorik_atas == '4/4 (Sedang)' or k.secondary_survey_detail.ekstremitas.motorik_atas == '4/4' %}selected{% endif %}>4/4 (Tahanan Sedang)</option>
+                                                                            <option value="3/3 (Lemah)" {% if k.secondary_survey_detail.ekstremitas.motorik_atas == '3/3 (Lemah)' or k.secondary_survey_detail.ekstremitas.motorik_atas == '3/3' %}selected{% endif %}>3/3 (Melawan Gravitasi Saja)</option>
+                                                                            <option value="0/0 (Plegi)" {% if k.secondary_survey_detail.ekstremitas.motorik_atas == '0/0 (Plegi)' or k.secondary_survey_detail.ekstremitas.motorik_atas == '0/0' %}selected{% endif %}>0/0 (Paralisis Total / Plegi)</option>
+                                                                        </select>
+                                                                    </div>
                                                                 </div>
                                                             </div>
                                                         </div>
