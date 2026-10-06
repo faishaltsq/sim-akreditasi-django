@@ -17,6 +17,7 @@ urlpatterns = [
     path('kunjungan/<int:kunjungan_pk>/discharge-planning/', views.discharge_planning_set, name='discharge_planning_set'),
     path('kunjungan/<int:kunjungan_pk>/resume-pdf/', views.resume_pdf, name='resume_pdf'),
     path('api/icd10/', views.api_icd10, name='api_icd10'),
+    path('api/sdki/', views.api_sdki, name='api_sdki'),
     path('api/parse-qr/', views.api_parse_qr, name='api_parse_qr'),
     path('kunjungan/<int:kunjungan_pk>/resep/buat/', views.resep_buat, name='resep_buat'),
     path('kunjungan/<int:kunjungan_pk>/satusehat-sync/', views.satusehat_sync_view, name='satusehat_sync'),

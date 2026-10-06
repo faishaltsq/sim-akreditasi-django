@@ -107,6 +107,33 @@ ICD10_CODES = [
     ('Z51.1', 'Sesi Kemoterapi'),
 ]
 
+SDKI_CODES = [
+    ('D.0001', 'Bersihan Jalan Napas Tidak Efektif'),
+    ('D.0003', 'Gangguan Pertukaran Gas'),
+    ('D.0005', 'Pola Napas Tidak Efektif'),
+    ('D.0007', 'Gangguan Sirkulasi Spontan'),
+    ('D.0008', 'Penurunan Curah Jantung'),
+    ('D.0009', 'Perfusi Perifer Tidak Efektif'),
+    ('D.0019', 'Defisit Nutrisi'),
+    ('D.0020', 'Diare'),
+    ('D.0022', 'Hipervolemia'),
+    ('D.0023', 'Hipovolemia'),
+    ('D.0036', 'Konstipasi'),
+    ('D.0049', 'Toleransi Aktivitas Menurun'),
+    ('D.0056', 'Intoleransi Aktivitas'),
+    ('D.0074', 'Gangguan Rasa Nyaman'),
+    ('D.0077', 'Nyeri Akut'),
+    ('D.0078', 'Nyeri Kronis'),
+    ('D.0080', 'Ansietas'),
+    ('D.0129', 'Gangguan Integritas Kulit/Jaringan'),
+    ('D.0130', 'Hipertermia'),
+    ('D.0131', 'Hipotermia'),
+    ('D.0136', 'Risiko Cedera'),
+    ('D.0142', 'Risiko Infeksi'),
+    ('D.0143', 'Risiko Jatuh'),
+    ('D.0149', 'Risiko Perdarahan'),
+]
+
 
 def _kpi():
     now = timezone.now()
@@ -474,6 +501,19 @@ def api_icd10(request):
         for kode, nama in ICD10_CODES
         if q in kode.lower() or q in nama.lower()
     ][:10]
+    return JsonResponse(results, safe=False)
+
+
+def api_sdki(request):
+    """AJAX SDKI quick picker — returns matching SDKI codes as JSON."""
+    q = request.GET.get('q', '').strip().lower()
+    if len(q) < 2:
+        return JsonResponse([{'kode': k, 'nama': n} for k, n in SDKI_CODES[:15]], safe=False)
+    results = [
+        {'kode': kode, 'nama': nama}
+        for kode, nama in SDKI_CODES
+        if q in kode.lower() or q in nama.lower()
+    ][:15]
     return JsonResponse(results, safe=False)
 
 
@@ -1001,6 +1041,8 @@ def igd_ttv_update(request, pk):
             k.icd9_tindakan = request.POST.get('icd9_tindakan', '').strip()
             if request.POST.get('diagnosa_masuk'):
                 k.diagnosa_masuk = request.POST.get('diagnosa_masuk').strip()
+            if 'diagnosa_keperawatan_sdki' in request.POST:
+                k.diagnosa_keperawatan_sdki = request.POST.get('diagnosa_keperawatan_sdki', '').strip()
             k.status = 'ASESMEN'
             k.save()
             messages.success(request, f'TTV Pasien {k.pasien.nama_lengkap} berhasil diperbarui.')
