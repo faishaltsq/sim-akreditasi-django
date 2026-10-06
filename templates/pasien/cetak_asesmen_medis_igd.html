@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <title>Formulir Asesmen Medis Awal IGD — {{ kunjungan.no_kunjungan }}</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
+  <style>
+    @media print {
+      .no-print { display: none !important; }
+      body { font-size: 9pt; }
+      @page { size: A4 portrait; margin: 10mm; }
+    }
+    body { background: #fff; color: #000; font-family: 'Segoe UI', Arial, sans-serif; font-size: 9pt; }
+    .header-box { border-bottom: 3px double #000; padding-bottom: 6px; margin-bottom: 8px; }
+    .section-title { font-weight: bold; text-transform: uppercase; font-size: 8.5pt; background: #e9ecef; padding: 2px 6px; margin-top: 8px; margin-bottom: 4px; border-left: 3px solid #0d6efd; }
+    .table-form th, .table-form td { padding: 2px 5px; font-size: 8.5pt; vertical-align: top; }
+    .table-form th { background: #f8f9fa; width: 22%; }
+    .ck { display: inline-block; width: 11px; height: 11px; border: 1px solid #000; margin-right: 3px; vertical-align: middle; text-align: center; font-size: 8pt; line-height: 11px; }
+    .ck.checked { background: #000; color: #fff; }
+    .ck.checked::after { content: '✓'; }
+    .val { border-bottom: 1px dotted #999; min-width: 60px; display: inline-block; padding: 0 4px; }
+    .sig-box { border: 1px solid #000; min-height: 50px; width: 200px; display: inline-block; }
+  </style>
+</head>
+<body class="p-2">
+
+<div class="no-print mb-2 d-flex gap-2">
+  <button onclick="window.print()" class="btn btn-primary btn-sm">🖨️ Cetak Formulir</button>
+  <button onclick="window.close()" class="btn btn-outline-secondary btn-sm">Tutup</button>
+</div>
+
+<!-- HEADER RS -->
+<div class="header-box d-flex justify-content-between align-items-center">
+  <div>
+    <h5 class="mb-0 fw-bold">RS MONSISKAMI ARIMA</h5>
+    <small>JL. SEHAT UTAMA NO. 123, BANJARNEGARA | TELP: (0286) 123456</small><br>
+    <small>Email: info@monsiskami-arima.co.id | Website: www.monsiskami-arima.co.id</small>
+  </div>
+  <div class="text-end border p-2 rounded">
+    <div class="fw-bold" style="font-size: 10pt;">FORMULIR ASESMEN MEDIS AWAL<br>INSTALASI GAWAT DARURAT (IGD)</div>
+    <small class="text-muted">No: {{ kunjungan.no_kunjungan }}</small>
+  </div>
+</div>
+
+<!-- I. DATA PASIEN & WAKTU PELAYANAN -->
+<div class="section-title">I. DATA PASIEN & WAKTU PELAYANAN (RESPONSE TIME)</div>
+<table class="table table-bordered table-form mb-1">
+  <tr>
+    <th>Nama Pasien</th><td>{{ pasien.nama_lengkap }}</td>
+    <th>No. Rekam Medis</th><td class="fw-bold">{{ pasien.no_rm }}</td>
+  </tr>
+  <tr>
+    <th>Tanggal Lahir / Umur</th>
+    <td>{{ pasien.tanggal_lahir|date:"d/m/Y" }} ({{ pasien.umur }} Thn) — <span class="ck{% if pasien.jenis_kelamin == 'L' %} checked{% endif %}"></span> L <span class="ck{% if pasien.jenis_kelamin == 'P' %} checked{% endif %}"></span> P</td>
+    <th>Tanggal Pelayanan</th><td>{{ kunjungan.tanggal_masuk|date:"d/m/Y" }}</td>
+  </tr>
+  <tr>
+    <th>Waktu Masuk IGD</th><td>{{ kunjungan.tanggal_masuk|date:"H:i" }} WIB</td>
+    <th>Waktu Asesmen Dokter</th><td>{{ kunjungan.waktu_asesmen_dokter|default:"____:____ WIB" }}</td>
+  </tr>
+  <tr>
+    <th>Waktu Disposisi</th><td>{{ kunjungan.waktu_disposisi|default:"____:____ WIB" }}</td>
+    <th>Cara Datang</th>
+    <td>
+      <span class="ck{% if kunjungan.cara_datang == 'SENDIRI' %} checked{% endif %}"></span> Sendiri/Keluarga
+      <span class="ck{% if kunjungan.cara_datang == 'RUJUKAN' %} checked{% endif %}"></span> Rujukan
+      <span class="ck{% if kunjungan.cara_datang == 'AMBULANS' %} checked{% endif %}"></span> Ambulans
+      <span class="ck{% if kunjungan.cara_datang == 'POLISI' %} checked{% endif %}"></span> Polisi
+    </td>
+  </tr>
+</table>
+
+<!-- II. TRIASE KATEGORI -->
+<div class="section-title">II. TRIASE KATEGORI (ATS / ESI Level)</div>
+<table class="table table-bordered table-form mb-1">
+  <tr>
+    <td><span class="ck{% if kunjungan.triase_kategori == 'KATEGORI_1' %} checked{% endif %}"></span> <strong>Kategori 1</strong> (Resusitasi / Merah) — Immediate</td>
+    <td><span class="ck{% if kunjungan.triase_kategori == 'KATEGORI_2' %} checked{% endif %}"></span> <strong>Kategori 2</strong> (Emergensi / Merah) — 10 menit</td>
+  </tr>
+  <tr>
+    <td><span class="ck{% if kunjungan.triase_kategori == 'KATEGORI_3' %} checked{% endif %}"></span> <strong>Kategori 3</strong> (Urgensi / Kuning) — 30 menit</td>
+    <td><span class="ck{% if kunjungan.triase_kategori == 'KATEGORI_4' %} checked{% endif %}"></span> <strong>Kategori 4</strong> (Non-Urgensi / Hijau) — 60 menit</td>
+  </tr>
+  <tr>
+    <td colspan="2"><span class="ck{% if kunjungan.triase_kategori == 'KATEGORI_5' %} checked{% endif %}"></span> <strong>Kategori 5</strong> (Rutin / Hitam / DOA) — 120 menit</td>
+  </tr>
+</table>
+
+<!-- III. PRIMARY SURVEY -->
+<div class="section-title">III. PRIMARY SURVEY: TANDA VITAL & PENILAIAN AWAL</div>
+<table class="table table-bordered table-form mb-1">
+  <tr>
+    <th>GCS</th>
+    <td>E: <span class="val">{{ kunjungan.gcs_e|default:"__" }}</span> V: <span class="val">{{ kunjungan.gcs_v|default:"__" }}</span> M: <span class="val">{{ kunjungan.gcs_m|default:"__" }}</span> | Total: <span class="val fw-bold">{% if kunjungan.gcs_e and kunjungan.gcs_v and kunjungan.gcs_m %}{{ kunjungan.gcs_e|add:kunjungan.gcs_v|add:kunjungan.gcs_m }}{% else %}___{% endif %}</span></td>
+    <th>Kesadaran</th>
+    <td>{{ kunjungan.kesadaran|default:"Compos Mentis" }}</td>
+  </tr>
+  <tr>
+    <th>Tekanan Darah</th><td>{{ kunjungan.ttv_sistole|default:"___" }} / {{ kunjungan.ttv_diastole|default:"___" }} mmHg</td>
+    <th>Suhu Tubuh</th><td>{{ kunjungan.ttv_suhu|default:"___" }} °C ({{ kunjungan.suhu_lokasi|default:"Aksila" }})</td>
+  </tr>
+  <tr>
+    <th>Laju Nadi</th><td>{{ kunjungan.ttv_nadi|default:"___" }} x/mnt ({{ kunjungan.nadi_kekuatan|default:"Kuat" }} | {{ kunjungan.nadi_irama|default:"Reguler" }})</td>
+    <th>Laju Pernapasan</th><td>{{ kunjungan.ttv_rr|default:"___" }} x/mnt ({{ kunjungan.pernapasan_pola|default:"Spontan" }})</td>
+  </tr>
+  <tr>
+    <th>SpO2</th><td>{{ kunjungan.ttv_spo2|default:"___" }} % ({{ kunjungan.spo2_alat|default:"Udara Bebas" }})</td>
+    <th>Skala Nyeri (0–10)</th><td>{{ kunjungan.ttv_skala_nyeri|default:"___" }} — {{ kunjungan.skala_nyeri_sifat|default:"" }} {{ kunjungan.nyeri_karakteristik|default:"" }}</td>
+  </tr>
+  <tr>
+    <th>Risiko Jatuh</th>
+    <td>Metode: {{ kunjungan.metode_risiko_jatuh|default:"Morse Fall Scale" }} | Skor: {{ kunjungan.skrining_jatuh_skor|default:"___" }} | Grade: {{ kunjungan.skrining_jatuh_grade|default:"RENDAH" }}</td>
+    <th>NEWS Score</th><td>{{ news_score }} ({{ news_category }})</td>
+  </tr>
+</table>
+
+<!-- IV. ASESMEN PSIKOSOSIAL -->
+<div class="section-title">IV. ASESMEN PSIKOSOSIAL, EKONOMI, SPIRITUAL & HAMBATAN</div>
+<table class="table table-bordered table-form mb-1">
+  <tr>
+    <th>Status Emosional</th><td>{{ kunjungan.status_emosional|default:"Kooperatif" }}</td>
+    <th>Hambatan Komunikasi</th><td>{{ kunjungan.hambatan_komunikasi|default:"Tidak Ada" }}</td>
+  </tr>
+  <tr>
+    <th>Kebutuhan Spiritual</th><td colspan="3">{{ kunjungan.kebutuhan_spiritual|default:"Tidak Ada" }}</td>
+  </tr>
+</table>
+
+<!-- V. ANAMNESIS -->
+<div class="section-title">V. ANAMNESIS (SBAR / SAMPLE)</div>
+<table class="table table-bordered table-form mb-1">
+  <tr><th>Keluhan Utama</th><td colspan="3">{{ kunjungan.catatan_admisi|default:"—" }}</td></tr>
+  <tr><th>Riwayat Penyakit Sekarang</th><td colspan="3">{{ kunjungan.anamnesis_rps|default:"—" }}</td></tr>
+  <tr>
+    <th>RPD (Checklist)</th>
+    <td colspan="3">
+      {% for item in kunjungan.rpd_checklist %}<span class="ck checked"></span> {{ item }} {% empty %}<span class="ck"></span> HT <span class="ck"></span> DM <span class="ck"></span> Asma <span class="ck"></span> Jantung <span class="ck"></span> Ginjal <span class="ck"></span> Stroke <span class="ck"></span> Tidak Ada{% endfor %}
+    </td>
+  </tr>
+  <tr><th>Riwayat Alergi</th><td>{{ pasien.alergi_obat|default:"Tidak Ada" }}</td><th>Riwayat Pengobatan</th><td>{{ kunjungan.anamnesis_obat|default:"—" }}</td></tr>
+</table>
+
+<!-- VI. SECONDARY SURVEY -->
+<div class="section-title">VI. SECONDARY SURVEY: PEMERIKSAAN FISIK LENGKAP</div>
+<table class="table table-bordered table-form mb-1">
+  <tr><th style="width:15%;">1. MATA</th>
+    <td>Konjungtiva: {{ kunjungan.secondary_survey_detail.mata.konjungtiva|default:"Normal" }} | Sklera: {{ kunjungan.secondary_survey_detail.mata.sklera|default:"Normal" }} | Pupil: {{ kunjungan.secondary_survey_detail.mata.pupil|default:"Isokor" }} | RC: {{ kunjungan.secondary_survey_detail.mata.refleks_cahaya|default:"(+/+)" }}</td>
+  </tr>
+  <tr><th>2. THT</th>
+    <td>Telinga: {{ kunjungan.secondary_survey_detail.tht.telinga_lapang|default:"Lapang" }} | Hidung: NCH {{ kunjungan.secondary_survey_detail.tht.napas_cuping|default:"Tidak" }} | Mukosa Bibir: {{ kunjungan.secondary_survey_detail.tht.mukosa_bibir|default:"Lembap" }} | Faring: {{ kunjungan.secondary_survey_detail.tht.faring|default:"Tenang" }}</td>
+  </tr>
+  <tr><th>3. Kepala & Leher</th>
+    <td>Kepala: {{ kunjungan.secondary_survey_detail.kepala_leher.kepala|default:"Normosefali" }} | JVP: {{ kunjungan.secondary_survey_detail.kepala_leher.jvp|default:"Normal" }} | KGB: {{ kunjungan.secondary_survey_detail.kepala_leher.kgb|default:"Tidak Ada Pembesaran" }} | Kaku Kuduk: {{ kunjungan.secondary_survey_detail.kepala_leher.kaku_kuduk|default:"(-)" }}</td>
+  </tr>
+  <tr><th>4. Thorax</th>
+    <td>Paru: {{ kunjungan.secondary_survey_detail.thorax.paru_auskultasi|default:"Vesikuler (+/+)" }} Wh: {{ kunjungan.secondary_survey_detail.thorax.paru_wheezing|default:"(-/-)" }} Rh: {{ kunjungan.secondary_survey_detail.thorax.paru_ronkhi|default:"(-/-)" }} | Jantung: {{ kunjungan.secondary_survey_detail.thorax.jantung_bunyi|default:"S1-S2 Reguler" }} Murmur: {{ kunjungan.secondary_survey_detail.thorax.jantung_murmur|default:"(-)" }}</td>
+  </tr>
+  <tr><th>5. Abdomen</th>
+    <td>{{ kunjungan.secondary_survey_detail.abdomen.inspeksi|default:"Datar" }} | BU: {{ kunjungan.secondary_survey_detail.abdomen.bising_usus|default:"Normal" }} | Palpasi: {{ kunjungan.secondary_survey_detail.abdomen.palpasi|default:"Supel" }} | NT: {{ kunjungan.secondary_survey_detail.abdomen.nyeri_tekan|default:"Tidak Ada" }} | Perkusi: {{ kunjungan.secondary_survey_detail.abdomen.perkusi|default:"Timpani" }}</td>
+  </tr>
+  <tr><th>6. Ekstremitas</th>
+    <td>Akral: {{ kunjungan.secondary_survey_detail.ekstremitas.akral|default:"Hangat" }} | CRT: {{ kunjungan.secondary_survey_detail.ekstremitas.crt|default:"< 2 Detik" }} | Edema Atas: {{ kunjungan.secondary_survey_detail.ekstremitas.edema_atas|default:"(-/-)" }} Bawah: {{ kunjungan.secondary_survey_detail.ekstremitas.edema_bawah|default:"(-/-)" }} | Motorik: {{ kunjungan.secondary_survey_detail.ekstremitas.motorik_atas|default:"5/5" }} / {{ kunjungan.secondary_survey_detail.ekstremitas.motorik_bawah|default:"5/5" }}</td>
+  </tr>
+</table>
+
+<!-- VII. PEMERIKSAAN PENUNJANG -->
+<div class="section-title">VII. PEMERIKSAAN PENUNJANG IGD</div>
+<table class="table table-bordered table-form mb-1">
+  <tr><th>Laboratorium</th><td>Mencentang di formulir permintaan pemeriksaan laboratorium (terlampir)</td></tr>
+  <tr><th>Radiologi</th><td>{% for r in kunjungan.penunjang_radiologi_checklist %}<span class="ck checked"></span> {{ r }} {% empty %}<span class="ck"></span> Foto Thorax <span class="ck"></span> CT-Scan Kepala <span class="ck"></span> USG Abdomen <span class="ck"></span> X-Ray Ekstremitas{% endfor %}</td></tr>
+  <tr><th>EKG</th><td>{{ kunjungan.penunjang_ekg|default:"—" }}</td></tr>
+  <tr><th>Hasil Kritis</th><td>{{ kunjungan.penunjang_hasil_kritis|default:"—" }}</td></tr>
+</table>
+
+<!-- VIII. DIAGNOSIS KERJA -->
+<div class="section-title">VIII. DIAGNOSIS KERJA / DIAGNOSIS DIFERENSIAL</div>
+<table class="table table-bordered table-form mb-1">
+  <tr><th>Diagnosis Utama</th><td>{{ kunjungan.diagnosa_masuk|default:"—" }}</td></tr>
+  <tr><th>Diagnosis Sekunder</th><td>{{ kunjungan.diagnosa_keluar|default:"—" }}</td></tr>
+</table>
+
+<!-- IX. TATALAKSANA -->
+<div class="section-title">IX. TATALAKSANA & RENCANA TINDAKAN IGD</div>
+<table class="table table-bordered table-form mb-1">
+  <tr><th>Resusitasi / Stabilisasi</th><td>{{ kunjungan.tatalaksana_resusitasi|default:"—" }}</td></tr>
+  <tr><th>Terapi Farmakologi</th><td>{{ kunjungan.tatalaksana_terapi|default:"—" }}</td></tr>
+  <tr><th>Tindakan Medis IGD</th><td>{% for t in kunjungan.tatalaksana_tindakan_check %}<span class="ck checked"></span> {{ t }} {% empty %}<span class="ck"></span> Hecting <span class="ck"></span> Pasang Infus <span class="ck"></span> Pasang Kateter <span class="ck"></span> Pasang NGT <span class="ck"></span> Oksigenasi{% endfor %}</td></tr>
+</table>
+
+<!-- X. DISPOSISI & HANDOVER -->
+<div class="section-title">X. DISPOSISI & HANDOVER PASIEN</div>
+<table class="table table-bordered table-form mb-1">
+  <tr>
+    <th>Kondisi Akhir IGD</th>
+    <td>
+      <span class="ck{% if kunjungan.disposisi_kondisi_akhir == 'MEMBAIK' %} checked{% endif %}"></span> Membaik
+      <span class="ck{% if kunjungan.disposisi_kondisi_akhir == 'STABIL' %} checked{% endif %}"></span> Stabil
+      <span class="ck{% if kunjungan.disposisi_kondisi_akhir == 'MEMBURUK' %} checked{% endif %}"></span> Memburuk
+      <span class="ck{% if kunjungan.disposisi_kondisi_akhir == 'MENINGGAL' %} checked{% endif %}"></span> Meninggal
+    </td>
+  </tr>
+  <tr>
+    <th>Tindak Lanjut</th>
+    <td>
+      <span class="ck{% if kunjungan.disposisi_tindak_lanjut == 'RAWAT_INAP' %} checked{% endif %}"></span> Rawat Inap ({{ kunjungan.disposisi_ruang_rawat|default:"Ruang: ___" }})
+      <span class="ck{% if kunjungan.disposisi_tindak_lanjut == 'RAWAT_JALAN' %} checked{% endif %}"></span> Rawat Jalan / Pulang (Kontrol: {{ kunjungan.disposisi_kontrol_poli|default:"___" }} Tgl: {{ kunjungan.disposisi_kontrol_tgl|default:"___" }})<br>
+      <span class="ck{% if kunjungan.disposisi_tindak_lanjut == 'RUJUK' %} checked{% endif %}"></span> Rujuk ke RS Lain ({{ kunjungan.disposisi_rujuk_rs|default:"___" }})
+      <span class="ck{% if kunjungan.disposisi_tindak_lanjut == 'PAPS' %} checked{% endif %}"></span> Pulang Atas Permintaan Sendiri (PAPS)
+    </td>
+  </tr>
+</table>
+
+<div class="section-title">CATATAN SERAH TERIMA PASIEN (SBAR HANDOVER)</div>
+<table class="table table-bordered table-form mb-1">
+  <tr><th style="width:5%;">S</th><td>{{ kunjungan.sbar_situation|default:"—" }}</td></tr>
+  <tr><th>B</th><td>{{ kunjungan.sbar_background|default:"—" }}</td></tr>
+  <tr><th>A</th><td>{{ kunjungan.sbar_assessment|default:"—" }}</td></tr>
+  <tr><th>R</th><td>{{ kunjungan.sbar_recommendation|default:"—" }}</td></tr>
+</table>
+
+<div class="row mt-3">
+  <div class="col-6 text-center">
+    <p class="mb-0 small">Petugas Handover / Perawat IGD:</p>
+    <p class="mb-0 small">Nama: {{ kunjungan.petugas_handover_perawat|default:"___________________________" }}</p>
+    <div class="sig-box my-1"></div>
+    <p class="small">Jam: {{ kunjungan.petugas_handover_jam|default:"___:___ WIB" }}</p>
+  </div>
+  <div class="col-6 text-center">
+    <p class="mb-0 small">Dokter DPJP / Dokter IGD:</p>
+    <p class="mb-0 small">Nama: {{ kunjungan.petugas_handover_dokter|default:kunjungan.dpjp|default:"___________________________" }}</p>
+    <div class="sig-box my-1"></div>
+    <p class="small">Jam: {{ kunjungan.petugas_handover_dokter_jam|default:"___:___ WIB" }}</p>
+  </div>
+</div>
+
+<div class="text-center text-muted mt-2" style="font-size: 7pt;">
+  Dicetak: {{ printed_at|date:"d/m/Y H:i" }} WIB — RS MONSISKAMI ARIMA — Sistem Informasi Manajemen Rumah Sakit (ARIMA)
+</div>
+
+</body>
+</html>

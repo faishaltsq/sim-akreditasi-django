@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <title>Permintaan Laboratorium — {{ kunjungan.no_kunjungan }}</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
+  <style>
+    @media print {
+      .no-print { display: none !important; }
+      body { font-size: 9pt; }
+      @page { size: A4 portrait; margin: 10mm; }
+    }
+    body { background: #fff; color: #000; font-family: 'Segoe UI', Arial, sans-serif; font-size: 8.5pt; }
+    .header-box { border-bottom: 3px double #000; padding-bottom: 6px; margin-bottom: 8px; }
+    .section-title { font-weight: bold; text-transform: uppercase; font-size: 8pt; background: #e9ecef; padding: 2px 6px; margin-top: 6px; margin-bottom: 4px; border-left: 3px solid #dc3545; }
+    .table-sm th, .table-sm td { padding: 2px 4px; font-size: 8pt; vertical-align: middle; }
+    .table-sm th { background: #f8f9fa; }
+    .ck { display: inline-block; width: 11px; height: 11px; border: 1px solid #000; margin-right: 3px; vertical-align: middle; text-align: center; font-size: 8pt; line-height: 11px; }
+    .ck.checked { background: #000; color: #fff; }
+    .ck.checked::after { content: '✓'; }
+    .sig-box { border: 1px solid #000; min-height: 48px; width: 180px; display: inline-block; }
+  </style>
+</head>
+<body class="p-2">
+
+<div class="no-print mb-2 d-flex gap-2">
+  <button onclick="window.print()" class="btn btn-danger btn-sm">🖨️ Cetak Formulir Lab</button>
+  <button onclick="window.close()" class="btn btn-outline-secondary btn-sm">Tutup</button>
+</div>
+
+<!-- HEADER RS -->
+<div class="header-box d-flex justify-content-between align-items-center">
+  <div>
+    <h5 class="mb-0 fw-bold">RS MONSISKAMI ARIMA</h5>
+    <small>INSTALASI LABORATORIUM KLINIK & PATOLOGI</small><br>
+    <small>JL. SEHAT UTAMA NO. 123 | TELP: (0286) 123456</small>
+  </div>
+  <div class="text-end border p-2 rounded">
+    <div class="fw-bold" style="font-size: 10pt; color: #dc3545;">FORMULIR PERMINTAAN<br>PEMERIKSAAN LABORATORIUM</div>
+    <small class="text-muted">Order ID: {% if order %}{{ order.pk }}{% else %}NEW{% endif %}</small>
+  </div>
+</div>
+
+<!-- IDENTITAS PASIEN -->
+<table class="table table-bordered table-sm mb-1">
+  <tr>
+    <th style="width:16%;">No. Rekam Medis</th><td style="width:34%;" class="fw-bold fs-6">{{ pasien.no_rm }}</td>
+    <th style="width:16%;">Tgl / Jam Permintaan</th><td style="width:34%;">{% if order %}{{ order.created_at|date:"d/m/Y H:i" }}{% else %}{{ printed_at|date:"d/m/Y H:i" }}{% endif %} WIB</td>
+  </tr>
+  <tr>
+    <th>Nama Pasien</th><td class="fw-bold">{{ pasien.nama_lengkap }}</td>
+    <th>Dokter Pengirim</th><td>{% if order %}{{ order.dokter_pengirim|default:kunjungan.dpjp }}{% else %}{{ kunjungan.dpjp|default:"dr. Jaga IGD" }}{% endif %}</td>
+  </tr>
+  <tr>
+    <th>Tgl Lahir / Umur</th><td>{{ pasien.tanggal_lahir|date:"d/m/Y" }} ({{ pasien.umur }} Thn) — {{ pasien.get_jenis_kelamin_display }}</td>
+    <th>Ruang / Poli</th><td>{{ kunjungan.get_jenis_pelayanan_display }} (IGD)</td>
+  </tr>
+  <tr>
+    <th>Kategori Pasien</th><td>{{ kunjungan.penjamin|default:"UMUM" }}</td>
+    <th>Prioritas Order</th>
+    <td class="fw-bold">
+      <span class="ck{% if order and order.prioritas == 'CITO' %} checked{% endif %}"></span> CITO (Emergensi)
+      &nbsp;&nbsp;
+      <span class="ck{% if not order or order.prioritas == 'RUTIN' %} checked{% endif %}"></span> Rutin
+    </td>
+  </tr>
+  <tr>
+    <th>Indikasi Klinis / Diagnosis</th><td colspan="3">{{ order.catatan_klinis|default:kunjungan.diagnosa_masuk|default:"—" }}</td>
+  </tr>
+  <tr>
+    <th>Kondisi Sampel / Puasa</th>
+    <td colspan="3">
+      <span class="ck{% if order.kondisi_sampel == 'Puasa 10-12 Jam' %} checked{% endif %}"></span> Puasa 10–12 Jam
+      &nbsp;&nbsp;
+      <span class="ck{% if not order or order.kondisi_sampel == 'Tidak Puasa' %} checked{% endif %}"></span> Tidak Puasa
+      &nbsp;&nbsp;
+      <span class="ck{% if order.kondisi_sampel == 'Sedang Terapi Obat' %} checked{% endif %}"></span> Sedang Terapi Obat
+    </td>
+  </tr>
+</table>
+
+{% if order and order.parameter_list %}
+<!-- PARAMETER YANG DIPILIH -->
+<div class="section-title">PARAMETER PEMERIKSAAN YANG DIMINTA</div>
+<table class="table table-bordered table-sm mb-2">
+  <thead>
+    <tr class="table-light">
+      <th style="width: 5%;" class="text-center">No</th>
+      <th style="width: 25%;">Kategori</th>
+      <th style="width: 45%;">Nama Pemeriksaan</th>
+      <th style="width: 25%;">Status / Keterangan</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for p in order.parameter_list %}
+    <tr>
+      <td class="text-center">{{ forloop.counter }}</td>
+      <td class="fw-bold">{{ p.category }}</td>
+      <td>{{ p.item }}</td>
+      <td class="text-muted"><span class="ck checked"></span> Diminta</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<!-- CHECKLIST FORM STANDAR LABORATORIUM -->
+<div class="section-title">CHECKLIST DAFTAR PARAMETER LABORATORIUM</div>
+<div class="row g-1">
+  <div class="col-4">
+    <div class="border p-1" style="min-height: 180px;">
+      <strong class="text-danger d-block border-bottom pb-1 mb-1">HEMATOLOGI</strong>
+      <div><span class="ck"></span> Darah Lengkap (CBC)</div>
+      <div><span class="ck"></span> Hemoglobin / Hematokrit</div>
+      <div><span class="ck"></span> Leukosit & Hitung Jenis</div>
+      <div><span class="ck"></span> Trombosit</div>
+      <div><span class="ck"></span> Golongan Darah & Rhesus</div>
+      <div><span class="ck"></span> Laju Endap Darah (LED)</div>
+      <strong class="text-danger d-block border-bottom pb-1 my-1">HEMOSTASIS</strong>
+      <div><span class="ck"></span> Masa Perdarahan / Pembekuan</div>
+      <div><span class="ck"></span> PT / INR</div>
+      <div><span class="ck"></span> APTT</div>
+      <div><span class="ck"></span> D-Dimer</div>
+    </div>
+  </div>
+  <div class="col-4">
+    <div class="border p-1" style="min-height: 180px;">
+      <strong class="text-danger d-block border-bottom pb-1 mb-1">KIMIA KLINIK</strong>
+      <div><span class="ck"></span> Glukosa Darah Sewaktu (GDS)</div>
+      <div><span class="ck"></span> Glukosa Darah Puasa / 2JPP</div>
+      <div><span class="ck"></span> Ureum & Kreatinin</div>
+      <div><span class="ck"></span> SGOT / SGPT</div>
+      <div><span class="ck"></span> Bilirubin Total / Direk</div>
+      <div><span class="ck"></span> Elektrolit (Na, K, Cl)</div>
+      <div><span class="ck"></span> Asam Urat & Kolesterol Total</div>
+      <div><span class="ck"></span> Troponin I / T (Kuantitatif)</div>
+      <div><span class="ck"></span> CKMB</div>
+      <div><span class="ck"></span> Analisa Gas Darah (AGD)</div>
+    </div>
+  </div>
+  <div class="col-4">
+    <div class="border p-1" style="min-height: 180px;">
+      <strong class="text-danger d-block border-bottom pb-1 mb-1">IMUNO-SEROLOGI & LAINNYA</strong>
+      <div><span class="ck"></span> HBsAg Kualitatif / Kuantitatif</div>
+      <div><span class="ck"></span> Anti-HCV Rapid</div>
+      <div><span class="ck"></span> Anti-HIV (3 Metode)</div>
+      <div><span class="ck"></span> NS1 Dengue Ag</div>
+      <div><span class="ck"></span> IgG / IgM Anti Dengue</div>
+      <div><span class="ck"></span> Widal Test</div>
+      <strong class="text-danger d-block border-bottom pb-1 my-1">URINALISIS & FESES</strong>
+      <div><span class="ck"></span> Urin Rutin / Lengkap</div>
+      <div><span class="ck"></span> Tes Kehamilan (PP Test)</div>
+      <div><span class="ck"></span> Feses Lengkap & Darah Samar</div>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<!-- TANDA TANGAN & PENGESAHAN -->
+<div class="row mt-3">
+  <div class="col-4 text-center">
+    <p class="mb-0 small">Dokter yang Meminta:</p>
+    <div class="sig-box my-1"></div>
+    <p class="small mb-0">({% if order %}{{ order.dokter_pengirim|default:kunjungan.dpjp }}{% else %}{{ kunjungan.dpjp|default:"dr. Jaga IGD" }}{% endif %})</p>
+  </div>
+  <div class="col-4 text-center">
+    <p class="mb-0 small">Petugas Pengambil Sampel:</p>
+    <div class="sig-box my-1"></div>
+    <p class="small mb-0">(____________________)</p>
+    <small class="text-muted">Jam Ambil: ____:____</small>
+  </div>
+  <div class="col-4 text-center">
+    <p class="mb-0 small">Penerima Laboratorium:</p>
+    <div class="sig-box my-1"></div>
+    <p class="small mb-0">(____________________)</p>
+    <small class="text-muted">Jam Terima: ____:____</small>
+  </div>
+</div>
+
+<div class="text-center text-muted mt-2" style="font-size: 7pt;">
+  Formulir Cetak Permintaan Laboratorium — RS MONSISKAMI ARIMA — {{ printed_at|date:"d/m/Y H:i" }} WIB
+</div>
+
+</body>
+</html>

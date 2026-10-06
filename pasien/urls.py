@@ -62,4 +62,10 @@ urlpatterns = [
     path('kunjungan/<int:pk>/cppt-quick/', views.igd_cppt_quick_add, name='igd_cppt_quick_add'),
     path('kunjungan/<int:pk>/eksekusi-tindakan/', views.igd_eksekusi_tindakan, name='igd_eksekusi_tindakan'),
     path('kunjungan/<int:pk>/cetak-resume-igd/', views.cetak_resume_igd, name='cetak_resume_igd'),
+    # ── Formulir Asesmen Medis Awal IGD & Permintaan Lab (ARIMA 2026) ──
+    path('kunjungan/<int:pk>/asesmen-medis-igd/', views.igd_asesmen_medis_save, name='igd_asesmen_medis_save'),
+    path('kunjungan/<int:pk>/order-lab-create/', views.order_lab_create, name='order_lab_create'),
+    path('kunjungan/<int:pk>/cetak-asesmen-medis-igd/', views.cetak_asesmen_medis_igd, name='cetak_asesmen_medis_igd'),
+    path('kunjungan/<int:pk>/cetak-permintaan-lab/', views.cetak_permintaan_lab, name='cetak_permintaan_lab'),
+    path('kunjungan/<int:pk>/cetak-permintaan-lab/<int:order_id>/', views.cetak_permintaan_lab, name='cetak_permintaan_lab_order'),
 ]

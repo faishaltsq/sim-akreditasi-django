@@ -1841,3 +1841,318 @@ def cetak_formulir_pendaftaran(request, pk):
         'nik_boxes': nik_boxes,
         'printed_at': timezone.now(),
     })
+
+
+@login_required
+def igd_asesmen_medis_save(request, pk):
+    """
+    Comprehensive Medical Initial Assessment in IGD (ARIMA 2026 Revision).
+    Saves all 10 standard clinical sections: Response Time, Triage ATS/ESI,
+    Primary Survey, Psychosocial, Anamnesis, Secondary Survey, Diagnostic Workup,
+    Diagnosis, Therapy/Procedures, and SBAR Disposition/Handover.
+    """
+    k = get_object_or_404(KunjunganPasien, pk=pk)
+    if request.method == 'POST':
+        # Section I: Response Time & Cara Datang
+        if request.POST.get('cara_datang'):
+            k.cara_datang = request.POST.get('cara_datang', '').strip()
+        if request.POST.get('waktu_asesmen_dokter'):
+            k.waktu_asesmen_dokter = request.POST.get('waktu_asesmen_dokter', '').strip()
+        if request.POST.get('waktu_disposisi'):
+            k.waktu_disposisi = request.POST.get('waktu_disposisi', '').strip()
+
+        # Section II: Triase Kategori (ATS/ESI)
+        triase_kat = request.POST.get('triase_kategori', '').strip()
+        if triase_kat:
+            k.triase_kategori = triase_kat
+            if '1' in triase_kat or '2' in triase_kat:
+                k.triage = 'MERAH'
+            elif '3' in triase_kat:
+                k.triage = 'KUNING'
+            elif '4' in triase_kat:
+                k.triage = 'HIJAU'
+            elif '5' in triase_kat:
+                k.triage = 'HITAM'
+
+        # Section III: Primary Survey (GCS, TTV, Skala Nyeri, Risiko Jatuh)
+        if request.POST.get('gcs_e') and request.POST['gcs_e'].isdigit():
+            k.gcs_e = int(request.POST['gcs_e'])
+        if request.POST.get('gcs_v') and request.POST['gcs_v'].isdigit():
+            k.gcs_v = int(request.POST['gcs_v'])
+        if request.POST.get('gcs_m') and request.POST['gcs_m'].isdigit():
+            k.gcs_m = int(request.POST['gcs_m'])
+        if k.gcs_e and k.gcs_v and k.gcs_m:
+            tot = k.gcs_e + k.gcs_v + k.gcs_m
+            k.ttv_gcs = f'E{k.gcs_e}V{k.gcs_v}M{k.gcs_m} ({tot})'
+
+        if request.POST.get('kesadaran'):
+            k.kesadaran = request.POST.get('kesadaran', '').strip()
+        if request.POST.get('keadaan_umum'):
+            k.keadaan_umum = request.POST.get('keadaan_umum', '').strip()
+
+        if request.POST.get('ttv_sistole') and request.POST['ttv_sistole'].isdigit():
+            k.ttv_sistole = int(request.POST['ttv_sistole'])
+        if request.POST.get('ttv_diastole') and request.POST['ttv_diastole'].isdigit():
+            k.ttv_diastole = int(request.POST['ttv_diastole'])
+        if request.POST.get('ttv_nadi') and request.POST['ttv_nadi'].isdigit():
+            k.ttv_nadi = int(request.POST['ttv_nadi'])
+        if request.POST.get('ttv_rr') and request.POST['ttv_rr'].isdigit():
+            k.ttv_rr = int(request.POST['ttv_rr'])
+        if request.POST.get('ttv_suhu'):
+            try:
+                k.ttv_suhu = float(request.POST['ttv_suhu'])
+            except (ValueError, TypeError):
+                pass
+        if request.POST.get('ttv_spo2') and request.POST['ttv_spo2'].isdigit():
+            k.ttv_spo2 = int(request.POST['ttv_spo2'])
+
+        k.suhu_lokasi = request.POST.get('suhu_lokasi', k.suhu_lokasi or 'Aksila').strip()
+        k.nadi_kekuatan = request.POST.get('nadi_kekuatan', k.nadi_kekuatan or 'Kuat').strip()
+        k.nadi_irama = request.POST.get('nadi_irama', k.nadi_irama or 'Reguler').strip()
+        k.pernapasan_pola = request.POST.get('pernapasan_pola', k.pernapasan_pola or 'Spontan').strip()
+        k.spo2_alat = request.POST.get('spo2_alat', k.spo2_alat or 'Udara Bebas').strip()
+
+        # Nyeri
+        nyeri_skor = request.POST.get('skala_nyeri') or request.POST.get('ttv_skala_nyeri')
+        if nyeri_skor and nyeri_skor.isdigit():
+            k.ttv_skala_nyeri = int(nyeri_skor)
+        k.skala_nyeri_sifat = request.POST.get('skala_nyeri_sifat', k.skala_nyeri_sifat or 'Akut').strip()
+        k.nyeri_karakteristik = request.POST.get('nyeri_karakteristik', k.nyeri_karakteristik).strip()
+
+        # Skrining Risiko Jatuh & Gizi
+        k.metode_risiko_jatuh = request.POST.get('metode_risiko_jatuh', k.metode_risiko_jatuh or 'Morse Fall Scale').strip()
+        k.skrining_jatuh_grade = request.POST.get('skrining_jatuh_grade', k.skrining_jatuh_grade or 'RENDAH').strip()
+        if request.POST.get('skrining_jatuh_skor') and request.POST['skrining_jatuh_skor'].isdigit():
+            k.skrining_jatuh_skor = int(request.POST['skrining_jatuh_skor'])
+        if request.POST.get('skrining_gizi_mst') and request.POST['skrining_gizi_mst'].isdigit():
+            k.skrining_gizi_mst = int(request.POST['skrining_gizi_mst'])
+
+        # Section IV: Psikososial, Ekonomi, Spiritual & Hambatan
+        k.status_emosional = request.POST.get('status_emosional', k.status_emosional or 'Kooperatif').strip()
+        k.hambatan_komunikasi = request.POST.get('hambatan_komunikasi', k.hambatan_komunikasi or 'Tidak Ada').strip()
+        k.kebutuhan_spiritual = request.POST.get('kebutuhan_spiritual', k.kebutuhan_spiritual or 'Tidak Ada').strip()
+
+        # Section V: Anamnesis
+        if request.POST.get('keluhan_utama'):
+            k.catatan_admisi = request.POST.get('keluhan_utama', '').strip()
+        if request.POST.get('anamnesis_rps'):
+            k.anamnesis_rps = request.POST.get('anamnesis_rps', '').strip()
+        if request.POST.get('anamnesis_rpd'):
+            k.anamnesis_rpd = request.POST.get('anamnesis_rpd', '').strip()
+        if request.POST.get('anamnesis_rpk'):
+            k.anamnesis_rpk = request.POST.get('anamnesis_rpk', '').strip()
+        if request.POST.get('anamnesis_obat'):
+            k.anamnesis_obat = request.POST.get('anamnesis_obat', '').strip()
+
+        rpd_checks = request.POST.getlist('rpd_check') or request.POST.getlist('rpd_checklist')
+        if rpd_checks:
+            k.rpd_checklist = rpd_checks
+
+        # Alergi Pasien
+        alergi_obat = request.POST.get('alergi_obat', '').strip()
+        alergi_lain = request.POST.get('alergi_lain', '').strip()
+        if alergi_obat or alergi_lain:
+            if alergi_obat:
+                k.pasien.alergi_obat = alergi_obat
+            if alergi_lain:
+                k.pasien.alergi_lain = alergi_lain
+            k.pasien.save(update_fields=['alergi_obat', 'alergi_lain'])
+
+        # Section VI: Secondary Survey (Pemeriksaan Fisik Lengkap)
+        sec = k.secondary_survey_detail or {}
+        sec['mata'] = {
+            'visus_od': request.POST.get('mata_visus_od', ''),
+            'visus_os': request.POST.get('mata_visus_os', ''),
+            'konjungtiva': request.POST.get('mata_konjungtiva', 'Normal'),
+            'sklera': request.POST.get('mata_sklera', 'Normal'),
+            'pupil': request.POST.get('mata_pupil', 'Isokor'),
+            'pupil_diameter': request.POST.get('mata_pupil_diameter', '3mm / 3mm'),
+            'refleks_cahaya': request.POST.get('mata_refleks_cahaya', '(+/+)'),
+        }
+        sec['tht'] = {
+            'telinga_lapang': request.POST.get('tht_telinga_lapang', 'Ya'),
+            'telinga_sekret': request.POST.get('tht_telinga_sekret', '(-/-)'),
+            'telinga_nyeri_tragus': request.POST.get('tht_telinga_nyeri_tragus', '(-/-)'),
+            'membran_timpani': request.POST.get('tht_membran_timpani', 'Intak'),
+            'napas_cuping': request.POST.get('tht_napas_cuping', 'Tidak'),
+            'hidung_epistaksis': request.POST.get('tht_hidung_epistaksis', '(-/-)'),
+            'hidung_sekret': request.POST.get('tht_hidung_sekret', 'Jernih'),
+            'mukosa_bibir': request.POST.get('tht_mukosa_bibir', 'Lembap'),
+            'tonsil': request.POST.get('tht_tonsil', 'T1/T1 Tenang'),
+            'faring': request.POST.get('tht_faring', 'Tenang'),
+        }
+        sec['kepala_leher'] = {
+            'kepala': request.POST.get('kepala_kondisi', 'Normosefali'),
+            'jvp': request.POST.get('leher_jvp', 'Normal'),
+            'kgb': request.POST.get('leher_kgb', 'Tidak Ada Pembesaran'),
+            'kaku_kuduk': request.POST.get('leher_kaku_kuduk', 'Negatif (-)'),
+            'trakea': request.POST.get('leher_trakea', 'Ditengah (Normal)'),
+        }
+        sec['thorax'] = {
+            'paru_inspeksi': request.POST.get('paru_inspeksi', 'Simetris'),
+            'paru_retraksi': request.POST.get('paru_retraksi', 'Tidak Ada'),
+            'paru_auskultasi': request.POST.get('paru_auskultasi', 'Vesikuler (+/+)'),
+            'paru_wheezing': request.POST.get('paru_wheezing', '(-/-)'),
+            'paru_ronkhi': request.POST.get('paru_ronkhi', '(-/-)'),
+            'jantung_bunyi': request.POST.get('jantung_bunyi', 'S1-S2 Tunggal Reguler'),
+            'jantung_murmur': request.POST.get('jantung_murmur', '(-/-)'),
+            'jantung_gallop': request.POST.get('jantung_gallop', '(-/-)'),
+        }
+        sec['abdomen'] = {
+            'inspeksi': request.POST.get('abdomen_inspeksi', 'Datar'),
+            'bising_usus': request.POST.get('abdomen_bising_usus', 'Normal'),
+            'palpasi': request.POST.get('abdomen_palpasi', 'Supel'),
+            'nyeri_tekan': request.POST.get('abdomen_nyeri_tekan', 'Tidak Ada'),
+            'organomegali': request.POST.get('abdomen_organomegali', 'Tidak Ada'),
+            'perkusi': request.POST.get('abdomen_perkusi', 'Timpani'),
+        }
+        sec['ekstremitas'] = {
+            'akral': request.POST.get('ekstremitas_akral', 'Hangat'),
+            'crt': request.POST.get('ekstremitas_crt', '< 2 Detik'),
+            'edema_atas': request.POST.get('ekstremitas_edema_atas', '(-/-)'),
+            'edema_bawah': request.POST.get('ekstremitas_edema_bawah', '(-/-)'),
+            'motorik_atas': request.POST.get('ekstremitas_motorik_atas', '5/5'),
+            'motorik_bawah': request.POST.get('ekstremitas_motorik_bawah', '5/5'),
+        }
+        k.secondary_survey_detail = sec
+
+        # Section VII: Penunjang (Radiologi, EKG, Hasil Kritis)
+        rads = request.POST.getlist('penunjang_radiologi') or request.POST.getlist('penunjang_radiologi_checklist')
+        if rads:
+            k.penunjang_radiologi_checklist = rads
+        k.penunjang_ekg = request.POST.get('penunjang_ekg', k.penunjang_ekg).strip()
+        k.penunjang_hasil_kritis = request.POST.get('penunjang_hasil_kritis', k.penunjang_hasil_kritis).strip()
+
+        # Section VIII: Diagnosis Kerja
+        if request.POST.get('diagnosa_masuk'):
+            k.diagnosa_masuk = request.POST.get('diagnosa_masuk', '').strip()
+        if request.POST.get('diagnosa_keluar'):
+            k.diagnosa_keluar = request.POST.get('diagnosa_keluar', '').strip()
+
+        # Section IX: Tatalaksana & Tindakan IGD
+        k.tatalaksana_resusitasi = request.POST.get('tatalaksana_resusitasi', k.tatalaksana_resusitasi).strip()
+        k.tatalaksana_terapi = request.POST.get('tatalaksana_terapi', k.tatalaksana_terapi).strip()
+        tindakans = request.POST.getlist('tatalaksana_tindakan') or request.POST.getlist('tatalaksana_tindakan_check')
+        if tindakans:
+            k.tatalaksana_tindakan_check = tindakans
+
+        # Section X: Disposisi & Handover SBAR
+        if request.POST.get('disposisi_kondisi_akhir'):
+            k.disposisi_kondisi_akhir = request.POST.get('disposisi_kondisi_akhir', '').strip()
+        if request.POST.get('disposisi_tindak_lanjut'):
+            k.disposisi_tindak_lanjut = request.POST.get('disposisi_tindak_lanjut', '').strip()
+        k.disposisi_ruang_rawat = request.POST.get('disposisi_ruang_rawat', k.disposisi_ruang_rawat).strip()
+        k.disposisi_kontrol_poli = request.POST.get('disposisi_kontrol_poli', k.disposisi_kontrol_poli).strip()
+        k.disposisi_kontrol_tgl = request.POST.get('disposisi_kontrol_tgl', k.disposisi_kontrol_tgl).strip()
+        k.disposisi_rujuk_rs = request.POST.get('disposisi_rujuk_rs', k.disposisi_rujuk_rs).strip()
+        k.disposisi_rujuk_alasan = request.POST.get('disposisi_rujuk_alasan', k.disposisi_rujuk_alasan).strip()
+
+        k.sbar_situation = request.POST.get('sbar_situation', k.sbar_situation).strip()
+        k.sbar_background = request.POST.get('sbar_background', k.sbar_background).strip()
+        k.sbar_assessment = request.POST.get('sbar_assessment', k.sbar_assessment).strip()
+        k.sbar_recommendation = request.POST.get('sbar_recommendation', k.sbar_recommendation).strip()
+
+        k.petugas_handover_perawat = request.POST.get('petugas_handover_perawat', k.petugas_handover_perawat).strip()
+        k.petugas_handover_jam = request.POST.get('petugas_handover_jam', k.petugas_handover_jam).strip()
+        k.petugas_handover_dokter = request.POST.get('petugas_handover_dokter', k.petugas_handover_dokter).strip()
+        k.petugas_handover_dokter_jam = request.POST.get('petugas_handover_dokter_jam', k.petugas_handover_dokter_jam).strip()
+
+        k.save()
+        messages.success(request, f'Asesmen medis awal IGD pasien {k.pasien.nama_lengkap} berhasil diperbarui.')
+
+        next_url = request.POST.get('next_url')
+        if next_url:
+            return redirect(next_url)
+    return redirect('pasien:igd_dashboard')
+
+
+@login_required
+def order_lab_create(request, pk):
+    """
+    Creates a formal Laboratory Request (OrderPenunjang) with selected parameter checklists
+    categorized by Hematologi, Hemostasis, Kimia Klinik, Immuno-Serologi, Urinalisis/Feses, Mikrobiologi.
+    """
+    k = get_object_or_404(KunjunganPasien, pk=pk)
+    if request.method == 'POST':
+        prioritas = request.POST.get('prioritas', 'RUTIN')
+        kondisi_sampel = request.POST.get('kondisi_sampel', 'Tidak Puasa')
+        catatan_klinis = request.POST.get('catatan_klinis', k.diagnosa_masuk or '')
+        dokter_pengirim = request.POST.get('dokter_pengirim', k.dpjp or 'dr. Jaga IGD')
+
+        raw_params = request.POST.getlist('parameters')
+        param_list = []
+        for p in raw_params:
+            if '|' in p:
+                cat, item = p.split('|', 1)
+                param_list.append({'category': cat.strip(), 'item': item.strip()})
+            else:
+                param_list.append({'category': 'UMUM', 'item': p.strip()})
+
+        nama_pemeriksaan = request.POST.get('nama_pemeriksaan', '').strip()
+        if not nama_pemeriksaan:
+            if param_list:
+                nama_pemeriksaan = f'Pemeriksaan Lab ({len(param_list)} parameter)'
+            else:
+                nama_pemeriksaan = 'Permintaan Pemeriksaan Laboratorium'
+
+        order = OrderPenunjang.objects.create(
+            kunjungan=k,
+            jenis='LAB',
+            nama_pemeriksaan=nama_pemeriksaan,
+            catatan_klinis=catatan_klinis,
+            prioritas=prioritas,
+            status='ORDERED',
+            dokter_pengirim=dokter_pengirim,
+            parameter_list=param_list,
+            kondisi_sampel=kondisi_sampel,
+        )
+        messages.success(request, f'Permintaan laboratorium ({order.prioritas}) berhasil dikirim ke Unit Laboratorium.')
+
+        if request.POST.get('print_after_save') == '1':
+            return redirect('pasien:cetak_permintaan_lab_order', pk=k.pk, order_id=order.pk)
+
+        next_url = request.POST.get('next_url')
+        if next_url:
+            return redirect(next_url)
+    return redirect('pasien:igd_dashboard')
+
+
+@login_required
+def cetak_asesmen_medis_igd(request, pk):
+    """
+    Official A4 Medical Assessment Print Form (Formulir Asesmen Medis Awal IGD ARIMA).
+    Matches 10 sections from Hospital Accreditation Standard.
+    """
+    k = get_object_or_404(
+        KunjunganPasien.objects.select_related('pasien', 'bed', 'created_by')
+        .prefetch_related('order_penunjang', 'cppt'),
+        pk=pk
+    )
+    news_score, news_cat = k.hitung_news_score()
+    return render(request, 'pasien/cetak_asesmen_medis_igd.html', {
+        'kunjungan': k,
+        'pasien': k.pasien,
+        'news_score': news_score,
+        'news_category': news_cat,
+        'printed_at': timezone.now(),
+    })
+
+
+@login_required
+def cetak_permintaan_lab(request, pk, order_id=None):
+    """
+    Official A4 Laboratory Examination Request Form (Formulir Permintaan Pemeriksaan Laboratorium).
+    Includes letterhead RS MONSISKAMI ARIMA, clinical indication, priority, and categorized parameter checklist table.
+    """
+    k = get_object_or_404(KunjunganPasien.objects.select_related('pasien'), pk=pk)
+    if order_id:
+        order = get_object_or_404(OrderPenunjang, pk=order_id, kunjungan=k)
+    else:
+        order = OrderPenunjang.objects.filter(kunjungan=k, jenis='LAB').order_by('-created_at').first()
+
+    return render(request, 'pasien/cetak_permintaan_lab.html', {
+        'kunjungan': k,
+        'pasien': k.pasien,
+        'order': order,
+        'printed_at': timezone.now(),
+    })

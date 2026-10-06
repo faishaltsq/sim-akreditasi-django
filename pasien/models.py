@@ -360,6 +360,92 @@ class KunjunganPasien(models.Model):
     waktu_kematian    = models.DateTimeField('Waktu Kematian', null=True, blank=True)
     penyebab_kematian = models.TextField('Penyebab Kematian', blank=True)
 
+    # ── Asesmen Medis Awal IGD — Revisi Formulir ARIMA (sesuai dokumen ARIMA 2026) ──
+
+    CARA_DATANG_CHOICES = [
+        ('SENDIRI',  'Sendiri / Keluarga'),
+        ('RUJUKAN',  'Rujukan (RS / Puskesmas / Klinik)'),
+        ('AMBULANS', 'Ambulans'),
+        ('POLISI',   'Polisi'),
+    ]
+    TRIASE_KATEGORI_CHOICES = [
+        ('KATEGORI_1', 'Kategori 1 (Resusitasi / Merah) — Immediate'),
+        ('KATEGORI_2', 'Kategori 2 (Emergensi / Merah) — 10 menit'),
+        ('KATEGORI_3', 'Kategori 3 (Urgensi / Kuning) — 30 menit'),
+        ('KATEGORI_4', 'Kategori 4 (Non-Urgensi / Hijau) — 60 menit'),
+        ('KATEGORI_5', 'Kategori 5 (Rutin / Hitam / DOA) — 120 menit'),
+    ]
+    KONDISI_AKHIR_CHOICES = [
+        ('MEMBAIK',    'Membaik'),
+        ('STABIL',     'Stabil'),
+        ('MEMBURUK',   'Memburuk'),
+        ('MENINGGAL',  'Meninggal (DOA / Di IGD)'),
+    ]
+    DISPOSISI_CHOICES = [
+        ('RAWAT_INAP', 'Rawat Inap'),
+        ('RAWAT_JALAN','Rawat Jalan / Pulang'),
+        ('RUJUK',      'Rujuk ke RS Lain'),
+        ('PAPS',       'Pulang Atas Permintaan Sendiri (PAPS)'),
+    ]
+
+    # I. Data Waktu & Response Time
+    cara_datang             = models.CharField('Cara Datang', max_length=15, choices=CARA_DATANG_CHOICES, blank=True)
+    waktu_asesmen_dokter    = models.CharField('Waktu Asesmen Dokter (WIB)', max_length=10, blank=True)
+    waktu_disposisi         = models.CharField('Waktu Keputusan Disposisi (WIB)', max_length=10, blank=True)
+
+    # II. Triase ATS / ESI Level
+    triase_kategori         = models.CharField('Triase Kategori (ATS/ESI)', max_length=15, choices=TRIASE_KATEGORI_CHOICES, blank=True)
+
+    # III. Primary Survey — GCS detail, Tanda Vital Kualifikasi
+    gcs_e                   = models.PositiveSmallIntegerField('GCS E (Eyes)', null=True, blank=True)
+    gcs_v                   = models.PositiveSmallIntegerField('GCS V (Verbal)', null=True, blank=True)
+    gcs_m                   = models.PositiveSmallIntegerField('GCS M (Motor)', null=True, blank=True)
+    suhu_lokasi             = models.CharField('Lokasi Pengukuran Suhu', max_length=20, blank=True, help_text='Aksila / Oral / Rectal')
+    nadi_kekuatan           = models.CharField('Kekuatan Nadi', max_length=15, blank=True, help_text='Kuat / Lemah')
+    nadi_irama              = models.CharField('Irama Nadi', max_length=15, blank=True, help_text='Reguler / Ireguler')
+    pernapasan_pola         = models.CharField('Pola Pernapasan', max_length=20, blank=True, help_text='Spontan / Adekuat / Takipnea')
+    spo2_alat               = models.CharField('SpO2 via Alat', max_length=30, blank=True, help_text='Udara Bebas / Nasal Kanul / NRM')
+    skala_nyeri_sifat       = models.CharField('Sifat Nyeri', max_length=30, blank=True, help_text='Akut / Kronis / Hilang Timbul / Menusuk / Panas')
+    metode_risiko_jatuh     = models.CharField('Metode Skrining Risiko Jatuh', max_length=30, blank=True, help_text='Morse Fall Scale / Humpty Dumpty / Get Up and Go')
+
+    # IV. Asesmen Psikososiospiritual
+    status_emosional        = models.CharField('Status Emosional', max_length=30, blank=True, help_text='Kooperatif / Cemas / Agresif / Depresi')
+    hambatan_komunikasi     = models.CharField('Hambatan Komunikasi', max_length=60, blank=True)
+    kebutuhan_spiritual     = models.CharField('Kebutuhan Edukasi / Spiritual', max_length=100, blank=True)
+
+    # V. Anamnesis — RPD Checklist (JSON list: ['HT', 'DM', 'Asma', ...])
+    rpd_checklist           = models.JSONField('RPD Checklist (HT, DM, Asma, Jantung, ...)', default=list, blank=True)
+
+    # VI. Secondary Survey — Pemeriksaan Fisik Lengkap (JSON per organ)
+    secondary_survey_detail = models.JSONField('Secondary Survey Detail (Mata, THT, Kepala-Leher, Thorax, Abdomen, Ekstremitas)', default=dict, blank=True)
+
+    # VII. Pemeriksaan Penunjang
+    penunjang_radiologi_checklist  = models.JSONField('Radiologi Checklist (Thorax, CT, USG, X-Ray ...)', default=list, blank=True)
+    penunjang_ekg                  = models.CharField('Hasil EKG', max_length=100, blank=True)
+    penunjang_hasil_kritis         = models.TextField('Hasil Kritis Penunjang', blank=True)
+
+    # VIII–IX. Diagnosis & Tatalaksana
+    tatalaksana_resusitasi         = models.TextField('Resusitasi / Stabilisasi', blank=True)
+    tatalaksana_terapi             = models.TextField('Terapi Farmakologi IGD', blank=True)
+    tatalaksana_tindakan_check     = models.JSONField('Tindakan Medis IGD (Checklist)', default=list, blank=True)
+
+    # X. Disposisi & Handover SBAR
+    disposisi_kondisi_akhir        = models.CharField('Kondisi Akhir IGD', max_length=15, choices=KONDISI_AKHIR_CHOICES, blank=True)
+    disposisi_tindak_lanjut        = models.CharField('Tindak Lanjut Disposisi', max_length=15, choices=DISPOSISI_CHOICES, blank=True)
+    disposisi_ruang_rawat          = models.CharField('Ruang Rawat Inap / DPJP', max_length=200, blank=True)
+    disposisi_kontrol_poli         = models.CharField('Kontrol Poli (Rawat Jalan)', max_length=100, blank=True)
+    disposisi_kontrol_tgl          = models.CharField('Tanggal Kontrol', max_length=20, blank=True)
+    disposisi_rujuk_rs             = models.CharField('RS Tujuan Rujukan', max_length=200, blank=True)
+    disposisi_rujuk_alasan         = models.TextField('Alasan Rujukan', blank=True)
+    sbar_situation                 = models.TextField('SBAR — Situation', blank=True)
+    sbar_background                = models.TextField('SBAR — Background', blank=True)
+    sbar_assessment                = models.TextField('SBAR — Assessment', blank=True)
+    sbar_recommendation            = models.TextField('SBAR — Recommendation', blank=True)
+    petugas_handover_perawat       = models.CharField('Nama Perawat Handover', max_length=150, blank=True)
+    petugas_handover_jam           = models.CharField('Jam Handover Perawat', max_length=10, blank=True)
+    petugas_handover_dokter        = models.CharField('Nama Dokter IGD / DPJP', max_length=150, blank=True)
+    petugas_handover_dokter_jam    = models.CharField('Jam TTD Dokter IGD', max_length=10, blank=True)
+
     class Meta:
         verbose_name = 'Kunjungan Pasien'
         verbose_name_plural = 'Kunjungan Pasien'
@@ -683,6 +769,8 @@ class OrderPenunjang(models.Model):
     hasil_pemeriksaan      = models.TextField('Hasil Pemeriksaan', blank=True)
     is_critical_value      = models.BooleanField('Critical Value Alert', default=False)
     critical_value_catatan = models.CharField('Catatan Nilai Kritis', max_length=200, blank=True)
+    parameter_list         = models.JSONField('Daftar Parameter Pemeriksaan', default=list, blank=True)
+    kondisi_sampel         = models.CharField('Kondisi Sampel', max_length=30, blank=True, help_text='Puasa / Tidak Puasa / Hamil')
     created_at             = models.DateTimeField(auto_now_add=True)
 
     class Meta:
