@@ -12,14 +12,14 @@
 
 /* TEMA WARNA ANTARMUKA SISTEM (DINAMIS DARI PUSAT KONTROL) */
 :root, body[data-theme="teal"] {
-    --primary: #0d9488;
-    --primary-deep: #0f766e;
-    --primary-light: #ccfbf1;
-    --primary-gradient: linear-gradient(135deg, #0f766e, #0d9488);
-    --primary-shadow: rgba(13,148,136,0.3);
-    --sidebar-hover: #f0fdfa;
-    --active-nav-bg: #ccfbf1;
-    --active-nav-text: #0f766e;
+    --primary: #2A835F;
+    --primary-deep: #12544F;
+    --primary-light: #E5F1E7;
+    --primary-gradient: linear-gradient(135deg, #092328 0%, #12544F 58%, #2A835F 100%);
+    --primary-shadow: rgba(18,84,79,0.26);
+    --sidebar-hover: #F1F7F2;
+    --active-nav-bg: #DCEDE0;
+    --active-nav-text: #12544F;
 }
 
 body[data-theme="blue"] {
@@ -502,3 +502,37 @@ code, .font-mono, .mono { font-family: 'JetBrains Mono', ui-monospace, SFMono-Re
     .content-area { padding: 0 !important; }
     .table th { background: #f1f5f9 !important; color: #0f172a !important; print-color-adjust: exact; }
 }
+
+/* ============================================================
+   INSTITUTIONAL COMMAND CENTER — PALETTE OVERRIDES
+   ============================================================ */
+:root {
+    --sidebar-bg: #ffffff; --sidebar-border: #d9e7dc;
+    --body-bg: #f5f8f5; --surface: #ffffff; --border: #d9e7dc;
+    --border-light: #e9f1ea; --text-primary: #092328;
+    --text-secondary: #496267; --text-muted: #789094;
+    --success: #2A835F; --success-light: #e6f3e9; --success-deep: #12544F;
+    --radius: 0.65rem; --radius-lg: 0.85rem; --radius-xl: 1.1rem;
+    --shadow-xs: 0 1px 2px rgb(9 35 40 / 0.04);
+    --shadow-sm: 0 2px 8px rgb(9 35 40 / 0.06);
+    --shadow: 0 8px 20px rgb(9 35 40 / 0.07);
+    --shadow-md: 0 12px 28px rgb(9 35 40 / 0.1);
+}
+.sidebar-desktop { box-shadow: 4px 0 22px rgb(9 35 40 / 0.04); }
+.sidebar-brand { padding: 1.25rem 1.35rem; }
+.sidebar-nav .nav-link { margin: 0.16rem 0.85rem; }
+.sidebar-nav .nav-link.active { background: #12544F; box-shadow: 0 6px 14px rgb(18 84 79 / 0.22); }
+.top-bar { background: rgb(255 255 255 / 0.92); padding: 1rem 2rem; }
+.content-area { padding: 1.85rem 2.1rem; }
+.metric-card, .kpi-card, .table-card, .page-header-box { box-shadow: var(--shadow-sm); }
+.metric-card:hover, .kpi-card:hover { border-color: #8BBB92; }
+.table th { background: #edf5ee; color: #12544F; }
+.table-hover tbody tr:hover td { background: #f4faf5; }
+.form-control:focus, .form-select:focus { border-color: #2A835F; box-shadow: 0 0 0 0.2rem rgb(42 131 95 / 0.16); }
+.btn-primary { background-color: #2A835F; border-color: #2A835F; }
+.btn-primary:hover, .btn-primary:focus { background-color: #12544F; border-color: #12544F; }
+.btn-outline-primary { color: #12544F; border-color: #2A835F; }
+.btn-outline-primary:hover { background: #12544F; border-color: #12544F; }
+.progress-bar.bg-primary { background-color: #2A835F !important; }
+.badge.bg-teal { background-color: #12544F !important; }
+@media (max-width: 767.98px) { .top-bar { padding: 0.8rem 1rem; } .content-area { padding: 1rem; } }
