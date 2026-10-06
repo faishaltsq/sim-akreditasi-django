@@ -83,10 +83,16 @@ class Pasien(models.Model):
 
     @property
     def umur(self):
+        if not self.tanggal_lahir:
+            return 0
         from datetime import date
         today = date.today()
         b = self.tanggal_lahir
         return today.year - b.year - ((today.month, today.day) < (b.month, b.day))
+
+    @property
+    def usia(self):
+        return self.umur
 
     @property
     def has_alergi(self):
