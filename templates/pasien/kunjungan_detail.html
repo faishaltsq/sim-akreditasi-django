@@ -117,6 +117,12 @@
                         <a href="{% url 'pasien:cetak_resume_igd' k.pk %}" target="_blank" class="btn btn-sm btn-outline-danger" style="font-size:.75rem;" title="Cetak Resume Medis IGD">
                             <i class="bi bi-file-earmark-medical me-1"></i>Resume IGD
                         </a>
+                        <a href="{% url 'pasien:cetak_asesmen_medis_igd' k.pk %}" target="_blank" class="btn btn-sm btn-outline-primary" style="font-size:.75rem;" title="Cetak Formulir Asesmen Medis Awal IGD (ARIMA)">
+                            <i class="bi bi-clipboard2-pulse me-1"></i>Asesmen Medis IGD
+                        </a>
+                        <a href="{% url 'pasien:cetak_permintaan_lab' k.pk %}" target="_blank" class="btn btn-sm btn-outline-secondary" style="font-size:.75rem;" title="Cetak Formulir Permintaan Laboratorium">
+                            <i class="bi bi-droplet-half me-1"></i>Permintaan Lab
+                        </a>
                         {% endif %}
                     </div>
                 </div>

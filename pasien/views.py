@@ -1916,12 +1916,12 @@ def igd_asesmen_medis_save(request, pk):
         nyeri_skor = request.POST.get('skala_nyeri') or request.POST.get('ttv_skala_nyeri')
         if nyeri_skor and nyeri_skor.isdigit():
             k.ttv_skala_nyeri = int(nyeri_skor)
-        k.skala_nyeri_sifat = request.POST.get('skala_nyeri_sifat', k.skala_nyeri_sifat or 'Akut').strip()
-        k.nyeri_karakteristik = request.POST.get('nyeri_karakteristik', k.nyeri_karakteristik).strip()
+        k.skala_nyeri_sifat = (request.POST.get('skala_nyeri_sifat') or k.skala_nyeri_sifat or 'Akut').strip()
+        k.nyeri_karakteristik = (request.POST.get('nyeri_karakteristik') or k.nyeri_karakteristik or '').strip()
 
         # Skrining Risiko Jatuh & Gizi
-        k.metode_risiko_jatuh = request.POST.get('metode_risiko_jatuh', k.metode_risiko_jatuh or 'Morse Fall Scale').strip()
-        k.skrining_jatuh_grade = request.POST.get('skrining_jatuh_grade', k.skrining_jatuh_grade or 'RENDAH').strip()
+        k.metode_risiko_jatuh = (request.POST.get('metode_risiko_jatuh') or k.metode_risiko_jatuh or 'Morse Fall Scale').strip()
+        k.skrining_jatuh_grade = (request.POST.get('skrining_jatuh_grade') or k.skrining_jatuh_grade or 'RENDAH').strip()
         if request.POST.get('skrining_jatuh_skor') and request.POST['skrining_jatuh_skor'].isdigit():
             k.skrining_jatuh_skor = int(request.POST['skrining_jatuh_skor'])
         if request.POST.get('skrining_gizi_mst') and request.POST['skrining_gizi_mst'].isdigit():
@@ -2020,8 +2020,8 @@ def igd_asesmen_medis_save(request, pk):
         rads = request.POST.getlist('penunjang_radiologi') or request.POST.getlist('penunjang_radiologi_checklist')
         if rads:
             k.penunjang_radiologi_checklist = rads
-        k.penunjang_ekg = request.POST.get('penunjang_ekg', k.penunjang_ekg).strip()
-        k.penunjang_hasil_kritis = request.POST.get('penunjang_hasil_kritis', k.penunjang_hasil_kritis).strip()
+        k.penunjang_ekg = (request.POST.get('penunjang_ekg') or k.penunjang_ekg or '').strip()
+        k.penunjang_hasil_kritis = (request.POST.get('penunjang_hasil_kritis') or k.penunjang_hasil_kritis or '').strip()
 
         # Section VIII: Diagnosis Kerja
         if request.POST.get('diagnosa_masuk'):
@@ -2030,8 +2030,8 @@ def igd_asesmen_medis_save(request, pk):
             k.diagnosa_keluar = request.POST.get('diagnosa_keluar', '').strip()
 
         # Section IX: Tatalaksana & Tindakan IGD
-        k.tatalaksana_resusitasi = request.POST.get('tatalaksana_resusitasi', k.tatalaksana_resusitasi).strip()
-        k.tatalaksana_terapi = request.POST.get('tatalaksana_terapi', k.tatalaksana_terapi).strip()
+        k.tatalaksana_resusitasi = (request.POST.get('tatalaksana_resusitasi') or k.tatalaksana_resusitasi or '').strip()
+        k.tatalaksana_terapi = (request.POST.get('tatalaksana_terapi') or k.tatalaksana_terapi or '').strip()
         tindakans = request.POST.getlist('tatalaksana_tindakan') or request.POST.getlist('tatalaksana_tindakan_check')
         if tindakans:
             k.tatalaksana_tindakan_check = tindakans
@@ -2041,21 +2041,21 @@ def igd_asesmen_medis_save(request, pk):
             k.disposisi_kondisi_akhir = request.POST.get('disposisi_kondisi_akhir', '').strip()
         if request.POST.get('disposisi_tindak_lanjut'):
             k.disposisi_tindak_lanjut = request.POST.get('disposisi_tindak_lanjut', '').strip()
-        k.disposisi_ruang_rawat = request.POST.get('disposisi_ruang_rawat', k.disposisi_ruang_rawat).strip()
-        k.disposisi_kontrol_poli = request.POST.get('disposisi_kontrol_poli', k.disposisi_kontrol_poli).strip()
-        k.disposisi_kontrol_tgl = request.POST.get('disposisi_kontrol_tgl', k.disposisi_kontrol_tgl).strip()
-        k.disposisi_rujuk_rs = request.POST.get('disposisi_rujuk_rs', k.disposisi_rujuk_rs).strip()
-        k.disposisi_rujuk_alasan = request.POST.get('disposisi_rujuk_alasan', k.disposisi_rujuk_alasan).strip()
+        k.disposisi_ruang_rawat = (request.POST.get('disposisi_ruang_rawat') or k.disposisi_ruang_rawat or '').strip()
+        k.disposisi_kontrol_poli = (request.POST.get('disposisi_kontrol_poli') or k.disposisi_kontrol_poli or '').strip()
+        k.disposisi_kontrol_tgl = (request.POST.get('disposisi_kontrol_tgl') or k.disposisi_kontrol_tgl or '').strip()
+        k.disposisi_rujuk_rs = (request.POST.get('disposisi_rujuk_rs') or k.disposisi_rujuk_rs or '').strip()
+        k.disposisi_rujuk_alasan = (request.POST.get('disposisi_rujuk_alasan') or k.disposisi_rujuk_alasan or '').strip()
 
-        k.sbar_situation = request.POST.get('sbar_situation', k.sbar_situation).strip()
-        k.sbar_background = request.POST.get('sbar_background', k.sbar_background).strip()
-        k.sbar_assessment = request.POST.get('sbar_assessment', k.sbar_assessment).strip()
-        k.sbar_recommendation = request.POST.get('sbar_recommendation', k.sbar_recommendation).strip()
+        k.sbar_situation = (request.POST.get('sbar_situation') or k.sbar_situation or '').strip()
+        k.sbar_background = (request.POST.get('sbar_background') or k.sbar_background or '').strip()
+        k.sbar_assessment = (request.POST.get('sbar_assessment') or k.sbar_assessment or '').strip()
+        k.sbar_recommendation = (request.POST.get('sbar_recommendation') or k.sbar_recommendation or '').strip()
 
-        k.petugas_handover_perawat = request.POST.get('petugas_handover_perawat', k.petugas_handover_perawat).strip()
-        k.petugas_handover_jam = request.POST.get('petugas_handover_jam', k.petugas_handover_jam).strip()
-        k.petugas_handover_dokter = request.POST.get('petugas_handover_dokter', k.petugas_handover_dokter).strip()
-        k.petugas_handover_dokter_jam = request.POST.get('petugas_handover_dokter_jam', k.petugas_handover_dokter_jam).strip()
+        k.petugas_handover_perawat = (request.POST.get('petugas_handover_perawat') or k.petugas_handover_perawat or '').strip()
+        k.petugas_handover_jam = (request.POST.get('petugas_handover_jam') or k.petugas_handover_jam or '').strip()
+        k.petugas_handover_dokter = (request.POST.get('petugas_handover_dokter') or k.petugas_handover_dokter or '').strip()
+        k.petugas_handover_dokter_jam = (request.POST.get('petugas_handover_dokter_jam') or k.petugas_handover_dokter_jam or '').strip()
 
         k.save()
         messages.success(request, f'Asesmen medis awal IGD pasien {k.pasien.nama_lengkap} berhasil diperbarui.')
@@ -2084,6 +2084,9 @@ def order_lab_create(request, pk):
         for p in raw_params:
             if '|' in p:
                 cat, item = p.split('|', 1)
+                param_list.append({'category': cat.strip(), 'item': item.strip()})
+            elif ':' in p:
+                cat, item = p.split(':', 1)
                 param_list.append({'category': cat.strip(), 'item': item.strip()})
             else:
                 param_list.append({'category': 'UMUM', 'item': p.strip()})

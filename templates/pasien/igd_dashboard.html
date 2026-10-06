@@ -287,9 +287,13 @@
                                     <button class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#modalCPPT{{ k.pk }}" title="Catatan Perkembangan Pasien Terintegrasi (CPPT SOAP)">
                                         <i class="bi bi-journal-text me-1"></i>CPPT
                                     </button>
-                                    <!-- ORDER PENUNJANG -->
+                                    <!-- ORDER PENUNJANG (Umum) -->
                                     <button class="btn btn-outline-info text-dark" data-bs-toggle="modal" data-bs-target="#modalOrder{{ k.pk }}" title="Order Lab / Radiologi">
                                         <i class="bi bi-radioactive me-1 text-info"></i>Penunjang
+                                    </button>
+                                    <!-- ORDER LAB LENGKAP (ARIMA - parameter multi-kategori) -->
+                                    <button class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#modalOrderLab{{ k.pk }}" title="Formulir Permintaan Pemeriksaan Laboratorium (ARIMA)">
+                                        <i class="bi bi-droplet-half me-1"></i>Lab
                                     </button>
                                     <!-- DISPOSISI &amp; RTL UNIFIED MODAL (Revisi 02) -->
                                     <button class="btn btn-success fw-semibold" data-bs-toggle="modal" data-bs-target="#modalDisposisi{{ k.pk }}" title="Disposisi &amp; Rencana Tindak Lanjut (Ranap / Rujuk / Pulang / PAPS / DoA)">
@@ -304,6 +308,16 @@
                                             <li>
                                                 <a class="dropdown-item py-2" href="{% url 'pasien:cetak_resume_igd' k.pk %}" target="_blank">
                                                     <i class="bi bi-printer text-dark me-2"></i> Cetak Resume Medis IGD
+                                                </a>
+                                            </li>
+                                            <li>
+                                                <a class="dropdown-item py-2" href="{% url 'pasien:cetak_asesmen_medis_igd' k.pk %}" target="_blank">
+                                                    <i class="bi bi-clipboard2-pulse text-primary me-2"></i> Cetak Asesmen Medis Awal IGD
+                                                </a>
+                                            </li>
+                                            <li>
+                                                <a class="dropdown-item py-2" href="{% url 'pasien:cetak_permintaan_lab' k.pk %}" target="_blank">
+                                                    <i class="bi bi-droplet-half text-danger me-2"></i> Cetak Permintaan Lab
                                                 </a>
                                             </li>
                                             <li>
@@ -506,6 +520,162 @@
                                         <div class="modal-footer">
                                             <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Batal</button>
                                             <button type="submit" class="btn btn-info btn-sm text-white">Kirim Permintaan &amp; Billing</button>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- MODAL PERMINTAAN LAB (ARIMA - Terstruktur 6 Kategori) -->
+                        <div class="modal fade" id="modalOrderLab{{ k.pk }}" tabindex="-1">
+                            <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+                                <div class="modal-content">
+                                    <form method="POST" action="{% url 'pasien:order_lab_create' k.pk %}">
+                                        {% csrf_token %}
+                                        <div class="modal-header bg-danger text-white">
+                                            <div class="d-flex align-items-center gap-2">
+                                                <i class="bi bi-droplet-half fs-5"></i>
+                                                <h6 class="modal-title fw-bold mb-0">Formulir Permintaan Pemeriksaan Laboratorium (ARIMA)</h6>
+                                            </div>
+                                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                                        </div>
+                                        <div class="modal-body p-3">
+                                            <!-- Info Pasien Singkat -->
+                                            <div class="p-2 mb-3 bg-light border rounded d-flex justify-content-between align-items-center">
+                                                <div>
+                                                    <span class="fw-bold">{{ k.pasien.nama_lengkap }}</span> ({{ k.pasien.no_rm }}) &bull;
+                                                    <span>{{ k.pasien.get_jenis_kelamin_display }}, {{ k.pasien.usia }} th</span>
+                                                </div>
+                                                <div class="d-flex gap-2 align-items-center">
+                                                    <label class="form-label small fw-semibold mb-0">Prioritas:</label>
+                                                    <select name="prioritas" class="form-select form-select-sm w-auto">
+                                                        <option value="CITO" selected>⚡ CITO</option>
+                                                        <option value="RUTIN">RUTIN</option>
+                                                    </select>
+                                                </div>
+                                            </div>
+
+                                            <!-- Parameter Checklist (6 Kategori) -->
+                                            <div class="row g-3">
+                                                <!-- Hematologi -->
+                                                <div class="col-md-6">
+                                                    <div class="card h-100 border">
+                                                        <div class="card-header bg-danger-subtle py-1 px-2 fw-bold small text-danger">
+                                                            <i class="bi bi-droplet me-1"></i> I. HEMATOLOGI
+                                                        </div>
+                                                        <div class="card-body p-2" style="font-size: .8rem;">
+                                                            <div class="form-check"><input class="form-check-input" type="checkbox" name="parameters" value="HEMATOLOGI:Darah Lengkap (CBC + Hitung Jenis)" id="lab_dl_{{ k.pk }}" checked><label class="form-check-label" for="lab_dl_{{ k.pk }}">Darah Lengkap (CBC + Diff)</label></div>
+                                                            <div class="form-check"><input class="form-check-input" type="checkbox" name="parameters" value="HEMATOLOGI:Hemoglobin &amp; Hematokrit" id="lab_hb_{{ k.pk }}"><label class="form-check-label" for="lab_hb_{{ k.pk }}">Hemoglobin &amp; Hematokrit</label></div>
+                                                            <div class="form-check"><input class="form-check-input" type="checkbox" name="parameters" value="HEMATOLOGI:Laju Endap Darah (LED)" id="lab_led_{{ k.pk }}"><label class="form-check-label" for="lab_led_{{ k.pk }}">Laju Endap Darah (LED)</label></div>
+                                                            <div class="form-check"><input class="form-check-input" type="checkbox" name="parameters" value="HEMATOLOGI:Golongan Darah + Rhesus" id="lab_goldar_{{ k.pk }}"><label class="form-check-label" for="lab_goldar_{{ k.pk }}">Golongan Darah + Rhesus</label></div>
+                                                            <div class="form-check"><input class="form-check-input" type="checkbox" name="parameters" value="HEMATOLOGI:Apusan Darah Tepi (Morfologi)" id="lab_adt_{{ k.pk }}"><label class="form-check-label" for="lab_adt_{{ k.pk }}">Apusan Darah Tepi</label></div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                <!-- Hemostasis -->
+                                                <div class="col-md-6">
+                                                    <div class="card h-100 border">
+                                                        <div class="card-header bg-danger-subtle py-1 px-2 fw-bold small text-danger">
+                                                            <i class="bi bi-stopwatch me-1"></i> II. HEMOSTASIS / KOAGULASI
+                                                        </div>
+                                                        <div class="card-body p-2" style="font-size: .8rem;">
+                                                            <div class="form-check"><input class="form-check-input" type="checkbox" name="parameters" value="HEMOSTASIS:Masa Perdarahan (BT) &amp; Pembekuan (CT)" id="lab_btct_{{ k.pk }}"><label class="form-check-label" for="lab_btct_{{ k.pk }}">Masa Perdarahan (BT) / Pembekuan (CT)</label></div>
+                                                            <div class="form-check"><input class="form-check-input" type="checkbox" name="parameters" value="HEMOSTASIS:PT / INR" id="lab_pt_{{ k.pk }}"><label class="form-check-label" for="lab_pt_{{ k.pk }}">PT / INR</label></div>
+                                                            <div class="form-check"><input class="form-check-input" type="checkbox" name="parameters" value="HEMOSTASIS:APTT" id="lab_aptt_{{ k.pk }}"><label class="form-check-label" for="lab_aptt_{{ k.pk }}">APTT</label></div>
+                                                            <div class="form-check"><input class="form-check-input" type="checkbox" name="parameters" value="HEMOSTASIS:D-Dimer Kuantitatif" id="lab_ddimer_{{ k.pk }}"><label class="form-check-label" for="lab_ddimer_{{ k.pk }}">D-Dimer Kuantitatif</label></div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                <!-- Kimia Klinik -->
+                                                <div class="col-md-6">
+                                                    <div class="card h-100 border">
+                                                        <div class="card-header bg-danger-subtle py-1 px-2 fw-bold small text-danger">
+                                                            <i class="bi bi-activity me-1"></i> III. KIMIA KLINIK &amp; ELEKTROLIT
+                                                        </div>
+                                                        <div class="card-body p-2" style="font-size: .8rem;">
+                                                            <div class="form-check"><input class="form-check-input" type="checkbox" name="parameters" value="KIMIA KLINIK:Glukosa Darah Sewaktu (GDS)" id="lab_gds_{{ k.pk }}" checked><label class="form-check-label" for="lab_gds_{{ k.pk }}">Glukosa Darah Sewaktu (GDS)</label></div>
+                                                            <div class="form-check"><input class="form-check-input" type="checkbox" name="parameters" value="KIMIA KLINIK:Ureum &amp; Kreatinin" id="lab_urcr_{{ k.pk }}"><label class="form-check-label" for="lab_urcr_{{ k.pk }}">Ureum &amp; Kreatinin (Faal Ginjal)</label></div>
+                                                            <div class="form-check"><input class="form-check-input" type="checkbox" name="parameters" value="KIMIA KLINIK:SGOT &amp; SGPT" id="lab_sgot_{{ k.pk }}"><label class="form-check-label" for="lab_sgot_{{ k.pk }}">SGOT &amp; SGPT (Faal Hati)</label></div>
+                                                            <div class="form-check"><input class="form-check-input" type="checkbox" name="parameters" value="KIMIA KLINIK:Elektrolit Serum (Na, K, Cl)" id="lab_el_{{ k.pk }}"><label class="form-check-label" for="lab_el_{{ k.pk }}">Elektrolit Serum (Na / K / Cl)</label></div>
+                                                            <div class="form-check"><input class="form-check-input" type="checkbox" name="parameters" value="KIMIA KLINIK:Bilirubin Total / Direk" id="lab_bil_{{ k.pk }}"><label class="form-check-label" for="lab_bil_{{ k.pk }}">Bilirubin Total / Direk</label></div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                <!-- Imunoserologi & Kardiovaskular -->
+                                                <div class="col-md-6">
+                                                    <div class="card h-100 border">
+                                                        <div class="card-header bg-danger-subtle py-1 px-2 fw-bold small text-danger">
+                                                            <i class="bi bi-shield-plus me-1"></i> IV. IMUNOSEROLOGI &amp; JANTUNG
+                                                        </div>
+                                                        <div class="card-body p-2" style="font-size: .8rem;">
+                                                            <div class="form-check"><input class="form-check-input" type="checkbox" name="parameters" value="IMUNOSEROLOGI:Troponin I / T Kuantitatif" id="lab_trop_{{ k.pk }}"><label class="form-check-label" for="lab_trop_{{ k.pk }}">Troponin I / T (Kardiologi)</label></div>
+                                                            <div class="form-check"><input class="form-check-input" type="checkbox" name="parameters" value="IMUNOSEROLOGI:CK-MB" id="lab_ckmb_{{ k.pk }}"><label class="form-check-label" for="lab_ckmb_{{ k.pk }}">CK-MB</label></div>
+                                                            <div class="form-check"><input class="form-check-input" type="checkbox" name="parameters" value="IMUNOSEROLOGI:Antigen NS1 / Dengue IgG IgM" id="lab_ns1_{{ k.pk }}"><label class="form-check-label" for="lab_ns1_{{ k.pk }}">Antigen NS1 / Dengue IgG IgM</label></div>
+                                                            <div class="form-check"><input class="form-check-input" type="checkbox" name="parameters" value="IMUNOSEROLOGI:Widal / Tubex TF" id="lab_widal_{{ k.pk }}"><label class="form-check-label" for="lab_widal_{{ k.pk }}">Widal / Tubex TF</label></div>
+                                                            <div class="form-check"><input class="form-check-input" type="checkbox" name="parameters" value="IMUNOSEROLOGI:HBsAg Kualitatif" id="lab_hbsag_{{ k.pk }}"><label class="form-check-label" for="lab_hbsag_{{ k.pk }}">HBsAg Rapid</label></div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                <!-- Urinalisis & Feses -->
+                                                <div class="col-md-6">
+                                                    <div class="card h-100 border">
+                                                        <div class="card-header bg-danger-subtle py-1 px-2 fw-bold small text-danger">
+                                                            <i class="bi bi-eyedropper me-1"></i> V. URINALISIS &amp; CAIRAN TUBUH
+                                                        </div>
+                                                        <div class="card-body p-2" style="font-size: .8rem;">
+                                                            <div class="form-check"><input class="form-check-input" type="checkbox" name="parameters" value="URINALISIS:Urin Rutin / Lengkap + Sedimen" id="lab_ul_{{ k.pk }}"><label class="form-check-label" for="lab_ul_{{ k.pk }}">Urin Rutin + Sedimen</label></div>
+                                                            <div class="form-check"><input class="form-check-input" type="checkbox" name="parameters" value="URINALISIS:Tes Kehamilan (PP Test)" id="lab_pp_{{ k.pk }}"><label class="form-check-label" for="lab_pp_{{ k.pk }}">Tes Kehamilan (Plano Test)</label></div>
+                                                            <div class="form-check"><input class="form-check-input" type="checkbox" name="parameters" value="URINALISIS:Narkoba Rapid 6 Parameter" id="lab_narkoba_{{ k.pk }}"><label class="form-check-label" for="lab_narkoba_{{ k.pk }}">Skrining Narkoba 6 Parameter</label></div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                <!-- Analisa Gas Darah & Lainnya -->
+                                                <div class="col-md-6">
+                                                    <div class="card h-100 border">
+                                                        <div class="card-header bg-danger-subtle py-1 px-2 fw-bold small text-danger">
+                                                            <i class="bi bi-wind me-1"></i> VI. GAS DARAH &amp; LAIN-LAIN
+                                                        </div>
+                                                        <div class="card-body p-2" style="font-size: .8rem;">
+                                                            <div class="form-check"><input class="form-check-input" type="checkbox" name="parameters" value="AGD &amp; MIKRO:Analisa Gas Darah (AGD / BGA)" id="lab_agd_{{ k.pk }}"><label class="form-check-label" for="lab_agd_{{ k.pk }}">Analisa Gas Darah (AGD / BGA)</label></div>
+                                                            <div class="form-check"><input class="form-check-input" type="checkbox" name="parameters" value="AGD &amp; MIKRO:Laktat Darah Kuantitatif" id="lab_laktat_{{ k.pk }}"><label class="form-check-label" for="lab_laktat_{{ k.pk }}">Laktat Darah Kuantitatif</label></div>
+                                                            <div class="form-check"><input class="form-check-input" type="checkbox" name="parameters" value="AGD &amp; MIKRO:Prokalsitonin (PCT)" id="lab_pct_{{ k.pk }}"><label class="form-check-label" for="lab_pct_{{ k.pk }}">Prokalsitonin (Sepsis Marker)</label></div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <!-- Catatan Tambahan & Indikasi -->
+                                            <div class="row g-2 mt-2">
+                                                <div class="col-md-6">
+                                                    <label class="form-label small fw-semibold">Kondisi Sampel:</label>
+                                                    <select name="kondisi_sampel" class="form-select form-select-sm">
+                                                        <option value="BAIK" selected>Baik / Segar / Tanpa Lisis</option>
+                                                        <option value="LISIS">Lisis Sedang</option>
+                                                        <option value="IKTERIK">Ikterik</option>
+                                                        <option value="LIPEMIK">Lipemik</option>
+                                                        <option value="LAINNYA">Lainnya / Menunggu Pengambilan</option>
+                                                    </select>
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <label class="form-label small fw-semibold">Pemeriksaan Lainnya (Ketik Manual):</label>
+                                                    <input type="text" name="nama_pemeriksaan" class="form-control form-control-sm" placeholder="Contoh: Anti-HCV, Faal Tiroid, dsb...">
+                                                </div>
+                                                <div class="col-12">
+                                                    <label class="form-label small fw-semibold">Catatan Klinis / Indikasi Medis:</label>
+                                                    <textarea name="catatan_klinis" rows="2" class="form-control form-control-sm" placeholder="Contoh: Evaluasi nyeri dada kardiak, kecurigaan DHF hari ke-3, koma hiperglikemia..."></textarea>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="modal-footer bg-light py-2">
+                                            <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Tutup</button>
+                                            <button type="submit" class="btn btn-danger btn-sm">
+                                                <i class="bi bi-send me-1"></i> Buat Permintaan &amp; Cetak Formulir Lab
+                                            </button>
                                         </div>
                                     </form>
                                 </div>
@@ -970,7 +1140,7 @@
                                         </h5>
                                         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                                     </div>
-                                    <form method="post" action="{% url 'pasien:igd_asesmen_awal_save' k.pk %}">
+                                    <form method="post" action="{% url 'pasien:igd_asesmen_medis_save' k.pk %}">
                                         {% csrf_token %}
                                         <div class="modal-body p-3">
                                             <!-- Patient Summary Banner -->
@@ -1007,6 +1177,21 @@
                                                 <li class="nav-item">
                                                     <button class="nav-link btn-sm" data-bs-toggle="pill" data-bs-target="#tabDiagnosis{{ k.pk }}" type="button">
                                                         4. Diagnosis Medis & 3S Keperawatan
+                                                    </button>
+                                                </li>
+                                                <li class="nav-item">
+                                                    <button class="nav-link btn-sm" data-bs-toggle="pill" data-bs-target="#tabTriase{{ k.pk }}" type="button">
+                                                        5. Triase & Cara Datang
+                                                    </button>
+                                                </li>
+                                                <li class="nav-item">
+                                                    <button class="nav-link btn-sm" data-bs-toggle="pill" data-bs-target="#tabSecondary{{ k.pk }}" type="button">
+                                                        6. Pemeriksaan Fisik Lengkap
+                                                    </button>
+                                                </li>
+                                                <li class="nav-item">
+                                                    <button class="nav-link btn-sm" data-bs-toggle="pill" data-bs-target="#tabSBAR{{ k.pk }}" type="button">
+                                                        7. Tatalaksana & SBAR
                                                     </button>
                                                 </li>
                                             </ul>
@@ -1381,6 +1566,216 @@
                                                         <div class="col-md-6">
                                                             <label class="form-label fw-semibold">3. Intervensi Keperawatan (SIKI):</label>
                                                             <textarea name="intervensi_keperawatan_siki" rows="2" class="form-control form-control-sm" placeholder="Contoh: I.08238 - Manajemen Nyeri: Identifikasi lokasi, durasi, berikan teknik non-farmakologis...">{{ k.intervensi_keperawatan_siki }}</textarea>
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                <!-- TAB 5: TRIASE ATS/ESI & RESPONSE TIME -->
+                                                <div class="tab-pane fade" id="tabTriase{{ k.pk }}">
+                                                    <div class="row g-3">
+                                                        <div class="col-md-4">
+                                                            <label class="form-label fw-semibold">Cara Datang Pasien:</label>
+                                                            <select name="cara_datang" class="form-select form-select-sm">
+                                                                <option value="SENDIRI" {% if k.cara_datang == 'SENDIRI' %}selected{% endif %}>Sendiri / Keluarga</option>
+                                                                <option value="RUJUKAN" {% if k.cara_datang == 'RUJUKAN' %}selected{% endif %}>Rujukan FKTP / RS Lain</option>
+                                                                <option value="AMBULANS" {% if k.cara_datang == 'AMBULANS' %}selected{% endif %}>Ambulans 118 / RS</option>
+                                                                <option value="POLISI" {% if k.cara_datang == 'POLISI' %}selected{% endif %}>Diantar Polisi</option>
+                                                            </select>
+                                                        </div>
+                                                        <div class="col-md-4">
+                                                            <label class="form-label fw-semibold">Waktu Asesmen Dokter:</label>
+                                                            <input type="text" name="waktu_asesmen_dokter" class="form-control form-control-sm" value="{{ k.waktu_asesmen_dokter }}" placeholder="Contoh: 14:15">
+                                                        </div>
+                                                        <div class="col-md-4">
+                                                            <label class="form-label fw-semibold">Waktu Disposisi:</label>
+                                                            <input type="text" name="waktu_disposisi" class="form-control form-control-sm" value="{{ k.waktu_disposisi }}" placeholder="Contoh: 15:30">
+                                                        </div>
+                                                        <div class="col-md-12">
+                                                            <label class="form-label fw-semibold">Triase Kategori (Standar ATS / ESI):</label>
+                                                            <div class="d-flex flex-column gap-2 p-2 border rounded bg-light">
+                                                                <div class="form-check">
+                                                                    <input class="form-check-input" type="radio" name="triase_kategori" id="triase1_{{ k.pk }}" value="KATEGORI_1" {% if k.triase_kategori == 'KATEGORI_1' %}checked{% endif %}>
+                                                                    <label class="form-check-label fw-bold text-danger" for="triase1_{{ k.pk }}">
+                                                                        <span class="badge bg-danger me-1">Kategori 1</span> Resusitasi / Mengancam Nyawa (Respon: Segera / Immediate)
+                                                                    </label>
+                                                                </div>
+                                                                <div class="form-check">
+                                                                    <input class="form-check-input" type="radio" name="triase_kategori" id="triase2_{{ k.pk }}" value="KATEGORI_2" {% if k.triase_kategori == 'KATEGORI_2' %}checked{% endif %}>
+                                                                    <label class="form-check-label fw-bold text-danger" for="triase2_{{ k.pk }}">
+                                                                        <span class="badge bg-danger me-1">Kategori 2</span> Emergensi / Sangat Kritis (Respon: &le; 10 Menit)
+                                                                    </label>
+                                                                </div>
+                                                                <div class="form-check">
+                                                                    <input class="form-check-input" type="radio" name="triase_kategori" id="triase3_{{ k.pk }}" value="KATEGORI_3" {% if k.triase_kategori == 'KATEGORI_3' %}checked{% endif %}>
+                                                                    <label class="form-check-label fw-bold text-warning-emphasis" for="triase3_{{ k.pk }}">
+                                                                        <span class="badge bg-warning text-dark me-1">Kategori 3</span> Urgensi / Potensial Memburuk (Respon: &le; 30 Menit)
+                                                                    </label>
+                                                                </div>
+                                                                <div class="form-check">
+                                                                    <input class="form-check-input" type="radio" name="triase_kategori" id="triase4_{{ k.pk }}" value="KATEGORI_4" {% if k.triase_kategori == 'KATEGORI_4' %}checked{% endif %}>
+                                                                    <label class="form-check-label fw-bold text-success" for="triase4_{{ k.pk }}">
+                                                                        <span class="badge bg-success me-1">Kategori 4</span> Semi-Urgen / Kurang Mendesak (Respon: &le; 60 Menit)
+                                                                    </label>
+                                                                </div>
+                                                                <div class="form-check">
+                                                                    <input class="form-check-input" type="radio" name="triase_kategori" id="triase5_{{ k.pk }}" value="KATEGORI_5" {% if k.triase_kategori == 'KATEGORI_5' %}checked{% endif %}>
+                                                                    <label class="form-check-label fw-bold text-secondary" for="triase5_{{ k.pk }}">
+                                                                        <span class="badge bg-secondary me-1">Kategori 5</span> Non-Urgen / Rutin (Respon: &le; 120 Menit)
+                                                                    </label>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        <div class="col-md-12">
+                                                            <label class="form-label fw-semibold">RPD Checklist (Bisa Dipilih Banyak):</label>
+                                                            <div class="row g-2 p-2 border rounded bg-white">
+                                                                {% for disease in "Hipertensi,Diabetes Melitus,Asma Bronkial,Penyakit Jantung,Penyakit Ginjal Kronik,Stroke,Hepatitis,Tuberkulosis,Alergi Obat,Tidak Ada"|slice:":-1"|make_list %}
+                                                                {% endfor %}
+                                                                <div class="col-md-3"><label><input type="checkbox" name="rpd_checklist" value="Hipertensi" {% if 'Hipertensi' in k.rpd_checklist %}checked{% endif %}> Hipertensi</label></div>
+                                                                <div class="col-md-3"><label><input type="checkbox" name="rpd_checklist" value="Diabetes Melitus" {% if 'Diabetes Melitus' in k.rpd_checklist %}checked{% endif %}> Diabetes Melitus</label></div>
+                                                                <div class="col-md-3"><label><input type="checkbox" name="rpd_checklist" value="Asma Bronkial" {% if 'Asma Bronkial' in k.rpd_checklist %}checked{% endif %}> Asma Bronkial</label></div>
+                                                                <div class="col-md-3"><label><input type="checkbox" name="rpd_checklist" value="Penyakit Jantung" {% if 'Penyakit Jantung' in k.rpd_checklist %}checked{% endif %}> Penyakit Jantung</label></div>
+                                                                <div class="col-md-3"><label><input type="checkbox" name="rpd_checklist" value="Ginjal Kronik" {% if 'Ginjal Kronik' in k.rpd_checklist %}checked{% endif %}> Ginjal Kronik</label></div>
+                                                                <div class="col-md-3"><label><input type="checkbox" name="rpd_checklist" value="Stroke" {% if 'Stroke' in k.rpd_checklist %}checked{% endif %}> Stroke</label></div>
+                                                                <div class="col-md-3"><label><input type="checkbox" name="rpd_checklist" value="Tuberkulosis" {% if 'Tuberkulosis' in k.rpd_checklist %}checked{% endif %}> Tuberkulosis</label></div>
+                                                                <div class="col-md-3"><label><input type="checkbox" name="rpd_checklist" value="Tidak Ada" {% if 'Tidak Ada' in k.rpd_checklist %}checked{% endif %}> Tidak Ada</label></div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                <!-- TAB 6: SECONDARY SURVEY (HEAD TO TOE) -->
+                                                <div class="tab-pane fade" id="tabSecondary{{ k.pk }}">
+                                                    <div class="row g-3">
+                                                        <div class="col-md-6">
+                                                            <div class="card p-2 shadow-none border">
+                                                                <h6 class="fw-bold text-primary mb-2 border-bottom pb-1"><i class="bi bi-eye me-1"></i>1. Mata</h6>
+                                                                <div class="row g-2">
+                                                                    <div class="col-6"><label class="small text-muted">Konjungtiva</label><input type="text" name="mata_konjungtiva" class="form-control form-control-sm" value="{{ k.secondary_survey_detail.mata.konjungtiva|default:'Normal / Tidak Anemis' }}"></div>
+                                                                    <div class="col-6"><label class="small text-muted">Sklera</label><input type="text" name="mata_sklera" class="form-control form-control-sm" value="{{ k.secondary_survey_detail.mata.sklera|default:'Normal / Tidak Ikterik' }}"></div>
+                                                                    <div class="col-6"><label class="small text-muted">Pupil</label><input type="text" name="mata_pupil" class="form-control form-control-sm" value="{{ k.secondary_survey_detail.mata.pupil|default:'Isokor' }}"></div>
+                                                                    <div class="col-6"><label class="small text-muted">Refleks Cahaya</label><input type="text" name="mata_refleks_cahaya" class="form-control form-control-sm" value="{{ k.secondary_survey_detail.mata.refleks_cahaya|default:'(+/+)' }}"></div>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        <div class="col-md-6">
+                                                            <div class="card p-2 shadow-none border">
+                                                                <h6 class="fw-bold text-primary mb-2 border-bottom pb-1"><i class="bi bi-soundwave me-1"></i>2. THT & Rongga Mulut</h6>
+                                                                <div class="row g-2">
+                                                                    <div class="col-6"><label class="small text-muted">Telinga</label><input type="text" name="tht_telinga_lapang" class="form-control form-control-sm" value="{{ k.secondary_survey_detail.tht.telinga_lapang|default:'Lapang / Sekret (-/-)' }}"></div>
+                                                                    <div class="col-6"><label class="small text-muted">Hidung / NCH</label><input type="text" name="tht_napas_cuping" class="form-control form-control-sm" value="{{ k.secondary_survey_detail.tht.napas_cuping|default:'Napas Cuping (-) / Epistaksis (-)' }}"></div>
+                                                                    <div class="col-6"><label class="small text-muted">Mukosa Bibir</label><input type="text" name="tht_mukosa_bibir" class="form-control form-control-sm" value="{{ k.secondary_survey_detail.tht.mukosa_bibir|default:'Lembap / Sianosis (-)' }}"></div>
+                                                                    <div class="col-6"><label class="small text-muted">Tonsil / Faring</label><input type="text" name="tht_faring" class="form-control form-control-sm" value="{{ k.secondary_survey_detail.tht.faring|default:'T1/T1 Tenang, Hiperemis (-)' }}"></div>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        <div class="col-md-6">
+                                                            <div class="card p-2 shadow-none border">
+                                                                <h6 class="fw-bold text-primary mb-2 border-bottom pb-1"><i class="bi bi-person me-1"></i>3. Kepala & Leher</h6>
+                                                                <div class="row g-2">
+                                                                    <div class="col-6"><label class="small text-muted">Bentuk Kepala</label><input type="text" name="kepala_kondisi" class="form-control form-control-sm" value="{{ k.secondary_survey_detail.kepala_leher.kepala|default:'Normosefali' }}"></div>
+                                                                    <div class="col-6"><label class="small text-muted">JVP</label><input type="text" name="leher_jvp" class="form-control form-control-sm" value="{{ k.secondary_survey_detail.kepala_leher.jvp|default:'Normal (5-2 cmH2O)' }}"></div>
+                                                                    <div class="col-6"><label class="small text-muted">KGB Leher</label><input type="text" name="leher_kgb" class="form-control form-control-sm" value="{{ k.secondary_survey_detail.kepala_leher.kgb|default:'Tidak Ada Pembesaran' }}"></div>
+                                                                    <div class="col-6"><label class="small text-muted">Kaku Kuduk</label><input type="text" name="leher_kaku_kuduk" class="form-control form-control-sm" value="{{ k.secondary_survey_detail.kepala_leher.kaku_kuduk|default:'Negatif (-)' }}"></div>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        <div class="col-md-6">
+                                                            <div class="card p-2 shadow-none border">
+                                                                <h6 class="fw-bold text-primary mb-2 border-bottom pb-1"><i class="bi bi-heart-pulse me-1"></i>4. Thorax (Paru & Jantung)</h6>
+                                                                <div class="row g-2">
+                                                                    <div class="col-6"><label class="small text-muted">Auskultasi Paru</label><input type="text" name="paru_auskultasi" class="form-control form-control-sm" value="{{ k.secondary_survey_detail.thorax.paru_auskultasi|default:'Vesikuler (+/+)' }}"></div>
+                                                                    <div class="col-6"><label class="small text-muted">Ronkhi / Wheezing</label><input type="text" name="paru_wheezing" class="form-control form-control-sm" value="{{ k.secondary_survey_detail.thorax.paru_wheezing|default:'Wh (-/-), Rh (-/-)' }}"></div>
+                                                                    <div class="col-6"><label class="small text-muted">Bunyi Jantung</label><input type="text" name="jantung_bunyi" class="form-control form-control-sm" value="{{ k.secondary_survey_detail.thorax.jantung_bunyi|default:'S1-S2 Tunggal Reguler' }}"></div>
+                                                                    <div class="col-6"><label class="small text-muted">Murmur / Gallop</label><input type="text" name="jantung_murmur" class="form-control form-control-sm" value="{{ k.secondary_survey_detail.thorax.jantung_murmur|default:'Murmur (-), Gallop (-)' }}"></div>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        <div class="col-md-6">
+                                                            <div class="card p-2 shadow-none border">
+                                                                <h6 class="fw-bold text-primary mb-2 border-bottom pb-1"><i class="bi bi-shield me-1"></i>5. Abdomen</h6>
+                                                                <div class="row g-2">
+                                                                    <div class="col-6"><label class="small text-muted">Inspeksi / Bentuk</label><input type="text" name="abdomen_inspeksi" class="form-control form-control-sm" value="{{ k.secondary_survey_detail.abdomen.inspeksi|default:'Datar, Simetris' }}"></div>
+                                                                    <div class="col-6"><label class="small text-muted">Bising Usus</label><input type="text" name="abdomen_bising_usus" class="form-control form-control-sm" value="{{ k.secondary_survey_detail.abdomen.bising_usus|default:'Normal (12x/menit)' }}"></div>
+                                                                    <div class="col-6"><label class="small text-muted">Palpasi / Nyeri Tekan</label><input type="text" name="abdomen_nyeri_tekan" class="form-control form-control-sm" value="{{ k.secondary_survey_detail.abdomen.nyeri_tekan|default:'Supel, Nyeri Tekan (-)' }}"></div>
+                                                                    <div class="col-6"><label class="small text-muted">Organomegali</label><input type="text" name="abdomen_organomegali" class="form-control form-control-sm" value="{{ k.secondary_survey_detail.abdomen.organomegali|default:'Hepatosplenomegali (-)' }}"></div>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        <div class="col-md-6">
+                                                            <div class="card p-2 shadow-none border">
+                                                                <h6 class="fw-bold text-primary mb-2 border-bottom pb-1"><i class="bi bi-arrows-fullscreen me-1"></i>6. Ekstremitas & Neurologi</h6>
+                                                                <div class="row g-2">
+                                                                    <div class="col-6"><label class="small text-muted">Akral & Suhu</label><input type="text" name="ekstremitas_akral" class="form-control form-control-sm" value="{{ k.secondary_survey_detail.ekstremitas.akral|default:'Hangat, Kering, Merah' }}"></div>
+                                                                    <div class="col-6"><label class="small text-muted">Capillary Refill Time</label><input type="text" name="ekstremitas_crt" class="form-control form-control-sm" value="{{ k.secondary_survey_detail.ekstremitas.crt|default:'< 2 Detik' }}"></div>
+                                                                    <div class="col-6"><label class="small text-muted">Edema Ekstremitas</label><input type="text" name="ekstremitas_edema_atas" class="form-control form-control-sm" value="{{ k.secondary_survey_detail.ekstremitas.edema_atas|default:'Atas (-/-), Bawah (-/-)' }}"></div>
+                                                                    <div class="col-6"><label class="small text-muted">Kekuatan Motorik</label><input type="text" name="ekstremitas_motorik_atas" class="form-control form-control-sm" value="{{ k.secondary_survey_detail.ekstremitas.motorik_atas|default:'5/5 (Normal)' }}"></div>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                <!-- TAB 7: TATALAKSANA, DISPOSISI & SBAR HANDOVER -->
+                                                <div class="tab-pane fade" id="tabSBAR{{ k.pk }}">
+                                                    <div class="row g-3">
+                                                        <div class="col-md-6">
+                                                            <label class="form-label fw-semibold">Tatalaksana Resusitasi / Stabilisasi:</label>
+                                                            <textarea name="tatalaksana_resusitasi" rows="2" class="form-control form-control-sm" placeholder="Oksigenasi, hidrasi cairan IV, defibrilasi, dsb...">{{ k.tatalaksana_resusitasi }}</textarea>
+                                                        </div>
+                                                        <div class="col-md-6">
+                                                            <label class="form-label fw-semibold">Terapi Farmakologi IGD:</label>
+                                                            <textarea name="tatalaksana_terapi" rows="2" class="form-control form-control-sm" placeholder="Injeksi, obat oral, nebulisasi yang telah diberikan...">{{ k.tatalaksana_terapi }}</textarea>
+                                                        </div>
+                                                        <div class="col-md-6">
+                                                            <label class="form-label fw-semibold">Kondisi Akhir di IGD:</label>
+                                                            <select name="disposisi_kondisi_akhir" class="form-select form-select-sm">
+                                                                <option value="MEMBAIK" {% if k.disposisi_kondisi_akhir == 'MEMBAIK' %}selected{% endif %}>Membaik</option>
+                                                                <option value="STABIL" {% if k.disposisi_kondisi_akhir == 'STABIL' %}selected{% endif %}>Stabil</option>
+                                                                <option value="MEMBURUK" {% if k.disposisi_kondisi_akhir == 'MEMBURUK' %}selected{% endif %}>Memburuk</option>
+                                                                <option value="MENINGGAL" {% if k.disposisi_kondisi_akhir == 'MENINGGAL' %}selected{% endif %}>Meninggal di IGD</option>
+                                                            </select>
+                                                        </div>
+                                                        <div class="col-md-6">
+                                                            <label class="form-label fw-semibold">Rencana Tindak Lanjut (Disposisi):</label>
+                                                            <select name="disposisi_tindak_lanjut" class="form-select form-select-sm">
+                                                                <option value="RAWAT_INAP" {% if k.disposisi_tindak_lanjut == 'RAWAT_INAP' %}selected{% endif %}>Rawat Inap</option>
+                                                                <option value="RAWAT_JALAN" {% if k.disposisi_tindak_lanjut == 'RAWAT_JALAN' %}selected{% endif %}>Rawat Jalan / Kontrol Poliklinik</option>
+                                                                <option value="RUJUK" {% if k.disposisi_tindak_lanjut == 'RUJUK' %}selected{% endif %}>Rujuk ke RS Lain</option>
+                                                                <option value="PULANG" {% if k.disposisi_tindak_lanjut == 'PULANG' %}selected{% endif %}>Pulang (Sembuh / Izin Dokter)</option>
+                                                                <option value="APS" {% if k.disposisi_tindak_lanjut == 'APS' %}selected{% endif %}>Pulang Atas Permintaan Sendiri (PAPS)</option>
+                                                                <option value="DOA" {% if k.disposisi_tindak_lanjut == 'DOA' %}selected{% endif %}>Dead on Arrival (DoA)</option>
+                                                            </select>
+                                                        </div>
+                                                        <div class="col-md-12">
+                                                            <div class="p-2 border border-info rounded bg-info-subtle">
+                                                                <h6 class="fw-bold text-info-emphasis mb-2"><i class="bi bi-arrow-left-right me-1"></i>Format Handover Antar Ruangan (SBAR):</h6>
+                                                                <div class="row g-2">
+                                                                    <div class="col-md-6">
+                                                                        <label class="small fw-semibold">S - Situation:</label>
+                                                                        <textarea name="sbar_situation" rows="2" class="form-control form-control-sm" placeholder="Kondisi terkini saat pasien dipindahkan...">{{ k.sbar_situation }}</textarea>
+                                                                    </div>
+                                                                    <div class="col-md-6">
+                                                                        <label class="small fw-semibold">B - Background:</label>
+                                                                        <textarea name="sbar_background" rows="2" class="form-control form-control-sm" placeholder="Latar belakang medis, riwayat alergi, tindakan yang sudah dilakukan...">{{ k.sbar_background }}</textarea>
+                                                                    </div>
+                                                                    <div class="col-md-6">
+                                                                        <label class="small fw-semibold">A - Assessment:</label>
+                                                                        <textarea name="sbar_assessment" rows="2" class="form-control form-control-sm" placeholder="Penilaian klinis terkini, parameter vital terbaru...">{{ k.sbar_assessment }}</textarea>
+                                                                    </div>
+                                                                    <div class="col-md-6">
+                                                                        <label class="small fw-semibold">R - Recommendation:</label>
+                                                                        <textarea name="sbar_recommendation" rows="2" class="form-control form-control-sm" placeholder="Instruksi pengawasan, jadwal obat selanjutnya di bangsal...">{{ k.sbar_recommendation }}</textarea>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        <div class="col-md-6">
+                                                            <label class="small text-muted">Petugas Handover (Perawat IGD):</label>
+                                                            <input type="text" name="petugas_handover_perawat" class="form-control form-control-sm" value="{{ k.petugas_handover_perawat }}" placeholder="Nama Perawat IGD">
+                                                        </div>
+                                                        <div class="col-md-6">
+                                                            <label class="small text-muted">Dokter Penanggung Jawab Handover:</label>
+                                                            <input type="text" name="petugas_handover_dokter" class="form-control form-control-sm" value="{{ k.petugas_handover_dokter|default:k.dpjp }}" placeholder="dr. Jaga / DPJP">
                                                         </div>
                                                     </div>
                                                 </div>
