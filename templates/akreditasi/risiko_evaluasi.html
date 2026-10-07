@@ -49,6 +49,27 @@
                 </div>
             </div>
 
+            {% if risiko.masalah or risiko.data_pendukung %}
+            <div class="row g-2 mb-3">
+                {% if risiko.masalah %}
+                <div class="col-md-6">
+                    <div class="p-2 rounded border-start border-3 border-danger" style="background:#fff1f2; font-size:.78rem;">
+                        <strong class="d-block mb-1" style="color:#9f1239; font-size:.72rem;"><i class="bi bi-exclamation-circle me-1"></i>Masalah</strong>
+                        {{ risiko.masalah|linebreaksbr }}
+                    </div>
+                </div>
+                {% endif %}
+                {% if risiko.data_pendukung %}
+                <div class="col-md-6">
+                    <div class="p-2 rounded border-start border-3 border-primary" style="background:#eff6ff; font-size:.78rem;">
+                        <strong class="d-block mb-1" style="color:#1e40af; font-size:.72rem;"><i class="bi bi-file-earmark-bar-graph me-1"></i>Data / Bukti Pendukung</strong>
+                        {{ risiko.data_pendukung|linebreaksbr }}
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+            {% endif %}
+
             {# Perbandingan Sebelum vs Sesudah #}
             <h6 class="fw-bold mb-3" style="color:#0f172a;"><i class="bi bi-arrow-left-right me-1" style="color:#0d9488;"></i>Perbandingan Risiko Inherent vs Residual</h6>
 

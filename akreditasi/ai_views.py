@@ -60,18 +60,31 @@ def api_ai_mitigasi_risiko(request):
     probabilitas = int(data.get('probabilitas') or 3)
     strategi = data.get('strategi') or 'Mitigasi (Reduce)'
 
-    if not jenis_risiko and not deskripsi_risiko:
+    masalah = (data.get('masalah') or '').strip()
+    data_pendukung = (data.get('data_pendukung') or data.get('data') or '').strip()
+
+    if not jenis_risiko and not deskripsi_risiko and not masalah:
         return JsonResponse({
             'success': False,
-            'error': 'Harap isi Jenis Risiko atau Deskripsi Risiko terlebih dahulu sebelum meminta rekomendasi AI.'
+            'error': 'Harap isi Jenis Risiko, Masalah, atau Deskripsi Risiko terlebih dahulu sebelum meminta rekomendasi AI.'
         }, status=400)
+
+    # Standar 5.15: Perkaya konteks deskripsi risiko dengan masalah dan data pendukung
+    full_deskripsi = []
+    if masalah:
+        full_deskripsi.append(f"Masalah: {masalah}")
+    if data_pendukung:
+        full_deskripsi.append(f"Data Pendukung: {data_pendukung}")
+    if deskripsi_risiko:
+        full_deskripsi.append(f"Deskripsi: {deskripsi_risiko}")
+    context_deskripsi = "\n".join(full_deskripsi) if full_deskripsi else deskripsi_risiko
 
     res = generate_risk_mitigation(
         user=request.user,
         unit_name=unit_name,
         kategori_risiko=kategori_risiko,
         jenis_risiko=jenis_risiko,
-        deskripsi_risiko=deskripsi_risiko,
+        deskripsi_risiko=context_deskripsi,
         dampak=dampak,
         probabilitas=probabilitas,
         strategi=strategi,

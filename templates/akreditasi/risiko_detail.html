@@ -59,12 +59,28 @@
                         <div class="col-sm-4 text-muted">Periode / Tahun</div>
                         <div class="col-sm-8" style="color:#0f172a;">{{ risiko.get_periode_display }} ({{ risiko.tahun }})</div>
                         <div class="col-sm-4 text-muted">Kategori Risiko</div>
-                        <div class="col-sm-8"><span class="badge bg-light text-dark border">{{ risiko.get_kategori_risiko_display }}</span></div>
+                        <div class="col-sm-8">
+                            <span class="badge {% if risiko.kategori_risiko == 'KLINIS' %}bg-danger-subtle text-danger border border-danger-subtle{% elif risiko.kategori_risiko == 'OPERASIONAL' %}bg-primary-subtle text-primary border border-primary-subtle{% elif risiko.kategori_risiko == 'FINANSIAL' %}bg-success-subtle text-success border border-success-subtle{% elif risiko.kategori_risiko == 'REPUTASI' %}bg-info-subtle text-info border border-info-subtle{% elif risiko.kategori_risiko == 'HUKUM_KEPATUHAN' %}bg-warning-subtle text-warning border border-warning-subtle{% elif risiko.kategori_risiko == 'FASILITAS_LINGKUNGAN' %}bg-secondary-subtle text-secondary border border-secondary-subtle{% else %}bg-light text-dark border{% endif %}" style="font-size:.72rem;">{{ risiko.get_kategori_risiko_display }}</span>
+                        </div>
                         <div class="col-sm-4 text-muted">PJ Mitigasi</div>
                         <div class="col-sm-8" style="color:#0f172a;">{{ risiko.pj_mitigasi }}</div>
                         <div class="col-sm-4 text-muted">Target Selesai</div>
                         <div class="col-sm-8" style="color:#0f172a;">{{ risiko.target_selesai|date:"d M Y"|default:"—" }}</div>
                     </div>
+
+                    {% if risiko.masalah %}
+                    <div class="mb-3">
+                        <label class="text-muted d-block mb-1" style="font-size:.75rem;"><i class="bi bi-exclamation-circle text-danger me-1"></i>Masalah (Issue Statement)</label>
+                        <p class="p-2 rounded border-start border-3 border-danger" style="background:#fff1f2; font-size:.82rem; color:#9f1239;">{{ risiko.masalah|linebreaksbr }}</p>
+                    </div>
+                    {% endif %}
+
+                    {% if risiko.data_pendukung %}
+                    <div class="mb-3">
+                        <label class="text-muted d-block mb-1" style="font-size:.75rem;"><i class="bi bi-file-earmark-bar-graph text-primary me-1"></i>Data / Bukti Pendukung (Baseline)</label>
+                        <p class="p-2 rounded border-start border-3 border-primary" style="background:#eff6ff; font-size:.82rem; color:#1e40af;">{{ risiko.data_pendukung|linebreaksbr }}</p>
+                    </div>
+                    {% endif %}
 
                     <div class="mb-3">
                         <label class="text-muted d-block mb-1" style="font-size:.75rem;">Deskripsi Risiko</label>

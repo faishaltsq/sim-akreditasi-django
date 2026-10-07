@@ -23,8 +23,14 @@ class RisikoUnit(models.Model):
     ]
 
     KATEGORI_CHOICES = [
-        ('KLINIS',     'Risiko Klinis'),
-        ('MANAJERIAL', 'Risiko Manajerial'),
+        ('KLINIS',               'Risiko Klinis (Clinical Risk)'),
+        ('OPERASIONAL',          'Risiko Operasional (Operational Risk)'),
+        ('FINANSIAL',            'Risiko Finansial (Financial Risk)'),
+        ('REPUTASI',             'Risiko Reputasi (Reputational Risk)'),
+        ('HUKUM_KEPATUHAN',      'Risiko Hukum & Kepatuhan (Legal & Compliance)'),
+        ('FASILITAS_LINGKUNGAN', 'Risiko Fasilitas, B3 & Lingkungan (Facility & Env.)'),
+        # backward compatibility for existing records
+        ('MANAJERIAL',           'Risiko Manajerial (Legacy)'),
     ]
 
     STRATEGI_CHOICES = [
@@ -48,8 +54,13 @@ class RisikoUnit(models.Model):
     unit             = models.ForeignKey(UnitKerja, on_delete=models.CASCADE, verbose_name='Unit Kerja')
     tahun            = models.IntegerField('Tahun', default=2026)
     periode          = models.CharField('Periode', max_length=12, choices=PERIODE_CHOICES)
-    kategori_risiko  = models.CharField('Kategori Risiko', max_length=12, choices=KATEGORI_CHOICES)
+    kategori_risiko  = models.CharField('Kategori Risiko', max_length=30, choices=KATEGORI_CHOICES)
     jenis_risiko     = models.CharField('Jenis Risiko', max_length=200)
+
+    # Standar 5.15 — identifikasi risiko: masalah dan data pendukung
+    masalah          = models.TextField('Masalah', blank=True, default='')
+    data_pendukung   = models.TextField('Data / Bukti Pendukung', blank=True, default='')
+
     deskripsi_risiko = models.TextField('Deskripsi Risiko')
 
     dampak           = models.IntegerField('Dampak (1–5)', validators=DAMPAK_VALIDATORS)

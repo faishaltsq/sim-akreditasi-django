@@ -271,6 +271,8 @@ def risiko_input(request):
                 periode=request.POST['periode'],
                 kategori_risiko=request.POST['kategori_risiko'],
                 jenis_risiko=request.POST['jenis_risiko'],
+                masalah=request.POST.get('masalah', '').strip(),
+                data_pendukung=(request.POST.get('data') or request.POST.get('data_pendukung') or '').strip(),
                 deskripsi_risiko=request.POST['deskripsi_risiko'],
                 dampak=int(request.POST['dampak']),
                 probabilitas=int(request.POST['probabilitas']),

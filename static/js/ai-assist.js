@@ -73,6 +73,10 @@
             const jenisRisiko = jenisInput ? jenisInput.value.trim() : '';
             const descInput = document.querySelector('textarea[name="deskripsi_risiko"]');
             const deskripsiRisiko = descInput ? descInput.value.trim() : '';
+            const masalahInput = document.querySelector('textarea[name="masalah"]');
+            const masalah = masalahInput ? masalahInput.value.trim() : '';
+            const dataInput = document.querySelector('textarea[name="data"]');
+            const dataPendukung = dataInput ? dataInput.value.trim() : '';
             const dampakInput = document.querySelector('select[name="dampak"]') || document.querySelector('input[name="dampak"]');
             const dampak = dampakInput ? dampakInput.value : 3;
             const probInput = document.querySelector('select[name="probabilitas"]') || document.querySelector('input[name="probabilitas"]');
@@ -111,6 +115,8 @@
                         unit_name: unitName,
                         kategori_risiko: kategoriRisiko,
                         jenis_risiko: jenisRisiko || (indCtx ? `Risiko capaian ${indCtx.nama}` : ''),
+                        masalah: masalah,
+                        data_pendukung: dataPendukung,
                         deskripsi_risiko: deskripsiRisiko + (indDesc ? `\n${indDesc}` : ''),
                         dampak: dampak,
                         probabilitas: probabilitas,

@@ -82,6 +82,36 @@
                                 <input type="text" name="jenis_risiko" class="form-control form-control-sm" placeholder="cth: Kesalahan pemberian obat" required>
                             </div>
                         </div>
+
+                        {# Category Guide — contoh risiko per kategori (Standar 5.15) #}
+                        <div id="kategori-guide" class="mb-3 d-none">
+                            <div class="p-2 rounded" style="background:#f0fdfa; border:1px dashed #99f6e4; font-size:.76rem;">
+                                <strong id="kategori-guide-title" class="d-block mb-1" style="color:#0f766e;"></strong>
+                                <span id="kategori-guide-desc" class="text-muted d-block mb-2" style="font-size:.72rem;"></span>
+                                <div id="kategori-guide-chips"></div>
+                            </div>
+                        </div>
+
+                        {# Standar 5.15: Masalah dan Data Pendukung #}
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label" style="font-size:.8rem; font-weight:600;">
+                                    <i class="bi bi-exclamation-circle text-danger me-1"></i>Masalah <span class="text-muted fw-normal">(Issue Statement)</span>
+                                </label>
+                                <textarea name="masalah" class="form-control form-control-sm" rows="2"
+                                          placeholder="Uraikan masalah aktual atau potensi masalah yang dihadapi…"></textarea>
+                                <small class="text-muted" style="font-size:.68rem;">Masalah nyata/potensial yang mendasari munculnya risiko ini</small>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label" style="font-size:.8rem; font-weight:600;">
+                                    <i class="bi bi-file-earmark-bar-graph text-primary me-1"></i>Data / Bukti Pendukung <span class="text-muted fw-normal">(Baseline)</span>
+                                </label>
+                                <textarea name="data" class="form-control form-control-sm" rows="2"
+                                          placeholder="Data kuantitatif/kualitatif pendukung (cth: angka insiden, % komplain, hasil audit)…"></textarea>
+                                <small class="text-muted" style="font-size:.68rem;">Fakta, data capaian, atau bukti pendukung adanya masalah</small>
+                            </div>
+                        </div>
+
                         <div class="mb-3">
                             <label class="form-label" style="font-size:.8rem; font-weight:600;">Deskripsi Risiko <span class="text-danger">*</span></label>
                             <textarea name="deskripsi_risiko" class="form-control form-control-sm" rows="3" required placeholder="Deskripsikan risiko secara rinci…"></textarea>
@@ -360,6 +390,111 @@
                 satuan: opt.dataset.satuan,
             };
         });
+    }
+
+    // ── Standar 5.15: Category Guide & Quick Presets ───────────────
+    const KATEGORI_DATA = {
+        'KLINIS': {
+            title: 'Risiko Klinis (Clinical Risk)',
+            desc: 'Risiko dari proses diagnosis, pengobatan, perawatan, dan tindakan medis/keperawatan terhadap pasien.',
+            examples: [
+                'Kesalahan pemberian dosis obat (medication error)',
+                'Infeksi terkait pelayanan kesehatan (HAIs)',
+                'Pasien jatuh saat perawatan di rawat inap',
+                'Komplikasi pasca-bedah akibat ketidaksesuaian surgical checklist'
+            ]
+        },
+        'OPERASIONAL': {
+            title: 'Risiko Operasional (Operational Risk)',
+            desc: 'Risiko kegagalan proses internal, ketidakcukupan sistem, human error, atau gangguan jaringan harian.',
+            examples: [
+                'Kerusakan / kegagalan sistem Server IT / Aplikasi ARIMA saat pelayanan',
+                'Ketidaktersediaan stok obat-obatan esensial di Farmasi',
+                'Keterlambatan hasil pemeriksaan laboratorium kritis',
+                'Burnout atau kekurangan tenaga keperawatan pada jam dinas padat'
+            ]
+        },
+        'FINANSIAL': {
+            title: 'Risiko Finansial (Financial Risk)',
+            desc: 'Risiko berdampak negatif terhadap posisi keuangan, cash flow, dan pendapatan rumah sakit.',
+            examples: [
+                'Penolakan (pending/claim rejection) klaim BPJS Kesehatan',
+                'Pembengkakan biaya pemeliharaan sarana tidak terencana',
+                'Kebocoran penerimaan pada unit kasir / pendaftaran'
+            ]
+        },
+        'REPUTASI': {
+            title: 'Risiko Reputasi (Reputational Risk)',
+            desc: 'Risiko penurunan citra, nama baik, dan kepercayaan publik terhadap rumah sakit.',
+            examples: [
+                'Penyebaran keluhan pelayanan pasien yang viral di media sosial',
+                'Pemberitaan negatif media massa terkait insiden medis',
+                'Penurunan skor kepuasan pasien (NPS) secara signifikan'
+            ]
+        },
+        'HUKUM_KEPATUHAN': {
+            title: 'Risiko Hukum dan Kepatuhan (Legal & Compliance Risk)',
+            desc: 'Risiko akibat pelanggaran peraturan perundang-undangan, standar keselamatan, atau sengketa hukum.',
+            examples: [
+                'Pelanggaran kerahasiaan data rekam medis pasien',
+                'Keterlambatan perpanjangan Izin Operasional RS atau SIP/STR tenaga medis',
+                'Sengketa medikolegal akibat ketidaksesuaian prosedur Informed Consent'
+            ]
+        },
+        'FASILITAS_LINGKUNGAN': {
+            title: 'Risiko Fasilitas, B3, dan Lingkungan (Facility & Environmental Risk)',
+            desc: 'Risiko fisik terkait sarana gedung, infrastruktur, limbah B3, dan ancaman bencana.',
+            examples: [
+                'Kegagalan pasokan daya listrik cadangan (Genset) saat OK aktif',
+                'Kebocoran limbah B3 cair / paparan bahan kimia berbahaya di lab',
+                'Kebakaran gedung atau kegagalan proteksi aktif (hydrant / APAR)'
+            ]
+        }
+    };
+
+    const katSelect = document.querySelector('select[name="kategori_risiko"]');
+    const katGuide = document.getElementById('kategori-guide');
+    const katTitle = document.getElementById('kategori-guide-title');
+    const katDesc = document.getElementById('kategori-guide-desc');
+    const katChips = document.getElementById('kategori-guide-chips');
+    const jenisInput = document.querySelector('input[name="jenis_risiko"]');
+
+    function updateKategoriGuide(val) {
+        if (!katGuide) return;
+        const info = KATEGORI_DATA[val];
+        if (!info) {
+            katGuide.classList.add('d-none');
+            return;
+        }
+        katTitle.textContent = info.title;
+        katDesc.textContent = info.desc;
+        katChips.innerHTML = '<span class="text-muted me-2" style="font-size:.7rem;">Klik contoh untuk mengisi Jenis Risiko:</span>';
+        info.examples.forEach(function(ex) {
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'btn btn-outline-teal btn-sm me-1 mb-1 text-start';
+            btn.style.fontSize = '.7rem';
+            btn.style.padding = '2px 8px';
+            btn.style.borderRadius = '12px';
+            btn.textContent = '+ ' + ex;
+            btn.addEventListener('click', function() {
+                if (jenisInput) {
+                    jenisInput.value = ex;
+                    jenisInput.focus();
+                }
+            });
+            katChips.appendChild(btn);
+        });
+        katGuide.classList.remove('d-none');
+    }
+
+    if (katSelect) {
+        katSelect.addEventListener('change', function() {
+            updateKategoriGuide(this.value);
+        });
+        if (katSelect.value) {
+            updateKategoriGuide(katSelect.value);
+        }
     }
 
     // ── Override ai-assist.js: inject konteks indikator ke payload AI ────
