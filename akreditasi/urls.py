@@ -71,7 +71,9 @@ urlpatterns = [
 
     # Modul Indikator Mutu — INM + IMP-RS (Renstra 2026–2030)
     path('indikator-mutu/', indikator_views.indikator_dashboard, name='indikator_dashboard'),
+    path('indikator-mutu/baru/', indikator_views.indikator_tambah, name='indikator_tambah'),
     path('indikator-mutu/<int:indikator_id>/', indikator_views.indikator_detail, name='indikator_detail'),
+    path('indikator-mutu/<int:indikator_id>/edit/', indikator_views.indikator_edit, name='indikator_edit'),
     path('indikator-mutu/<int:indikator_id>/capaian/', indikator_views.indikator_input_capaian, name='indikator_input_capaian'),
 
     # Panduan / Dokumentasi Interaktif
@@ -83,5 +85,6 @@ urlpatterns = [
     path('ai/insiden-grading/', ai_views.api_ai_insiden_grading, name='ai_insiden_grading'),
     path('ai/evaluasi-risiko/', ai_views.api_ai_evaluasi_risiko, name='ai_evaluasi_risiko'),
     path('ai/rdwos-analisis/', ai_views.api_ai_rdwos_analisis, name='ai_rdwos_analisis'),
+    path('ai/rumus-indikator/', ai_views.api_ai_rumus_indikator, name='api_ai_rumus_indikator'),
     path('ai/test-connection/', ai_views.api_ai_test_connection, name='ai_test_connection'),
 ]

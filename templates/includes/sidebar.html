@@ -207,7 +207,7 @@
             <span class="nav-desc">INM Kemenkes & IMP-RS</span>
         </span>
     </a>
-    <a href="{% url 'akreditasi:indikator_dashboard' %}?add=1" class="nav-link {% if request.resolver_match.url_name == 'indikator_tambah' %}active{% endif %}">
+    <a href="{% url 'akreditasi:indikator_tambah' %}" class="nav-link {% if request.resolver_match.url_name == 'indikator_tambah' %}active{% endif %}">
         <span class="nav-icon"><i class="bi bi-plus-circle-fill"></i></span>
         <span class="nav-text">
             <span class="nav-title">Tambah Indikator Mutu</span>

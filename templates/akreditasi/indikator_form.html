@@ -1,0 +1,387 @@
+{% extends 'base.html' %}
+
+{% block title %}{% if is_edit %}Edit Indikator Mutu [{{ ind.kode_indikator }}]{% else %}Tambah Indikator Mutu Baru{% endif %} — ARIMA{% endblock %}
+{% block page_title %}{% if is_edit %}Edit Indikator Mutu{% else %}Tambah Indikator Mutu Baru{% endif %}{% endblock %}
+{% block page_subtitle %}Modul Pengukuran & Evaluasi Indikator Mutu (INM / IMP-RS / IMP-Unit){% endblock %}
+
+{% block extra_css %}
+<style>
+    .ai-card {
+        border: 1px solid #14b8a6;
+        background: linear-gradient(135deg, rgba(20, 184, 166, 0.04) 0%, rgba(13, 148, 136, 0.02) 100%);
+        border-radius: 12px;
+    }
+    .form-section-title {
+        font-size: 0.85rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: #0f766e;
+        margin-bottom: 0.75rem;
+        border-bottom: 2px solid rgba(15, 118, 110, 0.15);
+        padding-bottom: 0.35rem;
+    }
+    .required-star {
+        color: #ef4444;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-3">
+    <div class="row justify-content-center">
+        <div class="col-xl-9 col-lg-10">
+
+            {# Breadcrumb #}
+            <nav aria-label="breadcrumb" class="mb-3">
+                <ol class="breadcrumb" style="font-size: .82rem;">
+                    <li class="breadcrumb-item"><a href="{% url 'akreditasi:indikator_dashboard' %}" class="text-teal text-decoration-none">Indikator Mutu</a></li>
+                    {% if is_edit %}
+                    <li class="breadcrumb-item"><a href="{% url 'akreditasi:indikator_detail' ind.pk %}" class="text-teal text-decoration-none">{{ ind.kode_indikator }}</a></li>
+                    <li class="breadcrumb-item active">Edit</li>
+                    {% else %}
+                    <li class="breadcrumb-item active">Form Indikator Mutu</li>
+                    {% endif %}
+                </ol>
+            </nav>
+
+            {% if messages %}
+            {% for msg in messages %}
+            <div class="alert alert-{{ msg.tags }} alert-dismissible fade show py-2 mb-3" style="font-size: .85rem;">
+                {{ msg }}
+                <button type="button" class="btn-close py-2" data-bs-dismiss="alert"></button>
+            </div>
+            {% endfor %}
+            {% endif %}
+
+            {# AI Assistant Banner / Helper #}
+            <div class="card ai-card shadow-sm mb-4">
+                <div class="card-body p-3 p-md-4">
+                    <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-2">
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="fs-4">✨</span>
+                            <div>
+                                <h6 class="fw-bold mb-0 text-teal">Asisten Cerdas Formulasi Indikator Mutu</h6>
+                                <p class="text-muted small mb-0">Bantu menyusun definisi Numerator, Denominator, Target & Rencana Aksi secara SMART berbasis standar PMKP STARKES</p>
+                            </div>
+                        </div>
+                        <button type="button" id="btn-ai-assist" class="btn btn-sm btn-teal d-flex align-items-center gap-1 shadow-sm px-3">
+                            <span id="ai-spinner" class="spinner-border spinner-border-sm d-none" role="status"></span>
+                            <span>✨ Rumuskan Formula Otomatis</span>
+                        </button>
+                    </div>
+
+                    <div id="ai-feedback" class="small mt-2 d-none"></div>
+
+                    {# AI Result Preview Box #}
+                    <div id="ai-result-preview" class="p-3 bg-white border rounded-3 mt-3 d-none">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <strong class="text-teal small"><i class="bi bi-robot me-1"></i>Saran AI Telah Dibuat:</strong>
+                            <button type="button" id="btn-terapkan-ai" class="btn btn-xs btn-primary d-flex align-items-center gap-1">
+                                <i class="bi bi-check2-circle"></i> Terapkan ke Form Ini
+                            </button>
+                        </div>
+                        <div class="row g-2 small">
+                            <div class="col-md-6">
+                                <div class="p-2 bg-light rounded">
+                                    <div class="text-muted" style="font-size: 0.72rem;">NUMERATOR:</div>
+                                    <div id="ai-prev-num" class="fw-semibold text-dark">-</div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="p-2 bg-light rounded">
+                                    <div class="text-muted" style="font-size: 0.72rem;">DENOMINATOR:</div>
+                                    <div id="ai-prev-den" class="fw-semibold text-dark">-</div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="p-2 bg-light rounded">
+                                    <div class="text-muted" style="font-size: 0.72rem;">TARGET & SATUAN:</div>
+                                    <div id="ai-prev-target" class="fw-bold text-teal">-</div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="p-2 bg-light rounded">
+                                    <div class="text-muted" style="font-size: 0.72rem;">DIMENSI MUTU:</div>
+                                    <div id="ai-prev-dimensi" class="fw-semibold text-dark">-</div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="p-2 bg-light rounded">
+                                    <div class="text-muted" style="font-size: 0.72rem;">KODE SARAN:</div>
+                                    <div id="ai-prev-kode" class="fw-semibold font-monospace text-dark">-</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {# Main Form Card #}
+            <div class="card border-0 shadow-sm rounded-3">
+                <div class="card-header bg-white border-bottom py-3 d-flex justify-content-between align-items-center">
+                    <h6 class="fw-bold mb-0 text-dark">
+                        <i class="bi bi-clipboard-check text-teal me-2"></i>
+                        {% if is_edit %}Edit Profil Indikator: {{ ind.kode_indikator }}{% else %}Form Indikator Mutu Baru{% endif %}
+                    </h6>
+                    <span class="badge bg-light text-muted border">STARKES 2022</span>
+                </div>
+                <div class="card-body p-3 p-md-4">
+                    <form method="POST" id="form-indikator">
+                        {% csrf_token %}
+
+                        {# SECTION 1: Identitas & Klasifikasi #}
+                        <div class="form-section-title">1. Identitas & Klasifikasi Indikator</div>
+                        <div class="row g-3 mb-4">
+                            <div class="col-md-8">
+                                <label for="nama_indikator" class="form-label small fw-bold">Nama Indikator Mutu <span class="required-star">*</span></label>
+                                <input type="text" class="form-control form-control-sm" id="nama_indikator" name="nama_indikator"
+                                       value="{% if ind %}{{ ind.nama_indikator }}{% endif %}"
+                                       placeholder="Contoh: Kepatuhan Waktu Tanggap Pelayanan Resep Obat Non-Racikan" required>
+                                <div class="form-text small" style="font-size: .75rem;">Topik spesifik yang diukur. AI menggunakan nama ini untuk merumuskan formula.</div>
+                            </div>
+
+                            <div class="col-md-4">
+                                <label for="kode_indikator" class="form-label small fw-bold">Kode Indikator <span class="required-star">*</span></label>
+                                <input type="text" class="form-control form-control-sm font-monospace text-uppercase" id="kode_indikator" name="kode_indikator"
+                                       value="{% if ind %}{{ ind.kode_indikator }}{% endif %}"
+                                       placeholder="IMP-FAR-01" required>
+                                <div class="form-text small" style="font-size: .75rem;">Harus unik. Contoh: INM-01, IMP-RS-02, IMP-FAR-01</div>
+                            </div>
+
+                            <div class="col-md-4">
+                                <label for="unit" class="form-label small fw-bold">Unit Kerja Penanggung Jawab</label>
+                                <select class="form-select form-select-sm" id="unit" name="unit">
+                                    <option value="">— RS Keseluruhan (Non-Unit Spesifik) —</option>
+                                    {% for u in units %}
+                                    <option value="{{ u.id }}" {% if ind and ind.unit_id == u.id %}selected{% endif %}>
+                                        {{ u.code }} — {{ u.name }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+
+                            <div class="col-md-4">
+                                <label for="jenis" class="form-label small fw-bold">Jenis Indikator <span class="required-star">*</span></label>
+                                <select class="form-select form-select-sm" id="jenis" name="jenis" required>
+                                    {% for code, label in jenis_choices %}
+                                    <option value="{{ code }}" {% if ind and ind.jenis == code %}selected{% elif not ind and code == 'IMP_UNIT' %}selected{% endif %}>
+                                        {{ label }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+
+                            <div class="col-md-4">
+                                <label for="dimensi_mutu" class="form-label small fw-bold">Dimensi Mutu <span class="required-star">*</span></label>
+                                <select class="form-select form-select-sm" id="dimensi_mutu" name="dimensi_mutu" required>
+                                    {% for code, label in dimensi_choices %}
+                                    <option value="{{ code }}" {% if ind and ind.dimensi_mutu == code %}selected{% elif not ind and code == 'AMAN' %}selected{% endif %}>
+                                        {{ label }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+
+                        {# SECTION 2: Formula Pengukuran & Target #}
+                        <div class="form-section-title">2. Formula Pengukuran & Target</div>
+                        <div class="row g-3 mb-4">
+                            <div class="col-12">
+                                <label for="numerator" class="form-label small fw-bold">Numerator (Pembilang) <span class="required-star">*</span></label>
+                                <textarea class="form-control form-control-sm" id="numerator" name="numerator" rows="2"
+                                          placeholder="Contoh: Jumlah resep non-racikan yang selesai dilayani dalam waktu <= 30 menit" required>{% if ind %}{{ ind.numerator }}{% endif %}</textarea>
+                                <div class="form-text small" style="font-size: .75rem;">Definisi subjek/kejadian yang memenuhi standar kepatuhan.</div>
+                            </div>
+
+                            <div class="col-12">
+                                <label for="denominator" class="form-label small fw-bold">Denominator (Penyebut) <span class="required-star">*</span></label>
+                                <textarea class="form-control form-control-sm" id="denominator" name="denominator" rows="2"
+                                          placeholder="Contoh: Total seluruh lembar resep non-racikan yang masuk pada periode pengukuran" required>{% if ind %}{{ ind.denominator }}{% endif %}</textarea>
+                                <div class="form-text small" style="font-size: .75rem;">Total populasi atau seluruh kesempatan pengamatan.</div>
+                            </div>
+
+                            <div class="col-md-4">
+                                <label for="target_nilai" class="form-label small fw-bold">Target Nilai <span class="required-star">*</span></label>
+                                <div class="input-group input-group-sm">
+                                    <input type="number" step="0.01" class="form-control" id="target_nilai" name="target_nilai"
+                                           value="{% if ind %}{{ ind.target_nilai }}{% else %}80.00{% endif %}" required>
+                                    <span class="input-group-text" id="target-unit-label">%</span>
+                                </div>
+                            </div>
+
+                            <div class="col-md-4">
+                                <label for="satuan" class="form-label small fw-bold">Satuan Pengukuran</label>
+                                <input type="text" class="form-control form-control-sm" id="satuan" name="satuan"
+                                       value="{% if ind %}{{ ind.satuan }}{% else %}%{% endif %}"
+                                       placeholder="% atau menit / permil">
+                            </div>
+
+                            <div class="col-md-4">
+                                <label for="ep_terkait" class="form-label small fw-bold">Elemen Penilaian (EP) Terkait</label>
+                                <select class="form-select form-select-sm" id="ep_terkait" name="ep_terkait">
+                                    <option value="">— Tidak Di-link ke EP Spesifik —</option>
+                                    {% for ep in ep_list %}
+                                    <option value="{{ ep.id }}" {% if ind and ind.ep_terkait_id == ep.id %}selected{% endif %}>
+                                        [{{ ep.category.code }}] {{ ep.code }} — {{ ep.sub_standard|truncatechars:35 }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+
+                        {# SECTION 3: Rencana Tindak Lanjut & Penanggung Jawab #}
+                        <div class="form-section-title">3. Tata Kelola & Rencana Aksi</div>
+                        <div class="row g-3 mb-4">
+                            <div class="col-md-6">
+                                <label for="pj" class="form-label small fw-bold">Penanggung Jawab (PIC / Person in Charge)</label>
+                                <input type="text" class="form-control form-control-sm" id="pj" name="pj"
+                                       value="{% if ind %}{{ ind.pj }}{% endif %}"
+                                       placeholder="Contoh: Kepala Instalasi Farmasi / Tim PMKP">
+                            </div>
+
+                            <div class="col-12">
+                                <label for="rencana_aksi" class="form-label small fw-bold">Rencana Aksi / Standar Operasional Pemantauan</label>
+                                <textarea class="form-control form-control-sm" id="rencana_aksi" name="rencana_aksi" rows="3"
+                                          placeholder="1. Supervisi harian log book resep&#10;2. Rekapitulasi berkala akhir bulan&#10;3. Audit waktu tunggu sampling harian">{% if ind %}{{ ind.rencana_aksi }}{% endif %}</textarea>
+                            </div>
+                        </div>
+
+                        {# Actions #}
+                        <div class="d-flex justify-content-between align-items-center pt-3 border-top">
+                            <a href="{% if is_edit %}{% url 'akreditasi:indikator_detail' ind.pk %}{% else %}{% url 'akreditasi:indikator_dashboard' %}{% endif %}"
+                               class="btn btn-sm btn-outline-secondary px-3">
+                                <i class="bi bi-arrow-left me-1"></i> Batal
+                            </a>
+                            <button type="submit" class="btn btn-sm btn-teal px-4 fw-bold">
+                                <i class="bi bi-check2-circle me-1"></i>
+                                {% if is_edit %}Simpan Perubahan{% else %}Buat Indikator Mutu{% endif %}
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const btnAi = document.getElementById('btn-ai-assist');
+    const spinner = document.getElementById('ai-spinner');
+    const feedback = document.getElementById('ai-feedback');
+    const previewBox = document.getElementById('ai-result-preview');
+    const btnTerapkan = document.getElementById('btn-terapkan-ai');
+
+    const inpNama = document.getElementById('nama_indikator');
+    const selUnit = document.getElementById('unit');
+    const selJenis = document.getElementById('jenis');
+    const inpKode = document.getElementById('kode_indikator');
+    const selDimensi = document.getElementById('dimensi_mutu');
+    const inpNum = document.getElementById('numerator');
+    const inpDen = document.getElementById('denominator');
+    const inpTarget = document.getElementById('target_nilai');
+    const inpSatuan = document.getElementById('satuan');
+    const inpPj = document.getElementById('pj');
+    const inpRencana = document.getElementById('rencana_aksi');
+
+    let currentAiDraft = null;
+
+    btnAi.addEventListener('click', async function() {
+        const nama = inpNama.value.trim();
+        if (!nama) {
+            feedback.className = 'small mt-2 alert alert-warning py-1';
+            feedback.textContent = 'Silakan isi Nama Indikator terlebih dahulu agar AI memahami konteks pengukuran.';
+            feedback.classList.remove('d-none');
+            inpNama.focus();
+            return;
+        }
+
+        const unitName = selUnit.selectedIndex > 0 ? selUnit.options[selUnit.selectedIndex].text : '';
+        const jenis = selJenis.value;
+
+        // UI Loading
+        btnAi.disabled = true;
+        spinner.classList.remove('d-none');
+        feedback.className = 'small mt-2 alert alert-info py-1';
+        feedback.textContent = 'Menghubungi DeepSeek AI untuk merumuskan formula SMART...';
+        feedback.classList.remove('d-none');
+        previewBox.classList.add('d-none');
+
+        try {
+            const resp = await fetch("{% url 'akreditasi:api_ai_rumus_indikator' %}", {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                },
+                body: JSON.stringify({
+                    nama_indikator: nama,
+                    unit_name: unitName,
+                    jenis: jenis,
+                    masalah: inpRencana.value.trim()
+                })
+            });
+
+            const res = await resp.json();
+
+            if (!resp.ok || !res.success) {
+                throw new Error(res.error || 'Gagal memproses perumusan indikator.');
+            }
+
+            const data = res.data || {};
+            currentAiDraft = data;
+
+            // Render Preview Box
+            document.getElementById('ai-prev-num').textContent = data.numerator || '-';
+            document.getElementById('ai-prev-den').textContent = data.denominator || '-';
+            document.getElementById('ai-prev-target').textContent = (data.target_nilai !== undefined ? data.target_nilai : '-') + ' ' + (data.satuan || '%');
+            document.getElementById('ai-prev-dimensi').textContent = data.dimensi_mutu || '-';
+            document.getElementById('ai-prev-kode').textContent = data.kode_indikator_saran || '-';
+
+            previewBox.classList.remove('d-none');
+            feedback.className = 'small mt-2 alert alert-success py-1';
+            feedback.textContent = 'Formula indikator berhasil dirumuskan! Klik "Terapkan ke Form" untuk mengisi formulir.';
+
+        } catch (err) {
+            feedback.className = 'small mt-2 alert alert-danger py-1';
+            feedback.textContent = 'Terjadi kendala: ' + err.message;
+        } finally {
+            btnAi.disabled = false;
+            spinner.classList.add('d-none');
+        }
+    });
+
+    btnTerapkan.addEventListener('click', function() {
+        if (!currentAiDraft) return;
+
+        if (currentAiDraft.numerator) inpNum.value = currentAiDraft.numerator;
+        if (currentAiDraft.denominator) inpDen.value = currentAiDraft.denominator;
+        if (currentAiDraft.target_nilai !== undefined) inpTarget.value = currentAiDraft.target_nilai;
+        if (currentAiDraft.satuan) inpSatuan.value = currentAiDraft.satuan;
+        if (currentAiDraft.pj_saran && !inpPj.value) inpPj.value = currentAiDraft.pj_saran;
+        if (currentAiDraft.rencana_aksi) inpRencana.value = currentAiDraft.rencana_aksi;
+
+        // Dimensi Mutu match
+        if (currentAiDraft.dimensi_mutu) {
+            for (let i = 0; i < selDimensi.options.length; i++) {
+                if (selDimensi.options[i].value === currentAiDraft.dimensi_mutu ||
+                    selDimensi.options[i].text.toUpperCase().includes(currentAiDraft.dimensi_mutu.toUpperCase())) {
+                    selDimensi.selectedIndex = i;
+                    break;
+                }
+            }
+        }
+
+        // Kode saran if currently empty
+        if (!inpKode.value && currentAiDraft.kode_indikator_saran) {
+            inpKode.value = currentAiDraft.kode_indikator_saran;
+        }
+
+        feedback.className = 'small mt-2 alert alert-success py-1';
+        feedback.textContent = 'Formula telah diterapkan ke formulir. Silakan tinjau kembali sebelum menyimpan.';
+    });
+});
+</script>
+{% endblock %}

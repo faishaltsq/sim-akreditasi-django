@@ -21,6 +21,7 @@ from .ai_prompts import (
     PROMPT_EVALUASI_RISIKO,
     PROMPT_RDWOS_ANALISIS,
     PROMPT_KPS_REKOMENDASI,
+    PROMPT_INDIKATOR_MUTU,
 )
 
 logger = logging.getLogger(__name__)
@@ -299,6 +300,22 @@ def generate_kps_rekomendasi(user, profesi: str, jabatan: str, unit_name: str,
 
     result = _call_deepseek(prompt)
     _log_ai_call(user, 'KPS', f'{profesi} | {unit_name}', result['success'])
+    return result
+
+
+# ── 7. FORMULASI INDIKATOR MUTU ──────────────────────────────────────────
+
+def generate_indicator_draft(user, nama_indikator: str, unit_name: str,
+                              jenis: str, masalah: str) -> dict:
+    """Rumuskan formula indikator mutu (numerator, denominator, target, dimensi, rencana aksi)."""
+    prompt = PROMPT_INDIKATOR_MUTU.format(
+        unit_name=sanitize_hospital_prompt(unit_name),
+        jenis=jenis,
+        nama_indikator=sanitize_hospital_prompt(nama_indikator),
+        masalah=sanitize_hospital_prompt(masalah),
+    )
+    result = _call_deepseek(prompt)
+    _log_ai_call(user, 'INDIKATOR_MUTU', f'{jenis} | {unit_name} | {nama_indikator[:50]}', result['success'])
     return result
 
 

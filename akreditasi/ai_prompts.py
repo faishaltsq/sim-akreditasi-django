@@ -155,3 +155,29 @@ Format Output JSON:
   "standar_kps_terkait": "Referensi standar KPS KARS terkait",
   "rekomendasi": "Saran tindakan untuk pemenuhan standar KPS"
 }}"""
+
+# ── 7. FORMULASI INDIKATOR MUTU (INM / IMP-RS / IMP-UNIT) ─────────────────
+
+PROMPT_INDIKATOR_MUTU = """Konteks Perumusan Indikator Mutu Rumah Sakit (STARKES PMKP/TKRS):
+- Unit Kerja: {unit_name}
+- Jenis Indikator: {jenis}
+- Nama / Topik Indikator: {nama_indikator}
+- Masalah / Latar Belakang: {masalah}
+
+Tugas: Rumuskan formula indikator mutu yang SMART, terukur, dan aplikatif sesuai kaidah PMKP Kemenkes/KARS.
+
+Format Output JSON:
+{{
+  "kode_indikator_saran": "IMP-[UNIT]-01",
+  "dimensi_mutu": "AMAN / EFEKTIF / EFISIEN / TEPAT_WAKTU / BERPUSAT_PASIEN / AKSESIBEL / ADIL",
+  "numerator": "Kalimat definisi numerator (pembilang) yang jelas dan terukur",
+  "denominator": "Kalimat definisi denominator (penyebut) yang jelas dan terukur",
+  "target_nilai": 85.0,
+  "satuan": "%",
+  "rencana_aksi": "1. [Langkah pemantauan harian]\\n2. [Verifikasi data bulanan]\\n3. [Audit kepatuhan SOP]\\n4. [Rapat koordinasi perbaikan capaian]",
+  "pj_saran": "Kepala Unit / Penanggung Jawab Terkait",
+  "frekuensi_pengukuran": "Bulanan",
+  "standar_ep_terkait": "PMKP / TKRS / SKP terkait"
+}}"""
+
+

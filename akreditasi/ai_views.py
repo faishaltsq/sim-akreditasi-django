@@ -22,6 +22,7 @@ from .ai_service import (
     generate_evaluasi_risiko,
     generate_rdwos_analisis,
     generate_kps_rekomendasi,
+    generate_indicator_draft,
     test_deepseek_connection,
 )
 from .models import StandardItem, UnitKerja
@@ -213,6 +214,35 @@ def api_ai_rdwos_analisis(request):
         dokumen_ada=int(data.get('dokumen_ada') or 0),
         total_kebutuhan=int(data.get('total_kebutuhan') or 0),
         jenis_dokumen=data.get('jenis_dokumen') or [],
+    )
+    return JsonResponse(res, status=200 if res['success'] else 400)
+
+
+# ── 7. PERUMUSAN INDIKATOR MUTU CERDAS ────────────────────────────────────
+
+@login_required
+@require_POST
+@rate_limit(max_calls=12, window=60, scope='ai')
+def api_ai_rumus_indikator(request):
+    """Endpoint untuk tombol '✨ AI Bantu Rumuskan Indikator' di form indikator."""
+    data = _parse_json_body(request)
+    if not data:
+        return JsonResponse({'success': False, 'error': 'Payload tidak valid.'}, status=400)
+
+    nama_indikator = (data.get('nama_indikator') or '').strip()
+    if not nama_indikator:
+        return JsonResponse({'success': False, 'error': 'Nama atau topik indikator wajib diisi.'}, status=400)
+
+    unit_name = (data.get('unit_name') or '').strip()
+    jenis = (data.get('jenis') or 'IMP_UNIT').strip()
+    masalah = (data.get('masalah') or '').strip()
+
+    res = generate_indicator_draft(
+        user=request.user,
+        nama_indikator=nama_indikator,
+        unit_name=unit_name,
+        jenis=jenis,
+        masalah=masalah,
     )
     return JsonResponse(res, status=200 if res['success'] else 400)
 

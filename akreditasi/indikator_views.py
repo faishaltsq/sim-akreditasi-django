@@ -9,7 +9,7 @@ from django.db.models import Avg, Count, Q
 from django.http import JsonResponse
 
 from .risiko_models import IndikatorMutu, CatatanIndikator
-from .models import UnitKerja, AuditLog
+from .models import UnitKerja, AuditLog, StandardItem
 
 # ── DEFINISI RESMI RENSTRA 5 TAHUN (2026–2030) RS MONSISKAMI ─────────────
 RENSTRA_ANNUAL_FOCUS = {
@@ -288,3 +288,130 @@ def indikator_input_capaian(request, indikator_id):
         'bulan_choices': list(range(1, 13)),
     }
     return render(request, 'akreditasi/indikator_input_capaian.html', ctx)
+
+
+# ── 4. Form Tambah & Edit Indikator Mutu ──────────────────────────────────
+
+@login_required
+def indikator_tambah(request):
+    """Halaman dan action untuk menambahkan Indikator Mutu baru."""
+    if not _is_manager(request.user):
+        messages.error(request, 'Anda tidak memiliki hak akses menambah Indikator Mutu.')
+        return redirect('akreditasi:indikator_dashboard')
+
+    if request.method == 'POST':
+        try:
+            nama = request.POST['nama_indikator'].strip()
+            kode = request.POST['kode_indikator'].strip()
+            unit_id = request.POST.get('unit')
+            jenis = request.POST.get('jenis', 'IMP_UNIT')
+            dimensi = request.POST.get('dimensi_mutu', 'AMAN')
+            num = request.POST['numerator'].strip()
+            den = request.POST['denominator'].strip()
+            target_val = Decimal(request.POST['target_nilai'])
+            satuan = request.POST.get('satuan', '%').strip() or '%'
+            rencana = request.POST.get('rencana_aksi', '').strip()
+            pj = request.POST.get('pj', '').strip()
+            ep_id = request.POST.get('ep_terkait') or None
+
+            if IndikatorMutu.objects.filter(kode_indikator=kode).exists():
+                messages.error(request, f'Kode indikator "{kode}" sudah digunakan.')
+                raise ValueError('Kode indikator sudah ada')
+
+            ind = IndikatorMutu.objects.create(
+                nama_indikator=nama,
+                kode_indikator=kode,
+                unit_id=int(unit_id) if unit_id else None,
+                jenis=jenis,
+                dimensi_mutu=dimensi,
+                numerator=num,
+                denominator=den,
+                target_nilai=target_val,
+                satuan=satuan,
+                ep_terkait_id=int(ep_id) if ep_id else None,
+                rencana_aksi=rencana,
+                pj=pj,
+                aktif=True,
+            )
+            _log(request.user, 'CREATE', ind, f'Membuat indikator mutu {kode}: {nama}')
+            messages.success(request, f'Indikator Mutu [{kode}] berhasil dibuat.')
+            return redirect('akreditasi:indikator_detail', indikator_id=ind.pk)
+        except Exception as e:
+            if 'Kode indikator sudah ada' not in str(e):
+                messages.error(request, f'Gagal membuat indikator: {e}')
+
+    units = UnitKerja.objects.filter(is_active=True).order_by('name')
+    ep_list = StandardItem.objects.select_related('category').order_by('category__code', 'code')[:200]
+    ctx = {
+        'ind': None,
+        'is_edit': False,
+        'units': units,
+        'ep_list': ep_list,
+        'jenis_choices': IndikatorMutu.JENIS_CHOICES,
+        'dimensi_choices': IndikatorMutu.DIMENSI_CHOICES,
+    }
+    return render(request, 'akreditasi/indikator_form.html', ctx)
+
+
+@login_required
+def indikator_edit(request, indikator_id):
+    """Halaman dan action untuk mengedit Indikator Mutu eksisting."""
+    if not _is_manager(request.user):
+        messages.error(request, 'Anda tidak memiliki hak akses mengubah Indikator Mutu.')
+        return redirect('akreditasi:indikator_dashboard')
+
+    ind = get_object_or_404(IndikatorMutu, pk=indikator_id)
+
+    if request.method == 'POST':
+        try:
+            nama = request.POST['nama_indikator'].strip()
+            kode = request.POST['kode_indikator'].strip()
+            unit_id = request.POST.get('unit')
+            jenis = request.POST.get('jenis', 'IMP_UNIT')
+            dimensi = request.POST.get('dimensi_mutu', 'AMAN')
+            num = request.POST['numerator'].strip()
+            den = request.POST['denominator'].strip()
+            target_val = Decimal(request.POST['target_nilai'])
+            satuan = request.POST.get('satuan', '%').strip() or '%'
+            rencana = request.POST.get('rencana_aksi', '').strip()
+            pj = request.POST.get('pj', '').strip()
+            ep_id = request.POST.get('ep_terkait') or None
+
+            # Check unique kode if changed
+            if kode != ind.kode_indikator and IndikatorMutu.objects.filter(kode_indikator=kode).exists():
+                messages.error(request, f'Kode indikator "{kode}" sudah digunakan oleh indikator lain.')
+                raise ValueError('Kode indikator sudah ada')
+
+            ind.nama_indikator = nama
+            ind.kode_indikator = kode
+            ind.unit_id = int(unit_id) if unit_id else None
+            ind.jenis = jenis
+            ind.dimensi_mutu = dimensi
+            ind.numerator = num
+            ind.denominator = den
+            ind.target_nilai = target_val
+            ind.satuan = satuan
+            ind.ep_terkait_id = int(ep_id) if ep_id else None
+            ind.rencana_aksi = rencana
+            ind.pj = pj
+            ind.save()
+
+            _log(request.user, 'UPDATE', ind, f'Mengedit indikator mutu {kode}: {nama}')
+            messages.success(request, f'Indikator Mutu [{kode}] berhasil diperbarui.')
+            return redirect('akreditasi:indikator_detail', indikator_id=ind.pk)
+        except Exception as e:
+            if 'Kode indikator sudah ada' not in str(e):
+                messages.error(request, f'Gagal menyimpan perubahan: {e}')
+
+    units = UnitKerja.objects.filter(is_active=True).order_by('name')
+    ep_list = StandardItem.objects.select_related('category').order_by('category__code', 'code')[:200]
+    ctx = {
+        'ind': ind,
+        'is_edit': True,
+        'units': units,
+        'ep_list': ep_list,
+        'jenis_choices': IndikatorMutu.JENIS_CHOICES,
+        'dimensi_choices': IndikatorMutu.DIMENSI_CHOICES,
+    }
+    return render(request, 'akreditasi/indikator_form.html', ctx)
+
