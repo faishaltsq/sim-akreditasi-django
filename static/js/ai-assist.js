@@ -69,8 +69,9 @@
             const unitName = unitSelect && unitSelect.selectedOptions[0] ? unitSelect.selectedOptions[0].text : '';
             const katSelect = document.querySelector('select[name="kategori_risiko"]');
             const kategoriRisiko = katSelect ? katSelect.value : '';
-            const jenisInput = document.querySelector('input[name="jenis_risiko"]');
-            const jenisRisiko = jenisInput ? jenisInput.value.trim() : '';
+            const jenisInputs = Array.from(document.querySelectorAll('input[name="jenis_risiko"], textarea[name="jenis_risiko"]'));
+            const jenisList = jenisInputs.map(el => el.value.trim()).filter(Boolean);
+            const jenisRisiko = jenisList.join('; ');
             const descInput = document.querySelector('textarea[name="deskripsi_risiko"]');
             const deskripsiRisiko = descInput ? descInput.value.trim() : '';
             const masalahInput = document.querySelector('textarea[name="masalah"]');

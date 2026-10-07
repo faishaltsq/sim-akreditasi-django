@@ -23,6 +23,7 @@ from .ai_service import (
     generate_rdwos_analisis,
     generate_kps_rekomendasi,
     generate_indicator_draft,
+    generate_risk_analysis_from_problem,
     test_deepseek_connection,
 )
 from .models import StandardItem, UnitKerja
@@ -243,6 +244,33 @@ def api_ai_rumus_indikator(request):
         unit_name=unit_name,
         jenis=jenis,
         masalah=masalah,
+    )
+    return JsonResponse(res, status=200 if res['success'] else 400)
+
+
+# ── 8. ANALISIS MASALAH & PENENTUAN RISIKO (STANDAR 5.15) ────────────────
+
+@login_required
+@require_POST
+@rate_limit(max_calls=12, window=60, scope='ai')
+def api_ai_analisis_masalah_risiko(request):
+    """Endpoint untuk tombol '✨ AI Analisis Masalah & Sarankan Risiko' di form risiko."""
+    data = _parse_json_body(request)
+    if not data:
+        return JsonResponse({'success': False, 'error': 'Payload tidak valid.'}, status=400)
+
+    masalah = (data.get('masalah') or '').strip()
+    if not masalah:
+        return JsonResponse({'success': False, 'error': 'Uraian masalah (Issue Statement) wajib diisi untuk dianalisis AI.'}, status=400)
+
+    unit_name = (data.get('unit_name') or '').strip()
+    data_pendukung = (data.get('data_pendukung') or data.get('data') or '').strip()
+
+    res = generate_risk_analysis_from_problem(
+        user=request.user,
+        unit_name=unit_name,
+        masalah=masalah,
+        data_pendukung=data_pendukung,
     )
     return JsonResponse(res, status=200 if res['success'] else 400)
 

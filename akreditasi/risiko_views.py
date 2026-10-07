@@ -265,12 +265,22 @@ def risiko_input(request):
         try:
             indikator_id = request.POST.get('indikator_mutu_terkait') or None
             target_capaian = request.POST.get('target_capaian_indikator') or None
+
+            # Handle multiple or single jenis_risiko
+            jenis_list = request.POST.getlist('jenis_risiko')
+            if len(jenis_list) > 1:
+                jenis_val = '\n'.join([j.strip() for j in jenis_list if j.strip()])
+            elif len(jenis_list) == 1:
+                jenis_val = jenis_list[0].strip()
+            else:
+                jenis_val = (request.POST.get('jenis_risiko') or '').strip()
+
             risiko = RisikoUnit(
                 unit_id=int(request.POST['unit']),
                 tahun=int(request.POST['tahun']),
                 periode=request.POST['periode'],
                 kategori_risiko=request.POST['kategori_risiko'],
-                jenis_risiko=request.POST['jenis_risiko'],
+                jenis_risiko=jenis_val,
                 masalah=request.POST.get('masalah', '').strip(),
                 data_pendukung=(request.POST.get('data') or request.POST.get('data_pendukung') or '').strip(),
                 deskripsi_risiko=request.POST['deskripsi_risiko'],

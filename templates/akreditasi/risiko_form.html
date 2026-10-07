@@ -40,11 +40,13 @@
                         {% csrf_token %}
 
                         {# ── Bagian 1: Identifikasi ─────────────────── #}
-                        <h6 class="fw-bold mb-3 pb-1 border-bottom" style="color:#0f172a; font-size:.82rem;">A. Identifikasi Risiko</h6>
+                        <h6 class="fw-bold mb-3 pb-1 border-bottom" style="color:#0f172a; font-size:.82rem;">A. Identifikasi Risiko (Standar 5.15)</h6>
+                        
+                        {# 1. Header Identitas #}
                         <div class="row g-3 mb-3">
                             <div class="col-md-6">
                                 <label class="form-label" style="font-size:.8rem; font-weight:600;">Unit Kerja <span class="text-danger">*</span></label>
-                                <select name="unit" class="form-select form-select-sm" required>
+                                <select name="unit" id="unit_select" class="form-select form-select-sm" required>
                                     {% if not default_unit_id %}
                                     <option value="">— Pilih Unit —</option>
                                     {% endif %}
@@ -67,54 +69,89 @@
                                 </select>
                             </div>
                         </div>
-                        <div class="row g-3 mb-3">
-                            <div class="col-md-4">
-                                <label class="form-label" style="font-size:.8rem; font-weight:600;">Kategori Risiko <span class="text-danger">*</span></label>
-                                <select name="kategori_risiko" class="form-select form-select-sm" required>
-                                    <option value="">— Pilih —</option>
+
+                        {# 2. Masalah & Data Pendukung (DI ATAS Kategori & Jenis Risiko) #}
+                        <div class="p-3 mb-3 rounded-3" style="background:#f8fafc; border:1px solid #e2e8f0;">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <span class="fw-bold text-dark" style="font-size:.78rem;">
+                                    <i class="bi bi-card-checklist text-teal me-1"></i>Latar Belakang: Masalah &amp; Bukti Pendukung
+                                </span>
+                                <button type="button" id="btn-ai-analisis-masalah" class="btn btn-xs btn-outline-teal d-flex align-items-center gap-1 shadow-sm" style="font-size:.72rem; padding:3px 10px;">
+                                    <span id="ai-analisis-spinner" class="spinner-border spinner-border-sm d-none" role="status"></span>
+                                    <span>✨ AI Analisis Masalah &amp; Sarankan Risiko</span>
+                                </button>
+                            </div>
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label class="form-label" style="font-size:.78rem; font-weight:600;">
+                                        <i class="bi bi-exclamation-circle text-danger me-1"></i>Masalah <span class="text-muted fw-normal">(Issue Statement)</span>
+                                    </label>
+                                    <textarea name="masalah" id="input_masalah" class="form-control form-control-sm" rows="2"
+                                              placeholder="Uraikan masalah aktual atau potensi masalah yang dihadapi…"></textarea>
+                                    <small class="text-muted" style="font-size:.68rem;">Fakta/masalah nyata yang mendasari perlunya manajemen risiko</small>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label" style="font-size:.78rem; font-weight:600;">
+                                        <i class="bi bi-file-earmark-bar-graph text-primary me-1"></i>Data / Bukti Pendukung <span class="text-muted fw-normal">(Baseline Data)</span>
+                                    </label>
+                                    <textarea name="data" id="input_data_pendukung" class="form-control form-control-sm" rows="2"
+                                              placeholder="Data kuantitatif/kualitatif pendukung (cth: angka insiden, % komplain, hasil audit)…"></textarea>
+                                    <small class="text-muted" style="font-size:.68rem;">Data, fakta capaian, atau bukti dokumentasi masalah</small>
+                                </div>
+                            </div>
+                            <div id="ai-analisis-feedback" class="small mt-2 d-none"></div>
+                        </div>
+
+                        {# 3. Kategori Risiko #}
+                        <div class="row g-3 mb-2">
+                            <div class="col-12">
+                                <label class="form-label" style="font-size:.8rem; font-weight:600;">Kategori Risiko (STARKES) <span class="text-danger">*</span></label>
+                                <select name="kategori_risiko" id="kategori_risiko_select" class="form-select form-select-sm" required>
+                                    <option value="">— Pilih Kategori Risiko —</option>
                                     {% for val, label in kategori_choices %}
                                     <option value="{{ val }}">{{ label }}</option>
                                     {% endfor %}
                                 </select>
                             </div>
-                            <div class="col-md-8">
-                                <label class="form-label" style="font-size:.8rem; font-weight:600;">Jenis Risiko <span class="text-danger">*</span></label>
-                                <input type="text" name="jenis_risiko" class="form-control form-control-sm" placeholder="cth: Kesalahan pemberian obat" required>
-                            </div>
                         </div>
 
                         {# Category Guide — contoh risiko per kategori (Standar 5.15) #}
                         <div id="kategori-guide" class="mb-3 d-none">
-                            <div class="p-2 rounded" style="background:#f0fdfa; border:1px dashed #99f6e4; font-size:.76rem;">
+                            <div class="p-2.5 rounded" style="background:#f0fdfa; border:1px dashed #99f6e4; font-size:.76rem;">
                                 <strong id="kategori-guide-title" class="d-block mb-1" style="color:#0f766e;"></strong>
                                 <span id="kategori-guide-desc" class="text-muted d-block mb-2" style="font-size:.72rem;"></span>
                                 <div id="kategori-guide-chips"></div>
                             </div>
                         </div>
 
-                        {# Standar 5.15: Masalah dan Data Pendukung #}
-                        <div class="row g-3 mb-3">
-                            <div class="col-md-6">
-                                <label class="form-label" style="font-size:.8rem; font-weight:600;">
-                                    <i class="bi bi-exclamation-circle text-danger me-1"></i>Masalah <span class="text-muted fw-normal">(Issue Statement)</span>
-                                </label>
-                                <textarea name="masalah" class="form-control form-control-sm" rows="2"
-                                          placeholder="Uraikan masalah aktual atau potensi masalah yang dihadapi…"></textarea>
-                                <small class="text-muted" style="font-size:.68rem;">Masalah nyata/potensial yang mendasari munculnya risiko ini</small>
+                        {# 4. Jenis Risiko — Multi-Tag / Multi-Choice (Dapat Lebih Dari 1) #}
+                        <div class="mb-3">
+                            <label class="form-label d-flex justify-content-between align-items-center" style="font-size:.8rem; font-weight:600;">
+                                <span>Jenis Risiko <span class="text-danger">*</span> <span class="badge bg-light text-secondary border fw-normal" style="font-size:.68rem;">Dapat lebih dari 1</span></span>
+                                <small class="text-muted fw-normal" style="font-size:.7rem;">Klik chip contoh atau ketik lalu tekan Enter</small>
+                            </label>
+
+                            {# Container Tag / Chip yang sudah dipilih #}
+                            <div id="jenis-risiko-tag-box" class="p-2 border rounded bg-white min-h-38 mb-2 d-flex flex-wrap gap-1 align-items-center" style="min-height: 42px; border-color:#cbd5e1 !important;">
+                                <span id="jenis-risiko-placeholder" class="text-muted small ps-1" style="font-size:.75rem;">Belum ada jenis risiko dipilih. Pilih dari saran kategori di atas atau ketik di bawah.</span>
                             </div>
-                            <div class="col-md-6">
-                                <label class="form-label" style="font-size:.8rem; font-weight:600;">
-                                    <i class="bi bi-file-earmark-bar-graph text-primary me-1"></i>Data / Bukti Pendukung <span class="text-muted fw-normal">(Baseline)</span>
-                                </label>
-                                <textarea name="data" class="form-control form-control-sm" rows="2"
-                                          placeholder="Data kuantitatif/kualitatif pendukung (cth: angka insiden, % komplain, hasil audit)…"></textarea>
-                                <small class="text-muted" style="font-size:.68rem;">Fakta, data capaian, atau bukti pendukung adanya masalah</small>
+
+                            {# Input untuk menambah jenis risiko baru #}
+                            <div class="input-group input-group-sm">
+                                <input type="text" id="input_tambah_jenis_risiko" class="form-control" placeholder="Ketik jenis risiko tambahan lalu klik Tambah / tekan Enter…">
+                                <button type="button" id="btn_tambah_jenis_risiko" class="btn btn-outline-teal px-3">
+                                    <i class="bi bi-plus-lg me-1"></i>Tambah
+                                </button>
                             </div>
+                            
+                            {# Hidden container untuk menyimpan input name="jenis_risiko" yang dikirim ke backend #}
+                            <div id="jenis-risiko-hidden-inputs"></div>
                         </div>
 
+                        {# 5. Deskripsi Risiko #}
                         <div class="mb-3">
-                            <label class="form-label" style="font-size:.8rem; font-weight:600;">Deskripsi Risiko <span class="text-danger">*</span></label>
-                            <textarea name="deskripsi_risiko" class="form-control form-control-sm" rows="3" required placeholder="Deskripsikan risiko secara rinci…"></textarea>
+                            <label class="form-label" style="font-size:.8rem; font-weight:600;">Deskripsi Risiko Lengkap <span class="text-danger">*</span></label>
+                            <textarea name="deskripsi_risiko" id="input_deskripsi_risiko" class="form-control form-control-sm" rows="3" required placeholder="Deskripsikan dampak potensial dari jenis-jenis risiko di atas terhadap pelayanan, mutu, atau pasien…"></textarea>
                         </div>
 
                         {# ── Bagian 2: Penilaian (Slider) ───────────── #}
@@ -452,12 +489,119 @@
         }
     };
 
+    // ── Multi-Tag / Multi-Choice Management for Jenis Risiko ─────────────
+    let selectedRisks = [];
+    const tagBox = document.getElementById('jenis-risiko-tag-box');
+    const tagPlaceholder = document.getElementById('jenis-risiko-placeholder');
+    const hiddenContainer = document.getElementById('jenis-risiko-hidden-inputs');
+    const inputTambah = document.getElementById('input_tambah_jenis_risiko');
+    const btnTambah = document.getElementById('btn_tambah_jenis_risiko');
+    const formEl = document.querySelector('form');
+
+    function renderRiskTags() {
+        if (!tagBox || !hiddenContainer) return;
+        tagBox.innerHTML = '';
+        hiddenContainer.innerHTML = '';
+
+        if (selectedRisks.length === 0) {
+            tagBox.appendChild(tagPlaceholder);
+            // Tambahkan hidden dummy input agar validator HTML/form tidak crash jika dicek
+            const emptyHidden = document.createElement('input');
+            emptyHidden.type = 'hidden';
+            emptyHidden.name = 'jenis_risiko';
+            emptyHidden.value = '';
+            hiddenContainer.appendChild(emptyHidden);
+            return;
+        }
+
+        selectedRisks.forEach((risk, idx) => {
+            // Visual Badge
+            const badge = document.createElement('span');
+            badge.className = 'badge bg-teal-subtle text-teal-dark border border-teal d-inline-flex align-items-center gap-1 py-1 px-2.5';
+            badge.style.fontSize = '.78rem';
+            badge.style.background = '#f0fdfa';
+            badge.style.color = '#0f766e';
+            badge.style.borderColor = '#5eead4 !important';
+            badge.style.borderRadius = '16px';
+            badge.style.fontWeight = '600';
+
+            badge.innerHTML = `<span>${risk}</span>`;
+
+            const removeBtn = document.createElement('button');
+            removeBtn.type = 'button';
+            removeBtn.className = 'btn-close ms-1';
+            removeBtn.style.fontSize = '.55rem';
+            removeBtn.setAttribute('aria-label', 'Hapus');
+            removeBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                removeRiskTag(idx);
+            });
+
+            badge.appendChild(removeBtn);
+            tagBox.appendChild(badge);
+
+            // Hidden POST Input
+            const hidden = document.createElement('input');
+            hidden.type = 'hidden';
+            hidden.name = 'jenis_risiko';
+            hidden.value = risk;
+            hiddenContainer.appendChild(hidden);
+        });
+    }
+
+    function addRiskTag(riskName) {
+        const clean = (riskName || '').trim();
+        if (!clean) return;
+        if (!selectedRisks.includes(clean)) {
+            selectedRisks.push(clean);
+            renderRiskTags();
+        }
+    }
+
+    function removeRiskTag(index) {
+        selectedRisks.splice(index, 1);
+        renderRiskTags();
+    }
+
+    if (btnTambah && inputTambah) {
+        btnTambah.addEventListener('click', () => {
+            addRiskTag(inputTambah.value);
+            inputTambah.value = '';
+            inputTambah.focus();
+        });
+
+        inputTambah.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                addRiskTag(inputTambah.value);
+                inputTambah.value = '';
+            }
+        });
+    }
+
+    // Form submit validation: minimal 1 jenis risiko
+    if (formEl) {
+        formEl.addEventListener('submit', (e) => {
+            if (selectedRisks.length === 0) {
+                // Cek apakah ada teks di input_tambah yang belum di-enter
+                if (inputTambah && inputTambah.value.trim()) {
+                    addRiskTag(inputTambah.value);
+                    inputTambah.value = '';
+                } else {
+                    e.preventDefault();
+                    alert('Harap pilih atau ketik minimal 1 Jenis Risiko sebelum menyimpan.');
+                    inputTambah.focus();
+                }
+            }
+        });
+    }
+
+    // ── Kategori Guide Chips ──────────────────────────────────────
     const katSelect = document.querySelector('select[name="kategori_risiko"]');
     const katGuide = document.getElementById('kategori-guide');
     const katTitle = document.getElementById('kategori-guide-title');
     const katDesc = document.getElementById('kategori-guide-desc');
     const katChips = document.getElementById('kategori-guide-chips');
-    const jenisInput = document.querySelector('input[name="jenis_risiko"]');
 
     function updateKategoriGuide(val) {
         if (!katGuide) return;
@@ -468,7 +612,7 @@
         }
         katTitle.textContent = info.title;
         katDesc.textContent = info.desc;
-        katChips.innerHTML = '<span class="text-muted me-2" style="font-size:.7rem;">Klik contoh untuk mengisi Jenis Risiko:</span>';
+        katChips.innerHTML = '<span class="text-muted me-2 d-block mb-1" style="font-size:.7rem;">Klik contoh risiko di bawah untuk menambahkan ke daftar Jenis Risiko (dapat pilih >1):</span>';
         info.examples.forEach(function(ex) {
             const btn = document.createElement('button');
             btn.type = 'button';
@@ -478,10 +622,7 @@
             btn.style.borderRadius = '12px';
             btn.textContent = '+ ' + ex;
             btn.addEventListener('click', function() {
-                if (jenisInput) {
-                    jenisInput.value = ex;
-                    jenisInput.focus();
-                }
+                addRiskTag(ex);
             });
             katChips.appendChild(btn);
         });
@@ -497,17 +638,106 @@
         }
     }
 
+    // ── AI Analisis Masalah & Sarankan Risiko ────────────────────────
+    const btnAiAnalisis = document.getElementById('btn-ai-analisis-masalah');
+    const spinnerAiAnalisis = document.getElementById('ai-analisis-spinner');
+    const feedbackAiAnalisis = document.getElementById('ai-analisis-feedback');
+    const unitSelect = document.getElementById('unit_select');
+    const inputMasalah = document.getElementById('input_masalah');
+    const inputData = document.getElementById('input_data_pendukung');
+    const inputDesc = document.getElementById('input_deskripsi_risiko');
+    const inputDampak = document.getElementById('dampak');
+    const inputProb = document.getElementById('probabilitas');
+
+    if (btnAiAnalisis) {
+        btnAiAnalisis.addEventListener('click', async function() {
+            const masalah = (inputMasalah ? inputMasalah.value : '').trim();
+            if (!masalah) {
+                feedbackAiAnalisis.className = 'small mt-2 alert alert-warning py-1';
+                feedbackAiAnalisis.textContent = 'Harap isi uraian Masalah terlebih dahulu agar AI dapat menganalisis.';
+                feedbackAiAnalisis.classList.remove('d-none');
+                inputMasalah.focus();
+                return;
+            }
+
+            const unitName = (unitSelect && unitSelect.selectedIndex > 0) ? unitSelect.options[unitSelect.selectedIndex].text : '';
+            const dataPendukung = (inputData ? inputData.value : '').trim();
+
+            btnAiAnalisis.disabled = true;
+            if (spinnerAiAnalisis) spinnerAiAnalisis.classList.remove('d-none');
+            feedbackAiAnalisis.className = 'small mt-2 alert alert-info py-1';
+            feedbackAiAnalisis.textContent = 'DeepSeek AI sedang menganalisis masalah dan merumuskan jenis-jenis risiko...';
+            feedbackAiAnalisis.classList.remove('d-none');
+
+            try {
+                const resp = await fetch("{% url 'akreditasi:api_ai_analisis_masalah_risiko' %}", {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                    },
+                    body: JSON.stringify({
+                        masalah: masalah,
+                        data_pendukung: dataPendukung,
+                        unit_name: unitName
+                    })
+                });
+
+                const res = await resp.json();
+                if (!resp.ok || !res.success) {
+                    throw new Error(res.error || 'Gagal menganalisis masalah.');
+                }
+
+                const data = res.data || {};
+                
+                // 1. Auto-select Kategori Risiko
+                if (data.kategori_risiko && katSelect) {
+                    katSelect.value = data.kategori_risiko;
+                    updateKategoriGuide(data.kategori_risiko);
+                }
+
+                // 2. Tambah daftar jenis risiko yang disarankan AI
+                if (Array.isArray(data.daftar_jenis_risiko)) {
+                    data.daftar_jenis_risiko.forEach(r => addRiskTag(r));
+                }
+
+                // 3. Set deskripsi risiko jika belum diisi atau perbarui
+                if (data.deskripsi_risiko_saran && inputDesc && (!inputDesc.value || inputDesc.value.length < 10)) {
+                    inputDesc.value = data.deskripsi_risiko_saran;
+                }
+
+                // 4. Set skor dampak & probabilitas jika disarankan
+                if (data.dampak_saran && inputDampak) {
+                    inputDampak.value = data.dampak_saran;
+                    if (typeof updateSkor === 'function') updateSkor();
+                }
+                if (data.probabilitas_saran && inputProb) {
+                    inputProb.value = data.probabilitas_saran;
+                    if (typeof updateSkor === 'function') updateSkor();
+                }
+
+                feedbackAiAnalisis.className = 'small mt-2 alert alert-success py-1';
+                feedbackAiAnalisis.textContent = `✨ Berhasil! Kategori [${data.kategori_risiko}] dan ${data.daftar_jenis_risiko ? data.daftar_jenis_risiko.length : 0} jenis risiko berhasil disarankan oleh AI.`;
+
+            } catch (err) {
+                feedbackAiAnalisis.className = 'small mt-2 alert alert-danger py-1';
+                feedbackAiAnalisis.textContent = 'Kendala AI: ' + err.message;
+            } finally {
+                btnAiAnalisis.disabled = false;
+                if (spinnerAiAnalisis) spinnerAiAnalisis.classList.add('d-none');
+            }
+        });
+    }
+
     // ── Override ai-assist.js: inject konteks indikator ke payload AI ────
-    // Patch window sehingga saat btn-ai-mitigasi diklik, konteks indikator disertakan
     const origBtnAi = document.getElementById('btn-ai-mitigasi');
     if (origBtnAi) {
         origBtnAi.addEventListener('click', function() {
-            // Daftarkan indikator ke window global agar ai-assist.js bisa baca
             if (_currentIndikator) {
                 window._arimaIndikatorContext = _currentIndikator;
             }
-        }, true); // capture phase: sebelum ai-assist.js
+        }, true);
     }
-})();
+});
 </script>
 {% endblock %}

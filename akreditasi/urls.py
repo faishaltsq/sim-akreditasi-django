@@ -86,5 +86,6 @@ urlpatterns = [
     path('ai/evaluasi-risiko/', ai_views.api_ai_evaluasi_risiko, name='ai_evaluasi_risiko'),
     path('ai/rdwos-analisis/', ai_views.api_ai_rdwos_analisis, name='ai_rdwos_analisis'),
     path('ai/rumus-indikator/', ai_views.api_ai_rumus_indikator, name='api_ai_rumus_indikator'),
+    path('ai/analisis-masalah-risiko/', ai_views.api_ai_analisis_masalah_risiko, name='api_ai_analisis_masalah_risiko'),
     path('ai/test-connection/', ai_views.api_ai_test_connection, name='ai_test_connection'),
 ]

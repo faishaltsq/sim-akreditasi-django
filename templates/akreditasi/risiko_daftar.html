@@ -134,7 +134,18 @@
                     <tr>
                         <td>{{ forloop.counter }}</td>
                         <td>{{ r.unit.name }}</td>
-                        <td><a href="{% url 'akreditasi:risiko_detail' risiko_id=r.pk %}" class="fw-semibold text-decoration-none" style="color:#0d9488;">{{ r.jenis_risiko|truncatewords:8 }}</a></td>
+                        <td>
+                            {% if r.jenis_risiko_list|length > 1 %}
+                                <a href="{% url 'akreditasi:risiko_detail' risiko_id=r.pk %}" class="fw-semibold text-decoration-none d-block mb-1" style="color:#0d9488;">
+                                    {{ r.jenis_risiko_list.0 }}
+                                </a>
+                                <div class="d-flex flex-wrap gap-1">
+                                    <span class="badge bg-light text-secondary border font-monospace" style="font-size:.65rem;">+{{ r.jenis_risiko_list|length|add:"-1" }} jenis risiko lain</span>
+                                </div>
+                            {% else %}
+                                <a href="{% url 'akreditasi:risiko_detail' risiko_id=r.pk %}" class="fw-semibold text-decoration-none" style="color:#0d9488;">{{ r.jenis_risiko|truncatewords:8 }}</a>
+                            {% endif %}
+                        </td>
                         <td>
                             <span class="badge {% if r.kategori_risiko == 'KLINIS' %}bg-danger-subtle text-danger border border-danger-subtle{% elif r.kategori_risiko == 'OPERASIONAL' %}bg-primary-subtle text-primary border border-primary-subtle{% elif r.kategori_risiko == 'FINANSIAL' %}bg-success-subtle text-success border border-success-subtle{% elif r.kategori_risiko == 'REPUTASI' %}bg-info-subtle text-info border border-info-subtle{% elif r.kategori_risiko == 'HUKUM_KEPATUHAN' %}bg-warning-subtle text-warning border border-warning-subtle{% elif r.kategori_risiko == 'FASILITAS_LINGKUNGAN' %}bg-secondary-subtle text-secondary border border-secondary-subtle{% else %}bg-light text-dark border{% endif %}" style="font-size:.68rem;">{{ r.get_kategori_risiko_display }}</span>
                         </td>

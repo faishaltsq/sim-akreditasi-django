@@ -180,4 +180,33 @@ Format Output JSON:
   "standar_ep_terkait": "PMKP / TKRS / SKP terkait"
 }}"""
 
+# ── 8. ANALISIS MASALAH & PENENTUAN JENIS RISIKO (STANDAR 5.15) ──────────
+
+PROMPT_ANALISIS_MASALAH_RISIKO = """Konteks Masalah & Data Unit Kerja Rumah Sakit:
+- Unit Kerja: {unit_name}
+- Pernyataan Masalah (Issue Statement): {masalah}
+- Data / Bukti Pendukung (Baseline Data): {data_pendukung}
+
+Tugas:
+1. Klasifikasikan masalah ini ke dalam salah satu Kategori Risiko Standar STARKES:
+   (KLINIS, OPERASIONAL, FINANSIAL, REPUTASI, HUKUM_KEPATUHAN, FASILITAS_LINGKUNGAN).
+2. Identifikasi 2 sampai 4 Jenis Risiko spesifik (potensi bahaya/kejadian tidak diharapkan) yang mungkin timbul dari masalah tersebut.
+3. Buatkan draft Deskripsi Risiko yang komprehensif.
+
+Format Output JSON:
+{{
+  "kategori_risiko": "KLINIS / OPERASIONAL / FINANSIAL / REPUTASI / HUKUM_KEPATUHAN / FASILITAS_LINGKUNGAN",
+  "kategori_alasan": "Alasan singkat pemilihan kategori risiko ini",
+  "daftar_jenis_risiko": [
+    "Jenis Risiko 1 yang spesifik dan terukur",
+    "Jenis Risiko 2 yang spesifik dan terukur",
+    "Jenis Risiko 3 (opsional)"
+  ],
+  "deskripsi_risiko_saran": "Uraian deskripsi risiko lengkap yang menggabungkan konteks masalah dan dampak potensialnya",
+  "dampak_saran": 3,
+  "probabilitas_saran": 3
+}}"""
+
+
+
 

@@ -117,3 +117,54 @@ class Standar515KategoriDanFieldsTest(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'Genset otomatis sering terlambat menyala')
         self.assertContains(response, 'transfer switch mengalami delay 18 detik')
+
+    def test_multi_jenis_risiko_property(self):
+        r = RisikoUnit(
+            unit=self.unit,
+            tahun=2026,
+            periode='TRIWULAN_1',
+            kategori_risiko='KLINIS',
+            jenis_risiko='Medication Error; Keterlambatan Pelayanan Farmasi; Resep Tidak Terbaca',
+            dampak=3,
+            probabilitas=3,
+            strategi_mitigasi='KURANGI',
+        )
+        items = r.jenis_risiko_list
+        self.assertEqual(len(items), 3)
+        self.assertIn('Medication Error', items)
+        self.assertIn('Keterlambatan Pelayanan Farmasi', items)
+        self.assertIn('Resep Tidak Terbaca', items)
+
+    def test_risiko_input_view_post_saves_multi_jenis_risiko(self):
+        url = reverse('akreditasi:risiko_input')
+        payload = {
+            'unit': self.unit.id,
+            'tahun': 2026,
+            'periode': 'TRIWULAN_1',
+            'kategori_risiko': 'KLINIS',
+            'masalah': 'Sering terjadi salah baca resep dan antrean menumpuk',
+            'data': 'Ada 3 laporan KNC per bulan dan waktu tunggu >45 menit',
+            'jenis_risiko': ['Salah dosis racikan', 'Keterlambatan penyerahan obat'],
+            'deskripsi_risiko': 'Risiko kesalahan terapi obat dan komplain pasien',
+            'dampak': 4,
+            'probabilitas': 3,
+            'strategi_mitigasi': 'KURANGI',
+            'pj_mitigasi': 'Ka Farmasi',
+            'rencana_aksi': 'Double check resep dan penambahan staf jam sibuk',
+            'biaya_mitigasi': '0',
+        }
+        res = self.client.post(url, payload)
+        self.assertEqual(res.status_code, 302)
+        created = RisikoUnit.objects.latest('id')
+        self.assertIn('Salah dosis racikan', created.jenis_risiko)
+        self.assertIn('Keterlambatan penyerahan obat', created.jenis_risiko)
+        self.assertEqual(len(created.jenis_risiko_list), 2)
+
+    def test_api_ai_analisis_masalah_risiko_validation(self):
+        import json
+        url = reverse('akreditasi:api_ai_analisis_masalah_risiko')
+        res = self.client.post(url, data=json.dumps({}), content_type='application/json')
+        self.assertEqual(res.status_code, 400)
+        self.assertFalse(res.json()['success'])
+
+

@@ -55,7 +55,7 @@ class RisikoUnit(models.Model):
     tahun            = models.IntegerField('Tahun', default=2026)
     periode          = models.CharField('Periode', max_length=12, choices=PERIODE_CHOICES)
     kategori_risiko  = models.CharField('Kategori Risiko', max_length=30, choices=KATEGORI_CHOICES)
-    jenis_risiko     = models.CharField('Jenis Risiko', max_length=200)
+    jenis_risiko     = models.TextField('Jenis Risiko')
 
     # Standar 5.15 — identifikasi risiko: masalah dan data pendukung
     masalah          = models.TextField('Masalah', blank=True, default='')
@@ -98,6 +98,21 @@ class RisikoUnit(models.Model):
 
     def __str__(self):
         return f"[{self.unit}] {self.jenis_risiko} ({self.periode} {self.tahun})"
+
+    @property
+    def jenis_risiko_list(self):
+        """Mengembalikan list dari jenis risiko jika ada multiple (dipisahkan newline, titik-koma, atau koma)."""
+        if not self.jenis_risiko:
+            return []
+        import re
+        # Pecah berdasarkan newline, titik-koma, atau bullet point
+        items = re.split(r'[\r\n;]+', self.jenis_risiko)
+        result = []
+        for it in items:
+            cleaned = re.sub(r'^\s*[-•*\d.]+\s*', '', it).strip()
+            if cleaned:
+                result.append(cleaned)
+        return result if result else [self.jenis_risiko.strip()]
 
     @property
     def skor_inherent(self):

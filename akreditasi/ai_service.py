@@ -22,6 +22,7 @@ from .ai_prompts import (
     PROMPT_RDWOS_ANALISIS,
     PROMPT_KPS_REKOMENDASI,
     PROMPT_INDIKATOR_MUTU,
+    PROMPT_ANALISIS_MASALAH_RISIKO,
 )
 
 logger = logging.getLogger(__name__)
@@ -316,6 +317,20 @@ def generate_indicator_draft(user, nama_indikator: str, unit_name: str,
     )
     result = _call_deepseek(prompt)
     _log_ai_call(user, 'INDIKATOR_MUTU', f'{jenis} | {unit_name} | {nama_indikator[:50]}', result['success'])
+    return result
+
+
+# ── 8. ANALISIS MASALAH & SARAN KATEGORI/JENIS RISIKO (STANDAR 5.15) ─────
+
+def generate_risk_analysis_from_problem(user, unit_name: str, masalah: str, data_pendukung: str) -> dict:
+    """Analisis masalah dan data pendukung untuk merekomendasikan kategori dan daftar jenis risiko."""
+    prompt = PROMPT_ANALISIS_MASALAH_RISIKO.format(
+        unit_name=sanitize_hospital_prompt(unit_name),
+        masalah=sanitize_hospital_prompt(masalah),
+        data_pendukung=sanitize_hospital_prompt(data_pendukung),
+    )
+    result = _call_deepseek(prompt)
+    _log_ai_call(user, 'ANALISIS_MASALAH_RISIKO', f'{unit_name} | {masalah[:50]}', result['success'])
     return result
 
 

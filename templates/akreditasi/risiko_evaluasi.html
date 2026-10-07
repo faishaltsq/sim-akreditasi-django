@@ -39,7 +39,15 @@
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
                             <span class="badge bg-secondary mb-1" style="font-size:.68rem;">{{ risiko.unit.name }}</span>
+                            {% if risiko.jenis_risiko_list|length > 1 %}
+                            <div class="d-flex flex-wrap gap-1 my-1">
+                                {% for j in risiko.jenis_risiko_list %}
+                                <span class="badge bg-teal-subtle text-teal-dark border border-teal-subtle fw-semibold" style="font-size:.78rem;">{{ j }}</span>
+                                {% endfor %}
+                            </div>
+                            {% else %}
                             <h5 class="fw-bold mb-0" style="color:#0f172a;">{{ risiko.jenis_risiko }}</h5>
+                            {% endif %}
                             <small class="text-muted">{{ risiko.get_periode_display }} {{ risiko.tahun }} &bull; {{ risiko.get_kategori_risiko_display }}</small>
                         </div>
                         <span class="badge {% if risiko.status == 'IDENTIFIKASI' %}bg-secondary{% elif risiko.status == 'PLAN' %}bg-primary{% elif risiko.status == 'DO' %}bg-warning text-dark{% elif risiko.status == 'EVALUASI' %}badge-purple{% elif risiko.status == 'SELESAI' %}bg-success{% elif risiko.status == 'ACCEPTED' %}badge-teal{% endif %} p-2">
