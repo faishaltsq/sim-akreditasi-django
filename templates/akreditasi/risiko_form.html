@@ -781,7 +781,9 @@
                 const strategiSel = document.getElementById('strategi_mitigasi_select');
                 const strategiBadge = document.getElementById('ai-strategi-badge');
                 if (data.strategi_mitigasi_saran && strategiSel) {
-                    strategiSel.value = data.strategi_mitigasi_saran;
+                    const sMap = {REDUCE:'KURANGI',AVOID:'HINDARI',ACCEPT:'TERIMA',TRANSFER:'TRANSFER'};
+                    const sv = (sMap[data.strategi_mitigasi_saran.toUpperCase()] || data.strategi_mitigasi_saran).toUpperCase();
+                    strategiSel.value = sv;
                     if (strategiBadge) {
                         strategiBadge.textContent = `✨ AI: ${data.strategi_mitigasi_saran}`;
                         strategiBadge.classList.remove('d-none');

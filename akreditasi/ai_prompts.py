@@ -205,7 +205,7 @@ Format Output JSON:
     "Jenis Risiko 3 (opsional)"
   ],
   "deskripsi_risiko_saran": "Uraian deskripsi risiko lengkap yang menggabungkan konteks masalah dan dampak potensialnya",
-  "strategi_mitigasi_saran": "REDUCE / AVOID / TRANSFER / ACCEPT",
+  "strategi_mitigasi_saran": "KURANGI / HINDARI / TRANSFER / TERIMA",
   "indikator_mutu_saran": "Nama indikator mutu terkait yang relevan untuk memantau risiko ini",
   "dampak_saran": 3,
   "probabilitas_saran": 3
