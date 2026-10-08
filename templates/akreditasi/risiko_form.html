@@ -703,7 +703,7 @@
     const btnAiAnalisis = document.getElementById('btn-ai-analisis-masalah');
     const spinnerAiAnalisis = document.getElementById('ai-analisis-spinner');
     const feedbackAiAnalisis = document.getElementById('ai-analisis-feedback');
-    const unitSelect = document.getElementById('unit_select');
+    const unitSelectAi = document.getElementById('unit_select');
     const inputMasalah = document.getElementById('input_masalah');
     const inputData = document.getElementById('input_data_pendukung');
     const inputDesc = document.getElementById('input_deskripsi_risiko');
@@ -721,7 +721,8 @@
                 return;
             }
 
-            const unitName = (unitSelect && unitSelect.selectedIndex > 0) ? unitSelect.options[unitSelect.selectedIndex].text : '';
+            const sel = unitSelectAi || unitSelect;
+            const unitName = (sel && sel.selectedIndex > 0) ? sel.options[sel.selectedIndex].text : '';
             const dataPendukung = (inputData ? inputData.value : '').trim();
 
             btnAiAnalisis.disabled = true;
