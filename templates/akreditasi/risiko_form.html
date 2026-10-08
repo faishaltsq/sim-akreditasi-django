@@ -9,6 +9,33 @@
     .skor-badge { display:inline-block; padding:6px 18px; border-radius:20px; font-weight:700; font-size:1rem; color:#fff; transition:background .2s; }
     input[type=range] { accent-color:#0d9488; }
     .slider-val { display:inline-block; min-width:28px; text-align:center; font-weight:700; color:#0d9488; }
+    
+    /* Realtime Required Field Indicators */
+    .field-req-empty {
+        border-bottom: 2.5px solid #e11d48 !important;
+        background-color: #fff1f2 !important;
+        transition: border-color .2s, background-color .2s;
+    }
+    .field-req-filled {
+        border-bottom: 2px solid #0d9488 !important;
+        background-color: #ffffff !important;
+        transition: border-color .2s, background-color .2s;
+    }
+    .req-helper-note {
+        font-size: .68rem;
+        margin-top: 3px;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        gap: 3px;
+        transition: color .2s;
+    }
+    .req-note-empty {
+        color: #e11d48 !important;
+    }
+    .req-note-filled {
+        color: #0d9488 !important;
+    }
 </style>
 {% endblock %}
 
@@ -295,7 +322,7 @@
 {% block extra_js %}
 <script src="/static/js/ai-assist.js"></script>
 <script>
-(function() {
+document.addEventListener('DOMContentLoaded', function() {
     // ── Skor Risiko Realtime ──────────────────────────────────────────────
     const dampakEl  = document.getElementById('dampak');
     const probEl    = document.getElementById('probabilitas');
@@ -831,15 +858,78 @@
         });
     }
 
-    // ── Override ai-assist.js: inject konteks indikator ke payload AI ────
-    const origBtnAi = document.getElementById('btn-ai-mitigasi');
-    if (origBtnAi) {
-        origBtnAi.addEventListener('click', function() {
-            if (_currentIndikator) {
-                window._arimaIndikatorContext = _currentIndikator;
-            }
-        }, true);
+    // ── Realtime Visual Required Field Validation ─────────────────────────
+    const reqFields = [
+        { el: unitSelectAi || unitSelect, id: 'unit', label: 'Unit Kerja' },
+        { el: katSelect, id: 'kategori', label: 'Kategori Risiko' },
+        { el: inputDesc, id: 'desc', label: 'Deskripsi Risiko' },
+        { el: document.getElementById('pj_mitigasi'), id: 'pj', label: 'Penanggung Jawab' },
+        { el: document.getElementById('rencana_aksi'), id: 'aksi', label: 'Rencana Aksi' }
+    ];
+
+    function validateField(field) {
+        if (!field.el) return;
+        const val = (field.el.value || '').trim();
+        let noteEl = document.getElementById('req-note-' + field.id);
+        if (!noteEl) {
+            noteEl = document.createElement('div');
+            noteEl.id = 'req-note-' + field.id;
+            noteEl.className = 'req-helper-note';
+            field.el.parentNode.appendChild(noteEl);
+        }
+
+        if (!val) {
+            field.el.classList.add('field-req-empty');
+            field.el.classList.remove('field-req-filled');
+            noteEl.className = 'req-helper-note req-note-empty';
+            noteEl.innerHTML = `<i class="bi bi-exclamation-circle-fill"></i> ${field.label} belum dipilih/diisi (wajib)`;
+        } else {
+            field.el.classList.remove('field-req-empty');
+            field.el.classList.add('field-req-filled');
+            noteEl.className = 'req-helper-note req-note-filled';
+            noteEl.innerHTML = `<i class="bi bi-check-circle-fill"></i> ${field.label} sudah terisi`;
+        }
     }
+
+    function validateJenisRisikoBox() {
+        if (!tagBox) return;
+        let noteEl = document.getElementById('req-note-jenis');
+        if (!noteEl) {
+            noteEl = document.createElement('div');
+            noteEl.id = 'req-note-jenis';
+            noteEl.className = 'req-helper-note';
+            tagBox.parentNode.appendChild(noteEl);
+        }
+        if (selectedRisks.length === 0) {
+            tagBox.classList.add('field-req-empty');
+            tagBox.classList.remove('field-req-filled');
+            noteEl.className = 'req-helper-note req-note-empty';
+            noteEl.innerHTML = '<i class="bi bi-exclamation-circle-fill"></i> Minimal pilih atau ketik 1 jenis risiko (wajib)';
+        } else {
+            tagBox.classList.remove('field-req-empty');
+            tagBox.classList.add('field-req-filled');
+            noteEl.className = 'req-helper-note req-note-filled';
+            noteEl.innerHTML = `<i class="bi bi-check-circle-fill"></i> ${selectedRisks.length} jenis risiko dipilih`;
+        }
+    }
+
+    // Attach listeners for realtime feedback
+    reqFields.forEach(f => {
+        if (f.el) {
+            f.el.addEventListener('input', () => validateField(f));
+            f.el.addEventListener('change', () => validateField(f));
+            f.el.addEventListener('blur', () => validateField(f));
+            validateField(f); // Initial check
+        }
+    });
+
+    // Hook validation to renderRiskTags
+    const origRender = renderRiskTags;
+    renderRiskTags = function() {
+        origRender();
+        validateJenisRisikoBox();
+    };
+    validateJenisRisikoBox(); // Initial check
 });
 </script>
 {% endblock %}
