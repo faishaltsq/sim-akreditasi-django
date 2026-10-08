@@ -167,4 +167,29 @@ class Standar515KategoriDanFieldsTest(TestCase):
         self.assertEqual(res.status_code, 400)
         self.assertFalse(res.json()['success'])
 
+    def test_risiko_input_manual_indikator(self):
+        url = reverse('akreditasi:risiko_input')
+        payload = {
+            'unit': self.unit.id,
+            'tahun': 2026,
+            'periode': 'TAHUNAN',
+            'kategori_risiko': 'KLINIS',
+            'jenis_risiko': 'Insiden Tertusuk Jarum',
+            'masalah': 'Staf sering tertusuk jarum saat recapping',
+            'data': 'Ada 3 laporan insiden needle stick injury dalam 3 bulan',
+            'deskripsi_risiko': 'Potensi penularan penyakit bloodborne pada nakes',
+            'indikator_mutu_manual': 'Angka Kejadian Tertusuk Jarum Suntik (NSI)',
+            'dampak': 4,
+            'probabilitas': 3,
+            'strategi_mitigasi': 'KURANGI',
+            'pj_mitigasi': 'Ka Farmasi',
+            'rencana_aksi': 'Sosialisasi no-recapping dan penyediaan safety needle box',
+            'biaya_mitigasi': '0',
+        }
+        res = self.client.post(url, payload)
+        self.assertEqual(res.status_code, 302)
+        created = RisikoUnit.objects.latest('id')
+        self.assertIn('[Indikator Mutu Manual: Angka Kejadian Tertusuk Jarum Suntik (NSI)]', created.deskripsi_risiko)
+
+
 

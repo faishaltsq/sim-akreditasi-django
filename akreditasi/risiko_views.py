@@ -281,6 +281,9 @@ def risiko_input(request):
             indikator_id = request.POST.get('indikator_mutu_terkait') or None
             target_capaian = request.POST.get('target_capaian_indikator') or None
 
+            # Handle manual indikator mutu — append marker to deskripsi_risiko
+            indikator_manual = (request.POST.get('indikator_mutu_manual') or '').strip()
+
             # Handle multiple or single jenis_risiko
             jenis_list = request.POST.getlist('jenis_risiko')
             if len(jenis_list) > 1:
@@ -298,7 +301,7 @@ def risiko_input(request):
                 jenis_risiko=jenis_val,
                 masalah=request.POST.get('masalah', '').strip(),
                 data_pendukung=(request.POST.get('data') or request.POST.get('data_pendukung') or '').strip(),
-                deskripsi_risiko=request.POST['deskripsi_risiko'],
+                deskripsi_risiko=(request.POST['deskripsi_risiko'] + (f"\n\n[Indikator Mutu Manual: {indikator_manual}]" if (indikator_manual and not indikator_id) else '')),
                 dampak=int(request.POST['dampak']),
                 probabilitas=int(request.POST['probabilitas']),
                 indikator_mutu_terkait_id=int(indikator_id) if indikator_id else None,

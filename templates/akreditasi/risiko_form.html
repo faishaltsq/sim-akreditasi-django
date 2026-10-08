@@ -177,15 +177,40 @@
 
                         {# ── Bagian C: Pengendalian & Indikator Mutu ── #}
                         <h6 class="fw-bold mb-3 pb-1 border-bottom" style="color:#0f172a; font-size:.82rem;">C. Pengendalian & Indikator Mutu</h6>
+                        <div class="mb-2" style="font-size:.7rem; color:#64748b;">
+                            <span class="badge bg-light text-secondary border me-1">📋 Pilih dari Sistem</span>
+                            <span class="badge bg-light text-secondary border me-1">✏️ Input Manual</span>
+                            <span class="badge bg-light text-secondary border">✨ Saran AI</span>
+                        </div>
                         <div class="row g-3 mb-3">
                             <div class="col-md-8">
-                                <label class="form-label" style="font-size:.8rem; font-weight:600;">
-                                    <i class="bi bi-graph-up-arrow text-primary me-1"></i>Indikator Mutu Terkait
+                                <label class="form-label d-flex justify-content-between align-items-center" style="font-size:.8rem; font-weight:600;">
+                                    <span><i class="bi bi-graph-up-arrow text-primary me-1"></i>Indikator Mutu Terkait</span>
+                                    <div class="btn-group btn-group-sm" role="group" id="indikator-mode-toggle">
+                                        <button type="button" class="btn btn-outline-teal btn-sm active" data-mode="sistem" style="font-size:.68rem; padding:1px 8px;">📋 Pilih dari Sistem</button>
+                                        <button type="button" class="btn btn-outline-teal btn-sm" data-mode="manual" style="font-size:.68rem; padding:1px 8px;">✏️ Input Manual</button>
+                                    </div>
                                 </label>
-                                <select name="indikator_mutu_terkait" id="indikator_mutu_select" class="form-select form-select-sm">
-                                    <option value="">— Pilih unit dahulu untuk memfilter indikator —</option>
-                                </select>
-                                <small class="text-muted" style="font-size:.65rem;">Indikator mutu otomatis difilter sesuai unit kerja yang dipilih</small>
+                                {# Mode 1: Pilih dari sistem (default) #}
+                                <div id="indikator-mode-sistem">
+                                    <select name="indikator_mutu_terkait" id="indikator_mutu_select" class="form-select form-select-sm">
+                                        <option value="">— Pilih unit dahulu untuk memfilter indikator —</option>
+                                    </select>
+                                    <small class="text-muted" style="font-size:.65rem;">Indikator mutu otomatis difilter sesuai unit kerja yang dipilih</small>
+                                </div>
+                                {# Mode 2: Input manual #}
+                                <div id="indikator-mode-manual" class="d-none">
+                                    <input type="text" name="indikator_mutu_manual" id="input_indikator_manual" class="form-control form-control-sm"
+                                           placeholder="Ketik nama indikator mutu yang ingin dipantau…">
+                                    <small class="text-muted" style="font-size:.65rem;">Indikator dicatat sebagai teks bebas jika tidak tersedia di sistem</small>
+                                </div>
+                                {# AI suggestion badge #}
+                                <div id="ai-indikator-hint" class="d-none mt-1">
+                                    <span class="badge bg-info-subtle text-info border border-info-subtle" style="font-size:.72rem;">
+                                        ✨ Saran AI: <span id="ai-indikator-hint-text"></span>
+                                        <button type="button" class="btn-close ms-1" style="font-size:.5rem;" id="btn-apply-ai-indikator" aria-label="Terapkan"></button>
+                                    </span>
+                                </div>
                             </div>
                             <div class="col-md-4">
                                 <label class="form-label" style="font-size:.8rem; font-weight:600;">
@@ -207,10 +232,18 @@
 
                         {# ── Bagian D: Mitigasi ─────────────────────── #}
                         <h6 class="fw-bold mb-3 pb-1 border-bottom" style="color:#0f172a; font-size:.82rem;">D. Rencana Mitigasi</h6>
+                        <div class="mb-2" style="font-size:.7rem; color:#64748b;">
+                            <span class="badge bg-light text-secondary border me-1">📋 Pilih dari Sistem</span>
+                            <span class="badge bg-light text-secondary border me-1">✏️ Input Manual</span>
+                            <span class="badge bg-light text-secondary border">✨ Saran AI</span>
+                        </div>
                         <div class="row g-3 mb-3">
                             <div class="col-md-6">
-                                <label class="form-label" style="font-size:.8rem; font-weight:600;">Strategi Mitigasi <span class="text-danger">*</span></label>
-                                <select name="strategi_mitigasi" class="form-select form-select-sm" required>
+                                <label class="form-label d-flex justify-content-between align-items-center" style="font-size:.8rem; font-weight:600;">
+                                    <span>Strategi Mitigasi <span class="text-danger">*</span></span>
+                                    <span id="ai-strategi-badge" class="badge d-none" style="font-size:.68rem; background:#0d9488; color:#fff; border-radius:10px; padding:2px 7px;">✨ AI: —</span>
+                                </label>
+                                <select name="strategi_mitigasi" id="strategi_mitigasi_select" class="form-select form-select-sm" required>
                                     <option value="">— Pilih —</option>
                                     {% for val, label in strategi_choices %}
                                     <option value="{{ val }}">{{ label }}</option>
@@ -489,6 +522,34 @@
         }
     };
 
+    // ── Toggle Indikator Mode (Sistem vs Manual) ───────────────────
+    const modeToggle = document.getElementById('indikator-mode-toggle');
+    const modeSistem = document.getElementById('indikator-mode-sistem');
+    const modeManual = document.getElementById('indikator-mode-manual');
+    const selectIndikator = document.getElementById('indikator_mutu_select');
+    const inputIndikatorManual = document.getElementById('input_indikator_manual');
+
+    if (modeToggle) {
+        modeToggle.querySelectorAll('button').forEach(btn => {
+            btn.addEventListener('click', function() {
+                modeToggle.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+                const mode = this.dataset.mode;
+                if (mode === 'sistem') {
+                    modeSistem.classList.remove('d-none');
+                    modeManual.classList.add('d-none');
+                    if (inputIndikatorManual) inputIndikatorManual.value = '';
+                } else {
+                    modeSistem.classList.add('d-none');
+                    modeManual.classList.remove('d-none');
+                    if (selectIndikator) selectIndikator.value = '';
+                    if (presetContainer) presetContainer.style.display = 'none';
+                    if (inputIndikatorManual) inputIndikatorManual.focus();
+                }
+            });
+        });
+    }
+
     // ── Multi-Tag / Multi-Choice Management for Jenis Risiko ─────────────
     let selectedRisks = [];
     const tagBox = document.getElementById('jenis-risiko-tag-box');
@@ -709,15 +770,53 @@
                 // 4. Set skor dampak & probabilitas jika disarankan
                 if (data.dampak_saran && inputDampak) {
                     inputDampak.value = data.dampak_saran;
-                    if (typeof updateSkor === 'function') updateSkor();
+                    if (typeof update === 'function') update();
                 }
                 if (data.probabilitas_saran && inputProb) {
                     inputProb.value = data.probabilitas_saran;
-                    if (typeof updateSkor === 'function') updateSkor();
+                    if (typeof update === 'function') update();
+                }
+
+                // 5. Auto-select Strategi Mitigasi + tampilkan AI badge
+                const strategiSel = document.getElementById('strategi_mitigasi_select');
+                const strategiBadge = document.getElementById('ai-strategi-badge');
+                if (data.strategi_mitigasi_saran && strategiSel) {
+                    strategiSel.value = data.strategi_mitigasi_saran;
+                    if (strategiBadge) {
+                        strategiBadge.textContent = `✨ AI: ${data.strategi_mitigasi_saran}`;
+                        strategiBadge.classList.remove('d-none');
+                        // Sembunyikan badge jika user override manual
+                        strategiSel.addEventListener('change', () => strategiBadge.classList.add('d-none'), { once: true });
+                    }
+                }
+
+                // 6. Tampilkan saran Indikator Mutu sebagai hint badge
+                if (data.indikator_mutu_saran) {
+                    const hintBox = document.getElementById('ai-indikator-hint');
+                    const hintText = document.getElementById('ai-indikator-hint-text');
+                    const applyBtn = document.getElementById('btn-apply-ai-indikator');
+                    if (hintBox && hintText) {
+                        hintText.textContent = data.indikator_mutu_saran;
+                        hintBox.classList.remove('d-none');
+                        // Klik badge: switch ke mode manual & isi otomatis
+                        if (applyBtn) {
+                            applyBtn.addEventListener('click', () => {
+                                // Switch ke mode manual
+                                document.querySelectorAll('#indikator-mode-toggle button').forEach(b => b.classList.remove('active'));
+                                document.querySelector('#indikator-mode-toggle [data-mode="manual"]').classList.add('active');
+                                document.getElementById('indikator-mode-sistem').classList.add('d-none');
+                                document.getElementById('indikator-mode-manual').classList.remove('d-none');
+                                // Isi teks
+                                const manualInp = document.getElementById('input_indikator_manual');
+                                if (manualInp) manualInp.value = data.indikator_mutu_saran;
+                                hintBox.classList.add('d-none');
+                            }, { once: true });
+                        }
+                    }
                 }
 
                 feedbackAiAnalisis.className = 'small mt-2 alert alert-success py-1';
-                feedbackAiAnalisis.textContent = `✨ Berhasil! Kategori [${data.kategori_risiko}] dan ${data.daftar_jenis_risiko ? data.daftar_jenis_risiko.length : 0} jenis risiko berhasil disarankan oleh AI.`;
+                feedbackAiAnalisis.textContent = `✨ Berhasil! Kategori [${data.kategori_risiko}], ${data.daftar_jenis_risiko ? data.daftar_jenis_risiko.length : 0} jenis risiko, strategi [${data.strategi_mitigasi_saran || '—'}] disarankan AI.`;
 
             } catch (err) {
                 feedbackAiAnalisis.className = 'small mt-2 alert alert-danger py-1';

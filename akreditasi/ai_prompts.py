@@ -192,6 +192,8 @@ Tugas:
    (KLINIS, OPERASIONAL, FINANSIAL, REPUTASI, HUKUM_KEPATUHAN, FASILITAS_LINGKUNGAN).
 2. Identifikasi 2 sampai 4 Jenis Risiko spesifik (potensi bahaya/kejadian tidak diharapkan) yang mungkin timbul dari masalah tersebut.
 3. Buatkan draft Deskripsi Risiko yang komprehensif.
+4. Sarankan Strategi Mitigasi terbaik sesuai STARKES (pilih satu: AVOID, REDUCE, TRANSFER, ACCEPT).
+5. Sarankan nama Indikator Mutu yang relevan untuk memonitor risiko ini.
 
 Format Output JSON:
 {{
@@ -203,6 +205,8 @@ Format Output JSON:
     "Jenis Risiko 3 (opsional)"
   ],
   "deskripsi_risiko_saran": "Uraian deskripsi risiko lengkap yang menggabungkan konteks masalah dan dampak potensialnya",
+  "strategi_mitigasi_saran": "REDUCE / AVOID / TRANSFER / ACCEPT",
+  "indikator_mutu_saran": "Nama indikator mutu terkait yang relevan untuk memantau risiko ini",
   "dampak_saran": 3,
   "probabilitas_saran": 3
 }}"""
