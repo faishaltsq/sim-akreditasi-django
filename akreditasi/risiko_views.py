@@ -198,9 +198,24 @@ def risiko_daftar(request):
     # Scope filtering untuk unit-scoped users
     if profile and profile.is_unit_scoped and profile.unit_kerja:
         user_unit = profile.unit_kerja
-        unit_ids = [user_unit.id] + list(UnitKerja.objects.filter(parent=user_unit).values_list('id', flat=True))
+
+        # Kumpulkan ID: unit sendiri + anak (bawahan) + semua leluhur (parent chain)
+        # Sehingga risiko yang di-assign ke bidang/direktorat di atasnya tetap terlihat
+        def _collect_ids(unit):
+            ids = {unit.id}
+            # turun ke anak
+            for child in UnitKerja.objects.filter(parent=unit).values_list('id', flat=True):
+                ids.add(child)
+            # naik ke parent chain
+            cur = unit.parent
+            while cur:
+                ids.add(cur.id)
+                cur = cur.parent
+            return list(ids)
+
+        unit_ids = _collect_ids(user_unit)
         units = UnitKerja.objects.filter(id__in=unit_ids)
-        # Filter QS ke unit miliknya jika tidak ditentukan secara eksplisit
+
         unit_id = request.GET.get('unit')
         if not unit_id:
             qs = qs.filter(unit_id__in=unit_ids)
