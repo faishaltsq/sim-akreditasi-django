@@ -1,0 +1,529 @@
+{% extends 'base.html' %}
+
+{% block title %}Laporan Manajemen Risiko — {{ sel_unit.name|default:"Seluruh Unit" }} — ARIMA{% endblock %}
+
+{% block extra_css %}
+<style>
+@media print {
+    .no-print, header, nav, .sidebar, .sidebar-wrapper, .app-sidebar, #sidebar-wrapper, .btn, form {
+        display: none !important;
+    }
+    body {
+        background: #fff !important;
+        color: #000 !important;
+        font-size: 11pt;
+    }
+    .container-fluid, .content-wrapper, main {
+        padding: 0 !important;
+        margin: 0 !important;
+        width: 100% !important;
+        max-width: 100% !important;
+    }
+    .card {
+        border: 1px solid #cbd5e1 !important;
+        box-shadow: none !important;
+        break-inside: avoid;
+        margin-bottom: 1.5rem !important;
+    }
+    .table {
+        font-size: 9.5pt !important;
+    }
+    .badge {
+        border: 1px solid #94a3b8 !important;
+        color: #000 !important;
+        background: transparent !important;
+    }
+}
+
+.report-header-banner {
+    background: linear-gradient(135deg, #0f766e, #0d9488);
+    color: #fff;
+    border-radius: 12px;
+    padding: 1.5rem 2rem;
+    box-shadow: 0 4px 15px rgba(13, 148, 136, 0.15);
+}
+
+.section-title {
+    font-size: 0.95rem;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    color: #0f172a;
+    border-bottom: 2px solid #0d9488;
+    padding-bottom: 6px;
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.sub-section-title {
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: #0f766e;
+    margin-top: 1rem;
+    margin-bottom: 0.5rem;
+}
+
+.card-category-klinis { border-left: 4px solid #ef4444 !important; }
+.card-category-operasional { border-left: 4px solid #3b82f6 !important; }
+.card-category-ppi { border-left: 4px solid #14b8a6 !important; }
+.card-category-hukum { border-left: 4px solid #f59e0b !important; }
+.card-category-default { border-left: 4px solid #64748b !important; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+
+    {# ── HEADER DOKUMEN ──────────────────────────────────────────────── #}
+    <div class="report-header-banner mb-4">
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
+            <div>
+                <span class="badge bg-white text-teal fw-bold mb-2 shadow-sm" style="font-size:0.7rem; letter-spacing:0.05em;">
+                    STANDAR STARKES 5.15 — MANAJEMEN RISIKO UNIT
+                </span>
+                <h4 class="fw-bold mb-1 text-white">
+                    MANAJEMEN RISIKO UNIT {% if sel_unit %}{{ sel_unit.name|upper }}{% else %}RUMAH SAKIT{% endif %}
+                </h4>
+                <p class="mb-0 text-white-50 small">
+                    RS MONSISKAMI ARIMA &bull; Periode: {{ periode|default:"Tahunan" }} {{ tahun }}
+                    {% if sel_unit %}&bull; Kode Unit: <span class="text-white fw-semibold">{{ sel_unit.code }}</span>{% endif %}
+                </p>
+            </div>
+            <div class="no-print d-flex gap-2">
+                <button onclick="window.print()" class="btn btn-light btn-sm fw-semibold shadow-sm d-flex align-items-center gap-1.5" style="color:#0f766e;">
+                    <i class="bi bi-printer-fill"></i> Cetak / Ekspor PDF
+                </button>
+                <a href="{% url 'akreditasi:risiko_input' %}" class="btn btn-outline-light btn-sm fw-semibold shadow-sm">
+                    <i class="bi bi-plus-circle me-1"></i> Input Risiko Baru
+                </a>
+            </div>
+        </div>
+    </div>
+
+    {# ── FILTER BAR (NO-PRINT) ───────────────────────────────────────── #}
+    <div class="card border-0 shadow-sm mb-4 no-print" style="background:#f8fafc;">
+        <div class="card-body p-3">
+            <form method="get" class="row g-2 align-items-end">
+                <div class="col-md-5">
+                    <label class="form-label small fw-semibold text-muted mb-1">Unit Kerja</label>
+                    <select name="unit" class="form-select form-select-sm" onchange="this.form.submit()">
+                        <option value="">— Semua Unit Kerja —</option>
+                        {% for u in units %}
+                        <option value="{{ u.id }}" {% if sel_unit and sel_unit.id == u.id %}selected{% endif %}>{{ u }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label small fw-semibold text-muted mb-1">Tahun</label>
+                    <select name="tahun" class="form-select form-select-sm" onchange="this.form.submit()">
+                        {% for t in tahun_list %}
+                        <option value="{{ t }}" {% if tahun == t|stringformat:"s" %}selected{% endif %}>{{ t }}</option>
+                        {% empty %}
+                        <option value="2026" selected>2026</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label small fw-semibold text-muted mb-1">Periode</label>
+                    <select name="periode" class="form-select form-select-sm" onchange="this.form.submit()">
+                        <option value="">Semua Periode</option>
+                        {% for val, label in periode_choices %}
+                        <option value="{{ val }}" {% if periode == val %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-1 d-flex gap-1">
+                    <a href="{% url 'akreditasi:risiko_laporan' %}" class="btn btn-sm btn-outline-secondary w-100" title="Reset">Reset</a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    {% if not risiko_list %}
+    <div class="card border-0 shadow-sm text-center py-5">
+        <div class="card-body">
+            <i class="bi bi-folder2-open display-4 text-muted"></i>
+            <h6 class="fw-bold mt-3 text-secondary">Belum ada data risiko untuk unit dan periode ini</h6>
+            <p class="text-muted small">Silakan pilih unit kerja lain atau lakukan input identifikasi risiko baru.</p>
+            <a href="{% url 'akreditasi:risiko_input' %}" class="btn btn-sm text-white" style="background:#0d9488;">
+                <i class="bi bi-plus-circle me-1"></i> Input Risiko Sekarang
+            </a>
+        </div>
+    </div>
+    {% else %}
+
+    {# ════════════════════════════════════════════════════════════════════ #}
+    {# 1. IDENTIFIKASI RISIKO (MASALAH & DATA BUKTI PENDUKUNG)              #}
+    {# ════════════════════════════════════════════════════════════════════ #}
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-body p-4">
+            <h5 class="section-title">
+                <i class="bi bi-1-circle-fill text-teal"></i>
+                1. IDENTIFIKASI RISIKO (MASALAH &amp; DATA BUKTI PENDUKUNG)
+            </h5>
+            <p class="text-muted small mb-3">
+                Matriks Identifikasi Risiko Berdasarkan Kategori Standar STARKES 5.15 — menguraikan temuan audit, insiden keselamatan, keluhan, dan bukti kuantitatif/kualitatif per unit kerja.
+            </p>
+
+            {% for kat_code, kat_label, items in grouped_ordered %}
+            <div class="mb-4">
+                <h6 class="sub-section-title">
+                    <i class="bi bi-tag-fill me-1"></i>{{ kat_label }}
+                </h6>
+
+                <div class="row g-3">
+                    {% for r in items %}
+                    <div class="col-md-6">
+                        <div class="p-3 rounded-3 bg-light border {% if kat_code == 'KLINIS' %}card-category-klinis{% elif kat_code == 'OPERASIONAL' %}card-category-operasional{% elif kat_code == 'FASILITAS_LINGKUNGAN' %}card-category-ppi{% elif kat_code == 'HUKUM_KEPATUHAN' or kat_code == 'FINANSIAL' %}card-category-hukum{% else %}card-category-default{% endif %} h-100">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <span class="badge bg-dark font-monospace" style="font-size:0.7rem;">{{ r.kode_risiko }}</span>
+                                <span class="badge" style="background:{{ r.skor_color_val }}; font-size:0.65rem;">
+                                    Skor {{ r.skor_calc }} &bull; {{ r.skor_label_val }}
+                                </span>
+                            </div>
+
+                            <div class="fw-semibold text-dark mb-2" style="font-size:0.85rem;">
+                                {{ r.jenis_risiko }}
+                            </div>
+
+                            {% if r.masalah %}
+                            <div class="mb-2 p-2 rounded bg-white border-start border-3 border-danger" style="font-size:0.78rem;">
+                                <strong class="d-block text-danger mb-0.5" style="font-size:0.7rem;">
+                                    <i class="bi bi-exclamation-circle me-1"></i>Masalah / Temuan:
+                                </strong>
+                                <span class="text-secondary">{{ r.masalah|linebreaksbr }}</span>
+                            </div>
+                            {% endif %}
+
+                            {% if r.data_pendukung %}
+                            <div class="p-2 rounded bg-white border-start border-3 border-primary" style="font-size:0.78rem;">
+                                <strong class="d-block text-primary mb-0.5" style="font-size:0.7rem;">
+                                    <i class="bi bi-file-earmark-bar-graph me-1"></i>Data / Bukti Pendukung:
+                                </strong>
+                                <span class="text-secondary">{{ r.data_pendukung|linebreaksbr }}</span>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    {# ════════════════════════════════════════════════════════════════════ #}
+    {# 2. ANALISIS RISIKO DAN PENETAPAN PRIORITAS (RISK SCORE MATRIX)       #}
+    {# ════════════════════════════════════════════════════════════════════ #}
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-body p-4">
+            <h5 class="section-title">
+                <i class="bi bi-2-circle-fill text-teal"></i>
+                2. ANALISIS RISIKO DAN PENETAPAN PRIORITAS (RISK SCORE MATRIX)
+            </h5>
+
+            {# Scoring Legend #}
+            <div class="p-3 rounded-3 mb-3 border" style="background:#f0fdfa; border-color:#99f6e4 !important; font-size:0.78rem;">
+                <div class="fw-bold text-teal mb-1">Standar Skoring Matriks Risiko 5×5:</div>
+                <div class="row g-2">
+                    <div class="col-md-6">
+                        &bull; <strong>Dampak (D):</strong> 1 (Sangat Ringan) s.d. 5 (Sangat Berat / Katastropik)<br>
+                        &bull; <strong>Probabilitas (P):</strong> 1 (Sangat Jarang) s.d. 5 (Sangat Sering)
+                    </div>
+                    <div class="col-md-6">
+                        &bull; <strong>Skor Risiko:</strong> Dampak × Probabilitas (Rentang 1–25)<br>
+                        &bull; <strong>Kategori Level:</strong>
+                        <span class="badge bg-success" style="font-size:0.65rem;">1–5 Rendah</span>
+                        <span class="badge bg-warning text-dark" style="font-size:0.65rem;">6–11 Sedang</span>
+                        <span class="badge" style="background:#ea580c; font-size:0.65rem;">12–15 Tinggi</span>
+                        <span class="badge bg-danger" style="font-size:0.65rem;">16–25 Ekstrem</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="table-responsive">
+                <table class="table table-sm table-hover table-bordered align-middle mb-0" style="font-size:0.8rem;">
+                    <thead class="table-light text-center" style="font-size:0.76rem;">
+                        <tr>
+                            <th style="width:40px;">No</th>
+                            <th style="width:100px;">Kode Risiko</th>
+                            <th>Deskripsi Risiko Utama</th>
+                            <th style="width:45px;">D</th>
+                            <th style="width:45px;">P</th>
+                            <th style="width:85px;">Skor Risiko</th>
+                            <th style="width:110px;">Tingkat Risiko</th>
+                            <th style="width:100px;">Prioritas</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for rank_num, r in ranked %}
+                        <tr>
+                            <td class="text-center fw-semibold">{{ rank_num }}</td>
+                            <td class="text-center font-monospace fw-bold text-dark">{{ r.kode_risiko }}</td>
+                            <td>
+                                <a href="{% url 'akreditasi:risiko_detail' risiko_id=r.pk %}" class="text-decoration-none fw-semibold text-dark">
+                                    {{ r.jenis_risiko }}
+                                </a>
+                                {% if r.deskripsi_risiko %}
+                                <div class="text-muted small mt-0.5" style="font-size:0.72rem;">
+                                    {{ r.deskripsi_risiko|truncatechars:120 }}
+                                </div>
+                                {% endif %}
+                            </td>
+                            <td class="text-center fw-bold">{{ r.dampak }}</td>
+                            <td class="text-center fw-bold">{{ r.probabilitas }}</td>
+                            <td class="text-center">
+                                <span class="badge fw-bold" style="background:{{ r.skor_color_val }}; font-size:0.75rem;">
+                                    {{ r.skor_calc }}
+                                </span>
+                                {% if r.skor_residual_calc %}
+                                <div class="text-muted" style="font-size:0.65rem;">
+                                    Res: {{ r.skor_residual_calc }}
+                                </div>
+                                {% endif %}
+                            </td>
+                            <td class="text-center">
+                                <span class="badge" style="background:{{ r.skor_color_val }}; font-size:0.68rem;">
+                                    {{ r.skor_label_val }}
+                                </span>
+                            </td>
+                            <td class="text-center fw-bold" style="color:#0f766e;">
+                                Prioritas {{ rank_num }}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    {# ════════════════════════════════════════════════════════════════════ #}
+    {# 3. PENANGANAN / MITIGASI RISIKO                                      #}
+    {# ════════════════════════════════════════════════════════════════════ #}
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-body p-4">
+            <h5 class="section-title">
+                <i class="bi bi-3-circle-fill text-teal"></i>
+                3. PENANGANAN / MITIGASI RISIKO
+            </h5>
+            <p class="text-muted small mb-3">
+                Strategi mitigasi dan tindakan pengendalian terperinci yang ditetapkan untuk setiap risiko prioritas:
+            </p>
+
+            <div class="row g-3">
+                {% for rank_num, r in ranked %}
+                <div class="col-md-6">
+                    <div class="p-3 rounded-3 bg-light border h-100">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="fw-bold font-monospace text-teal" style="font-size:0.85rem;">
+                                {{ r.kode_risiko }} &mdash; {{ r.jenis_risiko|truncatechars:40 }}
+                            </span>
+                            <span class="badge bg-secondary-subtle text-secondary border" style="font-size:0.65rem;">
+                                {{ r.get_strategi_mitigasi_display }}
+                            </span>
+                        </div>
+
+                        {% if r.rencana_list %}
+                        <ul class="mb-2 ps-3" style="font-size:0.78rem;">
+                            {% for poin in r.rencana_list %}
+                            <li class="mb-1 text-secondary">{{ poin }}</li>
+                            {% endfor %}
+                        </ul>
+                        {% else %}
+                        <p class="text-muted small mb-2 fst-italic">Belum ada rincian tindakan mitigasi.</p>
+                        {% endif %}
+
+                        <div class="d-flex justify-content-between align-items-center pt-2 border-top text-muted" style="font-size:0.7rem;">
+                            <span><i class="bi bi-person-fill me-1"></i>PJ: <strong>{{ r.pj_mitigasi|default:"—" }}</strong></span>
+                            {% if r.target_selesai %}
+                            <span><i class="bi bi-calendar-event me-1"></i>Target: {{ r.target_selesai|date:"d M Y" }}</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    {# ════════════════════════════════════════════════════════════════════ #}
+    {# 4. PENYUSUNAN RENCANA AKSI (ACTION PLAN MATRIX)                      #}
+    {# ════════════════════════════════════════════════════════════════════ #}
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-body p-4">
+            <h5 class="section-title">
+                <i class="bi bi-4-circle-fill text-teal"></i>
+                4. PENYUSUNAN RENCANA AKSI (ACTION PLAN MATRIX)
+            </h5>
+
+            <div class="table-responsive">
+                <table class="table table-sm table-hover table-bordered align-middle mb-0" style="font-size:0.78rem;">
+                    <thead class="table-light text-center" style="font-size:0.74rem;">
+                        <tr>
+                            <th style="width:35px;">No</th>
+                            <th>Tindakan Pengendalian (Rencana Aksi)</th>
+                            <th style="width:140px;">Penanggung Jawab (PIC)</th>
+                            <th style="width:105px;">Target Waktu</th>
+                            <th style="width:120px;">Biaya</th>
+                            <th style="width:180px;">Target Capaian</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for rank_num, r in ranked %}
+                        <tr>
+                            <td class="text-center fw-semibold">{{ rank_num }}</td>
+                            <td>
+                                <strong class="d-block font-monospace text-teal" style="font-size:0.72rem;">{{ r.kode_risiko }} &bull; {{ r.jenis_risiko|truncatechars:35 }}</strong>
+                                {% if r.rencana_list %}
+                                    {{ r.rencana_list.0 }}
+                                    {% if r.rencana_list|length > 1 %}
+                                    <span class="text-muted small">(+{{ r.rencana_list|length|add:"-1" }} tindakan lain)</span>
+                                    {% endif %}
+                                {% else %}
+                                    <span class="text-muted fst-italic">—</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ r.pj_mitigasi|default:"—" }}</td>
+                            <td class="text-center">{{ r.target_selesai|date:"d M Y"|default:"—" }}</td>
+                            <td class="text-end">
+                                {% if r.biaya_mitigasi and r.biaya_mitigasi > 0 %}
+                                    Rp {{ r.biaya_mitigasi|floatformat:0 }}
+                                {% else %}
+                                    <span class="text-muted">—</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if r.indikator_mutu_terkait %}
+                                    <span class="badge bg-light text-dark border d-block text-truncate mb-1" style="font-size:0.65rem;">
+                                        {{ r.indikator_mutu_terkait.kode_indikator }}
+                                    </span>
+                                    {% if r.target_capaian_indikator %}
+                                        Target: <strong>{{ r.target_capaian_indikator }}%</strong>
+                                    {% endif %}
+                                {% else %}
+                                    <span class="badge bg-light text-secondary border" style="font-size:0.65rem;">Mitigasi Operasional</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    {# ════════════════════════════════════════════════════════════════════ #}
+    {# 5. PEMANTAUAN, ANALISIS, DAN TINDAK LANJUT                           #}
+    {# ════════════════════════════════════════════════════════════════════ #}
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-body p-4">
+            <h5 class="section-title">
+                <i class="bi bi-5-circle-fill text-teal"></i>
+                5. PEMANTAUAN, ANALISIS, DAN TINDAK LANJUT
+            </h5>
+
+            {# A. Mekanisme Pemantauan #}
+            <h6 class="sub-section-title">
+                <i class="bi bi-calendar-check me-1"></i>A. Mekanisme Pemantauan (Monitoring)
+            </h6>
+            <div class="row g-3 mb-4">
+                <div class="col-md-4">
+                    <div class="p-3 rounded-3 bg-light border h-100">
+                        <strong class="d-block text-teal mb-1" style="font-size:0.8rem;">
+                            <i class="bi bi-clock-history me-1"></i>Harian (Shift Supervisor):
+                        </strong>
+                        <p class="text-muted small mb-0" style="font-size:0.75rem;">
+                            Supervisor shift unit melakukan validasi harian terhadap pelaksanaan SOP berisiko tinggi, kelengkapan check-sheet keselamatan, dan inspeksi kelayakan sarana kerja.
+                        </p>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="p-3 rounded-3 bg-light border h-100">
+                        <strong class="d-block text-primary mb-1" style="font-size:0.8rem;">
+                            <i class="bi bi-calendar3 me-1"></i>Mingguan (Kepala Unit):
+                        </strong>
+                        <p class="text-muted small mb-0" style="font-size:0.75rem;">
+                            Kepala Unit meninjau rekap angka keluhan pasien/staf, indikator efisiensi (BOR/AVLOS), log kepatuhan, dan pelaporan insiden keselamatan (KNC/KTD).
+                        </p>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="p-3 rounded-3 bg-light border h-100">
+                        <strong class="d-block text-danger mb-1" style="font-size:0.8rem;">
+                            <i class="bi bi-people-fill me-1"></i>Bulanan (KMKP &amp; Komite Terkait):
+                        </strong>
+                        <p class="text-muted small mb-0" style="font-size:0.75rem;">
+                            Rapat Penilaian Manajemen Risiko bersama Komite Mutu &amp; Keselamatan Pasien (KMKP), Tim PPI, dan K3RS guna mengevaluasi efektivitas tindak lanjut dan sisa risiko (residual).
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            {# B. Evaluasi & Analisis KPI #}
+            <h6 class="sub-section-title">
+                <i class="bi bi-graph-up-arrow me-1"></i>B. Evaluasi &amp; Analisis Indikator Kunci (KPI Manajemen Risiko)
+            </h6>
+            <div class="row g-3 mb-4">
+                <div class="col-md-6">
+                    <div class="p-3 rounded-3 bg-light border h-100">
+                        <strong class="d-block text-dark mb-2" style="font-size:0.8rem;">
+                            <i class="bi bi-bullseye text-teal me-1"></i>Indikator Mutu Terintegrasi:
+                        </strong>
+                        {% if kpi_list %}
+                        <ul class="mb-0 ps-3" style="font-size:0.76rem;">
+                            {% for kode, ind, target in kpi_list %}
+                            <li class="mb-1 text-secondary">
+                                <strong>[{{ kode }}]</strong> {{ ind.nama_indikator }}
+                                {% if target %}&mdash; Target: <span class="badge bg-teal text-white">{{ target }}%</span>{% endif %}
+                            </li>
+                            {% endfor %}
+                        </ul>
+                        {% else %}
+                        <p class="text-muted small mb-0 fst-italic">Belum ada indikator mutu yang dihubungkan ke risiko unit ini.</p>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="p-3 rounded-3 bg-light border h-100">
+                        <strong class="d-block text-dark mb-2" style="font-size:0.8rem;">
+                            <i class="bi bi-arrow-repeat text-danger me-1"></i>Analisis Tren &amp; Metode RCA/FMEA:
+                        </strong>
+                        <p class="text-muted small mb-0" style="font-size:0.75rem;">
+                            Apabila dalam kurun waktu <strong>1 bulan pasca-rencana aksi</strong> skor risiko tidak menunjukkan penurunan (tetap dalam kategori Merah / Oranye), maka dilakukan evaluasi ulang mendalam melalui metode <strong>FMEA (Failure Mode and Effects Analysis)</strong> atau <strong>RCA (Root Cause Analysis)</strong> bersama Tim Mutu Rumah Sakit.
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            {# C. Status PDCA Saat Ini & Tindak Lanjut #}
+            <h6 class="sub-section-title">
+                <i class="bi bi-send-check me-1"></i>C. Tindak Lanjut &amp; Distribusi Status Siklus PDCA
+            </h6>
+            <div class="d-flex flex-wrap gap-2 mb-3">
+                {% for st_val, st_lbl, count, badge_cls in status_counts_list %}
+                <span class="badge bg-light text-dark border p-2 d-flex align-items-center gap-1.5" style="font-size:0.72rem;">
+                    <span>{{ st_lbl }}:</span>
+                    <strong class="badge bg-{{ badge_cls }}">{{ count }}</strong>
+                </span>
+                {% endfor %}
+            </div>
+            <div class="p-3 rounded-3 bg-light border" style="font-size:0.75rem;">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <strong>Pelaporan Berkala:</strong> Laporan Pelaksanaan Manajemen Risiko disahkan oleh Kepala Unit dan diserahkan kepada Direktur Rumah Sakit serta Komite Mutu setiap triwulan.
+                    </div>
+                    <div class="col-md-6">
+                        <strong>Eskalasi Masalah:</strong> Jika terjadi kendala rantai pasok alat/obat medis atau kendala kapasitas fisik fasilitas yang berulang, Kepala Unit segera mengajukan permohonan eskalasi kebijakan kepada jajaran Direksi.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% endif %}
+
+</div>
+{% endblock %}

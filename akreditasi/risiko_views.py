@@ -411,7 +411,136 @@ def risiko_evaluasi(request, risiko_id):
     return render(request, 'akreditasi/risiko_evaluasi.html', ctx)
 
 
-# ── 5. Lapor Insiden ─────────────────────────────────────────────────────
+# ── 5. Laporan Komprehensif Manajemen Risiko (5-Seksi STARKES 5.15) ─────
+
+_KAT_PREFIX = {
+    'KLINIS':               'KLN',
+    'OPERASIONAL':          'OPS',
+    'FINANSIAL':            'FIN',
+    'REPUTASI':             'REP',
+    'HUKUM_KEPATUHAN':      'HKM',
+    'FASILITAS_LINGKUNGAN': 'FAL',
+    'MANAJERIAL':           'MAN',
+}
+
+_KAT_LABEL_SEKSI = {
+    'KLINIS':               'A. Masalah dan Data Keselamatan Pasien & Klinis',
+    'OPERASIONAL':          'B. Masalah dan Data Operasional & Sarana Prasarana',
+    'FASILITAS_LINGKUNGAN': 'C. Masalah dan Data Fasilitas, B3 & Lingkungan (PPI)',
+    'HUKUM_KEPATUHAN':      'D. Masalah dan Data Hukum, Manajemen & Finansial',
+    'FINANSIAL':            'D. Masalah dan Data Hukum, Manajemen & Finansial',
+    'REPUTASI':             'E. Masalah dan Data Reputasi & Kepuasan',
+    'MANAJERIAL':           'F. Masalah dan Data Manajerial',
+}
+
+
+@login_required
+def risiko_laporan(request, unit_id=None):
+    profile = getattr(request.user, 'profile', None)
+    is_scoped = profile and profile.is_unit_scoped and profile.unit_kerja
+
+    # Determine available units for filter
+    if is_scoped:
+        user_unit = profile.unit_kerja
+        def _collect_ids(unit):
+            ids = {unit.id}
+            for child in UnitKerja.objects.filter(parent=unit).values_list('id', flat=True):
+                ids.add(child)
+            cur = unit.parent
+            while cur:
+                ids.add(cur.id)
+                cur = cur.parent
+            return list(ids)
+        allowed_ids = _collect_ids(user_unit)
+        units = UnitKerja.objects.filter(id__in=allowed_ids)
+    else:
+        units = UnitKerja.objects.all()
+        allowed_ids = None
+
+    # Resolve selected unit
+    sel_unit_id = unit_id or request.GET.get('unit') or (profile.unit_kerja.id if is_scoped else None)
+    sel_unit = None
+    if sel_unit_id:
+        try:
+            sel_unit = UnitKerja.objects.get(pk=int(sel_unit_id))
+        except (UnitKerja.DoesNotExist, ValueError):
+            sel_unit = None
+
+    tahun   = request.GET.get('tahun', '2026')
+    periode = request.GET.get('periode', '')
+
+    qs = RisikoUnit.objects.select_related('unit', 'indikator_mutu_terkait').all()
+    if is_scoped and allowed_ids:
+        qs = qs.filter(unit_id__in=allowed_ids)
+    if sel_unit:
+        qs = qs.filter(unit=sel_unit)
+    if tahun:
+        qs = qs.filter(tahun=tahun)
+    if periode:
+        qs = qs.filter(periode=periode)
+
+    # Assign kode risiko: sort by skor desc, then by kategori
+    risiko_list = list(qs.order_by('-dampak', '-probabilitas', 'kategori_risiko'))
+    # Count per kategori prefix for sequential numbering
+    kat_counter = {}
+    for r in risiko_list:
+        prefix = _KAT_PREFIX.get(r.kategori_risiko, 'RSK')
+        kat_counter[prefix] = kat_counter.get(prefix, 0) + 1
+        r.kode_risiko = f'R-{prefix}-{kat_counter[prefix]:02d}'
+        r.skor_calc = r.dampak * r.probabilitas
+        r.skor_color_val = _skor_color(r.skor_calc)
+        r.skor_label_val = _skor_label(r.skor_calc)
+        r.skor_residual_calc = (r.dampak_residual or 0) * (r.probabilitas_residual or 0) if r.dampak_residual else None
+        r.rencana_list = [l.strip() for l in (r.rencana_aksi or '').splitlines() if l.strip()]
+
+    # Section 1: group by kategori, preserving docx order
+    KAT_ORDER = ['KLINIS', 'OPERASIONAL', 'FASILITAS_LINGKUNGAN', 'HUKUM_KEPATUHAN', 'FINANSIAL', 'REPUTASI', 'MANAJERIAL']
+    grouped = {}
+    for r in risiko_list:
+        k = r.kategori_risiko
+        if k not in grouped:
+            grouped[k] = []
+        grouped[k].append(r)
+    grouped_ordered = [(k, _KAT_LABEL_SEKSI.get(k, k), grouped[k])
+                       for k in KAT_ORDER if k in grouped]
+
+    # Section 2: ranked by skor desc (already sorted)
+    ranked = list(enumerate(risiko_list, 1))
+
+    # Section 5: status summary as list of tuples for template
+    status_counts_list = []
+    _sc = {}
+    for r in risiko_list:
+        _sc[r.status] = _sc.get(r.status, 0) + 1
+    for s, label in RisikoUnit.STATUS_CHOICES:
+        status_counts_list.append((s, label, _sc.get(s, 0), STATUS_BADGES.get(s, 'secondary')))
+
+    # KPI list from linked indikator mutu
+    kpi_list = [(r.kode_risiko, r.indikator_mutu_terkait, r.target_capaian_indikator)
+                for r in risiko_list if r.indikator_mutu_terkait]
+
+    tahun_list = RisikoUnit.objects.values_list('tahun', flat=True).distinct().order_by('-tahun')
+
+    ctx = {
+        'sel_unit':        sel_unit,
+        'units':           units,
+        'tahun':           tahun,
+        'periode':         periode,
+        'tahun_list':      tahun_list,
+        'periode_choices': RisikoUnit.PERIODE_CHOICES,
+        'risiko_list':     risiko_list,
+        'grouped_ordered': grouped_ordered,
+        'ranked':          ranked,
+        'kpi_list':        kpi_list,
+        'status_counts_list': status_counts_list,
+        'status_choices':  RisikoUnit.STATUS_CHOICES,
+        'status_badges':   STATUS_BADGES,
+        'total':           len(risiko_list),
+    }
+    return render(request, 'akreditasi/risiko_laporan.html', ctx)
+
+
+# ── 6. Lapor Insiden ─────────────────────────────────────────────────────
 
 @login_required
 def insiden_lapor(request):

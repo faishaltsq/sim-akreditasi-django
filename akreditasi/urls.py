@@ -62,6 +62,8 @@ urlpatterns = [
     # Modul Manajemen Risiko PDCA (Fase 2)
     path('risiko/', risiko_views.risiko_daftar, name='risiko_daftar'),
     path('risiko/baru/', risiko_views.risiko_input, name='risiko_input'),
+    path('risiko/laporan/', risiko_views.risiko_laporan, name='risiko_laporan'),
+    path('risiko/laporan/<int:unit_id>/', risiko_views.risiko_laporan, name='risiko_laporan_unit'),
     path('risiko/api/indikator-by-unit/', risiko_views.api_indikator_by_unit, name='api_indikator_by_unit'),
     path('risiko/<int:risiko_id>/', risiko_views.risiko_detail, name='risiko_detail'),
     path('risiko/<int:risiko_id>/evaluasi/', risiko_views.risiko_evaluasi, name='risiko_evaluasi'),

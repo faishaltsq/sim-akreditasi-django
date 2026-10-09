@@ -185,7 +185,14 @@
         <span class="nav-icon"><i class="bi bi-plus-circle-fill"></i></span>
         <span class="nav-text">
             <span class="nav-title">Input Risiko Baru</span>
-            <span class="nav-desc">Identifikasi & Asesmen</span>
+            <span class="nav-desc">Identifikasi &amp; Asesmen</span>
+        </span>
+    </a>
+    <a href="{% url 'akreditasi:risiko_laporan' %}" class="nav-link {% if 'risiko_laporan' in request.resolver_match.url_name %}active{% endif %}">
+        <span class="nav-icon"><i class="bi bi-file-earmark-bar-graph-fill"></i></span>
+        <span class="nav-text">
+            <span class="nav-title">Laporan Manajemen Risiko</span>
+            <span class="nav-desc">5-Seksi STARKES 5.15</span>
         </span>
     </a>
     <a href="{% url 'akreditasi:insiden_lapor' %}" class="nav-link {% if request.resolver_match.url_name == 'insiden_lapor' %}active{% endif %}">
