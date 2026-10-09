@@ -64,6 +64,24 @@
                     </span>
                 </div>
                 <div class="card-body p-3">
+                    {# Visual Lineage: Masalah ➔ Kategori ➔ Jenis Risiko #}
+                    <div class="p-2.5 mb-3 rounded-3 border" style="background:#f8fafc; border-color:#e2e8f0; font-size:.75rem;">
+                        <span class="d-block text-muted fw-bold mb-1" style="font-size:.68rem; letter-spacing:0.04em;">ALUR LINEAGE MANAJEMEN RISIKO (STANDAR 5.15):</span>
+                        <div class="d-flex flex-wrap align-items-center gap-2">
+                            <span class="badge bg-danger-subtle text-danger border border-danger-subtle p-1.5 px-2">
+                                <i class="bi bi-exclamation-circle me-1"></i>Akar Masalah: {{ risiko.masalah|truncatechars:35|default:"(Tanpa narasi)" }}
+                            </span>
+                            <i class="bi bi-arrow-right text-muted"></i>
+                            <span class="badge bg-secondary-subtle text-secondary border p-1.5 px-2">
+                                <i class="bi bi-tags me-1"></i>{{ risiko.get_kategori_risiko_display }}
+                            </span>
+                            <i class="bi bi-arrow-right text-muted"></i>
+                            <span class="badge bg-teal text-white p-1.5 px-2">
+                                <i class="bi bi-shield-exclamation me-1"></i>{{ risiko.jenis_risiko|truncatechars:35 }}
+                            </span>
+                        </div>
+                    </div>
+
                     <div class="row g-2 mb-3" style="font-size:.8rem;">
                         <div class="col-sm-4 text-muted">Unit Kerja</div>
                         <div class="col-sm-8 fw-semibold" style="color:#0f172a;">{{ risiko.unit }}</div>

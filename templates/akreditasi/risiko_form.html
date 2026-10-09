@@ -129,7 +129,34 @@
                             <div id="ai-analisis-feedback" class="small mt-2 d-none"></div>
                         </div>
 
-                        {# 3. Kategori Risiko #}
+                        {# 3. Banner Konteks Masalah Terhubung (Live Linking ke Kategori & Jenis Risiko) #}
+                        <div id="live-masalah-link-banner" class="p-2.5 mb-3 rounded-3 border" style="background:#f0fdfa; border-color:#99f6e4 !important; font-size:.76rem;">
+                            <div class="d-flex align-items-center justify-content-between mb-1">
+                                <span class="fw-bold d-flex align-items-center gap-1.5" style="color:#0f766e; font-size:.75rem;">
+                                    <i class="bi bi-link-45deg fs-6"></i>
+                                    <span>Konteks Masalah Terhubung</span>
+                                    <span class="badge bg-teal text-white ms-1" style="font-size:.6rem; padding:2px 6px;">Pipeline STARKES</span>
+                                </span>
+                                <span class="text-muted" style="font-size:.68rem;">
+                                    Masalah ➔ Kategori ➔ Jenis Risiko
+                                </span>
+                            </div>
+                            <div id="live-masalah-content" class="text-muted fst-italic ps-1" style="font-size:.74rem;">
+                                <i class="bi bi-arrow-up-circle me-1 text-teal"></i>Ketik masalah &amp; data pendukung di atas — konteksnya akan terus muncul di sini untuk memandu pemilihan Kategori &amp; Jenis Risiko.
+                            </div>
+                            <div id="live-masalah-filled" class="d-none mt-1">
+                                <div id="live-masalah-text-box" class="p-1.5 px-2 rounded mb-1 border-start border-3 border-danger" style="background:#fff1f2; color:#9f1239;">
+                                    <strong class="d-block" style="font-size:.68rem; color:#be123c;"><i class="bi bi-exclamation-circle me-1"></i>MASALAH:</strong>
+                                    <span id="live-masalah-val" class="d-block" style="font-size:.73rem; white-space:pre-wrap;"></span>
+                                </div>
+                                <div id="live-data-text-box" class="p-1.5 px-2 rounded border-start border-3 border-primary d-none" style="background:#eff6ff; color:#1e40af;">
+                                    <strong class="d-block" style="font-size:.68rem; color:#1d4ed8;"><i class="bi bi-file-earmark-bar-graph me-1"></i>BUKTI PENDUKUNG:</strong>
+                                    <span id="live-data-val" class="d-block" style="font-size:.73rem; white-space:pre-wrap;"></span>
+                                </div>
+                            </div>
+                        </div>
+
+                        {# 4. Kategori Risiko #}
                         <div class="row g-3 mb-2">
                             <div class="col-12">
                                 <label class="form-label" style="font-size:.8rem; font-weight:600;">Kategori Risiko (STARKES) <span class="text-danger">*</span></label>
@@ -857,6 +884,32 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     }
+
+    // ── Live Masalah-to-Risk Link Banner ──────────────────────────────────
+    const liveBannerEmpty = document.getElementById('live-masalah-content');
+    const liveBannerFilled = document.getElementById('live-masalah-filled');
+    const liveMasalahVal = document.getElementById('live-masalah-val');
+    const liveDataVal = document.getElementById('live-data-val');
+    const liveDataBox = document.getElementById('live-data-text-box');
+
+    function updateLiveBanner() {
+        const m = (inputMasalah ? inputMasalah.value : '').trim();
+        const d = (inputData ? inputData.value : '').trim();
+        if (!m && !d) {
+            if (liveBannerEmpty) liveBannerEmpty.classList.remove('d-none');
+            if (liveBannerFilled) liveBannerFilled.classList.add('d-none');
+        } else {
+            if (liveBannerEmpty) liveBannerEmpty.classList.add('d-none');
+            if (liveBannerFilled) liveBannerFilled.classList.remove('d-none');
+            if (liveMasalahVal) liveMasalahVal.textContent = m || '(belum diisi)';
+            if (liveDataVal) liveDataVal.textContent = d;
+            if (liveDataBox) liveDataBox.classList.toggle('d-none', !d);
+        }
+    }
+
+    if (inputMasalah) inputMasalah.addEventListener('input', updateLiveBanner);
+    if (inputData) inputData.addEventListener('input', updateLiveBanner);
+    updateLiveBanner(); // initial
 
     // ── Realtime Visual Required Field Validation ─────────────────────────
     const reqFields = [
