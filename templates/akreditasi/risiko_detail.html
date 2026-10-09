@@ -13,6 +13,62 @@
     .matrix-highlight::after { content:'★'; display:block; font-size:.55rem; line-height:1; }
     .badge-teal { background:#0d9488; color:#fff; }
     .badge-purple { background:#7c3aed; color:#fff; }
+
+    /* ── Responsive Jenis Risiko Header ──────────────── */
+    .risiko-header-card {
+        flex-direction: row;
+        align-items: flex-start;
+        gap: 12px;
+    }
+    .risiko-header-card .risiko-jenis-col {
+        flex: 1;
+        min-width: 0; /* allow shrinking */
+    }
+    .risiko-jenis-chip {
+        display: inline-block;
+        white-space: normal !important;
+        word-break: break-word;
+        text-align: left;
+        max-width: 100%;
+        font-size: clamp(0.68rem, 1.8vw, 0.78rem);
+        padding: 4px 10px;
+        line-height: 1.35;
+        border-radius: 8px;
+    }
+    .risiko-jenis-single {
+        font-size: clamp(0.78rem, 2.2vw, 1rem);
+        word-break: break-word;
+    }
+    .lineage-badge {
+        white-space: normal !important;
+        word-break: break-word;
+        max-width: 100%;
+        display: inline-block;
+        text-align: left;
+        line-height: 1.35;
+    }
+
+    @media (max-width: 768px) {
+        .risiko-header-card {
+            flex-direction: column !important;
+            gap: 8px;
+        }
+        .risiko-header-card .risiko-status-badge {
+            align-self: flex-start;
+        }
+        .risiko-jenis-chip {
+            font-size: 0.72rem;
+            padding: 3px 8px;
+        }
+        .lineage-flow {
+            flex-direction: column !important;
+            align-items: flex-start !important;
+        }
+        .lineage-flow .lineage-arrow {
+            transform: rotate(90deg);
+            margin: 2px 0 2px 12px;
+        }
+    }
 </style>
 {% endblock %}
 
@@ -46,20 +102,20 @@
 
             {# Card Info Utama #}
             <div class="card border-0 shadow-sm mb-3">
-                <div class="card-header border-0 py-3 d-flex justify-content-between align-items-center" style="background:linear-gradient(135deg,#0f766e,#0d9488); color:#fff;">
-                    <div class="d-flex flex-column">
+                <div class="card-header border-0 py-3 d-flex risiko-header-card justify-content-between" style="background:linear-gradient(135deg,#0f766e,#0d9488); color:#fff;">
+                    <div class="d-flex flex-column risiko-jenis-col">
                         <span class="text-white-50" style="font-size:.7rem; text-transform:uppercase; letter-spacing:0.05em;">Jenis Risiko:</span>
                         {% if risiko.jenis_risiko_list|length > 1 %}
-                        <div class="d-flex flex-wrap gap-1 mt-1">
+                        <div class="d-flex flex-wrap gap-1.5 mt-1.5">
                             {% for j in risiko.jenis_risiko_list %}
-                            <span class="badge bg-white text-teal shadow-sm fw-semibold" style="font-size:.78rem; border-radius:12px;">{{ j }}</span>
+                            <span class="badge bg-white text-teal shadow-sm fw-semibold risiko-jenis-chip">{{ j }}</span>
                             {% endfor %}
                         </div>
                         {% else %}
-                        <h6 class="mb-0 fw-bold">{{ risiko.jenis_risiko }}</h6>
+                        <h6 class="mb-0 fw-bold mt-1 risiko-jenis-single">{{ risiko.jenis_risiko }}</h6>
                         {% endif %}
                     </div>
-                    <span class="badge {% if risiko.status == 'IDENTIFIKASI' %}bg-secondary{% elif risiko.status == 'PLAN' %}bg-primary{% elif risiko.status == 'DO' %}bg-warning text-dark{% elif risiko.status == 'EVALUASI' %}badge-purple{% elif risiko.status == 'SELESAI' %}bg-success{% elif risiko.status == 'ACCEPTED' %}badge-teal{% endif %}" style="font-size:.7rem;">
+                    <span class="badge risiko-status-badge flex-shrink-0 align-self-start {% if risiko.status == 'IDENTIFIKASI' %}bg-secondary{% elif risiko.status == 'PLAN' %}bg-primary{% elif risiko.status == 'DO' %}bg-warning text-dark{% elif risiko.status == 'EVALUASI' %}badge-purple{% elif risiko.status == 'SELESAI' %}bg-success{% elif risiko.status == 'ACCEPTED' %}badge-teal{% endif %}" style="font-size:.72rem; padding: 5px 10px;">
                         {{ risiko.get_status_display }}
                     </span>
                 </div>
@@ -67,17 +123,17 @@
                     {# Visual Lineage: Masalah ➔ Kategori ➔ Jenis Risiko #}
                     <div class="p-2.5 mb-3 rounded-3 border" style="background:#f8fafc; border-color:#e2e8f0; font-size:.75rem;">
                         <span class="d-block text-muted fw-bold mb-1" style="font-size:.68rem; letter-spacing:0.04em;">ALUR LINEAGE MANAJEMEN RISIKO (STANDAR 5.15):</span>
-                        <div class="d-flex flex-wrap align-items-center gap-2">
-                            <span class="badge bg-danger-subtle text-danger border border-danger-subtle p-1.5 px-2">
-                                <i class="bi bi-exclamation-circle me-1"></i>Akar Masalah: {{ risiko.masalah|truncatechars:35|default:"(Tanpa narasi)" }}
+                        <div class="d-flex flex-wrap align-items-center gap-2 lineage-flow">
+                            <span class="badge bg-danger-subtle text-danger border border-danger-subtle p-1.5 px-2 lineage-badge">
+                                <i class="bi bi-exclamation-circle me-1"></i>Akar Masalah: {{ risiko.masalah|truncatechars:45|default:"(Tanpa narasi)" }}
                             </span>
-                            <i class="bi bi-arrow-right text-muted"></i>
-                            <span class="badge bg-secondary-subtle text-secondary border p-1.5 px-2">
+                            <i class="bi bi-arrow-right text-muted lineage-arrow"></i>
+                            <span class="badge bg-secondary-subtle text-secondary border p-1.5 px-2 lineage-badge">
                                 <i class="bi bi-tags me-1"></i>{{ risiko.get_kategori_risiko_display }}
                             </span>
-                            <i class="bi bi-arrow-right text-muted"></i>
-                            <span class="badge bg-teal text-white p-1.5 px-2">
-                                <i class="bi bi-shield-exclamation me-1"></i>{{ risiko.jenis_risiko|truncatechars:35 }}
+                            <i class="bi bi-arrow-right text-muted lineage-arrow"></i>
+                            <span class="badge bg-teal text-white p-1.5 px-2 lineage-badge">
+                                <i class="bi bi-shield-exclamation me-1"></i>{{ risiko.jenis_risiko|truncatechars:45 }}
                             </span>
                         </div>
                     </div>
