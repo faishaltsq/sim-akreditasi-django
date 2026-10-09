@@ -106,10 +106,12 @@
                     <div class="d-flex flex-column risiko-jenis-col">
                         <span class="text-white-50" style="font-size:.7rem; text-transform:uppercase; letter-spacing:0.05em;">Jenis Risiko:</span>
                         {% if risiko.jenis_risiko_list|length > 1 %}
-                        <div class="d-flex flex-wrap gap-1.5 mt-1.5">
-                            {% for j in risiko.jenis_risiko_list %}
-                            <span class="badge bg-white text-teal shadow-sm fw-semibold risiko-jenis-chip">{{ j }}</span>
-                            {% endfor %}
+                        <div class="bg-white rounded-3 p-2 mt-1.5 shadow-sm" style="color:#0f766e;">
+                            <ul class="mb-0 ps-3" style="font-size: clamp(0.72rem, 1.8vw, 0.82rem); line-height:1.5;">
+                                {% for j in risiko.jenis_risiko_list %}
+                                <li class="mb-1">{{ j }}</li>
+                                {% endfor %}
+                            </ul>
                         </div>
                         {% else %}
                         <h6 class="mb-0 fw-bold mt-1 risiko-jenis-single">{{ risiko.jenis_risiko }}</h6>

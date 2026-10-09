@@ -40,10 +40,12 @@
                         <div>
                             <span class="badge bg-secondary mb-1" style="font-size:.68rem;">{{ risiko.unit.name }}</span>
                             {% if risiko.jenis_risiko_list|length > 1 %}
-                            <div class="d-flex flex-wrap gap-1 my-1">
-                                {% for j in risiko.jenis_risiko_list %}
-                                <span class="badge bg-teal-subtle text-teal-dark border border-teal-subtle fw-semibold" style="font-size:.78rem;">{{ j }}</span>
-                                {% endfor %}
+                            <div class="bg-white rounded-3 p-2 my-1 shadow-sm" style="color:#0f766e;">
+                                <ul class="mb-0 ps-3" style="font-size:.82rem; line-height:1.5;">
+                                    {% for j in risiko.jenis_risiko_list %}
+                                    <li class="mb-1">{{ j }}</li>
+                                    {% endfor %}
+                                </ul>
                             </div>
                             {% else %}
                             <h5 class="fw-bold mb-0" style="color:#0f172a;">{{ risiko.jenis_risiko }}</h5>
