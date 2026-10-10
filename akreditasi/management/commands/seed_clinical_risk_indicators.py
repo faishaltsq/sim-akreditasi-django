@@ -21,6 +21,55 @@ from akreditasi.risiko_models import IndikatorMutu, RisikoUnit
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# PETA KODE UNIT — menangani perbedaan penamaan kode antar-environment
+# (lokal vs production Supabase). Urutan kandidat = prioritas pencocokan.
+# ─────────────────────────────────────────────────────────────────────────────
+
+UNIT_CODE_MAP = {
+    'IGD':   ['IGD'],
+    'ICU':   ['ICU'],
+    'ICCU':  ['ICCU'],
+    'RAJAL': ['IRJ', 'RAJAL', 'IRJ-RAJAL'],                 # Rawat Jalan
+    'RANAP': ['IRIN', 'RANAP', 'IRIN-RANAP'],               # Rawat Inap
+    'HD':    ['HD', 'HEMODIALISA', 'HEMODIALISIS'],         # Hemodialisa
+    'LAB':   ['LAB-BDRS', 'LAB', 'LAB-PK', 'PATOLOGI-MIKRO'],  # Laboratorium
+    'VK':    ['RUANG-BERSALIN-VK', 'VK', 'RUANG-BERSALIN'],    # Kamar Bersalin
+    'IBS':   ['IBS', 'KAMAR-OPERASI', 'RUANG-OK'],             # Bedah Sentral / OK
+}
+
+# Unit yang dibuat otomatis bila belum ada di DB (kode, nama, parent_code)
+UNIT_AUTO_CREATE = {
+    'HD': ('HD', 'Unit Hemodialisa (Cuci Darah)', 'UNIT-PENUNJANG'),
+}
+
+
+def _resolve_unit(unit_code, unit_map):
+    """Cari UnitKerja dari daftar kandidat kode. Return (unit, matched_code)."""
+    for candidate in UNIT_CODE_MAP.get(unit_code, [unit_code]):
+        u = unit_map.get(candidate)
+        if u:
+            return u, candidate
+    return None, None
+
+
+def _ensure_unit(unit_code, unit_map):
+    """Resolve unit; buat otomatis bila terdaftar di UNIT_AUTO_CREATE."""
+    unit, matched = _resolve_unit(unit_code, unit_map)
+    if unit:
+        return unit, matched
+
+    spec = UNIT_AUTO_CREATE.get(unit_code)
+    if not spec:
+        return None, None
+
+    code, name, parent_code = spec
+    parent = unit_map.get(parent_code)
+    unit = UnitKerja.objects.create(code=code, name=name, parent=parent)
+    unit_map[code] = unit
+    return unit, code
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # INDIKATOR MUTU PER UNIT (kode, nama, jenis, dimensi, target, satuan)
 # Kode INM-xx merujuk indikator nasional yang sudah ada (link saja, tidak dibuat ulang)
 # ─────────────────────────────────────────────────────────────────────────────
@@ -382,10 +431,14 @@ class Command(BaseCommand):
         kode_to_ind = {}
 
         for item in INDIKATOR_NEW:
-            unit = unit_map.get(item['unit'])
+            unit, matched = _ensure_unit(item['unit'], unit_map)
             if not unit:
-                self.stdout.write(self.style.WARNING(f"  ⚠ Unit '{item['unit']}' tidak ditemukan — dilewati"))
+                self.stdout.write(self.style.WARNING(
+                    f"  ⚠ Unit '{item['unit']}' tidak ditemukan — dilewati "
+                    f"(kandidat: {UNIT_CODE_MAP.get(item['unit'], [item['unit']])})"))
                 continue
+            if matched != item['unit']:
+                self.stdout.write(f"  → [{item['unit']}] dipetakan ke unit '{matched}'")
 
             ep = StandardItem.objects.filter(code=item['ep']).first() if item.get('ep') else None
 
@@ -424,9 +477,11 @@ class Command(BaseCommand):
         risk_created, risk_updated = 0, 0
 
         for unit_code, data in RISIKO_DATA.items():
-            unit = unit_map.get(unit_code)
+            unit, matched = _ensure_unit(unit_code, unit_map)
             if not unit:
-                self.stdout.write(self.style.WARNING(f"  ⚠ Unit '{unit_code}' tidak ditemukan — dilewati"))
+                self.stdout.write(self.style.WARNING(
+                    f"  ⚠ Unit '{unit_code}' tidak ditemukan — dilewati "
+                    f"(kandidat: {UNIT_CODE_MAP.get(unit_code, [unit_code])})"))
                 continue
 
             self.stdout.write(self.style.MIGRATE_LABEL(f"\n  ── {unit.name} ──"))

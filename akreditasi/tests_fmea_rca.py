@@ -309,11 +309,13 @@ class FmeaRcaAiEndpointTest(TestCase):
 class FmeaRcaSeedTest(TestCase):
     """Test bahwa seed command membuat data yang benar."""
 
-    # Kode unit yang dibutuhkan seed command (harus ada di test DB)
-    REQUIRED_UNITS = ['IGD', 'ICU', 'ICCU', 'RAJAL', 'RANAP', 'HD', 'LAB', 'VK', 'IBS']
+    # Kode unit yang dibutuhkan seed command (kandidat pertama tiap logical unit).
+    # Seed command punya fallback otomatis untuk HD bila belum ada.
+    REQUIRED_UNITS = ['IGD', 'ICU', 'ICCU', 'IRJ', 'IRIN', 'LAB-BDRS',
+                      'RUANG-BERSALIN-VK', 'IBS']
 
     def setUp(self):
-        # Test DB kosong — buat 9 unit yang dibutuhkan seed command
+        # Test DB kosong — buat unit yang dibutuhkan seed command
         for code in self.REQUIRED_UNITS:
             UnitKerja.objects.get_or_create(code=code, defaults={'name': f'Unit {code} Uji'})
 
@@ -347,10 +349,12 @@ class FmeaRcaSeedTest(TestCase):
         call_command('seed_clinical_risk_indicators', stdout=StringIO())
         self.assertEqual(RisikoUnit.objects.filter(kategori_risiko='KLINIS').count(), 45)
 
-        # 9 unit terwakili
+        # 9 unit terwakili (via UNIT_CODE_MAP: kode bisa berbeda antar environment)
+        from akreditasi.management.commands.seed_clinical_risk_indicators import UNIT_CODE_MAP
         unit_codes = set(klinis.values_list('unit__code', flat=True))
-        for expected in ['IGD', 'ICU', 'ICCU', 'RAJAL', 'RANAP', 'HD', 'LAB', 'VK', 'IBS']:
-            self.assertIn(expected, unit_codes, f'Unit {expected} tidak ter-seed')
+        for logical, candidates in UNIT_CODE_MAP.items():
+            matched = [c for c in candidates if c in unit_codes]
+            self.assertTrue(matched, f'Unit {logical} tidak ter-seed (kandidat: {candidates})')
 
     def test_seed_creates_indicators_with_categories(self):
         from django.core.management import call_command
