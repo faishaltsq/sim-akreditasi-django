@@ -293,6 +293,27 @@ def risiko_input(request):
             else:
                 jenis_val = (request.POST.get('jenis_risiko') or '').strip()
 
+            # ── Section E: FMEA & RCA ────────────────────────────────────────
+            metode_evaluasi = (request.POST.get('metode_evaluasi') or 'STANDAR').strip()
+            if metode_evaluasi not in ('STANDAR', 'FMEA', 'RCA'):
+                metode_evaluasi = 'STANDAR'
+
+            # Tim evaluasi: ambil dari field sesuai metode yang dipilih
+            if metode_evaluasi == 'FMEA':
+                tim_evaluasi = (request.POST.get('tim_evaluasi_fmea') or '').strip()
+            elif metode_evaluasi == 'RCA':
+                tim_evaluasi = (request.POST.get('tim_evaluasi_rca') or '').strip()
+            else:
+                tim_evaluasi = ''
+
+            rpn_raw = (request.POST.get('rpn_fmea') or '').strip()
+            try:
+                rpn_fmea = int(rpn_raw) if rpn_raw else None
+            except ValueError:
+                rpn_fmea = None
+
+            tanggal_eval_raw = (request.POST.get('tanggal_evaluasi') or '').strip()
+
             risiko = RisikoUnit(
                 unit_id=int(request.POST['unit']),
                 tahun=int(request.POST['tahun']),
@@ -312,6 +333,14 @@ def risiko_input(request):
                 biaya_mitigasi=request.POST.get('biaya_mitigasi') or 0,
                 target_selesai=request.POST.get('target_selesai') or None,
                 status='IDENTIFIKASI',
+                # Section E
+                metode_evaluasi=metode_evaluasi,
+                tim_evaluasi=tim_evaluasi,
+                failure_mode_fmea=(request.POST.get('failure_mode_fmea') or '').strip() if metode_evaluasi == 'FMEA' else '',
+                akar_masalah_rca=(request.POST.get('akar_masalah_rca') or '').strip() if metode_evaluasi == 'RCA' else '',
+                tindakan_korektif_rca=(request.POST.get('tindakan_korektif_rca') or '').strip() if metode_evaluasi == 'RCA' else '',
+                rpn_fmea=rpn_fmea if metode_evaluasi == 'FMEA' else None,
+                tanggal_evaluasi=tanggal_eval_raw or None,
                 created_by=request.user,
             )
             risiko.full_clean()
@@ -536,6 +565,8 @@ def risiko_laporan(request, unit_id=None):
         'status_choices':  RisikoUnit.STATUS_CHOICES,
         'status_badges':   STATUS_BADGES,
         'total':           len(risiko_list),
+        'fmea_list':       [r for r in risiko_list if r.metode_evaluasi == 'FMEA'],
+        'rca_list':        [r for r in risiko_list if r.metode_evaluasi == 'RCA'],
     }
     return render(request, 'akreditasi/risiko_laporan.html', ctx)
 
@@ -573,3 +604,93 @@ def insiden_lapor(request):
         'keparahan_choices': InsidenKeselamatan.KEPARAHAN_CHOICES,
     }
     return render(request, 'akreditasi/insiden_form.html', ctx)
+
+
+# ── FMEA & RCA — Command Center (Section E) ──────────────────────────────
+
+@login_required
+def risiko_fmea_rca(request):
+    """Pusat evaluasi mendalam: Kajian FMEA Proaktif & Investigasi RCA Reaktif.
+
+    Menampilkan register risiko yang menggunakan metode evaluasi mendalam
+    (FMEA / RCA) beserta ringkasan KPI dan filter unit/tahun/status.
+    """
+    profile = getattr(request.user, 'profile', None)
+    qs = RisikoUnit.objects.select_related('unit', 'indikator_mutu_terkait').all()
+
+    # ── Scope filtering (sama dengan risiko_daftar) ──────────────────────
+    if profile and profile.is_unit_scoped and profile.unit_kerja:
+        user_unit = profile.unit_kerja
+
+        def _collect_ids(unit):
+            ids = {unit.id}
+            for child in UnitKerja.objects.filter(parent=unit).values_list('id', flat=True):
+                ids.add(child)
+            cur = unit.parent
+            while cur:
+                ids.add(cur.id)
+                cur = cur.parent
+            return list(ids)
+
+        unit_ids = _collect_ids(user_unit)
+        units = UnitKerja.objects.filter(id__in=unit_ids)
+        unit_id = request.GET.get('unit')
+        if not unit_id:
+            qs = qs.filter(unit_id__in=unit_ids)
+            default_filter_unit = str(user_unit.id)
+        else:
+            qs = qs.filter(unit_id=unit_id)
+            default_filter_unit = unit_id
+    else:
+        units = UnitKerja.objects.all()
+        unit_id = request.GET.get('unit')
+        if unit_id:
+            qs = qs.filter(unit_id=unit_id)
+        default_filter_unit = unit_id or ''
+
+    # ── Filters ──────────────────────────────────────────────────────────
+    tahun = request.GET.get('tahun')
+    status = request.GET.get('status')
+    if tahun:
+        qs = qs.filter(tahun=tahun)
+    if status:
+        qs = qs.filter(status=status)
+
+    tahun_list = RisikoUnit.objects.values_list('tahun', flat=True).distinct().order_by('-tahun')
+
+    # ── Split data per metode ────────────────────────────────────────────
+    fmea_list = list(qs.filter(metode_evaluasi='FMEA').order_by('-dampak', '-probabilitas'))
+    rca_list = list(qs.filter(metode_evaluasi='RCA').order_by('-dampak', '-probabilitas'))
+
+    # ── KPI Summary ──────────────────────────────────────────────────────
+    kpi = {
+        'total_fmea': len(fmea_list),
+        'total_rca': len(rca_list),
+        'fmea_selesai': sum(1 for r in fmea_list if r.status == 'SELESAI'),
+        'rca_selesai': sum(1 for r in rca_list if r.status == 'SELESAI'),
+        'korektif_berjalan': sum(1 for r in rca_list if r.tindakan_korektif_rca and r.status not in ('SELESAI',)),
+        'fmea_berjalan': sum(1 for r in fmea_list if r.status not in ('SELESAI',)),
+    }
+
+    # RPN rata-rata untuk FMEA
+    rpn_values = [r.rpn_calc for r in fmea_list if r.rpn_calc]
+    kpi['rpn_avg'] = round(sum(rpn_values) / len(rpn_values)) if rpn_values else 0
+    kpi['rpn_max'] = max(rpn_values) if rpn_values else 0
+
+    # ── Top RPN FMEA (prioritas tertinggi) ───────────────────────────────
+    fmea_prioritas = sorted([r for r in fmea_list if r.rpn_calc],
+                            key=lambda x: x.rpn_calc, reverse=True)[:5]
+
+    ctx = {
+        'fmea_list': fmea_list,
+        'rca_list': rca_list,
+        'fmea_prioritas': fmea_prioritas,
+        'kpi': kpi,
+        'units': units,
+        'tahun_list': tahun_list,
+        'status_choices': RisikoUnit.STATUS_CHOICES,
+        'default_filter_unit': default_filter_unit,
+        'sel_tahun': tahun or '',
+        'sel_status': status or '',
+    }
+    return render(request, 'akreditasi/risiko_fmea_rca.html', ctx)

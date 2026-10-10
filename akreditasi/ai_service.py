@@ -23,6 +23,8 @@ from .ai_prompts import (
     PROMPT_KPS_REKOMENDASI,
     PROMPT_INDIKATOR_MUTU,
     PROMPT_ANALISIS_MASALAH_RISIKO,
+    PROMPT_FMEA_SUGGESTION,
+    PROMPT_RCA_SUGGESTION,
 )
 
 logger = logging.getLogger(__name__)
@@ -331,6 +333,45 @@ def generate_risk_analysis_from_problem(user, unit_name: str, masalah: str, data
     )
     result = _call_deepseek(prompt)
     _log_ai_call(user, 'ANALISIS_MASALAH_RISIKO', f'{unit_name} | {masalah[:50]}', result['success'])
+    return result
+
+
+# ── SECTION E: FMEA (Proaktif) ───────────────────────────────────────────
+
+def generate_fmea_suggestion(user, unit_name: str, kategori_risiko: str, jenis_risiko: str,
+                             masalah: str, data_pendukung: str,
+                             dampak: int, probabilitas: int) -> dict:
+    """Hasilkan analisis FMEA proaktif: failure mode, efek, penyebab, barrier, RPN."""
+    prompt = PROMPT_FMEA_SUGGESTION.format(
+        unit_name=sanitize_hospital_prompt(unit_name),
+        kategori_risiko=sanitize_hospital_prompt(kategori_risiko),
+        jenis_risiko=sanitize_hospital_prompt(jenis_risiko),
+        masalah=sanitize_hospital_prompt(masalah),
+        data_pendukung=sanitize_hospital_prompt(data_pendukung),
+        dampak=dampak,
+        probabilitas=probabilitas,
+    )
+    result = _call_deepseek(prompt)
+    _log_ai_call(user, 'FMEA_SUGGESTION', f'{unit_name} | {jenis_risiko[:50]}', result['success'])
+    return result
+
+
+# ── SECTION E: RCA (Reaktif) ─────────────────────────────────────────────
+
+def generate_rca_suggestion(user, unit_name: str, jenis_risiko: str,
+                            masalah: str, data_pendukung: str,
+                            dampak: int, probabilitas: int) -> dict:
+    """Hasilkan analisis RCA reaktif: 5-Whys, fishbone, tindakan korektif."""
+    prompt = PROMPT_RCA_SUGGESTION.format(
+        unit_name=sanitize_hospital_prompt(unit_name),
+        jenis_risiko=sanitize_hospital_prompt(jenis_risiko),
+        masalah=sanitize_hospital_prompt(masalah),
+        data_pendukung=sanitize_hospital_prompt(data_pendukung),
+        dampak=dampak,
+        probabilitas=probabilitas,
+    )
+    result = _call_deepseek(prompt)
+    _log_ai_call(user, 'RCA_SUGGESTION', f'{unit_name} | {jenis_risiko[:50]}', result['success'])
     return result
 
 

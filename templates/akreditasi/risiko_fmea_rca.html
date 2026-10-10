@@ -1,0 +1,435 @@
+{% extends 'base.html' %}
+
+{% block title %}Metode FMEA &amp; RCA — ARIMA{% endblock %}
+{% block page_title %}Metode FMEA &amp; RCA{% endblock %}
+{% block page_subtitle %}Evaluasi Mendalam Proaktif &amp; Reaktif — STARKES PMKP 7 &amp; 8{% endblock %}
+
+{% block extra_css %}
+<style>
+    .kpi-card { border-radius: 10px; padding: 14px 16px; border: none; height: 100%; }
+    .kpi-value { font-size: 1.9rem; font-weight: 800; line-height: 1.1; }
+    .kpi-label { font-size: .72rem; text-transform: uppercase; letter-spacing: .05em; opacity: .85; }
+    .rpn-badge { font-family: ui-monospace, monospace; font-weight: 700; }
+    .metode-tabs .nav-link { font-size: .82rem; font-weight: 600; border-radius: 8px 8px 0 0; }
+    .metode-tabs .nav-link.active { background: #0d9488; color: #fff; }
+    .risk-row-card {
+        border-left: 4px solid #e2e8f0;
+        transition: box-shadow .15s;
+    }
+    .risk-row-card:hover { box-shadow: 0 3px 12px rgba(15,23,42,.09); }
+    .risk-row-card.fmea { border-left-color: #f59e0b; }
+    .risk-row-card.rca  { border-left-color: #dc2626; }
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+    @media (max-width: 768px) {
+        .kpi-value { font-size: 1.45rem; }
+    }
+    @media print {
+        .no-print, .sidebar, .navbar, .breadcrumb, footer { display: none !important; }
+        .container-fluid { padding: 0 !important; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-3">
+
+    {# ── Header ────────────────────────────────────────────────────────── #}
+    <div class="d-flex flex-wrap justify-content-between align-items-start mb-3 gap-2">
+        <div>
+            <h5 class="fw-bold mb-1" style="color:#0f172a;">
+                <i class="bi bi-diagram-3-fill text-warning me-2"></i>Pusat Evaluasi Mendalam FMEA &amp; RCA
+            </h5>
+            <p class="text-muted mb-0" style="font-size:.8rem;">
+                <strong>FMEA</strong> (Failure Mode and Effects Analysis) = pendekatan proaktif mencegah kegagalan proses berisiko tinggi
+                &bull; <strong>RCA</strong> (Root Cause Analysis) = pendekatan reaktif menggali akar masalah pasca insiden.
+            </p>
+        </div>
+        <div class="d-flex gap-2 no-print">
+            <a href="{% url 'akreditasi:risiko_input' %}" class="btn btn-sm text-white" style="background:#0d9488;">
+                <i class="bi bi-plus-circle me-1"></i>Input Risiko Baru
+            </a>
+            <button onclick="window.print()" class="btn btn-sm btn-outline-secondary">
+                <i class="bi bi-printer me-1"></i>Cetak
+            </button>
+        </div>
+    </div>
+
+    {# ── KPI Cards ─────────────────────────────────────────────────────── #}
+    <div class="row g-3 mb-3">
+        <div class="col-6 col-md-3">
+            <div class="kpi-card" style="background:linear-gradient(135deg,#fffbeb,#fef3c7); color:#78350f;">
+                <div class="kpi-label"><i class="bi bi-diagram-3-fill me-1"></i>Kajian FMEA</div>
+                <div class="kpi-value">{{ kpi.total_fmea }}</div>
+                <small style="font-size:.7rem;">{{ kpi.fmea_berjalan }} berjalan &bull; {{ kpi.fmea_selesai }} selesai</small>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="kpi-card" style="background:linear-gradient(135deg,#fef2f2,#fee2e2); color:#7f1d1d;">
+                <div class="kpi-label"><i class="bi bi-search me-1"></i>Investigasi RCA</div>
+                <div class="kpi-value">{{ kpi.total_rca }}</div>
+                <small style="font-size:.7rem;">{{ kpi.rca_selesai }} selesai &bull; {{ kpi.korektif_berjalan }} korektif berjalan</small>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="kpi-card" style="background:linear-gradient(135deg,#f0fdfa,#ccfbf1); color:#134e4a;">
+                <div class="kpi-label"><i class="bi bi-speedometer2 me-1"></i>RPN Rata-rata</div>
+                <div class="kpi-value">{{ kpi.rpn_avg }}</div>
+                <small style="font-size:.7rem;">RPN tertinggi: <strong>{{ kpi.rpn_max }}</strong></small>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="kpi-card" style="background:linear-gradient(135deg,#eff6ff,#dbeafe); color:#1e3a8a;">
+                <div class="kpi-label"><i class="bi bi-list-check me-1"></i>Total Terdaftar</div>
+                <div class="kpi-value">{{ kpi.total_fmea|add:kpi.total_rca }}</div>
+                <small style="font-size:.7rem;">risiko dengan evaluasi mendalam</small>
+            </div>
+        </div>
+    </div>
+
+    {# ── Filter Bar ────────────────────────────────────────────────────── #}
+    <div class="card border-0 shadow-sm mb-3 no-print">
+        <div class="card-body py-2">
+            <form method="get" class="row g-2 align-items-end">
+                <div class="col-6 col-md-3">
+                    <label class="form-label mb-1" style="font-size:.72rem; font-weight:600;">Unit Kerja</label>
+                    <select name="unit" class="form-select form-select-sm" onchange="this.form.submit()">
+                        <option value="">— Seluruh Unit —</option>
+                        {% for u in units %}
+                        <option value="{{ u.id }}" {% if default_filter_unit == u.id|stringformat:"s" %}selected{% endif %}>
+                            {% if u.code %}[{{ u.code }}] {% endif %}{{ u.name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-6 col-md-2">
+                    <label class="form-label mb-1" style="font-size:.72rem; font-weight:600;">Tahun</label>
+                    <select name="tahun" class="form-select form-select-sm" onchange="this.form.submit()">
+                        <option value="">Semua</option>
+                        {% for t in tahun_list %}
+                        <option value="{{ t }}" {% if sel_tahun == t|stringformat:"s" %}selected{% endif %}>{{ t }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-6 col-md-3">
+                    <label class="form-label mb-1" style="font-size:.72rem; font-weight:600;">Status PDCA</label>
+                    <select name="status" class="form-select form-select-sm" onchange="this.form.submit()">
+                        <option value="">Semua Status</option>
+                        {% for val, lbl in status_choices %}
+                        <option value="{{ val }}" {% if sel_status == val %}selected{% endif %}>{{ lbl }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-6 col-md-4 d-flex gap-2">
+                    <button type="submit" class="btn btn-sm text-white" style="background:#0d9488;">
+                        <i class="bi bi-funnel me-1"></i>Terapkan
+                    </button>
+                    <a href="{% url 'akreditasi:risiko_fmea_rca' %}" class="btn btn-sm btn-outline-secondary">
+                        <i class="bi bi-arrow-counterclockwise me-1"></i>Reset
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    {# ── Tabs: FMEA & RCA ──────────────────────────────────────────────── #}
+    <ul class="nav nav-tabs metode-tabs mb-3" id="fmeaRcaTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="tab-fmea-btn" data-bs-toggle="tab" data-bs-target="#tab-fmea" type="button" role="tab">
+                <i class="bi bi-diagram-3-fill me-1"></i>Kajian FMEA Proaktif
+                <span class="badge bg-warning text-dark ms-1">{{ kpi.total_fmea }}</span>
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="tab-rca-btn" data-bs-toggle="tab" data-bs-target="#tab-rca" type="button" role="tab">
+                <i class="bi bi-search me-1"></i>Investigasi RCA Reaktif
+                <span class="badge bg-danger ms-1">{{ kpi.total_rca }}</span>
+            </button>
+        </li>
+    </ul>
+
+    <div class="tab-content">
+
+        {# ══ TAB 1: FMEA ══════════════════════════════════════════════════ #}
+        <div class="tab-pane fade show active" id="tab-fmea" role="tabpanel">
+
+            {% if fmea_prioritas %}
+            <div class="card border-0 shadow-sm mb-3" style="background:#fffbeb;">
+                <div class="card-body py-3">
+                    <h6 class="fw-bold mb-2" style="font-size:.82rem; color:#78350f;">
+                        <i class="bi bi-exclamation-triangle-fill me-1"></i>Prioritas Tertinggi (Top 5 RPN)
+                    </h6>
+                    <div class="table-responsive">
+                        <table class="table table-sm mb-0" style="font-size:.75rem;">
+                            <thead>
+                                <tr class="text-muted">
+                                    <th style="width:60px;">RPN</th>
+                                    <th>Unit</th>
+                                    <th>Jenis Risiko</th>
+                                    <th style="width:90px;">Status</th>
+                                    <th style="width:60px;"></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for r in fmea_prioritas %}
+                                <tr>
+                                    <td><span class="badge bg-warning text-dark rpn-badge">{{ r.rpn_calc }}</span></td>
+                                    <td style="font-size:.72rem;">{{ r.unit.name|truncatechars:32 }}</td>
+                                    <td>{{ r.jenis_risiko|truncatechars:72 }}</td>
+                                    <td><span class="badge bg-secondary" style="font-size:.62rem;">{{ r.get_status_display }}</span></td>
+                                    <td>
+                                        <a href="{% url 'akreditasi:risiko_detail' risiko_id=r.pk %}" class="btn btn-sm btn-outline-secondary py-0 px-2" style="font-size:.68rem;">Detail</a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            {% if fmea_list %}
+            <div class="row g-3">
+                {% for r in fmea_list %}
+                <div class="col-12">
+                    <div class="card border-0 shadow-sm risk-row-card fmea">
+                        <div class="card-body py-3">
+                            <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-2">
+                                <div class="flex-grow-1" style="min-width:0;">
+                                    <div class="d-flex flex-wrap align-items-center gap-2 mb-1">
+                                        <span class="badge" style="background:#f59e0b; color:#fff; font-size:.62rem;">
+                                            <i class="bi bi-diagram-3-fill me-1"></i>FMEA PROAKTIF
+                                        </span>
+                                        {% if r.rpn_calc %}
+                                        <span class="badge bg-dark rpn-badge" style="font-size:.65rem;">RPN {{ r.rpn_calc }}</span>
+                                        {% endif %}
+                                        <span class="badge bg-secondary" style="font-size:.62rem;">{{ r.get_status_display }}</span>
+                                    </div>
+                                    <div class="fw-semibold" style="font-size:.85rem; color:#0f172a;">
+                                        {{ r.jenis_risiko|truncatechars:120 }}
+                                    </div>
+                                    <div class="text-muted mt-1" style="font-size:.72rem;">
+                                        <i class="bi bi-building me-1"></i>{{ r.unit.name }}
+                                        &bull; D={{ r.dampak }} P={{ r.probabilitas }} &bull; Skor {{ r.skor_inherent }}
+                                    </div>
+                                </div>
+                                <div class="d-flex gap-1 flex-shrink-0">
+                                    <a href="{% url 'akreditasi:risiko_detail' risiko_id=r.pk %}" class="btn btn-sm btn-outline-secondary py-0 px-2" style="font-size:.68rem;">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+                                    <a href="{% url 'akreditasi:risiko_evaluasi' risiko_id=r.pk %}" class="btn btn-sm py-0 px-2 text-white" style="font-size:.68rem; background:#0d9488;">
+                                        <i class="bi bi-pencil-square"></i>
+                                    </a>
+                                </div>
+                            </div>
+
+                            {% if r.tim_evaluasi %}
+                            <div class="mb-2" style="font-size:.74rem;">
+                                <i class="bi bi-people-fill text-warning me-1"></i><strong>Tim FMEA:</strong> {{ r.tim_evaluasi }}
+                            </div>
+                            {% endif %}
+
+                            {% if r.failure_mode_fmea %}
+                            <div class="p-2 rounded mb-2" style="background:#fffbeb; border-left:3px solid #f59e0b; font-size:.75rem;">
+                                <strong class="d-block mb-1" style="color:#78350f; font-size:.7rem;">
+                                    <i class="bi bi-exclamation-diamond me-1"></i>MODE KEGAGALAN &amp; EFEK POTENSIAL:
+                                </strong>
+                                <div style="white-space:pre-wrap; color:#57534e;">{{ r.failure_mode_fmea }}</div>
+                            </div>
+                            {% else %}
+                            <div class="text-muted fst-italic" style="font-size:.72rem;">
+                                <i class="bi bi-info-circle me-1"></i>Analisis failure mode belum diisi.
+                            </div>
+                            {% endif %}
+
+                            {% if r.rencana_aksi %}
+                            <details class="mt-2" style="font-size:.74rem;">
+                                <summary class="text-muted" style="cursor:pointer; font-size:.72rem;">
+                                    <i class="bi bi-list-check me-1"></i>Rencana Mitigasi
+                                </summary>
+                                <div class="mt-1 p-2 rounded" style="background:#f8fafc; white-space:pre-wrap;">{{ r.rencana_aksi }}</div>
+                            </details>
+                            {% endif %}
+
+                            <div class="d-flex flex-wrap justify-content-between align-items-center pt-2 mt-2 border-top text-muted" style="font-size:.68rem;">
+                                <span><i class="bi bi-person-fill me-1"></i>PJ: <strong>{{ r.pj_mitigasi|default:"—" }}</strong></span>
+                                {% if r.tanggal_evaluasi %}
+                                <span><i class="bi bi-calendar-check me-1"></i>Evaluasi: {{ r.tanggal_evaluasi|date:"d M Y" }}</span>
+                                {% endif %}
+                                {% if r.indikator_mutu_terkait %}
+                                <span><i class="bi bi-graph-up me-1"></i>{{ r.indikator_mutu_terkait.kode_indikator }}</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="card border-0 shadow-sm">
+                <div class="card-body text-center py-5">
+                    <i class="bi bi-diagram-3" style="font-size:2.5rem; color:#cbd5e1;"></i>
+                    <p class="text-muted mt-2 mb-1" style="font-size:.85rem;">Belum ada kajian FMEA terdaftar.</p>
+                    <p class="text-muted mb-3" style="font-size:.75rem;">
+                        Pilih metode <strong>FMEA Proaktif</strong> saat menginput risiko baru untuk menganalisis mode kegagalan proses berisiko tinggi.
+                    </p>
+                    <a href="{% url 'akreditasi:risiko_input' %}" class="btn btn-sm text-white" style="background:#0d9488;">
+                        <i class="bi bi-plus-circle me-1"></i>Input Risiko dengan FMEA
+                    </a>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        {# ══ TAB 2: RCA ═══════════════════════════════════════════════════ #}
+        <div class="tab-pane fade" id="tab-rca" role="tabpanel">
+
+            {% if rca_list %}
+            <div class="row g-3">
+                {% for r in rca_list %}
+                <div class="col-12">
+                    <div class="card border-0 shadow-sm risk-row-card rca">
+                        <div class="card-body py-3">
+                            <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-2">
+                                <div class="flex-grow-1" style="min-width:0;">
+                                    <div class="d-flex flex-wrap align-items-center gap-2 mb-1">
+                                        <span class="badge bg-danger" style="font-size:.62rem;">
+                                            <i class="bi bi-search me-1"></i>RCA REAKTIF
+                                        </span>
+                                        <span class="badge bg-secondary" style="font-size:.62rem;">{{ r.get_status_display }}</span>
+                                        {% if r.dampak >= 5 %}
+                                        <span class="badge bg-dark" style="font-size:.62rem;">
+                                            <i class="bi bi-exclamation-octagon me-1"></i>Dampak Kritis
+                                        </span>
+                                        {% endif %}
+                                    </div>
+                                    <div class="fw-semibold" style="font-size:.85rem; color:#0f172a;">
+                                        {{ r.jenis_risiko|truncatechars:120 }}
+                                    </div>
+                                    <div class="text-muted mt-1" style="font-size:.72rem;">
+                                        <i class="bi bi-building me-1"></i>{{ r.unit.name }}
+                                        &bull; D={{ r.dampak }} P={{ r.probabilitas }} &bull; Skor {{ r.skor_inherent }}
+                                    </div>
+                                </div>
+                                <div class="d-flex gap-1 flex-shrink-0">
+                                    <a href="{% url 'akreditasi:risiko_detail' risiko_id=r.pk %}" class="btn btn-sm btn-outline-secondary py-0 px-2" style="font-size:.68rem;">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+                                    <a href="{% url 'akreditasi:risiko_evaluasi' risiko_id=r.pk %}" class="btn btn-sm py-0 px-2 text-white" style="font-size:.68rem; background:#0d9488;">
+                                        <i class="bi bi-pencil-square"></i>
+                                    </a>
+                                </div>
+                            </div>
+
+                            {% if r.tim_evaluasi %}
+                            <div class="mb-2" style="font-size:.74rem;">
+                                <i class="bi bi-people-fill text-danger me-1"></i><strong>Tim Investigasi:</strong> {{ r.tim_evaluasi }}
+                            </div>
+                            {% endif %}
+
+                            <div class="row g-2">
+                                {% if r.akar_masalah_rca %}
+                                <div class="col-md-6">
+                                    <div class="p-2 rounded h-100" style="background:#fef2f2; border-left:3px solid #dc2626; font-size:.74rem;">
+                                        <strong class="d-block mb-1" style="color:#7f1d1d; font-size:.7rem;">
+                                            <i class="bi bi-question-circle me-1"></i>ANALISIS AKAR MASALAH (5-WHYS):
+                                        </strong>
+                                        <div style="white-space:pre-wrap; color:#7f1d1d;">{{ r.akar_masalah_rca }}</div>
+                                    </div>
+                                </div>
+                                {% endif %}
+                                {% if r.tindakan_korektif_rca %}
+                                <div class="col-md-6">
+                                    <div class="p-2 rounded h-100" style="background:#f0fdf4; border-left:3px solid #16a34a; font-size:.74rem;">
+                                        <strong class="d-block mb-1" style="color:#14532d; font-size:.7rem;">
+                                            <i class="bi bi-check2-square me-1"></i>TINDAKAN KOREKTIF &amp; SOLUSI PERMANEN:
+                                        </strong>
+                                        <div style="white-space:pre-wrap; color:#14532d;">{{ r.tindakan_korektif_rca }}</div>
+                                    </div>
+                                </div>
+                                {% endif %}
+                            </div>
+
+                            {% if not r.akar_masalah_rca and not r.tindakan_korektif_rca %}
+                            <div class="text-muted fst-italic" style="font-size:.72rem;">
+                                <i class="bi bi-info-circle me-1"></i>Analisis akar masalah &amp; tindakan korektif belum diisi.
+                            </div>
+                            {% endif %}
+
+                            <div class="d-flex flex-wrap justify-content-between align-items-center pt-2 mt-2 border-top text-muted" style="font-size:.68rem;">
+                                <span><i class="bi bi-person-fill me-1"></i>PJ: <strong>{{ r.pj_mitigasi|default:"—" }}</strong></span>
+                                {% if r.tanggal_evaluasi %}
+                                <span><i class="bi bi-calendar-check me-1"></i>Investigasi: {{ r.tanggal_evaluasi|date:"d M Y" }}</span>
+                                {% endif %}
+                                {% if r.indikator_mutu_terkait %}
+                                <span><i class="bi bi-graph-up me-1"></i>{{ r.indikator_mutu_terkait.kode_indikator }}</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="card border-0 shadow-sm">
+                <div class="card-body text-center py-5">
+                    <i class="bi bi-search" style="font-size:2.5rem; color:#cbd5e1;"></i>
+                    <p class="text-muted mt-2 mb-1" style="font-size:.85rem;">Belum ada investigasi RCA terdaftar.</p>
+                    <p class="text-muted mb-3" style="font-size:.75rem;">
+                        Pilih metode <strong>RCA Reaktif</strong> saat menginput risiko untuk menganalisis akar masalah pasca kejadian sentinel / KTD berat.
+                    </p>
+                    <a href="{% url 'akreditasi:risiko_input' %}" class="btn btn-sm text-white" style="background:#0d9488;">
+                        <i class="bi bi-plus-circle me-1"></i>Input Risiko dengan RCA
+                    </a>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+    </div>
+
+    {# ── Panduan Alur ──────────────────────────────────────────────────── #}
+    <div class="card border-0 shadow-sm mt-4">
+        <div class="card-body py-3">
+            <h6 class="fw-bold mb-3" style="font-size:.8rem; color:#0f172a;">
+                <i class="bi bi-signpost-split me-1"></i>Panduan Pemilihan Metode Evaluasi
+            </h6>
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <div class="p-3 rounded h-100" style="background:#fffbeb; border-left:4px solid #f59e0b;">
+                        <div class="fw-bold mb-1" style="font-size:.8rem; color:#78350f;">
+                            <i class="bi bi-diagram-3-fill me-1"></i>FMEA — Proaktif
+                        </div>
+                        <ul class="mb-0 ps-3 text-muted" style="font-size:.74rem; line-height:1.6;">
+                            <li>Digunakan <strong>sebelum</strong> insiden terjadi</li>
+                            <li>Untuk proses berisiko tinggi yang diprioritaskan tahun berjalan</li>
+                            <li>Output: mode kegagalan, efek potensial, penyebab, barrier pencegahan, RPN</li>
+                            <li>Standar: <strong>STARKES PMKP 8</strong> — Penerapan Manajemen Risiko Klinis Terintegrasi</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="p-3 rounded h-100" style="background:#fef2f2; border-left:4px solid #dc2626;">
+                        <div class="fw-bold mb-1" style="font-size:.8rem; color:#7f1d1d;">
+                            <i class="bi bi-search me-1"></i>RCA — Reaktif
+                        </div>
+                        <ul class="mb-0 ps-3 text-muted" style="font-size:.74rem; line-height:1.6;">
+                            <li>Digunakan <strong>setelah</strong> kejadian sentinel / KTD berat</li>
+                            <li>Juga untuk risiko merah kronis yang tidak turun setelah rencana aksi</li>
+                            <li>Output: 5-Whys, Fishbone, akar masalah sistemik, tindakan korektif permanen</li>
+                            <li>Standar: <strong>STARKES PMKP 7</strong> — Investigasi Sederhana &amp; Root Cause Analysis</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            <div class="mt-3 p-2 rounded text-muted" style="background:#f8fafc; font-size:.72rem;">
+                <i class="bi bi-lightbulb me-1"></i>
+                Risiko dengan skor <strong>tinggi/sangat tinggi</strong> yang tidak menunjukkan penurunan dalam 1 bulan pasca-rencana aksi
+                direkomendasikan untuk dieskalasi ke <strong>FMEA</strong> (jika belum terjadi insiden) atau <strong>RCA</strong> (jika sudah terjadi insiden).
+                Dokumen bukti tindak lanjut diunggah ke menu <strong>Dokumen Bukti (RDWOS)</strong>.
+            </div>
+        </div>
+    </div>
+
+</div>
+{% endblock %}

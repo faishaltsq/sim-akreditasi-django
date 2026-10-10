@@ -49,6 +49,13 @@ class RisikoUnit(models.Model):
         ('ACCEPTED',     'Diterima (Accepted Risk)'),
     ]
 
+    # Section E — Hiliran Metode Evaluasi Mendalam (STARKES PMKP 7 & 8)
+    METODE_EVALUASI_CHOICES = [
+        ('STANDAR', 'Standar Pemantauan PDCA'),
+        ('FMEA',    'FMEA — Failure Mode and Effects Analysis (Proaktif)'),
+        ('RCA',     'RCA — Root Cause Analysis (Reaktif)'),
+    ]
+
     DAMPAK_VALIDATORS = [MinValueValidator(1), MaxValueValidator(5)]
 
     unit             = models.ForeignKey(UnitKerja, on_delete=models.CASCADE, verbose_name='Unit Kerja')
@@ -87,6 +94,20 @@ class RisikoUnit(models.Model):
     )
 
     status     = models.CharField('Status PDCA', max_length=12, choices=STATUS_CHOICES, default='IDENTIFIKASI')
+
+    # ── Section E: Hiliran Metode Evaluasi Mendalam (FMEA & RCA) ──────────
+    metode_evaluasi       = models.CharField(
+        'Metode Evaluasi Mendalam', max_length=10,
+        choices=METODE_EVALUASI_CHOICES, default='STANDAR',
+        help_text='Standar PDCA, FMEA (proaktif), atau RCA (reaktif).'
+    )
+    tim_evaluasi          = models.CharField('Tim Evaluasi / Investigasi', max_length=255, blank=True, default='')
+    failure_mode_fmea     = models.TextField('Mode Kegagalan & Efek Potensial (FMEA)', blank=True, default='')
+    akar_masalah_rca      = models.TextField('Analisis Akar Masalah (RCA 5-Whys / Fishbone)', blank=True, default='')
+    tindakan_korektif_rca = models.TextField('Rencana Tindakan Korektif & Solusi Permanen', blank=True, default='')
+    rpn_fmea              = models.IntegerField('RPN — Risk Priority Number (FMEA)', null=True, blank=True)
+    tanggal_evaluasi      = models.DateField('Tanggal Evaluasi / Investigasi', null=True, blank=True)
+
     created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='risiko_dibuat')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -117,6 +138,32 @@ class RisikoUnit(models.Model):
     @property
     def skor_inherent(self):
         return self.dampak * self.probabilitas
+
+    @property
+    def rpn_calc(self):
+        """RPN FMEA: Severity × Occurrence × Detection (approx dari dampak × probabilitas × 5).
+        Jika rpn_fmea diisi manual, pakai nilai manual."""
+        if self.rpn_fmea:
+            return self.rpn_fmea
+        if self.metode_evaluasi == 'FMEA':
+            return self.dampak * self.probabilitas * 5
+        return None
+
+    @property
+    def metode_evaluasi_badge(self):
+        return {
+            'STANDAR': ('secondary', 'bi-arrow-repeat', 'Standar PDCA'),
+            'FMEA':    ('warning text-dark', 'bi-diagram-3-fill', 'FMEA Proaktif'),
+            'RCA':     ('danger', 'bi-search', 'RCA Reaktif'),
+        }.get(self.metode_evaluasi, ('secondary', 'bi-arrow-repeat', 'Standar PDCA'))
+
+    @property
+    def is_fmea(self):
+        return self.metode_evaluasi == 'FMEA'
+
+    @property
+    def is_rca(self):
+        return self.metode_evaluasi == 'RCA'
 
     @property
     def skor_residual(self):

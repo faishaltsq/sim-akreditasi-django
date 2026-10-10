@@ -212,5 +212,71 @@ Format Output JSON:
 }}"""
 
 
+# ── Section E: FMEA — Failure Mode and Effects Analysis (Proaktif) ────────────
+PROMPT_FMEA_SUGGESTION = """Konteks Risiko Klinis Rumah Sakit (STARKES PMKP 8 - FMEA):
+- Unit Kerja: {unit_name}
+- Kategori Risiko: {kategori_risiko}
+- Jenis Risiko: {jenis_risiko}
+- Masalah / Temuan: {masalah}
+- Data Pendukung: {data_pendukung}
+- Skor Dampak (1-5): {dampak}
+- Skor Probabilitas (1-5): {probabilitas}
+
+Tugas (FMEA - Failure Mode and Effects Analysis, pendekatan PROAKTIF):
+Lakukan analisis FMEA terhadap proses berisiko tinggi ini untuk MENCEGAH insiden sebelum terjadi.
+1. Uraikan 3-5 MODE KEGAGALAN (failure mode) spesifik yang mungkin terjadi pada proses tersebut.
+2. Untuk setiap mode kegagalan, sebutkan EFEK POTENSIAL terhadap pasien/unit.
+3. Sebutkan PENYEBAB potensial (root causes).
+4. Sebutkan BARRIER / KONTROL PENCEGAHAN yang direkomendasikan.
+5. Hitung RPN = Severity x Occurrence x Detection (skala 1-10 tiap komponen, atau 1-5 jika skala RS 1-5).
+6. Sarankan susunan TIM FMEA multidisiplin yang relevan.
+
+Format Output JSON:
+{{
+  "failure_mode": "1) Mode Kegagalan: <uraian>\n   Efek Potensial: <uraian>\n   Penyebab: <uraian>\n   Barrier Pencegahan: <uraian>\n2) ...",
+  "daftar_failure_mode": [
+    {{"mode": "...", "efek": "...", "penyebab": "...", "barrier": "...", "severity": 8, "occurrence": 4, "detection": 3}}
+  ],
+  "rpn": 96,
+  "rpn_kategori": "TINGGI / SEDANG / RENDAH",
+  "tim_fmea": "Ka. Unit, IPCN, Ka. Farmasi, Komite Mutu, ...",
+  "prioritas_tindakan": "Mode kegagalan mana yang harus ditangani lebih dulu dan mengapa",
+  "rekomendasi_barrier": "Ringkasan kontrol pencegahan utama yang harus segera diterapkan"
+}}"""
 
 
+# ── Section E: RCA — Root Cause Analysis (Reaktif) ───────────────────────────
+PROMPT_RCA_SUGGESTION = """Konteks Insiden / Risiko Klinis Rumah Sakit (STARKES PMKP 7 - RCA):
+- Unit Kerja: {unit_name}
+- Jenis Risiko: {jenis_risiko}
+- Masalah / Kronologi Kejadian: {masalah}
+- Data Pendukung: {data_pendukung}
+- Skor Dampak (1-5): {dampak}
+- Skor Probabilitas (1-5): {probabilitas}
+
+Tugas (RCA - Root Cause Analysis, pendekatan REAKTIF):
+Lakukan analisis akar masalah mendalam atas kejadian/risiko ini menggunakan metode 5-Whys dan kerangka Fishbone (Man, Method, Material, Machine, Measurement, Environment).
+1. Susun rantai 5-Whys yang mengarah ke akar masalah utama.
+2. Identifikasi penyebab langsung (immediate cause) vs akar masalah sistem (systemic root cause).
+3. Kelompokkan kontributor berdasarkan kategori Fishbone.
+4. Susun RENCANA TINDAKAN KOREKTIF yang konkret, terukur, dan bersifat solusi permanen (bukan sekadar quick fix).
+5. Sarankan TIM INVESTIGASI RCA yang sesuai (ketua, anggota, unit terkait).
+6. Sarankan cara memverifikasi efektivitas perbaikan.
+
+Format Output JSON:
+{{
+  "akar_masalah": "Mengapa 1: ...\nMengapa 2: ...\nMengapa 3: ...\nMengapa 4: ...\nMengapa 5 (Akar Masalah Utama): ...",
+  "penyebab_langsung": "Uraian penyebab langsung",
+  "akar_masalah_sistemik": "Uraian akar masalah sistemik",
+  "fishbone": {{
+    "man": "...",
+    "method": "...",
+    "material": "...",
+    "machine": "...",
+    "measurement": "...",
+    "environment": "..."
+  }},
+  "tindakan_korektif": "1) <tindakan konkret>\n2) <tindakan konkret>\n3) <tindakan konkret>",
+  "tim_investigasi": "Ketua Komite Mutu, Ka. Unit, IPCN, ...",
+  "verifikasi_efektivitas": "Cara memantau apakah tindakan perbaikan efektif mencegah berulangnya insiden"
+}}"""

@@ -502,6 +502,64 @@
             <h6 class="sub-section-title">
                 <i class="bi bi-send-check me-1"></i>C. Tindak Lanjut &amp; Distribusi Status Siklus PDCA
             </h6>
+
+            {# C.1 Rekap Evaluasi Mendalam FMEA & RCA (Section E) #}
+            {% if fmea_list or rca_list %}
+            <div class="mb-3">
+                <div class="fw-bold text-dark mb-2" style="font-size:0.8rem;">
+                    <i class="bi bi-diagram-3-fill text-warning me-1"></i>Rekapitulasi Evaluasi Mendalam (FMEA &amp; RCA):
+                </div>
+                <div class="table-responsive mb-2">
+                    <table class="table table-sm table-bordered align-middle mb-0" style="font-size:0.72rem;">
+                        <thead style="background:#f8fafc;">
+                            <tr>
+                                <th style="width:110px;">Metode</th>
+                                <th>Unit</th>
+                                <th>Jenis Risiko</th>
+                                <th style="width:70px;" class="text-center">RPN</th>
+                                <th>Tim Evaluasi</th>
+                                <th style="width:90px;">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for r in fmea_list %}
+                            <tr>
+                                <td><span class="badge" style="background:#f59e0b; color:#fff; font-size:0.62rem;">FMEA</span></td>
+                                <td>{{ r.unit.name|truncatechars:26 }}</td>
+                                <td>{{ r.jenis_risiko|truncatechars:70 }}</td>
+                                <td class="text-center font-monospace fw-bold">{{ r.rpn_calc|default:"—" }}</td>
+                                <td>{{ r.tim_evaluasi|default:"—"|truncatechars:40 }}</td>
+                                <td><span class="badge bg-secondary" style="font-size:0.62rem;">{{ r.get_status_display }}</span></td>
+                            </tr>
+                            {% endfor %}
+                            {% for r in rca_list %}
+                            <tr>
+                                <td><span class="badge bg-danger" style="font-size:0.62rem;">RCA</span></td>
+                                <td>{{ r.unit.name|truncatechars:26 }}</td>
+                                <td>{{ r.jenis_risiko|truncatechars:70 }}</td>
+                                <td class="text-center text-muted">—</td>
+                                <td>{{ r.tim_evaluasi|default:"—"|truncatechars:40 }}</td>
+                                <td><span class="badge bg-secondary" style="font-size:0.62rem;">{{ r.get_status_display }}</span></td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% if fmea_list %}
+                <div class="p-2 rounded mb-2" style="background:#fffbeb; border-left:3px solid #f59e0b; font-size:0.72rem;">
+                    <strong style="color:#78350f;"><i class="bi bi-diagram-3-fill me-1"></i>Kajian FMEA Proaktif ({{ fmea_list|length }}):</strong>
+                    <span class="text-muted">Analisis mode kegagalan pada proses berisiko tinggi untuk mencegah insiden sebelum terjadi (STARKES PMKP 8).</span>
+                </div>
+                {% endif %}
+                {% if rca_list %}
+                <div class="p-2 rounded" style="background:#fef2f2; border-left:3px solid #dc2626; font-size:0.72rem;">
+                    <strong style="color:#7f1d1d;"><i class="bi bi-search me-1"></i>Investigasi RCA Reaktif ({{ rca_list|length }}):</strong>
+                    <span class="text-muted">Analisis akar masalah mendalam pasca kejadian sentinel / KTD berat (STARKES PMKP 7).</span>
+                </div>
+                {% endif %}
+            </div>
+            {% endif %}
+
             <div class="d-flex flex-wrap gap-2 mb-3">
                 {% for st_val, st_lbl, count, badge_cls in status_counts_list %}
                 <span class="badge bg-light text-dark border p-2 d-flex align-items-center gap-1.5" style="font-size:0.72rem;">

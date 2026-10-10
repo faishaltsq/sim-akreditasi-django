@@ -24,6 +24,8 @@ from .ai_service import (
     generate_kps_rekomendasi,
     generate_indicator_draft,
     generate_risk_analysis_from_problem,
+    generate_fmea_suggestion,
+    generate_rca_suggestion,
     test_deepseek_connection,
 )
 from .models import StandardItem, UnitKerja
@@ -271,6 +273,77 @@ def api_ai_analisis_masalah_risiko(request):
         unit_name=unit_name,
         masalah=masalah,
         data_pendukung=data_pendukung,
+    )
+    return JsonResponse(res, status=200 if res['success'] else 400)
+
+
+# ── 9. FMEA — FAILURE MODE & EFFECTS ANALYSIS (PROAKTIF) ─────────────────
+
+@login_required
+@require_POST
+@rate_limit(max_calls=12, window=60, scope='ai')
+def api_ai_fmea_saran(request):
+    """Endpoint untuk tombol 'AI Bantu Susun FMEA' di Section E form risiko."""
+    profile = getattr(request.user, 'profile', None)
+    if profile and not profile.has_permission('can_manage_risiko'):
+        return JsonResponse({'success': False, 'error': 'Anda tidak memiliki hak akses mengubah data risiko.'}, status=403)
+
+    data = _parse_json_body(request)
+    if not data:
+        return JsonResponse({'success': False, 'error': 'Payload request tidak valid.'}, status=400)
+
+    jenis_risiko = (data.get('jenis_risiko') or '').strip()
+    masalah = (data.get('masalah') or '').strip()
+    if not jenis_risiko and not masalah:
+        return JsonResponse({
+            'success': False,
+            'error': 'Harap isi Jenis Risiko atau Masalah terlebih dahulu sebelum meminta analisis FMEA.'
+        }, status=400)
+
+    res = generate_fmea_suggestion(
+        user=request.user,
+        unit_name=(data.get('unit_name') or 'Unit Kerja').strip(),
+        kategori_risiko=(data.get('kategori_risiko') or 'KLINIS').strip(),
+        jenis_risiko=jenis_risiko,
+        masalah=masalah,
+        data_pendukung=(data.get('data_pendukung') or '').strip(),
+        dampak=int(data.get('dampak') or 3),
+        probabilitas=int(data.get('probabilitas') or 3),
+    )
+    return JsonResponse(res, status=200 if res['success'] else 400)
+
+
+# ── 10. RCA — ROOT CAUSE ANALYSIS (REAKTIF) ──────────────────────────────
+
+@login_required
+@require_POST
+@rate_limit(max_calls=12, window=60, scope='ai')
+def api_ai_rca_saran(request):
+    """Endpoint untuk tombol 'AI Bantu 5-Whys' di Section E form risiko."""
+    profile = getattr(request.user, 'profile', None)
+    if profile and not profile.has_permission('can_manage_risiko'):
+        return JsonResponse({'success': False, 'error': 'Anda tidak memiliki hak akses mengubah data risiko.'}, status=403)
+
+    data = _parse_json_body(request)
+    if not data:
+        return JsonResponse({'success': False, 'error': 'Payload request tidak valid.'}, status=400)
+
+    jenis_risiko = (data.get('jenis_risiko') or '').strip()
+    masalah = (data.get('masalah') or '').strip()
+    if not jenis_risiko and not masalah:
+        return JsonResponse({
+            'success': False,
+            'error': 'Harap isi Jenis Risiko atau Masalah terlebih dahulu sebelum meminta analisis RCA.'
+        }, status=400)
+
+    res = generate_rca_suggestion(
+        user=request.user,
+        unit_name=(data.get('unit_name') or 'Unit Kerja').strip(),
+        jenis_risiko=jenis_risiko,
+        masalah=masalah,
+        data_pendukung=(data.get('data_pendukung') or '').strip(),
+        dampak=int(data.get('dampak') or 3),
+        probabilitas=int(data.get('probabilitas') or 3),
     )
     return JsonResponse(res, status=200 if res['success'] else 400)
 

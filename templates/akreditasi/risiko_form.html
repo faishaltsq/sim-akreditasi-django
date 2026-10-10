@@ -333,6 +333,122 @@
                             <input type="date" name="target_selesai" class="form-control form-control-sm">
                         </div>
 
+                        {# ═══════════════════════════════════════════════════════════
+                           SECTION E — HILIRAN METODE EVALUASI MENDALAM (FMEA & RCA)
+                           STARKES PMKP 7 (RCA) & PMKP 8 (FMEA)
+                           ═══════════════════════════════════════════════════════════ #}
+                        <div class="border-top pt-3 mb-3">
+                            <h6 class="fw-bold mb-1 pb-1" style="color:#0f172a; font-size:.82rem;">
+                                <i class="bi bi-diagram-3 text-warning me-1"></i>E. Hiliran Metode Evaluasi Mendalam (FMEA &amp; RCA)
+                            </h6>
+                            <p class="text-muted mb-3" style="font-size:.72rem; line-height:1.45;">
+                                <strong>FMEA</strong> = analisis <em>proaktif</em> untuk mencegah kegagalan pada proses berisiko tinggi sebelum insiden terjadi.
+                                <strong>RCA</strong> = analisis <em>reaktif</em> untuk menggali akar masalah setelah kejadian sentinel / KTD berat.
+                                Biarkan <strong>Standar PDCA</strong> bila risiko cukup ditangani dengan pemantauan rutin.
+                            </p>
+
+                            {# Mode toggle pills #}
+                            <div class="btn-group btn-group-sm mb-3 w-100" role="group" id="metode-evaluasi-toggle">
+                                <button type="button" class="btn btn-outline-secondary active" data-metode="STANDAR" style="font-size:.72rem;">
+                                    <i class="bi bi-arrow-repeat me-1"></i>Standar PDCA
+                                </button>
+                                <button type="button" class="btn btn-outline-warning" data-metode="FMEA" style="font-size:.72rem;">
+                                    <i class="bi bi-diagram-3-fill me-1"></i>FMEA Proaktif
+                                </button>
+                                <button type="button" class="btn btn-outline-danger" data-metode="RCA" style="font-size:.72rem;">
+                                    <i class="bi bi-search me-1"></i>RCA Reaktif
+                                </button>
+                            </div>
+                            <input type="hidden" name="metode_evaluasi" id="input_metode_evaluasi" value="STANDAR">
+
+                            {# ── Panel STANDAR ── #}
+                            <div id="panel-metode-standar" class="p-2 rounded border bg-light-subtle" style="font-size:.75rem;">
+                                <i class="bi bi-info-circle text-secondary me-1"></i>
+                                Risiko ini dipantau melalui <strong>siklus PDCA rutin</strong> dan evaluasi berkala di Matriks PDCA.
+                            </div>
+
+                            {# ── Panel FMEA ── #}
+                            <div id="panel-metode-fmea" class="d-none">
+                                <div class="p-2 mb-2 rounded" style="background:#fffbeb; border-left:3px solid #f59e0b; font-size:.72rem;">
+                                    <strong class="text-warning-emphasis">Pendekatan Proaktif</strong> — Identifikasi mode kegagalan &amp; efeknya sebelum insiden terjadi (STARKES PMKP 8).
+                                </div>
+                                <div class="row g-3 mb-3">
+                                    <div class="col-md-8">
+                                        <label class="form-label" style="font-size:.78rem; font-weight:600;">
+                                            Tim FMEA Multidisiplin
+                                        </label>
+                                        <input type="text" name="tim_evaluasi_fmea" id="input_tim_fmea"
+                                               class="form-control form-control-sm"
+                                               placeholder="cth: Ka. IGD, Ka. Farmasi, IPCN, Komite Mutu">
+                                        <small class="text-muted" style="font-size:.65rem;">Pisahkan dengan koma</small>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label" style="font-size:.78rem; font-weight:600;">
+                                            RPN <span class="text-muted">(S × O × D)</span>
+                                        </label>
+                                        <input type="number" name="rpn_fmea" id="input_rpn_fmea"
+                                               class="form-control form-control-sm" placeholder="Auto" min="1" max="125">
+                                        <small class="text-muted" style="font-size:.65rem;">Kosongkan untuk hitung otomatis</small>
+                                    </div>
+                                </div>
+                                <div class="mb-3">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <label class="form-label mb-0" style="font-size:.78rem; font-weight:600;">
+                                            Mode Kegagalan &amp; Efek Potensial
+                                        </label>
+                                        <button type="button" class="btn btn-sm btn-outline-warning px-2 py-0"
+                                                id="btn-ai-fmea" style="font-size:.7rem;">
+                                            <i class="bi bi-stars me-1"></i>AI Bantu Susun FMEA
+                                        </button>
+                                    </div>
+                                    <textarea name="failure_mode_fmea" id="input_failure_mode" class="form-control form-control-sm"
+                                              rows="4" placeholder="cth: 1) Mode kegagalan: Dosis obat salah dihitung&#10;   Efek: Overdosis, henti jantung&#10;   Penyebab: Kelelahan shift malam, tidak ada double check&#10;   Barrier: Implementasi barcode scanning"></textarea>
+                                </div>
+                            </div>
+
+                            {# ── Panel RCA ── #}
+                            <div id="panel-metode-rca" class="d-none">
+                                <div class="p-2 mb-2 rounded" style="background:#fef2f2; border-left:3px solid #dc2626; font-size:.72rem;">
+                                    <strong class="text-danger">Pendekatan Reaktif</strong> — Analisis mendalam pasca kejadian sentinel / KTD berat / risiko merah kronis (STARKES PMKP 7).
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label" style="font-size:.78rem; font-weight:600;">
+                                        Tim Investigasi RCA
+                                    </label>
+                                    <input type="text" name="tim_evaluasi_rca" id="input_tim_rca"
+                                           class="form-control form-control-sm"
+                                           placeholder="cth: Ketua Komite Mutu, Ka. Unit, IPCN, Perawat Pelaksana">
+                                </div>
+                                <div class="mb-3">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <label class="form-label mb-0" style="font-size:.78rem; font-weight:600;">
+                                            Analisis Akar Masalah <span class="text-muted">(5-Whys / Fishbone)</span>
+                                        </label>
+                                        <button type="button" class="btn btn-sm btn-outline-danger px-2 py-0"
+                                                id="btn-ai-rca" style="font-size:.7rem;">
+                                            <i class="bi bi-stars me-1"></i>AI Bantu 5-Whys
+                                        </button>
+                                    </div>
+                                    <textarea name="akar_masalah_rca" id="input_akar_masalah" class="form-control form-control-sm"
+                                              rows="4" placeholder="Mengapa 1: ...&#10;Mengapa 2: ...&#10;Mengapa 3: ...&#10;Mengapa 4: ...&#10;Mengapa 5: Akar masalah utama: ..."></textarea>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label" style="font-size:.78rem; font-weight:600;">
+                                        Rencana Tindakan Korektif &amp; Solusi Permanen
+                                    </label>
+                                    <textarea name="tindakan_korektif_rca" id="input_tindakan_korektif" class="form-control form-control-sm"
+                                              rows="3" placeholder="cth: 1) Revisi SPO pemberian obat high-alert&#10;2) Pelatihan ulang seluruh perawat&#10;3) Implementasi barcode scanning di SIMRS"></textarea>
+                                </div>
+                            </div>
+
+                            <div class="mt-3">
+                                <label class="form-label" style="font-size:.78rem; font-weight:600;">
+                                    Tanggal Evaluasi / Investigasi
+                                </label>
+                                <input type="date" name="tanggal_evaluasi" class="form-control form-control-sm" style="max-width:220px;">
+                            </div>
+                        </div>
+
                         <div class="d-flex gap-2 justify-content-end">
                             <a href="{% url 'akreditasi:risiko_daftar' %}" class="btn btn-sm btn-outline-secondary">Batal</a>
                             <button type="submit" class="btn btn-sm text-white px-4" style="background:#0d9488;"><i class="bi bi-save me-1"></i>Simpan Risiko</button>
@@ -983,6 +1099,127 @@ document.addEventListener('DOMContentLoaded', function() {
         validateJenisRisikoBox();
     };
     validateJenisRisikoBox(); // Initial check
+
+    // ══════════════════════════════════════════════════════════════════════
+    // SECTION E — TOGGLE METODE EVALUASI MENDALAM (FMEA & RCA)
+    // ══════════════════════════════════════════════════════════════════════
+    const metodeToggle   = document.getElementById('metode-evaluasi-toggle');
+    const inputMetode    = document.getElementById('input_metode_evaluasi');
+    const panelStandar   = document.getElementById('panel-metode-standar');
+    const panelFmea      = document.getElementById('panel-metode-fmea');
+    const panelRca       = document.getElementById('panel-metode-rca');
+
+    function showMetodePanel(metode) {
+        if (inputMetode) inputMetode.value = metode;
+        [panelStandar, panelFmea, panelRca].forEach(p => { if (p) p.classList.add('d-none'); });
+        if (metode === 'FMEA'  && panelFmea)  panelFmea.classList.remove('d-none');
+        if (metode === 'RCA'   && panelRca)   panelRca.classList.remove('d-none');
+        if (metode === 'STANDAR' && panelStandar) panelStandar.classList.remove('d-none');
+    }
+
+    if (metodeToggle) {
+        metodeToggle.querySelectorAll('button').forEach(btn => {
+            btn.addEventListener('click', function() {
+                metodeToggle.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+                showMetodePanel(this.dataset.metode);
+            });
+        });
+    }
+    showMetodePanel('STANDAR');
+
+    // ── AI Helper: FMEA Failure Mode Suggestion ──────────────────────────
+    const btnAiFmea = document.getElementById('btn-ai-fmea');
+    if (btnAiFmea) {
+        btnAiFmea.addEventListener('click', async function() {
+            const jenisRisiko = selectedRisks.join('; ') || document.querySelector('[name="jenis_risiko_text"]')?.value || '';
+            const masalah = (inputMasalah && inputMasalah.value) || '';
+            if (!jenisRisiko && !masalah) {
+                alert('Harap isi Jenis Risiko atau Masalah terlebih dahulu.');
+                return;
+            }
+            const orig = this.innerHTML;
+            this.disabled = true;
+            this.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Menyusun…';
+            try {
+                const r = await fetch('/ai/risiko-fmea-saran/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value },
+                    body: JSON.stringify({
+                        unit_name: unitSelect ? unitSelect.options[unitSelect.selectedIndex]?.text : '',
+                        jenis_risiko: jenisRisiko,
+                        masalah: masalah,
+                        data_pendukung: (inputData && inputData.value) || '',
+                        kategori_risiko: document.querySelector('[name="kategori_risiko"]')?.value || 'KLINIS',
+                        dampak: dampakEl ? dampakEl.value : 3,
+                        probabilitas: probEl ? probEl.value : 3,
+                    })
+                });
+                const j = await r.json();
+                if (j.success && j.data) {
+                    const fm = document.getElementById('input_failure_mode');
+                    if (fm) fm.value = j.data.failure_mode || j.data.text || JSON.stringify(j.data, null, 2);
+                    const rpn = document.getElementById('input_rpn_fmea');
+                    if (rpn && j.data.rpn) rpn.value = j.data.rpn;
+                    const tim = document.getElementById('input_tim_fmea');
+                    if (tim && j.data.tim_fmea) tim.value = j.data.tim_fmea;
+                } else {
+                    alert('AI gagal: ' + (j.error || 'unknown'));
+                }
+            } catch (e) {
+                alert('Gagal menghubungi AI: ' + e.message);
+            } finally {
+                this.disabled = false;
+                this.innerHTML = orig;
+            }
+        });
+    }
+
+    // ── AI Helper: RCA 5-Whys ────────────────────────────────────────────
+    const btnAiRca = document.getElementById('btn-ai-rca');
+    if (btnAiRca) {
+        btnAiRca.addEventListener('click', async function() {
+            const jenisRisiko = selectedRisks.join('; ') || '';
+            const masalah = (inputMasalah && inputMasalah.value) || '';
+            if (!jenisRisiko && !masalah) {
+                alert('Harap isi Jenis Risiko atau Masalah terlebih dahulu.');
+                return;
+            }
+            const orig = this.innerHTML;
+            this.disabled = true;
+            this.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Menganalisis…';
+            try {
+                const r = await fetch('/ai/risiko-rca-saran/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value },
+                    body: JSON.stringify({
+                        unit_name: unitSelect ? unitSelect.options[unitSelect.selectedIndex]?.text : '',
+                        jenis_risiko: jenisRisiko,
+                        masalah: masalah,
+                        data_pendukung: (inputData && inputData.value) || '',
+                        dampak: dampakEl ? dampakEl.value : 3,
+                        probabilitas: probEl ? probEl.value : 3,
+                    })
+                });
+                const j = await r.json();
+                if (j.success && j.data) {
+                    const am = document.getElementById('input_akar_masalah');
+                    if (am) am.value = j.data.akar_masalah || j.data.text || '';
+                    const tk = document.getElementById('input_tindakan_korektif');
+                    if (tk && j.data.tindakan_korektif) tk.value = j.data.tindakan_korektif;
+                    const tim = document.getElementById('input_tim_rca');
+                    if (tim && j.data.tim_investigasi) tim.value = j.data.tim_investigasi;
+                } else {
+                    alert('AI gagal: ' + (j.error || 'unknown'));
+                }
+            } catch (e) {
+                alert('Gagal menghubungi AI: ' + e.message);
+            } finally {
+                this.disabled = false;
+                this.innerHTML = orig;
+            }
+        });
+    }
 });
 </script>
 {% endblock %}

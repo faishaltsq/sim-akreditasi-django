@@ -195,6 +195,13 @@
             <span class="nav-desc">5-Seksi STARKES 5.15</span>
         </span>
     </a>
+    <a href="{% url 'akreditasi:risiko_fmea_rca' %}" class="nav-link {% if 'fmea' in request.resolver_match.url_name %}active{% endif %}">
+        <span class="nav-icon"><i class="bi bi-diagram-3-fill"></i></span>
+        <span class="nav-text">
+            <span class="nav-title">Metode FMEA &amp; RCA</span>
+            <span class="nav-desc">Evaluasi Proaktif &amp; Reaktif</span>
+        </span>
+    </a>
     <a href="{% url 'akreditasi:insiden_lapor' %}" class="nav-link {% if request.resolver_match.url_name == 'insiden_lapor' %}active{% endif %}">
         <span class="nav-icon"><i class="bi bi-shield-exclamation"></i></span>
         <span class="nav-text">
