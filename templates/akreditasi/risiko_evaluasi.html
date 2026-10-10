@@ -124,31 +124,86 @@
             {# Form Evaluasi #}
             <div class="card border-0 shadow-sm">
                 <div class="card-header border-0 py-3" style="background:linear-gradient(135deg,#0f766e,#0d9488); color:#fff;">
-                    <h6 class="mb-0 fw-bold"><i class="bi bi-sliders me-2"></i>Tetapkan Skor Residual & Ubah Status ke EVALUASI</h6>
+                    <h6 class="mb-0 fw-bold"><i class="bi bi-sliders me-2"></i>F &amp; G. Penilaian Risiko Sisa (Residu) &amp; Rencana Tindak Lanjut (RTL)</h6>
                 </div>
                 <div class="card-body p-4">
                     <form method="post">
                         {% csrf_token %}
-                        <div class="row g-4 mb-4">
-                            <div class="col-md-6">
-                                <label class="form-label fw-semibold" style="font-size:.8rem;">Dampak Residual (1–5) &nbsp;<span class="fw-bold text-teal" id="slider-d-display" style="color:#0d9488;">{{ risiko.dampak_residual|default:"2" }}</span></label>
+
+                        {# ── F. PENILAIAN RISIKO SISA ── #}
+                        <h6 class="fw-bold mb-3 pb-1 border-bottom" style="color:#0f172a; font-size:.82rem;">
+                            <i class="bi bi-shield-shaded text-teal me-1"></i>F. Penilaian Risiko Sisa (Residu)
+                        </h6>
+                        <div class="row g-4 mb-3">
+                            <div class="col-md-{% if risiko.is_fmea %}4{% else %}6{% endif %}">
+                                <label class="form-label fw-semibold" style="font-size:.8rem;">Dampak Residu (1–5) &nbsp;<span class="fw-bold text-teal" id="slider-d-display" style="color:#0d9488;">{{ risiko.dampak_residual|default:"2" }}</span></label>
                                 <input type="range" name="dampak_residual" id="dampak_residual" class="form-range" min="1" max="5" step="1" value="{{ risiko.dampak_residual|default:"2" }}" required>
                                 <div class="d-flex justify-content-between" style="font-size:.65rem; color:#64748b;"><span>1 — Minimal</span><span>5 — Katastrofik</span></div>
                             </div>
-                            <div class="col-md-6">
-                                <label class="form-label fw-semibold" style="font-size:.8rem;">Probabilitas Residual (1–5) &nbsp;<span class="fw-bold text-teal" id="slider-p-display" style="color:#0d9488;">{{ risiko.probabilitas_residual|default:"2" }}</span></label>
+                            <div class="col-md-{% if risiko.is_fmea %}4{% else %}6{% endif %}">
+                                <label class="form-label fw-semibold" style="font-size:.8rem;">Peluang Residu (1–5) &nbsp;<span class="fw-bold text-teal" id="slider-p-display" style="color:#0d9488;">{{ risiko.probabilitas_residual|default:"2" }}</span></label>
                                 <input type="range" name="probabilitas_residual" id="probabilitas_residual" class="form-range" min="1" max="5" step="1" value="{{ risiko.probabilitas_residual|default:"2" }}" required>
                                 <div class="d-flex justify-content-between" style="font-size:.65rem; color:#64748b;"><span>1 — Sangat Jarang</span><span>5 — Sangat Sering</span></div>
+                            </div>
+                            {% if risiko.is_fmea %}
+                            <div class="col-md-4">
+                                <label class="form-label fw-semibold" style="font-size:.8rem;">Deteksi Residu FMEA (1–5) &nbsp;<span class="badge bg-warning text-dark" id="slider-det-display">{{ risiko.deteksi_residual|default:"2" }}</span></label>
+                                <input type="range" name="deteksi_residual" id="deteksi_residual" class="form-range" min="1" max="5" step="1" value="{{ risiko.deteksi_residual|default:"2" }}">
+                                <div class="d-flex justify-content-between" style="font-size:.65rem; color:#64748b;"><span>1 — Mudah Deteksi</span><span>5 — Sulit</span></div>
+                            </div>
+                            {% endif %}
+                        </div>
+
+                        {% if risiko.is_fmea %}
+                        <div class="p-2 mb-3 rounded bg-warning-subtle text-warning-emphasis d-flex justify-content-between align-items-center" style="font-size:.78rem;">
+                            <span><strong>RPN Residu FMEA</strong> (Severity &times; Occurrence &times; Detection):</span>
+                            <span class="badge bg-dark font-monospace" id="rpn-res-display" style="font-size:.82rem;">RPN Residu: {{ risiko.rpn_residual|default:"8" }}</span>
+                        </div>
+                        {% endif %}
+
+                        {# ── G. EVALUASI CAPAIAN & RTL ── #}
+                        <h6 class="fw-bold mb-3 pb-1 border-bottom pt-2" style="color:#0f172a; font-size:.82rem;">
+                            <i class="bi bi-clipboard-check text-primary me-1"></i>G. Evaluasi Capaian &amp; Rencana Tindak Lanjut (RTL)
+                        </h6>
+                        <div class="mb-3">
+                            <label for="evaluasi_capaian" class="form-label fw-semibold" style="font-size:.8rem;">
+                                Evaluasi Capaian Indikator Mutu &amp; Kinerja
+                            </label>
+                            <textarea name="evaluasi_capaian" id="evaluasi_capaian" class="form-control form-control-sm" rows="3"
+                                      placeholder="Uraikan evaluasi capaian target indikator mutu terkait dan efektivitas barrier mitigasi yang sudah berjalan…">{{ risiko.evaluasi_capaian }}</textarea>
+                            <small class="text-muted" style="font-size:.65rem;">Bandingkan capaian riil unit dengan target numerik indikator mutu.</small>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="rca_ulang" class="form-label fw-semibold" style="font-size:.8rem;">
+                                Kajian / RCA Ulang <span class="text-muted fw-normal">(jika insiden berulang atau mitigasi belum tuntas)</span>
+                            </label>
+                            <textarea name="rca_ulang" id="rca_ulang" class="form-control form-control-sm" rows="2"
+                                      placeholder="Kosongkan jika target mitigasi tercapai penuh. Isi analisis akar masalah baru jika masih terdapat deviasi…">{{ risiko.rca_ulang }}</textarea>
+                        </div>
+
+                        <div class="row g-3 mb-4">
+                            <div class="col-md-8">
+                                <label for="rencana_tindak_lanjut" class="form-label fw-semibold" style="font-size:.8rem;">
+                                    Rencana Tindak Lanjut (RTL)
+                                </label>
+                                <textarea name="rencana_tindak_lanjut" id="rencana_tindak_lanjut" class="form-control form-control-sm" rows="2"
+                                          placeholder="Langkah perbaikan siklus lanjutan (revisi SPO, pembaruan sarana, pelatihan ulang staf)…">{{ risiko.rencana_tindak_lanjut }}</textarea>
+                            </div>
+                            <div class="col-md-4">
+                                <label for="pj_rtl" class="form-label fw-semibold" style="font-size:.8rem;">PJ RTL</label>
+                                <input type="text" name="pj_rtl" id="pj_rtl" class="form-control form-control-sm"
+                                       value="{{ risiko.pj_rtl }}" placeholder="Nama penanggung jawab RTL">
                             </div>
                         </div>
 
                         <div class="alert alert-info py-2" style="font-size:.8rem;">
-                            <i class="bi bi-info-circle me-1"></i>Menyimpan evaluasi ini akan secara otomatis mengubah status risiko menjadi <strong>EVALUASI</strong> (tahap Check pada siklus PDCA).
+                            <i class="bi bi-info-circle me-1"></i>Menyimpan evaluasi ini akan secara otomatis memperbarui skor residu dan menetapkan status risiko menjadi <strong>EVALUASI</strong> (tahap Check/Act pada siklus PDCA).
                         </div>
 
                         <div class="d-flex gap-2 justify-content-end">
                             <a href="{% url 'akreditasi:risiko_detail' risiko_id=risiko.pk %}" class="btn btn-sm btn-outline-secondary">Batal</a>
-                            <button type="submit" class="btn btn-sm text-white px-4" style="background:#0d9488;"><i class="bi bi-check2-circle me-1"></i>Simpan Evaluasi</button>
+                            <button type="submit" class="btn btn-sm text-white px-4" style="background:#0d9488;"><i class="bi bi-check2-circle me-1"></i>Simpan Evaluasi &amp; RTL</button>
                         </div>
                     </form>
                 </div>
@@ -164,8 +219,11 @@
 (function() {
     const dEl = document.getElementById('dampak_residual');
     const pEl = document.getElementById('probabilitas_residual');
+    const detEl = document.getElementById('deteksi_residual');
     const dDisp = document.getElementById('slider-d-display');
     const pDisp = document.getElementById('slider-p-display');
+    const detDisp = document.getElementById('slider-det-display');
+    const rpnResDisplay = document.getElementById('rpn-res-display');
     const resDVal = document.getElementById('res-d-val');
     const resPVal = document.getElementById('res-p-val');
     const resBadge = document.getElementById('res-badge');
@@ -196,10 +254,20 @@
         resBadge.style.background = colors[lv];
         resLabel.textContent = labels[lv];
         resLabel.style.color = colors[lv];
+
+        if (detEl && detDisp) {
+            const det = parseInt(detEl.value) || 2;
+            detDisp.textContent = det;
+            if (rpnResDisplay) {
+                const rpn = d * p * det;
+                rpnResDisplay.textContent = 'RPN Residu: ' + rpn;
+            }
+        }
     }
 
     dEl.addEventListener('input', updateResidual);
     pEl.addEventListener('input', updateResidual);
+    if (detEl) detEl.addEventListener('input', updateResidual);
     updateResidual();
 })();
 </script>

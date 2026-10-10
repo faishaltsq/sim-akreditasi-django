@@ -73,6 +73,9 @@ class RisikoUnit(models.Model):
     dampak           = models.IntegerField('Dampak (1–5)', validators=DAMPAK_VALIDATORS)
     probabilitas     = models.IntegerField('Probabilitas (1–5)', validators=DAMPAK_VALIDATORS)
 
+    # Section B — Pengendalian yang Sudah Ada (Existing Control)
+    pengendalian_ada = models.TextField('Pengendalian yang Sudah Ada (Existing Control)', blank=True, default='')
+
     strategi_mitigasi = models.CharField('Strategi Mitigasi', max_length=10, choices=STRATEGI_CHOICES)
     rencana_aksi      = models.TextField('Rencana Aksi')
     pj_mitigasi       = models.CharField('PJ Mitigasi', max_length=150)
@@ -82,6 +85,8 @@ class RisikoUnit(models.Model):
 
     dampak_residual      = models.IntegerField('Dampak Residual (1–5)', null=True, blank=True, validators=DAMPAK_VALIDATORS)
     probabilitas_residual = models.IntegerField('Probabilitas Residual (1–5)', null=True, blank=True, validators=DAMPAK_VALIDATORS)
+    deteksi_residual      = models.IntegerField('Deteksi Residu (1–5)', null=True, blank=True, validators=DAMPAK_VALIDATORS)
+    rpn_residual          = models.IntegerField('RPN Residu (FMEA)', null=True, blank=True)
 
     # Integrasi Indikator Mutu (Section C dokumen permintaan user)
     indikator_mutu_terkait   = models.ForeignKey(
@@ -95,18 +100,25 @@ class RisikoUnit(models.Model):
 
     status     = models.CharField('Status PDCA', max_length=12, choices=STATUS_CHOICES, default='IDENTIFIKASI')
 
-    # ── Section E: Hiliran Metode Evaluasi Mendalam (FMEA & RCA) ──────────
+    # ── Section C/E: Hiliran Metode Evaluasi Mendalam (FMEA & RCA) ──────────
     metode_evaluasi       = models.CharField(
         'Metode Evaluasi Mendalam', max_length=10,
         choices=METODE_EVALUASI_CHOICES, default='STANDAR',
         help_text='Standar PDCA, FMEA (proaktif), atau RCA (reaktif).'
     )
     tim_evaluasi          = models.CharField('Tim Evaluasi / Investigasi', max_length=255, blank=True, default='')
+    deteksi_fmea          = models.IntegerField('Tingkat Deteksi / Detection (1–5)', null=True, blank=True, validators=DAMPAK_VALIDATORS)
     failure_mode_fmea     = models.TextField('Mode Kegagalan & Efek Potensial (FMEA)', blank=True, default='')
     akar_masalah_rca      = models.TextField('Analisis Akar Masalah (RCA 5-Whys / Fishbone)', blank=True, default='')
     tindakan_korektif_rca = models.TextField('Rencana Tindakan Korektif & Solusi Permanen', blank=True, default='')
     rpn_fmea              = models.IntegerField('RPN — Risk Priority Number (FMEA)', null=True, blank=True)
     tanggal_evaluasi      = models.DateField('Tanggal Evaluasi / Investigasi', null=True, blank=True)
+
+    # ── Section G: Evaluasi & RTL ──────────────────────────────────────────
+    evaluasi_capaian      = models.TextField('Evaluasi Capaian Indikator Mutu', blank=True, default='')
+    rca_ulang             = models.TextField('RCA Ulang / Investigasi Lanjutan', blank=True, default='')
+    rencana_tindak_lanjut = models.TextField('Rencana Tindak Lanjut (RTL)', blank=True, default='')
+    pj_rtl                = models.CharField('PJ Tindak Lanjut (RTL)', max_length=150, blank=True, default='')
 
     created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='risiko_dibuat')
     created_at = models.DateTimeField(auto_now_add=True)
@@ -141,12 +153,23 @@ class RisikoUnit(models.Model):
 
     @property
     def rpn_calc(self):
-        """RPN FMEA: Severity × Occurrence × Detection (approx dari dampak × probabilitas × 5).
+        """RPN FMEA: Severity × Occurrence × Detection (S × O × D).
         Jika rpn_fmea diisi manual, pakai nilai manual."""
         if self.rpn_fmea:
             return self.rpn_fmea
         if self.metode_evaluasi == 'FMEA':
-            return self.dampak * self.probabilitas * 5
+            d = self.deteksi_fmea or 1
+            return self.dampak * self.probabilitas * d
+        return None
+
+    @property
+    def rpn_residual_calc(self):
+        """RPN Residu FMEA: S_residu × O_residu × D_residu."""
+        if self.rpn_residual:
+            return self.rpn_residual
+        if self.metode_evaluasi == 'FMEA' and self.dampak_residual and self.probabilitas_residual:
+            d = self.deteksi_residual or self.deteksi_fmea or 1
+            return self.dampak_residual * self.probabilitas_residual * d
         return None
 
     @property

@@ -179,6 +179,7 @@ def api_indikator_by_unit(request):
             'kode': ind.kode_indikator,
             'nama': ind.nama_indikator,
             'jenis': ind.get_jenis_display(),
+            'jenis_code': ind.jenis,
             'target': float(ind.target_nilai),
             'satuan': ind.satuan,
             'unit_name': ind.unit.name if ind.unit else 'Global / Nasional',
@@ -293,7 +294,7 @@ def risiko_input(request):
             else:
                 jenis_val = (request.POST.get('jenis_risiko') or '').strip()
 
-            # ── Section E: FMEA & RCA ────────────────────────────────────────
+            # ── Section C: FMEA & RCA ────────────────────────────────────────
             metode_evaluasi = (request.POST.get('metode_evaluasi') or 'STANDAR').strip()
             if metode_evaluasi not in ('STANDAR', 'FMEA', 'RCA'):
                 metode_evaluasi = 'STANDAR'
@@ -306,13 +307,47 @@ def risiko_input(request):
             else:
                 tim_evaluasi = ''
 
+            # Deteksi FMEA & RPN
+            deteksi_fmea = None
+            if metode_evaluasi == 'FMEA':
+                det_raw = (request.POST.get('deteksi_fmea') or '').strip()
+                try:
+                    deteksi_fmea = int(det_raw) if det_raw else 3
+                except ValueError:
+                    deteksi_fmea = 3
+
+            dampak_val = int(request.POST['dampak'])
+            prob_val = int(request.POST['probabilitas'])
+
             rpn_raw = (request.POST.get('rpn_fmea') or '').strip()
             try:
-                rpn_fmea = int(rpn_raw) if rpn_raw else None
+                rpn_fmea = int(rpn_raw) if rpn_raw else (dampak_val * prob_val * (deteksi_fmea or 1) if metode_evaluasi == 'FMEA' else None)
             except ValueError:
-                rpn_fmea = None
+                rpn_fmea = dampak_val * prob_val * (deteksi_fmea or 1) if metode_evaluasi == 'FMEA' else None
 
             tanggal_eval_raw = (request.POST.get('tanggal_evaluasi') or '').strip()
+
+            # Section F: Residual Risk
+            dampak_res_raw = (request.POST.get('dampak_residual') or '').strip()
+            prob_res_raw = (request.POST.get('probabilitas_residual') or '').strip()
+            det_res_raw = (request.POST.get('deteksi_residual') or '').strip()
+            dampak_res = int(dampak_res_raw) if dampak_res_raw else None
+            prob_res = int(prob_res_raw) if prob_res_raw else None
+            det_res = int(det_res_raw) if det_res_raw else None
+            rpn_res = None
+            if dampak_res and prob_res:
+                if det_res:
+                    rpn_res = dampak_res * prob_res * det_res
+                elif metode_evaluasi == 'FMEA':
+                    rpn_res = dampak_res * prob_res * (deteksi_fmea or 1)
+
+            # Section G: Evaluasi & RTL
+            eval_capaian = (request.POST.get('evaluasi_capaian') or '').strip()
+            rca_ulang_val = (request.POST.get('rca_ulang') or '').strip()
+            rtl_val = (request.POST.get('rencana_tindak_lanjut') or '').strip()
+            pj_rtl_val = (request.POST.get('pj_rtl') or '').strip()
+
+            status_val = 'EVALUASI' if (dampak_res and prob_res) else 'IDENTIFIKASI'
 
             risiko = RisikoUnit(
                 unit_id=int(request.POST['unit']),
@@ -323,8 +358,9 @@ def risiko_input(request):
                 masalah=request.POST.get('masalah', '').strip(),
                 data_pendukung=(request.POST.get('data') or request.POST.get('data_pendukung') or '').strip(),
                 deskripsi_risiko=(request.POST['deskripsi_risiko'] + (f"\n\n[Indikator Mutu Manual: {indikator_manual}]" if (indikator_manual and not indikator_id) else '')),
-                dampak=int(request.POST['dampak']),
-                probabilitas=int(request.POST['probabilitas']),
+                dampak=dampak_val,
+                probabilitas=prob_val,
+                pengendalian_ada=(request.POST.get('pengendalian_ada') or '').strip(),
                 indikator_mutu_terkait_id=int(indikator_id) if indikator_id else None,
                 target_capaian_indikator=float(target_capaian) if target_capaian else None,
                 strategi_mitigasi=request.POST['strategi_mitigasi'],
@@ -332,15 +368,26 @@ def risiko_input(request):
                 pj_mitigasi=request.POST['pj_mitigasi'],
                 biaya_mitigasi=request.POST.get('biaya_mitigasi') or 0,
                 target_selesai=request.POST.get('target_selesai') or None,
-                status='IDENTIFIKASI',
-                # Section E
+                status=status_val,
+                # Section C: Metode Evaluasi
                 metode_evaluasi=metode_evaluasi,
                 tim_evaluasi=tim_evaluasi,
+                deteksi_fmea=deteksi_fmea,
                 failure_mode_fmea=(request.POST.get('failure_mode_fmea') or '').strip() if metode_evaluasi == 'FMEA' else '',
                 akar_masalah_rca=(request.POST.get('akar_masalah_rca') or '').strip() if metode_evaluasi == 'RCA' else '',
                 tindakan_korektif_rca=(request.POST.get('tindakan_korektif_rca') or '').strip() if metode_evaluasi == 'RCA' else '',
                 rpn_fmea=rpn_fmea if metode_evaluasi == 'FMEA' else None,
                 tanggal_evaluasi=tanggal_eval_raw or None,
+                # Section F: Residual Risk
+                dampak_residual=dampak_res,
+                probabilitas_residual=prob_res,
+                deteksi_residual=det_res,
+                rpn_residual=rpn_res,
+                # Section G: Evaluasi & RTL
+                evaluasi_capaian=eval_capaian,
+                rca_ulang=rca_ulang_val,
+                rencana_tindak_lanjut=rtl_val,
+                pj_rtl=pj_rtl_val,
                 created_by=request.user,
             )
             risiko.full_clean()
@@ -424,11 +471,32 @@ def risiko_evaluasi(request, risiko_id):
         try:
             risiko.dampak_residual = int(request.POST['dampak_residual'])
             risiko.probabilitas_residual = int(request.POST['probabilitas_residual'])
+
+            det_res_raw = request.POST.get('deteksi_residual', '').strip()
+            if det_res_raw:
+                try:
+                    risiko.deteksi_residual = int(det_res_raw)
+                    risiko.rpn_residual = risiko.dampak_residual * risiko.probabilitas_residual * risiko.deteksi_residual
+                except ValueError:
+                    pass
+            elif risiko.is_fmea:
+                d = risiko.deteksi_fmea or 1
+                risiko.rpn_residual = risiko.dampak_residual * risiko.probabilitas_residual * d
+
+            if 'evaluasi_capaian' in request.POST:
+                risiko.evaluasi_capaian = request.POST.get('evaluasi_capaian', '').strip()
+            if 'rca_ulang' in request.POST:
+                risiko.rca_ulang = request.POST.get('rca_ulang', '').strip()
+            if 'rencana_tindak_lanjut' in request.POST:
+                risiko.rencana_tindak_lanjut = request.POST.get('rencana_tindak_lanjut', '').strip()
+            if 'pj_rtl' in request.POST:
+                risiko.pj_rtl = request.POST.get('pj_rtl', '').strip()
+
             risiko.status = 'EVALUASI'
             risiko.full_clean()
             risiko.save()
-            _log(request.user, 'UPDATE', risiko, 'Evaluasi residual risk')
-            messages.success(request, 'Evaluasi risiko disimpan.')
+            _log(request.user, 'UPDATE', risiko, 'Evaluasi residual risk & RTL')
+            messages.success(request, 'Evaluasi risiko dan RTL berhasil disimpan.')
             return redirect('akreditasi:risiko_detail', risiko_id=risiko.pk)
         except Exception as e:
             messages.error(request, f'Gagal: {e}')

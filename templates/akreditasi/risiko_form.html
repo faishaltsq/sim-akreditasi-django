@@ -208,143 +208,50 @@
                             <textarea name="deskripsi_risiko" id="input_deskripsi_risiko" class="form-control form-control-sm" rows="3" required placeholder="Deskripsikan dampak potensial dari jenis-jenis risiko di atas terhadap pelayanan, mutu, atau pasien…"></textarea>
                         </div>
 
-                        {# ── Bagian 2: Penilaian (Slider) ───────────── #}
-                        <h6 class="fw-bold mb-3 pb-1 border-bottom" style="color:#0f172a; font-size:.82rem;">B. Penilaian Risiko</h6>
+                        {# ── Bagian B: Penilaian Risiko Awal ───────────── #}
+                        <h6 class="fw-bold mb-3 pb-1 border-bottom" style="color:#0f172a; font-size:.82rem;">B. Penilaian Risiko Awal</h6>
                         <div class="row g-4 mb-3">
                             <div class="col-md-6">
-                                <label for="dampak" class="form-label fw-semibold" style="font-size:.8rem;">Dampak &nbsp;<span class="slider-val" id="dampak-val">3</span></label>
+                                <label for="dampak" class="form-label fw-semibold" style="font-size:.8rem;">Dampak (Severity) &nbsp;<span class="slider-val" id="dampak-val">3</span></label>
                                 <input type="range" name="dampak" id="dampak" class="form-range" min="1" max="5" step="1" value="3">
                                 <div class="d-flex justify-content-between" style="font-size:.65rem; color:#64748b;"><span>1 — Minimal</span><span>5 — Katastrofik</span></div>
                             </div>
                             <div class="col-md-6">
-                                <label for="probabilitas" class="form-label fw-semibold" style="font-size:.8rem;">Probabilitas &nbsp;<span class="slider-val" id="prob-val">3</span></label>
+                                <label for="probabilitas" class="form-label fw-semibold" style="font-size:.8rem;">Peluang / Probabilitas (Occurrence) &nbsp;<span class="slider-val" id="prob-val">3</span></label>
                                 <input type="range" name="probabilitas" id="probabilitas" class="form-range" min="1" max="5" step="1" value="3">
                                 <div class="d-flex justify-content-between" style="font-size:.65rem; color:#64748b;"><span>1 — Sangat Jarang</span><span>5 — Hampir Pasti</span></div>
                             </div>
                         </div>
-                        {# Realtime Skor #}
-                        <div class="text-center mb-4 py-3" style="background:#f8fafc; border-radius:12px;">
-                            <div style="font-size:.78rem; color:#64748b; font-weight:600; margin-bottom:6px;">SKOR INHERENT (Dampak × Probabilitas)</div>
+
+                        {# Existing Control #}
+                        <div class="mb-3">
+                            <label for="pengendalian_ada" class="form-label fw-semibold" style="font-size:.8rem;">
+                                <i class="bi bi-shield-check text-success me-1"></i>Pengendalian yang Sudah Ada (Existing Control)
+                            </label>
+                            <textarea name="pengendalian_ada" id="pengendalian_ada" class="form-control form-control-sm" rows="2"
+                                      placeholder="cth: SPO identifikasi pasien sudah disosialisasikan, verifikasi ganda perawat, supervisi rutin kepala ruangan…"></textarea>
+                            <small class="text-muted" style="font-size:.65rem;">Sistem barrier, SPO, atau sarana proteksi yang saat ini sudah berjalan di unit.</small>
+                        </div>
+
+                        {# Realtime Skor Inherent #}
+                        <div class="text-center mb-4 py-3" style="background:#f8fafc; border-radius:12px; border:1px solid #e2e8f0;">
+                            <div style="font-size:.78rem; color:#64748b; font-weight:600; margin-bottom:6px;">SKOR RISIKO AWAL / INHERENT (Dampak × Peluang)</div>
                             <span class="skor-badge" id="skor-badge" style="background:#ca8a04;">9</span>
                             <div id="skor-label" class="mt-2 fw-bold" style="font-size:.85rem; color:#ca8a04;">SEDANG</div>
                         </div>
 
-                        {# ── Bagian C: Pengendalian & Indikator Mutu ── #}
-                        <h6 class="fw-bold mb-3 pb-1 border-bottom" style="color:#0f172a; font-size:.82rem;">C. Pengendalian & Indikator Mutu</h6>
-                        <div class="mb-2" style="font-size:.7rem; color:#64748b;">
-                            <span class="badge bg-light text-secondary border me-1">📋 Pilih dari Sistem</span>
-                            <span class="badge bg-light text-secondary border me-1">✏️ Input Manual</span>
-                            <span class="badge bg-light text-secondary border">✨ Saran AI</span>
-                        </div>
-                        <div class="row g-3 mb-3">
-                            <div class="col-md-8">
-                                <label class="form-label d-flex justify-content-between align-items-center" style="font-size:.8rem; font-weight:600;">
-                                    <span><i class="bi bi-graph-up-arrow text-primary me-1"></i>Indikator Mutu Terkait</span>
-                                    <div class="btn-group btn-group-sm" role="group" id="indikator-mode-toggle">
-                                        <button type="button" class="btn btn-outline-teal btn-sm active" data-mode="sistem" style="font-size:.68rem; padding:1px 8px;">📋 Pilih dari Sistem</button>
-                                        <button type="button" class="btn btn-outline-teal btn-sm" data-mode="manual" style="font-size:.68rem; padding:1px 8px;">✏️ Input Manual</button>
-                                    </div>
-                                </label>
-                                {# Mode 1: Pilih dari sistem (default) #}
-                                <div id="indikator-mode-sistem">
-                                    <select name="indikator_mutu_terkait" id="indikator_mutu_select" class="form-select form-select-sm">
-                                        <option value="">— Pilih unit dahulu untuk memfilter indikator —</option>
-                                    </select>
-                                    <small class="text-muted" style="font-size:.65rem;">Indikator mutu otomatis difilter sesuai unit kerja yang dipilih</small>
-                                </div>
-                                {# Mode 2: Input manual #}
-                                <div id="indikator-mode-manual" class="d-none">
-                                    <input type="text" name="indikator_mutu_manual" id="input_indikator_manual" class="form-control form-control-sm"
-                                           placeholder="Ketik nama indikator mutu yang ingin dipantau…">
-                                    <small class="text-muted" style="font-size:.65rem;">Indikator dicatat sebagai teks bebas jika tidak tersedia di sistem</small>
-                                </div>
-                                {# AI suggestion badge #}
-                                <div id="ai-indikator-hint" class="d-none mt-1">
-                                    <span class="badge bg-info-subtle text-info border border-info-subtle" style="font-size:.72rem;">
-                                        ✨ Saran AI: <span id="ai-indikator-hint-text"></span>
-                                        <button type="button" class="btn-close ms-1" style="font-size:.5rem;" id="btn-apply-ai-indikator" aria-label="Terapkan"></button>
-                                    </span>
-                                </div>
-                            </div>
-                            <div class="col-md-4">
-                                <label class="form-label" style="font-size:.8rem; font-weight:600;">
-                                    <i class="bi bi-bullseye text-success me-1"></i>Target Capaian (%)
-                                </label>
-                                <input type="number" name="target_capaian_indikator" id="target_capaian_indikator"
-                                       class="form-control form-control-sm" placeholder="cth: 80.00"
-                                       min="0" max="100" step="0.01">
-                                <small class="text-muted" style="font-size:.65rem;">Target capaian indikator mutu terkait risiko ini</small>
-                            </div>
-                        </div>
-                        {# Preset Rencana Aksi per Indikator #}
-                        <div id="preset-rencana-aksi-container" class="mb-3" style="display:none;">
-                            <label class="form-label" style="font-size:.78rem; font-weight:600; color:#0f766e;">
-                                <i class="bi bi-lightning-charge-fill me-1"></i>Pilih Rencana Aksi Cepat <span class="text-muted fw-normal">(klik untuk menambahkan)</span>
-                            </label>
-                            <div id="preset-chips" class="d-flex flex-wrap gap-2"></div>
-                        </div>
-
-                        {# ── Bagian D: Mitigasi ─────────────────────── #}
-                        <h6 class="fw-bold mb-3 pb-1 border-bottom" style="color:#0f172a; font-size:.82rem;">D. Rencana Mitigasi</h6>
-                        <div class="mb-2" style="font-size:.7rem; color:#64748b;">
-                            <span class="badge bg-light text-secondary border me-1">📋 Pilih dari Sistem</span>
-                            <span class="badge bg-light text-secondary border me-1">✏️ Input Manual</span>
-                            <span class="badge bg-light text-secondary border">✨ Saran AI</span>
-                        </div>
-                        <div class="row g-3 mb-3">
-                            <div class="col-md-6">
-                                <label class="form-label d-flex justify-content-between align-items-center" style="font-size:.8rem; font-weight:600;">
-                                    <span>Strategi Mitigasi <span class="text-danger">*</span></span>
-                                    <span id="ai-strategi-badge" class="badge d-none" style="font-size:.68rem; background:#0d9488; color:#fff; border-radius:10px; padding:2px 7px;">✨ AI: —</span>
-                                </label>
-                                <select name="strategi_mitigasi" id="strategi_mitigasi_select" class="form-select form-select-sm" required>
-                                    <option value="">— Pilih —</option>
-                                    {% for val, label in strategi_choices %}
-                                    <option value="{{ val }}">{{ label }}</option>
-                                    {% endfor %}
-                                </select>
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label" style="font-size:.8rem; font-weight:600;">PJ Mitigasi <span class="text-danger">*</span></label>
-                                <input type="text" name="pj_mitigasi" class="form-control form-control-sm" placeholder="Nama penanggung jawab" required>
-                            </div>
-                        </div>
-                        <div class="row g-3 mb-3">
-                            <div class="col-md-6">
-                                <label class="form-label" style="font-size:.8rem; font-weight:600;">
-                                    <i class="bi bi-cash-coin text-teal me-1"></i>Estimasi Biaya Mitigasi (Rp)
-                                </label>
-                                <input type="number" name="biaya_mitigasi" class="form-control form-control-sm"
-                                       placeholder="0" min="0" step="1000" value="0">
-                                <small class="text-muted" style="font-size:0.65rem;">Isi 0 jika non-biaya / belum dianggarkan</small>
-                            </div>
-                        </div>
-                        <div class="mb-3">
-                            <div class="d-flex justify-content-between align-items-center">
-                                <label class="form-label" style="font-size:.8rem; font-weight:600;">Rencana Aksi <span class="text-danger">*</span></label>
-                                <button type="button" class="btn btn-sm btn-outline-teal px-2 py-0" id="btn-ai-mitigasi" style="font-size:.72rem; border-color:#0d9488; color:#0d9488;">
-                                    <i class="bi bi-stars me-1"></i>Bantu Susun dengan AI DeepSeek
-                                </button>
-                            </div>
-                            <textarea name="rencana_aksi" class="form-control form-control-sm" rows="3" required placeholder="Langkah-langkah mitigasi…"></textarea>
-                        </div>
-                        <div class="mb-4">
-                            <label class="form-label" style="font-size:.8rem; font-weight:600;">Target Selesai</label>
-                            <input type="date" name="target_selesai" class="form-control form-control-sm">
-                        </div>
-
                         {# ═══════════════════════════════════════════════════════════
-                           SECTION E — HILIRAN METODE EVALUASI MENDALAM (FMEA & RCA)
+                           SECTION C — PILIHAN METODE EVALUASI / HILIRAN (FMEA & RCA)
                            STARKES PMKP 7 (RCA) & PMKP 8 (FMEA)
                            ═══════════════════════════════════════════════════════════ #}
-                        <div class="border-top pt-3 mb-3">
+                        <div class="border-top pt-3 mb-4">
                             <h6 class="fw-bold mb-1 pb-1" style="color:#0f172a; font-size:.82rem;">
-                                <i class="bi bi-diagram-3 text-warning me-1"></i>E. Hiliran Metode Evaluasi Mendalam (FMEA &amp; RCA)
+                                <i class="bi bi-diagram-3 text-warning me-1"></i>C. Pilihan Metode Evaluasi / Hiliran
                             </h6>
                             <p class="text-muted mb-3" style="font-size:.72rem; line-height:1.45;">
-                                <strong>FMEA</strong> = analisis <em>proaktif</em> untuk mencegah kegagalan pada proses berisiko tinggi sebelum insiden terjadi.
-                                <strong>RCA</strong> = analisis <em>reaktif</em> untuk menggali akar masalah setelah kejadian sentinel / KTD berat.
-                                Biarkan <strong>Standar PDCA</strong> bila risiko cukup ditangani dengan pemantauan rutin.
+                                Tentukan metode evaluasi: <strong>Standar PDCA</strong> untuk pemantauan rutin,
+                                <strong>🗂️ FMEA Proaktif</strong> dengan kalkulasi RPN (Severity &times; Occurrence &times; Detection) untuk proses klinis berisiko tinggi, atau
+                                <strong>🔍 RCA Reaktif</strong> (5-Whys) pasca insiden keselamatan/KTD sentinel.
                             </p>
 
                             {# Mode toggle pills #}
@@ -353,43 +260,54 @@
                                     <i class="bi bi-arrow-repeat me-1"></i>Standar PDCA
                                 </button>
                                 <button type="button" class="btn btn-outline-warning" data-metode="FMEA" style="font-size:.72rem;">
-                                    <i class="bi bi-diagram-3-fill me-1"></i>FMEA Proaktif
+                                    <i class="bi bi-diagram-3-fill me-1"></i>🗂️ FMEA Proaktif
                                 </button>
                                 <button type="button" class="btn btn-outline-danger" data-metode="RCA" style="font-size:.72rem;">
-                                    <i class="bi bi-search me-1"></i>RCA Reaktif
+                                    <i class="bi bi-search me-1"></i>🔍 RCA Reaktif
                                 </button>
                             </div>
                             <input type="hidden" name="metode_evaluasi" id="input_metode_evaluasi" value="STANDAR">
 
                             {# ── Panel STANDAR ── #}
-                            <div id="panel-metode-standar" class="p-2 rounded border bg-light-subtle" style="font-size:.75rem;">
+                            <div id="panel-metode-standar" class="p-2.5 rounded border bg-light-subtle" style="font-size:.75rem;">
                                 <i class="bi bi-info-circle text-secondary me-1"></i>
-                                Risiko ini dipantau melalui <strong>siklus PDCA rutin</strong> dan evaluasi berkala di Matriks PDCA.
+                                Risiko ini dipantau melalui <strong>siklus PDCA rutin</strong> dan evaluasi berkala di Matriks PDCA Unit.
                             </div>
 
                             {# ── Panel FMEA ── #}
                             <div id="panel-metode-fmea" class="d-none">
                                 <div class="p-2 mb-2 rounded" style="background:#fffbeb; border-left:3px solid #f59e0b; font-size:.72rem;">
-                                    <strong class="text-warning-emphasis">Pendekatan Proaktif</strong> — Identifikasi mode kegagalan &amp; efeknya sebelum insiden terjadi (STARKES PMKP 8).
+                                    <strong class="text-warning-emphasis"><i class="bi bi-shield-fill-check me-1"></i>Pendekatan Proaktif (FMEA)</strong> — Identifikasi mode kegagalan proses klinis sebelum insiden terjadi (STARKES PMKP 8).
                                 </div>
                                 <div class="row g-3 mb-3">
-                                    <div class="col-md-8">
-                                        <label class="form-label" style="font-size:.78rem; font-weight:600;">
-                                            Tim FMEA Multidisiplin
+                                    <div class="col-md-6">
+                                        <label for="deteksi_fmea" class="form-label fw-semibold" style="font-size:.78rem;">
+                                            Tingkat Kemudahan Deteksi (D: 1–5) &nbsp;<span class="badge bg-warning text-dark" id="deteksi-val">3</span>
                                         </label>
-                                        <input type="text" name="tim_evaluasi_fmea" id="input_tim_fmea"
-                                               class="form-control form-control-sm"
-                                               placeholder="cth: Ka. IGD, Ka. Farmasi, IPCN, Komite Mutu">
-                                        <small class="text-muted" style="font-size:.65rem;">Pisahkan dengan koma</small>
+                                        <input type="range" name="deteksi_fmea" id="deteksi_fmea" class="form-range" min="1" max="5" step="1" value="3">
+                                        <div class="d-flex justify-content-between" style="font-size:.65rem; color:#64748b;">
+                                            <span>1 — Sangat Mudah Terdeteksi</span><span>5 — Hampir Mustahil Terdeteksi</span>
+                                        </div>
                                     </div>
-                                    <div class="col-md-4">
-                                        <label class="form-label" style="font-size:.78rem; font-weight:600;">
-                                            RPN <span class="text-muted">(S × O × D)</span>
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-semibold" style="font-size:.78rem;">
+                                            Risk Priority Number (RPN = S × O × D)
                                         </label>
-                                        <input type="number" name="rpn_fmea" id="input_rpn_fmea"
-                                               class="form-control form-control-sm" placeholder="Auto" min="1" max="125">
-                                        <small class="text-muted" style="font-size:.65rem;">Kosongkan untuk hitung otomatis</small>
+                                        <div class="d-flex align-items-center gap-2">
+                                            <input type="number" name="rpn_fmea" id="input_rpn_fmea" class="form-control form-control-sm" placeholder="Auto" min="1" max="125" style="max-width:110px;">
+                                            <span class="badge font-monospace p-2" id="rpn-live-badge" style="background:#ca8a04; font-size:.78rem;">RPN: 27 (MODERAT)</span>
+                                        </div>
+                                        <small class="text-muted" style="font-size:.65rem;">Otomatis dihitung dari Dampak &times; Probabilitas &times; Deteksi</small>
                                     </div>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label" style="font-size:.78rem; font-weight:600;">
+                                        Tim FMEA Multidisiplin
+                                    </label>
+                                    <input type="text" name="tim_evaluasi_fmea" id="input_tim_fmea"
+                                           class="form-control form-control-sm"
+                                           placeholder="cth: Ka. Ruangan, Dokter DPJP, IPCN, Perawat Pelaksana, Komite Mutu">
+                                    <small class="text-muted" style="font-size:.65rem;">Daftar perwakilan unit multidisiplin pengkaji proses</small>
                                 </div>
                                 <div class="mb-3">
                                     <div class="d-flex justify-content-between align-items-center">
@@ -402,14 +320,14 @@
                                         </button>
                                     </div>
                                     <textarea name="failure_mode_fmea" id="input_failure_mode" class="form-control form-control-sm"
-                                              rows="4" placeholder="cth: 1) Mode kegagalan: Dosis obat salah dihitung&#10;   Efek: Overdosis, henti jantung&#10;   Penyebab: Kelelahan shift malam, tidak ada double check&#10;   Barrier: Implementasi barcode scanning"></textarea>
+                                              rows="4" placeholder="cth: 1) Mode kegagalan: Dosis salah hitung atau penandaan lokasi operasi luput&#10;   Efek: Komplikasi berat / salah insisi&#10;   Penyebab: Kelelahan pergantian shift, tidak ada double check&#10;   Barrier: Wajib time-out dan verifikasi ganda"></textarea>
                                 </div>
                             </div>
 
                             {# ── Panel RCA ── #}
                             <div id="panel-metode-rca" class="d-none">
                                 <div class="p-2 mb-2 rounded" style="background:#fef2f2; border-left:3px solid #dc2626; font-size:.72rem;">
-                                    <strong class="text-danger">Pendekatan Reaktif</strong> — Analisis mendalam pasca kejadian sentinel / KTD berat / risiko merah kronis (STARKES PMKP 7).
+                                    <strong class="text-danger"><i class="bi bi-search me-1"></i>Pendekatan Reaktif (RCA)</strong> — Analisis mendalam pasca insiden keselamatan pasien / KTD berat (STARKES PMKP 7).
                                 </div>
                                 <div class="mb-3">
                                     <label class="form-label" style="font-size:.78rem; font-weight:600;">
@@ -417,7 +335,7 @@
                                     </label>
                                     <input type="text" name="tim_evaluasi_rca" id="input_tim_rca"
                                            class="form-control form-control-sm"
-                                           placeholder="cth: Ketua Komite Mutu, Ka. Unit, IPCN, Perawat Pelaksana">
+                                           placeholder="cth: Ketua Komite Keselamatan Pasien, Ka. Unit, IPCN, DPJP">
                                 </div>
                                 <div class="mb-3">
                                     <div class="d-flex justify-content-between align-items-center">
@@ -437,7 +355,7 @@
                                         Rencana Tindakan Korektif &amp; Solusi Permanen
                                     </label>
                                     <textarea name="tindakan_korektif_rca" id="input_tindakan_korektif" class="form-control form-control-sm"
-                                              rows="3" placeholder="cth: 1) Revisi SPO pemberian obat high-alert&#10;2) Pelatihan ulang seluruh perawat&#10;3) Implementasi barcode scanning di SIMRS"></textarea>
+                                              rows="3" placeholder="cth: 1) Revisi SOP serah terima pasien&#10;2) Pengadaan barcode scanner digital&#10;3) Refresh training keselamatan seluruh staf"></textarea>
                                 </div>
                             </div>
 
@@ -446,6 +364,200 @@
                                     Tanggal Evaluasi / Investigasi
                                 </label>
                                 <input type="date" name="tanggal_evaluasi" class="form-control form-control-sm" style="max-width:220px;">
+                            </div>
+                        </div>
+
+                        {# ── Bagian D: Indikator Mutu ── #}
+                        <div class="border-top pt-3 mb-4">
+                            <h6 class="fw-bold mb-3 pb-1 border-bottom" style="color:#0f172a; font-size:.82rem;">D. Indikator Mutu</h6>
+                            <div class="mb-2" style="font-size:.7rem; color:#64748b;">
+                                <span class="badge bg-light text-secondary border me-1">🟢 [INM] Nasional</span>
+                                <span class="badge bg-light text-secondary border me-1">🔵 [Indikator RS] IMP-RS</span>
+                                <span class="badge bg-light text-secondary border me-1">🔴 [Indikator Unit] Unit</span>
+                                <span class="badge bg-light text-secondary border">✨ Saran AI</span>
+                            </div>
+                            <div class="row g-3 mb-3">
+                                <div class="col-md-8">
+                                    <label class="form-label d-flex justify-content-between align-items-center" style="font-size:.8rem; font-weight:600;">
+                                        <span><i class="bi bi-graph-up-arrow text-primary me-1"></i>Indikator Mutu Terkait</span>
+                                        <div class="btn-group btn-group-sm" role="group" id="indikator-mode-toggle">
+                                            <button type="button" class="btn btn-outline-teal btn-sm active" data-mode="sistem" style="font-size:.68rem; padding:1px 8px;">📋 Pilih dari Sistem</button>
+                                            <button type="button" class="btn btn-outline-teal btn-sm" data-mode="manual" style="font-size:.68rem; padding:1px 8px;">✏️ Input Manual</button>
+                                        </div>
+                                    </label>
+                                    {# Mode 1: Pilih dari sistem (default) #}
+                                    <div id="indikator-mode-sistem">
+                                        <select name="indikator_mutu_terkait" id="indikator_mutu_select" class="form-select form-select-sm">
+                                            <option value="">— Pilih unit dahulu untuk memfilter indikator —</option>
+                                        </select>
+                                        <small class="text-muted" style="font-size:.65rem;">Indikator mutu otomatis difilter sesuai unit kerja dengan tanda 🟢 [INM], 🔵 [Indikator RS], 🔴 [Indikator Unit]</small>
+                                    </div>
+                                    {# Mode 2: Input manual #}
+                                    <div id="indikator-mode-manual" class="d-none">
+                                        <input type="text" name="indikator_mutu_manual" id="input_indikator_manual" class="form-control form-control-sm"
+                                               placeholder="Ketik nama indikator mutu yang ingin dipantau…">
+                                        <small class="text-muted" style="font-size:.65rem;">Indikator dicatat sebagai teks bebas jika belum tersedia di sistem</small>
+                                    </div>
+                                    {# AI suggestion badge #}
+                                    <div id="ai-indikator-hint" class="d-none mt-1">
+                                        <span class="badge bg-info-subtle text-info border border-info-subtle" style="font-size:.72rem;">
+                                            ✨ Saran AI: <span id="ai-indikator-hint-text"></span>
+                                            <button type="button" class="btn-close ms-1" style="font-size:.5rem;" id="btn-apply-ai-indikator" aria-label="Terapkan"></button>
+                                        </span>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label" style="font-size:.8rem; font-weight:600;">
+                                        <i class="bi bi-bullseye text-success me-1"></i>Target Capaian (%)
+                                    </label>
+                                    <input type="number" name="target_capaian_indikator" id="target_capaian_indikator"
+                                           class="form-control form-control-sm" placeholder="cth: 100.00"
+                                           min="0" max="100" step="0.01">
+                                    <small class="text-muted" style="font-size:.65rem;">Target capaian indikator mutu terkait risiko ini</small>
+                                </div>
+                            </div>
+                            {# Preset Rencana Aksi per Indikator #}
+                            <div id="preset-rencana-aksi-container" class="mb-3" style="display:none;">
+                                <label class="form-label" style="font-size:.78rem; font-weight:600; color:#0f766e;">
+                                    <i class="bi bi-lightning-charge-fill me-1"></i>Pilih Rencana Aksi Cepat <span class="text-muted fw-normal">(klik untuk menambahkan)</span>
+                                </label>
+                                <div id="preset-chips" class="d-flex flex-wrap gap-2"></div>
+                            </div>
+                        </div>
+
+                        {# ── Bagian E: Rencana Aksi & Mitigasi ──────── #}
+                        <div class="border-top pt-3 mb-4">
+                            <h6 class="fw-bold mb-3 pb-1 border-bottom" style="color:#0f172a; font-size:.82rem;">E. Rencana Aksi &amp; Mitigasi</h6>
+                            <div class="row g-3 mb-3">
+                                <div class="col-md-6">
+                                    <label class="form-label d-flex justify-content-between align-items-center" style="font-size:.8rem; font-weight:600;">
+                                        <span>Strategi Mitigasi <span class="text-danger">*</span></span>
+                                        <span id="ai-strategi-badge" class="badge d-none" style="font-size:.68rem; background:#0d9488; color:#fff; border-radius:10px; padding:2px 7px;">✨ AI: —</span>
+                                    </label>
+                                    <select name="strategi_mitigasi" id="strategi_mitigasi_select" class="form-select form-select-sm" required>
+                                        <option value="">— Pilih —</option>
+                                        {% for val, label in strategi_choices %}
+                                        <option value="{{ val }}">{{ label }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label" style="font-size:.8rem; font-weight:600;">PJ Mitigasi <span class="text-danger">*</span></label>
+                                    <input type="text" name="pj_mitigasi" id="pj_mitigasi" class="form-control form-control-sm" placeholder="Nama penanggung jawab mitigasi" required>
+                                </div>
+                            </div>
+                            <div class="row g-3 mb-3">
+                                <div class="col-md-6">
+                                    <label class="form-label" style="font-size:.8rem; font-weight:600;">
+                                        <i class="bi bi-cash-coin text-teal me-1"></i>Estimasi Biaya Mitigasi (Rp)
+                                    </label>
+                                    <input type="number" name="biaya_mitigasi" class="form-control form-control-sm"
+                                           placeholder="0" min="0" step="1000" value="0">
+                                    <small class="text-muted" style="font-size:0.65rem;">Isi 0 jika non-biaya / belum dianggarkan</small>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label" style="font-size:.8rem; font-weight:600;">Target Selesai</label>
+                                    <input type="date" name="target_selesai" class="form-control form-control-sm">
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <label class="form-label" style="font-size:.8rem; font-weight:600;">Rencana Aksi <span class="text-danger">*</span></label>
+                                    <button type="button" class="btn btn-sm btn-outline-teal px-2 py-0" id="btn-ai-mitigasi" style="font-size:.72rem; border-color:#0d9488; color:#0d9488;">
+                                        <i class="bi bi-stars me-1"></i>Bantu Susun dengan AI DeepSeek
+                                    </button>
+                                </div>
+                                <textarea name="rencana_aksi" id="rencana_aksi" class="form-control form-control-sm" rows="3" required placeholder="Langkah-langkah terstruktur rencana perbaikan dan mitigasi…"></textarea>
+                            </div>
+                        </div>
+
+                        {# ── Bagian F: Penilaian Risiko Sisa (Residu Pasca Mitigasi) ── #}
+                        <div class="border-top pt-3 mb-4">
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <h6 class="fw-bold mb-0" style="color:#0f172a; font-size:.82rem;">
+                                    <i class="bi bi-shield-shaded text-teal me-1"></i>F. Penilaian Risiko Sisa (Residu Pasca Mitigasi)
+                                </h6>
+                                <span class="badge bg-light text-secondary border" style="font-size:.65rem;">Target Residu</span>
+                            </div>
+                            <p class="text-muted mb-3" style="font-size:.72rem; line-height:1.45;">
+                                Target tingkat keparahan risiko sisa setelah rencana mitigasi terlaksana secara menyeluruh (opsional saat input awal).
+                            </p>
+
+                            <div class="row g-4 mb-3">
+                                <div class="col-md-6">
+                                    <label for="dampak_residual" class="form-label fw-semibold" style="font-size:.8rem;">
+                                        Dampak Residu &nbsp;<span class="slider-val" id="dampak-res-val">2</span>
+                                    </label>
+                                    <input type="range" name="dampak_residual" id="dampak_residual" class="form-range" min="1" max="5" step="1" value="2">
+                                    <div class="d-flex justify-content-between" style="font-size:.65rem; color:#64748b;"><span>1 — Minimal</span><span>5 — Katastrofik</span></div>
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="probabilitas_residual" class="form-label fw-semibold" style="font-size:.8rem;">
+                                        Peluang Residu &nbsp;<span class="slider-val" id="prob-res-val">2</span>
+                                    </label>
+                                    <input type="range" name="probabilitas_residual" id="probabilitas_residual" class="form-range" min="1" max="5" step="1" value="2">
+                                    <div class="d-flex justify-content-between" style="font-size:.65rem; color:#64748b;"><span>1 — Sangat Jarang</span><span>5 — Hampir Pasti</span></div>
+                                </div>
+                                <div class="col-md-6 d-none" id="col-deteksi-residual">
+                                    <label for="deteksi_residual" class="form-label fw-semibold" style="font-size:.78rem;">
+                                        Deteksi Residu (FMEA) &nbsp;<span class="badge bg-warning text-dark" id="deteksi-res-val">2</span>
+                                    </label>
+                                    <input type="range" name="deteksi_residual" id="deteksi_residual" class="form-range" min="1" max="5" step="1" value="2">
+                                    <div class="d-flex justify-content-between" style="font-size:.65rem; color:#64748b;"><span>1 — Sangat Mudah</span><span>5 — Sulit</span></div>
+                                </div>
+                            </div>
+
+                            {# Realtime Perbandingan Risiko #}
+                            <div class="p-3 rounded mb-3" style="background:#f0fdfa; border:1px solid #ccfbf1;">
+                                <div class="row text-center align-items-center">
+                                    <div class="col-4">
+                                        <small class="text-muted d-block" style="font-size:.7rem;">SKOR AWAL</small>
+                                        <span class="fw-bold fs-6 text-muted" id="prev-score-comparison">9</span>
+                                    </div>
+                                    <div class="col-4">
+                                        <small class="text-muted d-block" style="font-size:.7rem;">SKOR RESIDU</small>
+                                        <span class="fw-bold fs-5 text-teal" id="res-score-comparison">4</span>
+                                        <span class="badge bg-success ms-1" id="res-level-badge" style="font-size:.65rem;">RENDAH</span>
+                                    </div>
+                                    <div class="col-4">
+                                        <small class="text-muted d-block" style="font-size:.7rem;">PENURUNAN RISIKO (Δ)</small>
+                                        <span class="fw-bold fs-6 text-success" id="delta-risk-display">-5 pts (55%)</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {# ── Bagian G: Evaluasi Capaian & Rencana Tindak Lanjut (RTL) ── #}
+                        <div class="border-top pt-3 mb-4">
+                            <h6 class="fw-bold mb-3 pb-1 border-bottom" style="color:#0f172a; font-size:.82rem;">
+                                <i class="bi bi-clipboard-check text-primary me-1"></i>G. Evaluasi Capaian &amp; Rencana Tindak Lanjut (RTL)
+                            </h6>
+                            <div class="mb-3">
+                                <label for="evaluasi_capaian" class="form-label" style="font-size:.8rem; font-weight:600;">
+                                    Evaluasi Capaian Indikator Mutu &amp; Kinerja
+                                </label>
+                                <textarea name="evaluasi_capaian" id="evaluasi_capaian" class="form-control form-control-sm" rows="2"
+                                          placeholder="cth: Kepatuhan indikator mutu tercapai 98.2%, tidak terjadi insiden keselamatan baru selama masa evaluasi…"></textarea>
+                            </div>
+                            <div class="mb-3">
+                                <label for="rca_ulang" class="form-label" style="font-size:.8rem; font-weight:600;">
+                                    Kajian / RCA Ulang <span class="text-muted fw-normal">(jika insiden berulang atau mitigasi belum efektif)</span>
+                                </label>
+                                <textarea name="rca_ulang" id="rca_ulang" class="form-control form-control-sm" rows="2"
+                                          placeholder="Kosongkan jika mitigasi berhasil. Isi kajian akar masalah tambahan bila insiden atau deviasi masih terjadi…"></textarea>
+                            </div>
+                            <div class="row g-3 mb-3">
+                                <div class="col-md-8">
+                                    <label for="rencana_tindak_lanjut" class="form-label" style="font-size:.8rem; font-weight:600;">
+                                        Rencana Tindak Lanjut (RTL)
+                                    </label>
+                                    <textarea name="rencana_tindak_lanjut" id="rencana_tindak_lanjut" class="form-control form-control-sm" rows="2"
+                                              placeholder="Langkah perbaikan siklus lanjutan (penguatan supervisi, revisi standar SPO, audit berkala)…"></textarea>
+                                </div>
+                                <div class="col-md-4">
+                                    <label for="pj_rtl" class="form-label" style="font-size:.8rem; font-weight:600;">PJ RTL</label>
+                                    <input type="text" name="pj_rtl" id="pj_rtl" class="form-control form-control-sm" placeholder="Nama Penanggung Jawab RTL">
+                                </div>
                             </div>
                         </div>
 
@@ -496,6 +608,8 @@ document.addEventListener('DOMContentLoaded', function() {
         badge.style.background = colors[lv];
         labelEl.textContent = labels[lv];
         labelEl.style.color = colors[lv];
+        if (typeof updateRpn === 'function') updateRpn();
+        if (typeof updateResidual === 'function') updateResidual();
     }
 
     dampakEl.addEventListener('input', update);
@@ -564,7 +678,12 @@ document.addEventListener('DOMContentLoaded', function() {
                     }
                     const opt = document.createElement('option');
                     opt.value = ind.id;
-                    opt.textContent = '[' + ind.kode + '] ' + ind.nama;
+                    let badgePrefix = '';
+                    if (ind.jenis_code === 'NASIONAL') badgePrefix = '🟢 [INM] ';
+                    else if (ind.jenis_code === 'IMP_RS') badgePrefix = '🔵 [Indikator RS] ';
+                    else if (ind.jenis_code === 'IMP_UNIT') badgePrefix = '🔴 [Indikator Unit] ';
+                    else badgePrefix = '⚪ ';
+                    opt.textContent = badgePrefix + '[' + ind.kode + '] ' + ind.nama;
                     opt.dataset.target = ind.target;
                     opt.dataset.satuan = ind.satuan;
                     opt.dataset.presets = JSON.stringify(ind.preset_rencana_aksi);
@@ -1101,20 +1220,117 @@ document.addEventListener('DOMContentLoaded', function() {
     validateJenisRisikoBox(); // Initial check
 
     // ══════════════════════════════════════════════════════════════════════
-    // SECTION E — TOGGLE METODE EVALUASI MENDALAM (FMEA & RCA)
+    // SECTION C — REALTIME RPN (S × O × D) & TOGGLE METODE EVALUASI
     // ══════════════════════════════════════════════════════════════════════
-    const metodeToggle   = document.getElementById('metode-evaluasi-toggle');
-    const inputMetode    = document.getElementById('input_metode_evaluasi');
-    const panelStandar   = document.getElementById('panel-metode-standar');
-    const panelFmea      = document.getElementById('panel-metode-fmea');
-    const panelRca       = document.getElementById('panel-metode-rca');
+    const metodeToggle    = document.getElementById('metode-evaluasi-toggle');
+    const inputMetode     = document.getElementById('input_metode_evaluasi');
+    const panelStandar    = document.getElementById('panel-metode-standar');
+    const panelFmea       = document.getElementById('panel-metode-fmea');
+    const panelRca        = document.getElementById('panel-metode-rca');
+    const deteksiEl       = document.getElementById('deteksi_fmea');
+    const detValEl        = document.getElementById('deteksi-val');
+    const rpnLiveBadge    = document.getElementById('rpn-live-badge');
+    const inputRpnFmea    = document.getElementById('input_rpn_fmea');
+    const colDetResidual  = document.getElementById('col-deteksi-residual');
+
+    function updateRpn() {
+        if (!deteksiEl) return;
+        const d = parseInt(dampakEl.value) || 3;
+        const p = parseInt(probEl.value) || 3;
+        const det = parseInt(deteksiEl.value) || 3;
+        if (detValEl) detValEl.textContent = det;
+        const rpn = d * p * det;
+        if (inputRpnFmea && !inputRpnFmea.dataset.manual) {
+            inputRpnFmea.value = rpn;
+        }
+        if (rpnLiveBadge) {
+            let rpnColor = '#16a34a';
+            let rpnText = 'RENDAH';
+            if (rpn >= 80) { rpnColor = '#dc2626'; rpnText = 'TINGGI'; }
+            else if (rpn >= 40) { rpnColor = '#ca8a04'; rpnText = 'MODERAT'; }
+            rpnLiveBadge.textContent = `RPN: ${rpn} (${rpnText})`;
+            rpnLiveBadge.style.background = rpnColor;
+        }
+    }
+
+    if (deteksiEl) {
+        deteksiEl.addEventListener('input', updateRpn);
+        updateRpn();
+    }
+    if (inputRpnFmea) {
+        inputRpnFmea.addEventListener('input', function() {
+            this.dataset.manual = 'true';
+        });
+    }
+
+    // ══════════════════════════════════════════════════════════════════════
+    // SECTION F — REALTIME EVALUASI RESIDUAL & PENURUNAN RISIKO (Δ)
+    // ══════════════════════════════════════════════════════════════════════
+    const dResEl = document.getElementById('dampak_residual');
+    const pResEl = document.getElementById('probabilitas_residual');
+    const detResEl = document.getElementById('deteksi_residual');
+    const dResVal = document.getElementById('dampak-res-val');
+    const pResVal = document.getElementById('prob-res-val');
+    const detResVal = document.getElementById('deteksi-res-val');
+    const prevScoreComp = document.getElementById('prev-score-comparison');
+    const resScoreComp = document.getElementById('res-score-comparison');
+    const resLevelBadge = document.getElementById('res-level-badge');
+    const deltaRiskDisplay = document.getElementById('delta-risk-display');
+
+    function updateResidual() {
+        if (!dResEl || !pResEl) return;
+        const dr = parseInt(dResEl.value) || 2;
+        const pr = parseInt(pResEl.value) || 2;
+        if (dResVal) dResVal.textContent = dr;
+        if (pResVal) pResVal.textContent = pr;
+        if (detResEl && detResVal) detResVal.textContent = detResEl.value;
+
+        const sAwal = (parseInt(dampakEl.value) || 3) * (parseInt(probEl.value) || 3);
+        const sRes = dr * pr;
+        if (prevScoreComp) prevScoreComp.textContent = sAwal;
+        if (resScoreComp) resScoreComp.textContent = sRes;
+
+        const lv = level(sRes);
+        if (resLevelBadge) {
+            resLevelBadge.textContent = labels[lv];
+            resLevelBadge.style.background = colors[lv];
+        }
+
+        if (deltaRiskDisplay) {
+            const delta = sRes - sAwal;
+            const pct = sAwal > 0 ? Math.round(((sAwal - sRes) / sAwal) * 100) : 0;
+            if (delta <= 0) {
+                deltaRiskDisplay.textContent = `${delta} pts (Turun ${pct}%)`;
+                deltaRiskDisplay.className = 'fw-bold fs-6 text-success';
+            } else {
+                deltaRiskDisplay.textContent = `+${delta} pts`;
+                deltaRiskDisplay.className = 'fw-bold fs-6 text-danger';
+            }
+        }
+    }
+
+    if (dResEl && pResEl) {
+        dResEl.addEventListener('input', updateResidual);
+        pResEl.addEventListener('input', updateResidual);
+        if (detResEl) detResEl.addEventListener('input', updateResidual);
+        updateResidual();
+    }
 
     function showMetodePanel(metode) {
         if (inputMetode) inputMetode.value = metode;
         [panelStandar, panelFmea, panelRca].forEach(p => { if (p) p.classList.add('d-none'); });
-        if (metode === 'FMEA'  && panelFmea)  panelFmea.classList.remove('d-none');
-        if (metode === 'RCA'   && panelRca)   panelRca.classList.remove('d-none');
-        if (metode === 'STANDAR' && panelStandar) panelStandar.classList.remove('d-none');
+        if (metode === 'FMEA') {
+            if (panelFmea) panelFmea.classList.remove('d-none');
+            if (colDetResidual) colDetResidual.classList.remove('d-none');
+            updateRpn();
+        } else if (metode === 'RCA') {
+            if (panelRca) panelRca.classList.remove('d-none');
+            if (colDetResidual) colDetResidual.classList.add('d-none');
+        } else {
+            if (panelStandar) panelStandar.classList.remove('d-none');
+            if (colDetResidual) colDetResidual.classList.add('d-none');
+        }
+        updateResidual();
     }
 
     if (metodeToggle) {
