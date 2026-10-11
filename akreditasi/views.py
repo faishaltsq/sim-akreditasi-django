@@ -22,6 +22,29 @@ from .file_security import validate_uploaded_file, sanitize_filename
 logger = logging.getLogger(__name__)
 
 
+def custom_csrf_failure(request, reason=""):
+    """
+    CSRF failure view kustom:
+    Jika request adalah API/AJAX (mengakses /ai/ atau /api/ atau accept json),
+    kembalikan JsonResponse 403. Jika view biasa, kembalikan halaman CSRF default Django.
+    """
+    is_api = (
+        request.path.startswith('/ai/') or
+        request.path.startswith('/api/') or
+        request.headers.get('x-requested-with') == 'XMLHttpRequest' or
+        'application/json' in request.headers.get('accept', '') or
+        'application/json' in request.headers.get('content-type', '')
+    )
+    if is_api:
+        return JsonResponse({
+            'success': False,
+            'error': 'Token keamanan (CSRF) tidak valid atau kedaluwarsa. Harap muat ulang halaman.',
+            'csrf_error': True
+        }, status=403)
+    from django.views.csrf import csrf_failure as django_csrf_failure
+    return django_csrf_failure(request, reason=reason)
+
+
 # ==============================================================================
 # RBAC HELPERS
 # ==============================================================================

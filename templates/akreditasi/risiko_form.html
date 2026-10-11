@@ -1064,6 +1064,20 @@ document.addEventListener('DOMContentLoaded', function() {
                     })
                 });
 
+                if (resp.redirected || resp.status === 401) {
+                    throw new Error('Sesi login telah berakhir. Harap muat ulang halaman atau login kembali.');
+                }
+                if (resp.status === 403) {
+                    throw new Error('Akses ditolak atau token keamanan (CSRF) kedaluwarsa. Harap muat ulang halaman.');
+                }
+                if (resp.status === 429) {
+                    throw new Error('Terlalu banyak permintaan AI dalam waktu singkat. Harap tunggu 30–60 detik.');
+                }
+                const contentType = resp.headers.get('content-type') || '';
+                if (!contentType.includes('application/json')) {
+                    throw new Error(`Server mengembalikan respons tidak terduga (HTTP ${resp.status}). Harap muat ulang halaman.`);
+                }
+
                 const res = await resp.json();
                 if (!resp.ok || !res.success) {
                     throw new Error(res.error || 'Gagal menganalisis masalah.');

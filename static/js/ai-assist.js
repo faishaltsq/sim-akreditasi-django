@@ -20,6 +20,23 @@
         return cookie ? cookie.split('=')[1] : '';
     }
 
+    async function parseJsonResponse(resp) {
+        if (resp.redirected || resp.status === 401) {
+            throw new Error('Sesi login telah berakhir. Harap muat ulang halaman atau login kembali.');
+        }
+        if (resp.status === 403) {
+            throw new Error('Akses ditolak atau token keamanan (CSRF) kedaluwarsa. Harap muat ulang halaman.');
+        }
+        if (resp.status === 429) {
+            throw new Error('Terlalu banyak permintaan AI. Harap tunggu beberapa saat.');
+        }
+        const contentType = resp.headers.get('content-type') || '';
+        if (!contentType.includes('application/json')) {
+            throw new Error(`Server mengembalikan respons tidak terduga (HTTP ${resp.status}). Harap muat ulang halaman.`);
+        }
+        return await resp.json();
+    }
+
     // Modal Builder Dinamis
     function createOrGetAiModal() {
         let modalEl = document.getElementById('aiAssistModal');
@@ -125,7 +142,7 @@
                     }),
                 });
 
-                const res = await resp.json();
+                const res = await parseJsonResponse(resp);
                 document.getElementById('aiModalLoading').style.display = 'none';
                 const contentEl = document.getElementById('aiModalContent');
                 contentEl.style.display = 'block';
@@ -222,7 +239,7 @@
                     }),
                 });
 
-                const res = await resp.json();
+                const res = await parseJsonResponse(resp);
                 document.getElementById('aiModalLoading').style.display = 'none';
                 const contentEl = document.getElementById('aiModalContent');
                 contentEl.style.display = 'block';
@@ -279,7 +296,7 @@
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() },
                 });
-                const res = await resp.json();
+                const res = await parseJsonResponse(resp);
                 btnTestDeepseek.disabled = false;
 
                 if (res.success) {

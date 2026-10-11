@@ -31,10 +31,13 @@ CSRF_TRUSTED_ORIGINS = [
     if o.strip()
 ]
 CSRF_TRUSTED_ORIGINS += [
+    'https://sim-akreditasi-django.vercel.app',
     'https://*.onrender.com',
     'https://*.railway.app',
     'https://*.vercel.app',
 ]
+
+CSRF_FAILURE_VIEW = 'akreditasi.views.custom_csrf_failure'
 
 RENDER_EXTERNAL_HOSTNAME = os.environ.get('RENDER_EXTERNAL_HOSTNAME')
 if RENDER_EXTERNAL_HOSTNAME:

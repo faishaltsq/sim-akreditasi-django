@@ -41,6 +41,17 @@ class SecurityHeadersTest(TestCase):
         # Standard nosniff
         self.assertEqual(response.get('X-Content-Type-Options'), 'nosniff')
 
+    def test_api_302_converted_to_401_json(self):
+        # Simulasi @login_required redirecting an unauthenticated API call
+        from django.shortcuts import redirect
+        mw = SecurityHeadersMiddleware(lambda req: redirect('/accounts/login/?next=/ai/test/'))
+        req = self.factory.get('/ai/test/')
+        res = mw(req)
+
+        self.assertEqual(res.status_code, 401)
+        self.assertEqual(res['Content-Type'], 'application/json')
+        self.assertIn('Sesi login telah berakhir', res.content.decode('utf-8'))
+
 
 class RateLimiterTest(TestCase):
     def setUp(self):
