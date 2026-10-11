@@ -92,6 +92,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'akreditasi.middleware.SecurityHeadersMiddleware',
 ]
 
 ROOT_URLCONF = 'config.urls'
@@ -116,7 +117,8 @@ WSGI_APPLICATION = 'config.wsgi.application'
 
 DATABASE_URL = os.environ.get('DATABASE_URL')
 if DATABASE_URL:
-    db_config = dj_database_url.parse(DATABASE_URL, conn_max_age=600)
+    conn_age = 0 if os.environ.get('VERCEL') else 600
+    db_config = dj_database_url.parse(DATABASE_URL, conn_max_age=conn_age)
     if DATABASE_URL.startswith('postgres') and 'railway' not in DATABASE_URL:
         db_config['OPTIONS'] = {'sslmode': 'require'}
     DATABASES = {'default': db_config}
@@ -125,6 +127,24 @@ else:
         'default': {
             'ENGINE': 'django.db.backends.sqlite3',
             'NAME': BASE_DIR / 'db.sqlite3',
+        }
+    }
+
+# ── CACHE FRAMEWORK: RATE LIMITING & PERFORMANCE ─────────────────────────
+if DATABASE_URL:
+    CACHES = {
+        'default': {
+            'BACKEND': 'django.core.cache.backends.db.DatabaseCache',
+            'LOCATION': 'django_cache_table',
+            'TIMEOUT': 300,
+        }
+    }
+else:
+    CACHES = {
+        'default': {
+            'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+            'LOCATION': 'arima-local-cache',
+            'TIMEOUT': 300,
         }
     }
 
@@ -144,9 +164,20 @@ STATIC_URL = 'static/'
 STATICFILES_DIRS = [BASE_DIR / 'static']
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 
+if not DEBUG:
+    WHITENOISE_MAX_AGE = 31536000  # 1 tahun Cache-Control untuk static assets
+
+SUPABASE_URL = os.environ.get('SUPABASE_URL', '')
+SUPABASE_KEY = os.environ.get('SUPABASE_KEY', '')
+SUPABASE_BUCKET = os.environ.get('SUPABASE_BUCKET', 'bukti-akreditasi')
+
 STORAGES = {
     'default': {
-        'BACKEND': 'django.core.files.storage.FileSystemStorage',
+        'BACKEND': (
+            'akreditasi.storage.SupabaseMediaStorage'
+            if (SUPABASE_URL and SUPABASE_KEY and (IS_PRODUCTION or os.environ.get('USE_SUPABASE_STORAGE')))
+            else 'django.core.files.storage.FileSystemStorage'
+        ),
     },
     'staticfiles': {
         # CompressedManifest butuh manifest di filesystem — tidak cocok untuk Vercel serverless
@@ -179,7 +210,3 @@ MESSAGE_TAGS = {
     message_constants.WARNING: 'warning',
     message_constants.ERROR: 'danger',
 }
-
-SUPABASE_URL = os.environ.get('SUPABASE_URL', '')
-SUPABASE_KEY = os.environ.get('SUPABASE_KEY', '')
-SUPABASE_BUCKET = os.environ.get('SUPABASE_BUCKET', 'bukti-akreditasi')

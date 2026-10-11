@@ -1,5 +1,7 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required, user_passes_test
+from django.contrib.auth.views import LoginView as BaseLoginView
+from django.utils.decorators import method_decorator
 from django.contrib.auth.models import User
 from django.contrib import messages
 from django.views.decorators.http import require_POST
@@ -9,6 +11,13 @@ from django.db.models import Q
 from .models import UserProfile
 from .forms import UserCreateForm, UserEditForm, UserProfileForm
 from akreditasi.models import AuditLog
+from akreditasi.security_utils import rate_limit
+
+
+@method_decorator(rate_limit(max_calls=8, window=60, scope='login'), name='dispatch')
+class RateLimitedLoginView(BaseLoginView):
+    """View login dengan proteksi anti brute-force: maksimal 8 request per 60 detik."""
+    template_name = 'accounts/login.html'
 
 
 def admin_only(user):

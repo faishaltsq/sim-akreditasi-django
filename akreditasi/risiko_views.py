@@ -194,7 +194,7 @@ def api_indikator_by_unit(request):
 @login_required
 def risiko_daftar(request):
     profile = getattr(request.user, 'profile', None)
-    qs = RisikoUnit.objects.select_related('unit').all()
+    qs = RisikoUnit.objects.select_related('unit', 'indikator_mutu_terkait', 'created_by').all()
 
     # Scope filtering untuk unit-scoped users
     if profile and profile.is_unit_scoped and profile.unit_kerja:
@@ -416,7 +416,7 @@ def risiko_input(request):
 
 @login_required
 def risiko_detail(request, risiko_id):
-    risiko = get_object_or_404(RisikoUnit.objects.select_related('unit'), pk=risiko_id)
+    risiko = get_object_or_404(RisikoUnit.objects.select_related('unit', 'indikator_mutu_terkait', 'created_by'), pk=risiko_id)
     tindak_lanjut = risiko.tindak_lanjut.all()
 
     # Tambah tindak lanjut inline
@@ -465,7 +465,7 @@ def risiko_detail(request, risiko_id):
 
 @login_required
 def risiko_evaluasi(request, risiko_id):
-    risiko = get_object_or_404(RisikoUnit.objects.select_related('unit'), pk=risiko_id)
+    risiko = get_object_or_404(RisikoUnit.objects.select_related('unit', 'indikator_mutu_terkait', 'created_by'), pk=risiko_id)
 
     if request.method == 'POST':
         try:
@@ -566,7 +566,7 @@ def risiko_laporan(request, unit_id=None):
     tahun   = request.GET.get('tahun', '2026')
     periode = request.GET.get('periode', '')
 
-    qs = RisikoUnit.objects.select_related('unit', 'indikator_mutu_terkait').all()
+    qs = RisikoUnit.objects.select_related('unit', 'indikator_mutu_terkait', 'created_by').prefetch_related('tindak_lanjut').all()
     if is_scoped and allowed_ids:
         qs = qs.filter(unit_id__in=allowed_ids)
     if sel_unit:
