@@ -88,7 +88,7 @@ def _call_deepseek(prompt: str, system_prompt: str = SYSTEM_PROMPT_RS,
 
     _model = model or config.ai_model_name
     _temp = temperature if temperature is not None else config.ai_temperature
-    _max_tok = max_tokens or config.ai_max_tokens
+    _max_tok = max_tokens or max(config.ai_max_tokens or 2500, 2500)
 
     headers = {
         'Authorization': f'Bearer {api_key}',
@@ -351,7 +351,7 @@ def generate_fmea_suggestion(user, unit_name: str, kategori_risiko: str, jenis_r
         dampak=dampak,
         probabilitas=probabilitas,
     )
-    result = _call_deepseek(prompt)
+    result = _call_deepseek(prompt, max_tokens=2500)
     _log_ai_call(user, 'FMEA_SUGGESTION', f'{unit_name} | {jenis_risiko[:50]}', result['success'])
     return result
 
@@ -370,7 +370,7 @@ def generate_rca_suggestion(user, unit_name: str, jenis_risiko: str,
         dampak=dampak,
         probabilitas=probabilitas,
     )
-    result = _call_deepseek(prompt)
+    result = _call_deepseek(prompt, max_tokens=2500)
     _log_ai_call(user, 'RCA_SUGGESTION', f'{unit_name} | {jenis_risiko[:50]}', result['success'])
     return result
 

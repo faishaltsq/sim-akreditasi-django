@@ -72,7 +72,7 @@ class SystemConfig(models.Model):
     ai_enable_rdwos = models.BooleanField('AI: Modul Dokumen Bukti RDWOS', default=True)
     ai_enable_kps = models.BooleanField('AI: Modul KPS / Kredensial Nakes', default=True)
     ai_temperature = models.FloatField('Kreativitas AI (temperature 0.0–1.0)', default=0.3)
-    ai_max_tokens = models.PositiveSmallIntegerField('Maksimal Token Output AI', default=1000)
+    ai_max_tokens = models.PositiveSmallIntegerField('Maksimal Token Output AI', default=2500)
 
     updated_at = models.DateTimeField(auto_now=True)
 
