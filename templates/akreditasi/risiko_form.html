@@ -578,13 +578,37 @@
 <script src="/static/js/ai-assist.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // ── Skor Risiko Realtime ──────────────────────────────────────────────
-    const dampakEl  = document.getElementById('dampak');
-    const probEl    = document.getElementById('probabilitas');
-    const dValEl    = document.getElementById('dampak-val');
-    const pValEl    = document.getElementById('prob-val');
-    const badge     = document.getElementById('skor-badge');
-    const labelEl   = document.getElementById('skor-label');
+    // ── Referensi Elemen Global & Lintas-Section (Scope Hoisted) ──────────
+    const dampakEl        = document.getElementById('dampak');
+    const probEl          = document.getElementById('probabilitas');
+    const dValEl          = document.getElementById('dampak-val');
+    const pValEl          = document.getElementById('prob-val');
+    const badge           = document.getElementById('skor-badge');
+    const labelEl         = document.getElementById('skor-label');
+
+    // Section C — FMEA & RCA Elemen
+    const metodeToggle    = document.getElementById('metode-evaluasi-toggle');
+    const inputMetode     = document.getElementById('input_metode_evaluasi');
+    const panelStandar    = document.getElementById('panel-metode-standar');
+    const panelFmea       = document.getElementById('panel-metode-fmea');
+    const panelRca        = document.getElementById('panel-metode-rca');
+    const deteksiEl       = document.getElementById('deteksi_fmea');
+    const detValEl        = document.getElementById('deteksi-val');
+    const rpnLiveBadge    = document.getElementById('rpn-live-badge');
+    const inputRpnFmea    = document.getElementById('input_rpn_fmea');
+    const colDetResidual  = document.getElementById('col-deteksi-residual');
+
+    // Section F — Risiko Residual Elemen
+    const dResEl          = document.getElementById('dampak_residual');
+    const pResEl          = document.getElementById('probabilitas_residual');
+    const detResEl        = document.getElementById('deteksi_residual');
+    const dResVal         = document.getElementById('dampak-res-val');
+    const pResVal         = document.getElementById('prob-res-val');
+    const detResVal       = document.getElementById('deteksi-res-val');
+    const prevScoreComp   = document.getElementById('prev-score-comparison');
+    const resScoreComp    = document.getElementById('res-score-comparison');
+    const resLevelBadge   = document.getElementById('res-level-badge');
+    const deltaRiskDisplay= document.getElementById('delta-risk-display');
 
     const colors = { SANGAT_TINGGI:'#dc2626', TINGGI:'#ea580c', SEDANG:'#ca8a04', RENDAH:'#16a34a', SANGAT_RENDAH:'#64748b' };
     const labels = { SANGAT_TINGGI:'SANGAT TINGGI', TINGGI:'TINGGI', SEDANG:'SEDANG', RENDAH:'RENDAH', SANGAT_RENDAH:'SANGAT RENDAH' };
@@ -598,23 +622,27 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function update() {
-        const d = parseInt(dampakEl.value);
-        const p = parseInt(probEl.value);
+        if (!dampakEl || !probEl) return;
+        const d = parseInt(dampakEl.value) || 3;
+        const p = parseInt(probEl.value) || 3;
         const s = d * p;
         const lv = level(s);
-        dValEl.textContent = d;
-        pValEl.textContent = p;
-        badge.textContent = s;
-        badge.style.background = colors[lv];
-        labelEl.textContent = labels[lv];
-        labelEl.style.color = colors[lv];
+        if (dValEl) dValEl.textContent = d;
+        if (pValEl) pValEl.textContent = p;
+        if (badge) {
+            badge.textContent = s;
+            badge.style.background = colors[lv];
+        }
+        if (labelEl) {
+            labelEl.textContent = labels[lv];
+            labelEl.style.color = colors[lv];
+        }
         if (typeof updateRpn === 'function') updateRpn();
         if (typeof updateResidual === 'function') updateResidual();
     }
 
-    dampakEl.addEventListener('input', update);
-    probEl.addEventListener('input', update);
-    update();
+    if (dampakEl) dampakEl.addEventListener('input', update);
+    if (probEl) probEl.addEventListener('input', update);
 
     // ── Filter Indikator Mutu per Unit (AJAX) ────────────────────────────
     const unitSelect     = document.querySelector('select[name="unit"]');
@@ -1021,11 +1049,13 @@ document.addEventListener('DOMContentLoaded', function() {
             feedbackAiAnalisis.classList.remove('d-none');
 
             try {
+                const csrfTokenEl = document.querySelector('[name=csrfmiddlewaretoken]');
+                const csrfToken = csrfTokenEl ? csrfTokenEl.value : '';
                 const resp = await fetch("{% url 'akreditasi:api_ai_analisis_masalah_risiko' %}", {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                        'X-CSRFToken': csrfToken
                     },
                     body: JSON.stringify({
                         masalah: masalah,
@@ -1222,25 +1252,14 @@ document.addEventListener('DOMContentLoaded', function() {
     // ══════════════════════════════════════════════════════════════════════
     // SECTION C — REALTIME RPN (S × O × D) & TOGGLE METODE EVALUASI
     // ══════════════════════════════════════════════════════════════════════
-    const metodeToggle    = document.getElementById('metode-evaluasi-toggle');
-    const inputMetode     = document.getElementById('input_metode_evaluasi');
-    const panelStandar    = document.getElementById('panel-metode-standar');
-    const panelFmea       = document.getElementById('panel-metode-fmea');
-    const panelRca        = document.getElementById('panel-metode-rca');
-    const deteksiEl       = document.getElementById('deteksi_fmea');
-    const detValEl        = document.getElementById('deteksi-val');
-    const rpnLiveBadge    = document.getElementById('rpn-live-badge');
-    const inputRpnFmea    = document.getElementById('input_rpn_fmea');
-    const colDetResidual  = document.getElementById('col-deteksi-residual');
-
     function updateRpn() {
         if (!deteksiEl) return;
-        const d = parseInt(dampakEl.value) || 3;
-        const p = parseInt(probEl.value) || 3;
+        const d = parseInt(dampakEl ? dampakEl.value : 3) || 3;
+        const p = parseInt(probEl ? probEl.value : 3) || 3;
         const det = parseInt(deteksiEl.value) || 3;
         if (detValEl) detValEl.textContent = det;
         const rpn = d * p * det;
-        if (inputRpnFmea && !inputRpnFmea.dataset.manual) {
+        if (inputRpnFmea && inputRpnFmea.dataset && !inputRpnFmea.dataset.manual) {
             inputRpnFmea.value = rpn;
         }
         if (rpnLiveBadge) {
@@ -1255,7 +1274,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
     if (deteksiEl) {
         deteksiEl.addEventListener('input', updateRpn);
-        updateRpn();
     }
     if (inputRpnFmea) {
         inputRpnFmea.addEventListener('input', function() {
@@ -1266,17 +1284,6 @@ document.addEventListener('DOMContentLoaded', function() {
     // ══════════════════════════════════════════════════════════════════════
     // SECTION F — REALTIME EVALUASI RESIDUAL & PENURUNAN RISIKO (Δ)
     // ══════════════════════════════════════════════════════════════════════
-    const dResEl = document.getElementById('dampak_residual');
-    const pResEl = document.getElementById('probabilitas_residual');
-    const detResEl = document.getElementById('deteksi_residual');
-    const dResVal = document.getElementById('dampak-res-val');
-    const pResVal = document.getElementById('prob-res-val');
-    const detResVal = document.getElementById('deteksi-res-val');
-    const prevScoreComp = document.getElementById('prev-score-comparison');
-    const resScoreComp = document.getElementById('res-score-comparison');
-    const resLevelBadge = document.getElementById('res-level-badge');
-    const deltaRiskDisplay = document.getElementById('delta-risk-display');
-
     function updateResidual() {
         if (!dResEl || !pResEl) return;
         const dr = parseInt(dResEl.value) || 2;
@@ -1285,7 +1292,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (pResVal) pResVal.textContent = pr;
         if (detResEl && detResVal) detResVal.textContent = detResEl.value;
 
-        const sAwal = (parseInt(dampakEl.value) || 3) * (parseInt(probEl.value) || 3);
+        const sAwal = ((dampakEl ? parseInt(dampakEl.value) : 3) || 3) * ((probEl ? parseInt(probEl.value) : 3) || 3);
         const sRes = dr * pr;
         if (prevScoreComp) prevScoreComp.textContent = sAwal;
         if (resScoreComp) resScoreComp.textContent = sRes;
@@ -1358,9 +1365,11 @@ document.addEventListener('DOMContentLoaded', function() {
             this.disabled = true;
             this.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Menyusun…';
             try {
+                const csrfTokenEl = document.querySelector('[name=csrfmiddlewaretoken]');
+                const csrfToken = csrfTokenEl ? csrfTokenEl.value : '';
                 const r = await fetch('/ai/risiko-fmea-saran/', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value },
+                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
                     body: JSON.stringify({
                         unit_name: unitSelect ? unitSelect.options[unitSelect.selectedIndex]?.text : '',
                         jenis_risiko: jenisRisiko,
@@ -1405,9 +1414,11 @@ document.addEventListener('DOMContentLoaded', function() {
             this.disabled = true;
             this.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Menganalisis…';
             try {
+                const csrfTokenEl = document.querySelector('[name=csrfmiddlewaretoken]');
+                const csrfToken = csrfTokenEl ? csrfTokenEl.value : '';
                 const r = await fetch('/ai/risiko-rca-saran/', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value },
+                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
                     body: JSON.stringify({
                         unit_name: unitSelect ? unitSelect.options[unitSelect.selectedIndex]?.text : '',
                         jenis_risiko: jenisRisiko,
@@ -1435,6 +1446,15 @@ document.addEventListener('DOMContentLoaded', function() {
                 this.innerHTML = orig;
             }
         });
+    }
+
+    // ── Inisialisasi awal seluruh kalkulasi setelah semua listener terpasang ──
+    try {
+        update();
+        if (typeof updateRpn === 'function') updateRpn();
+        if (typeof updateResidual === 'function') updateResidual();
+    } catch (e) {
+        console.warn('Initial calculation error:', e);
     }
 });
 </script>

@@ -94,7 +94,7 @@
 
             if (!jenisRisiko && !deskripsiRisiko && !indDesc) {
                 alert('Silakan pilih Indikator Mutu atau ketik dahulu "Jenis Risiko" / "Deskripsi Risiko" agar AI memiliki konteks.');
-                if (jenisInput) jenisInput.focus();
+                if (jenisInputs.length && jenisInputs[0]) jenisInputs[0].focus();
                 return;
             }
 
