@@ -114,11 +114,37 @@ class RisikoUnit(models.Model):
     rpn_fmea              = models.IntegerField('RPN — Risk Priority Number (FMEA)', null=True, blank=True)
     tanggal_evaluasi      = models.DateField('Tanggal Evaluasi / Investigasi', null=True, blank=True)
 
-    # ── Section G: Evaluasi & RTL ──────────────────────────────────────────
+    # ── Section G: Monitoring, Evaluasi, RCA Fishbone & RTL ───────────────
+    STATUS_PELAKSANAAN_CHOICES = [
+        ('DILAKUKAN',       'Dilakukan'),
+        ('SEBAGIAN',        'Dilakukan Sebagian'),
+        ('TIDAK_DILAKUKAN', 'Tidak Dilakukan'),
+    ]
+
+    STATUS_RTL_CHOICES = [
+        ('BELUM',   'Belum Dimulai'),
+        ('PROSES',  'Dalam Proses'),
+        ('SELESAI', 'Selesai'),
+    ]
+
+    # Capaian Indikator Mutu
+    capaian_nilai         = models.DecimalField('Nilai Capaian Indikator (%)', max_digits=5, decimal_places=2, null=True, blank=True)
+    bukti_capaian         = models.FileField('Bukti Dokumen Capaian', upload_to='risiko/bukti_capaian/', null=True, blank=True)
     evaluasi_capaian      = models.TextField('Evaluasi Capaian Indikator Mutu', blank=True, default='')
+
+    # Pelaksanaan Tindakan Rencana (Do)
+    status_pelaksanaan    = models.CharField('Status Pelaksanaan Tindakan', max_length=20, choices=STATUS_PELAKSANAAN_CHOICES, default='DILAKUKAN')
+
+    # Root Cause Analysis (RCA) Terstruktur — Fishbone / 5-Whys
     rca_ulang             = models.TextField('RCA Ulang / Investigasi Lanjutan', blank=True, default='')
+    rca_fishbone          = models.JSONField('Analisis RCA Fishbone Terstruktur', default=dict, blank=True)
+
+    # Rencana Tindak Lanjut (RTL)
     rencana_tindak_lanjut = models.TextField('Rencana Tindak Lanjut (RTL)', blank=True, default='')
     pj_rtl                = models.CharField('PJ Tindak Lanjut (RTL)', max_length=150, blank=True, default='')
+    deadline_rtl          = models.DateField('Target Waktu / Tenggat RTL', null=True, blank=True)
+    status_rtl            = models.CharField('Status RTL', max_length=15, choices=STATUS_RTL_CHOICES, default='BELUM')
+    bukti_rtl             = models.FileField('Bukti Dokumen RTL', upload_to='risiko/bukti_rtl/', null=True, blank=True)
 
     created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='risiko_dibuat')
     created_at = models.DateTimeField(auto_now_add=True)
@@ -131,6 +157,37 @@ class RisikoUnit(models.Model):
 
     def __str__(self):
         return f"[{self.unit}] {self.jenis_risiko} ({self.periode} {self.tahun})"
+
+    @property
+    def capaian_persen_display(self):
+        """Format tampilan persen capaian indikator."""
+        if self.capaian_nilai is not None:
+            return f"{self.capaian_nilai:.1f}%"
+        return "—"
+
+    @property
+    def rca_fishbone_items(self):
+        """Kembalikan list of (label, text) untuk fishbone yang tidak kosong."""
+        if not isinstance(self.rca_fishbone, dict):
+            return []
+        labels = {
+            'manpower': 'Manpower (SDM)',
+            'process': 'Process / Method (Metode & Alur)',
+            'material': 'Material (Sarana & Bahan)',
+            'machine': 'Machine / Equipment (Alat & Fasilitas)',
+            'environment': 'Environment / Behavior (Lingkungan & Budaya)',
+            'system': 'System (Sistem & Kebijakan)',
+        }
+        res = []
+        for k, v in self.rca_fishbone.items():
+            if v and str(v).strip():
+                res.append({'key': k, 'label': labels.get(k, k.capitalize()), 'text': str(v).strip()})
+        return res
+
+    @property
+    def status_rtl_badge_color(self):
+        m = {'BELUM': 'secondary', 'PROSES': 'warning', 'SELESAI': 'success'}
+        return m.get(self.status_rtl, 'secondary')
 
     @property
     def jenis_risiko_list(self):

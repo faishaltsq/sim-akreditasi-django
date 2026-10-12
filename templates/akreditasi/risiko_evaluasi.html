@@ -127,12 +127,78 @@
                     <h6 class="mb-0 fw-bold"><i class="bi bi-sliders me-2"></i>G. Monitoring dan Evaluasi Risiko</h6>
                 </div>
                 <div class="card-body p-4">
-                    <form method="post">
+                    <form method="post" enctype="multipart/form-data">
                         {% csrf_token %}
 
-                        {# ── G.1 PENILAIAN RISIKO SISA ── #}
+                        {# ── G.1 CAPAIAN INDIKATOR MUTU & BUKTI ── #}
                         <h6 class="fw-bold mb-3 pb-1 border-bottom" style="color:#0f172a; font-size:.82rem;">
-                            <i class="bi bi-shield-shaded text-teal me-1"></i>G.1 Penilaian Risiko Sisa (Residu Pasca Pelaksanaan)
+                            <i class="bi bi-graph-up-arrow text-primary me-1"></i>G.1 Capaian Indikator Mutu &amp; Bukti Pendukung
+                        </h6>
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-4">
+                                <label for="capaian_nilai" class="form-label fw-semibold" style="font-size:.8rem;">
+                                    Nilai Capaian Realisasi (%)
+                                </label>
+                                <div class="input-group input-group-sm">
+                                    <input type="number" step="0.01" min="0" max="1000" name="capaian_nilai" id="capaian_nilai" class="form-control"
+                                           value="{{ risiko.capaian_nilai|default_if_none:'' }}" placeholder="Contoh: 88.5">
+                                    <span class="input-group-text">%</span>
+                                </div>
+                                <small class="text-muted" style="font-size:.68rem;">
+                                    Target Indikator: <strong>{{ risiko.target_capaian_indikator|default:"100" }}%</strong>
+                                </small>
+                            </div>
+                            <div class="col-md-8">
+                                <label for="bukti_capaian" class="form-label fw-semibold" style="font-size:.8rem;">
+                                    <i class="bi bi-paperclip me-1"></i>Upload Bukti Dokumen Capaian <span class="text-muted fw-normal">(PDF, Gambar, Video, Excel max 10MB)</span>
+                                </label>
+                                <input type="file" name="bukti_capaian" id="bukti_capaian" class="form-control form-control-sm" accept=".pdf,.jpg,.jpeg,.png,.mp4,.doc,.docx,.xls,.xlsx">
+                                {% if risiko.bukti_capaian %}
+                                <div class="mt-1 d-flex align-items-center gap-2" style="font-size:.72rem;">
+                                    <span class="badge bg-success-subtle text-success border border-success-subtle"><i class="bi bi-check-circle me-1"></i>Bukti tersimpan</span>
+                                    <a href="{{ risiko.bukti_capaian.url }}" target="_blank" class="text-decoration-none fw-semibold" style="color:#0f766e;">
+                                        <i class="bi bi-download me-1"></i>Lihat Bukti Capaian Saat Ini
+                                    </a>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <div class="mb-4">
+                            <label for="evaluasi_capaian" class="form-label fw-semibold" style="font-size:.8rem;">
+                                Uraian Evaluasi Capaian Indikator Mutu &amp; Kinerja
+                            </label>
+                            <textarea name="evaluasi_capaian" id="evaluasi_capaian" class="form-control form-control-sm" rows="2"
+                                      placeholder="Uraikan evaluasi capaian target indikator mutu terkait dan efektivitas barrier mitigasi yang sudah berjalan…">{{ risiko.evaluasi_capaian }}</textarea>
+                            <small class="text-muted" style="font-size:.65rem;">Bandingkan capaian riil unit dengan target numerik indikator mutu.</small>
+                        </div>
+
+                        {# ── G.2 STATUS PELAKSANAAN TINDAKAN (DO) ── #}
+                        <h6 class="fw-bold mb-3 pb-1 border-bottom pt-2" style="color:#0f172a; font-size:.82rem;">
+                            <i class="bi bi-check2-circle text-success me-1"></i>G.2 Status Pelaksanaan Tindakan Setiap Rencana
+                        </h6>
+                        <div class="mb-4">
+                            <label class="form-label fw-semibold d-block" style="font-size:.8rem;">Status Pelaksanaan Tindakan:</label>
+                            <div class="d-flex flex-wrap gap-3">
+                                {% for val, lbl in status_pelaksanaan_choices %}
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input" type="radio" name="status_pelaksanaan" id="pelaksanaan_{{ val }}" value="{{ val }}"
+                                           {% if risiko.status_pelaksanaan == val %}checked{% elif not risiko.status_pelaksanaan and val == 'DILAKUKAN' %}checked{% endif %}>
+                                    <label class="form-check-label" for="pelaksanaan_{{ val }}" style="font-size:.82rem;">
+                                        {% if val == 'DILAKUKAN' %}<span class="badge bg-success me-1">✓</span>{% elif val == 'SEBAGIAN' %}<span class="badge bg-warning text-dark me-1">~</span>{% else %}<span class="badge bg-danger me-1">✗</span>{% endif %}
+                                        {{ lbl }}
+                                    </label>
+                                </div>
+                                {% endfor %}
+                            </div>
+                            <small class="text-muted d-block mt-1" style="font-size:.68rem;">
+                                *Catatan: Berkas bukti dokumen pelaksanaan per tindakan dapat diunggah langsung di tabel Seksi F (Pelaksanaan Risiko).
+                            </small>
+                        </div>
+
+                        {# ── G.3 PENILAIAN RISIKO SISA (RESIDU) ── #}
+                        <h6 class="fw-bold mb-3 pb-1 border-bottom pt-2" style="color:#0f172a; font-size:.82rem;">
+                            <i class="bi bi-shield-shaded text-teal me-1"></i>G.3 Penilaian Risiko Sisa (Residu Pasca Pelaksanaan Tindakan)
                         </h6>
                         <div class="row g-4 mb-3">
                             <div class="col-md-{% if risiko.is_fmea %}4{% else %}6{% endif %}">
@@ -161,40 +227,101 @@
                         </div>
                         {% endif %}
 
-                        {# ── G.2 EVALUASI CAPAIAN & RTL ── #}
+                        {# ── G.4 ROOT CAUSE ANALYSIS (RCA) FISHBONE ── #}
                         <h6 class="fw-bold mb-3 pb-1 border-bottom pt-2" style="color:#0f172a; font-size:.82rem;">
-                            <i class="bi bi-clipboard-check text-primary me-1"></i>G.2 Evaluasi Capaian &amp; Rencana Tindak Lanjut (RTL)
+                            <i class="bi bi-diagram-3-fill text-danger me-1"></i>G.4 Root Cause Analysis (RCA) Terstruktur — Metode Fishbone / 5-Whys
+                        </h6>
+                        <div class="p-3 mb-3 rounded-3 border" style="background:#f8fafc;">
+                            <small class="text-muted d-block mb-2" style="font-size:.72rem;">
+                                Petakan akar masalah penyebab deviasi atau kegagalan pencapaian target berdasarkan 6 kategori Fishbone (Ishikawa):
+                            </small>
+                            <div class="row g-2">
+                                <div class="col-md-6">
+                                    <label class="form-label fw-semibold text-secondary" style="font-size:.75rem;">1. Manpower (SDM / Kepatuhan / Kompetensi / Beban Kerja)</label>
+                                    <input type="text" name="rca_manpower" class="form-control form-control-sm"
+                                           value="{{ risiko.rca_fishbone.manpower|default:'' }}" placeholder="Contoh: Beban kerja tinggi saat jam sibuk, perawat belum tersertifikasi">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label fw-semibold text-secondary" style="font-size:.75rem;">2. Process / Method (Metode / SPO / Alur Kerja)</label>
+                                    <input type="text" name="rca_process" class="form-control form-control-sm"
+                                           value="{{ risiko.rca_fishbone.process|default:'' }}" placeholder="Contoh: Belum ada SPO baku verifikasi gelang identitas sebelum injeksi">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label fw-semibold text-secondary" style="font-size:.75rem;">3. Material (Sarana / Obat / Bahan / Dokumen)</label>
+                                    <input type="text" name="rca_material" class="form-control form-control-sm"
+                                           value="{{ risiko.rca_fishbone.material|default:'' }}" placeholder="Contoh: Kertas gelang identitas barcode sering macet di printer">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label fw-semibold text-secondary" style="font-size:.75rem;">4. Machine / Equipment (Alat / Fasilitas / IT)</label>
+                                    <input type="text" name="rca_machine" class="form-control form-control-sm"
+                                           value="{{ risiko.rca_fishbone.machine|default:'' }}" placeholder="Contoh: Scanner barcode wireless tidak sinkron ke SIMRS">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label fw-semibold text-secondary" style="font-size:.75rem;">5. Environment / Behavior (Lingkungan Kerja / Budaya Keselamatan)</label>
+                                    <input type="text" name="rca_environment" class="form-control form-control-sm"
+                                           value="{{ risiko.rca_fishbone.environment|default:'' }}" placeholder="Contoh: Kebiasaan memanggil nama panggilan bukan mencocokkan identitas">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label fw-semibold text-secondary" style="font-size:.75rem;">6. System (Sistem / Kebijakan RS / SIMRS)</label>
+                                    <input type="text" name="rca_system" class="form-control form-control-sm"
+                                           value="{{ risiko.rca_fishbone.system|default:'' }}" placeholder="Contoh: SIMRS belum auto-lock asesmen 24 jam untuk DPJP">
+                                </div>
+                            </div>
+                            <div class="mt-3">
+                                <label for="rca_ulang" class="form-label fw-semibold" style="font-size:.78rem;">
+                                    Catatan / Ringkasan Investigasi Lanjutan RCA (Opsional)
+                                </label>
+                                <textarea name="rca_ulang" id="rca_ulang" class="form-control form-control-sm" rows="2"
+                                          placeholder="Uraian naratif kesimpulan investigasi akar masalah…">{{ risiko.rca_ulang }}</textarea>
+                            </div>
+                        </div>
+
+                        {# ── G.5 RENCANA TINDAK LANJUT (RTL) & BUKTI ── #}
+                        <h6 class="fw-bold mb-3 pb-1 border-bottom pt-2" style="color:#0f172a; font-size:.82rem;">
+                            <i class="bi bi-calendar2-check text-primary me-1"></i>G.5 Rencana Tindak Lanjut (RTL) &amp; Bukti Penyelesaian
                         </h6>
                         <div class="mb-3">
-                            <label for="evaluasi_capaian" class="form-label fw-semibold" style="font-size:.8rem;">
-                                Evaluasi Capaian Indikator Mutu &amp; Kinerja
+                            <label for="rencana_tindak_lanjut" class="form-label fw-semibold" style="font-size:.8rem;">
+                                Uraian Rencana Tindak Lanjut (RTL)
                             </label>
-                            <textarea name="evaluasi_capaian" id="evaluasi_capaian" class="form-control form-control-sm" rows="3"
-                                      placeholder="Uraikan evaluasi capaian target indikator mutu terkait dan efektivitas barrier mitigasi yang sudah berjalan…">{{ risiko.evaluasi_capaian }}</textarea>
-                            <small class="text-muted" style="font-size:.65rem;">Bandingkan capaian riil unit dengan target numerik indikator mutu.</small>
+                            <textarea name="rencana_tindak_lanjut" id="rencana_tindak_lanjut" class="form-control form-control-sm" rows="3"
+                                      placeholder="Langkah perbaikan siklus lanjutan (revisi SPO, pembaruan sarana, pelatihan ulang staf, audit kepatuhan mingguan)…">{{ risiko.rencana_tindak_lanjut }}</textarea>
                         </div>
 
-                        <div class="mb-3">
-                            <label for="rca_ulang" class="form-label fw-semibold" style="font-size:.8rem;">
-                                Kajian / RCA Ulang <span class="text-muted fw-normal">(jika insiden berulang atau mitigasi belum tuntas)</span>
-                            </label>
-                            <textarea name="rca_ulang" id="rca_ulang" class="form-control form-control-sm" rows="2"
-                                      placeholder="Kosongkan jika target mitigasi tercapai penuh. Isi analisis akar masalah baru jika masih terdapat deviasi…">{{ risiko.rca_ulang }}</textarea>
-                        </div>
-
-                        <div class="row g-3 mb-4">
-                            <div class="col-md-8">
-                                <label for="rencana_tindak_lanjut" class="form-label fw-semibold" style="font-size:.8rem;">
-                                    Rencana Tindak Lanjut (RTL)
-                                </label>
-                                <textarea name="rencana_tindak_lanjut" id="rencana_tindak_lanjut" class="form-control form-control-sm" rows="2"
-                                          placeholder="Langkah perbaikan siklus lanjutan (revisi SPO, pembaruan sarana, pelatihan ulang staf)…">{{ risiko.rencana_tindak_lanjut }}</textarea>
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-4">
+                                <label for="pj_rtl" class="form-label fw-semibold" style="font-size:.8rem;">PIC / Penanggung Jawab RTL</label>
+                                <input type="text" name="pj_rtl" id="pj_rtl" class="form-control form-control-sm"
+                                       value="{{ risiko.pj_rtl }}" placeholder="Nama / Jabatan PIC (misal: Kepala Ruangan / Ka. Instalasi)">
                             </div>
                             <div class="col-md-4">
-                                <label for="pj_rtl" class="form-label fw-semibold" style="font-size:.8rem;">PJ RTL</label>
-                                <input type="text" name="pj_rtl" id="pj_rtl" class="form-control form-control-sm"
-                                       value="{{ risiko.pj_rtl }}" placeholder="Nama penanggung jawab RTL">
+                                <label for="deadline_rtl" class="form-label fw-semibold" style="font-size:.8rem;">Target Waktu / Tenggat RTL</label>
+                                <input type="date" name="deadline_rtl" id="deadline_rtl" class="form-control form-control-sm"
+                                       value="{{ risiko.deadline_rtl|date:'Y-m-d'|default:'' }}">
                             </div>
+                            <div class="col-md-4">
+                                <label class="form-label fw-semibold" style="font-size:.8rem;">Status RTL</label>
+                                <select name="status_rtl" id="status_rtl" class="form-select form-select-sm">
+                                    {% for val, lbl in status_rtl_choices %}
+                                    <option value="{{ val }}" {% if risiko.status_rtl == val %}selected{% endif %}>{{ lbl }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="mb-4">
+                            <label for="bukti_rtl" class="form-label fw-semibold" style="font-size:.8rem;">
+                                <i class="bi bi-paperclip me-1"></i>Upload Bukti Dokumen Pelaksanaan RTL <span class="text-muted fw-normal">(SPO Revisi, Sertifikat Diklat, Berita Acara, dll)</span>
+                            </label>
+                            <input type="file" name="bukti_rtl" id="bukti_rtl" class="form-control form-control-sm" accept=".pdf,.jpg,.jpeg,.png,.mp4,.doc,.docx,.xls,.xlsx">
+                            {% if risiko.bukti_rtl %}
+                            <div class="mt-1 d-flex align-items-center gap-2" style="font-size:.72rem;">
+                                <span class="badge bg-success-subtle text-success border border-success-subtle"><i class="bi bi-check-circle me-1"></i>Bukti RTL tersimpan</span>
+                                <a href="{{ risiko.bukti_rtl.url }}" target="_blank" class="text-decoration-none fw-semibold" style="color:#0f766e;">
+                                    <i class="bi bi-download me-1"></i>Lihat Bukti Dokumen RTL Saat Ini
+                                </a>
+                            </div>
+                            {% endif %}
                         </div>
 
                         <div class="alert alert-info py-2" style="font-size:.8rem;">

@@ -511,29 +511,269 @@ def risiko_evaluasi(request, risiko_id):
                 d = risiko.deteksi_fmea or 1
                 risiko.rpn_residual = risiko.dampak_residual * risiko.probabilitas_residual * d
 
+            # ── Capaian Indikator Mutu ──
+            capaian_raw = request.POST.get('capaian_nilai', '').strip()
+            if capaian_raw:
+                try:
+                    from decimal import Decimal
+                    risiko.capaian_nilai = Decimal(capaian_raw.replace(',', '.'))
+                except Exception:
+                    pass
+            if request.FILES.get('bukti_capaian'):
+                risiko.bukti_capaian = request.FILES['bukti_capaian']
+
             if 'evaluasi_capaian' in request.POST:
                 risiko.evaluasi_capaian = request.POST.get('evaluasi_capaian', '').strip()
+
+            # ── Pelaksanaan Tindakan ──
+            if 'status_pelaksanaan' in request.POST:
+                risiko.status_pelaksanaan = request.POST.get('status_pelaksanaan', 'DILAKUKAN')
+
+            # ── RCA Fishbone Terstruktur ──
             if 'rca_ulang' in request.POST:
                 risiko.rca_ulang = request.POST.get('rca_ulang', '').strip()
+
+            fb = {}
+            for dim in ['manpower', 'process', 'material', 'machine', 'environment', 'system']:
+                val = request.POST.get(f'rca_{dim}', '').strip()
+                if val:
+                    fb[dim] = val
+            risiko.rca_fishbone = fb
+
+            # ── Rencana Tindak Lanjut (RTL) ──
             if 'rencana_tindak_lanjut' in request.POST:
                 risiko.rencana_tindak_lanjut = request.POST.get('rencana_tindak_lanjut', '').strip()
             if 'pj_rtl' in request.POST:
                 risiko.pj_rtl = request.POST.get('pj_rtl', '').strip()
+            if 'deadline_rtl' in request.POST:
+                risiko.deadline_rtl = request.POST.get('deadline_rtl') or None
+            if 'status_rtl' in request.POST:
+                risiko.status_rtl = request.POST.get('status_rtl', 'BELUM')
+            if request.FILES.get('bukti_rtl'):
+                risiko.bukti_rtl = request.FILES['bukti_rtl']
 
             risiko.status = 'EVALUASI'
-            risiko.full_clean()
+            risiko.full_clean(exclude=['bukti_capaian', 'bukti_rtl'])
             risiko.save()
-            _log(request.user, 'UPDATE', risiko, 'Evaluasi residual risk & RTL')
-            messages.success(request, 'Evaluasi risiko dan RTL berhasil disimpan.')
+            _log(request.user, 'UPDATE', risiko, 'Evaluasi residual risk, RCA fishbone & RTL')
+            messages.success(request, 'Evaluasi risiko, analisis RCA, dan RTL berhasil disimpan.')
             return redirect('akreditasi:risiko_detail', risiko_id=risiko.pk)
         except Exception as e:
-            messages.error(request, f'Gagal: {e}')
+            messages.error(request, f'Gagal menyimpan evaluasi: {e}')
 
     ctx = {
         'risiko': risiko,
         'status_badges': STATUS_BADGES,
+        'status_pelaksanaan_choices': RisikoUnit.STATUS_PELAKSANAAN_CHOICES,
+        'status_rtl_choices': RisikoUnit.STATUS_RTL_CHOICES,
     }
     return render(request, 'akreditasi/risiko_evaluasi.html', ctx)
+
+
+# ── 4B. Monitoring & Evaluasi Risiko (Tabel Komprehensif MONEV + RCA) ──
+
+@login_required
+def risiko_monitoring_evaluasi(request, unit_id=None):
+    """
+    Tabel Monitoring dan Evaluasi Risiko Mutu Lengkap sesuai standar akreditasi:
+    Kolom: No, Indikator Mutu & Target, Capaian & Bukti, Pelaksanaan & Bukti, RCA (Fishbone), RTL & Bukti, Skor Sebelum vs Sesudah.
+    """
+    profile = getattr(request.user, 'profile', None)
+    is_scoped = profile and profile.is_unit_scoped and profile.unit_kerja
+
+    if is_scoped:
+        user_unit = profile.unit_kerja
+        allowed_ids = [user_unit.id] + list(UnitKerja.objects.filter(parent=user_unit).values_list('id', flat=True))
+        units = UnitKerja.objects.filter(id__in=allowed_ids)
+    else:
+        units = UnitKerja.objects.all()
+        allowed_ids = None
+
+    # Filter parameters
+    sel_unit_id = unit_id or request.GET.get('unit') or (profile.unit_kerja.id if is_scoped else None)
+    sel_unit = None
+    if sel_unit_id:
+        try:
+            sel_unit = UnitKerja.objects.get(pk=int(sel_unit_id))
+        except (UnitKerja.DoesNotExist, ValueError):
+            sel_unit = None
+
+    tahun = request.GET.get('tahun', '2026')
+    status_rtl = request.GET.get('status_rtl', '')
+    status_pelaksanaan = request.GET.get('status_pelaksanaan', '')
+    query = request.GET.get('q', '').strip()
+
+    qs = RisikoUnit.objects.select_related('unit', 'indikator_mutu_terkait', 'created_by').prefetch_related('tindak_lanjut').all()
+
+    if is_scoped and allowed_ids:
+        qs = qs.filter(unit_id__in=allowed_ids)
+    if sel_unit:
+        qs = qs.filter(unit=sel_unit)
+    if tahun:
+        qs = qs.filter(tahun=tahun)
+    if status_rtl:
+        qs = qs.filter(status_rtl=status_rtl)
+    if status_pelaksanaan:
+        qs = qs.filter(status_pelaksanaan=status_pelaksanaan)
+    if query:
+        qs = qs.filter(
+            Q(jenis_risiko__icontains=query) |
+            Q(masalah__icontains=query) |
+            Q(indikator_mutu_terkait__nama__icontains=query) |
+            Q(rencana_aksi__icontains=query) |
+            Q(rencana_tindak_lanjut__icontains=query) |
+            Q(pj_rtl__icontains=query)
+        )
+
+    risiko_list = list(qs.order_by('-tahun', '-dampak', '-probabilitas'))
+
+    # Calculate additional dynamic attributes for rendering
+    total_risiko = len(risiko_list)
+    rtl_selesai_count = sum(1 for r in risiko_list if r.status_rtl == 'SELESAI')
+    rtl_proses_count = sum(1 for r in risiko_list if r.status_rtl == 'PROSES')
+    terevaluasi_count = sum(1 for r in risiko_list if r.dampak_residual and r.probabilitas_residual)
+
+    capaian_vals = [float(r.capaian_nilai) for r in risiko_list if r.capaian_nilai is not None]
+    avg_capaian = round(sum(capaian_vals) / len(capaian_vals), 1) if capaian_vals else None
+
+    # Calculate score before vs after for each
+    for r in risiko_list:
+        r.skor_awal = r.dampak * r.probabilitas
+        r.skor_awal_color = _skor_color(r.skor_awal)
+        r.skor_awal_label = _skor_label(r.skor_awal)
+
+        if r.dampak_residual and r.probabilitas_residual:
+            r.skor_akhir = r.dampak_residual * r.probabilitas_residual
+            r.skor_akhir_color = _skor_color(r.skor_akhir)
+            r.skor_akhir_label = _skor_label(r.skor_akhir)
+            r.skor_delta = r.skor_awal - r.skor_akhir
+        else:
+            r.skor_akhir = None
+            r.skor_akhir_color = '#64748b'
+            r.skor_akhir_label = 'Belum Evaluasi'
+            r.skor_delta = None
+
+        # Gather summary of action items (Do)
+        r.daftar_tindak_lanjut = list(r.tindak_lanjut.all())
+
+    ctx = {
+        'risiko_list': risiko_list,
+        'total_risiko': total_risiko,
+        'rtl_selesai_count': rtl_selesai_count,
+        'rtl_proses_count': rtl_proses_count,
+        'terevaluasi_count': terevaluasi_count,
+        'avg_capaian': avg_capaian,
+        'units': units,
+        'sel_unit': sel_unit,
+        'tahun': tahun,
+        'status_rtl': status_rtl,
+        'status_pelaksanaan': status_pelaksanaan,
+        'query': query,
+        'status_rtl_choices': RisikoUnit.STATUS_RTL_CHOICES,
+        'status_pelaksanaan_choices': RisikoUnit.STATUS_PELAKSANAAN_CHOICES,
+    }
+    return render(request, 'akreditasi/risiko_monitoring_evaluasi.html', ctx)
+
+
+@login_required
+def risiko_monev_export_csv(request):
+    """
+    Ekspor tabel Monitoring & Evaluasi Risiko ke CSV/Excel dengan UTF-8 BOM.
+    """
+    import csv
+    from django.http import HttpResponse
+
+    profile = getattr(request.user, 'profile', None)
+    is_scoped = profile and profile.is_unit_scoped and profile.unit_kerja
+
+    qs = RisikoUnit.objects.select_related('unit', 'indikator_mutu_terkait').prefetch_related('tindak_lanjut').all()
+
+    if is_scoped and profile.unit_kerja:
+        user_unit = profile.unit_kerja
+        allowed_ids = [user_unit.id] + list(UnitKerja.objects.filter(parent=user_unit).values_list('id', flat=True))
+        qs = qs.filter(unit_id__in=allowed_ids)
+
+    unit_id = request.GET.get('unit')
+    if unit_id:
+        qs = qs.filter(unit_id=unit_id)
+
+    tahun = request.GET.get('tahun')
+    if tahun:
+        qs = qs.filter(tahun=tahun)
+
+    status_rtl = request.GET.get('status_rtl')
+    if status_rtl:
+        qs = qs.filter(status_rtl=status_rtl)
+
+    response = HttpResponse(content_type='text/csv; charset=utf-8')
+    response['Content-Disposition'] = f'attachment; filename="Monev_Risiko_ARIMA_{timezone.now().strftime("%Y%m%d_%H%M")}.csv"'
+    # UTF-8 BOM for Microsoft Excel
+    response.write('\ufeff'.encode('utf8'))
+
+    writer = csv.writer(response)
+    writer.writerow([
+        'No',
+        'Unit Kerja',
+        'Jenis / Deskripsi Risiko',
+        'Indikator Mutu & Target',
+        'Capaian Indikator Mutu (%)',
+        'Pelaksanaan Tindakan (Status)',
+        'Rincian Tindakan (Do)',
+        'RCA (Penyebab Utama / Fishbone)',
+        'RTL (Rencana Tindak Lanjut)',
+        'PIC RTL',
+        'Deadline RTL',
+        'Status RTL',
+        'Skor Risiko Awal (D x P)',
+        'Skor Risiko Residual (D x P)',
+    ])
+
+    for i, r in enumerate(qs.order_by('-tahun', '-dampak', '-probabilitas'), start=1):
+        # Indikator
+        ind_text = f"{r.indikator_mutu_terkait.nama} (Target: {r.target_capaian_indikator or 100}%)" if r.indikator_mutu_terkait else "—"
+
+        # Capaian
+        capaian_str = f"{r.capaian_nilai}%" if r.capaian_nilai is not None else "Belum Diisi"
+
+        # Pelaksanaan
+        pelaksanaan_status = r.get_status_pelaksanaan_display()
+        tl_list = [f"- {tl.aksi} ({tl.get_status_aksi_display()})" for tl in r.tindak_lanjut.all()]
+        tl_str = "\n".join(tl_list) if tl_list else r.rencana_aksi or "—"
+
+        # RCA
+        rca_parts = []
+        if r.rca_fishbone:
+            for k, v in r.rca_fishbone.items():
+                rca_parts.append(f"{k.capitalize()}: {v}")
+        if r.rca_ulang:
+            rca_parts.append(f"RCA Ulang: {r.rca_ulang}")
+        rca_str = "\n".join(rca_parts) if rca_parts else (r.akar_masalah_rca or "—")
+
+        # Skor
+        skor_awal = f"{r.dampak * r.probabilitas} ({_skor_label(r.dampak * r.probabilitas)})"
+        if r.dampak_residual and r.probabilitas_residual:
+            skor_res = f"{r.dampak_residual * r.probabilitas_residual} ({_skor_label(r.dampak_residual * r.probabilitas_residual)})"
+        else:
+            skor_res = "Belum Evaluasi"
+
+        writer.writerow([
+            i,
+            r.unit.name if r.unit else "—",
+            r.jenis_risiko,
+            ind_text,
+            capaian_str,
+            pelaksanaan_status,
+            tl_str,
+            rca_str,
+            r.rencana_tindak_lanjut or "—",
+            r.pj_rtl or "—",
+            r.deadline_rtl.strftime('%d/%m/%Y') if r.deadline_rtl else "—",
+            r.get_status_rtl_display(),
+            skor_awal,
+            skor_res,
+        ])
+
+    return response
 
 
 # ── 5. Laporan Komprehensif Manajemen Risiko (5-Seksi STARKES 5.15) ─────

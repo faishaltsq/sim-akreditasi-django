@@ -174,7 +174,7 @@
     <div class="nav-section mt-2">
         <i class="bi bi-exclamation-triangle-fill me-1" style="font-size:0.6rem;"></i> Manajemen Risiko
     </div>
-    <a href="{% url 'akreditasi:risiko_daftar' %}" class="nav-link {% if 'risiko' in request.resolver_match.url_name %}active{% endif %}">
+    <a href="{% url 'akreditasi:risiko_daftar' %}" class="nav-link {% if request.resolver_match.url_name == 'risiko_daftar' %}active{% endif %}">
         <span class="nav-icon"><i class="bi bi-clipboard2-pulse-fill"></i></span>
         <span class="nav-text">
             <span class="nav-title">Daftar Risiko PDCA</span>
@@ -186,6 +186,13 @@
         <span class="nav-text">
             <span class="nav-title">Input Risiko Baru</span>
             <span class="nav-desc">Identifikasi &amp; Asesmen</span>
+        </span>
+    </a>
+    <a href="{% url 'akreditasi:risiko_monev' %}" class="nav-link {% if 'risiko_monev' in request.resolver_match.url_name %}active{% endif %}">
+        <span class="nav-icon"><i class="bi bi-clipboard2-data-fill"></i></span>
+        <span class="nav-text">
+            <span class="nav-title">Monitoring &amp; Evaluasi (MONEV)</span>
+            <span class="nav-desc">Tabel Capaian, RCA &amp; RTL</span>
         </span>
     </a>
     <a href="{% url 'akreditasi:risiko_laporan' %}" class="nav-link {% if 'risiko_laporan' in request.resolver_match.url_name %}active{% endif %}">
