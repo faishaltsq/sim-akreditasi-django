@@ -1,6 +1,6 @@
 {% extends 'base.html' %}
 
-{% block title %}Evaluasi Risiko — {{ risiko.jenis_risiko }}{% endblock %}
+{% block title %}G. Monitoring &amp; Evaluasi Risiko — {{ risiko.nomor_risiko }} | ARIMA{% endblock %}
 {% block page_title %}Evaluasi Risiko (Check/Act){% endblock %}
 {% block page_subtitle %}Penilaian Risiko Residual setelah Mitigasi{% endblock %}
 
@@ -124,15 +124,15 @@
             {# Form Evaluasi #}
             <div class="card border-0 shadow-sm">
                 <div class="card-header border-0 py-3" style="background:linear-gradient(135deg,#0f766e,#0d9488); color:#fff;">
-                    <h6 class="mb-0 fw-bold"><i class="bi bi-sliders me-2"></i>F &amp; G. Penilaian Risiko Sisa (Residu) &amp; Rencana Tindak Lanjut (RTL)</h6>
+                    <h6 class="mb-0 fw-bold"><i class="bi bi-sliders me-2"></i>G. Monitoring dan Evaluasi Risiko</h6>
                 </div>
                 <div class="card-body p-4">
                     <form method="post">
                         {% csrf_token %}
 
-                        {# ── F. PENILAIAN RISIKO SISA ── #}
+                        {# ── G.1 PENILAIAN RISIKO SISA ── #}
                         <h6 class="fw-bold mb-3 pb-1 border-bottom" style="color:#0f172a; font-size:.82rem;">
-                            <i class="bi bi-shield-shaded text-teal me-1"></i>F. Penilaian Risiko Sisa (Residu)
+                            <i class="bi bi-shield-shaded text-teal me-1"></i>G.1 Penilaian Risiko Sisa (Residu Pasca Pelaksanaan)
                         </h6>
                         <div class="row g-4 mb-3">
                             <div class="col-md-{% if risiko.is_fmea %}4{% else %}6{% endif %}">
@@ -161,9 +161,9 @@
                         </div>
                         {% endif %}
 
-                        {# ── G. EVALUASI CAPAIAN & RTL ── #}
+                        {# ── G.2 EVALUASI CAPAIAN & RTL ── #}
                         <h6 class="fw-bold mb-3 pb-1 border-bottom pt-2" style="color:#0f172a; font-size:.82rem;">
-                            <i class="bi bi-clipboard-check text-primary me-1"></i>G. Evaluasi Capaian &amp; Rencana Tindak Lanjut (RTL)
+                            <i class="bi bi-clipboard-check text-primary me-1"></i>G.2 Evaluasi Capaian &amp; Rencana Tindak Lanjut (RTL)
                         </h6>
                         <div class="mb-3">
                             <label for="evaluasi_capaian" class="form-label fw-semibold" style="font-size:.8rem;">
