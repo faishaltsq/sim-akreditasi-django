@@ -696,6 +696,11 @@ document.addEventListener('DOMContentLoaded', function() {
                     indikatorSel.innerHTML += '<option disabled>Tidak ada indikator untuk unit ini</option>';
                     return;
                 }
+                // Cek apakah fallback INM (semua indikator NASIONAL)
+                const allNasional = data.indikator.every(function(i) { return i.jenis_code === 'NASIONAL'; });
+                if (allNasional && unitId) {
+                    indikatorSel.innerHTML = '<option value="">— Pilih Indikator Nasional (INM) —</option>';
+                }
                 let lastJenis = '';
                 data.indikator.forEach(function(ind) {
                     if (ind.jenis !== lastJenis) {

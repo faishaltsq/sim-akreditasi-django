@@ -164,6 +164,11 @@ def api_indikator_by_unit(request):
         qs = qs.filter(Q(unit_id=unit_id) | Q(unit__isnull=True))
     qs = qs.order_by('jenis', 'kode_indikator')
 
+    # Fallback: jika unit ada tapi tidak punya indikator sama sekali,
+    # tampilkan semua indikator NASIONAL (INM) sebagai indikator universal
+    if unit_id and not qs.exists():
+        qs = IndikatorMutu.objects.filter(aktif=True, jenis='NASIONAL').order_by('kode_indikator')
+
     data = []
     for ind in qs:
         # Prioritas: ambil rencana aksi dari field DB jika ada
