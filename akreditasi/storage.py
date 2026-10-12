@@ -22,9 +22,18 @@ class SupabaseMediaStorage(Storage):
         self.supabase_key = getattr(settings, 'SUPABASE_KEY', '')
 
     def _get_headers(self, content_type='application/octet-stream'):
+        auth_token = self.supabase_key
+        # Supabase Storage requires a Compact JWS (JWT) in Authorization: Bearer.
+        # sb_publishable_* keys will cause 'Invalid Compact JWS'.
+        if not auth_token or auth_token.startswith('sb_publishable_') or not auth_token.startswith('eyJ'):
+            auth_token = (
+                getattr(settings, 'SUPABASE_ANON_KEY', '')
+                or os.environ.get('SUPABASE_ANON_KEY', '')
+                or 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd3YWV1emJiZGF3YmVrcm1ydmZkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkwODE4OTYsImV4cCI6MjEwNDY1Nzg5Nn0.5XJVOJif2MGjIpQSvk49erTmdCBk621MzAjtXw9b6RU'
+            )
         return {
-            "Authorization": f"Bearer {self.supabase_key}",
-            "apiKey": self.supabase_key,
+            "Authorization": f"Bearer {auth_token}",
+            "apiKey": auth_token,
             "Content-Type": content_type,
             "x-upsert": "true",
         }
@@ -43,12 +52,17 @@ class SupabaseMediaStorage(Storage):
         data = content.read()
 
         try:
-            resp = requests.post(endpoint, headers=headers, data=data, timeout=20)
-            resp.raise_for_status()
+            resp = requests.post(endpoint, headers=headers, data=data, timeout=30)
+            if resp.status_code not in (200, 201):
+                import logging
+                logging.getLogger(__name__).error(
+                    "Gagal unggah ke Supabase Storage (%s) HTTP %s: %s",
+                    clean_name, resp.status_code, resp.text
+                )
         except Exception as e:
             # Jika upload gagal, log dan biarkan nama file tersimpan
             import logging
-            logging.getLogger(__name__).warning("Gagal unggah ke Supabase Storage (%s): %s", clean_name, e)
+            logging.getLogger(__name__).error("Gagal koneksi ke Supabase Storage (%s): %s", clean_name, e)
 
         return clean_name
 

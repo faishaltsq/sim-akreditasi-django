@@ -14,10 +14,17 @@ def upload_to_supabase_storage(file_obj, filename, folder="bukti"):
 
     if supabase_url and supabase_key:
         try:
+            auth_token = supabase_key
+            if not auth_token or auth_token.startswith('sb_publishable_') or not auth_token.startswith('eyJ'):
+                auth_token = (
+                    getattr(settings, 'SUPABASE_ANON_KEY', '')
+                    or os.environ.get('SUPABASE_ANON_KEY', '')
+                    or 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd3YWV1emJiZGF3YmVrcm1ydmZkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkwODE4OTYsImV4cCI6MjEwNDY1Nzg5Nn0.5XJVOJif2MGjIpQSvk49erTmdCBk621MzAjtXw9b6RU'
+                )
             endpoint = f"{supabase_url.rstrip('/')}/storage/v1/object/{bucket}/{storage_path}"
             headers = {
-                "Authorization": f"Bearer {supabase_key}",
-                "apiKey": supabase_key,
+                "Authorization": f"Bearer {auth_token}",
+                "apiKey": auth_token,
                 "Content-Type": getattr(file_obj, 'content_type', 'application/octet-stream'),
                 "x-upsert": "true",
             }
