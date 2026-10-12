@@ -598,7 +598,12 @@ def risiko_monitoring_evaluasi(request, unit_id=None):
         except (UnitKerja.DoesNotExist, ValueError):
             sel_unit = None
 
-    tahun = request.GET.get('tahun', '2026')
+    tahun_raw = request.GET.get('tahun', '2026')
+    try:
+        tahun = int(tahun_raw) if tahun_raw else None
+    except (ValueError, TypeError):
+        tahun = None
+
     status_rtl = request.GET.get('status_rtl', '')
     status_pelaksanaan = request.GET.get('status_pelaksanaan', '')
     query = request.GET.get('q', '').strip()
@@ -697,7 +702,12 @@ def risiko_monev_export_csv(request):
     if unit_id:
         qs = qs.filter(unit_id=unit_id)
 
-    tahun = request.GET.get('tahun')
+    tahun_raw = request.GET.get('tahun')
+    try:
+        tahun = int(tahun_raw) if tahun_raw else None
+    except (ValueError, TypeError):
+        tahun = None
+
     if tahun:
         qs = qs.filter(tahun=tahun)
 
