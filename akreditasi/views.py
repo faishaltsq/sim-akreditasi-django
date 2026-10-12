@@ -1590,34 +1590,3 @@ def verify_kredensial(request, cred_id):
     return redirect('akreditasi:rekap_kps')
 
 
-@login_required
-def storage_diagnostic(request):
-    if not request.user.is_superuser:
-        return JsonResponse({'error': 'forbidden'}, status=403)
-    from django.core.files.storage import default_storage
-    from akreditasi.storage import SupabaseMediaStorage
-    import requests as req
-    
-    sms = SupabaseMediaStorage()
-    endpoint = f"{sms.supabase_url}/storage/v1/object/{sms.bucket}/diag_test.txt"
-    headers = sms._get_headers('text/plain')
-    info = {
-        'default_storage_class': type(default_storage).__name__,
-        'supabase_url': sms.supabase_url,
-        'bucket': sms.bucket,
-        'has_key': bool(sms.supabase_key),
-        'key_len': len(sms.supabase_key),
-        'key_prefix': sms.supabase_key[:8] if sms.supabase_key else '',
-        'endpoint': endpoint,
-    }
-    try:
-        resp = req.post(endpoint, headers=headers, data=b'diag test 123', timeout=10)
-        info['status_code'] = resp.status_code
-        info['response_text'] = resp.text[:500]
-        if resp.status_code in (200, 201):
-            req.delete(f"{sms.supabase_url}/storage/v1/object/{sms.bucket}", headers=headers, json={'prefixes': ['diag_test.txt']})
-    except Exception as exc:
-        info['exception'] = str(exc)
-        info['exception_type'] = type(exc).__name__
-    return JsonResponse(info)
-
