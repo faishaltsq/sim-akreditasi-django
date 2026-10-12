@@ -457,8 +457,11 @@ def risiko_detail(request, risiko_id):
                 tanggal_selesai=request.POST.get('tanggal_selesai') or None,
                 catatan=request.POST.get('catatan', ''),
             )
-            tl.full_clean()
+            tl.full_clean(exclude=['bukti_upload'])
             tl.save()
+            if request.FILES.get('bukti_upload'):
+                tl.bukti_upload = request.FILES['bukti_upload']
+                tl.save(update_fields=['bukti_upload'])
             _log(request.user, 'CREATE', tl, f'Tindak lanjut #{tl.urutan}')
             messages.success(request, 'Tindak lanjut ditambahkan.')
             return redirect('akreditasi:risiko_detail', risiko_id=risiko.pk)
