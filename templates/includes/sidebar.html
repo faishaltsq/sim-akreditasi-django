@@ -188,6 +188,13 @@
             <span class="nav-desc">Identifikasi &amp; Asesmen</span>
         </span>
     </a>
+    <a href="{% url 'akreditasi:risiko_perencanaan' %}" class="nav-link {% if 'risiko_perencanaan' in request.resolver_match.url_name %}active{% endif %}">
+        <span class="nav-icon"><i class="bi bi-file-earmark-ruled-fill"></i></span>
+        <span class="nav-text">
+            <span class="nav-title">Perencanaan Risiko (Plan)</span>
+            <span class="nav-desc">Format Cetak STARKES 5.15</span>
+        </span>
+    </a>
     <a href="{% url 'akreditasi:risiko_monev' %}" class="nav-link {% if 'risiko_monev' in request.resolver_match.url_name %}active{% endif %}">
         <span class="nav-icon"><i class="bi bi-clipboard2-data-fill"></i></span>
         <span class="nav-text">

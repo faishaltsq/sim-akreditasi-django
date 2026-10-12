@@ -67,6 +67,10 @@ class RisikoUnit(models.Model):
     # Standar 5.15 — identifikasi risiko: masalah dan data pendukung
     masalah          = models.TextField('Masalah', blank=True, default='')
     data_pendukung   = models.TextField('Data / Bukti Pendukung', blank=True, default='')
+    tujuan           = models.TextField(
+        'Tujuan Pengendalian Risiko', blank=True, default='',
+        help_text='Tujuan mitigasi dan sasaran keselamatan/mutu klinis yang ingin dicapai'
+    )
 
     deskripsi_risiko = models.TextField('Deskripsi Risiko')
 
@@ -157,6 +161,15 @@ class RisikoUnit(models.Model):
 
     def __str__(self):
         return f"[{self.unit}] {self.jenis_risiko} ({self.periode} {self.tahun})"
+
+    @property
+    def tujuan_display(self):
+        """Kembalikan tujuan pengendalian risiko atau fallback cerdas berbasis kategori."""
+        if self.tujuan and self.tujuan.strip():
+            return self.tujuan.strip()
+        kat = self.get_kategori_risiko_display() if hasattr(self, 'get_kategori_risiko_display') else 'Klinis'
+        unit_name = self.unit.name if self.unit else 'unit kerja'
+        return f"Mengendalikan dan memitigasi {kat.lower()} guna mencegah insiden keselamatan pasien serta memastikan kepatuhan terhadap standar pelayanan di {unit_name}."
 
     @property
     def capaian_persen_display(self):

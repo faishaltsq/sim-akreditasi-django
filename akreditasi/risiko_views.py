@@ -4,7 +4,7 @@ Fase 2 — Views Manajemen Risiko PDCA + Insiden Keselamatan
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponse, Http404
 from django.db.models import Count, Q
 from django.utils import timezone
 from django.core.paginator import Paginator
@@ -382,6 +382,7 @@ def risiko_input(request):
                 jenis_risiko=jenis_val,
                 masalah=request.POST.get('masalah', '').strip(),
                 data_pendukung=(request.POST.get('data') or request.POST.get('data_pendukung') or '').strip(),
+                tujuan=request.POST.get('tujuan', '').strip(),
                 deskripsi_risiko=(request.POST['deskripsi_risiko'] + (f"\n\n[Indikator Mutu Manual: {indikator_manual}]" if (indikator_manual and not indikator_id) else '')),
                 dampak=dampak_val,
                 probabilitas=prob_val,
@@ -1173,3 +1174,206 @@ def risiko_fmea_rca(request):
         'sel_status': status or '',
     }
     return render(request, 'akreditasi/risiko_fmea_rca.html', ctx)
+
+
+# ── 11. Dokumen Perencanaan Risiko (Siklus Plan — STARKES 5.15) ─────────────
+
+@login_required
+def risiko_perencanaan_dokumen(request, risiko_id):
+    """
+    Dokumen Perencanaan Risiko Spesifik (Single Risk View).
+    Sesuai format resmi dokumen perencanaan RS Monsiskami ARIMA.
+    """
+    risiko = get_object_or_404(
+        RisikoUnit.objects.select_related('unit', 'indikator_mutu_terkait', 'created_by').prefetch_related('tindak_lanjut'),
+        pk=risiko_id
+    )
+    profile = getattr(request.user, 'profile', None)
+    if profile and profile.is_unit_scoped and profile.unit_kerja:
+        allowed_ids = [profile.unit_kerja.id] + list(UnitKerja.objects.filter(parent=profile.unit_kerja).values_list('id', flat=True))
+        if risiko.unit_id not in allowed_ids:
+            messages.error(request, 'Anda tidak memiliki akses ke dokumen perencanaan risiko unit ini.')
+            return redirect('akreditasi:risiko_daftar')
+
+    tindak_lanjut = list(risiko.tindak_lanjut.all().order_by('urutan'))
+
+    ctx = {
+        'risiko': risiko,
+        'is_single': True,
+        'unit': risiko.unit,
+        'tahun': risiko.tahun,
+        'periode': risiko.get_periode_display(),
+        'tindak_lanjut_list': tindak_lanjut,
+        'tgl_cetak': timezone.now(),
+    }
+    return render(request, 'akreditasi/risiko_perencanaan.html', ctx)
+
+
+@login_required
+def risiko_perencanaan_unit(request, unit_id=None):
+    """
+    Dokumen Perencanaan Risiko Unit Kerja (Rekapitulasi Agregat Unit - Siklus Plan).
+    Memformat seluruh risiko unit ke dalam Tabel Indikator Mutu (5 Kolom)
+    dan Tabel Rencana Aksi Mitigasi (7 Kolom) sesuai dokumen resmi.
+    """
+    profile = getattr(request.user, 'profile', None)
+
+    if profile and profile.is_unit_scoped and profile.unit_kerja:
+        user_unit = profile.unit_kerja
+        unit_ids = [user_unit.id] + list(UnitKerja.objects.filter(parent=user_unit).values_list('id', flat=True))
+        units = UnitKerja.objects.filter(id__in=unit_ids)
+        default_unit = user_unit
+    else:
+        units = UnitKerja.objects.all().order_by('name')
+        default_unit = units.first()
+
+    target_unit_id = unit_id or request.GET.get('unit')
+    if target_unit_id:
+        try:
+            target_unit_id = int(target_unit_id)
+            selected_unit = get_object_or_404(UnitKerja, pk=target_unit_id)
+        except (ValueError, TypeError, Http404):
+            selected_unit = default_unit
+    else:
+        selected_unit = default_unit
+
+    tahun_raw = request.GET.get('tahun')
+    tahun = 2026
+    if tahun_raw:
+        try:
+            tahun = int(tahun_raw)
+        except (ValueError, TypeError):
+            tahun = 2026
+
+    tahun_list = sorted(list(set(RisikoUnit.objects.values_list('tahun', flat=True).distinct())), reverse=True)
+    if not tahun_list:
+        tahun_list = [2026]
+
+    risiko_qs = RisikoUnit.objects.filter(unit=selected_unit).select_related(
+        'unit', 'indikator_mutu_terkait', 'created_by'
+    ).prefetch_related('tindak_lanjut').order_by('-dampak', '-probabilitas', 'id')
+
+    if tahun:
+        risiko_qs = risiko_qs.filter(tahun=tahun)
+
+    risiko_list = list(risiko_qs)
+
+    # Tabel 1: Indikator Mutu (5 Kolom)
+    # No | Masalah Resiko | Indikator mutu | Target | Jenis (INM, IM RS/IMUnit)
+    table_indikator = []
+    for idx, r in enumerate(risiko_list, start=1):
+        ind = r.indikator_mutu_terkait
+        nama_ind = ind.nama_indikator if ind else '—'
+        kode_ind = f"[{ind.kode_indikator}] " if ind else ''
+        if r.target_capaian_indikator is not None:
+            target_str = f"{r.target_capaian_indikator:.1f}%"
+        elif ind and ind.target_nilai is not None:
+            target_str = f"{ind.target_nilai:.1f}%"
+        else:
+            target_str = "—"
+
+        jenis_str = ind.get_jenis_display() if ind else 'IMP Unit'
+
+        table_indikator.append({
+            'no': idx,
+            'risiko': r,
+            'masalah': r.masalah or r.jenis_risiko,
+            'indikator_mutu': f"{kode_ind}{nama_ind}" if nama_ind != '—' else 'Belum ditentukan',
+            'target': target_str,
+            'jenis': jenis_str,
+        })
+
+    # Tabel 2: Rencana Aksi Mitigasi (7 Kolom)
+    # No | Masalah resiko | Indikator mutu | Rencana Aksi | waktu | Biaya | PJ
+    table_aksi = []
+    for idx, r in enumerate(risiko_list, start=1):
+        ind = r.indikator_mutu_terkait
+        nama_ind = ind.nama_indikator if ind else '—'
+        waktu_str = r.target_selesai.strftime('%d/%m/%Y') if r.target_selesai else r.get_periode_display()
+        biaya_str = f"Rp {r.biaya_mitigasi:,.0f}" if r.biaya_mitigasi else "Rp 0"
+        tindak_items = list(r.tindak_lanjut.all().order_by('urutan'))
+
+        table_aksi.append({
+            'no': idx,
+            'risiko': r,
+            'masalah': r.masalah or r.jenis_risiko,
+            'indikator_mutu': nama_ind,
+            'rencana_aksi': r.rencana_aksi,
+            'tindak_lanjut_items': tindak_items,
+            'waktu': waktu_str,
+            'biaya': biaya_str,
+            'pj': r.pj_mitigasi or 'Ka. Unit',
+        })
+
+    ctx = {
+        'is_single': False,
+        'selected_unit': selected_unit,
+        'units': units,
+        'tahun': tahun,
+        'tahun_list': tahun_list,
+        'risiko_list': risiko_list,
+        'table_indikator': table_indikator,
+        'table_aksi': table_aksi,
+        'total_risiko': len(risiko_list),
+        'tgl_cetak': timezone.now(),
+    }
+    return render(request, 'akreditasi/risiko_perencanaan.html', ctx)
+
+
+@login_required
+def risiko_perencanaan_export_csv(request):
+    """Ekspor Tabel Perencanaan Risiko (Indikator & Rencana Aksi) ke format CSV UTF-8 BOM."""
+    import csv
+    unit_id = request.GET.get('unit')
+    tahun_raw = request.GET.get('tahun')
+
+    profile = getattr(request.user, 'profile', None)
+    if profile and profile.is_unit_scoped and profile.unit_kerja:
+        target_unit = profile.unit_kerja
+    elif unit_id:
+        target_unit = get_object_or_404(UnitKerja, pk=unit_id)
+    else:
+        target_unit = UnitKerja.objects.first()
+
+    tahun = int(tahun_raw) if tahun_raw and tahun_raw.isdigit() else 2026
+
+    risiko_qs = RisikoUnit.objects.filter(unit=target_unit, tahun=tahun).select_related(
+        'unit', 'indikator_mutu_terkait'
+    ).order_by('-dampak', '-probabilitas', 'id')
+
+    unit_slug = (target_unit.name if target_unit else 'Unit').replace(' ', '_')
+    filename = f"Perencanaan_Risiko_{unit_slug}_{tahun}_{timezone.now().strftime('%Y%m%d_%H%M')}.csv"
+
+    response = HttpResponse(content_type='text/csv; charset=utf-8')
+    response['Content-Disposition'] = f'attachment; filename="{filename}"'
+    response.write('\ufeff'.encode('utf-8'))
+
+    writer = csv.writer(response)
+    writer.writerow(['PERENCANAAN RESIKO RS MONSISKAMI ARIMA'])
+    writer.writerow(['JL. Candiwulan Kalibuntu Mangli Kuwarasan Kebumen Jawatengah'])
+    writer.writerow([f'Unit Kerja: {target_unit.name if target_unit else "Semua"}', f'Tahun: {tahun}'])
+    writer.writerow([])
+
+    # Table 1: Indikator Mutu
+    writer.writerow(['TABEL 1: INDIKATOR MUTU DENGAN RISIKO TERKAIT'])
+    writer.writerow(['No', 'Masalah Resiko', 'Indikator Mutu', 'Target', 'Jenis (INM, IM RS/IMUnit)'])
+    for idx, r in enumerate(risiko_qs, start=1):
+        ind = r.indikator_mutu_terkait
+        nama_ind = ind.nama_indikator if ind else 'Belum ditentukan'
+        target_val = f"{r.target_capaian_indikator:.1f}%" if r.target_capaian_indikator is not None else (f"{ind.target_nilai:.1f}%" if ind and ind.target_nilai is not None else '—')
+        jenis_val = ind.get_jenis_display() if ind else 'IMP Unit'
+        writer.writerow([idx, r.masalah or r.jenis_risiko, nama_ind, target_val, jenis_val])
+
+    writer.writerow([])
+    # Table 2: Rencana Aksi (Mitigasi)
+    writer.writerow(['TABEL 2: RENCANA AKSI (MITIGASI) RISIKO'])
+    writer.writerow(['No', 'Masalah Resiko', 'Indikator Mutu', 'Rencana Aksi', 'Waktu', 'Biaya', 'PJ'])
+    for idx, r in enumerate(risiko_qs, start=1):
+        ind = r.indikator_mutu_terkait
+        nama_ind = ind.nama_indikator if ind else '—'
+        waktu_val = r.target_selesai.strftime('%d/%m/%Y') if r.target_selesai else r.get_periode_display()
+        biaya_val = f"Rp {r.biaya_mitigasi:,.0f}" if r.biaya_mitigasi else "Rp 0"
+        writer.writerow([idx, r.masalah or r.jenis_risiko, nama_ind, r.rencana_aksi, waktu_val, biaya_val, r.pj_mitigasi or 'Ka. Unit'])
+
+    return response
+
