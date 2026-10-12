@@ -196,7 +196,41 @@
   </div>
 
   <!-- ========================================================================= -->
-  <!-- 4. FILTER BAR CEPAT (JENIS & UNIT PENGAMPU)                               -->
+  <!-- 4. GRAFIK TREN CAPAIAN BULANAN (CHART.JS)                                 -->
+  <!-- ========================================================================= -->
+  <div class="row g-3 mb-4">
+    <!-- Grafik 1: Line Chart — Rata-rata Capaian Bulanan -->
+    <div class="col-12 col-lg-8">
+      <div class="card border-0 shadow-sm rounded-3 h-100">
+        <div class="card-header bg-white py-2 border-bottom d-flex align-items-center gap-2">
+          <i class="bi bi-graph-up-arrow text-teal"></i>
+          <span class="fw-bold text-dark" style="font-size:.84rem;">
+            Tren Rata-Rata Capaian Indikator Mutu (Tahun {{ filter_tahun }})
+          </span>
+          <span class="badge bg-light text-muted border ms-auto" style="font-size:.65rem;">PMK 30/2022 · STARKES PMKP 12</span>
+        </div>
+        <div class="card-body py-2 px-3">
+          <canvas id="chartTrenCapaian" height="90"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- Grafik 2: Bar Chart — Volume Input per Jenis Indikator per Bulan -->
+    <div class="col-12 col-lg-4">
+      <div class="card border-0 shadow-sm rounded-3 h-100">
+        <div class="card-header bg-white py-2 border-bottom d-flex align-items-center gap-2">
+          <i class="bi bi-bar-chart-fill text-primary"></i>
+          <span class="fw-bold text-dark" style="font-size:.84rem;">Volume Pengukuran per Bulan</span>
+        </div>
+        <div class="card-body py-2 px-3">
+          <canvas id="chartJenisBulan" height="190"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================================= -->
+  <!-- 5. FILTER BAR CEPAT (JENIS & UNIT PENGAMPU)                               -->
   <!-- ========================================================================= -->
   <div class="card border-0 shadow-sm rounded-3 mb-4">
     <div class="card-body p-3">
@@ -386,4 +420,118 @@
   </div>
 
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const labels   = {{ chart_labels|safe }};
+    const capaian  = {{ chart_capaian|safe }};
+    const jenisDS  = {{ chart_jenis_json|safe }};
+
+    // ── Grafik 1: Line Chart Tren Capaian (%) ─────────────────
+    const ctx1 = document.getElementById('chartTrenCapaian');
+    if (ctx1) {
+        new Chart(ctx1, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [
+                    {
+                        label: 'Rata-rata Capaian Mutu (%)',
+                        data: capaian,
+                        borderColor: '#0d9488',
+                        backgroundColor: 'rgba(13, 148, 136, 0.08)',
+                        borderWidth: 2.5,
+                        tension: 0.3,
+                        fill: true,
+                        pointRadius: 4,
+                        pointHoverRadius: 6,
+                        pointBackgroundColor: '#0d9488',
+                        spanGaps: true,
+                    },
+                    {
+                        label: 'Garis Target Standar (100%)',
+                        data: Array(12).fill(100),
+                        borderColor: 'rgba(239, 68, 68, 0.55)',
+                        borderDash: [5, 5],
+                        borderWidth: 1.5,
+                        pointRadius: 0,
+                        fill: false,
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                    legend: {
+                        position: 'top',
+                        labels: { font: { size: 11, family: 'Inter, sans-serif' }, boxWidth: 12 }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(c) {
+                                if (c.raw === null) return ' Belum ada data pengukuran';
+                                return ` ${c.dataset.label}: ${c.raw}%`;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        min: 0,
+                        max: 120,
+                        ticks: {
+                            callback: v => v + '%',
+                            font: { size: 10 }
+                        },
+                        grid: { color: 'rgba(0,0,0,0.05)' }
+                    },
+                    x: {
+                        grid: { display: false },
+                        ticks: { font: { size: 10 } }
+                    }
+                }
+            }
+        });
+    }
+
+    // ── Grafik 2: Stacked Bar Chart Volume per Bulan ──────────
+    const ctx2 = document.getElementById('chartJenisBulan');
+    if (ctx2) {
+        new Chart(ctx2, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: jenisDS
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: { font: { size: 10 }, boxWidth: 10 }
+                    }
+                },
+                scales: {
+                    x: {
+                        stacked: true,
+                        grid: { display: false },
+                        ticks: { font: { size: 9 } }
+                    },
+                    y: {
+                        stacked: true,
+                        beginAtZero: true,
+                        ticks: { precision: 0, font: { size: 9 } },
+                        grid: { color: 'rgba(0,0,0,0.05)' }
+                    }
+                }
+            }
+        });
+    }
+});
+</script>
 {% endblock %}

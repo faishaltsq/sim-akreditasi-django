@@ -5,7 +5,7 @@ from decimal import Decimal, InvalidOperation
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
-from django.db.models import Avg, Count, Q
+from django.db.models import Avg, Count, Q, Sum
 from django.http import JsonResponse
 
 from .risiko_models import IndikatorMutu, CatatanIndikator
@@ -200,6 +200,53 @@ def indikator_dashboard(request):
 
     units = UnitKerja.objects.filter(level__lte=3).order_by('order', 'name')
 
+    # ── Chart.js: tren capaian bulanan (Jan–Des) ────────────────
+    import json as _json
+    from decimal import Decimal as _Dec
+    BULAN_LABELS = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des']
+
+    # Ambil semua catatan indikator untuk tahun ini yang indikatornya masuk filter
+    ind_ids = [i.pk for i in indikators_with_stats]
+    catatan_qs = CatatanIndikator.objects.filter(
+        indikator_id__in=ind_ids, tahun=tahun_int
+    ).values('bulan').annotate(
+        avg_num=Sum('nilai_numerator'),
+        avg_den=Sum('nilai_denominator'),
+        count=Count('id'),
+    ).order_by('bulan')
+
+    # Build monthly avg capaian %
+    monthly_avg = {}
+    for c in catatan_qs:
+        if c['avg_den'] and c['avg_den'] > 0:
+            pct = float(round((c['avg_num'] / c['avg_den']) * 100, 1))
+        else:
+            pct = 0.0
+        monthly_avg[c['bulan']] = {'pct': pct, 'count': c['count']}
+
+    chart_labels = _json.dumps(BULAN_LABELS)
+    chart_capaian = _json.dumps([monthly_avg.get(m, {}).get('pct', None) for m in range(1, 13)])
+    chart_jumlah  = _json.dumps([monthly_avg.get(m, {}).get('count', 0) for m in range(1, 13)])
+
+    # Per-jenis monthly breakdown for stacked bar
+    jenis_map = {'NASIONAL': 'INM Nasional', 'IMP_RS': 'IMP-RS', 'IMP_UNIT': 'IMP Unit'}
+    chart_jenis_datasets = []
+    jenis_colors = {'NASIONAL': '#0d9488', 'IMP_RS': '#6366f1', 'IMP_UNIT': '#f59e0b'}
+    for jcode, jlabel in jenis_map.items():
+        j_ids = [i.pk for i in indikators_with_stats if i.jenis == jcode]
+        if not j_ids:
+            continue
+        j_cat = CatatanIndikator.objects.filter(
+            indikator_id__in=j_ids, tahun=tahun_int
+        ).values('bulan').annotate(n=Count('id')).order_by('bulan')
+        j_monthly = {c['bulan']: c['n'] for c in j_cat}
+        chart_jenis_datasets.append({
+            'label': jlabel,
+            'data': [j_monthly.get(m, 0) for m in range(1, 13)],
+            'backgroundColor': jenis_colors.get(jcode, '#94a3b8'),
+        })
+    chart_jenis_json = _json.dumps(chart_jenis_datasets)
+
     ctx = {
         'indikators': indikators_with_stats,
         'inm_list': inm_list,
@@ -215,6 +262,10 @@ def indikator_dashboard(request):
         'filter_tahun': tahun_int,
         'tahun_choices': list(_renstra_data.keys()) if _renstra_data else [2026, 2027, 2028, 2029, 2030],
         'is_manager': _is_manager(request.user),
+        'chart_labels': chart_labels,
+        'chart_capaian': chart_capaian,
+        'chart_jumlah': chart_jumlah,
+        'chart_jenis_json': chart_jenis_json,
     }
     return render(request, 'akreditasi/indikator_dashboard.html', ctx)
 
