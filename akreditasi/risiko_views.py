@@ -624,7 +624,7 @@ def risiko_monitoring_evaluasi(request, unit_id=None):
         qs = qs.filter(
             Q(jenis_risiko__icontains=query) |
             Q(masalah__icontains=query) |
-            Q(indikator_mutu_terkait__nama__icontains=query) |
+            Q(indikator_mutu_terkait__nama_indikator__icontains=query) |
             Q(rencana_aksi__icontains=query) |
             Q(rencana_tindak_lanjut__icontains=query) |
             Q(pj_rtl__icontains=query)
@@ -740,7 +740,7 @@ def risiko_monev_export_csv(request):
 
     for i, r in enumerate(qs.order_by('-tahun', '-dampak', '-probabilitas'), start=1):
         # Indikator
-        ind_text = f"{r.indikator_mutu_terkait.nama} (Target: {r.target_capaian_indikator or 100}%)" if r.indikator_mutu_terkait else "—"
+        ind_text = f"{r.indikator_mutu_terkait.nama_indikator} (Target: {r.target_capaian_indikator or 100}%)" if r.indikator_mutu_terkait else "—"
 
         # Capaian
         capaian_str = f"{r.capaian_nilai}%" if r.capaian_nilai is not None else "Belum Diisi"

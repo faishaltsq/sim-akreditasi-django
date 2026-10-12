@@ -222,7 +222,7 @@
                         <td>
                             <div class="fw-semibold text-dark mb-1" style="font-size:.82rem;">
                                 {% if r.indikator_mutu_terkait %}
-                                {{ r.indikator_mutu_terkait.nama }}
+                                {{ r.indikator_mutu_terkait.nama_indikator }}
                                 {% else %}
                                 <span class="text-muted fst-italic">Risiko: {{ r.jenis_risiko|truncatechars:60 }}</span>
                                 {% endif %}
