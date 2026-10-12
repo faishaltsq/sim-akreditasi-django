@@ -74,7 +74,11 @@ urlpatterns = [
     path('risiko/api/indikator-by-unit/', risiko_views.api_indikator_by_unit, name='api_indikator_by_unit'),
     path('risiko/<int:risiko_id>/', risiko_views.risiko_detail, name='risiko_detail'),
     path('risiko/<int:risiko_id>/perencanaan/', risiko_views.risiko_perencanaan_dokumen, name='risiko_perencanaan_dokumen'),
+    path('risiko/<int:risiko_id>/pelaksanaan/', risiko_views.risiko_pelaksanaan_dokumen, name='risiko_pelaksanaan_dokumen'),
     path('risiko/<int:risiko_id>/evaluasi/', risiko_views.risiko_evaluasi, name='risiko_evaluasi'),
+    path('risiko/pelaksanaan/', risiko_views.risiko_pelaksanaan_unit, name='risiko_pelaksanaan'),
+    path('risiko/pelaksanaan/<int:unit_id>/', risiko_views.risiko_pelaksanaan_unit, name='risiko_pelaksanaan_unit'),
+    path('risiko/pelaksanaan/export-csv/', risiko_views.risiko_pelaksanaan_export_csv, name='risiko_pelaksanaan_export_csv'),
 
     # Modul Insiden Keselamatan (Fase 5)
     path('insiden/', risiko_views.insiden_daftar, name='insiden_daftar'),

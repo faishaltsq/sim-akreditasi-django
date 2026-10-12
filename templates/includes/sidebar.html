@@ -195,6 +195,13 @@
             <span class="nav-desc">Format Cetak STARKES 5.15</span>
         </span>
     </a>
+    <a href="{% url 'akreditasi:risiko_pelaksanaan' %}" class="nav-link {% if 'risiko_pelaksanaan' in request.resolver_match.url_name %}active{% endif %}">
+        <span class="nav-icon"><i class="bi bi-list-check"></i></span>
+        <span class="nav-text">
+            <span class="nav-title">Pelaksanaan Risiko (Do)</span>
+            <span class="nav-desc">Dokumen Cetak Siklus Do</span>
+        </span>
+    </a>
     <a href="{% url 'akreditasi:risiko_monev' %}" class="nav-link {% if 'risiko_monev' in request.resolver_match.url_name %}active{% endif %}">
         <span class="nav-icon"><i class="bi bi-clipboard2-data-fill"></i></span>
         <span class="nav-text">

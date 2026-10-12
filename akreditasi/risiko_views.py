@@ -1380,3 +1380,167 @@ def risiko_perencanaan_export_csv(request):
 
     return response
 
+
+# ── Dokumen Pelaksanaan (Do) ──────────────────────────────────────────────────
+
+@login_required
+def risiko_pelaksanaan_dokumen(request, risiko_id):
+    """Dokumen Cetak Pelaksanaan Risiko (Siklus DO) — per satu risiko."""
+    risiko = get_object_or_404(
+        RisikoUnit.objects.select_related('unit', 'indikator_mutu_terkait', 'created_by'),
+        pk=risiko_id
+    )
+    tindak_lanjut = risiko.tindak_lanjut.all().order_by('urutan')
+
+    total_tl = tindak_lanjut.count()
+    selesai_tl = tindak_lanjut.filter(status_aksi='SELESAI').count()
+    pct_selesai = round((selesai_tl / total_tl * 100) if total_tl > 0 else 0)
+
+    ctx = {
+        'is_single': True,
+        'risiko': risiko,
+        'tindak_lanjut': tindak_lanjut,
+        'total_tl': total_tl,
+        'selesai_tl': selesai_tl,
+        'pct_selesai': pct_selesai,
+        'tgl_cetak': timezone.now(),
+    }
+    return render(request, 'akreditasi/risiko_pelaksanaan.html', ctx)
+
+
+@login_required
+def risiko_pelaksanaan_unit(request, unit_id=None):
+    """Dokumen Cetak Pelaksanaan Risiko (Siklus DO) — rekap semua risiko per unit & tahun."""
+    from .models import UnitKerja as UK
+    profile = getattr(request.user, 'profile', None)
+
+    if profile and profile.is_unit_scoped and profile.unit_kerja:
+        units = UK.objects.filter(pk=profile.unit_kerja.pk)
+        default_unit = profile.unit_kerja
+    else:
+        units = UK.objects.all().order_by('name')
+        default_unit = UK.objects.first()
+
+    if unit_id:
+        selected_unit = get_object_or_404(UK, pk=unit_id)
+    elif request.GET.get('unit'):
+        try:
+            selected_unit = UK.objects.get(pk=int(request.GET.get('unit')))
+        except (UK.DoesNotExist, ValueError):
+            selected_unit = default_unit
+    else:
+        selected_unit = default_unit
+
+    tahun_raw = request.GET.get('tahun')
+    tahun = 2026
+    if tahun_raw:
+        try:
+            tahun = int(tahun_raw)
+        except (ValueError, TypeError):
+            tahun = 2026
+
+    tahun_list = sorted(list(set(RisikoUnit.objects.values_list('tahun', flat=True).distinct())), reverse=True)
+    if not tahun_list:
+        tahun_list = [2026]
+
+    risiko_qs = RisikoUnit.objects.filter(unit=selected_unit, tahun=tahun).select_related(
+        'unit', 'indikator_mutu_terkait', 'created_by'
+    ).prefetch_related('tindak_lanjut').order_by('-dampak', '-probabilitas', 'id')
+
+    risiko_list = []
+    for r in risiko_qs:
+        tl_list = list(r.tindak_lanjut.all().order_by('urutan'))
+        total = len(tl_list)
+        selesai = sum(1 for tl in tl_list if tl.status_aksi == 'SELESAI')
+        pct = round((selesai / total * 100) if total > 0 else 0)
+        risiko_list.append({
+            'risiko': r,
+            'tindak_lanjut': tl_list,
+            'total_tl': total,
+            'selesai_tl': selesai,
+            'pct_selesai': pct,
+        })
+
+    ctx = {
+        'is_single': False,
+        'selected_unit': selected_unit,
+        'units': units,
+        'tahun': tahun,
+        'tahun_list': tahun_list,
+        'risiko_list': risiko_list,
+        'total_risiko': len(risiko_list),
+        'tgl_cetak': timezone.now(),
+    }
+    return render(request, 'akreditasi/risiko_pelaksanaan.html', ctx)
+
+
+@login_required
+def risiko_pelaksanaan_export_csv(request):
+    """Ekspor Dokumen Pelaksanaan Risiko (Siklus DO) ke CSV UTF-8 BOM."""
+    import csv
+    unit_id = request.GET.get('unit')
+    tahun_raw = request.GET.get('tahun')
+
+    profile = getattr(request.user, 'profile', None)
+    if profile and profile.is_unit_scoped and profile.unit_kerja:
+        target_unit = profile.unit_kerja
+    elif unit_id:
+        target_unit = get_object_or_404(UnitKerja, pk=unit_id)
+    else:
+        target_unit = UnitKerja.objects.first()
+
+    tahun = int(tahun_raw) if tahun_raw and tahun_raw.isdigit() else 2026
+
+    risiko_qs = RisikoUnit.objects.filter(unit=target_unit, tahun=tahun).select_related(
+        'unit', 'indikator_mutu_terkait'
+    ).prefetch_related('tindak_lanjut').order_by('-dampak', '-probabilitas', 'id')
+
+    unit_slug = (target_unit.name if target_unit else 'Unit').replace(' ', '_')
+    filename = f"Pelaksanaan_Risiko_{unit_slug}_{tahun}_{timezone.now().strftime('%Y%m%d_%H%M')}.csv"
+
+    response = HttpResponse(content_type='text/csv; charset=utf-8')
+    response['Content-Disposition'] = f'attachment; filename="{filename}"'
+    response.write('\ufeff'.encode('utf-8'))
+
+    writer = csv.writer(response)
+    writer.writerow(['PELAKSANAAN RESIKO RS MONSISKAMI ARIMA'])
+    writer.writerow(['JL. Candiwulan Kalibuntu Mangli Kuwarasan Kebumen Jawatengah'])
+    writer.writerow([f'Unit Kerja: {target_unit.name if target_unit else "Semua"}', f'Tahun: {tahun}'])
+    writer.writerow([])
+
+    writer.writerow(['TABEL PELAKSANAAN TINDAKAN RISIKO (SIKLUS DO)'])
+    writer.writerow(['No', 'Jenis Risiko', 'Rencana Aksi Mitigasi', 'No. Aksi', 'Deskripsi Pelaksanaan', 'Status', 'Tgl Mulai', 'Tgl Selesai', 'Catatan', 'Bukti Dokumen', 'PJ Mitigasi'])
+
+    row_no = 1
+    for r in risiko_qs:
+        tl_list = list(r.tindak_lanjut.all().order_by('urutan'))
+        if tl_list:
+            for tl in tl_list:
+                writer.writerow([
+                    row_no,
+                    r.jenis_risiko,
+                    r.rencana_aksi,
+                    tl.urutan,
+                    tl.aksi,
+                    tl.get_status_aksi_display(),
+                    tl.tanggal_mulai.strftime('%d/%m/%Y') if tl.tanggal_mulai else '—',
+                    tl.tanggal_selesai.strftime('%d/%m/%Y') if tl.tanggal_selesai else '—',
+                    tl.catatan or '—',
+                    'Ada' if tl.bukti_upload else 'Belum ada',
+                    r.pj_mitigasi or 'Ka. Unit',
+                ])
+                row_no += 1
+        else:
+            writer.writerow([
+                row_no,
+                r.jenis_risiko,
+                r.rencana_aksi,
+                '—', 'Belum ada pelaksanaan dicatat',
+                'BELUM', '—', '—', '—', '—',
+                r.pj_mitigasi or 'Ka. Unit',
+            ])
+            row_no += 1
+
+    return response
+
+

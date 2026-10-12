@@ -464,7 +464,12 @@
     <div class="card border-0 shadow-sm mt-3">
         <div class="card-header border-0 py-3 bg-white d-flex justify-content-between align-items-center">
             <h6 class="mb-0 fw-bold" style="color:#0f172a;"><i class="bi bi-list-task me-2" style="color:#0d9488;"></i>F. Pelaksanaan Risiko (Do)</h6>
-            <button class="btn btn-sm text-white" style="background:#0d9488;" data-bs-toggle="collapse" data-bs-target="#formTindakLanjut"><i class="bi bi-plus-lg me-1"></i>Tambah Pelaksanaan</button>
+            <div class="d-flex flex-wrap gap-2">
+                <a href="{% url 'akreditasi:risiko_pelaksanaan_dokumen' risiko.pk %}" class="btn btn-sm btn-outline-dark" target="_blank">
+                    <i class="bi bi-printer me-1"></i>Cetak Pelaksanaan (Do)
+                </a>
+                <button class="btn btn-sm text-white" style="background:#0d9488;" data-bs-toggle="collapse" data-bs-target="#formTindakLanjut"><i class="bi bi-plus-lg me-1"></i>Tambah Pelaksanaan</button>
+            </div>
         </div>
         <div class="card-body p-3">
 

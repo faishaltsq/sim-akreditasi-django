@@ -133,3 +133,28 @@ class PerencanaanRisikoTest(TestCase):
         self.assertTrue(bool(created.bukti_data_pendukung))
         self.assertIn('laporan_baseline', created.bukti_data_pendukung.name)
 
+    def test_pelaksanaan_dokumen_single_view(self):
+        """Test single risk execution view (HTTP 200)."""
+        url = reverse('akreditasi:risiko_pelaksanaan_dokumen', kwargs={'risiko_id': self.risiko.pk})
+        resp = self.client.get(url)
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, 'PELAKSANAAN TINDAKAN RESIKO RS MONSISKAMI ARIMA')
+        self.assertContains(resp, 'Siklus Do')
+
+    def test_pelaksanaan_unit_view(self):
+        """Test unit execution view (HTTP 200)."""
+        url = reverse('akreditasi:risiko_pelaksanaan_unit', kwargs={'unit_id': self.unit.pk})
+        resp = self.client.get(url)
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, 'PELAKSANAAN TINDAKAN RESIKO RS MONSISKAMI ARIMA')
+
+    def test_pelaksanaan_export_csv(self):
+        """Test execution CSV export."""
+        url = reverse('akreditasi:risiko_pelaksanaan_export_csv') + f'?unit={self.unit.pk}&tahun=2026'
+        resp = self.client.get(url)
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp['Content-Type'], 'text/csv; charset=utf-8')
+        content = resp.content.decode('utf-8')
+        self.assertIn('PELAKSANAAN RESIKO RS MONSISKAMI ARIMA', content)
+
+
