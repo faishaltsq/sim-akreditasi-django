@@ -213,3 +213,17 @@ MESSAGE_TAGS = {
     message_constants.WARNING: 'warning',
     message_constants.ERROR: 'danger',
 }
+
+# ── SatuSehat Kemenkes FHIR Integration (Permenkes 24/2022) ──────────
+SATUSEHAT_BASE_URL = os.environ.get('SATUSEHAT_BASE_URL', 'https://api-satusehat-stg.dto.kemkes.go.id')
+SATUSEHAT_CLIENT_ID = os.environ.get('SATUSEHAT_CLIENT_ID', '')
+SATUSEHAT_CLIENT_SECRET = os.environ.get('SATUSEHAT_CLIENT_SECRET', '')
+SATUSEHAT_ORG_ID = os.environ.get('SATUSEHAT_ORG_ID', '')
+
+# ── BPJS Kesehatan Bridging (VClaim v2 + Antrean Online) ─────────────
+BPJS_VCLAIM_BASE_URL = os.environ.get('BPJS_VCLAIM_BASE_URL', 'https://apijkn-dev.bpjs-kesehatan.go.id/vclaim-rest-dev')
+BPJS_ANTREAN_BASE_URL = os.environ.get('BPJS_ANTREAN_BASE_URL', 'https://apijkn-dev.bpjs-kesehatan.go.id/antreanrs-dev')
+BPJS_CONS_ID = os.environ.get('BPJS_CONS_ID', '')
+BPJS_SECRET_KEY = os.environ.get('BPJS_SECRET_KEY', '')
+BPJS_USER_KEY = os.environ.get('BPJS_USER_KEY', '')
+BPJS_KODE_PPK = os.environ.get('BPJS_KODE_PPK', '0000000')

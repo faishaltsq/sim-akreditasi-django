@@ -2205,9 +2205,46 @@ def cetak_permintaan_lab(request, pk, order_id=None):
     else:
         order = OrderPenunjang.objects.filter(kunjungan=k, jenis='LAB').order_by('-created_at').first()
 
-    return render(request, 'pasien/cetak_permintaan_lab.html', {
+    return render(request, 'pasien/resep_print.html', {
         'kunjungan': k,
         'pasien': k.pasien,
         'order': order,
         'printed_at': timezone.now(),
+    })
+
+
+@login_required
+def bpjs_cek_peserta_view(request):
+    """Cek eligibilitas peserta BPJS via AJAX."""
+    from .bpjs import cek_eligibilitas
+    no_bpjs = request.GET.get('no_bpjs', '').strip()
+    if not no_bpjs:
+        return JsonResponse({'success': False, 'message': 'No. BPJS wajib diisi'}, status=400)
+    res = cek_eligibilitas(no_bpjs)
+    return JsonResponse(res)
+
+
+@login_required
+def bpjs_buat_sep_view(request, kunjungan_pk):
+    """Penerbitan SEP BPJS untuk kunjungan pasien."""
+    from .bpjs import buat_sep
+    kunjungan = get_object_or_404(KunjunganPasien, pk=kunjungan_pk)
+    res = buat_sep(kunjungan)
+    if request.headers.get('x-requested-with') == 'XMLHttpRequest' or request.GET.get('format') == 'json':
+        return JsonResponse(res)
+    if res['success']:
+        messages.success(request, res['message'])
+    else:
+        messages.error(request, f"Gagal SEP: {res['message']}")
+    return redirect('pasien:kunjungan_detail', pk=kunjungan_pk)
+
+
+@login_required
+def integrasi_status_view(request):
+    """Status integrasi SatuSehat dan BPJS Bridging."""
+    from .satusehat import satusehat_connection_status
+    from .bpjs import bpjs_connection_status
+    return JsonResponse({
+        'satusehat': satusehat_connection_status(),
+        'bpjs': bpjs_connection_status(),
     })

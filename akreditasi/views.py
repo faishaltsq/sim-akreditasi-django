@@ -1518,11 +1518,43 @@ def rekap_kps_unit(request):
         for cred in nakes.credentials.all():
             cred.auto_check_expiry()
 
+    # ── Alert Stats: STR/SIP expiry summary ──────────────────────
+    from django.utils import timezone as tz
+    from accounts.models import NakesCredential
+    import datetime as _dt
+
+    today = tz.now().date()
+    d30 = today + _dt.timedelta(days=30)
+    d60 = today + _dt.timedelta(days=60)
+    d90 = today + _dt.timedelta(days=90)
+
+    alert_qs = NakesCredential.objects.filter(
+        doc_type__in=('STR', 'SIP'),
+        valid_until__isnull=False,
+    ).select_related('user_profile__unit_kerja', 'user_profile__user')
+
+    if profile.role == 'KEPALA_UNIT' and profile.unit_kerja:
+        alert_qs = alert_qs.filter(user_profile__unit_kerja=profile.unit_kerja)
+
+    alert_expired    = [c for c in alert_qs if c.valid_until < today]
+    alert_30         = [c for c in alert_qs if today <= c.valid_until <= d30]
+    alert_60         = [c for c in alert_qs if d30 < c.valid_until <= d60]
+    alert_90         = [c for c in alert_qs if d60 < c.valid_until <= d90]
+
+    alert_stats = {
+        'expired':  alert_expired,
+        'lt_30':    alert_30,
+        'lt_60':    alert_60,
+        'lt_90':    alert_90,
+        'total_alert': len(alert_expired) + len(alert_30) + len(alert_60) + len(alert_90),
+    }
+
     context = {
         'nakes_list': nakes_qs,
         'units': units,
         'selected_unit_id': selected_unit_id,
         'profile': profile,
+        'alert_stats': alert_stats,
     }
     return render(request, 'akreditasi/rekap_kps.html', context)
 
