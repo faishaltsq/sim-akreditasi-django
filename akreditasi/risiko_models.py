@@ -67,6 +67,12 @@ class RisikoUnit(models.Model):
     # Standar 5.15 — identifikasi risiko: masalah dan data pendukung
     masalah          = models.TextField('Masalah', blank=True, default='')
     data_pendukung   = models.TextField('Data / Bukti Pendukung', blank=True, default='')
+    bukti_data_pendukung = models.FileField(
+        'Bukti / Lampiran Data Pendukung',
+        upload_to='risiko/bukti_data_pendukung/',
+        null=True, blank=True,
+        help_text='Upload file bukti/lampiran pendukung masalah (PDF, gambar, Excel, dsb.)'
+    )
     tujuan           = models.TextField(
         'Tujuan Pengendalian Risiko', blank=True, default='',
         help_text='Tujuan mitigasi dan sasaran keselamatan/mutu klinis yang ingin dicapai'

@@ -24,7 +24,7 @@ class PerencanaanRisikoTest(TestCase):
         )
         self.risiko = RisikoUnit.objects.create(
             unit=self.unit,
-            periode='TW1',
+            periode='TAHUNAN',
             tahun=2026,
             jenis_risiko='Keterlambatan Penyiapan Obat Racikan',
             kategori_risiko='OPERASIONAL',
@@ -38,6 +38,7 @@ class PerencanaanRisikoTest(TestCase):
             metode_evaluasi='FMEA',
             indikator_mutu_terkait=self.indikator,
             target_capaian_indikator=90.0,
+            strategi_mitigasi='KURANGI',
             rencana_aksi='Penambahan mesin press pulverizer dan rotasi jam sibuk',
             pj_mitigasi='Apoteker Penanggung Jawab',
             biaya_mitigasi=5000000,
@@ -52,7 +53,7 @@ class PerencanaanRisikoTest(TestCase):
         # Test fallback when tujuan is empty
         risiko_empty = RisikoUnit.objects.create(
             unit=self.unit,
-            periode='TW1',
+            periode='TAHUNAN',
             tahun=2026,
             jenis_risiko='Risiko Tanpa Tujuan Khusus',
             kategori_risiko='KLINIS',
@@ -61,6 +62,7 @@ class PerencanaanRisikoTest(TestCase):
             deskripsi_risiko='Deskripsi',
             rencana_aksi='Aksi mitigasi',
             pj_mitigasi='Ka. Unit',
+            strategi_mitigasi='KURANGI',
             created_by=self.user
         )
         self.assertIn('Mengendalikan dan memitigasi risiko klinis', risiko_empty.tujuan_display)
@@ -99,3 +101,35 @@ class PerencanaanRisikoTest(TestCase):
         self.assertIn('TABEL 1: INDIKATOR MUTU DENGAN RISIKO TERKAIT', content)
         self.assertIn('TABEL 2: RENCANA AKSI (MITIGASI) RISIKO', content)
         self.assertIn('Antrean resep racikan melebihi standar waktu 60 menit', content)
+
+    def test_upload_bukti_data_pendukung(self):
+        """Test upload file in risiko_input for data pendukung."""
+        from django.core.files.uploadedfile import SimpleUploadedFile
+        test_file = SimpleUploadedFile("laporan_baseline.pdf", b"%PDF-1.4 sample baseline report", content_type="application/pdf")
+        
+        post_data = {
+            'unit': self.unit.pk,
+            'tahun': 2026,
+            'periode': 'TAHUNAN',
+            'kategori_risiko': 'OPERASIONAL',
+            'jenis_risiko': 'Risiko dengan Lampiran Data Pendukung',
+            'masalah': 'Masalah dengan lampiran data pendukung',
+            'data': 'Audit internal menunjukkan baseline 15% deviasi',
+            'tujuan': 'Target deviasi turun ke 0%',
+            'deskripsi_risiko': 'Deskripsi risiko terlampir',
+            'dampak': 3,
+            'probabilitas': 3,
+            'metode_evaluasi': 'STANDAR',
+            'strategi_mitigasi': 'KURANGI',
+            'rencana_aksi': 'Lakukan pelatihan ulang SOP',
+            'pj_mitigasi': 'Ka. Unit',
+            'bukti_data_pendukung': test_file
+        }
+        resp = self.client.post(reverse('akreditasi:risiko_input'), post_data)
+        self.assertEqual(resp.status_code, 302)
+        
+        created = RisikoUnit.objects.filter(jenis_risiko='Risiko dengan Lampiran Data Pendukung').first()
+        self.assertIsNotNone(created)
+        self.assertTrue(bool(created.bukti_data_pendukung))
+        self.assertIn('laporan_baseline', created.bukti_data_pendukung.name)
+

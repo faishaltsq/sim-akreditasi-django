@@ -169,6 +169,16 @@
                     </div>
                     {% endif %}
 
+                    {% if risiko.bukti_data_pendukung %}
+                    <div class="mb-3">
+                        <label class="text-muted d-block mb-1" style="font-size:.75rem;"><i class="bi bi-paperclip text-primary me-1"></i>Lampiran Bukti Pendukung</label>
+                        <a href="{{ risiko.bukti_data_pendukung.url }}" target="_blank" rel="noopener"
+                           class="btn btn-sm btn-outline-primary py-1 px-2" style="font-size:.76rem;">
+                            <i class="bi bi-cloud-download me-1"></i>Lihat / Unduh Bukti Pendukung
+                        </a>
+                    </div>
+                    {% endif %}
+
                     <div class="mb-3">
                         <label class="text-muted d-block mb-1" style="font-size:.75rem;"><i class="bi bi-bullseye text-success me-1"></i>Tujuan Pengendalian Risiko</label>
                         <p class="p-2 rounded border-start border-3 border-success" style="background:#f0fdf4; font-size:.82rem; color:#166534;">{{ risiko.tujuan_display|linebreaksbr }}</p>

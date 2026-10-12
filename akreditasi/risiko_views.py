@@ -416,8 +416,11 @@ def risiko_input(request):
                 pj_rtl=pj_rtl_val,
                 created_by=request.user,
             )
-            risiko.full_clean()
+            risiko.full_clean(exclude=['bukti_data_pendukung'])
             risiko.save()
+            if request.FILES.get('bukti_data_pendukung'):
+                risiko.bukti_data_pendukung = request.FILES['bukti_data_pendukung']
+                risiko.save(update_fields=['bukti_data_pendukung'])
             _log(request.user, 'CREATE', risiko, 'Input risiko baru')
             messages.success(request, 'Risiko berhasil ditambahkan.')
             return redirect('akreditasi:risiko_detail', risiko_id=risiko.pk)
