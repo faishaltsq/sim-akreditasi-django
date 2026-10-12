@@ -249,11 +249,30 @@ def risiko_daftar(request):
         qs = qs.filter(kategori_risiko=kategori)
 
     matrix = _risk_matrix_summary(qs)
+
+    # Serialisasi matrix ke JSON untuk heatmap interaktif
+    import json as _json
+    matrix_json = _json.dumps({f"{d},{p}": cnt for (d, p), cnt in matrix.items()})
+
+    # Residual risk matrix
+    residual_matrix = {}
+    for d in range(1, 6):
+        for p in range(1, 6):
+            residual_matrix[(d, p)] = 0
+    residual_qs = qs.filter(
+        dampak_residual__isnull=False, probabilitas_residual__isnull=False
+    ).values('dampak_residual', 'probabilitas_residual').annotate(n=Count('id'))
+    for r in residual_qs:
+        residual_matrix[(r['dampak_residual'], r['probabilitas_residual'])] = r['n']
+    residual_matrix_json = _json.dumps({f"{d},{p}": cnt for (d, p), cnt in residual_matrix.items()})
+
     tahun_list = RisikoUnit.objects.values_list('tahun', flat=True).distinct().order_by('-tahun')
 
     ctx = {
         'risiko_list': qs,
         'matrix': matrix,
+        'matrix_json': matrix_json,
+        'residual_matrix_json': residual_matrix_json,
         'units': units,
         'tahun_list': tahun_list,
         'status_choices': RisikoUnit.STATUS_CHOICES,

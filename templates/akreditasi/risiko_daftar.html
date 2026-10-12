@@ -6,10 +6,27 @@
 
 {% block extra_css %}
 <style>
-    .risk-matrix td { width:48px; height:40px; text-align:center; font-size:.72rem; font-weight:700; color:#fff; border:1px solid #e2e8f0; }
-    .risk-matrix th { font-size:.68rem; text-align:center; padding:4px; color:#64748b; }
-    .badge-teal { background:#0d9488; color:#fff; }
+    .badge-teal   { background:#0d9488; color:#fff; }
     .badge-purple { background:#7c3aed; color:#fff; }
+
+    /* ── Risk Heatmap ─────────────────────────────────────── */
+    .heatmap-wrap { display:grid; grid-template-columns: 36px repeat(5,1fr); gap:3px; }
+    .hm-cell {
+        border-radius:6px; display:flex; flex-direction:column; align-items:center;
+        justify-content:center; cursor:pointer; transition:transform .12s,box-shadow .12s;
+        aspect-ratio:1.15; min-height:48px; font-weight:700;
+        color:#fff; font-size:.75rem; position:relative;
+        border:2px solid transparent;
+    }
+    .hm-cell:hover { transform:scale(1.08); box-shadow:0 4px 16px rgba(0,0,0,.22); z-index:5; }
+    .hm-cell.selected { border-color:#1e293b !important; box-shadow:0 0 0 3px #1e293b55; }
+    .hm-cell .hm-skor { font-size:.82rem; font-weight:800; line-height:1; }
+    .hm-cell .hm-count { font-size:.6rem; background:rgba(0,0,0,.30); border-radius:8px; padding:1px 5px; margin-top:2px; }
+    .hm-axis-label { display:flex; align-items:center; justify-content:center;
+        font-size:.65rem; font-weight:600; color:#64748b; }
+    .hm-axis-title { writing-mode:vertical-rl; transform:rotate(180deg); font-size:.65rem;
+        color:#94a3b8; letter-spacing:1px; text-transform:uppercase; text-align:center; }
+    .legend-dot { width:12px; height:12px; border-radius:3px; display:inline-block; flex-shrink:0; }
 </style>
 {% endblock %}
 
@@ -25,40 +42,85 @@
         </div>
     </div>
 
-    {# ── Risk Matrix Summary 5×5 ─────────────────────── #}
+    {# ── Interactive Risk Heatmap 5×5 ─────────────────── #}
     <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header bg-white border-bottom py-2 d-flex flex-wrap align-items-center justify-content-between gap-2">
+            <div class="d-flex align-items-center gap-2">
+                <i class="bi bi-grid-3x3-gap-fill text-teal"></i>
+                <span class="fw-bold text-dark" style="font-size:.84rem;">Matriks Risiko 5×5 (Standar ISO 31000 &amp; STARKES PMKP 12)</span>
+            </div>
+            <div class="d-flex align-items-center gap-2">
+                <div class="btn-group btn-group-sm" role="group">
+                    <button type="button" class="btn btn-outline-teal active" id="btnModeInherent" onclick="setHeatmapMode('inherent')">
+                        <i class="bi bi-lightning-charge me-1"></i>Risiko Awal (Inherent)
+                    </button>
+                    <button type="button" class="btn btn-outline-teal" id="btnModeResidual" onclick="setHeatmapMode('residual')">
+                        <i class="bi bi-shield-check me-1"></i>Risiko Residu (Mitigasi)
+                    </button>
+                </div>
+            </div>
+        </div>
         <div class="card-body p-3">
-            <h6 class="fw-bold mb-2" style="font-size:.82rem; color:#0f172a;"><i class="bi bi-grid-3x3-gap me-1"></i>Matriks Risiko (Ringkasan)</h6>
-            <div class="table-responsive">
-                <table class="risk-matrix mb-0">
-                    <thead>
-                        <tr>
-                            <th style="width:80px;">Dampak \ Prob.</th>
-                            <th>1</th><th>2</th><th>3</th><th>4</th><th>5</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for d in "54321" %}
-                        <tr>
-                            <th>{{ d }}</th>
-                            {% for p in "12345" %}
-                            {% with d_int=d|add:"0" p_int=p|add:"0" %}
-                            {% widthratio d_int 1 p_int as skor %}
-                            <td style="background:{% if skor >= 20 %}#dc2626{% elif skor >= 15 %}#ea580c{% elif skor >= 10 %}#ca8a04{% elif skor >= 5 %}#16a34a{% else %}#64748b{% endif %}; cursor:default;"
-                                title="Skor {{ skor }}">
-                                {{ skor }}
-                                {% for key, val in matrix.items %}
-                                    {% if key.0|stringformat:"d" == d and key.1|stringformat:"d" == p and val > 0 %}
-                                        <br><span class="badge bg-dark" style="font-size:.58rem;">{{ val }}</span>
-                                    {% endif %}
-                                {% endfor %}
-                            </td>
-                            {% endwith %}
-                            {% endfor %}
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
+            <div class="row g-3 align-items-center">
+                {# Left: Heatmap Grid #}
+                <div class="col-lg-7">
+                    <div style="max-width:440px; margin:0 auto;">
+                        <div class="text-center text-muted fw-semibold mb-1" style="font-size:.65rem; letter-spacing:1px;">
+                            PROBABILITAS / KEMUNGKINAN →
+                        </div>
+                        <div class="d-flex">
+                            <div class="hm-axis-title pe-2">
+                                ← DAMPAK / KEPARAHAN
+                            </div>
+                            <div class="flex-grow-1">
+                                <div class="heatmap-wrap" id="heatmapGrid">
+                                    {# Rendered by JavaScript #}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {# Right: Legend & Selected Filter Details #}
+                <div class="col-lg-5">
+                    <div class="p-3 bg-light rounded" style="font-size:.78rem;">
+                        <div class="fw-bold text-dark mb-2"><i class="bi bi-info-circle me-1 text-primary"></i>Zonasi Tingkat Risiko</div>
+                        <div class="d-flex flex-column gap-1 mb-3">
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="legend-dot" style="background:#dc2626;"></span>
+                                <span class="fw-bold text-danger">Sangat Tinggi (20–25)</span>
+                                <span class="text-muted ms-auto">Tindakan segera, eskalasi Direksi</span>
+                            </div>
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="legend-dot" style="background:#ea580c;"></span>
+                                <span class="fw-bold" style="color:#c2410c;">Tinggi (15–19)</span>
+                                <span class="text-muted ms-auto">Perlu mitigasi aktif bulanan</span>
+                            </div>
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="legend-dot" style="background:#ca8a04;"></span>
+                                <span class="fw-bold" style="color:#a16207;">Sedang (10–14)</span>
+                                <span class="text-muted ms-auto">Monitoring berkala triwulan</span>
+                            </div>
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="legend-dot" style="background:#16a34a;"></span>
+                                <span class="fw-bold text-success">Rendah (5–9)</span>
+                                <span class="text-muted ms-auto">Pengendalian standar unit</span>
+                            </div>
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="legend-dot" style="background:#64748b;"></span>
+                                <span class="fw-bold text-secondary">Sangat Rendah (1–4)</span>
+                                <span class="text-muted ms-auto">Diterima / toleransi risiko</span>
+                            </div>
+                        </div>
+
+                        <div id="filterNotice" class="alert py-2 mb-0 d-none" style="background:#fff; border:1px solid #cbd5e1; font-size:.75rem;">
+                            <span id="filterNoticeText"></span>
+                            <button type="button" class="btn btn-link btn-sm p-0 ms-2 text-danger text-decoration-none" onclick="resetHeatmapFilter()">
+                                <i class="bi bi-x-circle"></i> Reset Filter
+                            </button>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -131,7 +193,7 @@
                 </thead>
                 <tbody>
                     {% for r in risiko_list %}
-                    <tr>
+                    <tr data-d="{{ r.dampak }}" data-p="{{ r.probabilitas }}" data-dr="{{ r.dampak_residual|default:r.dampak }}" data-pr="{{ r.probabilitas_residual|default:r.probabilitas }}">
                         <td>{{ forloop.counter }}</td>
                         <td>{{ r.unit.name }}</td>
                         <td>
@@ -178,4 +240,127 @@
     </div>
 
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// ── Risk Heatmap 5×5 — Interactive ──────────────────────────────────────
+const MATRIX_INHERENT  = {{ matrix_json|safe }};
+const MATRIX_RESIDUAL  = {{ residual_matrix_json|safe }};
+
+let currentMode = 'inherent';
+let selectedCell = null;  // {d, p} or null
+
+function cellColor(skor) {
+    if (skor >= 20) return '#dc2626';
+    if (skor >= 15) return '#ea580c';
+    if (skor >= 10) return '#ca8a04';
+    if (skor >= 5)  return '#16a34a';
+    return '#64748b';
+}
+function cellLabel(skor) {
+    if (skor >= 20) return 'Sangat Tinggi';
+    if (skor >= 15) return 'Tinggi';
+    if (skor >= 10) return 'Sedang';
+    if (skor >= 5)  return 'Rendah';
+    return 'Sangat Rendah';
+}
+
+function renderHeatmap(mode) {
+    const data   = mode === 'residual' ? MATRIX_RESIDUAL : MATRIX_INHERENT;
+    const grid   = document.getElementById('heatmapGrid');
+    if (!grid) return;
+    grid.innerHTML = '';
+
+    // Header row: empty corner + P labels 1-5
+    grid.appendChild(Object.assign(document.createElement('div'), {className:'hm-axis-label', innerHTML:'D\\P'}));
+    [1,2,3,4,5].forEach(p => {
+        const el = document.createElement('div');
+        el.className = 'hm-axis-label fw-bold';
+        el.textContent = p;
+        grid.appendChild(el);
+    });
+
+    // Data rows: D = 5 down to 1
+    for (let d = 5; d >= 1; d--) {
+        // Row label
+        const lbl = document.createElement('div');
+        lbl.className = 'hm-axis-label fw-bold';
+        lbl.textContent = d;
+        grid.appendChild(lbl);
+
+        for (let p = 1; p <= 5; p++) {
+            const skor  = d * p;
+            const count = data[`${d},${p}`] || 0;
+            const cell  = document.createElement('div');
+            cell.className = 'hm-cell';
+            cell.style.background = cellColor(skor);
+
+            const isSel = selectedCell && selectedCell.d === d && selectedCell.p === p;
+            if (isSel) cell.classList.add('selected');
+
+            cell.innerHTML = `
+                <span class="hm-skor">${skor}</span>
+                ${count > 0 ? `<span class="hm-count">${count} risiko</span>` : ''}
+            `;
+            cell.title = `Dampak ${d} × Prob ${p} = Skor ${skor} (${cellLabel(skor)})${count ? ` | ${count} risiko terdaftar` : ''}`;
+
+            cell.addEventListener('click', () => onCellClick(d, p, skor, count, mode));
+            grid.appendChild(cell);
+        }
+    }
+}
+
+function onCellClick(d, p, skor, count, mode) {
+    const isSame = selectedCell && selectedCell.d === d && selectedCell.p === p;
+    if (isSame) {
+        selectedCell = null;
+        resetHeatmapFilter();
+        return;
+    }
+    selectedCell = {d, p};
+    renderHeatmap(currentMode);
+
+    // Update notice
+    const notice = document.getElementById('filterNotice');
+    const noticeText = document.getElementById('filterNoticeText');
+    const modeLabel = mode === 'residual' ? 'Residual' : 'Inherent';
+    notice.classList.remove('d-none');
+    noticeText.innerHTML = `<i class="bi bi-funnel-fill me-1 text-primary"></i>
+        Filter aktif: Skor ${skor} (Dampak ${d} × Probabilitas ${p}) — ${cellLabel(skor)}
+        <span class="badge ${count > 0 ? 'bg-danger' : 'bg-success'} ms-1">${count} risiko ${modeLabel}</span>`;
+
+    // Filter risiko table rows
+    filterTableByCell(d, p, mode);
+}
+
+function filterTableByCell(d, p, mode) {
+    const rows = document.querySelectorAll('table tbody tr[data-d]');
+    if (!rows.length) return;
+    rows.forEach(row => {
+        const rd = parseInt(mode === 'residual' ? row.dataset.dr : row.dataset.d);
+        const rp = parseInt(mode === 'residual' ? row.dataset.pr : row.dataset.p);
+        row.style.display = (rd === d && rp === p) ? '' : 'none';
+    });
+}
+
+function resetHeatmapFilter() {
+    selectedCell = null;
+    document.getElementById('filterNotice').classList.add('d-none');
+    renderHeatmap(currentMode);
+    document.querySelectorAll('table tbody tr[data-d]').forEach(r => r.style.display = '');
+}
+
+function setHeatmapMode(mode) {
+    currentMode = mode;
+    selectedCell = null;
+    document.getElementById('filterNotice').classList.add('d-none');
+    document.querySelectorAll('table tbody tr[data-d]').forEach(r => r.style.display = '');
+    document.getElementById('btnModeInherent').classList.toggle('active', mode === 'inherent');
+    document.getElementById('btnModeResidual').classList.toggle('active', mode === 'residual');
+    renderHeatmap(mode);
+}
+
+document.addEventListener('DOMContentLoaded', () => renderHeatmap('inherent'));
+</script>
 {% endblock %}
