@@ -1,0 +1,270 @@
+{% extends 'base.html' %}
+
+{% block title %}Detail Insiden #{{ insiden.pk }} — ARIMA{% endblock %}
+{% block page_title %}Detail Insiden Keselamatan Pasien{% endblock %}
+{% block page_subtitle %}Investigasi & Tindak Lanjut — Standar KNKP{% endblock %}
+
+{% block extra_css %}
+<style>
+    .badge-pita-biru   { background:#dbeafe; color:#1e40af; border:1px solid #93c5fd; }
+    .badge-pita-hijau  { background:#dcfce7; color:#15803d; border:1px solid #86efac; }
+    .badge-pita-kuning { background:#fef9c3; color:#854d0e; border:1px solid #fde047; }
+    .badge-pita-merah  { background:#fee2e2; color:#991b1b; border:1px solid #fca5a5; font-weight:700; }
+
+    .pita-biru   { background:linear-gradient(135deg,#3b82f6,#1d4ed8); }
+    .pita-hijau  { background:linear-gradient(135deg,#22c55e,#15803d); }
+    .pita-kuning { background:linear-gradient(135deg,#eab308,#a16207); }
+    .pita-merah  { background:linear-gradient(135deg,#ef4444,#991b1b); }
+
+    .detail-label { font-size:.72rem; color:#94a3b8; text-transform:uppercase; letter-spacing:.5px; font-weight:600; margin-bottom:2px; }
+    .detail-value { font-size:.88rem; color:#0f172a; font-weight:500; }
+    .timeline-dot { width:12px; height:12px; border-radius:50%; background:#cbd5e1; flex-shrink:0; margin-top:4px; }
+    .timeline-dot.active { background:#0d9488; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-3">
+    <div class="row justify-content-center">
+        <div class="col-xl-10">
+
+            {# Breadcrumb & Back #}
+            <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-4">
+                <nav aria-label="breadcrumb">
+                    <ol class="breadcrumb mb-0" style="font-size:.8rem;">
+                        <li class="breadcrumb-item"><a href="{% url 'akreditasi:risiko_daftar' %}" class="text-teal text-decoration-none">Manajemen Risiko</a></li>
+                        <li class="breadcrumb-item"><a href="{% url 'akreditasi:insiden_daftar' %}" class="text-teal text-decoration-none">Register Insiden</a></li>
+                        <li class="breadcrumb-item active">Detail #{{ insiden.pk }}</li>
+                    </ol>
+                </nav>
+                <a href="{% url 'akreditasi:insiden_daftar' %}" class="btn btn-outline-secondary btn-sm d-flex align-items-center gap-1">
+                    <i class="bi bi-arrow-left"></i> Kembali ke Register
+                </a>
+            </div>
+
+            {% if messages %}
+            {% for msg in messages %}
+            <div class="alert alert-{{ msg.tags }} py-2 mb-3" style="font-size:.82rem;">{{ msg }}</div>
+            {% endfor %}
+            {% endif %}
+
+            {# TOP: Grading Pita Risiko Banner #}
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-body p-0">
+                    <div class="pita-{{ pita_color }} text-white p-4 rounded-top d-flex flex-wrap align-items-center justify-content-between gap-3">
+                        <div>
+                            <div class="fw-bold fs-5"><i class="bi bi-shield-exclamation me-2"></i>Pita Risiko: {{ pita_label }}</div>
+                            <div class="mt-1" style="font-size:.88rem; opacity:.9;">{{ pita_aksi }}</div>
+                        </div>
+                        <div class="text-end">
+                            <div style="font-size:.72rem; opacity:.8;">GRADING KNKP</div>
+                            <div class="fs-4 fw-bold">{{ insiden.get_tingkat_keparahan_display }}</div>
+                        </div>
+                    </div>
+
+                    {# Insiden Info Grid #}
+                    <div class="p-4">
+                        <div class="row g-4">
+                            <div class="col-md-3">
+                                <div class="detail-label">TANGGAL & WAKTU KEJADIAN</div>
+                                <div class="detail-value">
+                                    {{ insiden.tanggal_kejadian|date:"d M Y" }}
+                                    {% if insiden.waktu_kejadian %}, {{ insiden.waktu_kejadian|time:"H:i" }}{% endif %}
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="detail-label">JENIS INSIDEN</div>
+                                <div class="detail-value">
+                                    {% if insiden.jenis_insiden == 'SENTINEL' %}
+                                    <span class="badge bg-danger">SENTINEL</span>
+                                    {% elif insiden.jenis_insiden == 'KTD' %}
+                                    <span class="badge bg-warning text-dark">KTD</span>
+                                    {% elif insiden.jenis_insiden == 'KNC' %}
+                                    <span class="badge bg-info text-white">KNC</span>
+                                    {% elif insiden.jenis_insiden == 'KTC' %}
+                                    <span class="badge bg-secondary">KTC</span>
+                                    {% else %}
+                                    <span class="badge bg-light text-dark">{{ insiden.get_jenis_insiden_display }}</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="detail-label">UNIT TERKAIT</div>
+                                <div class="detail-value">{{ insiden.unit.name|default:"Umum / Tidak Ditentukan" }}</div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="detail-label">PASIEN TERPAPAR</div>
+                                <div class="detail-value">
+                                    {% if insiden.pasien_terpapar %}
+                                    <span class="text-danger fw-bold"><i class="bi bi-person-x-fill me-1"></i>Ya, pasien terdampak</span>
+                                    {% else %}
+                                    <span class="text-muted"><i class="bi bi-shield-check me-1"></i>Tidak ada pasien terdampak</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <hr class="my-3">
+
+                        <div class="row g-4">
+                            <div class="col-md-6">
+                                <div class="detail-label">LOKASI KEJADIAN</div>
+                                <div class="detail-value"><i class="bi bi-geo-alt me-1 text-muted"></i>{{ insiden.lokasi_kejadian }}</div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="detail-label">PELAPOR</div>
+                                <div class="detail-value">
+                                    {% if insiden.pelapor_anonim %}
+                                    <span class="text-muted"><i class="bi bi-person-fill-lock me-1"></i>Anonim (data dirahasiakan)</span>
+                                    {% else %}
+                                    <span><i class="bi bi-person-fill me-1"></i>Teridentifikasi</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="detail-label">DILAPORKAN PADA</div>
+                                <div class="detail-value">{{ insiden.created_at|date:"d M Y, H:i" }}</div>
+                            </div>
+                        </div>
+
+                        <hr class="my-3">
+
+                        <div class="row g-4">
+                            <div class="col-md-6">
+                                <div class="detail-label">DESKRIPSI KEJADIAN</div>
+                                <div class="detail-value p-3 bg-light rounded" style="white-space:pre-wrap; font-size:.84rem;">{{ insiden.deskripsi_kejadian }}</div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="detail-label">TINDAKAN SEGERA YANG DILAKUKAN</div>
+                                <div class="detail-value p-3 bg-light rounded" style="white-space:pre-wrap; font-size:.84rem;">{{ insiden.tindakan_segera|default:"Belum ada tindakan yang dicatat." }}</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {# Two Column: Timeline & Status Update Form #}
+            <div class="row g-4">
+                {# LEFT: Alur Investigasi Timeline #}
+                <div class="col-md-5">
+                    <div class="card border-0 shadow-sm h-100">
+                        <div class="card-header bg-white border-bottom py-3">
+                            <h6 class="mb-0 fw-bold text-slate-800"><i class="bi bi-clock-history me-2 text-primary"></i>Alur Investigasi</h6>
+                        </div>
+                        <div class="card-body py-3">
+                            {% with status=insiden.status_investigasi %}
+                            {% for code, label in status_choices %}
+                            <div class="d-flex gap-3 {% if not forloop.last %}mb-3{% endif %}">
+                                <div class="d-flex flex-column align-items-center">
+                                    <div class="timeline-dot {% if code == status or forloop.counter <= status_choices|length and code == 'DILAPORKAN' and status != 'DILAPORKAN' or code == 'VERIFIKASI' and status == 'INVESTIGASI' or code == 'VERIFIKASI' and status == 'SELESAI' or code == 'INVESTIGASI' and status == 'SELESAI' or code == status %}active{% endif %}"></div>
+                                    {% if not forloop.last %}
+                                    <div style="width:2px; height:30px; background:#e2e8f0;"></div>
+                                    {% endif %}
+                                </div>
+                                <div>
+                                    <div class="fw-semibold {% if code == status %}text-teal{% else %}text-muted{% endif %}" style="font-size:.85rem;">
+                                        {% if code == status %}<i class="bi bi-arrow-right-circle-fill me-1 text-teal"></i>{% endif %}
+                                        {{ label }}
+                                        {% if code == status %}<span class="badge bg-teal bg-opacity-10 text-teal ms-1" style="font-size:.65rem;">Saat ini</span>{% endif %}
+                                    </div>
+                                    {% if code == 'DILAPORKAN' %}<div class="text-muted" style="font-size:.72rem;">Laporan diterima sistem</div>{% endif %}
+                                    {% if code == 'VERIFIKASI' %}<div class="text-muted" style="font-size:.72rem;">Validasi data oleh Tim KP</div>{% endif %}
+                                    {% if code == 'INVESTIGASI' %}<div class="text-muted" style="font-size:.72rem;">Proses investigasi berjalan</div>{% endif %}
+                                    {% if code == 'SELESAI' %}<div class="text-muted" style="font-size:.72rem;">Investigasi tuntas, rekomendasi diterapkan</div>{% endif %}
+                                </div>
+                            </div>
+                            {% endfor %}
+                            {% endwith %}
+
+                            <hr class="my-3">
+
+                            {# RCA & PJ Info #}
+                            <div class="mb-3">
+                                <div class="detail-label">PJ INVESTIGASI</div>
+                                <div class="detail-value">
+                                    {% if insiden.pj_investigasi %}
+                                    <i class="bi bi-person-badge me-1 text-primary"></i>{{ insiden.pj_investigasi.get_full_name|default:insiden.pj_investigasi.username }}
+                                    {% else %}
+                                    <span class="text-muted fst-italic">Belum ditugaskan</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div>
+                                <div class="detail-label">ROOT CAUSE ANALYSIS (RCA)</div>
+                                <div class="detail-value">
+                                    {% if insiden.rca_dilakukan %}
+                                    <span class="badge bg-success"><i class="bi bi-diagram-3-fill me-1"></i>RCA Telah Dilakukan</span>
+                                    {% else %}
+                                    <span class="badge bg-light text-muted border"><i class="bi bi-diagram-3 me-1"></i>Belum Dilakukan</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {# RIGHT: Update Status Form #}
+                <div class="col-md-7">
+                    <div class="card border-0 shadow-sm h-100">
+                        <div class="card-header bg-white border-bottom py-3 d-flex justify-content-between align-items-center">
+                            <h6 class="mb-0 fw-bold text-slate-800"><i class="bi bi-pencil-square me-2 text-success"></i>Update Status Investigasi</h6>
+                            <span class="badge bg-light text-muted border" style="font-size:.7rem;">Hanya Tim KP / Admin</span>
+                        </div>
+                        <div class="card-body py-3">
+                            <form method="post" action="{% url 'akreditasi:insiden_update_status' insiden.pk %}">
+                                {% csrf_token %}
+                                <div class="row g-3 mb-3">
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-semibold" style="font-size:.82rem;">Status Investigasi</label>
+                                        <select name="status_investigasi" class="form-select form-select-sm" required>
+                                            {% for code, label in status_choices %}
+                                            <option value="{{ code }}" {% if code == insiden.status_investigasi %}selected{% endif %}>{{ label }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-semibold" style="font-size:.82rem;">Penanggung Jawab (PJ)</label>
+                                        <select name="pj_investigasi" class="form-select form-select-sm">
+                                            <option value="">— Belum Ditugaskan —</option>
+                                            {% for u in staff_users %}
+                                            <option value="{{ u.pk }}" {% if insiden.pj_investigasi_id == u.pk %}selected{% endif %}>{{ u.get_full_name|default:u.username }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label fw-semibold" style="font-size:.82rem;">Catatan Investigasi</label>
+                                    <textarea name="catatan_investigasi" class="form-control form-control-sm" rows="3" placeholder="Tuliskan catatan hasil investigasi, temuan, atau keputusan tim..."></textarea>
+                                </div>
+                                <div class="form-check mb-3">
+                                    <input type="checkbox" class="form-check-input" name="rca_dilakukan" id="rca_dilakukan" {% if insiden.rca_dilakukan %}checked{% endif %}>
+                                    <label class="form-check-label fw-semibold" for="rca_dilakukan" style="font-size:.82rem;">
+                                        <i class="bi bi-diagram-3-fill me-1 text-purple"></i>RCA (Root Cause Analysis) telah dilakukan
+                                    </label>
+                                </div>
+                                <button type="submit" class="btn btn-teal btn-sm px-4 d-flex align-items-center gap-1">
+                                    <i class="bi bi-check2-circle"></i> Simpan Perubahan
+                                </button>
+                            </form>
+
+                            <hr class="my-3">
+
+                            {# Referensi Aksi Berdasarkan Pita #}
+                            <div class="alert mb-0 py-2" style="background:#f8fafc; border:1px solid #e2e8f0; font-size:.8rem;">
+                                <div class="fw-bold text-dark mb-1"><i class="bi bi-info-circle-fill me-1 text-primary"></i>Panduan Tindak Lanjut (Standar KNKP):</div>
+                                <ul class="mb-0 ps-3 text-muted">
+                                    <li><strong>Pita Biru:</strong> Investigasi sederhana, maks 7 hari, oleh atasan langsung.</li>
+                                    <li><strong>Pita Hijau:</strong> Investigasi sederhana, maks 14 hari, oleh atasan langsung.</li>
+                                    <li><strong>Pita Kuning:</strong> RCA komprehensif, maks 45 hari, oleh Tim KP RS.</li>
+                                    <li><strong>Pita Merah:</strong> RCA wajib, maks 45 hari, oleh Tim KP + Direksi. Sentinel → lapor KNKP 2x24 jam.</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+{% endblock %}

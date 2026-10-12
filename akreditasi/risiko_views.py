@@ -7,7 +7,8 @@ from django.contrib import messages
 from django.http import JsonResponse
 from django.db.models import Count, Q
 from django.utils import timezone
-from django.views.decorators.http import require_GET
+from django.core.paginator import Paginator
+from django.views.decorators.http import require_GET, require_POST
 
 from .risiko_models import RisikoUnit, TindakLanjutRisiko, InsidenKeselamatan, IndikatorMutu
 from .models import UnitKerja, AuditLog
@@ -644,7 +645,140 @@ def risiko_laporan(request, unit_id=None):
     return render(request, 'akreditasi/risiko_laporan.html', ctx)
 
 
-# ── 6. Lapor Insiden ─────────────────────────────────────────────────────
+# ── 6. Insiden Keselamatan Pasien (IKP) ──────────────────────────────────
+
+def _grading_pita(keparahan):
+    """Return pita risiko KNKP (warna, label, aksi) berdasarkan tingkat keparahan."""
+    MAP = {
+        'TIDAK_CEDERA': ('biru',   'Biru',   'Investigasi sederhana oleh atasan langsung, selesai maks 7 hari'),
+        'MINOR':        ('hijau',  'Hijau',  'Investigasi sederhana oleh atasan langsung, selesai maks 14 hari'),
+        'MODERAT':      ('kuning', 'Kuning', 'Investigasi komprehensif / RCA oleh Tim KP, selesai maks 45 hari'),
+        'MAYOR':        ('merah',  'Merah',  'Investigasi komprehensif / RCA oleh Tim KP + Direksi, selesai maks 45 hari'),
+        'SENTINEL':     ('merah',  'Merah',  'RCA wajib oleh Tim KP + Direksi, lapor ke KNKP maks 2x24 jam'),
+    }
+    return MAP.get(keparahan, ('biru', 'Biru', '-'))
+
+
+@login_required
+def insiden_daftar(request):
+    """Register Insiden Keselamatan Pasien — daftar, filter, statistik."""
+    qs = InsidenKeselamatan.objects.select_related('unit', 'pj_investigasi').all()
+
+    # ── Filters ──────────────────────────────────────────────────────────
+    f_jenis  = request.GET.get('jenis', '')
+    f_status = request.GET.get('status', '')
+    f_unit   = request.GET.get('unit', '')
+    f_q      = request.GET.get('q', '')
+
+    if f_jenis:
+        qs = qs.filter(jenis_insiden=f_jenis)
+    if f_status:
+        qs = qs.filter(status_investigasi=f_status)
+    if f_unit:
+        qs = qs.filter(unit_id=f_unit)
+    if f_q:
+        qs = qs.filter(
+            Q(deskripsi_kejadian__icontains=f_q) |
+            Q(lokasi_kejadian__icontains=f_q) |
+            Q(tindakan_segera__icontains=f_q)
+        )
+
+    # ── Stats ────────────────────────────────────────────────────────────
+    all_qs = InsidenKeselamatan.objects.all()
+    stats = {
+        'total':       all_qs.count(),
+        'sentinel':    all_qs.filter(jenis_insiden='SENTINEL').count(),
+        'ktd':         all_qs.filter(jenis_insiden='KTD').count(),
+        'knc':         all_qs.filter(jenis_insiden='KNC').count(),
+        'perlu_investigasi': all_qs.filter(
+            status_investigasi__in=['DILAPORKAN', 'VERIFIKASI']
+        ).count(),
+        'selesai':     all_qs.filter(status_investigasi='SELESAI').count(),
+    }
+
+    # ── Pagination ───────────────────────────────────────────────────────
+    paginator = Paginator(qs, 20)
+    page = paginator.get_page(request.GET.get('page', 1))
+
+    # Add grading pita to each insiden
+    for ins in page:
+        pita_color, pita_label, pita_aksi = _grading_pita(ins.tingkat_keparahan)
+        ins.pita_color = pita_color
+        ins.pita_label = pita_label
+        ins.pita_aksi  = pita_aksi
+
+    ctx = {
+        'page': page,
+        'stats': stats,
+        'units': UnitKerja.objects.all(),
+        'jenis_choices':  InsidenKeselamatan.JENIS_CHOICES,
+        'status_choices': InsidenKeselamatan.STATUS_INVESTIGASI_CHOICES,
+        'f_jenis': f_jenis,
+        'f_status': f_status,
+        'f_unit': f_unit,
+        'f_q': f_q,
+    }
+    return render(request, 'akreditasi/insiden_daftar.html', ctx)
+
+
+@login_required
+def insiden_detail(request, pk):
+    """Detail lengkap insiden dengan grading pita risiko KNKP."""
+    insiden = get_object_or_404(
+        InsidenKeselamatan.objects.select_related('unit', 'pj_investigasi'), pk=pk
+    )
+    pita_color, pita_label, pita_aksi = _grading_pita(insiden.tingkat_keparahan)
+
+    from django.contrib.auth import get_user_model
+    User = get_user_model()
+    staff_users = User.objects.filter(is_active=True).order_by('username')
+
+    ctx = {
+        'insiden': insiden,
+        'pita_color': pita_color,
+        'pita_label': pita_label,
+        'pita_aksi': pita_aksi,
+        'status_choices': InsidenKeselamatan.STATUS_INVESTIGASI_CHOICES,
+        'staff_users': staff_users,
+    }
+    return render(request, 'akreditasi/insiden_detail.html', ctx)
+
+
+@login_required
+@require_POST
+def insiden_update_status(request, pk):
+    """Update status investigasi, assign PJ, flag RCA."""
+    insiden = get_object_or_404(InsidenKeselamatan, pk=pk)
+
+    new_status = request.POST.get('status_investigasi', '')
+    pj_id      = request.POST.get('pj_investigasi', '')
+    rca_flag   = 'rca_dilakukan' in request.POST
+    catatan    = request.POST.get('catatan_investigasi', '')
+
+    valid_statuses = [c[0] for c in InsidenKeselamatan.STATUS_INVESTIGASI_CHOICES]
+    if new_status and new_status in valid_statuses:
+        old_status = insiden.status_investigasi
+        insiden.status_investigasi = new_status
+
+        if pj_id:
+            from django.contrib.auth import get_user_model
+            User = get_user_model()
+            try:
+                insiden.pj_investigasi = User.objects.get(pk=pj_id)
+            except User.DoesNotExist:
+                pass
+
+        insiden.rca_dilakukan = rca_flag
+        insiden.save()
+
+        _log(request.user, 'UPDATE', insiden,
+             f'Status: {old_status}→{new_status}. PJ: {insiden.pj_investigasi}. RCA: {rca_flag}. {catatan}')
+        messages.success(request, f'Status insiden diperbarui: {insiden.get_status_investigasi_display()}')
+    else:
+        messages.error(request, 'Status tidak valid.')
+
+    return redirect('akreditasi:insiden_detail', pk=pk)
+
 
 @login_required
 def insiden_lapor(request):

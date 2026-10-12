@@ -70,7 +70,10 @@ urlpatterns = [
     path('risiko/<int:risiko_id>/evaluasi/', risiko_views.risiko_evaluasi, name='risiko_evaluasi'),
 
     # Modul Insiden Keselamatan (Fase 5)
+    path('insiden/', risiko_views.insiden_daftar, name='insiden_daftar'),
     path('insiden/lapor/', risiko_views.insiden_lapor, name='insiden_lapor'),
+    path('insiden/<int:pk>/', risiko_views.insiden_detail, name='insiden_detail'),
+    path('insiden/<int:pk>/status/', risiko_views.insiden_update_status, name='insiden_update_status'),
 
     # Modul Indikator Mutu — INM + IMP-RS (Renstra 2026–2030)
     path('indikator-mutu/', indikator_views.indikator_dashboard, name='indikator_dashboard'),

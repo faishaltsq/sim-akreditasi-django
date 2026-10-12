@@ -202,11 +202,17 @@
             <span class="nav-desc">Evaluasi Proaktif &amp; Reaktif</span>
         </span>
     </a>
-    <a href="{% url 'akreditasi:insiden_lapor' %}" class="nav-link {% if request.resolver_match.url_name == 'insiden_lapor' %}active{% endif %}">
+    <a href="{% url 'akreditasi:insiden_daftar' %}" class="nav-link {% if 'insiden' in request.resolver_match.url_name %}active{% endif %}">
         <span class="nav-icon"><i class="bi bi-shield-exclamation"></i></span>
         <span class="nav-text">
-            <span class="nav-title">Laporan Insiden</span>
-            <span class="nav-desc">KNC / KTD / Sentinel</span>
+            <span class="nav-title">Register Insiden (IKP)</span>
+            <span class="nav-desc">Monitor & Investigasi Insiden</span>
+        </span>
+    </a>
+    <a href="{% url 'akreditasi:insiden_lapor' %}" class="nav-link nav-link-sub {% if request.resolver_match.url_name == 'insiden_lapor' %}active{% endif %}" style="padding-left:2.2rem;">
+        <span class="nav-icon" style="font-size:.75rem;"><i class="bi bi-plus-circle"></i></span>
+        <span class="nav-text">
+            <span class="nav-title" style="font-size:.78rem;">Lapor Insiden Baru</span>
         </span>
     </a>
 
