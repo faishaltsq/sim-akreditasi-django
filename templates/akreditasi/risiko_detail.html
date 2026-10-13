@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load akreditasi_tags %}
 
 {% block title %}Detail Risiko — {{ risiko.jenis_risiko }}{% endblock %}
 {% block page_title %}Detail Risiko{% endblock %}
@@ -269,8 +270,8 @@
                         </div>
                         {% if risiko.failure_mode_fmea %}
                         <div class="mb-2">
-                            <label class="text-muted d-block mb-1" style="font-size:.72rem;"><i class="bi bi-exclamation-diamond me-1"></i>Mode Kegagalan &amp; Efek Potensial</label>
-                            <div class="p-2 rounded bg-white border" style="font-size:.78rem; white-space:pre-wrap; color:#57534e;">{{ risiko.failure_mode_fmea }}</div>
+                            <label class="text-muted d-block mb-1 fw-semibold" style="font-size:.72rem;"><i class="bi bi-diagram-3-fill text-warning me-1"></i>Mode Kegagalan &amp; Efek Potensial (FMEA)</label>
+                            {{ risiko.failure_mode_fmea|render_fmea_cards }}
                         </div>
                         {% endif %}
                         {% elif risiko.is_rca %}
@@ -286,8 +287,8 @@
                         </div>
                         {% if risiko.akar_masalah_rca %}
                         <div class="mb-2">
-                            <label class="text-muted d-block mb-1" style="font-size:.72rem;"><i class="bi bi-question-circle me-1"></i>Analisis Akar Masalah (5-Whys / Fishbone)</label>
-                            <div class="p-2 rounded bg-white border" style="font-size:.78rem; white-space:pre-wrap; color:#7f1d1d;">{{ risiko.akar_masalah_rca }}</div>
+                            <label class="text-muted d-block mb-1 fw-semibold" style="font-size:.72rem;"><i class="bi bi-question-circle text-danger me-1"></i>Analisis Akar Masalah (5-Whys / Fishbone)</label>
+                            {{ risiko.akar_masalah_rca|render_rca_whys }}
                         </div>
                         {% endif %}
                         {% if risiko.tindakan_korektif_rca %}

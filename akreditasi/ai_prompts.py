@@ -233,7 +233,7 @@ Lakukan analisis FMEA terhadap proses berisiko tinggi ini untuk MENCEGAH insiden
 
 Format Output JSON:
 {{
-  "failure_mode": "1) Mode Kegagalan: <uraian>\n   Efek Potensial: <uraian>\n   Penyebab: <uraian>\n   Barrier Pencegahan: <uraian>\n2) ...",
+  "failure_mode": "1. MODE KEGAGALAN:\n   <uraian spesifik modus kegagalan>\n   a. Efek Potensial:\n      <uraian efek terhadap pasien/unit>\n   b. Akar Masalah / Penyebab:\n      <uraian akar penyebab masalah>\n   c. Barrier / Kontrol Pencegahan:\n      <uraian kontrol pencegahan yang harus diterapkan>\n\n2. MODE KEGAGALAN:\n   <uraian spesifik modus kegagalan>\n   a. Efek Potensial:\n      <uraian efek terhadap pasien/unit>\n   b. Akar Masalah / Penyebab:\n      <uraian akar penyebab masalah>\n   c. Barrier / Kontrol Pencegahan:\n      <uraian kontrol pencegahan yang harus diterapkan>",
   "daftar_failure_mode": [
     {{"mode": "...", "efek": "...", "penyebab": "...", "barrier": "...", "severity": 8, "occurrence": 4, "detection": 3}}
   ],
@@ -265,7 +265,7 @@ Lakukan analisis akar masalah mendalam atas kejadian/risiko ini menggunakan meto
 
 Format Output JSON:
 {{
-  "akar_masalah": "Mengapa 1: ...\nMengapa 2: ...\nMengapa 3: ...\nMengapa 4: ...\nMengapa 5 (Akar Masalah Utama): ...",
+  "akar_masalah": "1. Mengapa 1: ...\n2. Mengapa 2: ...\n3. Mengapa 3: ...\n4. Mengapa 4: ...\n5. Mengapa 5 (Akar Masalah Utama): ...",
   "penyebab_langsung": "Uraian penyebab langsung",
   "akar_masalah_sistemik": "Uraian akar masalah sistemik",
   "fishbone": {{
@@ -276,7 +276,7 @@ Format Output JSON:
     "measurement": "...",
     "environment": "..."
   }},
-  "tindakan_korektif": "1) <tindakan konkret>\n2) <tindakan konkret>\n3) <tindakan konkret>",
+  "tindakan_korektif": "1. <tindakan konkret 1>\n2. <tindakan konkret 2>\n3. <tindakan konkret 3>",
   "tim_investigasi": "Ketua Komite Mutu, Ka. Unit, IPCN, ...",
   "verifikasi_efektivitas": "Cara memantau apakah tindakan perbaikan efektif mencegah berulangnya insiden"
 }}"""

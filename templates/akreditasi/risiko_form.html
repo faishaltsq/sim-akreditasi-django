@@ -338,17 +338,38 @@
                                     <small class="text-muted" style="font-size:.65rem;">Daftar perwakilan unit multidisiplin pengkaji proses</small>
                                 </div>
                                 <div class="mb-3">
-                                    <div class="d-flex justify-content-between align-items-center">
+                                    <div class="d-flex justify-content-between align-items-center mb-1">
                                         <label class="form-label mb-0" style="font-size:.78rem; font-weight:600;">
-                                            Mode Kegagalan &amp; Efek Potensial
+                                            <i class="bi bi-diagram-3-fill text-warning me-1"></i>Mode Kegagalan &amp; Efek Potensial (FMEA)
                                         </label>
-                                        <button type="button" class="btn btn-sm btn-outline-warning px-2 py-0"
-                                                id="btn-ai-fmea" style="font-size:.7rem;">
-                                            <i class="bi bi-stars me-1"></i>AI Bantu Susun FMEA
-                                        </button>
+                                        <div class="btn-group btn-group-sm">
+                                            <button type="button" class="btn btn-outline-secondary px-2 py-0"
+                                                    id="btn-format-fmea" title="Rapihkan susunan nomor urut dan baris" style="font-size:.7rem;">
+                                                <i class="bi bi-text-indent-left me-1"></i>Rapihkan Nomor
+                                            </button>
+                                            <button type="button" class="btn btn-outline-warning px-2 py-0"
+                                                    id="btn-ai-fmea" style="font-size:.7rem;">
+                                                <i class="bi bi-stars me-1"></i>AI Bantu Susun FMEA
+                                            </button>
+                                        </div>
                                     </div>
-                                    <textarea name="failure_mode_fmea" id="input_failure_mode" class="form-control form-control-sm"
-                                              rows="4" placeholder="cth: 1) Mode kegagalan: Dosis salah hitung atau penandaan lokasi operasi luput&#10;   Efek: Komplikasi berat / salah insisi&#10;   Penyebab: Kelelahan pergantian shift, tidak ada double check&#10;   Barrier: Wajib time-out dan verifikasi ganda"></textarea>
+                                    <textarea name="failure_mode_fmea" id="input_failure_mode" class="form-control form-control-sm font-monospace"
+                                              rows="9" spellcheck="false"
+                                              style="font-size:.82rem; line-height:1.65; border:1.5px solid #cbd5e1; border-radius:8px; padding:10px 12px; background-color:#fafafa;"
+                                              placeholder="cth susunan rapi:&#10;1. MODE KEGAGALAN:&#10;   Side rails tidak terkunci dengan baik saat digunakan&#10;   a. Efek Potensial:&#10;      Pasien anak terjatuh, risiko cedera kepala&#10;   b. Akar Masalah / Penyebab:&#10;      Mekanisme kunci aus, checklist belum jalan&#10;   c. Barrier / Kontrol Pencegahan:&#10;      Inspeksi rutin bulanan, checklist bed serah terima"></textarea>
+
+                                    {# ── Interactive Structured Cards Live Preview ── #}
+                                    <div id="fmea-preview-wrapper" class="mt-2 d-none">
+                                        <div class="d-flex justify-content-between align-items-center mb-1">
+                                            <span class="badge bg-white text-dark border font-monospace" style="font-size:.68rem;" id="fmea-detected-badge">
+                                                <i class="bi bi-list-ol me-1 text-primary"></i>0 Mode Terdeteksi
+                                            </span>
+                                            <button type="button" class="btn btn-link btn-sm text-muted p-0 text-decoration-none" id="btn-toggle-fmea-preview" style="font-size:.68rem;">
+                                                Sembunyikan Kartu
+                                            </button>
+                                        </div>
+                                        <div id="fmea-cards-list" class="d-flex flex-column gap-2"></div>
+                                    </div>
                                 </div>
                             </div>
 
@@ -366,24 +387,40 @@
                                            placeholder="cth: Ketua Komite Keselamatan Pasien, Ka. Unit, IPCN, DPJP">
                                 </div>
                                 <div class="mb-3">
-                                    <div class="d-flex justify-content-between align-items-center">
+                                    <div class="d-flex justify-content-between align-items-center mb-1">
                                         <label class="form-label mb-0" style="font-size:.78rem; font-weight:600;">
-                                            Analisis Akar Masalah <span class="text-muted">(5-Whys / Fishbone)</span>
+                                            <i class="bi bi-search text-danger me-1"></i>Analisis Akar Masalah <span class="text-muted">(5-Whys / Fishbone)</span>
                                         </label>
-                                        <button type="button" class="btn btn-sm btn-outline-danger px-2 py-0"
-                                                id="btn-ai-rca" style="font-size:.7rem;">
-                                            <i class="bi bi-stars me-1"></i>AI Bantu 5-Whys
-                                        </button>
+                                        <div class="btn-group btn-group-sm">
+                                            <button type="button" class="btn btn-outline-secondary px-2 py-0"
+                                                    id="btn-format-rca" title="Rapihkan nomor urut 5-Whys" style="font-size:.7rem;">
+                                                <i class="bi bi-text-indent-left me-1"></i>Rapihkan Nomor
+                                            </button>
+                                            <button type="button" class="btn btn-outline-danger px-2 py-0"
+                                                    id="btn-ai-rca" style="font-size:.7rem;">
+                                                <i class="bi bi-stars me-1"></i>AI Bantu 5-Whys
+                                            </button>
+                                        </div>
                                     </div>
-                                    <textarea name="akar_masalah_rca" id="input_akar_masalah" class="form-control form-control-sm"
-                                              rows="4" placeholder="Mengapa 1: ...&#10;Mengapa 2: ...&#10;Mengapa 3: ...&#10;Mengapa 4: ...&#10;Mengapa 5: Akar masalah utama: ..."></textarea>
+                                    <textarea name="akar_masalah_rca" id="input_akar_masalah" class="form-control form-control-sm font-monospace"
+                                              rows="7" spellcheck="false"
+                                              style="font-size:.82rem; line-height:1.65; border:1.5px solid #cbd5e1; border-radius:8px; padding:10px 12px; background-color:#fafafa;"
+                                              placeholder="1. Mengapa 1: ...&#10;2. Mengapa 2: ...&#10;3. Mengapa 3: ...&#10;4. Mengapa 4: ...&#10;5. Mengapa 5 (Akar Masalah Utama): ..."></textarea>
                                 </div>
                                 <div class="mb-3">
-                                    <label class="form-label" style="font-size:.78rem; font-weight:600;">
-                                        Rencana Tindakan Korektif &amp; Solusi Permanen
-                                    </label>
-                                    <textarea name="tindakan_korektif_rca" id="input_tindakan_korektif" class="form-control form-control-sm"
-                                              rows="3" placeholder="cth: 1) Revisi SOP serah terima pasien&#10;2) Pengadaan barcode scanner digital&#10;3) Refresh training keselamatan seluruh staf"></textarea>
+                                    <div class="d-flex justify-content-between align-items-center mb-1">
+                                        <label class="form-label mb-0" style="font-size:.78rem; font-weight:600;">
+                                            <i class="bi bi-check2-square text-success me-1"></i>Rencana Tindakan Korektif &amp; Solusi Permanen
+                                        </label>
+                                        <button type="button" class="btn btn-outline-secondary btn-sm px-2 py-0"
+                                                id="btn-format-tindakan" title="Rapihkan nomor urut tindakan korektif" style="font-size:.7rem;">
+                                            <i class="bi bi-text-indent-left me-1"></i>Rapihkan Nomor
+                                        </button>
+                                    </div>
+                                    <textarea name="tindakan_korektif_rca" id="input_tindakan_korektif" class="form-control form-control-sm font-monospace"
+                                              rows="5" spellcheck="false"
+                                              style="font-size:.82rem; line-height:1.65; border:1.5px solid #cbd5e1; border-radius:8px; padding:10px 12px; background-color:#fafafa;"
+                                              placeholder="1. Tindakan Korektif 1: Revisi SOP serah terima pasien&#10;2. Tindakan Korektif 2: Pengadaan barcode scanner digital&#10;3. Tindakan Korektif 3: Refresh training keselamatan seluruh staf"></textarea>
                                 </div>
                             </div>
 
@@ -1339,6 +1376,236 @@ document.addEventListener('DOMContentLoaded', function() {
     showMetodePanel('STANDAR');
 
     // ── AI Helper: FMEA Failure Mode Suggestion ──────────────────────────
+    // ── Helper: Format & Parse Failure Mode (FMEA) Text ──────────────────
+    function parseFmeaText(text) {
+        if (!text || !text.trim()) return [];
+        const parts = text.split(/(?:^|\n+)(?=(?:\d+[\.\)]\s*(?:Mode Kegagalan:?|MODE KEGAGALAN:?)?|MODE KEGAGALAN\s*\d*:?))/i)
+                          .map(s => s.trim())
+                          .filter(Boolean);
+
+        return parts.map((part, idx) => {
+            const reEfek = /(?:\n\s*|\s{2,})(?:a\.\s*)?Efek(?:\s+Potensial)?\s*:/i;
+            const rePenyebab = /(?:\n\s*|\s{2,})(?:b\.\s*)?(?:Akar\s+Masalah(?:\s*[\/\-]\s*Penyebab)?|Penyebab(?:\s*[\/\-]\s*Akar\s+Masalah)?|Penyebab(?:\s+Potensial)?)\s*:/i;
+            const reBarrier = /(?:\n\s*|\s{2,})(?:c\.\s*)?(?:Barrier(?:\s*[\/\-]\s*Kontrol)?(?:\s+Pencegahan)?|Kontrol(?:\s+Pencegahan)?)\s*:/i;
+
+            const mEfek = part.search(reEfek);
+            const mPenyebab = part.search(rePenyebab);
+            const mBarrier = part.search(reBarrier);
+
+            let mode = '', efek = '', penyebab = '', barrier = '';
+
+            const cutpoints = [];
+            if (mEfek !== -1) cutpoints.push({ type: 'efek', index: mEfek });
+            if (mPenyebab !== -1) cutpoints.push({ type: 'penyebab', index: mPenyebab });
+            if (mBarrier !== -1) cutpoints.push({ type: 'barrier', index: mBarrier });
+            cutpoints.sort((a, b) => a.index - b.index);
+
+            if (cutpoints.length > 0) {
+                mode = part.substring(0, cutpoints[0].index).trim();
+                for (let i = 0; i < cutpoints.length; i++) {
+                    const cur = cutpoints[i];
+                    const nextIdx = (i + 1 < cutpoints.length) ? cutpoints[i + 1].index : part.length;
+                    const segment = part.substring(cur.index, nextIdx).trim();
+                    const colonPos = segment.indexOf(':');
+                    const content = colonPos !== -1 ? segment.substring(colonPos + 1).trim() : segment;
+                    if (cur.type === 'efek') efek = content;
+                    else if (cur.type === 'penyebab') penyebab = content;
+                    else if (cur.type === 'barrier') barrier = content;
+                }
+            } else {
+                mode = part.trim();
+            }
+
+            mode = mode.replace(/^\d+[\.\)]\s*/, '')
+                       .replace(/^(?:Mode Kegagalan|MODE KEGAGALAN)\s*:\s*/i, '')
+                       .trim();
+
+            return { index: idx + 1, mode, efek, penyebab, barrier };
+        });
+    }
+
+    function formatFmeaText(text) {
+        const items = parseFmeaText(text);
+        if (!items || !items.length) return text;
+        return items.map(item => {
+            let out = `${item.index}. MODE KEGAGALAN:\n   ${item.mode}`;
+            if (item.efek) out += `\n   a. Efek Potensial:\n      ${item.efek}`;
+            if (item.penyebab) out += `\n   b. Akar Masalah / Penyebab:\n      ${item.penyebab}`;
+            if (item.barrier) out += `\n   c. Barrier / Kontrol Pencegahan:\n      ${item.barrier}`;
+            return out;
+        }).join('\n\n');
+    }
+
+    function escapeHtml(s) {
+        if (!s) return '';
+        return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
+    function updateFmeaCardsPreview() {
+        const fmEl = document.getElementById('input_failure_mode');
+        const wrapper = document.getElementById('fmea-preview-wrapper');
+        const badge = document.getElementById('fmea-detected-badge');
+        const list = document.getElementById('fmea-cards-list');
+        if (!fmEl || !wrapper || !list) return;
+
+        const val = fmEl.value.trim();
+        if (!val) {
+            wrapper.classList.add('d-none');
+            list.innerHTML = '';
+            return;
+        }
+
+        const items = parseFmeaText(val);
+        if (!items || !items.length) {
+            wrapper.classList.add('d-none');
+            return;
+        }
+
+        wrapper.classList.remove('d-none');
+        if (badge) badge.innerHTML = `<i class="bi bi-list-ol me-1 text-primary"></i>${items.length} Mode Terdeteksi (FMEA)`;
+
+        list.innerHTML = items.map(it => `
+            <div class="card border mb-1" style="border-radius:7px; border-color:#e2e8f0; overflow:hidden;">
+                <div class="card-header py-1 px-2.5 d-flex align-items-center gap-2 border-bottom" style="background:#f8fafc;">
+                    <span class="badge bg-primary px-2 py-0.5 font-monospace" style="font-size:.68rem;">Mode #${it.index}</span>
+                    <span class="fw-bold text-dark" style="font-size:.78rem;">${escapeHtml(it.mode || '—')}</span>
+                </div>
+                <div class="card-body p-2 bg-white d-flex flex-column gap-1">
+                    ${it.efek ? `
+                    <div class="p-1.5 px-2 rounded" style="background:#fef2f2; border-left:3px solid #ef4444; font-size:.74rem;">
+                        <span class="fw-bold text-danger me-1"><i class="bi bi-exclamation-triangle-fill me-1"></i>a. Efek Potensial:</span>
+                        <span class="text-dark">${escapeHtml(it.efek)}</span>
+                    </div>` : ''}
+                    ${it.penyebab ? `
+                    <div class="p-1.5 px-2 rounded" style="background:#fffbeb; border-left:3px solid #f59e0b; font-size:.74rem;">
+                        <span class="fw-bold text-warning-emphasis me-1"><i class="bi bi-diagram-2 me-1"></i>b. Akar Masalah / Penyebab:</span>
+                        <span class="text-dark">${escapeHtml(it.penyebab)}</span>
+                    </div>` : ''}
+                    ${it.barrier ? `
+                    <div class="p-1.5 px-2 rounded" style="background:#f0fdf4; border-left:3px solid #22c55e; font-size:.74rem;">
+                        <span class="fw-bold text-success me-1"><i class="bi bi-shield-check me-1"></i>c. Barrier / Kontrol Pencegahan:</span>
+                        <span class="text-dark">${escapeHtml(it.barrier)}</span>
+                    </div>` : ''}
+                </div>
+            </div>
+        `).join('');
+    }
+
+    // Toggle Preview Cards
+    const btnTogglePreview = document.getElementById('btn-toggle-fmea-preview');
+    if (btnTogglePreview) {
+        btnTogglePreview.addEventListener('click', function() {
+            const list = document.getElementById('fmea-cards-list');
+            if (list) {
+                if (list.classList.contains('d-none')) {
+                    list.classList.remove('d-none');
+                    this.textContent = 'Sembunyikan Kartu';
+                } else {
+                    list.classList.add('d-none');
+                    this.textContent = 'Tampilkan Kartu';
+                }
+            }
+        });
+    }
+
+    // Input listener on input_failure_mode
+    const inputFm = document.getElementById('input_failure_mode');
+    if (inputFm) {
+        let timer = null;
+        inputFm.addEventListener('input', function() {
+            clearTimeout(timer);
+            timer = setTimeout(updateFmeaCardsPreview, 300);
+        });
+    }
+
+    // Button Rapihkan Nomor FMEA
+    const btnFormatFmea = document.getElementById('btn-format-fmea');
+    if (btnFormatFmea) {
+        btnFormatFmea.addEventListener('click', function() {
+            const fm = document.getElementById('input_failure_mode');
+            if (!fm || !fm.value.trim()) {
+                alert('Teks Failure Mode masih kosong.');
+                return;
+            }
+            const formatted = formatFmeaText(fm.value);
+            fm.value = formatted;
+            updateFmeaCardsPreview();
+
+            const orig = this.innerHTML;
+            this.innerHTML = '<i class="bi bi-check-lg text-success me-1"></i>Rapi!';
+            setTimeout(() => { this.innerHTML = orig; }, 1500);
+        });
+    }
+
+    // ── Helper: Format RCA 5-Whys ─────────────────────────────────────────
+    function formatRcaText(text) {
+        if (!text || !text.trim()) return '';
+        const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
+        const out = [];
+        let num = 1;
+        for (const line of lines) {
+            let clean = line.replace(/^\d+[\.\)]\s*/, '')
+                            .replace(/^Mengapa\s*\d*\s*[\:\-]?\s*/i, '')
+                            .replace(/^\(Akar Masalah Utama\)\s*[\:\-]?\s*/i, '')
+                            .trim();
+            if (!clean) continue;
+            if (num === 5) {
+                out.push(`5. Mengapa 5 (Akar Masalah Utama): ${clean}`);
+            } else {
+                out.push(`${num}. Mengapa ${num}: ${clean}`);
+            }
+            num++;
+        }
+        return out.join('\n');
+    }
+
+    const btnFormatRca = document.getElementById('btn-format-rca');
+    if (btnFormatRca) {
+        btnFormatRca.addEventListener('click', function() {
+            const am = document.getElementById('input_akar_masalah');
+            if (!am || !am.value.trim()) {
+                alert('Teks Analisis Akar Masalah masih kosong.');
+                return;
+            }
+            am.value = formatRcaText(am.value);
+            const orig = this.innerHTML;
+            this.innerHTML = '<i class="bi bi-check-lg text-success me-1"></i>Rapi!';
+            setTimeout(() => { this.innerHTML = orig; }, 1500);
+        });
+    }
+
+    // Helper: Format Tindakan Korektif
+    function formatTindakanText(text) {
+        if (!text || !text.trim()) return '';
+        const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
+        const out = [];
+        let num = 1;
+        for (const line of lines) {
+            let clean = line.replace(/^\d+[\.\)]\s*/, '')
+                            .replace(/^Tindakan(?:\s+Korektif)?\s*\d*\s*[\:\-]?\s*/i, '')
+                            .trim();
+            if (!clean) continue;
+            out.push(`${num}. Tindakan Korektif ${num}: ${clean}`);
+            num++;
+        }
+        return out.join('\n');
+    }
+
+    const btnFormatTindakan = document.getElementById('btn-format-tindakan');
+    if (btnFormatTindakan) {
+        btnFormatTindakan.addEventListener('click', function() {
+            const tk = document.getElementById('input_tindakan_korektif');
+            if (!tk || !tk.value.trim()) {
+                alert('Teks Tindakan Korektif masih kosong.');
+                return;
+            }
+            tk.value = formatTindakanText(tk.value);
+            const orig = this.innerHTML;
+            this.innerHTML = '<i class="bi bi-check-lg text-success me-1"></i>Rapi!';
+            setTimeout(() => { this.innerHTML = orig; }, 1500);
+        });
+    }
+
     const btnAiFmea = document.getElementById('btn-ai-fmea');
     if (btnAiFmea) {
         btnAiFmea.addEventListener('click', async function() {
@@ -1370,7 +1637,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 const j = await r.json();
                 if (j.success && j.data) {
                     const fm = document.getElementById('input_failure_mode');
-                    if (fm) fm.value = j.data.failure_mode || j.data.text || JSON.stringify(j.data, null, 2);
+                    if (fm) {
+                        const rawFm = j.data.failure_mode || j.data.text || JSON.stringify(j.data, null, 2);
+                        fm.value = formatFmeaText(rawFm);
+                        updateFmeaCardsPreview();
+                    }
                     const rpn = document.getElementById('input_rpn_fmea');
                     if (rpn && j.data.rpn) rpn.value = j.data.rpn;
                     const tim = document.getElementById('input_tim_fmea');
@@ -1418,9 +1689,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 const j = await r.json();
                 if (j.success && j.data) {
                     const am = document.getElementById('input_akar_masalah');
-                    if (am) am.value = j.data.akar_masalah || j.data.text || '';
+                    if (am) am.value = formatRcaText(j.data.akar_masalah || j.data.text || '');
                     const tk = document.getElementById('input_tindakan_korektif');
-                    if (tk && j.data.tindakan_korektif) tk.value = j.data.tindakan_korektif;
+                    if (tk && j.data.tindakan_korektif) tk.value = formatTindakanText(j.data.tindakan_korektif);
                     const tim = document.getElementById('input_tim_rca');
                     if (tim && j.data.tim_investigasi) tim.value = j.data.tim_investigasi;
                 } else {
@@ -1521,7 +1792,10 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         if (editData.failure_mode_fmea) {
             const el = document.querySelector('[name="failure_mode_fmea"]');
-            if (el) el.value = editData.failure_mode_fmea;
+            if (el) {
+                el.value = editData.failure_mode_fmea;
+                updateFmeaCardsPreview();
+            }
         }
         if (editData.akar_masalah_rca) {
             const el = document.querySelector('[name="akar_masalah_rca"]');

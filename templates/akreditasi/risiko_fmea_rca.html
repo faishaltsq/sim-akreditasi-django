@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load akreditasi_tags %}
 
 {% block title %}Metode FMEA &amp; RCA — ARIMA{% endblock %}
 {% block page_title %}Metode FMEA &amp; RCA{% endblock %}
@@ -230,11 +231,11 @@
                             {% endif %}
 
                             {% if r.failure_mode_fmea %}
-                            <div class="p-2 rounded mb-2" style="background:#fffbeb; border-left:3px solid #f59e0b; font-size:.75rem;">
-                                <strong class="d-block mb-1" style="color:#78350f; font-size:.7rem;">
-                                    <i class="bi bi-exclamation-diamond me-1"></i>MODE KEGAGALAN &amp; EFEK POTENSIAL:
+                            <div class="mb-2">
+                                <strong class="d-block mb-1 text-warning-emphasis" style="font-size:.7rem;">
+                                    <i class="bi bi-diagram-3-fill me-1"></i>MODE KEGAGALAN &amp; EFEK POTENSIAL (FMEA):
                                 </strong>
-                                <div style="white-space:pre-wrap; color:#57534e;">{{ r.failure_mode_fmea }}</div>
+                                {{ r.failure_mode_fmea|render_fmea_cards }}
                             </div>
                             {% else %}
                             <div class="text-muted fst-italic" style="font-size:.72rem;">
@@ -330,11 +331,11 @@
                             <div class="row g-2">
                                 {% if r.akar_masalah_rca %}
                                 <div class="col-md-6">
-                                    <div class="p-2 rounded h-100" style="background:#fef2f2; border-left:3px solid #dc2626; font-size:.74rem;">
-                                        <strong class="d-block mb-1" style="color:#7f1d1d; font-size:.7rem;">
+                                    <div class="mb-2">
+                                        <strong class="d-block mb-1 text-danger-emphasis" style="font-size:.7rem;">
                                             <i class="bi bi-question-circle me-1"></i>ANALISIS AKAR MASALAH (5-WHYS):
                                         </strong>
-                                        <div style="white-space:pre-wrap; color:#7f1d1d;">{{ r.akar_masalah_rca }}</div>
+                                        {{ r.akar_masalah_rca|render_rca_whys }}
                                     </div>
                                 </div>
                                 {% endif %}

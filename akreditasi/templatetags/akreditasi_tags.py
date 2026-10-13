@@ -58,3 +58,115 @@ def pct(value, total):
         return round((float(value) / float(total)) * 100)
     except (ZeroDivisionError, ValueError, TypeError):
         return 0
+
+
+@register.filter(is_safe=True)
+def render_fmea_cards(text):
+    """Render Failure Mode FMEA menjadi kartu visual bernomor urut jelas."""
+    import re
+    from django.utils.html import escape
+    from django.utils.safestring import mark_safe
+
+    if not text or not str(text).strip():
+        return ""
+    text = str(text).strip()
+    parts = re.split(r"(?:^|\n+)(?=(?:\d+[\.\)]\s*(?:Mode Kegagalan:?|MODE KEGAGALAN:?)?|MODE KEGAGALAN\s*\d*:?))", text, flags=re.IGNORECASE)
+    parts = [p.strip() for p in parts if p.strip()]
+    if not parts:
+        return mark_safe(f'<div class="p-2 bg-white rounded border font-monospace" style="font-size:.78rem; white-space:pre-wrap;">{escape(text)}</div>')
+
+    items = []
+    for idx, part in enumerate(parts, 1):
+        reEfek = r"(?:\n\s*|\s{2,})(?:a\.\s*)?Efek(?:\s+Potensial)?\s*:"
+        rePenyebab = r"(?:\n\s*|\s{2,})(?:b\.\s*)?(?:Akar\s+Masalah(?:\s*[\/\-]\s*Penyebab)?|Penyebab(?:\s*[\/\-]\s*Akar\s+Masalah)?|Penyebab(?:\s+Potensial)?)\s*:"
+        reBarrier = r"(?:\n\s*|\s{2,})(?:c\.\s*)?(?:Barrier(?:\s*[\/\-]\s*Kontrol)?(?:\s+Pencegahan)?|Kontrol(?:\s+Pencegahan)?)\s*:"
+
+        mEfek = re.search(reEfek, part, re.IGNORECASE)
+        mPenyebab = re.search(rePenyebab, part, re.IGNORECASE)
+        mBarrier = re.search(reBarrier, part, re.IGNORECASE)
+
+        cuts = []
+        if mEfek: cuts.append(("efek", mEfek.start()))
+        if mPenyebab: cuts.append(("penyebab", mPenyebab.start()))
+        if mBarrier: cuts.append(("barrier", mBarrier.start()))
+        cuts.sort(key=lambda x: x[1])
+
+        mode, efek, penyebab, barrier = "", "", "", ""
+        if cuts:
+            mode = part[:cuts[0][1]].strip()
+            for i, (ctype, start_idx) in enumerate(cuts):
+                end_idx = cuts[i+1][1] if i + 1 < len(cuts) else len(part)
+                seg = part[start_idx:end_idx].strip()
+                colon_pos = seg.find(":")
+                content = seg[colon_pos+1:].strip() if colon_pos != -1 else seg
+                if ctype == "efek": efek = content
+                elif ctype == "penyebab": penyebab = content
+                elif ctype == "barrier": barrier = content
+        else:
+            mode = part
+
+        mode = re.sub(r"^\d+[\.\)]\s*", "", mode)
+        mode = re.sub(r"^(?:Mode Kegagalan|MODE KEGAGALAN)\s*:\s*", "", mode, flags=re.IGNORECASE).strip()
+        items.append((idx, mode, efek, penyebab, barrier))
+
+    html = []
+    for idx, mode, efek, penyebab, barrier in items:
+        card = [
+            f'<div class="card border mb-2" style="border-radius:8px; border-color:#e2e8f0; overflow:hidden;">',
+            f'  <div class="card-header py-1 px-3 d-flex align-items-center gap-2 border-bottom" style="background:#f8fafc;">',
+            f'    <span class="badge bg-primary px-2 py-0.5 font-monospace" style="font-size:.72rem;">Mode #{idx}</span>',
+            f'    <span class="fw-bold text-dark" style="font-size:.82rem;">{escape(mode)}</span>',
+            f'  </div>',
+            f'  <div class="card-body p-2 bg-white d-flex flex-column gap-1">'
+        ]
+        if efek:
+            card.append(f'    <div class="p-2 rounded" style="background:#fef2f2; border-left:3.5px solid #ef4444; font-size:.78rem;">'
+                        f'      <div class="fw-bold text-danger mb-0.5"><i class="bi bi-exclamation-triangle-fill me-1"></i>a. Efek Potensial:</div>'
+                        f'      <div class="text-dark" style="white-space:pre-wrap;">{escape(efek)}</div>'
+                        f'    </div>')
+        if penyebab:
+            card.append(f'    <div class="p-2 rounded" style="background:#fffbeb; border-left:3.5px solid #f59e0b; font-size:.78rem;">'
+                        f'      <div class="fw-bold text-warning-emphasis mb-0.5"><i class="bi bi-diagram-2 me-1"></i>b. Akar Masalah / Penyebab:</div>'
+                        f'      <div class="text-dark" style="white-space:pre-wrap;">{escape(penyebab)}</div>'
+                        f'    </div>')
+        if barrier:
+            card.append(f'    <div class="p-2 rounded" style="background:#f0fdf4; border-left:3.5px solid #22c55e; font-size:.78rem;">'
+                        f'      <div class="fw-bold text-success mb-0.5"><i class="bi bi-shield-check me-1"></i>c. Barrier / Kontrol Pencegahan:</div>'
+                        f'      <div class="text-dark" style="white-space:pre-wrap;">{escape(barrier)}</div>'
+                        f'    </div>')
+        card.append('  </div>')
+        card.append('</div>')
+        html.append("".join(card))
+    return mark_safe("".join(html))
+
+
+@register.filter(is_safe=True)
+def render_rca_whys(text):
+    """Render 5-Whys RCA menjadi daftar terstruktur bernomor urut jelas."""
+    import re
+    from django.utils.html import escape
+    from django.utils.safestring import mark_safe
+
+    if not text or not str(text).strip():
+        return ""
+    lines = [l.strip() for l in str(text).split("\n") if l.strip()]
+    if not lines:
+        return ""
+
+    html = ['<div class="d-flex flex-column gap-1">']
+    for idx, line in enumerate(lines, 1):
+        clean = re.sub(r"^\d+[\.\)]\s*", "", line)
+        clean = re.sub(r"^Mengapa\s*\d*\s*[\:\-]?\s*", "", clean, flags=re.IGNORECASE)
+        clean = re.sub(r"^\(Akar Masalah Utama\)\s*[\:\-]?\s*", "", clean, flags=re.IGNORECASE).strip()
+        is_root = (idx == len(lines)) or ('akar masalah utama' in line.lower())
+        bg_col = "#fef2f2" if is_root else "#f8fafc"
+        border_col = "#ef4444" if is_root else "#cbd5e1"
+        badge_cls = "bg-danger" if is_root else "bg-secondary"
+        lbl = f"Akar Masalah #{idx}" if is_root else f"Mengapa #{idx}"
+
+        html.append(f'<div class="p-1.5 px-2 rounded d-flex align-items-start gap-2" style="background:{bg_col}; border-left:3px solid {border_col}; font-size:.78rem;">'
+                    f'  <span class="badge {badge_cls} font-monospace" style="font-size:.68rem;">{lbl}</span>'
+                    f'  <div class="text-dark" style="white-space:pre-wrap;">{escape(clean or line)}</div>'
+                    f'</div>')
+    html.append('</div>')
+    return mark_safe("".join(html))

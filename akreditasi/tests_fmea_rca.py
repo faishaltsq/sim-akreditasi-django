@@ -61,10 +61,14 @@ class FmeaRcaModelTest(TestCase):
         self.assertIsNone(r.rpn_calc)
 
     def test_rpn_calc_auto_for_fmea(self):
-        """RPN otomatis = dampak × probabilitas × 5 bila tidak diisi manual."""
-        r = self._mk(metode_evaluasi='FMEA', dampak=5, probabilitas=4)
+        """RPN otomatis = dampak × probabilitas × (deteksi atau 1) bila tidak diisi manual."""
+        r = self._mk(metode_evaluasi='FMEA', dampak=5, probabilitas=4, deteksi_fmea=5)
         self.assertEqual(r.rpn_calc, 5 * 4 * 5)
         self.assertTrue(r.is_fmea)
+
+        # Default deteksi_fmea=None fallback ke 1
+        r_default = self._mk(metode_evaluasi='FMEA', dampak=5, probabilitas=4)
+        self.assertEqual(r_default.rpn_calc, 5 * 4 * 1)
 
     def test_rpn_calc_uses_manual_value(self):
         """RPN manual (rpn_fmea) menang atas kalkulasi otomatis."""
@@ -227,13 +231,13 @@ class FmeaRcaViewTest(TestCase):
         resp = self.client.get(reverse('akreditasi:risiko_detail', kwargs={'risiko_id': self.fmea.pk}))
         self.assertEqual(resp.status_code, 200)
         html = resp.content.decode()
-        self.assertIn('E. Evaluasi Mendalam — FMEA', html)
+        self.assertIn('FMEA Proaktif', html)
         self.assertIn('Mode kegagalan uji', html)
 
     def test_detail_shows_rca_card(self):
         resp = self.client.get(reverse('akreditasi:risiko_detail', kwargs={'risiko_id': self.rca.pk}))
         html = resp.content.decode()
-        self.assertIn('E. Evaluasi Mendalam — RCA', html)
+        self.assertIn('RCA Reaktif', html)
         self.assertIn('Akar masalah uji', html)
         self.assertIn('Korektif uji', html)
 
@@ -245,11 +249,13 @@ class FmeaRcaViewTest(TestCase):
             strategi_mitigasi='TERIMA', rencana_aksi='ra', pj_mitigasi='pj',
         )
         html = self.client.get(reverse('akreditasi:risiko_detail', kwargs={'risiko_id': r.pk})).content.decode()
-        self.assertNotIn('E. Evaluasi Mendalam', html)
+        self.assertIn('Standar PDCA', html)
+        self.assertNotIn('FMEA Proaktif', html)
+        self.assertNotIn('RCA Reaktif', html)
 
     def test_form_has_section_e_markup(self):
         html = self.client.get(reverse('akreditasi:risiko_input')).content.decode()
-        for s in ['E. Hiliran Metode Evaluasi Mendalam', 'panel-metode-fmea',
+        for s in ['Pilihan Metode Evaluasi / Hiliran', 'panel-metode-fmea',
                   'panel-metode-rca', 'btn-ai-fmea', 'btn-ai-rca',
                   'input_metode_evaluasi']:
             self.assertIn(s, html)
@@ -303,7 +309,7 @@ class FmeaRcaAiEndpointTest(TestCase):
         anon = Client()
         for name in ['akreditasi:ai_fmea_saran', 'akreditasi:ai_rca_saran']:
             resp = anon.post(reverse(name), data='{}', content_type='application/json')
-            self.assertIn(resp.status_code, (302, 403), f'{name} tidak dilindungi login')
+            self.assertIn(resp.status_code, (302, 401, 403), f'{name} tidak dilindungi login')
 
 
 class FmeaRcaSeedTest(TestCase):

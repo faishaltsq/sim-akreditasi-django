@@ -338,6 +338,69 @@ def generate_risk_analysis_from_problem(user, unit_name: str, masalah: str, data
 
 # ── SECTION E: FMEA (Proaktif) ───────────────────────────────────────────
 
+def normalize_fmea_text(text: str, daftar_modes: list = None) -> str:
+    """Susun format nomor urut FMEA hierarkis, rapi, dan mudah dibaca."""
+    if isinstance(daftar_modes, list) and len(daftar_modes) > 0:
+        blocks = []
+        for idx, item in enumerate(daftar_modes, 1):
+            if not isinstance(item, dict):
+                continue
+            m = (item.get('mode') or '').strip()
+            e = (item.get('efek') or '').strip()
+            p = (item.get('penyebab') or '').strip()
+            b = (item.get('barrier') or '').strip()
+            if not m:
+                continue
+            lines = [f"{idx}. MODE KEGAGALAN:\n   {m}"]
+            if e:
+                lines.append(f"   a. Efek Potensial:\n      {e}")
+            if p:
+                lines.append(f"   b. Akar Masalah / Penyebab:\n      {p}")
+            if b:
+                lines.append(f"   c. Barrier / Kontrol Pencegahan:\n      {b}")
+            blocks.append("\n".join(lines))
+        if blocks:
+            return "\n\n".join(blocks)
+
+    if not text or not isinstance(text, str):
+        return ""
+
+    parts = re.split(r"(?:^|\n+)(?:\d+[\.\)]\s*(?:Mode Kegagalan:?)?)", text.strip(), flags=re.IGNORECASE)
+    parts = [p.strip() for p in parts if p.strip()]
+    if not parts:
+        return text.strip()
+
+    formatted_items = []
+    for idx, part in enumerate(parts, 1):
+        m_efek = re.search(r"Efek(?: Potensial)?\s*:\s*([\s\S]*?)(?=(?:Penyebab|Akar Masalah|Barrier|Kontrol|$))", part, re.IGNORECASE)
+        m_penyebab = re.search(r"(?:Penyebab(?: Potensial)?|Akar Masalah)\s*:\s*([\s\S]*?)(?=(?:Barrier|Kontrol|$))", part, re.IGNORECASE)
+        m_barrier = re.search(r"(?:Barrier(?: Pencegahan)?|Kontrol(?: Pencegahan)?)\s*:\s*([\s\S]*)$", part, re.IGNORECASE)
+
+        mode_text = part
+        if m_efek:
+            mode_text = mode_text[:m_efek.start()]
+        elif m_penyebab:
+            mode_text = mode_text[:m_penyebab.start()]
+        elif m_barrier:
+            mode_text = mode_text[:m_barrier.start()]
+        mode_text = re.sub(r"^[\s\:\-]+", "", mode_text).strip()
+
+        efek_text = m_efek.group(1).strip() if m_efek else ""
+        penyebab_text = m_penyebab.group(1).strip() if m_penyebab else ""
+        barrier_text = m_barrier.group(1).strip() if m_barrier else ""
+
+        lines = [f"{idx}. MODE KEGAGALAN:\n   {mode_text}"]
+        if efek_text:
+            lines.append(f"   a. Efek Potensial:\n      {efek_text}")
+        if penyebab_text:
+            lines.append(f"   b. Akar Masalah / Penyebab:\n      {penyebab_text}")
+        if barrier_text:
+            lines.append(f"   c. Barrier / Kontrol Pencegahan:\n      {barrier_text}")
+        formatted_items.append("\n".join(lines))
+
+    return "\n\n".join(formatted_items) if formatted_items else text.strip()
+
+
 def generate_fmea_suggestion(user, unit_name: str, kategori_risiko: str, jenis_risiko: str,
                              masalah: str, data_pendukung: str,
                              dampak: int, probabilitas: int) -> dict:
@@ -352,6 +415,9 @@ def generate_fmea_suggestion(user, unit_name: str, kategori_risiko: str, jenis_r
         probabilitas=probabilitas,
     )
     result = _call_deepseek(prompt, max_tokens=2500)
+    if result.get('success') and isinstance(result.get('data'), dict):
+        d = result['data']
+        d['failure_mode'] = normalize_fmea_text(d.get('failure_mode') or '', d.get('daftar_failure_mode'))
     _log_ai_call(user, 'FMEA_SUGGESTION', f'{unit_name} | {jenis_risiko[:50]}', result['success'])
     return result
 
@@ -371,6 +437,11 @@ def generate_rca_suggestion(user, unit_name: str, jenis_risiko: str,
         probabilitas=probabilitas,
     )
     result = _call_deepseek(prompt, max_tokens=2500)
+    if result.get('success') and isinstance(result.get('data'), dict):
+        d = result['data']
+        if d.get('akar_masalah') and isinstance(d['akar_masalah'], str):
+            lines = [l.strip() for l in d['akar_masalah'].split('\n') if l.strip()]
+            d['akar_masalah'] = '\n'.join(lines)
     _log_ai_call(user, 'RCA_SUGGESTION', f'{unit_name} | {jenis_risiko[:50]}', result['success'])
     return result
 
