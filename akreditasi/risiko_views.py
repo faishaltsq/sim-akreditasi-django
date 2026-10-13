@@ -1762,7 +1762,11 @@ def risiko_laporan_lengkap_unit(request, unit_id=None):
         default_unit = user_unit
     else:
         units = UnitKerja.objects.all().order_by('name')
-        default_unit = units.first()
+        from django.db.models import Count as _Count
+        default_unit = (
+            UnitKerja.objects.annotate(_n=_Count('risikounit')).order_by('-_n').first()
+            or units.first()
+        )
 
     target_unit_id = unit_id or request.GET.get('unit')
     if target_unit_id:
@@ -1794,6 +1798,12 @@ def risiko_laporan_lengkap_unit(request, unit_id=None):
         risiko_qs = risiko_qs.filter(tahun=tahun)
 
     risiko_list = list(risiko_qs)
+    if not risiko_list:
+        risiko_list = list(
+            RisikoUnit.objects.filter(unit=selected_unit).select_related(
+                'unit', 'indikator_mutu_terkait', 'created_by'
+            ).prefetch_related('tindak_lanjut').order_by('-dampak', '-probabilitas', 'id')
+        )
 
     total_risiko = len(risiko_list)
     rtl_selesai = sum(1 for r in risiko_list if r.status_rtl == 'SELESAI')
