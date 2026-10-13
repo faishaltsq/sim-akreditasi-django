@@ -157,4 +157,23 @@ class PerencanaanRisikoTest(TestCase):
         content = resp.content.decode('utf-8')
         self.assertIn('PELAKSANAAN RESIKO RS MONSISKAMI ARIMA', content)
 
+    def test_risiko_edit_view_get(self):
+        """Test edit view loads properly with pre-filled risk data."""
+        url = reverse('akreditasi:risiko_edit', kwargs={'risiko_id': self.risiko.pk})
+        resp = self.client.get(url)
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, f'Edit Risiko #{self.risiko.pk}')
+
+    def test_risiko_hapus_view(self):
+        """Test risk delete view confirmation and post-delete."""
+        url = reverse('akreditasi:risiko_hapus', kwargs={'risiko_id': self.risiko.pk})
+        resp_get = self.client.get(url)
+        self.assertEqual(resp_get.status_code, 200)
+        self.assertContains(resp_get, 'Konfirmasi Hapus Risiko')
+
+        resp_post = self.client.post(url)
+        self.assertEqual(resp_post.status_code, 302)
+        self.assertFalse(RisikoUnit.objects.filter(pk=self.risiko.pk).exists())
+
+
 
