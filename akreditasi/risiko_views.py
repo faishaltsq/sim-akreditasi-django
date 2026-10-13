@@ -1812,6 +1812,118 @@ def risiko_laporan_lengkap_unit(request, unit_id=None):
     rtl_proses = sum(1 for r in risiko_list if r.status_rtl == 'PROSES')
     terevaluasi = sum(1 for r in risiko_list if r.capaian_nilai is not None or r.evaluasi_capaian)
 
+    # Siapkan 5 dataset tabel untuk tampilan siklus PDCA ke bawah (1, 2, 3, 4)
+    # Sesuai spesifikasi resmi Word: contoh laporan manajemen resiko 1310.docx
+    table_penilaian_awal = []
+    table_indikator = []
+    table_rencana_aksi = []
+    table_pelaksanaan = []
+    table_monev = []
+
+    dampak_map = {1: 'Sangat Rendah', 2: 'Rendah', 3: 'Sedang', 4: 'Tinggi', 5: 'Katastropik'}
+    prob_map = {1: 'Sangat Jarang', 2: 'Jarang', 3: 'Kadang', 4: 'Sering', 5: 'Sangat Sering'}
+
+    for idx, r in enumerate(risiko_list, start=1):
+        ind = r.indikator_mutu_terkait
+        nama_ind = ind.nama_indikator if ind else '—'
+        kode_ind = f"[{ind.kode_indikator}] " if ind and ind.kode_indikator else ""
+
+        if r.target_capaian_indikator is not None:
+            target_str = f"{r.target_capaian_indikator:.1f}%"
+        elif ind and ind.target_nilai is not None:
+            target_str = f"{ind.target_nilai:.1f}%"
+        else:
+            target_str = "—"
+
+        jenis_str = ind.get_jenis_display() if ind else 'IMP Unit'
+        waktu_str = r.target_selesai.strftime('%d/%m/%Y') if r.target_selesai else (f"{r.get_periode_display()} {r.tahun}" if r.periode else "—")
+        biaya_str = f"Rp {r.biaya_mitigasi:,.0f}" if r.biaya_mitigasi else "Rp 0"
+        tindak_items = list(r.tindak_lanjut.all().order_by('urutan'))
+
+        # 1. Tabel Penilaian Risiko Awal
+        table_penilaian_awal.append({
+            'no': idx,
+            'risiko': r,
+            'risiko_id': r.id,
+            'masalah': r.masalah or r.jenis_risiko,
+            'kategori': r.get_kategori_risiko_display() if hasattr(r, 'get_kategori_risiko_display') else '',
+            'dampak': r.dampak,
+            'dampak_display': dampak_map.get(r.dampak, str(r.dampak)),
+            'probabilitas': r.probabilitas,
+            'probabilitas_display': prob_map.get(r.probabilitas, str(r.probabilitas)),
+            'skor': r.skor_inherent,
+            'risk_level': r.risk_level,
+        })
+
+        # 2. Tabel Indikator Mutu
+        table_indikator.append({
+            'no': idx,
+            'risiko': r,
+            'risiko_id': r.id,
+            'masalah': r.masalah or r.jenis_risiko,
+            'indikator_mutu': f"{kode_ind}{nama_ind}" if nama_ind != '—' else 'Belum ditentukan',
+            'target': target_str,
+            'jenis': jenis_str,
+        })
+
+        # 3. Tabel Rencana Aksi (Mitigasi)
+        table_rencana_aksi.append({
+            'no': idx,
+            'risiko': r,
+            'risiko_id': r.id,
+            'masalah': r.masalah or r.jenis_risiko,
+            'indikator_mutu': nama_ind,
+            'rencana_aksi': r.rencana_aksi,
+            'tindak_lanjut_items': tindak_items,
+            'waktu': waktu_str,
+            'biaya': biaya_str,
+            'pj': r.pj_mitigasi or 'Ka. Unit',
+        })
+
+        # 4. Tabel Pelaksanaan (Do)
+        # Susun narasi pelaksanaan dari tindak_lanjut jika ada
+        pelaksanaan_text = r.rencana_aksi
+        if tindak_items:
+            pelaksanaan_text = "; ".join([t.aksi for t in tindak_items])
+
+        table_pelaksanaan.append({
+            'no': idx,
+            'risiko': r,
+            'risiko_id': r.id,
+            'masalah': r.masalah or r.jenis_risiko,
+            'indikator_mutu': nama_ind,
+            'pelaksanaan_do': pelaksanaan_text,
+            'tindak_lanjut_items': tindak_items,
+            'waktu': waktu_str,
+            'biaya': biaya_str,
+            'pj': r.pj_mitigasi or 'Ka. Unit',
+            'bukti_dokumen': [t for t in tindak_items if t.bukti_upload],
+        })
+
+        # 5. Tabel Monitoring dan Evaluasi (5W + RTL)
+        capaian_str = r.capaian_persen_display if (r.capaian_nilai is not None or r.capaian_persen_display) else '—'
+        akar_5w = r.akar_masalah_rca or ''
+        if r.rca_fishbone_items:
+            akar_5w = "; ".join([f"{item['label']}: {item['text']}" for item in r.rca_fishbone_items])
+
+        table_monev.append({
+            'no': idx,
+            'risiko': r,
+            'risiko_id': r.id,
+            'masalah': r.masalah or r.jenis_risiko,
+            'indikator_mutu_target': target_str,
+            'indikator_mutu_capaian': capaian_str,
+            'capaian_nilai': r.capaian_nilai,
+            'evaluasi_capaian': r.evaluasi_capaian,
+            'akar_masalah_5w': akar_5w,
+            'rca_items': r.rca_fishbone_items,
+            'rtl': r.rencana_tindak_lanjut or '—',
+            'pj_rtl': r.pj_rtl or r.pj_mitigasi or 'Ka. Unit',
+            'deadline_rtl': r.deadline_rtl,
+            'status_rtl': r.get_status_rtl_display(),
+            'status_rtl_badge_color': r.status_rtl_badge_color,
+        })
+
     ctx = {
         'is_single': False,
         'selected_unit': selected_unit,
@@ -1823,6 +1935,11 @@ def risiko_laporan_lengkap_unit(request, unit_id=None):
         'rtl_selesai': rtl_selesai,
         'rtl_proses': rtl_proses,
         'terevaluasi': terevaluasi,
+        'table_penilaian_awal': table_penilaian_awal,
+        'table_indikator': table_indikator,
+        'table_rencana_aksi': table_rencana_aksi,
+        'table_pelaksanaan': table_pelaksanaan,
+        'table_monev': table_monev,
         'tgl_cetak': timezone.now(),
     }
     return render(request, 'akreditasi/risiko_laporan_lengkap.html', ctx)

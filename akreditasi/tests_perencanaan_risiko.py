@@ -188,13 +188,23 @@ class PerencanaanRisikoTest(TestCase):
         self.assertIn('FASE 4: RENCANA TINDAK LANJUT (ACTION / RTL)', content)
 
     def test_laporan_lengkap_unit_view(self):
-        """Test Laporan Lengkap PDCA aggregate unit view renders."""
+        """Test Laporan Lengkap PDCA aggregate unit view renders vertically stacked 9 sections."""
         url = reverse('akreditasi:risiko_laporan_lengkap_unit', kwargs={'unit_id': self.unit.pk})
         resp = self.client.get(url)
         self.assertEqual(resp.status_code, 200)
         content = resp.content.decode('utf-8')
         self.assertIn('LAPORAN LENGKAP MANAJEMEN RISIKO', content)
         self.assertIn('Unit Kamar Operasi', content)
+        # Verify 9 sections stacked vertically
+        self.assertIn('1. Identifikasi Masalah Risiko', content)
+        self.assertIn('2. Tujuan', content)
+        self.assertIn('3. Penilaian Risiko Awal', content)
+        self.assertIn('4. Pemilihan Metode Evaluasi', content)
+        self.assertIn('5. Indikator Mutu Terkait Risiko', content)
+        self.assertIn('6. Rencana Aksi (Mitigasi) Risiko', content)
+        self.assertIn('7. Pelaksanaan (Do)', content)
+        self.assertIn('8. Monitoring dan evaluasi', content)
+        self.assertIn('9. Kesimpulan Akhir', content)
 
     def test_document_views_contain_edit_and_delete_actions(self):
         """Verify that Perencanaan, Pelaksanaan, and Laporan Lengkap have Edit & Delete buttons."""

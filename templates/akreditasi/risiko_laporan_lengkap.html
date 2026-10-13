@@ -92,6 +92,52 @@
         word-break: break-word;
         overflow-wrap: break-word;
     }
+
+    /* Style Tabel Formal Sesuai Format Word RS MONSISKAMI ARIMA */
+    .table-formal {
+        width: 100%;
+        margin-bottom: 1.5rem;
+        border-collapse: collapse;
+        table-layout: fixed;
+        font-size: 0.84rem;
+        word-wrap: break-word;
+    }
+    .table-formal th, .table-formal td {
+        border: 1px solid #94a3b8;
+        padding: 7px 9px;
+        vertical-align: top;
+        word-break: break-word;
+        overflow-wrap: break-word;
+    }
+    .table-formal th {
+        background-color: #f1f5f9;
+        color: #0f172a;
+        font-weight: 700;
+        text-align: center;
+        vertical-align: middle;
+    }
+    .section-title-formal {
+        font-size: 0.98rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        margin-top: 1.75rem;
+        margin-bottom: 0.75rem;
+        color: #0f172a;
+        border-left: 4px solid #0f766e;
+        padding-left: 10px;
+    }
+    .callout-box {
+        background-color: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 6px;
+        padding: 12px 16px;
+        font-size: 0.85rem;
+        color: #334155;
+    }
+    .grade-badge-ekstrem { background-color: #ef4444; color: #ffffff; }
+    .grade-badge-tinggi { background-color: #f97316; color: #ffffff; }
+    .grade-badge-sedang { background-color: #eab308; color: #0f172a; }
+    .grade-badge-rendah { background-color: #22c55e; color: #ffffff; }
     .info-grid {
         display: grid;
         grid-template-columns: 180px 1fr;
@@ -215,15 +261,15 @@
                 <i class="bi bi-hospital fs-1 text-teal"></i>
                 <div>
                     <h4 class="kop-title">RUMAH SAKIT MONSISKAMI ARIMA KEBUMEN</h4>
-                    <p class="kop-address">JL. PURWODADI 139 KUWARASAN KEBUMEN &bull; Telp: 085227090875 / 081229649520, Kode Pos: 54366 &bull; Email: rsu.purwogondo@gmail.com</p>
+                    <p class="kop-address">JL. Candiwulan Kalibuntu Mangli Kuwarasan Kebumen Jawatengah &bull; Telp: 085227090875 / 081229649520 &bull; Email: rsu.purwogondo@gmail.com</p>
                     <small class="text-muted fst-italic">Komite Mutu dan Keselamatan Pasien (KMKP) — Sub-Komite Manajemen Risiko RS</small>
                 </div>
             </div>
             <div class="mt-3">
                 <div class="doc-badge-title">
-                    <i class="bi bi-journal-check me-2"></i>LAPORAN LENGKAP MANAJEMEN RISIKO SIKLUS PDCA (PLAN - DO - CHECK - ACTION)
+                    <i class="bi bi-journal-check me-2"></i>LAPORAN LENGKAP MANAJEMEN RISIKO (SIKLUS PDCA 1, 2, 3, 4)
                 </div>
-                <div class="small text-muted mt-1">Standar Akreditasi Kemenkes (STARKES 2022) — PMKP 12 &amp; Standar 5.15</div>
+                <div class="small text-muted mt-1">Standar Akreditasi: STARKES PMKP 12 &amp; Standar 5.15</div>
             </div>
         </div>
 
@@ -484,19 +530,22 @@
 
         {% else %}
         {# ══════════════════════════════════════════════════════════════════ #}
-        {# B. TAMPILAN AGREGAT UNIT KERJA (TABEL UTUH SIKLUS PDCA LENGKAP)    #}
+        {# B. TAMPILAN AGREGAT UNIT KERJA (SIKLUS PDCA 1, 2, 3, 4 KE BAWAH)   #}
+        {# Sesuai Format Resmi Dokumen Word: contoh laporan manajemen resiko #}
         {# ══════════════════════════════════════════════════════════════════ #}
 
         {# Identitas Agregat Unit #}
-        <div class="row mb-3 pb-2 border-bottom align-items-center">
+        <div class="row mb-4 pb-2 border-bottom align-items-center">
             <div class="col-md-8">
                 <div class="info-grid">
                     <div class="label">Unit Kerja</div>
                     <div class="fw-bold text-dark">: {{ selected_unit.name }}</div>
-                    <div class="label">Tahun Anggaran</div>
+                    <div class="label">Standar Akreditasi</div>
+                    <div>: STARKES PMKP 12 &amp; Standar 5.15</div>
+                    <div class="label">Periode / Tahun Anggaran</div>
                     <div>: {{ tahun }}</div>
                     <div class="label">Total Risiko Teridentifikasi</div>
-                    <div>: <strong>{{ total_risiko }} Risiko</strong> ({{ terevaluasi }} sudah dievaluasi MONEV)</div>
+                    <div>: <strong>{{ total_risiko }} Risiko</strong> ({{ terevaluasi }} sudah dievaluasi MONEV, {{ rtl_selesai }} RTL selesai)</div>
                 </div>
             </div>
             <div class="col-md-4 text-end">
@@ -505,160 +554,349 @@
             </div>
         </div>
 
-        {# TABEL BESAR SIKLUS PDCA LENGKAP #}
-        <div class="table-responsive">
-            <table class="table table-bordered table-report align-middle mb-0">
-                <thead>
-                    <tr>
-                        <th rowspan="2" class="text-center" style="width:3%;">No</th>
-                        <th colspan="3" class="text-center" style="background:#0f766e !important;">1. PLAN (PERENCANAAN)</th>
-                        <th colspan="2" class="text-center" style="background:#854d0e !important;">2. DO (PELAKSANAAN)</th>
-                        <th colspan="2" class="text-center" style="background:#1e40af !important;">3. CHECK (MONEV)</th>
-                        <th colspan="2" class="text-center" style="background:#6b21a8 !important;">4. ACTION (RTL)</th>
-                        <th rowspan="2" class="text-center" style="width:8%;">Skor Risiko</th>
-                        <th rowspan="2" class="text-center no-print" style="width:7%;">Aksi</th>
-                    </tr>
-                    <tr>
-                        {# Sub-kolom Plan #}
-                        <th style="width:14%;">Masalah / Risiko</th>
-                        <th style="width:11%;">Indikator &amp; Target</th>
-                        <th style="width:13%;">Rencana Mitigasi</th>
-                        {# Sub-kolom Do #}
-                        <th style="width:12%;">Realisasi Tindakan</th>
-                        <th style="width:7%;" class="text-center">Status Do</th>
-                        {# Sub-kolom Check #}
-                        <th style="width:7%;">Capaian</th>
-                        <th style="width:10%;">Analisis RCA</th>
-                        {# Sub-kolom Action #}
-                        <th style="width:11%;">RTL Siklus Baru</th>
-                        <th style="width:7%;" class="text-center">Status RTL</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for r in risiko_list %}
-                    <tr>
-                        {# NO #}
-                        <td class="text-center fw-bold text-muted">{{ forloop.counter }}</td>
+        {# 1. IDENTIFIKASI MASALAH RISIKO #}
+        <div class="mb-4">
+            <div class="section-title-formal">1. Identifikasi Masalah Risiko</div>
+            <p class="mb-1" style="line-height: 1.6;">
+                Seluruh potensi risiko di unit kerja <strong>{{ selected_unit.name }}</strong> telah diidentifikasi dan diinventarisasi pada awal periode tahun {{ tahun }}. Total risiko yang tercatat dalam register perencanaan adalah <strong>{{ total_risiko }} risiko</strong>.
+            </p>
+            <p class="text-muted small mb-0">
+                Proses identifikasi mencakup risiko klinis, keselamatan pasien, operasional fasilitas, keselamatan kerja (K3), tata kelola, dan kepatuhan regulasi akreditasi STARKES 2022.
+            </p>
+        </div>
 
-                        {# PLAN: Masalah #}
-                        <td>
-                            <a href="{% url 'akreditasi:risiko_laporan_lengkap_single' r.pk %}" class="fw-semibold text-decoration-none text-dark d-block mb-1">
-                                {{ r.masalah|default:r.jenis_risiko|truncatewords:10 }}
-                            </a>
-                            <span class="badge bg-light text-secondary border" style="font-size:.65rem;">{{ r.get_kategori_risiko_display }}</span>
-                        </td>
+        {# 2. TUJUAN #}
+        <div class="mb-4">
+            <div class="section-title-formal">2. Tujuan</div>
+            <p class="mb-0" style="line-height: 1.6;">
+                Mengendalikan, mencegah, dan memitigasi seluruh potensi risiko klinis serta operasional di unit <strong>{{ selected_unit.name }}</strong>, meningkatkan mutu pelayanan secara berkelanjutan, memastikan kepatuhan terhadap SOP, serta menjamin keselamatan pasien (patient safety) dan keselamatan staf selama tahun {{ tahun }}.
+            </p>
+        </div>
 
-                        {# PLAN: Indikator & Target #}
-                        <td>
-                            {% if r.indikator_mutu_terkait %}
-                            <div class="small fw-semibold text-teal mb-1">[{{ r.indikator_mutu_terkait.kode_indikator }}] {{ r.indikator_mutu_terkait.nama_indikator|truncatewords:6 }}</div>
-                            <span class="badge bg-secondary-subtle text-secondary" style="font-size:.65rem;">Target: {{ r.target_capaian_indikator|default:"100" }}%</span>
-                            {% else %}
-                            <span class="text-muted fst-italic small">Belum terhubung</span>
-                            {% endif %}
-                        </td>
-
-                        {# PLAN: Rencana Mitigasi #}
-                        <td>
-                            <div class="small text-dark">{{ r.rencana_aksi|default:"—"|truncatewords:10 }}</div>
-                            <small class="text-muted d-block mt-1">PJ: {{ r.pj_mitigasi|default:"Ka. Unit" }}</small>
-                        </td>
-
-                        {# DO: Realisasi Tindakan #}
-                        <td>
-                            {% with tls=r.tindak_lanjut.all %}
-                                {% if tls %}
-                                <ul class="list-unstyled mb-0 small">
-                                    {% for tl in tls|slice:":2" %}
-                                    <li class="mb-1">&bull; {{ tl.aksi|truncatewords:7 }}</li>
-                                    {% endfor %}
-                                    {% if tls|length > 2 %}
-                                    <li class="text-muted fst-italic" style="font-size:.68rem;">+{{ tls|length|add:"-2" }} tindakan lainnya</li>
-                                    {% endif %}
-                                </ul>
-                                {% else %}
-                                <span class="small text-dark">{{ r.rencana_aksi|truncatewords:8 }}</span>
-                                {% endif %}
-                            {% endwith %}
-                        </td>
-
-                        {# DO: Status Do #}
-                        <td class="text-center">
-                            <span class="badge bg-{{ r.status_pelaksanaan_badge_color }}" style="font-size:.68rem;">
-                                {{ r.get_status_pelaksanaan_display }}
-                            </span>
-                        </td>
-
-                        {# CHECK: Capaian Mutu #}
-                        <td>
-                            <div class="fw-bold {% if r.capaian_nilai >= 85 %}text-success{% elif r.capaian_nilai >= 70 %}text-warning{% elif r.capaian_nilai %}text-danger{% else %}text-muted{% endif %}">
-                                {{ r.capaian_persen_display }}
-                            </div>
-                            {% if r.evaluasi_capaian %}
-                            <small class="text-muted d-block" style="font-size:.68rem;">{{ r.evaluasi_capaian|truncatewords:6 }}</small>
-                            {% endif %}
-                        </td>
-
-                        {# CHECK: Analisis RCA #}
-                        <td>
-                            {% if r.rca_fishbone_items %}
-                            <span class="badge bg-danger-subtle text-danger border border-danger-subtle" style="font-size:.65rem;">RCA Fishbone Terisi</span>
-                            {% elif r.akar_masalah_rca %}
-                            <small class="text-dark d-block" style="font-size:.68rem;">{{ r.akar_masalah_rca|truncatewords:8 }}</small>
-                            {% else %}
-                            <span class="text-muted fst-italic small">Belum di-RCA</span>
-                            {% endif %}
-                        </td>
-
-                        {# ACTION: RTL #}
-                        <td>
-                            <div class="small text-dark fw-semibold">{{ r.rencana_tindak_lanjut|default:"—"|truncatewords:8 }}</div>
-                            {% if r.pj_rtl %}
-                            <small class="text-muted d-block" style="font-size:.68rem;">PIC: {{ r.pj_rtl }}</small>
-                            {% endif %}
-                        </td>
-
-                        {# ACTION: Status RTL #}
-                        <td class="text-center">
-                            <span class="badge bg-{{ r.status_rtl_badge_color }}" style="font-size:.68rem;">
-                                {{ r.get_status_rtl_display }}
-                            </span>
-                        </td>
-
-                        {# SKOR RISIKO AWAL & RESIDU #}
-                        <td class="text-center">
-                            <div class="d-flex flex-column align-items-center gap-1">
-                                <span class="badge text-white px-2 py-1" style="background:{{ r.skor_awal_color }}; font-size:.72rem;">
-                                    Awal: {{ r.skor_inherent }}
-                                </span>
-                                <span class="badge text-white px-2 py-1" style="background:{{ r.skor_akhir_color }}; font-size:.72rem;">
-                                    Residu: {{ r.skor_akhir|default:"—" }}
-                                </span>
-                            </div>
-                        </td>
-
-                        {# AKSI (NO PRINT) #}
-                        <td class="no-print text-center">
-                            <div class="d-inline-flex flex-column gap-1 w-100">
-                                <a href="{% url 'akreditasi:risiko_edit' r.pk %}" class="btn btn-sm btn-outline-primary py-0 px-1" style="font-size:0.7rem;" title="Edit Risiko">
-                                    <i class="bi bi-pencil-square me-1"></i>Edit
+        {# 3. PENILAIAN RISIKO AWAL #}
+        <div class="mb-4">
+            <div class="section-title-formal">3. Penilaian Risiko Awal (Lengkap dengan Perhitungan Grade Risiko)</div>
+            <p class="small text-muted mb-2">
+                Perhitungan Skor Inherent = Tingkat Dampak (1–5) &times; Tingkat Probabilitas (1–5). Matriks Grading: Ekstrem (15–25), Tinggi (8–14), Sedang (4–7), Rendah (1–3).
+            </p>
+            <div class="table-responsive">
+                <table class="table-formal">
+                    <thead>
+                        <tr>
+                            <th style="width: 4%;">No</th>
+                            <th style="width: 32%;">Masalah / Pernyataan Risiko</th>
+                            <th style="width: 12%;">Dampak (1-5)</th>
+                            <th style="width: 12%;">Probabilitas (1-5)</th>
+                            <th style="width: 14%;">Perhitungan Skor</th>
+                            <th style="width: 14%;">Grade Risiko Awal</th>
+                            <th class="no-print text-center" style="width: 12%;">Menu edit</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for row in table_penilaian_awal %}
+                        <tr>
+                            <td class="text-center">{{ row.no }}</td>
+                            <td>
+                                <a href="{% url 'akreditasi:risiko_laporan_lengkap_single' row.risiko_id %}" class="fw-semibold text-decoration-none text-dark d-block">
+                                    {{ row.masalah }}
                                 </a>
-                                <form method="post" action="{% url 'akreditasi:risiko_hapus' r.pk %}" class="d-inline" onsubmit="return confirm('Yakin ingin menghapus risiko ini?');">
-                                    {% csrf_token %}
-                                    <button type="submit" class="btn btn-sm btn-outline-danger py-0 px-1 w-100" style="font-size:0.7rem;" title="Hapus Risiko">
-                                        <i class="bi bi-trash me-1"></i>Hapus
-                                    </button>
-                                </form>
-                            </div>
-                        </td>
-                    </tr>
-                    {% empty %}
-                    <tr>
-                        <td colspan="12" class="text-center py-4 text-muted">Belum ada data risiko pada unit dan tahun ini.</td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+                                <span class="badge bg-light text-secondary border mt-1" style="font-size:0.7rem;">{{ row.kategori }}</span>
+                            </td>
+                            <td class="text-center">{{ row.dampak }} ({{ row.dampak_display }})</td>
+                            <td class="text-center">{{ row.probabilitas }} ({{ row.probabilitas_display }})</td>
+                            <td class="text-center fw-bold">{{ row.dampak }} &times; {{ row.probabilitas }} = {{ row.skor }}</td>
+                            <td class="text-center">
+                                {% if row.risk_level == 'SANGAT_TINGGI' or row.risk_level == 'Sangat Tinggi' or row.risk_level == 'EKSTREM' or row.risk_level == 'Ekstrem' %}
+                                    <span class="badge grade-badge-ekstrem">Ekstrem</span>
+                                {% elif row.risk_level == 'TINGGI' or row.risk_level == 'Tinggi' %}
+                                    <span class="badge grade-badge-tinggi">Tinggi</span>
+                                {% elif row.risk_level == 'SEDANG' or row.risk_level == 'Sedang' %}
+                                    <span class="badge grade-badge-sedang">Sedang</span>
+                                {% else %}
+                                    <span class="badge grade-badge-rendah">Rendah</span>
+                                {% endif %}
+                            </td>
+                            <td class="no-print text-center">
+                                <div class="d-inline-flex gap-1">
+                                    <a href="{% url 'akreditasi:risiko_edit' row.risiko_id %}" class="btn btn-sm btn-outline-primary py-0 px-2" title="Edit Risiko"><i class="bi bi-pencil-square"></i></a>
+                                    <form method="post" action="{% url 'akreditasi:risiko_hapus' row.risiko_id %}" class="d-inline" onsubmit="return confirm('Yakin ingin menghapus risiko ini?');">
+                                        {% csrf_token %}
+                                        <button type="submit" class="btn btn-sm btn-outline-danger py-0 px-2" title="Hapus Risiko"><i class="bi bi-trash"></i></button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="7" class="text-center text-muted py-3">Belum ada data risiko pada unit dan tahun ini.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        {# 4. PEMILIHAN METODE EVALUASI #}
+        <div class="mb-4">
+            <div class="section-title-formal">4. Pemilihan Metode Evaluasi (FMEA atau RCA)</div>
+            <div class="callout-box">
+                <p class="mb-1">Berdasarkan matriks grading risiko awal di atas, unit kerja menetapkan pendekatan evaluasi:</p>
+                <ul class="mb-0 ps-3 small">
+                    <li><strong>FMEA (Failure Mode and Effects Analysis):</strong> Diterapkan secara proaktif pada proses berisiko tinggi atau baru guna mereduksi potensi kegagalan sebelum insiden terjadi.</li>
+                    <li><strong>RCA (Root Cause Analysis):</strong> Diterapkan secara reaktif jika terjadi insiden keselamatan pasien bergradasi kuning/merah atau sentinel untuk menemukan akar penyebab masalah secara tuntas.</li>
+                </ul>
+            </div>
+        </div>
+
+        {# 5. INDIKATOR MUTU TERKAIT RISIKO #}
+        <div class="mb-4">
+            <div class="section-title-formal">5. Indikator Mutu Terkait Risiko</div>
+            <div class="table-responsive">
+                <table class="table-formal">
+                    <thead>
+                        <tr>
+                            <th style="width: 4%;">No</th>
+                            <th style="width: 32%;">Masalah Resiko</th>
+                            <th style="width: 32%;">Indikator mutu</th>
+                            <th style="width: 10%;">Target</th>
+                            <th style="width: 10%;">Jenis (INM, IM RS/IMUnit)</th>
+                            <th class="no-print text-center" style="width: 12%;">Menu edit</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for row in table_indikator %}
+                        <tr>
+                            <td class="text-center">{{ row.no }}</td>
+                            <td class="fw-semibold">{{ row.masalah }}</td>
+                            <td>{{ row.indikator_mutu }}</td>
+                            <td class="text-center fw-bold">{{ row.target }}</td>
+                            <td class="text-center">
+                                <span class="badge bg-light text-dark border">{{ row.jenis }}</span>
+                            </td>
+                            <td class="no-print text-center">
+                                <div class="d-inline-flex gap-1">
+                                    <a href="{% url 'akreditasi:risiko_edit' row.risiko_id %}" class="btn btn-sm btn-outline-primary py-0 px-2" title="Edit"><i class="bi bi-pencil-square"></i></a>
+                                    <form method="post" action="{% url 'akreditasi:risiko_hapus' row.risiko_id %}" class="d-inline" onsubmit="return confirm('Yakin ingin menghapus risiko ini?');">
+                                        {% csrf_token %}
+                                        <button type="submit" class="btn btn-sm btn-outline-danger py-0 px-2" title="Hapus"><i class="bi bi-trash"></i></button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="6" class="text-center text-muted py-3">Belum ada indikator mutu yang terhubung.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        {# 6. RENCANA AKSI MITIGASI RISIKO #}
+        <div class="mb-4">
+            <div class="section-title-formal">6. Rencana Aksi (Mitigasi) Risiko</div>
+            <div class="table-responsive">
+                <table class="table-formal">
+                    <thead>
+                        <tr>
+                            <th style="width: 4%;">No</th>
+                            <th style="width: 20%;">Masalah resiko</th>
+                            <th style="width: 16%;">Indikator mutu</th>
+                            <th style="width: 24%;">Rencana Aksi</th>
+                            <th style="width: 10%;">waktu</th>
+                            <th style="width: 8%;">Biaya</th>
+                            <th style="width: 10%;">PJ</th>
+                            <th class="no-print text-center" style="width: 8%;">Menu edit</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for row in table_rencana_aksi %}
+                        <tr>
+                            <td class="text-center">{{ row.no }}</td>
+                            <td class="fw-semibold">{{ row.masalah }}</td>
+                            <td>{{ row.indikator_mutu }}</td>
+                            <td>
+                                <div>{{ row.rencana_aksi|default:"—" }}</div>
+                                {% if row.tindak_lanjut_items %}
+                                <div class="mt-1 pt-1 border-top small">
+                                    <strong class="text-teal">Rincian Tindakan:</strong>
+                                    {% for t in row.tindak_lanjut_items %}
+                                        <div class="text-muted">&bull; {{ t.aksi|truncatewords:8 }}</div>
+                                    {% endfor %}
+                                </div>
+                                {% endif %}
+                            </td>
+                            <td class="text-center small">{{ row.waktu }}</td>
+                            <td class="text-center small">{{ row.biaya }}</td>
+                            <td class="text-center small fw-semibold">{{ row.pj }}</td>
+                            <td class="no-print text-center">
+                                <div class="d-inline-flex gap-1">
+                                    <a href="{% url 'akreditasi:risiko_edit' row.risiko_id %}" class="btn btn-sm btn-outline-primary py-0 px-2" title="Edit"><i class="bi bi-pencil-square"></i></a>
+                                    <form method="post" action="{% url 'akreditasi:risiko_hapus' row.risiko_id %}" class="d-inline" onsubmit="return confirm('Yakin ingin menghapus risiko ini?');">
+                                        {% csrf_token %}
+                                        <button type="submit" class="btn btn-sm btn-outline-danger py-0 px-2" title="Hapus"><i class="bi bi-trash"></i></button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="8" class="text-center text-muted py-3">Belum ada data rencana aksi mitigasi.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        {# 7. PELAKSANAAN (DO) #}
+        <div class="mb-4">
+            <div class="section-title-formal">7. Pelaksanaan (Do)</div>
+            <div class="table-responsive">
+                <table class="table-formal">
+                    <thead>
+                        <tr>
+                            <th style="width: 4%;">No</th>
+                            <th style="width: 18%;">Masalah resiko</th>
+                            <th style="width: 14%;">Indikator mutu</th>
+                            <th style="width: 22%;">Pelaksanaan (Do)</th>
+                            <th style="width: 10%;">waktu</th>
+                            <th style="width: 8%;">Biaya</th>
+                            <th style="width: 8%;">PJ</th>
+                            <th style="width: 8%;">Bukti dokumen</th>
+                            <th class="no-print text-center" style="width: 8%;">Menu edit</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for row in table_pelaksanaan %}
+                        <tr>
+                            <td class="text-center">{{ row.no }}</td>
+                            <td class="fw-semibold">{{ row.masalah }}</td>
+                            <td>{{ row.indikator_mutu }}</td>
+                            <td>
+                                <div>{{ row.pelaksanaan_do|default:"—" }}</div>
+                                {% if row.tindak_lanjut_items %}
+                                <div class="mt-1 pt-1 border-top small">
+                                    {% for t in row.tindak_lanjut_items %}
+                                        <div class="d-flex align-items-center gap-1 mb-1">
+                                            <span class="badge {% if t.status_aksi == 'SELESAI' %}bg-success{% elif t.status_aksi == 'SEDANG' %}bg-warning text-dark{% else %}bg-secondary{% endif %}" style="font-size:0.65rem;">
+                                                {{ t.get_status_aksi_display }}
+                                            </span>
+                                            <span class="text-dark">{{ t.aksi|truncatewords:6 }}</span>
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                                {% endif %}
+                            </td>
+                            <td class="text-center small">{{ row.waktu }}</td>
+                            <td class="text-center small">{{ row.biaya }}</td>
+                            <td class="text-center small fw-semibold">{{ row.pj }}</td>
+                            <td class="small">
+                                {% if row.bukti_dokumen %}
+                                    {% for b in row.bukti_dokumen %}
+                                    <a href="{{ b.bukti_upload.url }}" target="_blank" rel="noopener" class="d-block text-decoration-none">
+                                        <i class="bi bi-file-earmark-check text-primary me-1"></i>Bukti {{ forloop.counter }}
+                                    </a>
+                                    {% endfor %}
+                                {% else %}
+                                    <span class="text-muted">—</span>
+                                {% endif %}
+                            </td>
+                            <td class="no-print text-center">
+                                <div class="d-inline-flex gap-1">
+                                    <a href="{% url 'akreditasi:risiko_edit' row.risiko_id %}" class="btn btn-sm btn-outline-primary py-0 px-2" title="Edit"><i class="bi bi-pencil-square"></i></a>
+                                    <form method="post" action="{% url 'akreditasi:risiko_hapus' row.risiko_id %}" class="d-inline" onsubmit="return confirm('Yakin ingin menghapus risiko ini?');">
+                                        {% csrf_token %}
+                                        <button type="submit" class="btn btn-sm btn-outline-danger py-0 px-2" title="Hapus"><i class="bi bi-trash"></i></button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="9" class="text-center text-muted py-3">Belum ada data pelaksanaan (Do).</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        {# 8. MONITORING DAN EVALUASI #}
+        <div class="mb-4">
+            <div class="section-title-formal">8. Monitoring dan evaluasi</div>
+            <div class="table-responsive">
+                <table class="table-formal">
+                    <thead>
+                        <tr>
+                            <th style="width: 4%;">No</th>
+                            <th style="width: 18%;">Masalah resiko</th>
+                            <th style="width: 10%;">Indikator mutu target</th>
+                            <th style="width: 10%;">Indicator mutu capaian</th>
+                            <th style="width: 20%;">Penyebab/Akar masalah (5 W)</th>
+                            <th style="width: 24%;">RTL</th>
+                            <th class="no-print text-center" style="width: 14%;">Menu edit</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for row in table_monev %}
+                        <tr>
+                            <td class="text-center">{{ row.no }}</td>
+                            <td class="fw-semibold">{{ row.masalah }}</td>
+                            <td class="text-center fw-bold">{{ row.indikator_mutu_target }}</td>
+                            <td class="text-center fw-bold">
+                                <span class="{% if row.capaian_nilai >= 85 %}text-success{% elif row.capaian_nilai >= 70 %}text-warning{% elif row.capaian_nilai %}text-danger{% else %}text-muted{% endif %}">
+                                    {{ row.indikator_mutu_capaian }}
+                                </span>
+                            </td>
+                            <td>
+                                {% if row.rca_items %}
+                                <div class="d-flex flex-column gap-1 small">
+                                    {% for item in row.rca_items %}
+                                    <div><strong class="text-teal">{{ item.label }}:</strong> {{ item.text }}</div>
+                                    {% endfor %}
+                                </div>
+                                {% elif row.akar_masalah_5w %}
+                                <div class="small">{{ row.akar_masalah_5w|linebreaksbr }}</div>
+                                {% else %}
+                                <span class="text-muted fst-italic small">—</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="fw-semibold small">{{ row.rtl }}</div>
+                                <div class="mt-1 small text-muted">
+                                    <span>PIC: <strong>{{ row.pj_rtl }}</strong></span>
+                                    {% if row.deadline_rtl %}&bull; <span>Target: {{ row.deadline_rtl|date:"d/m/Y" }}</span>{% endif %}
+                                    &bull; <span class="badge bg-{{ row.status_rtl_badge_color }}">{{ row.status_rtl }}</span>
+                                </div>
+                            </td>
+                            <td class="no-print text-center">
+                                <div class="d-inline-flex gap-1">
+                                    <a href="{% url 'akreditasi:risiko_edit' row.risiko_id %}" class="btn btn-sm btn-outline-primary py-0 px-2" title="Edit"><i class="bi bi-pencil-square"></i></a>
+                                    <form method="post" action="{% url 'akreditasi:risiko_hapus' row.risiko_id %}" class="d-inline" onsubmit="return confirm('Yakin ingin menghapus risiko ini?');">
+                                        {% csrf_token %}
+                                        <button type="submit" class="btn btn-sm btn-outline-danger py-0 px-2" title="Hapus"><i class="bi bi-trash"></i></button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="7" class="text-center text-muted py-3">Belum ada data monitoring dan evaluasi.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        {# 9. KESIMPULAN AKHIR & LEMBAR PENGESAHAN #}
+        <div class="mb-4">
+            <div class="section-title-formal">9. Kesimpulan Akhir</div>
+            <p class="mb-2" style="line-height: 1.6;">
+                Seluruh rangkaian siklus PDCA (Plan, Do, Check, Action) untuk unit kerja <strong>{{ selected_unit.name }}</strong> pada tahun {{ tahun }} telah dilaksanakan secara terintegrasi. Dari {{ total_risiko }} risiko teridentifikasi, sebanyak <strong>{{ rtl_selesai }} risiko</strong> telah menyelesaikan rencana tindak lanjut (RTL), dengan {{ rtl_proses }} risiko dalam tahap monitoring berkala. Evaluasi berkala akan terus dilakukan bersama Sub-Tim Mutu Pelayanan &amp; Akreditasi demi menjaga mutu layanan dan keselamatan pasien.
+            </p>
         </div>
         {% endif %}
 
