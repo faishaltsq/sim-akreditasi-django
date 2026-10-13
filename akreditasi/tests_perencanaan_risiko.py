@@ -175,5 +175,27 @@ class PerencanaanRisikoTest(TestCase):
         self.assertEqual(resp_post.status_code, 302)
         self.assertFalse(RisikoUnit.objects.filter(pk=self.risiko.pk).exists())
 
+    def test_laporan_lengkap_single_view(self):
+        """Test Laporan Lengkap PDCA single risk view renders 4 phases."""
+        url = reverse('akreditasi:risiko_laporan_lengkap_single', kwargs={'risiko_id': self.risiko.pk})
+        resp = self.client.get(url)
+        self.assertEqual(resp.status_code, 200)
+        content = resp.content.decode('utf-8')
+        self.assertIn('LAPORAN LENGKAP MANAJEMEN RISIKO', content)
+        self.assertIn('FASE 1: PERENCANAAN RISIKO (PLAN)', content)
+        self.assertIn('FASE 2: PELAKSANAAN TINDAKAN RISIKO (DO)', content)
+        self.assertIn('FASE 3: MONITORING &amp; EVALUASI (CHECK)', content)
+        self.assertIn('FASE 4: RENCANA TINDAK LANJUT (ACTION / RTL)', content)
+
+    def test_laporan_lengkap_unit_view(self):
+        """Test Laporan Lengkap PDCA aggregate unit view renders."""
+        url = reverse('akreditasi:risiko_laporan_lengkap_unit', kwargs={'unit_id': self.unit.pk})
+        resp = self.client.get(url)
+        self.assertEqual(resp.status_code, 200)
+        content = resp.content.decode('utf-8')
+        self.assertIn('LAPORAN LENGKAP MANAJEMEN RISIKO', content)
+        self.assertIn('Unit Kamar Operasi', content)
+
+
 
 

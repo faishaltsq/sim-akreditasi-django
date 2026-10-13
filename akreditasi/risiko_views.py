@@ -1701,3 +1701,119 @@ def risiko_pelaksanaan_export_csv(request):
     return response
 
 
+# ── 13. Dokumen Laporan Lengkap Manajemen Risiko (Plan + Do + Check/Monev + Action/RTL) ──
+
+@login_required
+def risiko_laporan_lengkap(request, risiko_id):
+    """
+    Dokumen Laporan Lengkap Manajemen Risiko Terintegrasi (Single Risk).
+    Mencakup 4 Fase Siklus PDCA Utuh:
+    1. Plan: Identifikasi, Tujuan, Skor Awal, Metode, Indikator Mutu, Rencana Aksi
+    2. Do: Realisasi Pelaksanaan Tindakan & Bukti Dokumen
+    3. Check (Monev): Capaian Indikator Mutu, Evaluasi & Analisis RCA (Fishbone/5-Whys)
+    4. Action (RTL): Rencana Tindak Lanjut, PIC, Target Waktu, Status RTL & Matriks Perubahan Risiko
+    """
+    risiko = get_object_or_404(
+        RisikoUnit.objects.select_related('unit', 'indikator_mutu_terkait', 'created_by').prefetch_related('tindak_lanjut'),
+        pk=risiko_id
+    )
+    profile = getattr(request.user, 'profile', None)
+    if profile and profile.is_unit_scoped and profile.unit_kerja:
+        allowed_ids = [profile.unit_kerja.id] + list(UnitKerja.objects.filter(parent=profile.unit_kerja).values_list('id', flat=True))
+        if risiko.unit_id not in allowed_ids:
+            messages.error(request, 'Anda tidak memiliki akses ke laporan risiko unit ini.')
+            return redirect('akreditasi:risiko_daftar')
+
+    tindak_lanjut = list(risiko.tindak_lanjut.all().order_by('urutan'))
+    total_tl = len(tindak_lanjut)
+    selesai_tl = sum(1 for tl in tindak_lanjut if tl.status_aksi == 'SELESAI')
+    proses_tl = sum(1 for tl in tindak_lanjut if tl.status_aksi == 'PROSES')
+    persen_tl = int((selesai_tl / total_tl) * 100) if total_tl > 0 else 0
+
+    ctx = {
+        'risiko': risiko,
+        'is_single': True,
+        'unit': risiko.unit,
+        'tahun': risiko.tahun,
+        'periode': risiko.get_periode_display(),
+        'tindak_lanjut_list': tindak_lanjut,
+        'total_tl': total_tl,
+        'selesai_tl': selesai_tl,
+        'proses_tl': proses_tl,
+        'persen_tl': persen_tl,
+        'rca_items': risiko.rca_fishbone_items,
+        'tgl_cetak': timezone.now(),
+    }
+    return render(request, 'akreditasi/risiko_laporan_lengkap.html', ctx)
+
+
+@login_required
+def risiko_laporan_lengkap_unit(request, unit_id=None):
+    """
+    Dokumen Laporan Lengkap Manajemen Risiko Agregat Unit Kerja (Siklus PDCA Lengkap).
+    Menyajikan seluruh risiko unit dengan rincian Perencanaan, Pelaksanaan, MONEV, dan RTL.
+    """
+    profile = getattr(request.user, 'profile', None)
+
+    if profile and profile.is_unit_scoped and profile.unit_kerja:
+        user_unit = profile.unit_kerja
+        unit_ids = [user_unit.id] + list(UnitKerja.objects.filter(parent=user_unit).values_list('id', flat=True))
+        units = UnitKerja.objects.filter(id__in=unit_ids)
+        default_unit = user_unit
+    else:
+        units = UnitKerja.objects.all().order_by('name')
+        default_unit = units.first()
+
+    target_unit_id = unit_id or request.GET.get('unit')
+    if target_unit_id:
+        try:
+            target_unit_id = int(target_unit_id)
+            selected_unit = get_object_or_404(UnitKerja, pk=target_unit_id)
+        except (ValueError, TypeError, Http404):
+            selected_unit = default_unit
+    else:
+        selected_unit = default_unit
+
+    tahun_raw = request.GET.get('tahun')
+    tahun = 2026
+    if tahun_raw:
+        try:
+            tahun = int(tahun_raw)
+        except (ValueError, TypeError):
+            tahun = 2026
+
+    tahun_list = sorted(list(set(RisikoUnit.objects.values_list('tahun', flat=True).distinct())), reverse=True)
+    if not tahun_list:
+        tahun_list = [2026]
+
+    risiko_qs = RisikoUnit.objects.filter(unit=selected_unit).select_related(
+        'unit', 'indikator_mutu_terkait', 'created_by'
+    ).prefetch_related('tindak_lanjut').order_by('-dampak', '-probabilitas', 'id')
+
+    if tahun:
+        risiko_qs = risiko_qs.filter(tahun=tahun)
+
+    risiko_list = list(risiko_qs)
+
+    total_risiko = len(risiko_list)
+    rtl_selesai = sum(1 for r in risiko_list if r.status_rtl == 'SELESAI')
+    rtl_proses = sum(1 for r in risiko_list if r.status_rtl == 'PROSES')
+    terevaluasi = sum(1 for r in risiko_list if r.capaian_nilai is not None or r.evaluasi_capaian)
+
+    ctx = {
+        'is_single': False,
+        'selected_unit': selected_unit,
+        'units': units,
+        'tahun': tahun,
+        'tahun_list': tahun_list,
+        'risiko_list': risiko_list,
+        'total_risiko': total_risiko,
+        'rtl_selesai': rtl_selesai,
+        'rtl_proses': rtl_proses,
+        'terevaluasi': terevaluasi,
+        'tgl_cetak': timezone.now(),
+    }
+    return render(request, 'akreditasi/risiko_laporan_lengkap.html', ctx)
+
+
+

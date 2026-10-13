@@ -82,6 +82,11 @@ urlpatterns = [
     path('risiko/pelaksanaan/<int:unit_id>/', risiko_views.risiko_pelaksanaan_unit, name='risiko_pelaksanaan_unit'),
     path('risiko/pelaksanaan/export-csv/', risiko_views.risiko_pelaksanaan_export_csv, name='risiko_pelaksanaan_export_csv'),
 
+    # Laporan Lengkap PDCA (Plan + Do + Monev + RTL)
+    path('risiko/laporan-lengkap/', risiko_views.risiko_laporan_lengkap_unit, name='risiko_laporan_lengkap'),
+    path('risiko/laporan-lengkap/<int:unit_id>/', risiko_views.risiko_laporan_lengkap_unit, name='risiko_laporan_lengkap_unit'),
+    path('risiko/<int:risiko_id>/laporan-lengkap/', risiko_views.risiko_laporan_lengkap, name='risiko_laporan_lengkap_single'),
+
     # Modul Insiden Keselamatan (Fase 5)
     path('insiden/', risiko_views.insiden_daftar, name='insiden_daftar'),
     path('insiden/lapor/', risiko_views.insiden_lapor, name='insiden_lapor'),

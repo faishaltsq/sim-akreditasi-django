@@ -202,6 +202,13 @@
             <span class="nav-desc">Dokumen Cetak Siklus Do</span>
         </span>
     </a>
+    <a href="{% url 'akreditasi:risiko_laporan_lengkap' %}" class="nav-link {% if 'risiko_laporan_lengkap' in request.resolver_match.url_name %}active{% endif %}">
+        <span class="nav-icon"><i class="bi bi-journal-check"></i></span>
+        <span class="nav-text">
+            <span class="nav-title">Laporan Lengkap PDCA</span>
+            <span class="nav-desc">Plan + Do + Monev + RTL</span>
+        </span>
+    </a>
     <a href="{% url 'akreditasi:risiko_monev' %}" class="nav-link {% if 'risiko_monev' in request.resolver_match.url_name %}active{% endif %}">
         <span class="nav-icon"><i class="bi bi-clipboard2-data-fill"></i></span>
         <span class="nav-text">

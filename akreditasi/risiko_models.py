@@ -271,6 +271,62 @@ class RisikoUnit(models.Model):
         return None
 
     @property
+    def status_badge_color(self):
+        m = {
+            'IDENTIFIKASI': 'secondary',
+            'PLAN': 'primary',
+            'DO': 'warning text-dark',
+            'EVALUASI': 'info text-dark',
+            'SELESAI': 'success',
+            'ACCEPTED': 'teal text-white',
+        }
+        return m.get(self.status, 'secondary')
+
+    @property
+    def status_pelaksanaan_badge_color(self):
+        m = {
+            'DILAKUKAN': 'success',
+            'SEBAGIAN': 'warning text-dark',
+            'TIDAK_DILAKUKAN': 'danger',
+        }
+        return m.get(self.status_pelaksanaan, 'secondary')
+
+    @property
+    def skor_awal(self):
+        return self.dampak * self.probabilitas
+
+    @property
+    def skor_awal_color(self):
+        s = self.skor_awal
+        if s >= 20: return '#dc2626'
+        if s >= 15: return '#ea580c'
+        if s >= 10: return '#ca8a04'
+        if s >= 5: return '#16a34a'
+        return '#64748b'
+
+    @property
+    def skor_akhir(self):
+        if self.dampak_residual and self.probabilitas_residual:
+            return self.dampak_residual * self.probabilitas_residual
+        return None
+
+    @property
+    def skor_akhir_color(self):
+        s = self.skor_akhir
+        if not s: return '#64748b'
+        if s >= 20: return '#dc2626'
+        if s >= 15: return '#ea580c'
+        if s >= 10: return '#ca8a04'
+        if s >= 5: return '#16a34a'
+        return '#64748b'
+
+    @property
+    def skor_delta(self):
+        if self.skor_akhir is not None:
+            return self.skor_awal - self.skor_akhir
+        return None
+
+    @property
     def risk_level(self):
         from .system_models import SystemConfig
         cfg = SystemConfig.get_solo()
