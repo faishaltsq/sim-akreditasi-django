@@ -231,6 +231,8 @@
                             <div class="d-flex gap-1">
                             <a href="{% url 'akreditasi:risiko_detail' risiko_id=r.pk %}" class="btn btn-sm btn-outline-secondary py-0 px-1" title="Detail"><i class="bi bi-eye"></i></a>
                             <a href="{% url 'akreditasi:risiko_evaluasi' risiko_id=r.pk %}" class="btn btn-sm btn-outline-primary py-0 px-1" title="Evaluasi"><i class="bi bi-pencil-square"></i></a>
+                            <a href="{% url 'akreditasi:risiko_edit' risiko_id=r.pk %}" class="btn btn-sm btn-outline-warning py-0 px-1" title="Edit Risiko"><i class="bi bi-pencil"></i></a>
+                            <a href="{% url 'akreditasi:risiko_hapus' risiko_id=r.pk %}" class="btn btn-sm btn-outline-danger py-0 px-1" title="Hapus Risiko" onclick="return confirm('Hapus risiko ini secara permanen?')"><i class="bi bi-trash"></i></a>
                             </div>
                         </td>
                     </tr>

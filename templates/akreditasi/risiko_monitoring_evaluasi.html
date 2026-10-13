@@ -387,12 +387,18 @@
 
                         {# KOLOM 8: AKSI #}
                         <td class="text-center no-print">
-                            <div class="btn-group-vertical btn-group-sm">
+                            <div class="btn-group-vertical btn-group-sm w-100">
                                 <a href="{% url 'akreditasi:risiko_evaluasi' risiko_id=r.pk %}" class="btn btn-primary py-1 px-2 shadow-sm" style="background:#0f766e; border-color:#0f766e; font-size:.72rem;" title="Edit Evaluasi & MONEV">
                                     <i class="bi bi-pencil-square me-1"></i>Evaluasi
                                 </a>
                                 <a href="{% url 'akreditasi:risiko_detail' risiko_id=r.pk %}" class="btn btn-outline-secondary py-1 px-2" style="font-size:.72rem;" title="Buka Detail">
-                                    <i class="bi bi-eye"></i>
+                                    <i class="bi bi-eye me-1"></i>Detail
+                                </a>
+                                <a href="{% url 'akreditasi:risiko_edit' risiko_id=r.pk %}" class="btn btn-outline-primary py-1 px-2" style="font-size:.72rem;" title="Edit Risiko">
+                                    <i class="bi bi-pencil me-1"></i>Edit
+                                </a>
+                                <a href="{% url 'akreditasi:risiko_hapus' risiko_id=r.pk %}" class="btn btn-outline-danger py-1 px-2" style="font-size:.72rem;" title="Hapus Risiko" onclick="return confirm('Hapus risiko ini secara permanen?')">
+                                    <i class="bi bi-trash me-1"></i>Hapus
                                 </a>
                             </div>
                         </td>
