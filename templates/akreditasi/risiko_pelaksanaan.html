@@ -70,12 +70,16 @@
         width: 100%;
         margin-bottom: 1.25rem;
         border-collapse: collapse;
+        table-layout: fixed;
         font-size: 0.84rem;
+        word-wrap: break-word;
     }
     .table-formal th, .table-formal td {
         border: 1px solid #94a3b8;
-        padding: 8px 10px;
+        padding: 7px 9px;
         vertical-align: top;
+        word-break: break-word;
+        overflow-wrap: break-word;
     }
     .table-formal th {
         background-color: #f1f5f9;
@@ -277,12 +281,13 @@
                 <thead>
                     <tr>
                         <th style="width:5%;">No</th>
-                        <th style="width:35%;">Deskripsi Pelaksanaan Tindakan (Aksi)</th>
-                        <th style="width:12%;">Status Aksi</th>
+                        <th style="width:30%;">Deskripsi Pelaksanaan Tindakan (Aksi)</th>
+                        <th style="width:11%;">Status Aksi</th>
                         <th style="width:10%;">Tgl Mulai</th>
                         <th style="width:10%;">Tgl Selesai</th>
-                        <th style="width:13%;">Bukti Dokumen</th>
-                        <th style="width:15%;">Catatan Pelaksanaan</th>
+                        <th style="width:12%;">Bukti Dokumen</th>
+                        <th style="width:12%;">Catatan Pelaksanaan</th>
+                        <th class="no-print text-center" style="width:10%;">Aksi</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -311,10 +316,16 @@
                             {% endif %}
                         </td>
                         <td>{{ tl.catatan|default:"—" }}</td>
+                        <td class="no-print text-center">
+                            <div class="d-inline-flex gap-1">
+                                <a href="{% url 'akreditasi:risiko_edit' risiko.pk %}" class="btn btn-sm btn-outline-primary py-0 px-2" title="Edit"><i class="bi bi-pencil-square"></i></a>
+                                <form method="post" action="{% url 'akreditasi:risiko_hapus' risiko.pk %}" class="d-inline" onsubmit="return confirm('Yakin ingin menghapus risiko ini?');">{% csrf_token %}<button type="submit" class="btn btn-sm btn-outline-danger py-0 px-2" title="Hapus"><i class="bi bi-trash"></i></button></form>
+                            </div>
+                        </td>
                     </tr>
                     {% empty %}
                     <tr>
-                        <td colspan="7" class="text-center text-muted py-4">Belum ada tindakan pelaksanaan dicatat untuk risiko ini.</td>
+                        <td colspan="8" class="text-center text-muted py-4">Belum ada tindakan pelaksanaan dicatat untuk risiko ini.</td>
                     </tr>
                     {% endfor %}
                 </tbody>
@@ -333,13 +344,14 @@
                 <thead>
                     <tr>
                         <th style="width:4%;">No</th>
-                        <th style="width:22%;">Pernyataan Risiko &amp; Rencana Aksi</th>
-                        <th style="width:4%;">#</th>
-                        <th style="width:28%;">Deskripsi Pelaksanaan (Do)</th>
-                        <th style="width:10%;">Status Aksi</th>
-                        <th style="width:10%;">Waktu Pelaksanaan</th>
-                        <th style="width:12%;">Bukti Dokumen</th>
-                        <th style="width:10%;">PJ</th>
+                        <th style="width:18%;">Masalah resiko</th>
+                        <th style="width:14%;">Indikator mutu</th>
+                        <th style="width:20%;">Pelaksanaan (Do)</th>
+                        <th style="width:9%;">waktu</th>
+                        <th style="width:7%;">Biaya</th>
+                        <th style="width:9%;">PJ</th>
+                        <th style="width:9%;">Bukti dokumen</th>
+                        <th class="no-print text-center" style="width:10%;">Aksi</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -350,26 +362,45 @@
                                 {% if forloop.first %}
                                 <td rowspan="{{ item.tindak_lanjut|length }}" class="text-center align-top fw-bold">{{ forloop.parentloop.counter }}</td>
                                 <td rowspan="{{ item.tindak_lanjut|length }}" class="align-top">
-                                    <div class="fw-bold text-dark">{{ item.risiko.jenis_risiko }}</div>
+                                    <div class="fw-bold text-dark">{{ item.risiko.masalah|default:item.risiko.jenis_risiko }}</div>
                                     <div class="text-muted small mt-1"><strong>Rencana:</strong> {{ item.risiko.rencana_aksi }}</div>
-                                    <div class="mt-1">
-                                        <span class="badge bg-light text-dark border" style="font-size:0.7rem;">Realisasi: {{ item.pct_selesai }}% ({{ item.selesai_tl }}/{{ item.total_tl }})</span>
-                                    </div>
+                                </td>
+                                <td rowspan="{{ item.tindak_lanjut|length }}" class="align-top small">
+                                    {% if item.risiko.indikator_mutu_terkait %}
+                                        {{ item.risiko.indikator_mutu_terkait.nama_indikator }}
+                                    {% else %}
+                                        <span class="text-muted">—</span>
+                                    {% endif %}
                                 </td>
                                 {% endif %}
-                                <td class="text-center">{{ tl.urutan }}</td>
-                                <td>{{ tl.aksi }}</td>
-                                <td class="text-center">
-                                    {% if tl.status_aksi == 'SELESAI' %}
-                                    <span class="badge bg-success" style="font-size:0.7rem;">Selesai</span>
-                                    {% elif tl.status_aksi == 'SEDANG' %}
-                                    <span class="badge bg-warning text-dark" style="font-size:0.7rem;">Sedang Berjalan</span>
+                                <td>
+                                    <div>{{ tl.aksi }}</div>
+                                    <div class="mt-1">
+                                        {% if tl.status_aksi == 'SELESAI' %}
+                                        <span class="badge bg-success" style="font-size:0.68rem;">Selesai</span>
+                                        {% elif tl.status_aksi == 'SEDANG' %}
+                                        <span class="badge bg-warning text-dark" style="font-size:0.68rem;">Sedang Berjalan</span>
+                                        {% else %}
+                                        <span class="badge bg-secondary" style="font-size:0.68rem;">Belum</span>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                                <td class="text-center small">
+                                    {% if tl.tanggal_mulai or tl.tanggal_selesai %}
+                                        {{ tl.tanggal_mulai|date:"d/m/y"|default:"—" }} - {{ tl.tanggal_selesai|date:"d/m/y"|default:"—" }}
                                     {% else %}
-                                    <span class="badge bg-secondary" style="font-size:0.7rem;">Belum</span>
+                                        {{ item.risiko.get_periode_display }} {{ item.risiko.tahun }}
                                     {% endif %}
                                 </td>
                                 <td class="text-center small">
-                                    {{ tl.tanggal_mulai|date:"d/m/y"|default:"—" }} s/d {{ tl.tanggal_selesai|date:"d/m/y"|default:"—" }}
+                                    {% if item.risiko.biaya_mitigasi %}
+                                        Rp {{ item.risiko.biaya_mitigasi|floatformat:0 }}
+                                    {% else %}
+                                        Rp 0
+                                    {% endif %}
+                                </td>
+                                <td class="text-center small fw-semibold">
+                                    {{ item.risiko.pj_mitigasi|default:"Ka. Unit" }}
                                 </td>
                                 <td class="small">
                                     {% if tl.bukti_upload %}
@@ -381,8 +412,11 @@
                                     {% endif %}
                                 </td>
                                 {% if forloop.first %}
-                                <td rowspan="{{ item.tindak_lanjut|length }}" class="text-center align-top small">
-                                    {{ item.risiko.pj_mitigasi|default:"Ka. Unit" }}
+                                <td rowspan="{{ item.tindak_lanjut|length }}" class="no-print text-center align-top">
+                                    <div class="d-inline-flex gap-1">
+                                        <a href="{% url 'akreditasi:risiko_edit' item.risiko.pk %}" class="btn btn-sm btn-outline-primary py-0 px-2" title="Edit"><i class="bi bi-pencil-square"></i></a>
+                                        <form method="post" action="{% url 'akreditasi:risiko_hapus' item.risiko.pk %}" class="d-inline" onsubmit="return confirm('Yakin ingin menghapus risiko ini?');">{% csrf_token %}<button type="submit" class="btn btn-sm btn-outline-danger py-0 px-2" title="Hapus"><i class="bi bi-trash"></i></button></form>
+                                    </div>
                                 </td>
                                 {% endif %}
                             </tr>
@@ -391,17 +425,34 @@
                             <tr>
                                 <td class="text-center fw-bold">{{ forloop.counter }}</td>
                                 <td>
-                                    <div class="fw-bold text-dark">{{ item.risiko.jenis_risiko }}</div>
+                                    <div class="fw-bold text-dark">{{ item.risiko.masalah|default:item.risiko.jenis_risiko }}</div>
                                     <div class="text-muted small mt-1"><strong>Rencana:</strong> {{ item.risiko.rencana_aksi }}</div>
                                 </td>
-                                <td class="text-center text-muted">—</td>
-                                <td colspan="4" class="text-muted fst-italic">Belum ada tindakan pelaksanaan dicatat.</td>
-                                <td class="text-center small">{{ item.risiko.pj_mitigasi|default:"Ka. Unit" }}</td>
+                                <td class="small">
+                                    {% if item.risiko.indikator_mutu_terkait %}
+                                        {{ item.risiko.indikator_mutu_terkait.nama_indikator }}
+                                    {% else %}
+                                        <span class="text-muted">—</span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-muted fst-italic">Belum ada tindakan pelaksanaan dicatat.</td>
+                                <td class="text-center small">{{ item.risiko.get_periode_display }} {{ item.risiko.tahun }}</td>
+                                <td class="text-center small">
+                                    {% if item.risiko.biaya_mitigasi %}Rp {{ item.risiko.biaya_mitigasi|floatformat:0 }}{% else %}Rp 0{% endif %}
+                                </td>
+                                <td class="text-center small fw-semibold">{{ item.risiko.pj_mitigasi|default:"Ka. Unit" }}</td>
+                                <td class="text-center small text-muted">—</td>
+                                <td class="no-print text-center">
+                                    <div class="d-inline-flex gap-1">
+                                        <a href="{% url 'akreditasi:risiko_edit' item.risiko.pk %}" class="btn btn-sm btn-outline-primary py-0 px-2" title="Edit"><i class="bi bi-pencil-square"></i></a>
+                                        <form method="post" action="{% url 'akreditasi:risiko_hapus' item.risiko.pk %}" class="d-inline" onsubmit="return confirm('Yakin ingin menghapus risiko ini?');">{% csrf_token %}<button type="submit" class="btn btn-sm btn-outline-danger py-0 px-2" title="Hapus"><i class="bi bi-trash"></i></button></form>
+                                    </div>
+                                </td>
                             </tr>
                         {% endif %}
                     {% empty %}
                     <tr>
-                        <td colspan="8" class="text-center text-muted py-4">Belum ada data risiko untuk unit kerja ini pada tahun {{ tahun }}.</td>
+                        <td colspan="9" class="text-center text-muted py-4">Belum ada data risiko untuk unit kerja ini pada tahun {{ tahun }}.</td>
                     </tr>
                     {% endfor %}
                 </tbody>

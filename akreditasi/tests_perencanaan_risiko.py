@@ -196,6 +196,37 @@ class PerencanaanRisikoTest(TestCase):
         self.assertIn('LAPORAN LENGKAP MANAJEMEN RISIKO', content)
         self.assertIn('Unit Kamar Operasi', content)
 
+    def test_document_views_contain_edit_and_delete_actions(self):
+        """Verify that Perencanaan, Pelaksanaan, and Laporan Lengkap have Edit & Delete buttons."""
+        # 1. Perencanaan unit
+        url_plan = reverse('akreditasi:risiko_perencanaan_unit', kwargs={'unit_id': self.unit.pk})
+        resp_plan = self.client.get(url_plan)
+        self.assertEqual(resp_plan.status_code, 200)
+        self.assertContains(resp_plan, f'/risiko/{self.risiko.pk}/edit/')
+        self.assertContains(resp_plan, f'/risiko/{self.risiko.pk}/hapus/')
+
+        # 2. Pelaksanaan unit
+        url_do = reverse('akreditasi:risiko_pelaksanaan_unit', kwargs={'unit_id': self.unit.pk})
+        resp_do = self.client.get(url_do)
+        self.assertEqual(resp_do.status_code, 200)
+        self.assertContains(resp_do, f'/risiko/{self.risiko.pk}/edit/')
+        self.assertContains(resp_do, f'/risiko/{self.risiko.pk}/hapus/')
+
+        # 3. Laporan Lengkap Single
+        url_single = reverse('akreditasi:risiko_laporan_lengkap_single', kwargs={'risiko_id': self.risiko.pk})
+        resp_single = self.client.get(url_single)
+        self.assertEqual(resp_single.status_code, 200)
+        self.assertContains(resp_single, f'/risiko/{self.risiko.pk}/edit/')
+        self.assertContains(resp_single, f'/risiko/{self.risiko.pk}/hapus/')
+
+        # 4. Laporan Lengkap Unit
+        url_unit = reverse('akreditasi:risiko_laporan_lengkap_unit', kwargs={'unit_id': self.unit.pk})
+        resp_unit = self.client.get(url_unit)
+        self.assertEqual(resp_unit.status_code, 200)
+        self.assertContains(resp_unit, f'/risiko/{self.risiko.pk}/edit/')
+        self.assertContains(resp_unit, f'/risiko/{self.risiko.pk}/hapus/')
+
+
 
 
 

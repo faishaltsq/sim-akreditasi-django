@@ -1437,6 +1437,7 @@ def risiko_perencanaan_unit(request, unit_id=None):
         table_indikator.append({
             'no': idx,
             'risiko': r,
+            'risiko_id': r.id,
             'masalah': r.masalah or r.jenis_risiko,
             'indikator_mutu': f"{kode_ind}{nama_ind}" if nama_ind != '—' else 'Belum ditentukan',
             'target': target_str,
@@ -1456,6 +1457,7 @@ def risiko_perencanaan_unit(request, unit_id=None):
         table_aksi.append({
             'no': idx,
             'risiko': r,
+            'risiko_id': r.id,
             'masalah': r.masalah or r.jenis_risiko,
             'indikator_mutu': nama_ind,
             'rencana_aksi': r.rencana_aksi,

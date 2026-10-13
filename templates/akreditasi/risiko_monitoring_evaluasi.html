@@ -14,6 +14,11 @@
         transform: translateY(-2px);
         box-shadow: 0 8px 20px rgba(0,0,0,.08) !important;
     }
+    .table-monev {
+        table-layout: fixed;
+        width: 100%;
+        word-wrap: break-word;
+    }
     .table-monev th {
         font-size: .74rem;
         text-transform: uppercase;
@@ -22,11 +27,13 @@
         background-color: #0f766e !important;
         color: #ffffff !important;
         border-color: #0d9488 !important;
-        white-space: nowrap;
+        white-space: normal;
     }
     .table-monev td {
         font-size: .8rem;
         vertical-align: top;
+        word-break: break-word;
+        overflow-wrap: break-word;
     }
     .fishbone-tag {
         font-size: .7rem;
@@ -202,14 +209,14 @@
             <table class="table table-bordered table-hover table-monev align-middle mb-0">
                 <thead>
                     <tr>
-                        <th class="text-center" style="width: 40px;">No</th>
-                        <th style="min-width: 220px;">Indikator Mutu &amp; Target</th>
-                        <th style="min-width: 170px;">Capaian Indikator Mutu</th>
-                        <th style="min-width: 230px;">Pelaksanaan Tindakan Setiap Rencana</th>
-                        <th style="min-width: 260px;">RCA (Root Cause Analysis)</th>
-                        <th style="min-width: 240px;">RTL (Rencana Tindak Lanjut)</th>
-                        <th class="text-center" style="min-width: 110px;">Skor Risiko (Awal &rarr; Akhir)</th>
-                        <th class="text-center no-print" style="width: 80px;">Aksi</th>
+                        <th class="text-center" style="width: 4%;">No</th>
+                        <th style="width: 17%;">Indikator Mutu &amp; Target</th>
+                        <th style="width: 14%;">Capaian Indikator Mutu</th>
+                        <th style="width: 18%;">Pelaksanaan Tindakan Setiap Rencana</th>
+                        <th style="width: 18%;">RCA (Root Cause Analysis)</th>
+                        <th style="width: 16%;">RTL (Rencana Tindak Lanjut)</th>
+                        <th class="text-center" style="width: 8%;">Skor Risiko</th>
+                        <th class="text-center no-print" style="width: 5%;">Aksi</th>
                     </tr>
                 </thead>
                 <tbody>
