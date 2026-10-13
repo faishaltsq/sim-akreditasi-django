@@ -1,0 +1,61 @@
+{% extends 'base.html' %}
+
+{% block title %}Konfirmasi Hapus Risiko — ARIMA{% endblock %}
+{% block page_title %}Hapus Risiko{% endblock %}
+{% block page_subtitle %}Konfirmasi Penghapusan Data Risiko{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-3">
+    <div class="row justify-content-center">
+        <div class="col-xl-6">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header border-0 py-3 bg-danger text-white">
+                    <h6 class="mb-0 fw-bold"><i class="bi bi-exclamation-triangle-fill me-2"></i>Konfirmasi Hapus Risiko</h6>
+                </div>
+                <div class="card-body p-4">
+                    <div class="alert alert-danger d-flex align-items-start gap-2" style="font-size:.85rem;">
+                        <i class="bi bi-exclamation-octagon-fill fs-5 flex-shrink-0 mt-1"></i>
+                        <div>
+                            <strong>Perhatian!</strong> Data risiko ini akan dihapus secara permanen beserta seluruh tindak lanjut (pelaksanaan) yang terkait. Tindakan ini <strong>tidak dapat dibatalkan</strong>.
+                        </div>
+                    </div>
+
+                    <div class="p-3 rounded border mb-3" style="background:#f8fafc;">
+                        <div class="row g-2" style="font-size:.84rem;">
+                            <div class="col-sm-4 text-muted fw-bold">ID Risiko</div>
+                            <div class="col-sm-8 fw-semibold">#{{ risiko.pk }}</div>
+
+                            <div class="col-sm-4 text-muted fw-bold">Jenis Risiko</div>
+                            <div class="col-sm-8 text-danger fw-bold">{{ risiko.jenis_risiko }}</div>
+
+                            <div class="col-sm-4 text-muted fw-bold">Unit Kerja</div>
+                            <div class="col-sm-8">{{ risiko.unit.name }}</div>
+
+                            <div class="col-sm-4 text-muted fw-bold">Periode</div>
+                            <div class="col-sm-8">{{ risiko.get_periode_display }} {{ risiko.tahun }}</div>
+
+                            <div class="col-sm-4 text-muted fw-bold">Status PDCA</div>
+                            <div class="col-sm-8"><span class="badge bg-secondary">{{ risiko.get_status_display }}</span></div>
+
+                            <div class="col-sm-4 text-muted fw-bold">Skor Inherent</div>
+                            <div class="col-sm-8 fw-bold">{{ risiko.skor_inherent }}</div>
+                        </div>
+                    </div>
+
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="d-flex justify-content-end gap-2">
+                            <a href="{% url 'akreditasi:risiko_detail' risiko.pk %}" class="btn btn-sm btn-outline-secondary px-3">
+                                <i class="bi bi-arrow-left me-1"></i>Batal, Kembali
+                            </a>
+                            <button type="submit" class="btn btn-sm btn-danger px-3">
+                                <i class="bi bi-trash3-fill me-1"></i>Ya, Hapus Risiko Ini
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

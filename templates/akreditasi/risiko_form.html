@@ -1,8 +1,8 @@
 {% extends 'base.html' %}
 
-{% block title %}Input Risiko Baru — ARIMA{% endblock %}
-{% block page_title %}Input Risiko Baru{% endblock %}
-{% block page_subtitle %}Form Identifikasi & Penilaian Risiko Unit{% endblock %}
+{% block title %}{% if is_edit %}Edit Risiko #{{ risiko.pk }} — ARIMA{% else %}Input Risiko Baru — ARIMA{% endif %}{% endblock %}
+{% block page_title %}{% if is_edit %}Edit Risiko{% else %}Input Risiko Baru{% endif %}{% endblock %}
+{% block page_subtitle %}{% if is_edit %}Edit data risiko — {{ risiko.jenis_risiko|truncatewords:6 }}{% else %}Form Identifikasi &amp; Penilaian Risiko Unit{% endif %}{% endblock %}
 
 {% block extra_css %}
 <style>
@@ -48,7 +48,12 @@
             <nav aria-label="breadcrumb" class="mb-3">
                 <ol class="breadcrumb" style="font-size:.8rem;">
                     <li class="breadcrumb-item"><a href="{% url 'akreditasi:risiko_daftar' %}" style="color:#0d9488;">Daftar Risiko</a></li>
+                    {% if is_edit %}
+                    <li class="breadcrumb-item"><a href="{% url 'akreditasi:risiko_detail' risiko.pk %}" style="color:#0d9488;">Detail #{{ risiko.pk }}</a></li>
+                    <li class="breadcrumb-item active">Edit Risiko</li>
+                    {% else %}
                     <li class="breadcrumb-item active">Input Risiko Baru</li>
+                    {% endif %}
                 </ol>
             </nav>
 
@@ -60,10 +65,14 @@
 
             <div class="card border-0 shadow-sm">
                 <div class="card-header border-0 py-3" style="background:linear-gradient(135deg,#0f766e,#0d9488); color:#fff;">
-                    <h6 class="mb-0 fw-bold"><i class="bi bi-shield-plus me-2"></i>Formulir Identifikasi Risiko Unit</h6>
+                    <h6 class="mb-0 fw-bold">
+                        {% if is_edit %}<i class="bi bi-pencil-square me-2"></i>Edit Risiko #{{ risiko.pk }} — {{ risiko.unit.name }}
+                        {% else %}<i class="bi bi-shield-plus me-2"></i>Formulir Identifikasi Risiko Unit
+                        {% endif %}
+                    </h6>
                 </div>
                 <div class="card-body p-4">
-                    <form method="post" enctype="multipart/form-data" novalidate>
+                    <form method="post" action="{% if is_edit %}{% url 'akreditasi:risiko_edit' risiko.pk %}{% else %}{% url 'akreditasi:risiko_input' %}{% endif %}" enctype="multipart/form-data" novalidate>
                         {% csrf_token %}
 
                         {# ── Bagian 1: Identifikasi ─────────────────── #}
@@ -84,14 +93,14 @@
                             </div>
                             <div class="col-md-3">
                                 <label class="form-label" style="font-size:.8rem; font-weight:600;">Tahun <span class="text-danger">*</span></label>
-                                <input type="number" name="tahun" class="form-control form-control-sm" value="2026" min="2020" max="2035" required>
+                                <input type="number" name="tahun" class="form-control form-control-sm" value="{% if is_edit %}{{ risiko.tahun }}{% else %}2026{% endif %}" min="2020" max="2035" required>
                             </div>
                             <div class="col-md-3">
                                 <label class="form-label" style="font-size:.8rem; font-weight:600;">Periode <span class="text-danger">*</span></label>
                                 <select name="periode" class="form-select form-select-sm" required>
                                     <option value="">— Pilih —</option>
                                     {% for val, label in periode_choices %}
-                                    <option value="{{ val }}">{{ label }}</option>
+                                    <option value="{{ val }}" {% if is_edit and risiko.periode == val %}selected{% endif %}>{{ label }}</option>
                                     {% endfor %}
                                 </select>
                             </div>
@@ -114,7 +123,7 @@
                                         <i class="bi bi-exclamation-circle text-danger me-1"></i>Masalah <span class="text-muted fw-normal">(Issue Statement)</span>
                                     </label>
                                     <textarea name="masalah" id="input_masalah" class="form-control form-control-sm" rows="2"
-                                              placeholder="Uraikan masalah aktual atau potensi masalah yang dihadapi…"></textarea>
+                                              placeholder="Uraikan masalah aktual atau potensi masalah yang dihadapi…">{% if is_edit %}{{ risiko.masalah }}{% endif %}</textarea>
                                     <small class="text-muted" style="font-size:.68rem;">Fakta/masalah nyata yang mendasari perlunya manajemen risiko</small>
                                 </div>
                                 <div class="col-md-6">
@@ -122,7 +131,7 @@
                                         <i class="bi bi-file-earmark-bar-graph text-primary me-1"></i>Data / Bukti Pendukung <span class="text-muted fw-normal">(Baseline Data)</span>
                                     </label>
                                     <textarea name="data" id="input_data_pendukung" class="form-control form-control-sm" rows="2"
-                                              placeholder="Data kuantitatif/kualitatif pendukung (cth: angka insiden, % komplain, hasil audit)…"></textarea>
+                                              placeholder="Data kuantitatif/kualitatif pendukung (cth: angka insiden, % komplain, hasil audit)…">{% if is_edit %}{{ risiko.data_pendukung }}{% endif %}</textarea>
                                     <small class="text-muted" style="font-size:.68rem;">Data, fakta capaian, atau bukti dokumentasi masalah</small>
                                     <div class="mt-2">
                                         <label class="form-label mb-1" style="font-size:.72rem; font-weight:600;">
@@ -141,7 +150,7 @@
                                         <i class="bi bi-bullseye text-success me-1"></i>Tujuan Pengendalian Risiko <span class="text-muted fw-normal">(Objective / Target Mutu)</span>
                                     </label>
                                     <textarea name="tujuan" id="input_tujuan" class="form-control form-control-sm" rows="2"
-                                              placeholder="Uraikan tujuan yang ingin dicapai melalui mitigasi ini (cth: Mencegah insiden keselamatan pasien dan menjamin kontinuitas pelayanan sesuai SOP)..."></textarea>
+                                              placeholder="Uraikan tujuan yang ingin dicapai melalui mitigasi ini (cth: Mencegah insiden keselamatan pasien dan menjamin kontinuitas pelayanan sesuai SOP)...">{% if is_edit %}{{ risiko.tujuan }}{% endif %}</textarea>
                                     <small class="text-muted" style="font-size:.68rem;">Target perbaikan mutu, kepatuhan SOP, atau sasaran keselamatan pasien yang ingin diwujudkan</small>
                                 </div>
                             </div>
@@ -1503,6 +1512,146 @@ document.addEventListener('DOMContentLoaded', function() {
     } catch (e) {
         console.warn('Initial calculation error:', e);
     }
+
+    {% if is_edit %}
+    // ── Pre-fill Edit Mode Data ──
+    try {
+        const editData = {
+            unit: "{{ risiko.unit_id }}",
+            kategori_risiko: "{{ risiko.kategori_risiko }}",
+            jenis_risiko: `{{ risiko.jenis_risiko|escapejs }}`,
+            deskripsi_risiko: `{{ risiko.deskripsi_risiko|escapejs }}`,
+            dampak: {{ risiko.dampak }},
+            probabilitas: {{ risiko.probabilitas }},
+            pengendalian_ada: `{{ risiko.pengendalian_ada|escapejs }}`,
+            metode_evaluasi: "{{ risiko.metode_evaluasi }}",
+            tim_evaluasi_fmea: `{{ risiko.tim_evaluasi|escapejs }}`,
+            tim_evaluasi_rca: `{{ risiko.tim_evaluasi|escapejs }}`,
+            deteksi_fmea: {{ risiko.deteksi_fmea|default:3 }},
+            failure_mode_fmea: `{{ risiko.failure_mode_fmea|escapejs }}`,
+            akar_masalah_rca: `{{ risiko.akar_masalah_rca|escapejs }}`,
+            tindakan_korektif_rca: `{{ risiko.tindakan_korektif_rca|escapejs }}`,
+            tanggal_evaluasi: "{{ risiko.tanggal_evaluasi|date:'Y-m-d'|default:'' }}",
+            indikator_mutu_terkait: "{{ risiko.indikator_mutu_terkait_id|default:'' }}",
+            target_capaian_indikator: "{{ risiko.target_capaian_indikator|default:'' }}",
+            strategi_mitigasi: "{{ risiko.strategi_mitigasi }}",
+            pj_mitigasi: `{{ risiko.pj_mitigasi|escapejs }}`,
+            biaya_mitigasi: "{{ risiko.biaya_mitigasi|floatformat:0 }}",
+            target_selesai: "{{ risiko.target_selesai|date:'Y-m-d'|default:'' }}",
+            rencana_aksi: `{{ risiko.rencana_aksi|escapejs }}`,
+            dampak_residual: {{ risiko.dampak_residual|default:2 }},
+            probabilitas_residual: {{ risiko.probabilitas_residual|default:2 }},
+            deteksi_residual: {{ risiko.deteksi_residual|default:2 }},
+        };
+
+        if (editData.unit) {
+            const el = document.querySelector('[name="unit"]');
+            if (el) { el.value = editData.unit; el.dispatchEvent(new Event('change')); }
+        }
+        if (editData.kategori_risiko) {
+            const el = document.querySelector('[name="kategori_risiko"]');
+            if (el) { el.value = editData.kategori_risiko; el.dispatchEvent(new Event('change')); }
+        }
+        if (editData.jenis_risiko) {
+            const el = document.querySelector('[name="jenis_risiko"]');
+            if (el) el.value = editData.jenis_risiko;
+        }
+        if (editData.deskripsi_risiko) {
+            const el = document.querySelector('[name="deskripsi_risiko"]');
+            if (el) el.value = editData.deskripsi_risiko;
+        }
+        if (editData.dampak) {
+            const el = document.querySelector('[name="dampak"]');
+            if (el) { el.value = editData.dampak; el.dispatchEvent(new Event('input')); }
+        }
+        if (editData.probabilitas) {
+            const el = document.querySelector('[name="probabilitas"]');
+            if (el) { el.value = editData.probabilitas; el.dispatchEvent(new Event('input')); }
+        }
+        if (editData.pengendalian_ada) {
+            const el = document.querySelector('[name="pengendalian_ada"]');
+            if (el) el.value = editData.pengendalian_ada;
+        }
+        if (editData.metode_evaluasi) {
+            const el = document.querySelector(`input[name="metode_evaluasi"][value="${editData.metode_evaluasi}"]`);
+            if (el) { el.checked = true; el.dispatchEvent(new Event('change')); }
+        }
+        if (editData.tim_evaluasi_fmea) {
+            const el = document.querySelector('[name="tim_evaluasi_fmea"]');
+            if (el) el.value = editData.tim_evaluasi_fmea;
+        }
+        if (editData.tim_evaluasi_rca) {
+            const el = document.querySelector('[name="tim_evaluasi_rca"]');
+            if (el) el.value = editData.tim_evaluasi_rca;
+        }
+        if (editData.deteksi_fmea) {
+            const el = document.querySelector('[name="deteksi_fmea"]');
+            if (el) { el.value = editData.deteksi_fmea; el.dispatchEvent(new Event('input')); }
+        }
+        if (editData.failure_mode_fmea) {
+            const el = document.querySelector('[name="failure_mode_fmea"]');
+            if (el) el.value = editData.failure_mode_fmea;
+        }
+        if (editData.akar_masalah_rca) {
+            const el = document.querySelector('[name="akar_masalah_rca"]');
+            if (el) el.value = editData.akar_masalah_rca;
+        }
+        if (editData.tindakan_korektif_rca) {
+            const el = document.querySelector('[name="tindakan_korektif_rca"]');
+            if (el) el.value = editData.tindakan_korektif_rca;
+        }
+        if (editData.tanggal_evaluasi) {
+            const el = document.querySelector('[name="tanggal_evaluasi"]');
+            if (el) el.value = editData.tanggal_evaluasi;
+        }
+        if (editData.indikator_mutu_terkait) {
+            const el = document.querySelector('[name="indikator_mutu_terkait"]');
+            if (el) { el.value = editData.indikator_mutu_terkait; el.dispatchEvent(new Event('change')); }
+        }
+        if (editData.target_capaian_indikator) {
+            const el = document.querySelector('[name="target_capaian_indikator"]');
+            if (el) el.value = editData.target_capaian_indikator;
+        }
+        if (editData.strategi_mitigasi) {
+            const el = document.querySelector('[name="strategi_mitigasi"]');
+            if (el) el.value = editData.strategi_mitigasi;
+        }
+        if (editData.pj_mitigasi) {
+            const el = document.querySelector('[name="pj_mitigasi"]');
+            if (el) el.value = editData.pj_mitigasi;
+        }
+        if (editData.biaya_mitigasi) {
+            const el = document.querySelector('[name="biaya_mitigasi"]');
+            if (el) el.value = editData.biaya_mitigasi;
+        }
+        if (editData.target_selesai) {
+            const el = document.querySelector('[name="target_selesai"]');
+            if (el) el.value = editData.target_selesai;
+        }
+        if (editData.rencana_aksi) {
+            const el = document.querySelector('[name="rencana_aksi"]');
+            if (el) el.value = editData.rencana_aksi;
+        }
+        if (editData.dampak_residual) {
+            const el = document.querySelector('[name="dampak_residual"]');
+            if (el) { el.value = editData.dampak_residual; el.dispatchEvent(new Event('input')); }
+        }
+        if (editData.probabilitas_residual) {
+            const el = document.querySelector('[name="probabilitas_residual"]');
+            if (el) { el.value = editData.probabilitas_residual; el.dispatchEvent(new Event('input')); }
+        }
+        if (editData.deteksi_residual) {
+            const el = document.querySelector('[name="deteksi_residual"]');
+            if (el) { el.value = editData.deteksi_residual; el.dispatchEvent(new Event('input')); }
+        }
+        // Re-run calculations
+        update();
+        if (typeof updateRpn === 'function') updateRpn();
+        if (typeof updateResidual === 'function') updateResidual();
+    } catch (e) {
+        console.warn('Pre-fill edit error:', e);
+    }
+    {% endif %}
 });
 </script>
 {% endblock %}

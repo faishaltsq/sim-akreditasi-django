@@ -493,6 +493,163 @@ def risiko_detail(request, risiko_id):
     return render(request, 'akreditasi/risiko_detail.html', ctx)
 
 
+# ── 3b. Edit Risiko ──────────────────────────────────────────────────────
+
+@login_required
+def risiko_edit(request, risiko_id):
+    risiko = get_object_or_404(RisikoUnit, pk=risiko_id)
+
+    profile = getattr(request.user, 'profile', None)
+    if profile and profile.is_unit_scoped and profile.unit_kerja:
+        user_unit = profile.unit_kerja
+        unit_ids = [user_unit.id] + list(UnitKerja.objects.filter(parent=user_unit).values_list('id', flat=True))
+        units = UnitKerja.objects.filter(id__in=unit_ids)
+    else:
+        units = UnitKerja.objects.all()
+
+    if request.method == 'POST':
+        try:
+            indikator_id = request.POST.get('indikator_mutu_terkait') or None
+            target_capaian = request.POST.get('target_capaian_indikator') or None
+
+            indikator_manual = (request.POST.get('indikator_mutu_manual') or '').strip()
+
+            jenis_list = request.POST.getlist('jenis_risiko')
+            if len(jenis_list) > 1:
+                jenis_val = '\n'.join([j.strip() for j in jenis_list if j.strip()])
+            elif len(jenis_list) == 1:
+                jenis_val = jenis_list[0].strip()
+            else:
+                jenis_val = (request.POST.get('jenis_risiko') or '').strip()
+
+            metode_evaluasi = (request.POST.get('metode_evaluasi') or 'STANDAR').strip()
+            if metode_evaluasi not in ('STANDAR', 'FMEA', 'RCA'):
+                metode_evaluasi = 'STANDAR'
+
+            if metode_evaluasi == 'FMEA':
+                tim_evaluasi = (request.POST.get('tim_evaluasi_fmea') or '').strip()
+            elif metode_evaluasi == 'RCA':
+                tim_evaluasi = (request.POST.get('tim_evaluasi_rca') or '').strip()
+            else:
+                tim_evaluasi = ''
+
+            deteksi_fmea = None
+            if metode_evaluasi == 'FMEA':
+                det_raw = (request.POST.get('deteksi_fmea') or '').strip()
+                try:
+                    deteksi_fmea = int(det_raw) if det_raw else 3
+                except ValueError:
+                    deteksi_fmea = 3
+
+            dampak_val = int(request.POST['dampak'])
+            prob_val = int(request.POST['probabilitas'])
+
+            rpn_raw = (request.POST.get('rpn_fmea') or '').strip()
+            try:
+                rpn_fmea = int(rpn_raw) if rpn_raw else (dampak_val * prob_val * (deteksi_fmea or 1) if metode_evaluasi == 'FMEA' else None)
+            except ValueError:
+                rpn_fmea = dampak_val * prob_val * (deteksi_fmea or 1) if metode_evaluasi == 'FMEA' else None
+
+            tanggal_eval_raw = (request.POST.get('tanggal_evaluasi') or '').strip()
+
+            dampak_res_raw = (request.POST.get('dampak_residual') or '').strip()
+            prob_res_raw = (request.POST.get('probabilitas_residual') or '').strip()
+            det_res_raw = (request.POST.get('deteksi_residual') or '').strip()
+            dampak_res = int(dampak_res_raw) if dampak_res_raw else risiko.dampak_residual
+            prob_res = int(prob_res_raw) if prob_res_raw else risiko.probabilitas_residual
+            det_res = int(det_res_raw) if det_res_raw else risiko.deteksi_residual
+            rpn_res = None
+            if dampak_res and prob_res:
+                if det_res:
+                    rpn_res = dampak_res * prob_res * det_res
+                elif metode_evaluasi == 'FMEA':
+                    rpn_res = dampak_res * prob_res * (deteksi_fmea or 1)
+
+            eval_capaian = (request.POST.get('evaluasi_capaian') or '').strip() or risiko.evaluasi_capaian
+            rca_ulang_val = (request.POST.get('rca_ulang') or '').strip() or risiko.rca_ulang
+            rtl_val = (request.POST.get('rencana_tindak_lanjut') or '').strip() or risiko.rencana_tindak_lanjut
+            pj_rtl_val = (request.POST.get('pj_rtl') or '').strip() or risiko.pj_rtl
+
+            risiko.unit_id = int(request.POST['unit'])
+            risiko.tahun = int(request.POST['tahun'])
+            risiko.periode = request.POST['periode']
+            risiko.kategori_risiko = request.POST['kategori_risiko']
+            risiko.jenis_risiko = jenis_val
+            risiko.masalah = request.POST.get('masalah', '').strip()
+            risiko.data_pendukung = (request.POST.get('data') or request.POST.get('data_pendukung') or '').strip()
+            risiko.tujuan = request.POST.get('tujuan', '').strip()
+            deskripsi_base = request.POST['deskripsi_risiko']
+            risiko.deskripsi_risiko = deskripsi_base + (f"\n\n[Indikator Mutu Manual: {indikator_manual}]" if (indikator_manual and not indikator_id) else '')
+            risiko.dampak = dampak_val
+            risiko.probabilitas = prob_val
+            risiko.pengendalian_ada = (request.POST.get('pengendalian_ada') or '').strip()
+            risiko.indikator_mutu_terkait_id = int(indikator_id) if indikator_id else None
+            risiko.target_capaian_indikator = float(target_capaian) if target_capaian else None
+            risiko.strategi_mitigasi = request.POST['strategi_mitigasi']
+            risiko.rencana_aksi = request.POST['rencana_aksi']
+            risiko.pj_mitigasi = request.POST['pj_mitigasi']
+            risiko.biaya_mitigasi = request.POST.get('biaya_mitigasi') or 0
+            risiko.target_selesai = request.POST.get('target_selesai') or None
+            risiko.metode_evaluasi = metode_evaluasi
+            risiko.tim_evaluasi = tim_evaluasi
+            risiko.deteksi_fmea = deteksi_fmea
+            risiko.failure_mode_fmea = (request.POST.get('failure_mode_fmea') or '').strip() if metode_evaluasi == 'FMEA' else ''
+            risiko.akar_masalah_rca = (request.POST.get('akar_masalah_rca') or '').strip() if metode_evaluasi == 'RCA' else ''
+            risiko.tindakan_korektif_rca = (request.POST.get('tindakan_korektif_rca') or '').strip() if metode_evaluasi == 'RCA' else ''
+            risiko.rpn_fmea = rpn_fmea if metode_evaluasi == 'FMEA' else None
+            risiko.tanggal_evaluasi = tanggal_eval_raw or None
+            risiko.dampak_residual = dampak_res
+            risiko.probabilitas_residual = prob_res
+            risiko.deteksi_residual = det_res
+            risiko.rpn_residual = rpn_res
+            risiko.evaluasi_capaian = eval_capaian
+            risiko.rca_ulang = rca_ulang_val
+            risiko.rencana_tindak_lanjut = rtl_val
+            risiko.pj_rtl = pj_rtl_val
+
+            risiko.full_clean(exclude=['bukti_data_pendukung'])
+            risiko.save()
+            if request.FILES.get('bukti_data_pendukung'):
+                risiko.bukti_data_pendukung = request.FILES['bukti_data_pendukung']
+                risiko.save(update_fields=['bukti_data_pendukung'])
+            _log(request.user, 'UPDATE', risiko, f'Edit risiko #{risiko_id}')
+            messages.success(request, 'Risiko berhasil diperbarui.')
+            return redirect('akreditasi:risiko_detail', risiko_id=risiko.pk)
+        except Exception as e:
+            messages.error(request, f'Gagal menyimpan: {e}')
+
+    from .risiko_models import IndikatorMutu
+    indikator_list = IndikatorMutu.objects.filter(aktif=True).order_by('jenis', 'kode_indikator')
+
+    ctx = {
+        'risiko': risiko,
+        'is_edit': True,
+        'units': units,
+        'default_unit_id': risiko.unit_id,
+        'periode_choices': RisikoUnit.PERIODE_CHOICES,
+        'kategori_choices': RisikoUnit.KATEGORI_CHOICES,
+        'strategi_choices': RisikoUnit.STRATEGI_CHOICES,
+        'indikator_list': indikator_list,
+    }
+    return render(request, 'akreditasi/risiko_form.html', ctx)
+
+
+# ── 3c. Hapus Risiko ─────────────────────────────────────────────────────
+
+@login_required
+def risiko_hapus(request, risiko_id):
+    risiko = get_object_or_404(RisikoUnit, pk=risiko_id)
+    if request.method == 'POST':
+        unit_name = str(risiko.unit)
+        jenis = risiko.jenis_risiko[:60]
+        _log(request.user, 'DELETE', risiko, f'Hapus risiko #{risiko_id}: {jenis}')
+        risiko.delete()
+        messages.success(request, f'Risiko "{jenis}…" dari unit {unit_name} berhasil dihapus.')
+        return redirect('akreditasi:risiko_daftar')
+    # GET: tampilkan halaman konfirmasi
+    return render(request, 'akreditasi/risiko_hapus_konfirmasi.html', {'risiko': risiko})
+
+
 # ── 4. Evaluasi Risiko ───────────────────────────────────────────────────
 
 @login_required
