@@ -73,10 +73,11 @@ class UnitKerja(models.Model):
         return ' > '.join(names)
 
     def save(self, *args, **kwargs):
-        # N-level dinamis tanpa clamp statis — admin bisa bangun hierarki sedalam apapun
+        # Jika ada induk (parent), level otomatis parent.level + 1
+        # Jika tanpa induk, gunakan level yang ditentukan (default 1 jika kosong/0)
         if self.parent:
             self.level = self.parent.level + 1
-        else:
+        elif not self.level:
             self.level = 1
         super().save(*args, **kwargs)
 

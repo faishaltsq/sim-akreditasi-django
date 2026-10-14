@@ -120,7 +120,7 @@
                 </li>
                 <li class="nav-item" role="presentation">
                     <button class="nav-link" id="tab-form-btn" data-bs-toggle="tab" data-bs-target="#tab-form" type="button" role="tab">
-                        <i class="bi bi-plus-circle me-1"></i> Tambah Unit Kerja Baru
+                        <i class="bi bi-plus-circle me-1"></i> {% if unit %}Edit Unit Kerja: [{{ unit.code }}]{% else %}Tambah Unit Kerja Baru{% endif %}
                     </button>
                 </li>
             </ul>
@@ -208,7 +208,7 @@
                 </div>
 
                 <!-- ======================================================== -->
-                <!-- TAB 2: FORMULIR TAMBAH UNIT -->
+                <!-- TAB 2: FORMULIR TAMBAH / EDIT UNIT -->
                 <!-- ======================================================== -->
                 <div class="tab-pane fade" id="tab-form" role="tabpanel">
                     
@@ -220,43 +220,126 @@
                                     <div>
                                         <small>Menambahkan Sub-Unit di bawah:</small><br>
                                         <strong class="text-dark">[{{ parent_obj.code }}] {{ parent_obj.name }}</strong>
-                                        <span class="badge bg-light text-dark border ms-1 font-mono">Level Otomatis: {{ parent_obj.level|add:1 }}</span>
+                                        <span class="badge level-badge-{{ parent_obj.level|add:1 }} ms-1 font-mono">Level Otomatis: {{ parent_obj.level|add:1 }}</span>
                                     </div>
                                 </div>
                             {% endif %}
 
-                            <form method="post" action="{% url 'akreditasi:unit_list' %}">
+                            <form method="post" action="{% if unit %}{% url 'akreditasi:unit_edit' unit.id %}{% else %}{% url 'akreditasi:unit_list' %}{% endif %}" id="unitForm">
                                 {% csrf_token %}
-                                {{ form|crispy }}
+
+                                <div class="card p-3 border shadow-sm mb-3" style="background:#ffffff;">
+                                    <div class="row g-3">
+                                        <div class="col-md-7">
+                                            <label for="{{ form.name.id_for_label }}" class="form-label small fw-bold">
+                                                Nama Unit Kerja <span class="text-danger">*</span>
+                                            </label>
+                                            {{ form.name }}
+                                            {% if form.name.errors %}<div class="text-danger small mt-1">{{ form.name.errors }}</div>{% endif %}
+                                        </div>
+                                        <div class="col-md-5">
+                                            <label for="{{ form.code.id_for_label }}" class="form-label small fw-bold">
+                                                Kode Unit (Singkatan) <span class="text-danger">*</span>
+                                            </label>
+                                            {{ form.code }}
+                                            <div class="form-text" style="font-size:0.7rem;">Contoh: DIR-MED, HUMAS-CS, SUB-PKRS</div>
+                                            {% if form.code.errors %}<div class="text-danger small mt-1">{{ form.code.errors }}</div>{% endif %}
+                                        </div>
+
+                                        <div class="col-md-6">
+                                            <label for="{{ form.parent.id_for_label }}" class="form-label small fw-bold">
+                                                Induk Unit Kerja (Parent)
+                                            </label>
+                                            {{ form.parent }}
+                                            <div class="form-text" style="font-size:0.7rem;">
+                                                Pilih induk tingkat di atasnya. Kosongkan jika unit puncak (L1).
+                                            </div>
+                                            {% if form.parent.errors %}<div class="text-danger small mt-1">{{ form.parent.errors }}</div>{% endif %}
+                                        </div>
+
+                                        <div class="col-md-6">
+                                            <label for="{{ form.level.id_for_label }}" class="form-label small fw-bold d-flex justify-content-between align-items-center">
+                                                <span>Tingkat Hierarki (Level) <span class="text-danger">*</span></span>
+                                                <span id="levelBadgeDisplay" class="badge level-badge-1">Level 1</span>
+                                            </label>
+                                            {{ form.level }}
+                                            <div class="form-text" style="font-size:0.7rem;">
+                                                Otomatis menyesuaikan Induk + 1, atau tentukan langsung jika tanpa induk.
+                                            </div>
+                                            {% if form.level.errors %}<div class="text-danger small mt-1">{{ form.level.errors }}</div>{% endif %}
+                                        </div>
+
+                                        <div class="col-md-6">
+                                            <label for="{{ form.tipe_unit.id_for_label }}" class="form-label small fw-bold">
+                                                Kategori / Tipe Unit
+                                            </label>
+                                            {{ form.tipe_unit }}
+                                            {% if form.tipe_unit.errors %}<div class="text-danger small mt-1">{{ form.tipe_unit.errors }}</div>{% endif %}
+                                        </div>
+
+                                        <div class="col-md-6">
+                                            <label for="{{ form.pic_name.id_for_label }}" class="form-label small fw-bold">
+                                                Penanggung Jawab (PIC)
+                                            </label>
+                                            {{ form.pic_name }}
+                                            {% if form.pic_name.errors %}<div class="text-danger small mt-1">{{ form.pic_name.errors }}</div>{% endif %}
+                                        </div>
+
+                                        <div class="col-12">
+                                            <label for="{{ form.description.id_for_label }}" class="form-label small fw-bold">
+                                                Keterangan / Fungsi Unit
+                                            </label>
+                                            {{ form.description }}
+                                            {% if form.description.errors %}<div class="text-danger small mt-1">{{ form.description.errors }}</div>{% endif %}
+                                        </div>
+                                    </div>
+
+                                    <!-- TOMBOL SIMPAN / SUBMIT -->
+                                    <div class="mt-4 pt-3 border-top d-flex flex-wrap align-items-center gap-2">
+                                        <button type="submit" class="btn btn-primary px-4 py-2 fw-semibold d-inline-flex align-items-center gap-2 shadow-sm" id="btnSubmitUnit">
+                                            <i class="bi bi-check-circle-fill"></i>
+                                            {% if unit %}Simpan Perubahan Unit Kerja{% else %}Simpan &amp; Tambahkan Unit Kerja{% endif %}
+                                        </button>
+                                        {% if unit %}
+                                            <a href="{% url 'akreditasi:unit_list' %}" class="btn btn-outline-secondary px-3 py-2">
+                                                Batal Edit
+                                            </a>
+                                        {% endif %}
+                                    </div>
+                                </div>
                             </form>
                         </div>
 
                         <div class="col-lg-5">
                             <div class="card shadow-sm border mb-3">
-                                <div class="card-header bg-white py-2 fw-bold small">
-                                    <i class="bi bi-lightbulb-fill text-warning me-1"></i> Aturan Penentuan Level Otomatis
+                                <div class="card-header bg-white py-2 fw-bold small text-teal">
+                                    <i class="bi bi-diagram-3-fill me-1"></i> Panduan Hierarki &amp; Level Unit
                                 </div>
                                 <div class="card-body p-3" style="font-size:0.78rem; line-height:1.6;">
-                                    <p class="mb-2 text-muted">Sistem menentukan tingkat hierarki secara otomatis berdasarkan pilihan <strong>Induk Unit</strong>:</p>
-                                    <div class="mb-2 p-2 border rounded" style="background:#f8fafc;">
-                                        <strong>1. Jika Induk dikosongkan:</strong><br>
-                                        &rarr; Unit tersimpan sebagai <span class="badge level-badge-1">Level 1</span> (Pimpinan RS / Pemilik / Dewas / Direktur Utama).
+                                    <div class="p-2 mb-2 border rounded" style="background:#f8fafc; border-left: 4px solid #0f766e !important;">
+                                        <strong>Level 1 — Puncak:</strong><br>
+                                        Direktur Utama, Dewan Pengawas, Pemilik.<br>
+                                        <span class="text-muted small">&rarr; Induk Unit dikosongkan.</span>
                                     </div>
-                                    <div class="mb-2 p-2 border rounded" style="background:#f8fafc;">
-                                        <strong>2. Jika memilih Induk Level 1:</strong><br>
-                                        &rarr; Unit tersimpan sebagai <span class="badge level-badge-2">Level 2</span> (Direktorat / Bidang / Komite RS / SPI).
+                                    <div class="p-2 mb-2 border rounded" style="background:#f8fafc; border-left: 4px solid #0d9488 !important;">
+                                        <strong>Level 2 — Direktorat / Bidang / Komite RS:</strong><br>
+                                        Direktorat Medik, Keuangan, Umum, Komite Medik, SPI.<br>
+                                        <span class="text-muted small">&rarr; Pilih Induk Level 1 (misal DIRUT/Pimpinan) atau pilih langsung Level 2.</span>
                                     </div>
-                                    <div class="p-2 border rounded" style="background:#f8fafc;">
-                                        <strong>3. Jika memilih Induk Level 2:</strong><br>
-                                        &rarr; Unit tersimpan sebagai <span class="badge level-badge-3">Level 3</span> (Instalasi / KSM / Ruangan).
+                                    <div class="p-2 mb-2 border rounded" style="background:#f8fafc; border-left: 4px solid #14b8a6 !important;">
+                                        <strong>Level 3 — Instalasi / Bagian / KSM:</strong><br>
+                                        Instalasi Rawat Inap, Bedah, Farmasi, IGD, Radiologi.<br>
+                                        <span class="text-muted small">&rarr; Pilih Induk Level 2 (Direktorat / Bidang).</span>
                                     </div>
-                                    <div class="mt-2 p-2 border rounded" style="background:#f8fafc;">
-                                        <strong>4. Jika memilih Induk Level 3:</strong><br>
-                                        &rarr; Unit tersimpan sebagai <span class="badge level-badge-4">Level 4</span> (Sub-Instalasi / Ruang / Tim Khusus).
+                                    <div class="p-2 mb-2 border rounded" style="background:#f8fafc; border-left: 4px solid #5eead4 !important;">
+                                        <strong>Level 4 — Sub-Instalasi / Poliklinik / Ruang:</strong><br>
+                                        Poli Penyakit Dalam, Ruang ICU, Kamar Operasi 1.<br>
+                                        <span class="text-muted small">&rarr; Pilih Induk Level 3 (Instalasi).</span>
                                     </div>
-                                    <div class="mt-2 p-2 border rounded" style="background:#f8fafc;">
-                                        <strong>5. Jika memilih Induk Level 4:</strong><br>
-                                        &rarr; Unit tersimpan sebagai <span class="badge level-badge-5">Level 5</span> (Depo Satelit / Pos Jaga / Tim Kecil).
+                                    <div class="p-2 border rounded" style="background:#f8fafc; border-left: 4px solid #a7f3d0 !important;">
+                                        <strong>Level 5 — Depo / Tim / Satelit:</strong><br>
+                                        Depo Farmasi IGD, Pos Jaga, Tim Code Blue.<br>
+                                        <span class="text-muted small">&rarr; Pilih Induk Level 4.</span>
                                     </div>
                                 </div>
                             </div>
@@ -303,11 +386,59 @@
         });
     }
 
-    // Auto-switch to Form tab jika ada ?parent_id= di URL ATAU form memiliki error
+    // Map unit ID to Level untuk sinkronisasi otomatis
+    const unitLevelMap = {
+        {% for u in all_units %}
+        {{ u.id }}: {{ u.level }},
+        {% endfor %}
+    };
+
+    function updateLevelDisplay() {
+        const parentSelect = document.getElementById('id_parent');
+        const levelSelect = document.getElementById('id_level');
+        const badge = document.getElementById('levelBadgeDisplay');
+        if (!levelSelect) return;
+
+        let currentLevel = parseInt(levelSelect.value) || 1;
+
+        if (parentSelect && parentSelect.value) {
+            const pId = parseInt(parentSelect.value);
+            if (unitLevelMap[pId]) {
+                currentLevel = Math.min(unitLevelMap[pId] + 1, 5);
+                levelSelect.value = currentLevel;
+            }
+        }
+
+        if (badge) {
+            badge.className = `badge level-badge-${currentLevel}`;
+            badge.innerText = `Level ${currentLevel}`;
+        }
+    }
+
+    const parentEl = document.getElementById('id_parent');
+    if (parentEl) {
+        parentEl.addEventListener('change', updateLevelDisplay);
+    }
+    const levelEl = document.getElementById('id_level');
+    if (levelEl) {
+        levelEl.addEventListener('change', function() {
+            const badge = document.getElementById('levelBadgeDisplay');
+            const val = parseInt(this.value) || 1;
+            if (badge) {
+                badge.className = `badge level-badge-${val}`;
+                badge.innerText = `Level ${val}`;
+            }
+        });
+    }
+
+    // Auto-switch to Form tab jika ada ?parent_id= di URL ATAU form memiliki error ATAU sedang edit unit
     window.addEventListener('DOMContentLoaded', () => {
+        updateLevelDisplay();
         const urlParams = new URLSearchParams(window.location.search);
         const hasFormErrors = document.querySelectorAll('#tab-form .is-invalid, #tab-form .invalid-feedback, #tab-form .errorlist').length > 0;
-        if (urlParams.has('parent_id') || hasFormErrors) {
+        const isEditing = {% if unit %}true{% else %}false{% endif %};
+
+        if (urlParams.has('parent_id') || hasFormErrors || isEditing) {
             const formTabBtn = document.getElementById('tab-form-btn');
             if (formTabBtn) {
                 const tab = new bootstrap.Tab(formTabBtn);

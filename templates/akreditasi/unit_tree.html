@@ -542,20 +542,29 @@
                         </div>
                     </div>
 
-                    <div class="mb-3">
-                        <label for="id_parent" class="form-label small fw-bold">Induk Unit Kerja</label>
-                        <select name="parent" id="id_parent" class="form-select form-select-sm" onchange="onParentChange(this)">
-                            <option value="">(Tanpa Induk — Jadikan Level 1 / Pimpinan)</option>
-                            {% for u in all_units %}
-                                {% if u.level < 5 %}
-                                    <option value="{{ u.id }}" data-level="{{ u.level }}">
-                                        [L{{ u.level }}] {{ u.code }} — {{ u.name }}
-                                    </option>
-                                {% endif %}
-                            {% endfor %}
-                        </select>
-                        <div class="form-text" style="font-size:0.68rem;">
-                            Kosongkan bila unit berada di tingkat teratas (Level 1). Pilih induk untuk otomatis menentukan Level (hingga Level 5).
+                    <div class="row g-2 mb-3">
+                        <div class="col-7">
+                            <label for="id_parent" class="form-label small fw-bold">Induk Unit Kerja</label>
+                            <select name="parent" id="id_parent" class="form-select form-select-sm" onchange="onParentChange(this)">
+                                <option value="" data-level="0">(Tanpa Induk — Puncak / Independen)</option>
+                                {% for u in all_units %}
+                                    {% if u.level < 5 %}
+                                        <option value="{{ u.id }}" data-level="{{ u.level }}">
+                                            [L{{ u.level }}] {{ u.code }} — {{ u.name }}
+                                        </option>
+                                    {% endif %}
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-5">
+                            <label for="id_modal_level" class="form-label small fw-bold">Tingkat (Level)</label>
+                            <select name="level" id="id_modal_level" class="form-select form-select-sm font-mono fw-bold">
+                                <option value="1">L1 — Puncak</option>
+                                <option value="2">L2 — Direktorat / Bidang</option>
+                                <option value="3">L3 — Instalasi / Bagian</option>
+                                <option value="4">L4 — Sub-Instalasi / Poli</option>
+                                <option value="5">L5 — Depo / Tim</option>
+                            </select>
                         </div>
                     </div>
 
@@ -600,10 +609,14 @@
             parentNameDisplay.textContent = parentName;
             levelNoticeDisplay.textContent = `Tingkat Otomatis: Level ${targetLevel} (Sub-Unit)`;
             title.textContent = `Tambah Sub-Unit (Level ${targetLevel})`;
+            const lvlSelect = document.getElementById('id_modal_level');
+            if (lvlSelect) lvlSelect.value = targetLevel;
         } else {
             parentSelect.value = '';
             banner.style.display = 'none';
-            title.textContent = 'Tambah Unit Kerja (Level 1 — Pimpinan)';
+            title.textContent = 'Tambah Unit Kerja (Level 1 — Puncak)';
+            const lvlSelect = document.getElementById('id_modal_level');
+            if (lvlSelect) lvlSelect.value = 1;
         }
 
         modal.show();
@@ -618,14 +631,18 @@
 
         if (selectElem.value) {
             const parentLevel = parseInt(selectedOption.getAttribute('data-level')) || 1;
-            const targetLevel = Math.min(parentLevel + 1, 3);
+            const targetLevel = Math.min(parentLevel + 1, 5);
             banner.style.display = 'flex';
             parentNameDisplay.textContent = selectedOption.text;
             levelNoticeDisplay.textContent = `Tingkat Otomatis: Level ${targetLevel} (Sub-Unit dari Level ${parentLevel})`;
             title.textContent = `Tambah Sub-Unit (Level ${targetLevel})`;
+            const lvlSelect = document.getElementById('id_modal_level');
+            if (lvlSelect) lvlSelect.value = targetLevel;
         } else {
             banner.style.display = 'none';
-            title.textContent = 'Tambah Unit Kerja (Level 1 — Pimpinan)';
+            title.textContent = 'Tambah Unit Kerja (Level 1 — Puncak)';
+            const lvlSelect = document.getElementById('id_modal_level');
+            if (lvlSelect) lvlSelect.value = 1;
         }
     }
 

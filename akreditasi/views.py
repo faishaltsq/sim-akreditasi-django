@@ -1123,17 +1123,34 @@ def unit_edit(request, unit_id):
                 aksi='UPDATE',
                 model_name='UnitKerja',
                 object_repr=f"[{u.code}] {u.name}",
-                detail=f"Data Unit Kerja diperbarui"
+                detail=f"Data Unit Kerja diperbarui (Level {u.level})"
             )
-            messages.success(request, f"Unit Kerja '{u.name}' berhasil diperbarui!")
-            return redirect('akreditasi:unit_tree')
+            messages.success(request, f"✅ Unit Kerja '{u.name}' (Level {u.level}) berhasil diperbarui!")
+            return redirect('akreditasi:unit_list')
+        else:
+            messages.error(request, f"❌ Gagal memperbarui unit: {form.errors.as_text()}")
     else:
         form = UnitKerjaForm(instance=unit)
+
+    all_units = UnitKerja.objects.select_related('parent').prefetch_related('children').order_by('level', 'code')
+    level_counts = {lv: all_units.filter(level=lv).count() for lv in range(1, 6)}
 
     return render(request, 'akreditasi/unit_form.html', {
         'form': form,
         'unit': unit,
         'title': f'Edit Unit Kerja: {unit.code}',
+        'all_units': all_units,
+        'units_l1': all_units.filter(level=1),
+        'units_l2': all_units.filter(level=2),
+        'units_l3': all_units.filter(level=3),
+        'units_l4': all_units.filter(level=4),
+        'units_l5': all_units.filter(level=5),
+        'total_units': all_units.count(),
+        'count_l1': level_counts[1],
+        'count_l2': level_counts[2],
+        'count_l3': level_counts[3],
+        'count_l4': level_counts[4],
+        'count_l5': level_counts[5],
     })
 
 
