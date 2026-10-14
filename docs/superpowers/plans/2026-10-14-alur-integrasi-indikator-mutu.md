@@ -1,6 +1,6 @@
 # Alur Integrasi Indikator Mutu (INM, IMRS, IMU) & Renstra Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** Implement the hierarchical integration workflow where Hospital Strategic Goals (Renstra) drive three tiers of Quality Indicators (INM, IMRS, IMU), visualized via interactive trend & comparison charts, with an automated trigger generating Risk Register entries and PDCA action items when indicator targets are missed.
 
@@ -46,24 +46,24 @@
 - Field `arah_target`: CharField default `'MIN'`
 - Field `sasaran_strategis`: ForeignKey to `RenstraRoadmap` (or CharField code `SS-1`, `SS-2`, etc.)
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 Create `akreditasi/tests_indikator_alur_integrasi.py` testing the 3-tier indicator types, `arah_target` logic in `CatatanIndikator.tercapai`, and Renstra linkage.
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 Run: `python manage.py test akreditasi.tests_indikator_alur_integrasi`
 Expected: FAIL (missing fields or methods)
 
-- [ ] **Step 3: Update `IndikatorMutu` and `CatatanIndikator` in `akreditasi/risiko_models.py`**
+- [x] **Step 3: Update `IndikatorMutu` and `CatatanIndikator` in `akreditasi/risiko_models.py`**
 Add `arah_target`, update `JENIS_CHOICES` with fallback compatibility, update `CatatanIndikator.tercapai` property to evaluate based on `arah_target` (if `MIN`: `nilai >= target`, if `MAX`: `nilai <= target`).
 
-- [ ] **Step 4: Create and apply Django migration**
+- [x] **Step 4: Create and apply Django migration**
 Run: `python manage.py makemigrations akreditasi` and `python manage.py migrate`
 
-- [ ] **Step 5: Run tests to verify they pass**
+- [x] **Step 5: Run tests to verify they pass**
 Run: `python manage.py test akreditasi.tests_indikator_alur_integrasi`
 Expected: PASS
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 ```bash
 git add akreditasi/risiko_models.py akreditasi/migrations/* akreditasi/tests_indikator_alur_integrasi.py
 git commit -m "feat(mutu): standardize INM, IMRS, IMU indicator tiers and target direction"
@@ -88,21 +88,21 @@ git commit -m "feat(mutu): standardize INM, IMRS, IMU indicator tiers and target
   - `indikator_mutu_terkait = indikator`
   - `unit = indikator.unit`
 
-- [ ] **Step 1: Write test for automated risk generation**
+- [x] **Step 1: Write test for automated risk generation**
 Test in `akreditasi/tests_indikator_alur_integrasi.py` checking that inputting a failing `CatatanIndikator` automatically creates a corresponding `Risiko` entry, and doesn't duplicate if saved again.
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 Run: `python manage.py test akreditasi.tests_indikator_alur_integrasi::test_auto_risk_trigger`
 Expected: FAIL
 
-- [ ] **Step 3: Implement post-save logic in `CatatanIndikator.save`**
+- [x] **Step 3: Implement post-save logic in `CatatanIndikator.save`**
 Add automatic draft risk trigger with idempotency check.
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 Run: `python manage.py test akreditasi.tests_indikator_alur_integrasi::test_auto_risk_trigger`
 Expected: PASS
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 ```bash
 git add akreditasi/risiko_models.py akreditasi/tests_indikator_alur_integrasi.py
 git commit -m "feat(mutu): auto-trigger risk register and PDCA action when indicator fails target"
@@ -123,21 +123,21 @@ git commit -m "feat(mutu): auto-trigger risk register and PDCA action when indic
 - `indikator_tren_json(request, indikator_id)`: returns JSON series of monthly achievements and target line for Chart.js.
 - `indikator_komparasi_unit_json(request, jenis='IMU')`: returns unit-by-unit achievements compared to RS target.
 
-- [ ] **Step 1: Write API/View tests**
+- [x] **Step 1: Write API/View tests**
 Test that trend JSON and comparison JSON endpoints return correct datasets, threshold lines, and color statuses (`green` for $\ge$ target, `red` for < target).
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 Run: `python manage.py test akreditasi.tests_indikator_alur_integrasi::test_chart_data_endpoints`
 Expected: FAIL
 
-- [ ] **Step 3: Implement view logic in `indikator_views.py`**
+- [x] **Step 3: Implement view logic in `indikator_views.py`**
 Add helper methods calculating achievement percentages, threshold flags, and target series.
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 Run: `python manage.py test akreditasi.tests_indikator_alur_integrasi::test_chart_data_endpoints`
 Expected: PASS
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 ```bash
 git add akreditasi/indikator_views.py akreditasi/urls.py akreditasi/tests_indikator_alur_integrasi.py
 git commit -m "feat(mutu): add trend and unit comparison chart endpoints"
@@ -160,21 +160,21 @@ git commit -m "feat(mutu): add trend and unit comparison chart endpoints"
 - Chart cards showing real-time trend line with warning badges.
 - Unit comparison bar chart with click listener: clicking a red bar redirects directly to the Risk Register / PDCA entry for that unit & indicator.
 
-- [ ] **Step 1: Write template test checking rendered tabs and charts**
+- [x] **Step 1: Write template test checking rendered tabs and charts**
 Verify template contains tab elements for INM, IMRS, and IMU, and embeds Chart.js canvas with appropriate data attributes.
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 Run: `python manage.py test akreditasi.tests_indikator_alur_integrasi::test_dashboard_ui_elements`
 Expected: FAIL
 
-- [ ] **Step 3: Update `indikator_mutu_dashboard.html`**
+- [x] **Step 3: Update `indikator_mutu_dashboard.html`**
 Implement the visual layout according to the spec: Renstra header banner, INM/IMRS/IMU filter pills, interactive Chart.js line and bar charts with click-through navigation to PDCA/Fishbone.
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 Run: `python manage.py test akreditasi.tests_indikator_alur_integrasi::test_dashboard_ui_elements`
 Expected: PASS
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 ```bash
 git add templates/akreditasi/indikator_mutu_dashboard.html akreditasi/tests_indikator_alur_integrasi.py
 git commit -m "feat(mutu): interactive INM/IMRS/IMU dashboard with click-to-PDCA navigation"
