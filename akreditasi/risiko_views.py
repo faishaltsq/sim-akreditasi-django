@@ -9,12 +9,23 @@ from django.db.models import Count, Q
 from django.utils import timezone
 from django.core.paginator import Paginator
 from django.views.decorators.http import require_GET, require_POST
+from decimal import Decimal
 
 from .risiko_models import RisikoUnit, TindakLanjutRisiko, InsidenKeselamatan, IndikatorMutu
 from .models import UnitKerja, AuditLog
 
 
 # ── helpers ──────────────────────────────────────────────────────────────
+
+def _format_rupiah(val):
+    """Format angka nominal menjadi format Rupiah Indonesia (cth: Rp 5.000.000)."""
+    if not val:
+        return "Rp 0"
+    try:
+        val_float = float(val)
+        return f"Rp {val_float:,.0f}".replace(",", ".")
+    except (ValueError, TypeError):
+        return f"Rp {val}"
 
 def _risk_matrix_summary(qs):
     """Build 5×5 matrix counts from a queryset of RisikoUnit."""
@@ -1041,6 +1052,9 @@ def risiko_laporan(request, unit_id=None):
 
     tahun_list = RisikoUnit.objects.values_list('tahun', flat=True).distinct().order_by('-tahun')
 
+    total_biaya = sum((r.biaya_mitigasi or Decimal('0')) for r in risiko_list)
+    total_biaya_format = _format_rupiah(total_biaya)
+
     ctx = {
         'sel_unit':        sel_unit,
         'units':           units,
@@ -1056,6 +1070,8 @@ def risiko_laporan(request, unit_id=None):
         'status_choices':  RisikoUnit.STATUS_CHOICES,
         'status_badges':   STATUS_BADGES,
         'total':           len(risiko_list),
+        'total_biaya':     total_biaya,
+        'total_biaya_format': total_biaya_format,
         'fmea_list':       [r for r in risiko_list if r.metode_evaluasi == 'FMEA'],
         'rca_list':        [r for r in risiko_list if r.metode_evaluasi == 'RCA'],
     }
@@ -1340,15 +1356,19 @@ def risiko_perencanaan_dokumen(request, risiko_id):
             return redirect('akreditasi:risiko_daftar')
 
     tindak_lanjut = list(risiko.tindak_lanjut.all().order_by('urutan'))
+    total_biaya = risiko.biaya_mitigasi or Decimal('0')
+    total_biaya_format = _format_rupiah(total_biaya)
 
     ctx = {
-        'risiko': risiko,
-        'is_single': True,
-        'unit': risiko.unit,
-        'tahun': risiko.tahun,
-        'periode': risiko.get_periode_display(),
+        'risiko':             risiko,
+        'is_single':          True,
+        'unit':               risiko.unit,
+        'tahun':              risiko.tahun,
+        'periode':            risiko.get_periode_display(),
         'tindak_lanjut_list': tindak_lanjut,
-        'tgl_cetak': timezone.now(),
+        'total_biaya':        total_biaya,
+        'total_biaya_format': total_biaya_format,
+        'tgl_cetak':          timezone.now(),
     }
     return render(request, 'akreditasi/risiko_perencanaan.html', ctx)
 
@@ -1435,7 +1455,7 @@ def risiko_perencanaan_unit(request, unit_id=None):
         ind = r.indikator_mutu_terkait
         nama_ind = ind.nama_indikator if ind else '—'
         waktu_str = r.target_selesai.strftime('%d/%m/%Y') if r.target_selesai else r.get_periode_display()
-        biaya_str = f"Rp {r.biaya_mitigasi:,.0f}" if r.biaya_mitigasi else "Rp 0"
+        biaya_str = _format_rupiah(r.biaya_mitigasi)
         tindak_items = list(r.tindak_lanjut.all().order_by('urutan'))
 
         table_aksi.append({
@@ -1451,6 +1471,9 @@ def risiko_perencanaan_unit(request, unit_id=None):
             'pj': r.pj_mitigasi or 'Ka. Unit',
         })
 
+    total_biaya = sum((r.biaya_mitigasi or Decimal('0')) for r in risiko_list)
+    total_biaya_format = _format_rupiah(total_biaya)
+
     ctx = {
         'is_single': False,
         'selected_unit': selected_unit,
@@ -1461,6 +1484,8 @@ def risiko_perencanaan_unit(request, unit_id=None):
         'table_indikator': table_indikator,
         'table_aksi': table_aksi,
         'total_risiko': len(risiko_list),
+        'total_biaya': total_biaya,
+        'total_biaya_format': total_biaya_format,
         'tgl_cetak': timezone.now(),
     }
     return render(request, 'akreditasi/risiko_perencanaan.html', ctx)
@@ -1514,12 +1539,17 @@ def risiko_perencanaan_export_csv(request):
     # Table 2: Rencana Aksi (Mitigasi)
     writer.writerow(['TABEL 2: RENCANA AKSI (MITIGASI) RISIKO'])
     writer.writerow(['No', 'Masalah Resiko', 'Indikator Mutu', 'Rencana Aksi', 'Waktu', 'Biaya', 'PJ'])
+    total_biaya_csv = Decimal('0')
     for idx, r in enumerate(risiko_qs, start=1):
         ind = r.indikator_mutu_terkait
         nama_ind = ind.nama_indikator if ind else '—'
         waktu_val = r.target_selesai.strftime('%d/%m/%Y') if r.target_selesai else r.get_periode_display()
-        biaya_val = f"Rp {r.biaya_mitigasi:,.0f}" if r.biaya_mitigasi else "Rp 0"
+        biaya_val = _format_rupiah(r.biaya_mitigasi)
+        if r.biaya_mitigasi:
+            total_biaya_csv += r.biaya_mitigasi
         writer.writerow([idx, r.masalah or r.jenis_risiko, nama_ind, r.rencana_aksi, waktu_val, biaya_val, r.pj_mitigasi or 'Ka. Unit'])
+
+    writer.writerow(['TOTAL BIAYA MITIGASI', '', '', '', '', _format_rupiah(total_biaya_csv), ''])
 
     return response
 
@@ -1715,6 +1745,8 @@ def risiko_laporan_lengkap(request, risiko_id):
     selesai_tl = sum(1 for tl in tindak_lanjut if tl.status_aksi == 'SELESAI')
     proses_tl = sum(1 for tl in tindak_lanjut if tl.status_aksi == 'PROSES')
     persen_tl = int((selesai_tl / total_tl) * 100) if total_tl > 0 else 0
+    total_biaya = risiko.biaya_mitigasi or Decimal('0')
+    total_biaya_format = _format_rupiah(total_biaya)
 
     ctx = {
         'risiko': risiko,
@@ -1728,6 +1760,8 @@ def risiko_laporan_lengkap(request, risiko_id):
         'proses_tl': proses_tl,
         'persen_tl': persen_tl,
         'rca_items': risiko.rca_fishbone_items,
+        'total_biaya': total_biaya,
+        'total_biaya_format': total_biaya_format,
         'tgl_cetak': timezone.now(),
     }
     return render(request, 'akreditasi/risiko_laporan_lengkap.html', ctx)
@@ -1821,7 +1855,7 @@ def risiko_laporan_lengkap_unit(request, unit_id=None):
 
         jenis_str = ind.get_jenis_display() if ind else 'IMP Unit'
         waktu_str = r.target_selesai.strftime('%d/%m/%Y') if r.target_selesai else (f"{r.get_periode_display()} {r.tahun}" if r.periode else "—")
-        biaya_str = f"Rp {r.biaya_mitigasi:,.0f}" if r.biaya_mitigasi else "Rp 0"
+        biaya_str = _format_rupiah(r.biaya_mitigasi)
         tindak_items = list(r.tindak_lanjut.all().order_by('urutan'))
 
         # 1. Tabel Penilaian Risiko Awal
@@ -1908,6 +1942,9 @@ def risiko_laporan_lengkap_unit(request, unit_id=None):
             'status_rtl_badge_color': r.status_rtl_badge_color,
         })
 
+    total_biaya = sum((r.biaya_mitigasi or Decimal('0')) for r in risiko_list)
+    total_biaya_format = _format_rupiah(total_biaya)
+
     ctx = {
         'is_single': False,
         'selected_unit': selected_unit,
@@ -1916,6 +1953,8 @@ def risiko_laporan_lengkap_unit(request, unit_id=None):
         'tahun_list': tahun_list,
         'risiko_list': risiko_list,
         'total_risiko': total_risiko,
+        'total_biaya': total_biaya,
+        'total_biaya_format': total_biaya_format,
         'rtl_selesai': rtl_selesai,
         'rtl_proses': rtl_proses,
         'terevaluasi': terevaluasi,

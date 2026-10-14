@@ -79,6 +79,8 @@ class PerencanaanRisikoTest(TestCase):
         self.assertContains(resp, 'Kepatuhan Kebersihan Tangan')
         self.assertContains(resp, 'Penambahan mesin press pulverizer')
         self.assertContains(resp, 'Kuwarasan')
+        self.assertContains(resp, 'Total Estimasi Biaya Mitigasi')
+        self.assertContains(resp, 'Rp 5.000.000')
 
     def test_perencanaan_unit_aggregate_view(self):
         """Test unit aggregate planning view (HTTP 200 and tables)."""
@@ -89,6 +91,8 @@ class PerencanaanRisikoTest(TestCase):
         self.assertContains(resp, 'TABEL 1: INDIKATOR MUTU TERKAIT RISIKO' if False else 'Indikator Mutu Terkait Risiko')
         self.assertContains(resp, 'Rencana Aksi (Mitigasi) Risiko')
         self.assertContains(resp, 'Antrean resep racikan melebihi standar waktu 60 menit')
+        self.assertContains(resp, 'Total Estimasi Biaya Mitigasi')
+        self.assertContains(resp, 'Rp 5.000.000')
 
     def test_perencanaan_export_csv(self):
         """Test CSV export view returns valid CSV with UTF-8 BOM."""
@@ -101,6 +105,8 @@ class PerencanaanRisikoTest(TestCase):
         self.assertIn('TABEL 1: INDIKATOR MUTU DENGAN RISIKO TERKAIT', content)
         self.assertIn('TABEL 2: RENCANA AKSI (MITIGASI) RISIKO', content)
         self.assertIn('Antrean resep racikan melebihi standar waktu 60 menit', content)
+        self.assertIn('TOTAL BIAYA MITIGASI', content)
+        self.assertIn('Rp 5.000.000', content)
 
     def test_upload_bukti_data_pendukung(self):
         """Test upload file in risiko_input for data pendukung."""
@@ -176,7 +182,7 @@ class PerencanaanRisikoTest(TestCase):
         self.assertFalse(RisikoUnit.objects.filter(pk=self.risiko.pk).exists())
 
     def test_laporan_lengkap_single_view(self):
-        """Test Laporan Lengkap PDCA single risk view renders 4 phases."""
+        """Test Laporan Lengkap PDCA single risk view renders 4 phases and total cost."""
         url = reverse('akreditasi:risiko_laporan_lengkap_single', kwargs={'risiko_id': self.risiko.pk})
         resp = self.client.get(url)
         self.assertEqual(resp.status_code, 200)
@@ -186,9 +192,11 @@ class PerencanaanRisikoTest(TestCase):
         self.assertIn('FASE 2: PELAKSANAAN TINDAKAN RISIKO (DO)', content)
         self.assertIn('FASE 3: MONITORING &amp; EVALUASI (CHECK)', content)
         self.assertIn('FASE 4: RENCANA TINDAK LANJUT (ACTION / RTL)', content)
+        self.assertIn('Estimasi Biaya Mitigasi', content)
+        self.assertIn('Rp 5.000.000', content)
 
     def test_laporan_lengkap_unit_view(self):
-        """Test Laporan Lengkap PDCA aggregate unit view renders vertically stacked 9 sections."""
+        """Test Laporan Lengkap PDCA aggregate unit view renders vertically stacked 9 sections and total costs."""
         url = reverse('akreditasi:risiko_laporan_lengkap_unit', kwargs={'unit_id': self.unit.pk})
         resp = self.client.get(url)
         self.assertEqual(resp.status_code, 200)
@@ -205,6 +213,11 @@ class PerencanaanRisikoTest(TestCase):
         self.assertIn('7. Pelaksanaan (Do)', content)
         self.assertIn('8. Monitoring dan evaluasi', content)
         self.assertIn('9. Kesimpulan Akhir', content)
+        # Verify total cost calculation in aggregate summary & table footers
+        self.assertIn('Total Alokasi Biaya Mitigasi', content)
+        self.assertIn('Total Estimasi Biaya Mitigasi', content)
+        self.assertIn('Total Biaya Pelaksanaan', content)
+        self.assertIn('Rp 5.000.000', content)
 
     def test_document_views_contain_edit_and_delete_actions(self):
         """Verify that Perencanaan, Pelaksanaan, and Laporan Lengkap have Edit & Delete buttons."""

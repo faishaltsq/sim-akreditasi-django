@@ -239,6 +239,9 @@
                     <div class="col-sm-3 fw-bold text-muted">Masalah Risiko</div>
                     <div class="col-sm-9 text-danger fw-semibold">: {{ risiko.masalah|default:risiko.jenis_risiko }}</div>
 
+                    <div class="col-sm-3 fw-bold text-muted">Estimasi Biaya Mitigasi</div>
+                    <div class="col-sm-9 fw-bold text-dark">: {{ total_biaya_format }}</div>
+
                     {% if risiko.data_pendukung %}
                     <div class="col-sm-3 fw-bold text-muted">Data / Bukti Pendukung</div>
                     <div class="col-sm-9">: {{ risiko.data_pendukung }}</div>
@@ -254,7 +257,7 @@
             <div class="callout-box">
                 <p class="mb-1">
                     Seluruh potensi risiko di unit kerja <strong>{{ selected_unit.name }}</strong> telah diidentifikasi dan diinventarisasi pada awal periode tahun <strong>{{ tahun }}</strong>.
-                    Total risiko yang tercatat dalam register perencanaan: <strong>{{ total_risiko }} risiko</strong>.
+                    Total risiko yang tercatat dalam register perencanaan: <strong>{{ total_risiko }} risiko</strong> dengan total kebutuhan estimasi alokasi biaya mitigasi sebesar <strong class="text-dark">{{ total_biaya_format }}</strong>.
                 </p>
                 <small class="text-muted">
                     Identifikasi mencakup risiko klinis, keselamatan pasien, operasional fasilitas, keselamatan kerja (K3), tata kelola, dan kepatuhan regulasi STARKES.
@@ -605,6 +608,14 @@
                         {% endfor %}
                         {% endif %}
                     </tbody>
+                    <tfoot>
+                        <tr class="fw-bold" style="background-color: #f8fafc;">
+                            <td colspan="5" class="text-end text-uppercase pe-3">Total Estimasi Biaya Mitigasi:</td>
+                            <td class="text-center text-dark" style="background-color: #f1f5f9;">{{ total_biaya_format }}</td>
+                            <td class="text-center"></td>
+                            <td class="no-print"></td>
+                        </tr>
+                    </tfoot>
                 </table>
             </div>
         </div>

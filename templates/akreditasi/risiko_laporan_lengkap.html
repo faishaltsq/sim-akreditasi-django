@@ -298,6 +298,8 @@
                     <div class="fw-bold font-monospace">: #RSK-{{ risiko.pk|stringformat:"04d" }}</div>
                     <div class="label">Penanggung Jawab</div>
                     <div>: {{ risiko.pj_mitigasi|default:"Ka. Unit Kerja" }}</div>
+                    <div class="label">Estimasi Biaya Mitigasi</div>
+                    <div>: <strong class="text-dark">{{ total_biaya_format }}</strong></div>
                     <div class="label">Status Siklus PDCA</div>
                     <div>: <span class="badge bg-{{ risiko.status_badge_color }} px-2 py-1">{{ risiko.get_status_display }}</span></div>
                     <div class="label">Tanggal Pelaporan</div>
@@ -546,6 +548,8 @@
                     <div>: {{ tahun }}</div>
                     <div class="label">Total Risiko Teridentifikasi</div>
                     <div>: <strong>{{ total_risiko }} Risiko</strong> ({{ terevaluasi }} sudah dievaluasi MONEV, {{ rtl_selesai }} RTL selesai)</div>
+                    <div class="label">Total Alokasi Biaya Mitigasi</div>
+                    <div>: <strong class="text-dark">{{ total_biaya_format }}</strong></div>
                 </div>
             </div>
             <div class="col-md-4 text-end">
@@ -746,6 +750,14 @@
                         </tr>
                         {% endfor %}
                     </tbody>
+                    <tfoot>
+                        <tr class="fw-bold" style="background-color: #f8fafc;">
+                            <td colspan="5" class="text-end text-uppercase pe-3">Total Estimasi Biaya Mitigasi:</td>
+                            <td class="text-center text-dark" style="background-color: #f1f5f9;">{{ total_biaya_format }}</td>
+                            <td class="text-center"></td>
+                            <td class="no-print"></td>
+                        </tr>
+                    </tfoot>
                 </table>
             </div>
         </div>
@@ -819,6 +831,15 @@
                         </tr>
                         {% endfor %}
                     </tbody>
+                    <tfoot>
+                        <tr class="fw-bold" style="background-color: #f8fafc;">
+                            <td colspan="5" class="text-end text-uppercase pe-3">Total Biaya Pelaksanaan:</td>
+                            <td class="text-center text-dark" style="background-color: #f1f5f9;">{{ total_biaya_format }}</td>
+                            <td class="text-center"></td>
+                            <td class="text-center"></td>
+                            <td class="no-print"></td>
+                        </tr>
+                    </tfoot>
                 </table>
             </div>
         </div>
