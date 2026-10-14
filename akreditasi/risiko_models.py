@@ -437,15 +437,24 @@ class InsidenKeselamatan(models.Model):
 
 
 # ---------------------------------------------------------------------------
-# 4. IndikatorMutu — IMP-RS & IMP-Unit
+# 4. IndikatorMutu — INM, IMRS, IMU (3-Tier Mutu)
 # ---------------------------------------------------------------------------
 
 class IndikatorMutu(models.Model):
     JENIS_CHOICES = [
-        ('IMP_RS',    'IMP Rumah Sakit'),
-        ('IMP_UNIT',  'IMP Unit'),
-        ('NASIONAL',  'Indikator Nasional Mutu'),
+        ('INM',       'Indikator Nasional Mutu (INM)'),
+        ('IMRS',      'Indikator Mutu Rumah Sakit (IMRS)'),
+        ('IMU',       'Indikator Mutu Unit (IMU)'),
+        # legacy — backward-compatible, mapped via jenis_standar property
+        ('IMP_RS',    'IMP Rumah Sakit (Legacy)'),
+        ('IMP_UNIT',  'IMP Unit (Legacy)'),
+        ('NASIONAL',  'Indikator Nasional Mutu (Legacy)'),
         ('SNI',       'Standar Nasional Indonesia'),
+    ]
+
+    ARAH_CHOICES = [
+        ('MIN', 'Minimal — Capaian ≥ Target (higher is better)'),
+        ('MAX', 'Maksimal — Capaian ≤ Target (lower is better)'),
     ]
 
     DIMENSI_CHOICES = [
@@ -471,6 +480,10 @@ class IndikatorMutu(models.Model):
     rencana_aksi   = models.TextField('Rencana Aksi (Preset)', blank=True, default='')
     pj             = models.CharField('Penanggung Jawab', max_length=200, blank=True, default='')
     aktif          = models.BooleanField('Aktif', default=True)
+    arah_target    = models.CharField(
+        'Arah Target', max_length=3, choices=ARAH_CHOICES, default='MIN',
+        help_text='MIN = capaian harus ≥ target (higher is better). MAX = capaian harus ≤ target (lower is better, e.g. waktu tunggu).'
+    )
 
     class Meta:
         verbose_name        = 'Indikator Mutu'
@@ -479,6 +492,16 @@ class IndikatorMutu(models.Model):
 
     def __str__(self):
         return f"[{self.kode_indikator}] {self.nama_indikator}"
+
+    @property
+    def jenis_standar(self):
+        """Normalize legacy jenis codes to canonical 3-tier: INM, IMRS, IMU."""
+        mapping = {
+            'NASIONAL': 'INM',
+            'IMP_RS':   'IMRS',
+            'IMP_UNIT': 'IMU',
+        }
+        return mapping.get(self.jenis, self.jenis)
 
 
 # ---------------------------------------------------------------------------
@@ -517,7 +540,50 @@ class CatatanIndikator(models.Model):
 
     @property
     def tercapai(self):
-        return self.nilai_capaian >= self.indikator.target_nilai
+        capaian = self.nilai_capaian
+        target = self.indikator.target_nilai
+        arah = getattr(self.indikator, 'arah_target', 'MIN')
+        if arah == 'MAX':
+            # Lower is better — capaian harus ≤ target
+            return capaian <= target
+        return capaian >= target
+
+
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+        # Auto-trigger Risk Register draft when indicator misses target
+        if not self.tercapai and self.indikator.unit_id:
+            capaian = self.nilai_capaian
+            target = self.indikator.target_nilai
+            satuan = self.indikator.satuan or '%'
+            arah = getattr(self.indikator, 'arah_target', 'MIN')
+            arah_label = '≥' if arah == 'MIN' else '≤'
+            # Idempotent: only create ONE draft per indicator per unit
+            RisikoUnit.objects.get_or_create(
+                unit=self.indikator.unit,
+                indikator_mutu_terkait=self.indikator,
+                defaults={
+                    'tahun': self.tahun,
+                    'periode': 'TRIWULAN_1',
+                    'kategori_risiko': 'OPERASIONAL',
+                    'jenis_risiko': 'Risiko Kegagalan Mutu & Layanan',
+                    'masalah': (
+                        f"Capaian {self.indikator.nama_indikator} di bawah target "
+                        f"({capaian:.1f} {satuan} vs target {arah_label} {target} {satuan})"
+                    ),
+                    'deskripsi_risiko': (
+                        f"Indikator [{self.indikator.kode_indikator}] "
+                        f"{self.indikator.nama_indikator} tidak mencapai target Renstra. "
+                        f"Capaian: {capaian:.1f} {satuan} | Target: {arah_label} {target} {satuan}."
+                    ),
+                    'dampak': 3,
+                    'probabilitas': 3,
+                    'strategi_mitigasi': 'KURANGI',
+                    'rencana_aksi': self.indikator.rencana_aksi or 'Lakukan analisis akar masalah (Fishbone/5-Why) dan susun PDCA RTL.',
+                    'pj_mitigasi': self.indikator.pj or 'Ka. Unit',
+                    'status': 'IDENTIFIKASI',
+                },
+            )
 
 
 # ── 6. Renstra RS Roadmap (Dynamic Admin CRUD) ────────────────────────────────

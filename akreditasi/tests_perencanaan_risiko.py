@@ -232,7 +232,7 @@ class PerencanaanRisikoTest(TestCase):
         url_do = reverse('akreditasi:risiko_pelaksanaan_unit', kwargs={'unit_id': self.unit.pk})
         resp_do = self.client.get(url_do)
         self.assertEqual(resp_do.status_code, 200)
-        self.assertContains(resp_do, f'/risiko/{self.risiko.pk}/edit/')
+        self.assertContains(resp_do, f'/risiko/{self.risiko.pk}/evaluasi/')
         self.assertContains(resp_do, f'/risiko/{self.risiko.pk}/hapus/')
 
         # 3. Laporan Lengkap Single
