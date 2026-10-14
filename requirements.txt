@@ -1,11 +1,14 @@
-django>=5.0,<7.0
-psycopg2-binary>=2.9
-dj-database-url>=2.0
-django-crispy-forms>=2.0
-crispy-bootstrap5>=2024.2
-openpyxl>=3.1
-gunicorn>=22.0
-whitenoise>=6.5
-requests>=2.31
-python-decouple>=3.8
-reportlab>=4.0
+# Pinned direct dependencies — security hardening 2026-10-14 (OWASP A03).
+# Regenerate via: uv pip compile requirements.txt
+# Or: pip freeze | grep -iE '^(django|psycopg2-binary|dj-database-url|django-crispy-forms|crispy-bootstrap5|openpyxl|gunicorn|whitenoise|requests|python-decouple|reportlab)=='
+django==6.1.2
+psycopg2-binary==2.9.13
+dj-database-url==3.1.2
+django-crispy-forms==2.7
+crispy-bootstrap5==2026.9
+openpyxl==3.1.5
+gunicorn==26.2.0
+whitenoise==6.12.0
+requests==2.34.2
+python-decouple==3.8
+reportlab==5.0.1
