@@ -802,24 +802,8 @@ def risiko_monitoring_evaluasi(request, unit_id=None):
     capaian_vals = [float(r.capaian_nilai) for r in risiko_list if r.capaian_nilai is not None]
     avg_capaian = round(sum(capaian_vals) / len(capaian_vals), 1) if capaian_vals else None
 
-    # Calculate score before vs after for each
+    # Prefetch tindak lanjut per risiko (model properties handle skor_* calculations)
     for r in risiko_list:
-        r.skor_awal = r.dampak * r.probabilitas
-        r.skor_awal_color = _skor_color(r.skor_awal)
-        r.skor_awal_label = _skor_label(r.skor_awal)
-
-        if r.dampak_residual and r.probabilitas_residual:
-            r.skor_akhir = r.dampak_residual * r.probabilitas_residual
-            r.skor_akhir_color = _skor_color(r.skor_akhir)
-            r.skor_akhir_label = _skor_label(r.skor_akhir)
-            r.skor_delta = r.skor_awal - r.skor_akhir
-        else:
-            r.skor_akhir = None
-            r.skor_akhir_color = '#64748b'
-            r.skor_akhir_label = 'Belum Evaluasi'
-            r.skor_delta = None
-
-        # Gather summary of action items (Do)
         r.daftar_tindak_lanjut = list(r.tindak_lanjut.all())
 
     ctx = {

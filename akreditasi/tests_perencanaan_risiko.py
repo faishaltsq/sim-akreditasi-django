@@ -236,6 +236,15 @@ class PerencanaanRisikoTest(TestCase):
         self.assertContains(resp_unit, f'/risiko/{self.risiko.pk}/edit/')
         self.assertContains(resp_unit, f'/risiko/{self.risiko.pk}/hapus/')
 
+    def test_risiko_monitoring_evaluasi_view_regression(self):
+        """Pastikan view monitoring & evaluasi risiko merender HTTP 200 tanpa AttributeError pada skor_awal."""
+        url = reverse('akreditasi:risiko_monev')
+        resp = self.client.get(url)
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, 'Monitoring')
+        self.assertContains(resp, 'Awal:')
+
+
 
 
 
