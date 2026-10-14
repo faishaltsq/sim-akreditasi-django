@@ -189,12 +189,13 @@ git commit -m "feat(mutu): interactive INM/IMRS/IMU dashboard with click-to-PDCA
 - Run production database migration on Supabase.
 - Test production deployment via Vercel.
 
-- [ ] **Step 1: Run full test suite**
-Run: `python manage.py test akreditasi`
-Expected: 100% tests passing.
+- [x] **Step 1: Run full test suite**
+  Run: `python manage.py test akreditasi`
+  Result: **64/64 PASS** ✅
 
-- [ ] **Step 2: Deploy to Vercel and apply Supabase migration**
-Run git push and vercel deployment, execute migration against Supabase database URL.
+- [x] **Step 2: Deploy to Vercel and apply Supabase migration**
+  Migration `0037_indikatormutu_arah_target_alter_indikatormutu_jenis` applied.
+  Commits `b8facaf`, `6c9cb59`, `51dd3e0` pushed and deployed.
 
-- [ ] **Step 3: Verify live dashboard**
+- [x] **Step 3: Verify live dashboard**
 Confirm HTTP 200/302 responses and UI elements rendering cleanly on production URL.
