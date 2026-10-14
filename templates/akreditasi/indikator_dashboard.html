@@ -283,6 +283,10 @@
         <small class="text-muted">Total {{ indikators|length }} indikator mutu aktif di sistem RS Monsiskami</small>
       </div>
       <div class="d-flex align-items-center gap-2 mt-2 mt-md-0">
+        <button type="button" class="btn btn-sm btn-outline-primary" id="btnKomparasiUnit"
+                data-tahun="{{ filter_tahun }}" data-jenis="{{ filter_jenis|default:'INM' }}">
+          <i class="bi bi-bar-chart-steps me-1"></i>Komparasi Unit
+        </button>
         <span class="badge bg-success-subtle text-success border border-success-subtle px-2.5 py-1 small">
           <i class="bi bi-check2-circle me-1"></i>Tercapai
         </span>
@@ -587,7 +591,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const modal = new bootstrap.Modal(document.getElementById('trendModal'));
             modal.show();
             try {
-                const resp = await fetch(`/akreditasi/indikator-mutu/api/tren/${indId}/?tahun=${tahun}`);
+                const resp = await fetch(`/indikator-mutu/api/tren/${indId}/?tahun=${tahun}`);
                 const d = await resp.json();
                 const ctx = document.getElementById('trendChartCanvas').getContext('2d');
                 if (trendChart) trendChart.destroy();
@@ -642,6 +646,103 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     });
+
+    // ── Komparasi Unit Bar Chart ────────────────────────────
+    let kompChart = null;
+    let kompItems = [];  // store for click handler
+
+    async function loadKomparasi(jenis, bulan, tahun) {
+        try {
+            const resp = await fetch(`/indikator-mutu/api/komparasi-unit/?jenis=${jenis}&bulan=${bulan}&tahun=${tahun}`);
+            const d = await resp.json();
+            kompItems = d.items;
+            document.getElementById('komparasiModalLabel').textContent =
+                `Komparasi ${d.jenis} — Bulan ${d.bulan} / ${d.tahun}`;
+
+            const labels = d.items.map(i => `${i.kode}\n${i.unit}`);
+            const data = d.items.map(i => i.capaian);
+            const targets = d.items.map(i => i.target);
+            const colors = d.items.map(i => {
+                if (i.capaian === null) return 'rgba(200,200,200,0.5)';
+                return i.tercapai ? 'rgba(25,135,84,0.75)' : 'rgba(220,53,69,0.75)';
+            });
+
+            const ctx = document.getElementById('komparasiChartCanvas').getContext('2d');
+            if (kompChart) kompChart.destroy();
+
+            kompChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: 'Capaian (%)',
+                            data: data,
+                            backgroundColor: colors,
+                            borderRadius: 4,
+                        },
+                        {
+                            label: 'Target',
+                            data: targets,
+                            type: 'line',
+                            borderColor: 'rgba(255,193,7,0.9)',
+                            borderWidth: 2,
+                            borderDash: [5,3],
+                            pointRadius: 3,
+                            pointBackgroundColor: 'rgba(255,193,7,1)',
+                            fill: false,
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    onClick: (evt, elements) => {
+                        if (elements.length > 0 && elements[0].datasetIndex === 0) {
+                            const idx = elements[0].index;
+                            const item = kompItems[idx];
+                            // Only navigate if below target (red bar)
+                            if (item && !item.tercapai && item.unit_id) {
+                                window.location.href = `/risiko/unit/${item.unit_id}/`;
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: { position: 'bottom', labels: { font: { size: 10 } } },
+                        tooltip: {
+                            callbacks: {
+                                label: ctx => {
+                                    if (ctx.raw === null) return 'Belum ada data';
+                                    return `${ctx.dataset.label}: ${ctx.raw.toFixed(1)}%`;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: { ticks: { font: { size: 8 }, maxRotation: 45 } },
+                        y: { beginAtZero: true, ticks: { callback: v => v + '%' } }
+                    }
+                }
+            });
+        } catch(e) {
+            console.error('Gagal memuat komparasi:', e);
+        }
+    }
+
+    const btnKomp = document.getElementById('btnKomparasiUnit');
+    if (btnKomp) {
+        btnKomp.addEventListener('click', function() {
+            const tahun = this.dataset.tahun;
+            const jenis = this.dataset.jenis;
+            const modal = new bootstrap.Modal(document.getElementById('komparasiModal'));
+            modal.show();
+            const bulanSel = document.getElementById('komparasiBulanSelect');
+            loadKomparasi(jenis, bulanSel.value, tahun);
+
+            bulanSel.addEventListener('change', () => {
+                loadKomparasi(jenis, bulanSel.value, tahun);
+            });
+        });
+    }
 });
 </script>
 
@@ -655,6 +756,32 @@ document.addEventListener('DOMContentLoaded', function() {
       </div>
       <div class="modal-body">
         <canvas id="trendChartCanvas" height="280"></canvas>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Unit Comparison Modal -->
+<div class="modal fade" id="komparasiModal" tabindex="-1">
+  <div class="modal-dialog modal-xl modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header py-2">
+        <h6 class="modal-title fw-bold" id="komparasiModalLabel">Komparasi Capaian Antar Unit</h6>
+        <div class="d-flex align-items-center gap-2 ms-auto me-3">
+          <select id="komparasiBulanSelect" class="form-select form-select-sm" style="width: auto;">
+            {% for i in "123456789012"|make_list %}
+            <option value="{{ forloop.counter }}">Bulan {{ forloop.counter }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="alert alert-light border small py-2 mb-3">
+          <i class="bi bi-info-circle text-primary me-1"></i>
+          Klik pada bar warna <strong class="text-danger">merah</strong> (capaian di bawah target) untuk langsung membuat atau membuka tindak lanjut <strong>PDCA / Risk Register</strong> unit tersebut.
+        </div>
+        <canvas id="komparasiChartCanvas" height="320"></canvas>
       </div>
     </div>
   </div>

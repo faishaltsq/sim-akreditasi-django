@@ -157,3 +157,64 @@ class IndikatorAlurIntegrasiTest(TestCase):
         )
         count = RisikoUnit.objects.filter(indikator_mutu_terkait=ind).count()
         self.assertEqual(count, 0)
+
+    # ------------------------------------------------------------------
+    # Task 3 & 4: API JSON Endpoints for charts
+    # ------------------------------------------------------------------
+
+    def test_api_tren_endpoint(self):
+        """API tren returns 12-month series with target and direction."""
+        from django.contrib.auth.models import User
+        user = User.objects.create_user('testuser', password='password123')
+        self.client.login(username='testuser', password='password123')
+
+        ind = IndikatorMutu.objects.create(
+            nama_indikator='Waktu Tanggap Operasi SC',
+            kode_indikator='INM-SC-01',
+            jenis='INM',
+            dimensi_mutu='TEPAT_WAKTU',
+            numerator='A', denominator='B',
+            target_nilai=Decimal('80.00'),
+            arah_target='MIN',
+        )
+        CatatanIndikator.objects.create(
+            indikator=ind, bulan=1, tahun=2026,
+            nilai_numerator=Decimal('75'), nilai_denominator=Decimal('100')
+        )
+        resp = self.client.get(f'/indikator-mutu/api/tren/{ind.pk}/?tahun=2026')
+        self.assertEqual(resp.status_code, 200)
+        payload = resp.json()
+        self.assertEqual(payload['kode'], 'INM-SC-01')
+        self.assertEqual(payload['target'], 80.0)
+        self.assertEqual(payload['data'][0], 75.0)
+        self.assertIsNone(payload['data'][1])  # Bulan 2 belum ada data
+
+    def test_api_komparasi_unit_endpoint(self):
+        """API komparasi unit returns cross-unit indicators for a month."""
+        from django.contrib.auth.models import User
+        user = User.objects.create_user('testuser2', password='password123')
+        self.client.login(username='testuser2', password='password123')
+
+        ind = IndikatorMutu.objects.create(
+            nama_indikator='Kepuasan Pasien Farmasi',
+            kode_indikator='IMU-FAR-99',
+            jenis='IMU',
+            unit=self.unit,
+            dimensi_mutu='BERORIENTASI_PASIEN',
+            numerator='A', denominator='B',
+            target_nilai=Decimal('90.00'),
+            arah_target='MIN',
+        )
+        CatatanIndikator.objects.create(
+            indikator=ind, bulan=1, tahun=2026,
+            nilai_numerator=Decimal('92'), nilai_denominator=Decimal('100')
+        )
+        resp = self.client.get('/indikator-mutu/api/komparasi-unit/?jenis=IMU&bulan=1&tahun=2026')
+        self.assertEqual(resp.status_code, 200)
+        payload = resp.json()
+        self.assertEqual(payload['jenis'], 'IMU')
+        self.assertTrue(len(payload['items']) >= 1)
+        found = [i for i in payload['items'] if i['kode'] == 'IMU-FAR-99']
+        self.assertEqual(len(found), 1)
+        self.assertEqual(found[0]['capaian'], 92.0)
+        self.assertTrue(found[0]['tercapai'])
