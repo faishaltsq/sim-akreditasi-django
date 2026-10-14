@@ -24,6 +24,26 @@ def _cleanup_fallback(window: int):
         _rate_store_fallback.pop(k, None)
 
 
+def extract_client_ip(request) -> str:
+    """
+    Return the client IP as observed by the trusted edge proxy.
+
+    Behind Vercel/Railway the edge APPENDS the real client IP to the end of
+    X-Forwarded-For, so the LAST hop is the only client-untrusted-proof value.
+    Earlier hops are client-supplied and spoofable. Falls back to X-Real-IP,
+    then REMOTE_ADDR (direct/non-proxied requests, local dev).
+    """
+    xff = request.META.get('HTTP_X_FORWARDED_FOR', '')
+    if xff:
+        hops = [h.strip() for h in xff.split(',') if h.strip()]
+        if hops:
+            return hops[-1]
+    real_ip = request.META.get('HTTP_X_REAL_IP', '').strip()
+    if real_ip:
+        return real_ip
+    return request.META.get('REMOTE_ADDR', 'unknown')
+
+
 def rate_limit(max_calls: int = 10, window: int = 60, scope: str = 'default'):
     """
     Decorator rate limiter per user/IP.
@@ -40,9 +60,7 @@ def rate_limit(max_calls: int = 10, window: int = 60, scope: str = 'default'):
             if getattr(request, 'user', None) and request.user.is_authenticated:
                 client_key = f"{_RATE_PREFIX}{scope}:u:{request.user.id}"
             else:
-                xff = request.META.get('HTTP_X_FORWARDED_FOR', '')
-                ip = xff.split(',')[0].strip() if xff else request.META.get('REMOTE_ADDR', 'unknown')
-                client_key = f"{_RATE_PREFIX}{scope}:ip:{ip}"
+                client_key = f"{_RATE_PREFIX}{scope}:ip:{extract_client_ip(request)}"
 
             now = time.time()
             cutoff = now - window

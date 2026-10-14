@@ -99,6 +99,70 @@ class RateLimiterTest(TestCase):
         self.assertEqual(res3.status_code, 429)
         self.assertIn('Akses Dibatasi Sementara', res3.content.decode('utf-8'))
 
+    def _view(self):
+        calls = {'n': 0}
+
+        @rate_limit(max_calls=3, window=60, scope='ip-test')
+        def view(request):
+            calls['n'] += 1
+            return HttpResponse('ok')
+
+        return view, calls
+
+    def test_rate_limit_keys_on_last_xff_hop(self):
+        """Spoofed first-hop XFF entries share one bucket keyed on the edge-observed last hop."""
+        view, calls = self._view()
+        # 3 requests, each with a DIFFERENT spoofed first hop but the same real last hop
+        for spoofed in ['6.6.6.6', '7.7.7.7', '8.8.8.8']:
+            request = self.factory.get(
+                '/api/test/',
+                HTTP_X_FORWARDED_FOR=f'{spoofed}, 36.86.50.10',
+                REMOTE_ADDR='10.0.0.1',
+            )
+            response = view(request)
+            self.assertEqual(response.status_code, 200)
+        # 4th request with yet another spoofed first hop -> throttled (same last-hop bucket)
+        request = self.factory.get(
+            '/api/test/',
+            HTTP_X_FORWARDED_FOR='9.9.9.9, 36.86.50.10',
+            REMOTE_ADDR='10.0.0.1',
+        )
+        self.assertEqual(view(request).status_code, 429)
+
+    def test_extract_client_ip_fallback_chain(self):
+        from akreditasi.security_utils import extract_client_ip
+        # multi-hop: last hop wins
+        r = self.factory.get('/', HTTP_X_FORWARDED_FOR='6.6.6.6, 36.86.50.10', REMOTE_ADDR='10.0.0.1')
+        self.assertEqual(extract_client_ip(r), '36.86.50.10')
+        # no XFF: X-Real-IP wins
+        r = self.factory.get('/', HTTP_X_REAL_IP='36.86.50.11', REMOTE_ADDR='10.0.0.1')
+        self.assertEqual(extract_client_ip(r), '36.86.50.11')
+        # neither header: REMOTE_ADDR
+        r = self.factory.get('/', REMOTE_ADDR='192.168.1.100')
+        self.assertEqual(extract_client_ip(r), '192.168.1.100')
+        # empty XFF string: falls through, must not return ''
+        r = self.factory.get('/', HTTP_X_FORWARDED_FOR='', REMOTE_ADDR='10.0.0.2')
+        self.assertEqual(extract_client_ip(r), '10.0.0.2')
+
+
+class AllowedHostsTest(TestCase):
+    """A05/A02: foreign Host headers must be rejected with 400 (host-header injection)."""
+
+    def test_foreign_host_rejected(self):
+        from django.conf import settings
+        self.assertNotIn('.vercel.app', settings.ALLOWED_HOSTS)
+        self.assertNotIn('.railway.app', settings.ALLOWED_HOSTS)
+        self.assertNotIn('.onrender.com', settings.ALLOWED_HOSTS)
+        self.assertNotIn('.pythonanywhere.com', settings.ALLOWED_HOSTS)
+        self.assertIn('sim-akreditasi-django.vercel.app', settings.ALLOWED_HOSTS)
+        self.assertIn('sim-akreditasi-web-production.up.railway.app', settings.ALLOWED_HOSTS)
+
+    def test_legit_domains_accepted(self):
+        for host in ('sim-akreditasi-django.vercel.app',
+                     'sim-akreditasi-web-production.up.railway.app'):
+            response = self.client.get('/accounts/login/', HTTP_HOST=host, secure=True)
+            self.assertNotEqual(response.status_code, 400)
+
 
 class LoginBruteForceProtectionTest(TestCase):
     def test_login_url_accessible(self):
