@@ -494,6 +494,9 @@ class CatatanIndikator(models.Model):
     nilai_numerator  = models.DecimalField('Nilai Numerator', max_digits=10, decimal_places=2)
     nilai_denominator = models.DecimalField('Nilai Denominator', max_digits=10, decimal_places=2)
     catatan          = models.TextField('Catatan', blank=True)
+    bukti_dokumen    = models.FileField('Dokumen Bukti Pendukung', upload_to='indikator_bukti/%Y/%m/',
+                                        null=True, blank=True,
+                                        help_text='Upload bukti pelaksanaan atau laporan capaian bulanan (PDF/DOCX/JPG/PNG)')
     created_at       = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -529,6 +532,8 @@ class RenstraRoadmap(models.Model):
     warna_hex = models.CharField('Kode Warna Hex', max_length=20, default='#0d6efd',
                                  help_text='Contoh: #0d6efd, #6f42c1, #198754, #20c997, #fd7e14')
     urutan = models.PositiveSmallIntegerField('Urutan Tampil', default=1)
+    target_persen = models.DecimalField('Target Capaian Renstra (%)', max_digits=5, decimal_places=2, default=Decimal('80.00'),
+                                         help_text='Target agregat capaian indikator Renstra tahunan (misal: 2026: 75%, 2027: 80%, dst.)')
     aktif = models.BooleanField('Aktif Ditampilkan', default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

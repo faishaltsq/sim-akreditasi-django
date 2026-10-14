@@ -319,13 +319,26 @@ def indikator_input_capaian(request, indikator_id):
             if den <= 0:
                 raise ValueError('Denominator harus > 0')
 
+            file_bukti = request.FILES.get('bukti_dokumen')
+            if file_bukti:
+                ext = file_bukti.name.split('.')[-1].lower() if '.' in file_bukti.name else ''
+                allowed_exts = {'pdf', 'docx', 'doc', 'jpg', 'jpeg', 'png', 'xlsx', 'xls'}
+                if ext not in allowed_exts:
+                    raise ValueError(f'Format berkas .{ext} tidak diizinkan. Gunakan PDF, DOCX, XLSX, atau gambar.')
+                if file_bukti.size > 10 * 1024 * 1024:
+                    raise ValueError('Ukuran berkas melebihi batas maksimal 10 MB.')
+
+            defaults = {
+                'nilai_numerator': num,
+                'nilai_denominator': den,
+                'catatan': catatan_text,
+            }
+            if file_bukti:
+                defaults['bukti_dokumen'] = file_bukti
+
             obj, created = CatatanIndikator.objects.update_or_create(
                 indikator=ind, bulan=bulan, tahun=tahun,
-                defaults={
-                    'nilai_numerator': num,
-                    'nilai_denominator': den,
-                    'catatan': catatan_text,
-                }
+                defaults=defaults
             )
             _log(request.user, 'CREATE' if created else 'UPDATE', obj,
                  f'Capaian {ind.kode_indikator} bulan {bulan}/{tahun}: {float(obj.nilai_capaian):.1f}%')

@@ -387,6 +387,128 @@
       </div>
     </div>
 
+    <!-- ========================================================================= -->
+    <!-- GRUP GRAFIK CAPAIAN INDIKATOR MUTU & TREN RENSTRA RS (STARKES PMKP 12)    -->
+    <!-- ========================================================================= -->
+    <div class="card shadow-sm border-0 mb-4 rounded-3">
+        <div class="card-header bg-white py-3 border-0 d-flex flex-wrap justify-content-between align-items-center gap-2">
+            <div>
+                <div class="d-flex align-items-center gap-2">
+                    <span class="badge fw-bold font-monospace px-2.5 py-1" style="background:#ccfbf1; color:#0f766e; font-size:0.75rem;">
+                        <i class="bi bi-graph-up-arrow me-1"></i>STARKES PMKP 12 &amp; RENSTRA
+                    </span>
+                    <h5 class="fw-bold mb-0 text-dark" style="font-size:1.05rem;">
+                        Grafik Capaian Indikator Mutu &amp; Roadmap Renstra
+                    </h5>
+                </div>
+                <span class="text-muted small">Visualisasi pencapaian indikator bulanan dan komparasi target Renstra RS 2026–2030</span>
+            </div>
+
+            <!-- TAB NAVIGATOR -->
+            <ul class="nav nav-pills" id="pills-mutu-tab" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active py-1.5 px-3 rounded-pill fw-semibold small" id="pills-bulanan-tab" data-bs-toggle="pill" data-bs-target="#pills-bulanan" type="button" role="tab">
+                        <i class="bi bi-calendar3 me-1"></i>Tren Bulanan ({{ filter_mutu_tahun }})
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link py-1.5 px-3 rounded-pill fw-semibold small" id="pills-renstra-tab" data-bs-toggle="pill" data-bs-target="#pills-renstra" type="button" role="tab">
+                        <i class="bi bi-bar-chart-steps me-1"></i>Progres Renstra 2026–2030
+                    </button>
+                </li>
+            </ul>
+        </div>
+
+        <div class="card-body p-3 pt-0">
+            <!-- FILTER TOOLBAR (GET FORM) -->
+            <form method="GET" class="row g-2 align-items-center p-2 mb-3 rounded-3 bg-light border">
+                <div class="col-12 col-md-3">
+                    <label class="form-label mb-0 small text-muted fw-semibold">Kategori Indikator</label>
+                    <select name="mutu_jenis" class="form-select form-select-sm" onchange="this.form.submit()">
+                        <option value="">Semua Kategori (INM / IMP)</option>
+                        {% for jval, jtxt in mutu_jenis_choices %}
+                        <option value="{{ jval }}" {% if filter_mutu_jenis == jval %}selected{% endif %}>{{ jtxt }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                {% if not unit_dashboard %}
+                <div class="col-12 col-md-4">
+                    <label class="form-label mb-0 small text-muted fw-semibold">Unit Kerja</label>
+                    <select name="mutu_unit" class="form-select form-select-sm" onchange="this.form.submit()">
+                        <option value="">Semua Unit Kerja RS</option>
+                        {% for u in mutu_units_choices %}
+                        <option value="{{ u.id }}" {% if filter_mutu_unit == u.id|stringformat:"s" %}selected{% endif %}>
+                            {{ u.code }} — {{ u.name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                {% endif %}
+                <div class="col-12 col-md-3">
+                    <label class="form-label mb-0 small text-muted fw-semibold">Tahun Pengukuran</label>
+                    <select name="mutu_tahun" class="form-select form-select-sm" onchange="this.form.submit()">
+                        {% for yr in mutu_tahun_choices %}
+                        <option value="{{ yr }}" {% if filter_mutu_tahun == yr %}selected{% endif %}>Tahun {{ yr }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-12 col-md-2 d-flex align-items-end">
+                    <a href="{% url 'akreditasi:indikator_dashboard' %}?tahun={{ filter_mutu_tahun }}" class="btn btn-sm btn-outline-primary w-100">
+                        <i class="bi bi-box-arrow-up-right me-1"></i>Input & Detail
+                    </a>
+                </div>
+            </form>
+
+            <!-- TAB CONTENT -->
+            <div class="tab-content" id="pills-mutu-tabContent">
+                <!-- TAB 1: TREN BULANAN COMBO CHART -->
+                <div class="tab-pane fade show active" id="pills-bulanan" role="tabpanel">
+                    <div class="row align-items-center mb-2 px-2">
+                        <div class="col-12 col-md-7">
+                            <span class="small text-muted">
+                                Realisasi rata-rata per bulan vs garis target standar minimal
+                                <strong class="text-danger font-monospace">({{ chart_mutu_target_val }}%)</strong>.
+                            </span>
+                        </div>
+                        <div class="col-12 col-md-5 text-md-end">
+                            <span class="badge bg-success-subtle text-success border border-success-subtle me-1" style="font-size:0.7rem;">
+                                <i class="bi bi-square-fill me-1"></i>Tercapai (≥ {{ chart_mutu_target_val }}%)
+                            </span>
+                            <span class="badge bg-danger-subtle text-danger border border-danger-subtle" style="font-size:0.7rem;">
+                                <i class="bi bi-square-fill me-1"></i>Di bawah Target (< {{ chart_mutu_target_val }}%)
+                            </span>
+                        </div>
+                    </div>
+                    <div style="position: relative; height: 260px; width: 100%;">
+                        <canvas id="chartMutuBulanan"></canvas>
+                    </div>
+                </div>
+
+                <!-- TAB 2: TREN RENSTRA 2026-2030 GROUPED BAR -->
+                <div class="tab-pane fade" id="pills-renstra" role="tabpanel">
+                    <div class="row align-items-center mb-2 px-2">
+                        <div class="col-12 col-md-7">
+                            <span class="small text-muted">
+                                Perbandingan Target Rencana Strategis (Renstra) vs Realisasi Capaian Aktual RS 2026–2030.
+                            </span>
+                        </div>
+                        <div class="col-12 col-md-5 text-md-end">
+                            <span class="badge bg-primary-subtle text-primary border border-primary-subtle me-1" style="font-size:0.7rem;">
+                                <i class="bi bi-square-fill me-1"></i>Target Renstra
+                            </span>
+                            <span class="badge bg-success-subtle text-success border border-success-subtle" style="font-size:0.7rem;">
+                                <i class="bi bi-square-fill me-1"></i>Realisasi Aktual
+                            </span>
+                        </div>
+                    </div>
+                    <div style="position: relative; height: 260px; width: 100%;">
+                        <canvas id="chartRenstraTahunan"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- ROADMAP RENSTRA 2026–2030 (MENU TAHUN KLIK → INDIKATOR MUTU) -->
     {% if renstra_years %}
     <div class="card shadow-sm border-0 mb-4 rounded-3">
@@ -665,39 +787,199 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    const ctx = document.getElementById('kepatuhanChart').getContext('2d');
-    const kepatuhanChart = new Chart(ctx, {
-        type: 'doughnut',
-        data: {
-            labels: ['Tercapai (Skor 10)', 'Dalam Proses (Skor 5)', 'Belum Ada Bukti (Skor 0)'],
-            datasets: [{
-                data: [{{ count_tercapai }}, {{ count_proses }}, {{ count_belum }}],
-                backgroundColor: ['#10B981', '#F59E0B', '#EF4444'],
-                borderWidth: 2,
-                borderColor: '#FFFFFF',
-                hoverOffset: 4
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            cutout: '70%',
-            plugins: {
-                legend: {
-                    display: false
-                },
-                tooltip: {
-                    callbacks: {
-                        label: function(context) {
-                            let total = {{ total_ep }};
-                            let val = context.raw;
-                            let pct = total > 0 ? Math.round((val / total) * 100) : 0;
-                            return `${context.label}: ${val} EP (${pct}%)`;
+    // 1. Chart Kepatuhan EP (Doughnut)
+    const kepatuhanEl = document.getElementById('kepatuhanChart');
+    if (kepatuhanEl) {
+        new Chart(kepatuhanEl.getContext('2d'), {
+            type: 'doughnut',
+            data: {
+                labels: ['Tercapai (Skor 10)', 'Dalam Proses (Skor 5)', 'Belum Ada Bukti (Skor 0)'],
+                datasets: [{
+                    data: [{{ count_tercapai }}, {{ count_proses }}, {{ count_belum }}],
+                    backgroundColor: ['#10B981', '#F59E0B', '#EF4444'],
+                    borderWidth: 2,
+                    borderColor: '#FFFFFF',
+                    hoverOffset: 4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                cutout: '70%',
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                let total = {{ total_ep }};
+                                let val = context.raw;
+                                let pct = total > 0 ? Math.round((val / total) * 100) : 0;
+                                return `${context.label}: ${val} EP (${pct}%)`;
+                            }
                         }
                     }
                 }
             }
-        }
+        });
+    }
+
+    // 2. Chart Capaian Mutu Bulanan (Combo Bar + Target Line)
+    let chartMutu = null;
+    const mutuEl = document.getElementById('chartMutuBulanan');
+    if (mutuEl) {
+        const mutuLabels = {{ chart_mutu_labels_json|safe }};
+        const mutuData = {{ chart_mutu_data_json|safe }};
+        const mutuColors = {{ chart_mutu_colors_json|safe }};
+        const targetLine = {{ chart_mutu_target_line_json|safe }};
+        const targetVal = {{ chart_mutu_target_val_json|safe }};
+        const hasMutuData = {{ has_monthly_data|yesno:"true,false" }};
+
+        chartMutu = new Chart(mutuEl.getContext('2d'), {
+            type: 'bar',
+            data: {
+                labels: mutuLabels,
+                datasets: [
+                    {
+                        type: 'line',
+                        label: `Batas Target (${targetVal}%)`,
+                        data: targetLine,
+                        borderColor: '#dc3545',
+                        borderWidth: 2,
+                        borderDash: [6, 4],
+                        pointRadius: 0,
+                        pointHoverRadius: 0,
+                        fill: false,
+                        order: 1
+                    },
+                    {
+                        type: 'bar',
+                        label: 'Realisasi Capaian (%)',
+                        data: mutuData,
+                        backgroundColor: mutuColors,
+                        borderRadius: 5,
+                        maxBarThickness: 38,
+                        order: 2
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: { mode: 'index', intersect: false },
+                plugins: {
+                    legend: {
+                        position: 'top',
+                        labels: {
+                            boxWidth: 14,
+                            usePointStyle: true,
+                            font: { family: "'Plus Jakarta Sans', sans-serif", size: 11 }
+                        }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(ctx) {
+                                if (ctx.raw === null || ctx.raw === undefined) {
+                                    return `${ctx.dataset.label}: Belum ada data`;
+                                }
+                                return `${ctx.dataset.label}: ${ctx.raw}%`;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        max: 105,
+                        ticks: {
+                            stepSize: 20,
+                            callback: v => v + '%'
+                        },
+                        grid: { color: 'rgba(226, 232, 240, 0.7)' }
+                    },
+                    x: {
+                        grid: { display: false }
+                    }
+                }
+            }
+        });
+    }
+
+    // 3. Chart Tren Renstra 2026-2030 (Grouped Bar Target vs Realisasi)
+    let chartRenstra = null;
+    const renstraEl = document.getElementById('chartRenstraTahunan');
+    if (renstraEl) {
+        const renstraYears = {{ chart_renstra_years_json|safe }};
+        const renstraTargets = {{ chart_renstra_targets_json|safe }};
+        const renstraActuals = {{ chart_renstra_actuals_json|safe }};
+
+        chartRenstra = new Chart(renstraEl.getContext('2d'), {
+            type: 'bar',
+            data: {
+                labels: renstraYears.map(y => `Tahun ${y}`),
+                datasets: [
+                    {
+                        label: 'Target Renstra (%)',
+                        data: renstraTargets,
+                        backgroundColor: '#0284c7',
+                        borderRadius: 5,
+                        maxBarThickness: 34
+                    },
+                    {
+                        label: 'Realisasi Aktual (%)',
+                        data: renstraActuals,
+                        backgroundColor: '#10b981',
+                        borderRadius: 5,
+                        maxBarThickness: 34
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'top',
+                        labels: {
+                            boxWidth: 14,
+                            usePointStyle: true,
+                            font: { family: "'Plus Jakarta Sans', sans-serif", size: 11 }
+                        }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(ctx) {
+                                if (ctx.raw === null || ctx.raw === undefined) {
+                                    return `${ctx.dataset.label}: Belum ada realisasi`;
+                                }
+                                return `${ctx.dataset.label}: ${ctx.raw}%`;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        max: 105,
+                        ticks: {
+                            stepSize: 20,
+                            callback: v => v + '%'
+                        },
+                        grid: { color: 'rgba(226, 232, 240, 0.7)' }
+                    },
+                    x: {
+                        grid: { display: false }
+                    }
+                }
+            }
+        });
+    }
+
+    // Resize listener when switching tab pills
+    document.querySelectorAll('#pills-mutu-tab button[data-bs-toggle="pill"]').forEach(function(pill) {
+        pill.addEventListener('shown.bs.tab', function() {
+            if (chartMutu) chartMutu.resize();
+            if (chartRenstra) chartRenstra.resize();
+        });
     });
 });
 </script>

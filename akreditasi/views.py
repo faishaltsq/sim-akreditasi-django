@@ -118,6 +118,113 @@ def _is_manager_role(user) -> bool:
     return p and p.role in ('SUPER_ADMIN', 'ADMIN_RS', 'KEPALA_UNIT', 'KOORDINATOR_POKJA')
 
 
+def _get_mutu_renstra_charts_context(request, profile, db_roadmaps, renstra_years):
+    """Aggregate monthly indicators (Jan-Dec) and 5-year Renstra data for Dashboard charts."""
+    import json as _json
+    from .risiko_models import IndikatorMutu, CatatanIndikator
+    from .models import UnitKerja
+
+    mutu_jenis = request.GET.get('mutu_jenis', '')
+    mutu_unit = request.GET.get('mutu_unit', '')
+    try:
+        mutu_tahun = int(request.GET.get('mutu_tahun', '2026'))
+    except (ValueError, TypeError):
+        mutu_tahun = 2026
+
+    ind_qs = IndikatorMutu.objects.filter(aktif=True)
+    if profile and profile.is_unit_scoped and profile.unit_kerja:
+        user_unit = profile.unit_kerja
+        user_unit_ids = list(UnitKerja.objects.filter(
+            Q(pk=user_unit.pk) | Q(parent=user_unit) | Q(parent__parent=user_unit)
+        ).values_list('pk', flat=True))
+        ind_qs = ind_qs.filter(Q(unit_id__in=user_unit_ids) | Q(jenis='NASIONAL'))
+    elif mutu_unit:
+        ind_qs = ind_qs.filter(unit_id=mutu_unit)
+
+    if mutu_jenis:
+        ind_qs = ind_qs.filter(jenis=mutu_jenis)
+
+    filtered_ind_ids = list(ind_qs.values_list('id', flat=True))
+    avg_target_raw = ind_qs.aggregate(avg=Avg('target_nilai'))['avg']
+    avg_target_val = round(float(avg_target_raw), 1) if avg_target_raw else 80.0
+
+    # 1. Monthly Combo Chart (Jan - Des)
+    BULAN_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des']
+    monthly_cat = CatatanIndikator.objects.filter(
+        indikator_id__in=filtered_ind_ids, tahun=mutu_tahun
+    ).values('bulan').annotate(
+        sum_num=Sum('nilai_numerator'),
+        sum_den=Sum('nilai_denominator'),
+        count=Count('id')
+    ).order_by('bulan')
+
+    month_data_map = {}
+    for c in monthly_cat:
+        if c['sum_den'] and c['sum_den'] > 0:
+            pct = round(float((c['sum_num'] / c['sum_den']) * 100), 1)
+        else:
+            pct = 0.0
+        month_data_map[c['bulan']] = pct
+
+    chart_mutu_bulanan_data = []
+    chart_mutu_colors = []
+    has_monthly_data = False
+    for m in range(1, 13):
+        val = month_data_map.get(m, None)
+        chart_mutu_bulanan_data.append(val)
+        if val is not None:
+            has_monthly_data = True
+            if val >= avg_target_val:
+                chart_mutu_colors.append('#198754')  # Hijau (Tercapai >= Target)
+            else:
+                chart_mutu_colors.append('#dc3545')  # Merah (Belum Tercapai < Target)
+        else:
+            chart_mutu_colors.append('rgba(203, 213, 225, 0.4)')
+
+    # 2. Renstra Multi-Year Target vs Realization (2026 - 2030)
+    renstra_years_list = [2026, 2027, 2028, 2029, 2030]
+    renstra_targets_map = {2026: 75.0, 2027: 80.0, 2028: 85.0, 2029: 90.0, 2030: 95.0}
+    for rm in db_roadmaps:
+        if rm.tahun in renstra_targets_map and getattr(rm, 'target_persen', None):
+            renstra_targets_map[rm.tahun] = float(rm.target_persen)
+
+    renstra_targets_series = [renstra_targets_map[yr] for yr in renstra_years_list]
+    renstra_actual_series = []
+    for yr in renstra_years_list:
+        yr_stat = next((y for y in renstra_years if y['year'] == yr), None)
+        if yr_stat and yr_stat['has_data']:
+            renstra_actual_series.append(yr_stat['avg_capaian'])
+        else:
+            renstra_actual_series.append(None)
+
+    current_year_stat = next((y for y in renstra_years if y['year'] == mutu_tahun), None)
+    kpi_mutu_avg = current_year_stat['avg_capaian'] if current_year_stat else 0.0
+    kpi_mutu_tercapai = current_year_stat['tercapai'] if current_year_stat else 0
+    kpi_mutu_total = current_year_stat['total_catatan'] if current_year_stat else 0
+
+    return {
+        'filter_mutu_jenis': mutu_jenis,
+        'filter_mutu_unit': mutu_unit,
+        'filter_mutu_tahun': mutu_tahun,
+        'mutu_tahun_choices': renstra_years_list,
+        'mutu_jenis_choices': IndikatorMutu.JENIS_CHOICES,
+        'mutu_units_choices': UnitKerja.objects.filter(is_active=True).order_by('code'),
+        'chart_mutu_labels_json': _json.dumps(BULAN_SHORT),
+        'chart_mutu_data_json': _json.dumps(chart_mutu_bulanan_data),
+        'chart_mutu_colors_json': _json.dumps(chart_mutu_colors),
+        'chart_mutu_target_val': avg_target_val,
+        'chart_mutu_target_val_json': _json.dumps(avg_target_val),
+        'chart_mutu_target_line_json': _json.dumps([avg_target_val] * 12),
+        'has_monthly_data': has_monthly_data,
+        'chart_renstra_years_json': _json.dumps(renstra_years_list),
+        'chart_renstra_targets_json': _json.dumps(renstra_targets_series),
+        'chart_renstra_actuals_json': _json.dumps(renstra_actual_series),
+        'kpi_mutu_avg': kpi_mutu_avg,
+        'kpi_mutu_tercapai': kpi_mutu_tercapai,
+        'kpi_mutu_total': kpi_mutu_total,
+    }
+
+
 # ==============================================================================
 # 1. DASHBOARD UTAMA (SIK AP Overview)
 # ==============================================================================
@@ -171,6 +278,9 @@ def dashboard(request):
             'total_indikator': total_indikator,
             'has_data': total_catatan > 0,
         })
+
+    # Data grafik capaian mutu bulanan & perkembangan Renstra
+    mutu_chart_ctx = _get_mutu_renstra_charts_context(request, profile, db_roadmaps, renstra_years)
 
     # ===== MODE UNIT-SCOPED: user punya unit_kerja & bukan admin/direktur =====
     if profile and profile.is_unit_scoped and profile.unit_kerja:
@@ -239,6 +349,7 @@ def dashboard(request):
             'aktivitas_terkini': aktivitas_terkini,
             'renstra_years': renstra_years,
         }
+        context.update(mutu_chart_ctx)
         return render(request, 'akreditasi/dashboard.html', context)
 
     # ===== MODE GLOBAL: Admin / Direktur / user tanpa unit_kerja =====
@@ -249,8 +360,9 @@ def dashboard(request):
     cached_ctx = cache.get(_cache_key)
 
     if cached_ctx is not None:
-        # Gabungkan renstra_years yang sudah dihitung di atas (real-time) ke cached ctx
+        # Gabungkan renstra_years & grafik mutu yang real-time ke cached ctx
         cached_ctx['renstra_years'] = renstra_years
+        cached_ctx.update(mutu_chart_ctx)
         return render(request, 'akreditasi/dashboard.html', cached_ctx)
 
     rs_profile = RumahSakitProfile.get_default()
@@ -328,6 +440,7 @@ def dashboard(request):
         'total_units_count': total_units_count,
         'renstra_years': renstra_years,
     }
+    context.update(mutu_chart_ctx)
     cache.set(_cache_key, context, 300)
     return render(request, 'akreditasi/dashboard.html', context)
 

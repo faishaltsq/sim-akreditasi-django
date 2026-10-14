@@ -95,6 +95,7 @@
                 <th class="text-center">Num / Den</th>
                 <th class="text-center">Capaian</th>
                 <th class="text-center">Status</th>
+                <th class="text-center">Bukti</th>
               </tr>
             </thead>
             <tbody>
@@ -112,10 +113,19 @@
                     <span class="badge bg-danger-subtle text-danger"><i class="bi bi-x-lg"></i> Belum</span>
                   {% endif %}
                 </td>
+                <td class="text-center">
+                  {% if c.bukti_dokumen %}
+                    <a href="{{ c.bukti_dokumen.url }}" target="_blank" class="badge bg-primary-subtle text-primary text-decoration-none" title="Lihat/Unduh Bukti">
+                      <i class="bi bi-file-earmark-arrow-down-fill"></i> Unduh
+                    </a>
+                  {% else %}
+                    <span class="text-muted small">-</span>
+                  {% endif %}
+                </td>
               </tr>
               {% empty %}
               <tr>
-                <td colspan="4" class="text-center text-muted py-4 small">
+                <td colspan="5" class="text-center text-muted py-4 small">
                   <i class="bi bi-clipboard-x fs-4 d-block mb-1"></i>Belum ada data capaian untuk tahun {{ tahun }}.
                   {% if is_manager %}
                   <br><a href="{% url 'akreditasi:indikator_input_capaian' ind.pk %}" class="text-primary">Input sekarang</a>
