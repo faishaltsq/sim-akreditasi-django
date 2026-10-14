@@ -141,9 +141,17 @@ def indikator_dashboard(request):
 
     qs = IndikatorMutu.objects.filter(aktif=True).select_related('unit', 'ep_terkait')
 
+    # Normalize canonical 3-tier filter → DB codes (support both old and new)
+    JENIS_CANONICAL_MAP = {
+        'INM':  ['INM', 'NASIONAL'],
+        'IMRS': ['IMRS', 'IMP_RS'],
+        'IMU':  ['IMU', 'IMP_UNIT'],
+    }
+
     # Filter
     if jenis:
-        qs = qs.filter(jenis=jenis)
+        db_codes = JENIS_CANONICAL_MAP.get(jenis, [jenis])
+        qs = qs.filter(jenis__in=db_codes)
     if unit_id:
         qs = qs.filter(unit_id=unit_id)
 
@@ -478,4 +486,79 @@ def indikator_edit(request, indikator_id):
         'dimensi_choices': IndikatorMutu.DIMENSI_CHOICES,
     }
     return render(request, 'akreditasi/indikator_form.html', ctx)
+
+
+# ── API JSON Endpoints: Trend & Unit Comparison Charts ──────────────────────
+
+@login_required
+def api_indikator_tren(request, indikator_id):
+    """Monthly trend data for a single indicator — 12 months of a given year."""
+    ind = get_object_or_404(IndikatorMutu, pk=indikator_id)
+    tahun = int(request.GET.get('tahun', 2026))
+    catatan = CatatanIndikator.objects.filter(
+        indikator=ind, tahun=tahun
+    ).order_by('bulan')
+
+    data = [None] * 12
+    for c in catatan:
+        data[c.bulan - 1] = float(c.nilai_capaian)
+
+    arah = getattr(ind, 'arah_target', 'MIN')
+    return JsonResponse({
+        'kode': ind.kode_indikator,
+        'nama': ind.nama_indikator,
+        'jenis': ind.jenis_standar,
+        'target': float(ind.target_nilai),
+        'arah_target': arah,
+        'satuan': ind.satuan,
+        'tahun': tahun,
+        'labels': [f'Bln {i}' for i in range(1, 13)],
+        'data': data,
+    })
+
+
+@login_required
+def api_indikator_komparasi_unit(request):
+    """Cross-unit comparison for a given indicator jenis (INM/IMRS/IMU) and month/year."""
+    jenis = request.GET.get('jenis', 'INM')
+    bulan = int(request.GET.get('bulan', 1))
+    tahun = int(request.GET.get('tahun', 2026))
+
+    # Map legacy jenis codes to canonical
+    jenis_map = {'NASIONAL': 'INM', 'IMP_RS': 'IMRS', 'IMP_UNIT': 'IMU'}
+    canonical = jenis_map.get(jenis, jenis)
+    # Collect all DB jenis codes that map to this canonical
+    db_codes = [canonical]
+    for k, v in jenis_map.items():
+        if v == canonical:
+            db_codes.append(k)
+
+    indicators = IndikatorMutu.objects.filter(
+        jenis__in=db_codes, aktif=True
+    ).select_related('unit')
+
+    results = []
+    for ind in indicators:
+        cat = CatatanIndikator.objects.filter(
+            indikator=ind, bulan=bulan, tahun=tahun
+        ).first()
+        capaian = float(cat.nilai_capaian) if cat else None
+        target = float(ind.target_nilai)
+        arah = getattr(ind, 'arah_target', 'MIN')
+        if capaian is not None:
+            tercapai = capaian <= target if arah == 'MAX' else capaian >= target
+        else:
+            tercapai = None
+        results.append({
+            'indikator_id': ind.pk,
+            'kode': ind.kode_indikator,
+            'nama': ind.nama_indikator,
+            'unit': ind.unit.name if ind.unit else 'Hospital-wide',
+            'unit_id': ind.unit_id,
+            'target': target,
+            'capaian': capaian,
+            'tercapai': tercapai,
+            'arah_target': arah,
+        })
+    return JsonResponse({'jenis': canonical, 'bulan': bulan, 'tahun': tahun, 'items': results})
 

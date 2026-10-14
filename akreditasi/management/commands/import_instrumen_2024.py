@@ -195,8 +195,8 @@ class Command(BaseCommand):
             self._dry_run_report(ep_data)
             return
 
-        with transaction.atomic():
-            self._import(ep_data, framework_name)
+        # Import per-category (each in its own transaction) so remote DB timeouts don't rollback everything
+        self._import(ep_data, framework_name)
 
     def _dry_run_report(self, ep_data: dict):
         self.stdout.write("\n" + "=" * 60)
@@ -244,60 +244,60 @@ class Command(BaseCommand):
                 self.stdout.write(self.style.WARNING(f"  Skip unknown prefix: {prefix}"))
                 continue
 
-            meta = BAB_META[prefix]
+            with transaction.atomic():
+                meta = BAB_META[prefix]
 
-            # Upsert Category
-            cat, created = Category.objects.update_or_create(
-                code=prefix,
-                defaults={
-                    'name': meta['name'],
-                    'order': meta['order'],
-                    'kelompok': meta['kelompok'],
-                    'framework': framework,
-                }
-            )
-            if created:
-                stats['cat_created'] += 1
-                self.stdout.write(self.style.SUCCESS(f"  [NEW BAB]  {prefix} - {meta['name']}"))
-            else:
-                stats['cat_updated'] += 1
+                # Upsert Category
+                cat, created = Category.objects.update_or_create(
+                    code=prefix,
+                    defaults={
+                        'name': meta['name'],
+                        'order': meta['order'],
+                        'kelompok': meta['kelompok'],
+                        'framework': framework,
+                    }
+                )
+                if created:
+                    stats['cat_created'] += 1
+                    self.stdout.write(self.style.SUCCESS(f"  [NEW BAB]  {prefix} - {meta['name']}"))
+                else:
+                    stats['cat_updated'] += 1
 
-            # Upsert each StandardItem (EP)
-            ep_order = 1
-            for code in codes:
-                items = ep_data[code]
-                std_num = code.split()[1]
+                # Upsert each StandardItem (EP)
+                ep_order = 1
+                for code in codes:
+                    items = ep_data[code]
 
-                for ep in items:
-                    ep_code = f"{code} EP {ep['letter']}"
-                    ep_desc = ep['description'] or f"Elemen Penilaian {ep_code}"
+                    for ep in items:
+                        ep_code = f"{code} EP {ep['letter']}"
+                        ep_desc = ep['description'] or f"Elemen Penilaian {ep_code}"
 
-                    std_item, created = StandardItem.objects.update_or_create(
-                        category=cat,
-                        code=ep_code,
-                        defaults={
-                            'sub_standard': code,
-                            'sub_title': '',
-                            'description': ep_desc[:500],
-                            'order': ep_order,
-                        }
-                    )
-
-                    if created:
-                        stats['std_created'] += 1
-                    else:
-                        stats['std_updated'] += 1
-
-                    # Upsert EvidenceReq records for each RDWOS type
-                    for ev_type in ep['evidence_types']:
-                        EvidenceReq.objects.get_or_create(
-                            standard_item=std_item,
-                            category_type=ev_type,
-                            defaults={'title': f'Bukti {ev_type} — {ep_code}', 'is_mandatory': True}
+                        std_item, created = StandardItem.objects.update_or_create(
+                            category=cat,
+                            code=ep_code,
+                            defaults={
+                                'sub_standard': code,
+                                'sub_title': '',
+                                'description': ep_desc[:500],
+                                'order': ep_order,
+                            }
                         )
 
-                    stats['ep_total'] += 1
-                    ep_order += 1
+                        if created:
+                            stats['std_created'] += 1
+                        else:
+                            stats['std_updated'] += 1
+
+                        # Upsert EvidenceReq records for each RDWOS type
+                        for ev_type in ep['evidence_types']:
+                            EvidenceReq.objects.get_or_create(
+                                standard_item=std_item,
+                                category_type=ev_type,
+                                defaults={'title': f'Bukti {ev_type} — {ep_code}', 'is_mandatory': True}
+                            )
+
+                        stats['ep_total'] += 1
+                        ep_order += 1
 
             self.stdout.write(
                 f"  {prefix:8s}  {len(codes):3d} std  "

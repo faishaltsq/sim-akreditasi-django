@@ -99,6 +99,8 @@ urlpatterns = [
     path('indikator-mutu/<int:indikator_id>/', indikator_views.indikator_detail, name='indikator_detail'),
     path('indikator-mutu/<int:indikator_id>/edit/', indikator_views.indikator_edit, name='indikator_edit'),
     path('indikator-mutu/<int:indikator_id>/capaian/', indikator_views.indikator_input_capaian, name='indikator_input_capaian'),
+    path('indikator-mutu/api/tren/<int:indikator_id>/', indikator_views.api_indikator_tren, name='api_indikator_tren'),
+    path('indikator-mutu/api/komparasi-unit/', indikator_views.api_indikator_komparasi_unit, name='api_indikator_komparasi_unit'),
 
     # Panduan / Dokumentasi Interaktif
     path('panduan/', views.panduan_dokumentasi, name='panduan'),

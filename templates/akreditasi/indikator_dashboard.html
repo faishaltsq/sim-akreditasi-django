@@ -292,6 +292,36 @@
       </div>
     </div>
 
+    <!-- Quick-filter tabs: INM / IMRS / IMU -->
+    <div class="px-3 pt-2 bg-white border-bottom">
+      <ul class="nav nav-pills nav-fill gap-1 small" id="tierTabs">
+        <li class="nav-item">
+          <a href="?tahun={{ filter_tahun }}{% if filter_unit %}&unit={{ filter_unit }}{% endif %}"
+             class="nav-link py-1 px-2 {% if not filter_jenis %}active{% endif %}">
+            <i class="bi bi-grid-3x3-gap me-1"></i>Semua
+          </a>
+        </li>
+        <li class="nav-item">
+          <a href="?tahun={{ filter_tahun }}&jenis=INM{% if filter_unit %}&unit={{ filter_unit }}{% endif %}"
+             class="nav-link py-1 px-2 {% if filter_jenis == 'INM' or filter_jenis == 'NASIONAL' %}active{% endif %}">
+            <i class="bi bi-flag-fill me-1"></i>INM
+          </a>
+        </li>
+        <li class="nav-item">
+          <a href="?tahun={{ filter_tahun }}&jenis=IMRS{% if filter_unit %}&unit={{ filter_unit }}{% endif %}"
+             class="nav-link py-1 px-2 {% if filter_jenis == 'IMRS' or filter_jenis == 'IMP_RS' %}active{% endif %}">
+            <i class="bi bi-hospital me-1"></i>IMRS
+          </a>
+        </li>
+        <li class="nav-item">
+          <a href="?tahun={{ filter_tahun }}&jenis=IMU{% if filter_unit %}&unit={{ filter_unit }}{% endif %}"
+             class="nav-link py-1 px-2 {% if filter_jenis == 'IMU' or filter_jenis == 'IMP_UNIT' %}active{% endif %}">
+            <i class="bi bi-building me-1"></i>IMU
+          </a>
+        </li>
+      </ul>
+    </div>
+
     <div class="table-responsive">
       <table class="table table-hover align-middle mb-0 indicator-table">
         <thead>
@@ -333,13 +363,17 @@
 
             <!-- KATEGORI / JENIS -->
             <td>
-              {% if ind.jenis == 'NASIONAL' %}
+              {% if ind.jenis == 'NASIONAL' or ind.jenis == 'INM' %}
                 <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-2 py-1">
-                  <i class="bi bi-flag-fill me-1"></i>INM Wajib
+                  <i class="bi bi-flag-fill me-1"></i>INM
                 </span>
-              {% elif ind.jenis == 'IMP_RS' %}
+              {% elif ind.jenis == 'IMP_RS' or ind.jenis == 'IMRS' %}
                 <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-2 py-1">
-                  IMP-RS Prioritas
+                  <i class="bi bi-hospital me-1"></i>IMRS
+                </span>
+              {% elif ind.jenis == 'IMP_UNIT' or ind.jenis == 'IMU' %}
+                <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1">
+                  <i class="bi bi-building me-1"></i>IMU
                 </span>
               {% else %}
                 <span class="badge bg-secondary-subtle text-secondary px-2 py-1">
@@ -395,7 +429,15 @@
             <!-- AKSI -->
             <td class="text-end pe-3">
               <div class="btn-group btn-group-sm">
-                <a href="{% url 'akreditasi:indikator_detail' ind.pk %}?tahun={{ filter_tahun }}" class="btn btn-outline-primary" title="Grafik Tren &amp; Riwayat">
+                <button type="button"
+                        class="btn btn-outline-info btn-tren-chart"
+                        data-ind-id="{{ ind.pk }}"
+                        data-ind-nama="{{ ind.nama_indikator }}"
+                        data-tahun="{{ filter_tahun }}"
+                        title="Grafik Tren Bulanan">
+                  <i class="bi bi-bar-chart-line"></i>
+                </button>
+                <a href="{% url 'akreditasi:indikator_detail' ind.pk %}?tahun={{ filter_tahun }}" class="btn btn-outline-primary" title="Detail & Riwayat">
                   <i class="bi bi-graph-up"></i>
                 </a>
                 {% if is_manager %}
@@ -533,5 +575,88 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 });
+
+    // ── Grafik Tren Modal (per Indikator) ──────────────────
+    let trendChart = null;
+    document.querySelectorAll('.btn-tren-chart').forEach(btn => {
+        btn.addEventListener('click', async function() {
+            const indId = this.dataset.indId;
+            const indNama = this.dataset.indNama;
+            const tahun = this.dataset.tahun;
+            document.getElementById('trendModalLabel').textContent = `Tren ${indNama} (${tahun})`;
+            const modal = new bootstrap.Modal(document.getElementById('trendModal'));
+            modal.show();
+            try {
+                const resp = await fetch(`/akreditasi/indikator-mutu/api/tren/${indId}/?tahun=${tahun}`);
+                const d = await resp.json();
+                const ctx = document.getElementById('trendChartCanvas').getContext('2d');
+                if (trendChart) trendChart.destroy();
+                const targetData = Array(12).fill(d.target);
+                const colors = d.data.map(v => {
+                    if (v === null) return 'rgba(200,200,200,0.6)';
+                    if (d.arah_target === 'MAX') return v <= d.target ? 'rgba(25,135,84,0.7)' : 'rgba(220,53,69,0.7)';
+                    return v >= d.target ? 'rgba(25,135,84,0.7)' : 'rgba(220,53,69,0.7)';
+                });
+                trendChart = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: d.labels,
+                        datasets: [
+                            {
+                                label: `Capaian (${d.satuan || '%'})`,
+                                data: d.data,
+                                backgroundColor: colors,
+                                borderRadius: 4,
+                                order: 2,
+                            },
+                            {
+                                label: `Target ${d.target} ${d.satuan || '%'}`,
+                                data: targetData,
+                                type: 'line',
+                                borderColor: 'rgba(255,193,7,0.9)',
+                                borderWidth: 2,
+                                borderDash: [6,3],
+                                pointRadius: 0,
+                                fill: false,
+                                order: 1,
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            legend: { position: 'bottom', labels: { font: { size: 10 } } },
+                            tooltip: {
+                                callbacks: {
+                                    label: ctx => ctx.raw !== null ? `${ctx.dataset.label}: ${ctx.raw.toFixed(1)}` : 'Belum ada data'
+                                }
+                            }
+                        },
+                        scales: {
+                            y: { beginAtZero: true, ticks: { callback: v => v + (d.satuan || '%') } }
+                        }
+                    }
+                });
+            } catch(e) {
+                console.error('Gagal memuat tren:', e);
+            }
+        });
+    });
+});
 </script>
+
+<!-- Trend Chart Modal -->
+<div class="modal fade" id="trendModal" tabindex="-1">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header py-2">
+        <h6 class="modal-title fw-bold" id="trendModalLabel">Tren Indikator</h6>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <canvas id="trendChartCanvas" height="280"></canvas>
+      </div>
+    </div>
+  </div>
+</div>
 {% endblock %}
