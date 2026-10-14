@@ -23,7 +23,12 @@ ALLOWED_HOSTS = [
     for h in os.environ.get('DJANGO_ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
     if h.strip()
 ]
-ALLOWED_HOSTS += ['.onrender.com', '.railway.app', '.pythonanywhere.com', '.vercel.app', 'testserver']
+# Domain produksi eksplisit — TANPA wildcard platform (host-header injection hardening).
+ALLOWED_HOSTS += [
+    'sim-akreditasi-django.vercel.app',
+    'sim-akreditasi-web-production.up.railway.app',
+    'testserver',
+]
 
 CSRF_TRUSTED_ORIGINS = [
     o.strip()
@@ -32,9 +37,7 @@ CSRF_TRUSTED_ORIGINS = [
 ]
 CSRF_TRUSTED_ORIGINS += [
     'https://sim-akreditasi-django.vercel.app',
-    'https://*.onrender.com',
-    'https://*.railway.app',
-    'https://*.vercel.app',
+    'https://sim-akreditasi-web-production.up.railway.app',
 ]
 
 CSRF_FAILURE_VIEW = 'akreditasi.views.custom_csrf_failure'
