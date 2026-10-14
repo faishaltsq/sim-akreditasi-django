@@ -484,6 +484,11 @@ class IndikatorMutu(models.Model):
         'Arah Target', max_length=3, choices=ARAH_CHOICES, default='MIN',
         help_text='MIN = capaian harus ≥ target (higher is better). MAX = capaian harus ≤ target (lower is better, e.g. waktu tunggu).'
     )
+    sasaran_strategis = models.ForeignKey(
+        'RenstraRoadmap', on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='indikator_list', verbose_name='Sasaran Strategis (Renstra)',
+        help_text='Hubungkan indikator ke Roadmap Renstra tahunan RS.'
+    )
 
     class Meta:
         verbose_name        = 'Indikator Mutu'
@@ -584,6 +589,22 @@ class CatatanIndikator(models.Model):
                     'status': 'IDENTIFIKASI',
                 },
             )
+        elif self.tercapai and self.indikator.ep_terkait_id:
+            # Auto-tag: update QualityRecord for the linked EP when indicator achieved
+            from akreditasi.models import QualityRecord  # lazy — prevents circular import
+            try:
+                qr = QualityRecord.objects.get(standard_item_id=self.indikator.ep_terkait_id)
+                tag = (
+                    f"[{self.indikator.kode_indikator}] {self.indikator.nama_indikator}: "
+                    f"Tercapai ({self.nilai_capaian:.1f}{self.indikator.satuan or '%'}) "
+                    f"Bulan {self.bulan}/{self.tahun}"
+                )
+                qr.quality_target = tag
+                if qr.score == 0:
+                    qr.score = 10  # auto-promote to full score only when previously unscored
+                qr.save(update_fields=['quality_target', 'score'])
+            except QualityRecord.DoesNotExist:
+                pass  # no QualityRecord yet — don't create, let accreditation team do it
 
 
 # ── 6. Renstra RS Roadmap (Dynamic Admin CRUD) ────────────────────────────────

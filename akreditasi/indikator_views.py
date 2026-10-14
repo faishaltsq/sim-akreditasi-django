@@ -385,6 +385,8 @@ def indikator_tambah(request):
             rencana = request.POST.get('rencana_aksi', '').strip()
             pj = request.POST.get('pj', '').strip()
             ep_id = request.POST.get('ep_terkait') or None
+            arah_target = request.POST.get('arah_target', 'MIN')
+            ss_id = request.POST.get('sasaran_strategis') or None
 
             if IndikatorMutu.objects.filter(kode_indikator=kode).exists():
                 messages.error(request, f'Kode indikator "{kode}" sudah digunakan.')
@@ -404,6 +406,8 @@ def indikator_tambah(request):
                 rencana_aksi=rencana,
                 pj=pj,
                 aktif=True,
+                arah_target=arah_target,
+                sasaran_strategis_id=int(ss_id) if ss_id else None,
             )
             _log(request.user, 'CREATE', ind, f'Membuat indikator mutu {kode}: {nama}')
             messages.success(request, f'Indikator Mutu [{kode}] berhasil dibuat.')
@@ -414,13 +418,17 @@ def indikator_tambah(request):
 
     units = UnitKerja.objects.filter(is_active=True).order_by('name')
     ep_list = StandardItem.objects.select_related('category').order_by('category__code', 'code')[:200]
+    from .risiko_models import RenstraRoadmap as _RR
+    renstra_list = _RR.objects.filter(aktif=True).order_by('tahun')
     ctx = {
         'ind': None,
         'is_edit': False,
         'units': units,
         'ep_list': ep_list,
+        'renstra_list': renstra_list,
         'jenis_choices': IndikatorMutu.JENIS_CHOICES,
         'dimensi_choices': IndikatorMutu.DIMENSI_CHOICES,
+        'arah_choices': IndikatorMutu.ARAH_CHOICES,
     }
     return render(request, 'akreditasi/indikator_form.html', ctx)
 
@@ -448,6 +456,8 @@ def indikator_edit(request, indikator_id):
             rencana = request.POST.get('rencana_aksi', '').strip()
             pj = request.POST.get('pj', '').strip()
             ep_id = request.POST.get('ep_terkait') or None
+            arah_target = request.POST.get('arah_target', 'MIN')
+            ss_id = request.POST.get('sasaran_strategis') or None
 
             # Check unique kode if changed
             if kode != ind.kode_indikator and IndikatorMutu.objects.filter(kode_indikator=kode).exists():
@@ -466,6 +476,8 @@ def indikator_edit(request, indikator_id):
             ind.ep_terkait_id = int(ep_id) if ep_id else None
             ind.rencana_aksi = rencana
             ind.pj = pj
+            ind.arah_target = arah_target
+            ind.sasaran_strategis_id = int(ss_id) if ss_id else None
             ind.save()
 
             _log(request.user, 'UPDATE', ind, f'Mengedit indikator mutu {kode}: {nama}')
@@ -477,13 +489,17 @@ def indikator_edit(request, indikator_id):
 
     units = UnitKerja.objects.filter(is_active=True).order_by('name')
     ep_list = StandardItem.objects.select_related('category').order_by('category__code', 'code')[:200]
+    from .risiko_models import RenstraRoadmap as _RR2
+    renstra_list = _RR2.objects.filter(aktif=True).order_by('tahun')
     ctx = {
         'ind': ind,
         'is_edit': True,
         'units': units,
         'ep_list': ep_list,
+        'renstra_list': renstra_list,
         'jenis_choices': IndikatorMutu.JENIS_CHOICES,
         'dimensi_choices': IndikatorMutu.DIMENSI_CHOICES,
+        'arah_choices': IndikatorMutu.ARAH_CHOICES,
     }
     return render(request, 'akreditasi/indikator_form.html', ctx)
 

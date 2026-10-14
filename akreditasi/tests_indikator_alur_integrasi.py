@@ -218,3 +218,68 @@ class IndikatorAlurIntegrasiTest(TestCase):
         self.assertEqual(len(found), 1)
         self.assertEqual(found[0]['capaian'], 92.0)
         self.assertTrue(found[0]['tercapai'])
+
+    # ------------------------------------------------------------------
+    # Task 5: Renstra FK link + Auto-tag RDWOS evidence
+    # ------------------------------------------------------------------
+
+    def test_indikator_sasaran_strategis_fk(self):
+        """IndikatorMutu.sasaran_strategis links to RenstraRoadmap."""
+        from akreditasi.risiko_models import RenstraRoadmap
+        roadmap = RenstraRoadmap.objects.create(
+            tahun=2026,
+            isu_strategis='Consolidation & Digital Foundation',
+        )
+        ind = IndikatorMutu.objects.create(
+            nama_indikator='Uptime SIMRS',
+            kode_indikator='IMRS-SIM-01',
+            jenis='IMRS',
+            dimensi_mutu='EFISIEN',
+            numerator='Jam uptime', denominator='Total jam',
+            target_nilai=Decimal('99.50'),
+            arah_target='MIN',
+            sasaran_strategis=roadmap,
+        )
+        self.assertEqual(ind.sasaran_strategis.tahun, 2026)
+        # Reverse relation
+        self.assertIn(ind, roadmap.indikator_list.all())
+
+    def test_auto_evidence_tag_on_achieved_indicator(self):
+        """When indicator achieves target and has ep_terkait, auto-update QualityRecord."""
+        from akreditasi.models import Framework, Category, StandardItem, QualityRecord
+        fw = Framework.objects.create(name='STARKES 2022')
+        cat = Category.objects.create(name='TKRS', code='TKRS', order=1, framework=fw)
+        ep = StandardItem.objects.create(
+            category=cat,
+            code='TKRS-AUTOTEST-01',
+            sub_standard='TKRS 1',
+            sub_title='Tata Kelola RS',
+            description='Bukti indikator mutu tercapai',
+            order=1,
+        )
+        ind = IndikatorMutu.objects.create(
+            nama_indikator='Kepatuhan Clinical Pathway',
+            kode_indikator='IMRS-CP-01',
+            jenis='IMRS',
+            unit=self.unit,
+            dimensi_mutu='EFEKTIF',
+            numerator='A', denominator='B',
+            target_nilai=Decimal('80.00'),
+            arah_target='MIN',
+            ep_terkait=ep,
+        )
+        # Create QualityRecord for the EP
+        qr = QualityRecord.objects.create(
+            standard_item=ep,
+            unit=self.unit,
+            score=0,
+        )
+        # Achieve target: 90% >= 80%
+        CatatanIndikator.objects.create(
+            indikator=ind, bulan=6, tahun=2026,
+            nilai_numerator=Decimal('90'), nilai_denominator=Decimal('100')
+        )
+        qr.refresh_from_db()
+        self.assertEqual(qr.score, 10)
+        self.assertIn('IMRS-CP-01', qr.quality_target)
+        self.assertIn('90.0', qr.quality_target)

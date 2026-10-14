@@ -218,6 +218,18 @@
                             </div>
 
                             <div class="col-md-4">
+                                <label for="arah_target" class="form-label small fw-bold">Arah Target</label>
+                                <select class="form-select form-select-sm" id="arah_target" name="arah_target">
+                                  {% for val, lbl in arah_choices %}
+                                  <option value="{{ val }}" {% if ind and ind.arah_target == val %}selected{% elif not ind and val == 'MIN' %}selected{% endif %}>{{ lbl }}</option>
+                                  {% endfor %}
+                                </select>
+                                <div class="form-text text-muted" style="font-size:0.7rem;">
+                                  MIN = capaian harus ≥ target (kepatuhan, kepuasan) · MAX = capaian harus ≤ target (angka kejadian, waktu tunggu)
+                                </div>
+                            </div>
+
+                            <div class="col-md-4">
                                 <label for="ep_terkait" class="form-label small fw-bold">Elemen Penilaian (EP) Terkait</label>
                                 <select class="form-select form-select-sm" id="ep_terkait" name="ep_terkait">
                                     <option value="">— Tidak Di-link ke EP Spesifik —</option>
@@ -238,6 +250,21 @@
                                 <input type="text" class="form-control form-control-sm" id="pj" name="pj"
                                        value="{% if ind %}{{ ind.pj }}{% endif %}"
                                        placeholder="Contoh: Kepala Instalasi Farmasi / Tim PMKP">
+                            </div>
+
+                            <div class="col-md-6">
+                                <label for="sasaran_strategis" class="form-label small fw-bold">
+                                  Sasaran Strategis Renstra
+                                  <span class="badge bg-warning-subtle text-warning border border-warning-subtle ms-1" style="font-size:0.65rem;">Opsional</span>
+                                </label>
+                                <select class="form-select form-select-sm" id="sasaran_strategis" name="sasaran_strategis">
+                                  <option value="">— Tidak Ditautkan ke Renstra —</option>
+                                  {% for rr in renstra_list %}
+                                  <option value="{{ rr.id }}" {% if ind and ind.sasaran_strategis_id == rr.id %}selected{% endif %}>
+                                    {{ rr.tahun }} — {{ rr.isu_strategis }}
+                                  </option>
+                                  {% endfor %}
+                                </select>
                             </div>
 
                             <div class="col-12">
