@@ -318,7 +318,7 @@
                         <td>{{ tl.catatan|default:"—" }}</td>
                         <td class="no-print text-center">
                             <div class="d-inline-flex gap-1">
-                                <a href="{% url 'akreditasi:risiko_edit' risiko.pk %}" class="btn btn-sm btn-outline-primary py-0 px-2" title="Edit"><i class="bi bi-pencil-square"></i></a>
+                                <a href="{% url 'akreditasi:risiko_evaluasi' risiko_id=risiko.pk %}" class="btn btn-sm btn-outline-primary py-0 px-2" title="Edit Pelaksanaan"><i class="bi bi-pencil-square"></i></a>
                                 <form method="post" action="{% url 'akreditasi:risiko_hapus' risiko.pk %}" class="d-inline" onsubmit="return confirm('Yakin ingin menghapus risiko ini?');">{% csrf_token %}<button type="submit" class="btn btn-sm btn-outline-danger py-0 px-2" title="Hapus"><i class="bi bi-trash"></i></button></form>
                             </div>
                         </td>
@@ -414,7 +414,7 @@
                                 {% if forloop.first %}
                                 <td rowspan="{{ item.tindak_lanjut|length }}" class="no-print text-center align-top">
                                     <div class="d-inline-flex gap-1">
-                                        <a href="{% url 'akreditasi:risiko_edit' item.risiko.pk %}" class="btn btn-sm btn-outline-primary py-0 px-2" title="Edit"><i class="bi bi-pencil-square"></i></a>
+                                        <a href="{% url 'akreditasi:risiko_evaluasi' risiko_id=item.risiko.pk %}" class="btn btn-sm btn-outline-primary py-0 px-2" title="Edit Pelaksanaan"><i class="bi bi-pencil-square"></i></a>
                                         <form method="post" action="{% url 'akreditasi:risiko_hapus' item.risiko.pk %}" class="d-inline" onsubmit="return confirm('Yakin ingin menghapus risiko ini?');">{% csrf_token %}<button type="submit" class="btn btn-sm btn-outline-danger py-0 px-2" title="Hapus"><i class="bi bi-trash"></i></button></form>
                                     </div>
                                 </td>
@@ -444,7 +444,7 @@
                                 <td class="text-center small text-muted">—</td>
                                 <td class="no-print text-center">
                                     <div class="d-inline-flex gap-1">
-                                        <a href="{% url 'akreditasi:risiko_edit' item.risiko.pk %}" class="btn btn-sm btn-outline-primary py-0 px-2" title="Edit"><i class="bi bi-pencil-square"></i></a>
+                                        <a href="{% url 'akreditasi:risiko_evaluasi' risiko_id=item.risiko.pk %}" class="btn btn-sm btn-outline-primary py-0 px-2" title="Edit Pelaksanaan"><i class="bi bi-pencil-square"></i></a>
                                         <form method="post" action="{% url 'akreditasi:risiko_hapus' item.risiko.pk %}" class="d-inline" onsubmit="return confirm('Yakin ingin menghapus risiko ini?');">{% csrf_token %}<button type="submit" class="btn btn-sm btn-outline-danger py-0 px-2" title="Hapus"><i class="bi bi-trash"></i></button></form>
                                     </div>
                                 </td>
