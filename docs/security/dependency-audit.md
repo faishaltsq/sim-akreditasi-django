@@ -46,3 +46,21 @@ requests==2.34.2
 python-decouple==3.8
 reportlab==5.0.1
 ```
+
+---
+
+## 2026-10-14 Post-Hardening Production Verification
+
+**Commit range:** `7457862` → `5900520` (3 commits: Task 1–3)
+
+| Check | Result | Notes |
+|-------|--------|-------|
+| Vercel build | ✅ Building / Ready | Deployment `sim-akreditasi-django-2bj5qs4wn` |
+| root `/` | HTTP 302 | Redirects to login — expected |
+| `/accounts/login/` | HTTP 200 | Serves login form — expected |
+| Railway mirror | HTTP 404 | Railway service not running (not 400 — host not rejected) |
+| `tests_security` | 11/11 pass | All existing + new security tests green |
+| Rate limiter XFF spoofing | ✅ blocked | Last-hop bucket fires correctly on test `test_rate_limit_keys_on_last_xff_hop` |
+| ALLOWED_HOSTS wildcards | ✅ removed | `.vercel.app`, `.railway.app`, `.onrender.com`, `.pythonanywhere.com` gone |
+| CSRF_TRUSTED_ORIGINS | ✅ explicit | Only `sim-akreditasi-django.vercel.app` + Railway explicit domain |
+| Dependency pins | ✅ applied | `django==6.1.2`, 11 packages pinned via `uv pip compile` |
