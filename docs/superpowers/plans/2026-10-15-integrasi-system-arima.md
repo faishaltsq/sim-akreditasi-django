@@ -1,6 +1,6 @@
 # ARIMA System Integration Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** Integrate the Risk Register (ERM) cycle — Identifikasi → Plan → Do → Evaluasi → RTL — directly into the Unit Dashboard with live PDCA progress widgets and a shortcut button that bridges EP Akreditasi ↔ Risk Register navigation.
 
@@ -50,7 +50,7 @@
 - Consumes: `RisikoUnit.STATUS_CHOICES` — existing values `IDENTIFIKASI/PLAN/DO/EVALUASI/SELESAI/ACCEPTED`
 - Produces: context keys `risiko_plan` (int), `risiko_do` (int), `risiko_rtl` (int) passed to template
 
-- [ ] **Step 1: Write failing test**
+- [x] **Step 1: Write failing test**
 
 ```python
 # in akreditasi/tests_indikator_alur_integrasi.py
@@ -96,7 +96,7 @@ def test_unit_dashboard_risiko_pdca_breakdown(self):
     self.assertEqual(resp.context['risiko_rtl'], 1)
 ```
 
-- [ ] **Step 2: Run test — verify FAIL**
+- [x] **Step 2: Run test — verify FAIL**
 
 ```bash
 cd "C:/Users/cubeb/OneDrive/Documents/coding/sim-akreditasi-django"
@@ -106,7 +106,7 @@ python manage.py test akreditasi.tests_indikator_alur_integrasi.IndikatorAlurInt
 
 Expected: `KeyError: 'risiko_plan'` or `AssertionError`.
 
-- [ ] **Step 3: Add counts to `views.py` unit-scoped block**
+- [x] **Step 3: Add counts to `views.py` unit-scoped block**
 
 In `akreditasi/views.py`, inside the `if profile and profile.is_unit_scoped` block, **after** the `risiko_tinggi` line (~line 326), add:
 
@@ -124,7 +124,7 @@ Then add these three keys to the `context` dict (after `'risiko_tinggi': risiko_
             'risiko_rtl':  risiko_rtl,
 ```
 
-- [ ] **Step 4: Run test — verify PASS**
+- [x] **Step 4: Run test — verify PASS**
 
 ```bash
 python manage.py test akreditasi.tests_indikator_alur_integrasi -v2 2>&1 | grep -E "^Ran|^OK|FAIL"
@@ -132,7 +132,7 @@ python manage.py test akreditasi.tests_indikator_alur_integrasi -v2 2>&1 | grep 
 
 Expected: all 11 tests PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add akreditasi/views.py akreditasi/tests_indikator_alur_integrasi.py
@@ -150,7 +150,7 @@ git commit -m "feat(dashboard): expose PDCA status counts in unit dashboard cont
 - Consumes: `risiko_plan`, `risiko_do`, `risiko_rtl` from Task 1 context
 - Produces: visual 3-row breakdown inside KPI card (no new endpoints)
 
-- [ ] **Step 1: Locate the existing card in the template**
+- [x] **Step 1: Locate the existing card in the template**
 
 The card lives between `{% if unit_dashboard %}` and `<!-- BOX 4 (UNIT): EP TERISI -->`. Its current HTML:
 
@@ -176,7 +176,7 @@ The card lives between `{% if unit_dashboard %}` and `<!-- BOX 4 (UNIT): EP TERI
 </div>
 ```
 
-- [ ] **Step 2: Replace card body with PDCA breakdown**
+- [x] **Step 2: Replace card body with PDCA breakdown**
 
 Replace the entire `<div class="kpi-card kpi-evaluasi">` inner content with:
 
@@ -206,7 +206,7 @@ Replace the entire `<div class="kpi-card kpi-evaluasi">` inner content with:
 </div>
 ```
 
-- [ ] **Step 3: Smoke test visually — `manage.py check` + run server**
+- [x] **Step 3: Smoke test visually — `manage.py check` + run server**
 
 ```bash
 python manage.py check
@@ -215,7 +215,7 @@ python manage.py runserver 0.0.0.0:8001
 
 Login as unit user, navigate to `/`. Verify card shows 3 rows.
 
-- [ ] **Step 4: Run full test suite**
+- [x] **Step 4: Run full test suite**
 
 ```bash
 python manage.py test akreditasi.tests_indikator_alur_integrasi akreditasi.tests_perencanaan_risiko -v2 2>&1 | grep -E "^Ran|^OK|FAIL"
@@ -223,7 +223,7 @@ python manage.py test akreditasi.tests_indikator_alur_integrasi akreditasi.tests
 
 Expected: 11 + 55 = 66 tests PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add templates/akreditasi/dashboard.html
@@ -241,11 +241,11 @@ git commit -m "feat(dashboard): PDCA progress breakdown in Register Risiko Unit 
 - Consumes: `unit.id` from context (already present)
 - Produces: clickable button → `risiko_perencanaan_unit` URL
 
-- [ ] **Step 1: Locate insertion point**
+- [x] **Step 1: Locate insertion point**
 
 Find the closing `{% endif %}` of the `{% if unit_dashboard %}` KPI card block (after BOX 4 EP TERISI, before `{% else %}` for BOX 3 EVALUASI PDCA). The insertion goes immediately after BOX 4's closing `</div>` and before the `{% else %}`.
 
-- [ ] **Step 2: Insert shortcut button**
+- [x] **Step 2: Insert shortcut button**
 
 ```html
 <!-- ERM Shortcut: Risk Management cycle button (unit dashboard only) -->
@@ -275,7 +275,7 @@ Find the closing `{% endif %}` of the `{% if unit_dashboard %}` KPI card block (
 
 Place this block between BOX 4 closing tag and `{% else %}`.
 
-- [ ] **Step 3: Verify URL names exist**
+- [x] **Step 3: Verify URL names exist**
 
 ```bash
 python manage.py shell -c "
@@ -288,7 +288,7 @@ print(reverse('akreditasi:indikator_dashboard'))
 
 Expected: `/risiko/perencanaan/1/`, `/risiko/monitoring-evaluasi/1/`, `/indikator-mutu/` (no error).
 
-- [ ] **Step 4: Run full suite**
+- [x] **Step 4: Run full suite**
 
 ```bash
 python manage.py test akreditasi.tests_indikator_alur_integrasi akreditasi.tests_perencanaan_risiko 2>&1 | grep -E "^Ran|^OK|FAIL"
@@ -296,7 +296,7 @@ python manage.py test akreditasi.tests_indikator_alur_integrasi akreditasi.tests
 
 Expected: 66 PASS.
 
-- [ ] **Step 5: Commit + push**
+- [x] **Step 5: Commit + push**
 
 ```bash
 git add templates/akreditasi/dashboard.html
@@ -308,7 +308,7 @@ git push origin master
 
 ## Task 4: Deploy & Verify Production
 
-- [ ] **Step 1: Confirm Vercel deploy auto-triggered**
+- [x] **Step 1: Confirm Vercel deploy auto-triggered**
 
 ```bash
 curl -sI https://sim-akreditasi-django.vercel.app/ | grep "HTTP/"
@@ -316,13 +316,13 @@ curl -sI https://sim-akreditasi-django.vercel.app/ | grep "HTTP/"
 
 Expected: `HTTP/2 200`.
 
-- [ ] **Step 2: Verify no 500 errors on unit dashboard**
+- [x] **Step 2: Verify no 500 errors on unit dashboard**
 
 ```bash
 curl -s https://sim-akreditasi-django.vercel.app/ -o /dev/null -w "%{http_code}"
 ```
 
-- [ ] **Step 3: Update plan checkboxes to `[x]`**
+- [x] **Step 3: Update plan checkboxes to `[x]`**
 
 ```bash
 sed -i 's/- \[ \]/- [x]/g' docs/superpowers/plans/2026-10-15-integrasi-system-arima.md
