@@ -51,7 +51,7 @@
   - `chart_tahunan_colors_json`: `list[str]`
   - `matrix_rows`: `list[{year: int, months: [{val: float|None, ok: bool|None} ×12], avg: float|None}]`, newest year first
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Append to `akreditasi/tests_indikator_mutu_charts.py` inside class `IndikatorMutuChartsAndUploadTest`:
 
@@ -132,12 +132,12 @@ Append to `akreditasi/tests_indikator_mutu_charts.py` inside class `IndikatorMut
         self.assertContains(resp, 'dd-btn-pdca')
 ```
 
-- [ ] **Step 2: Run the new tests to verify they fail**
+- [x] **Step 2: Run the new tests to verify they fail**
 
 Run: `python manage.py test akreditasi.tests_indikator_mutu_charts -v1`
 Expected: FAIL — `mutu_indikator` is ignored (average colours still used), no `chart_tahunan_*`, no `tabelMatriksRekap`, no modal.
 
-- [ ] **Step 3: Replace `_get_mutu_renstra_charts_context`**
+- [x] **Step 3: Replace `_get_mutu_renstra_charts_context`**
 
 Replace the whole function at `akreditasi/views.py:121-225` with:
 
@@ -313,12 +313,12 @@ def _get_mutu_renstra_charts_context(request, profile, db_roadmaps, renstra_year
     }
 ```
 
-- [ ] **Step 4: Run the backend tests**
+- [x] **Step 4: Run the backend tests**
 
 Run: `python manage.py test akreditasi.tests_indikator_mutu_charts -v1`
 Expected: the 3 backend tests of this task PASS; the two template tests (`multi_year_trend_and_matrix_tab`, `datalabels_and_drilldown_modal_markup`) still FAIL (templates not touched yet). That is expected — Task 2 and 3 close them.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add akreditasi/views.py akreditasi/tests_indikator_mutu_charts.py
@@ -337,7 +337,7 @@ git commit -m "feat(dashboard): per-indicator chart context with target-aware co
 - Consumes: `mutu_indikator_choices`, `filter_mutu_indikator`, `mutu_indikator_terpilih`, `bulan_labels`, `matrix_rows`, `chart_mutu_target_val` (Task 1).
 - Produces: element ids `pills-tahunan-tab`, `pills-tahunan`, `pills-matriks-tab`, `pills-matriks`, `tabelMatriksRekap`, `chartTahunanMulti` (Task 3 binds to them).
 
-- [ ] **Step 1: Add the indicator dropdown to the GET filter form**
+- [x] **Step 1: Add the indicator dropdown to the GET filter form**
 
 In `templates/akreditasi/dashboard.html`, inside the filter `<form method="GET">` (starts line 454), change the Kategori column to `col-12 col-md-3` (already 3), change the Unit column wrapper from `col-12 col-md-4` to `col-12 col-md-3`, and insert this block immediately after the Unit column's `{% endif %}`:
 
@@ -366,7 +366,7 @@ Then change the Tahun column wrapper from `col-12 col-md-3` to `col-12 col-md-2`
                 </div>
 ```
 
-- [ ] **Step 2: Update the monthly tab subtitle for single-indicator mode**
+- [x] **Step 2: Update the monthly tab subtitle for single-indicator mode**
 
 Replace the `<span class="small text-muted">…</span>` inside `#pills-bulanan` (lines 498-501) with:
 
@@ -383,7 +383,7 @@ Replace the `<span class="small text-muted">…</span>` inside `#pills-bulanan` 
                             </span>
 ```
 
-- [ ] **Step 3: Add the two new tab buttons**
+- [x] **Step 3: Add the two new tab buttons**
 
 Inside `<ul class="nav nav-pills" id="pills-mutu-tab">`, after the `pills-renstra-tab` `<li>` (line 444-448), append:
 
@@ -400,7 +400,7 @@ Inside `<ul class="nav nav-pills" id="pills-mutu-tab">`, after the `pills-renstr
                 </li>
 ```
 
-- [ ] **Step 4: Add the two new tab panes**
+- [x] **Step 4: Add the two new tab panes**
 
 Inside `<div class="tab-content" id="pills-mutu-tabContent">`, after the `#pills-renstra` pane's closing `</div>` (line 537), append:
 
@@ -468,12 +468,12 @@ Inside `<div class="tab-content" id="pills-mutu-tabContent">`, after the `#pills
                 </div>
 ```
 
-- [ ] **Step 5: Run the tests**
+- [x] **Step 5: Run the tests**
 
 Run: `python manage.py test akreditasi.tests_indikator_mutu_charts -v1`
 Expected: `test_dashboard_multi_year_trend_and_matrix_tab` PASSES. `test_dashboard_chart_datalabels_and_drilldown_modal_markup` still FAILS (Task 3).
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add templates/akreditasi/dashboard.html
@@ -492,7 +492,7 @@ git commit -m "feat(dashboard): add indicator filter dropdown, multi-year trend 
 - Consumes: `chart_mutu_*_json`, `chart_tahunan_*_json`, `filter_mutu_indikator`, `mutu_indikator_terpilih`, `mutu_arah_target`, `filter_mutu_tahun` (Task 1); element ids from Task 2; URL name `akreditasi:risiko_input`.
 - Produces: JS functions `openDrilldown(idx, val)`; modal ids `modalDrilldownMutu`, `dd-bulan-label`, `dd-indikator-nama`, `dd-nilai`, `dd-status`, `dd-target`, `dd-gap`, `dd-hint-null`, `dd-btn-pdca`.
 
-- [ ] **Step 1: Add the drill-down modal markup**
+- [x] **Step 1: Add the drill-down modal markup**
 
 Immediately before `{% block extra_js %}` (line 816) in `templates/akreditasi/dashboard.html`, insert:
 
@@ -528,7 +528,7 @@ Immediately before `{% block extra_js %}` (line 816) in `templates/akreditasi/da
 </div>
 ```
 
-- [ ] **Step 2: Add the value-labels plugin and drill-down JS**
+- [x] **Step 2: Add the value-labels plugin and drill-down JS**
 
 At the top of the `DOMContentLoaded` callback (line 819, right after `document.addEventListener('DOMContentLoaded', function() {`), insert:
 
@@ -597,7 +597,7 @@ At the top of the `DOMContentLoaded` callback (line 819, right after `document.a
     }
 ```
 
-- [ ] **Step 3: Wire the plugin + click handler into the monthly chart**
+- [x] **Step 3: Wire the plugin + click handler into the monthly chart**
 
 In the monthly chart config (lines 867-934): add `plugins: [valueLabelsPlugin],` as a sibling of `type: 'bar',`, and add this to `options` (after `interaction:`):
 
@@ -614,7 +614,7 @@ In the monthly chart config (lines 867-934): add `plugins: [valueLabelsPlugin],`
 
 Also change the bar dataset's cursor hint by adding `onHover: function (evt, elements) { evt.native.target.style.cursor = elements.length ? 'pointer' : 'default'; }` to `options` (same level as `onClick`).
 
-- [ ] **Step 4: Add the multi-year trend chart**
+- [x] **Step 4: Add the multi-year trend chart**
 
 After the monthly chart block (after the `if (mutuEl) { … }` closing brace at line 935), insert:
 
@@ -685,7 +685,7 @@ After the monthly chart block (after the `if (mutuEl) { … }` closing brace at 
     }
 ```
 
-- [ ] **Step 5: Include the new chart in the resize listener**
+- [x] **Step 5: Include the new chart in the resize listener**
 
 Replace the resize block (lines 1008-1013) with:
 
@@ -699,12 +699,12 @@ Replace the resize block (lines 1008-1013) with:
     });
 ```
 
-- [ ] **Step 6: Run the tests**
+- [x] **Step 6: Run the tests**
 
 Run: `python manage.py test akreditasi.tests_indikator_mutu_charts -v1`
 Expected: all 8 tests in the file PASS.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add templates/akreditasi/dashboard.html
@@ -724,7 +724,7 @@ git commit -m "feat(dashboard): bar value labels, multi-year trend chart and cli
 - Consumes: query params `indikator`, `bulan`, `tahun` (produced by Task 3's `dd-btn-pdca` href).
 - Produces: context keys `prefill_indikator_id` (int), `prefill_unit_id` (int|None), `prefill_bulan` (int), `prefill_tahun` (int), `prefill_target` (float), `prefill_masalah` (str) — all absent when params are missing/invalid. JS global `window._pendingIndikatorId` consumed inside `loadIndikatorByUnit`.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Append to `akreditasi/tests_indikator_mutu_charts.py`:
 
@@ -748,12 +748,12 @@ Append to `akreditasi/tests_indikator_mutu_charts.py`:
         self.assertEqual(self.client.get(bad).status_code, 200)
 ```
 
-- [ ] **Step 2: Run it to verify it fails**
+- [x] **Step 2: Run it to verify it fails**
 
 Run: `python manage.py test akreditasi.tests_indikator_mutu_charts.IndikatorMutuChartsAndUploadTest.test_risiko_input_prefill_from_chart_drilldown -v2`
 Expected: FAIL — `prefill_indikator_id` not in the rendered page.
 
-- [ ] **Step 3: Add the prefill context in `risiko_input`**
+- [x] **Step 3: Add the prefill context in `risiko_input`**
 
 In `akreditasi/risiko_views.py` line 14, extend the import:
 
@@ -806,7 +806,7 @@ Then in `risiko_input`, replace the final context block (lines 444-451) with:
     return render(request, 'akreditasi/risiko_form.html', ctx)
 ```
 
-- [ ] **Step 4: Consume the prefill in `risiko_form.html`**
+- [x] **Step 4: Consume the prefill in `risiko_form.html`**
 
 In `templates/akreditasi/risiko_form.html`, inside the DOMContentLoaded callback, immediately BEFORE the `if (unitSelect) {` init block (line 738), insert:
 
@@ -846,12 +846,12 @@ Then inside `loadIndikatorByUnit`'s `.then(function(data) { … })`, right after
                 }
 ```
 
-- [ ] **Step 5: Run the tests**
+- [x] **Step 5: Run the tests**
 
 Run: `python manage.py test akreditasi.tests_indikator_mutu_charts -v1`
 Expected: all 9 tests PASS.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add akreditasi/risiko_views.py templates/akreditasi/risiko_form.html akreditasi/tests_indikator_mutu_charts.py
@@ -865,7 +865,7 @@ git commit -m "feat(risiko): pre-fill risk form from dashboard chart drill-down 
 **Files:**
 - Modify: `docs/superpowers/plans/2026-10-15-grafik-indikator-mutu-perubahan.md` (checkbox tick)
 
-- [ ] **Step 1: Run the full regression suite**
+- [x] **Step 1: Run the full regression suite**
 
 Run:
 ```bash
@@ -873,12 +873,12 @@ python manage.py test akreditasi.tests_indikator_mutu_charts akreditasi.tests_ev
 ```
 Expected: exit 0, all tests PASS (was 75, now ~81).
 
-- [ ] **Step 2: Django system check**
+- [x] **Step 2: Django system check**
 
 Run: `python manage.py check`
 Expected: `System check identified no issues (0 silenced).`
 
-- [ ] **Step 3: Manual smoke of the new URLs against the dev server (optional, if a server is running)**
+- [x] **Step 3: Manual smoke of the new URLs against the dev server (optional, if a server is running)**
 
 Run:
 ```bash
@@ -886,11 +886,11 @@ curl -s -o /dev/null -w "%{http_code}\n" "http://127.0.0.1:8000/akreditasi/"
 ```
 Expected: `302` (login redirect) — confirms no import-time crash. Skip if no local server is running; the test suite already renders the dashboard.
 
-- [ ] **Step 4: Mark every checkbox in this plan `[x]`**
+- [x] **Step 4: Mark every checkbox in this plan `[x]`**
 
 Use `patch` to flip `- [ ]` to `- [x]` throughout this plan file.
 
-- [ ] **Step 5: Commit and push**
+- [x] **Step 5: Commit and push**
 
 ```bash
 git add docs/superpowers/plans/2026-10-15-grafik-indikator-mutu-perubahan.md
@@ -898,7 +898,7 @@ git commit -m "docs: mark grafik indikator mutu plan tasks completed"
 git push origin master
 ```
 
-- [ ] **Step 6: Verify the deploy**
+- [x] **Step 6: Verify the deploy**
 
 Run: `curl -sI https://sim-akreditasi-django.vercel.app/ | head -1`
 Expected: `HTTP/2 302` (or 200) — Vercel healthy after push.
