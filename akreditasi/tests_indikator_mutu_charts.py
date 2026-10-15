@@ -146,3 +146,100 @@ class IndikatorMutuChartsAndUploadTest(TestCase):
         resp = self.client.get(url)
         self.assertEqual(resp.status_code, 200)
         self.assertContains(resp, 'chartMutuBulanan')
+
+    # ── Task 1: single indicator selection, target-aware colors ─────────────
+
+    def test_dashboard_single_indicator_selection_and_colors(self):
+        """Selecting one indicator charts its own monthly trend, target line and per-bar colours."""
+        CatatanIndikator.objects.create(
+            indikator=self.indikator, bulan=1, tahun=2026,
+            nilai_numerator=Decimal('90'), nilai_denominator=Decimal('100'))
+        CatatanIndikator.objects.create(
+            indikator=self.indikator, bulan=2, tahun=2026,
+            nilai_numerator=Decimal('70'), nilai_denominator=Decimal('100'))
+
+        url = reverse('akreditasi:dashboard') + f'?mutu_indikator={self.indikator.pk}&mutu_tahun=2026'
+        resp = self.client.get(url)
+        self.assertEqual(resp.status_code, 200)
+        content = resp.content.decode()
+
+        # Data of the single indicator: Jan=90.0, Feb=70.0 (target 85.00)
+        self.assertIn('[90.0, 70.0', content)
+        # Target line uses the indicator's own target, not the average of all
+        self.assertIn('85.0', content)
+        # Jan green, Feb red, remaining months grey
+        self.assertIn('["#198754", "#dc3545"', content)
+
+    def test_dashboard_arah_target_max_flips_bar_colors(self):
+        """MAX indicators (lower is better) turn green when capaian <= target."""
+        ind_max = IndikatorMutu.objects.create(
+            nama_indikator='Waktu Tanggap Pelayanan IGD', kode_indikator='IMRS-99',
+            unit=self.unit, jenis='IMRS', dimensi_mutu='EFISIEN',
+            numerator='Jumlah kasus <= 5 menit', denominator='Total kasus',
+            target_nilai=Decimal('5.00'), satuan='Menit', arah_target='MAX', aktif=True)
+        CatatanIndikator.objects.create(
+            indikator=ind_max, bulan=1, tahun=2026,
+            nilai_numerator=Decimal('4'), nilai_denominator=Decimal('100'))  # 4% <= 5% -> green
+
+        url = reverse('akreditasi:dashboard') + f'?mutu_indikator={ind_max.pk}&mutu_tahun=2026'
+        resp = self.client.get(url)
+        self.assertEqual(resp.status_code, 200)
+        self.assertIn('["#198754"', resp.content.decode())
+
+        CatatanIndikator.objects.filter(indikator=ind_max, bulan=1, tahun=2026).update(
+            nilai_numerator=Decimal('8'))  # 8% > 5% -> red
+        resp = self.client.get(url)
+        self.assertIn('["#dc3545"', resp.content.decode())
+
+    def test_dashboard_multi_year_trend_and_matrix_tab(self):
+        """Yearly trend JSON spans current year - 4, and matrix table renders."""
+        for yr in (2024, 2025, 2026):
+            CatatanIndikator.objects.create(
+                indikator=self.indikator, bulan=1, tahun=yr,
+                nilai_numerator=Decimal('80'), nilai_denominator=Decimal('100'))
+
+        url = reverse('akreditasi:dashboard') + f'?mutu_indikator={self.indikator.pk}&mutu_tahun=2026'
+        resp = self.client.get(url)
+        self.assertEqual(resp.status_code, 200)
+        content = resp.content.decode()
+
+        self.assertContains(resp, 'pills-tahunan-tab')
+        self.assertContains(resp, 'pills-matriks-tab')
+        self.assertContains(resp, 'chartTahunanMulti')
+        self.assertContains(resp, 'tabelMatriksRekap')
+        self.assertIn('[2022, 2023, 2024, 2025, 2026]', content)
+
+    def test_dashboard_unknown_indikator_param_falls_back(self):
+        """A bogus mutu_indikator id must not crash and must fall back to aggregate mode."""
+        url = reverse('akreditasi:dashboard') + '?mutu_indikator=999999&mutu_tahun=2026'
+        resp = self.client.get(url)
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, 'chartMutuBulanan')
+
+    def test_dashboard_chart_datalabels_and_drilldown_modal_markup(self):
+        """Value-label plugin and the drill-down modal are rendered."""
+        resp = self.client.get(reverse('akreditasi:dashboard'))
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, 'modalDrilldownMutu')
+        self.assertContains(resp, 'afterDatasetsDraw')
+        self.assertContains(resp, 'dd-btn-pdca')
+
+    # ── Task 4: risk form prefill from drill-down ──────────────────────────
+
+    def test_risiko_input_prefill_from_chart_drilldown(self):
+        """Drill-down link params pre-fill the risk form (indicator, unit, problem text)."""
+        CatatanIndikator.objects.create(
+            indikator=self.indikator, bulan=8, tahun=2026,
+            nilai_numerator=Decimal('60'), nilai_denominator=Decimal('100'))
+
+        url = reverse('akreditasi:risiko_input') + f'?indikator={self.indikator.pk}&bulan=8&tahun=2026'
+        resp = self.client.get(url)
+        self.assertEqual(resp.status_code, 200)
+        content = resp.content.decode()
+        self.assertIn('prefill_indikator_id', content)
+        self.assertIn('60.0', content)
+        self.assertIn('Capaian', content)
+
+        # Bogus params must not crash
+        bad = reverse('akreditasi:risiko_input') + '?indikator=999999&bulan=99&tahun=abc'
+        self.assertEqual(self.client.get(bad).status_code, 200)

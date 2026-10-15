@@ -119,10 +119,15 @@ def _is_manager_role(user) -> bool:
 
 
 def _get_mutu_renstra_charts_context(request, profile, db_roadmaps, renstra_years):
-    """Aggregate monthly indicators (Jan-Dec) and 5-year Renstra data for Dashboard charts."""
+    """Aggregate monthly indicators (Jan-Dec), multi-year trend, recap matrix
+    and 5-year Renstra data for Dashboard charts."""
     import json as _json
     from .risiko_models import IndikatorMutu, CatatanIndikator
     from .models import UnitKerja
+
+    def _tercapai(val, target, arah):
+        # MAX = lower is better (e.g. waktu tunggu); MIN = higher is better
+        return val <= target if arah == 'MAX' else val >= target
 
     mutu_jenis = request.GET.get('mutu_jenis', '')
     mutu_unit = request.GET.get('mutu_unit', '')
@@ -130,6 +135,10 @@ def _get_mutu_renstra_charts_context(request, profile, db_roadmaps, renstra_year
         mutu_tahun = int(request.GET.get('mutu_tahun', '2026'))
     except (ValueError, TypeError):
         mutu_tahun = 2026
+    try:
+        mutu_indikator_id = int(request.GET.get('mutu_indikator') or 0)
+    except (ValueError, TypeError):
+        mutu_indikator_id = 0
 
     ind_qs = IndikatorMutu.objects.filter(aktif=True)
     if profile and profile.is_unit_scoped and profile.unit_kerja:
@@ -144,44 +153,90 @@ def _get_mutu_renstra_charts_context(request, profile, db_roadmaps, renstra_year
     if mutu_jenis:
         ind_qs = ind_qs.filter(jenis=mutu_jenis)
 
-    filtered_ind_ids = list(ind_qs.values_list('id', flat=True))
-    avg_target_raw = ind_qs.aggregate(avg=Avg('target_nilai'))['avg']
-    avg_target_val = round(float(avg_target_raw), 1) if avg_target_raw else 80.0
+    # Dropdown choices: every indicator matching the unit+jenis filters
+    mutu_indikator_choices = list(ind_qs.order_by('jenis', 'kode_indikator'))
+    selected_indikator = next((i for i in mutu_indikator_choices if i.pk == mutu_indikator_id), None)
 
-    # 1. Monthly Combo Chart (Jan - Des)
+    chart_qs = IndikatorMutu.objects.filter(pk=selected_indikator.pk) if selected_indikator else ind_qs
+    filtered_ind_ids = list(chart_qs.values_list('id', flat=True))
+
+    if selected_indikator:
+        chart_target_val = round(float(selected_indikator.target_nilai), 1)
+        arah_target = getattr(selected_indikator, 'arah_target', 'MIN')
+    else:
+        avg_target_raw = chart_qs.aggregate(avg=Avg('target_nilai'))['avg']
+        chart_target_val = round(float(avg_target_raw), 1) if avg_target_raw else 80.0
+        arah_target = 'MIN'
+
     BULAN_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des']
+
+    # 1. Monthly Combo Chart (Jan - Des) for the selected filter set
+    month_data_map = {}
     monthly_cat = CatatanIndikator.objects.filter(
         indikator_id__in=filtered_ind_ids, tahun=mutu_tahun
     ).values('bulan').annotate(
         sum_num=Sum('nilai_numerator'),
-        sum_den=Sum('nilai_denominator'),
-        count=Count('id')
-    ).order_by('bulan')
-
-    month_data_map = {}
+        sum_den=Sum('nilai_denominator')
+    )
     for c in monthly_cat:
         if c['sum_den'] and c['sum_den'] > 0:
-            pct = round(float((c['sum_num'] / c['sum_den']) * 100), 1)
-        else:
-            pct = 0.0
-        month_data_map[c['bulan']] = pct
+            month_data_map[c['bulan']] = round(float((c['sum_num'] / c['sum_den']) * 100), 1)
 
     chart_mutu_bulanan_data = []
     chart_mutu_colors = []
     has_monthly_data = False
     for m in range(1, 13):
-        val = month_data_map.get(m, None)
+        val = month_data_map.get(m)
         chart_mutu_bulanan_data.append(val)
-        if val is not None:
-            has_monthly_data = True
-            if val >= avg_target_val:
-                chart_mutu_colors.append('#198754')  # Hijau (Tercapai >= Target)
-            else:
-                chart_mutu_colors.append('#dc3545')  # Merah (Belum Tercapai < Target)
-        else:
+        if val is None:
             chart_mutu_colors.append('rgba(203, 213, 225, 0.4)')
+        else:
+            has_monthly_data = True
+            chart_mutu_colors.append('#198754' if _tercapai(val, chart_target_val, arah_target) else '#dc3545')
 
-    # 2. Renstra Multi-Year Target vs Realization (2026 - 2030)
+    # 2. Multi-year trend + recap matrix: current year and the 4 before it
+    trend_years = list(range(mutu_tahun - 4, mutu_tahun + 1))
+    yearly_map = {}
+    matrix_map = {}
+    yearly_rows = CatatanIndikator.objects.filter(
+        indikator_id__in=filtered_ind_ids, tahun__in=trend_years
+    ).values('tahun', 'bulan').annotate(
+        sum_num=Sum('nilai_numerator'),
+        sum_den=Sum('nilai_denominator')
+    )
+    for r in yearly_rows:
+        if not (r['sum_den'] and r['sum_den'] > 0):
+            continue
+        pct = round(float((r['sum_num'] / r['sum_den']) * 100), 1)
+        matrix_map[(r['tahun'], r['bulan'])] = pct
+        yearly_map.setdefault(r['tahun'], []).append(pct)
+
+    chart_tahunan_data = []
+    chart_tahunan_colors = []
+    for y in trend_years:
+        vals = yearly_map.get(y, [])
+        if vals:
+            avg_y = round(sum(vals) / len(vals), 1)
+            chart_tahunan_data.append(avg_y)
+            chart_tahunan_colors.append('#198754' if _tercapai(avg_y, chart_target_val, arah_target) else '#dc3545')
+        else:
+            chart_tahunan_data.append(None)
+            chart_tahunan_colors.append('rgba(203, 213, 225, 0.4)')
+
+    matrix_rows = []
+    for y in reversed(trend_years):
+        cells = []
+        for m in range(1, 13):
+            v = matrix_map.get((y, m))
+            cells.append({'val': v, 'ok': (None if v is None else _tercapai(v, chart_target_val, arah_target))})
+        vals = [c['val'] for c in cells if c['val'] is not None]
+        matrix_rows.append({
+            'year': y,
+            'months': cells,
+            'avg': round(sum(vals) / len(vals), 1) if vals else None,
+        })
+
+    # 3. Renstra Multi-Year Target vs Realization (2026 - 2030)
     renstra_years_list = [2026, 2027, 2028, 2029, 2030]
     renstra_targets_map = {2026: 75.0, 2027: 80.0, 2028: 85.0, 2029: 90.0, 2030: 95.0}
     for rm in db_roadmaps:
@@ -206,16 +261,25 @@ def _get_mutu_renstra_charts_context(request, profile, db_roadmaps, renstra_year
         'filter_mutu_jenis': mutu_jenis,
         'filter_mutu_unit': mutu_unit,
         'filter_mutu_tahun': mutu_tahun,
+        'filter_mutu_indikator': mutu_indikator_id,
         'mutu_tahun_choices': renstra_years_list,
         'mutu_jenis_choices': IndikatorMutu.JENIS_CHOICES,
         'mutu_units_choices': UnitKerja.objects.filter(is_active=True).order_by('code'),
+        'mutu_indikator_choices': mutu_indikator_choices,
+        'mutu_indikator_terpilih': selected_indikator,
+        'mutu_arah_target': arah_target,
+        'bulan_labels': BULAN_SHORT,
         'chart_mutu_labels_json': _json.dumps(BULAN_SHORT),
         'chart_mutu_data_json': _json.dumps(chart_mutu_bulanan_data),
         'chart_mutu_colors_json': _json.dumps(chart_mutu_colors),
-        'chart_mutu_target_val': avg_target_val,
-        'chart_mutu_target_val_json': _json.dumps(avg_target_val),
-        'chart_mutu_target_line_json': _json.dumps([avg_target_val] * 12),
+        'chart_mutu_target_val': chart_target_val,
+        'chart_mutu_target_val_json': _json.dumps(chart_target_val),
+        'chart_mutu_target_line_json': _json.dumps([chart_target_val] * 12),
         'has_monthly_data': has_monthly_data,
+        'chart_tahunan_years_json': _json.dumps(trend_years),
+        'chart_tahunan_data_json': _json.dumps(chart_tahunan_data),
+        'chart_tahunan_colors_json': _json.dumps(chart_tahunan_colors),
+        'matrix_rows': matrix_rows,
         'chart_renstra_years_json': _json.dumps(renstra_years_list),
         'chart_renstra_targets_json': _json.dumps(renstra_targets_series),
         'chart_renstra_actuals_json': _json.dumps(renstra_actual_series),

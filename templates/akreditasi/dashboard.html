@@ -446,6 +446,16 @@
                         <i class="bi bi-bar-chart-steps me-1"></i>Progres Renstra 2026–2030
                     </button>
                 </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link py-1.5 px-3 rounded-pill fw-semibold small" id="pills-tahunan-tab" data-bs-toggle="pill" data-bs-target="#pills-tahunan" type="button" role="tab">
+                        <i class="bi bi-calendar-range me-1"></i>Tren Tahunan
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link py-1.5 px-3 rounded-pill fw-semibold small" id="pills-matriks-tab" data-bs-toggle="pill" data-bs-target="#pills-matriks" type="button" role="tab">
+                        <i class="bi bi-table me-1"></i>Matriks Rekap
+                    </button>
+                </li>
             </ul>
         </div>
 
@@ -462,7 +472,7 @@
                     </select>
                 </div>
                 {% if not unit_dashboard %}
-                <div class="col-12 col-md-4">
+                <div class="col-12 col-md-3">
                     <label class="form-label mb-0 small text-muted fw-semibold">Unit Kerja</label>
                     <select name="mutu_unit" class="form-select form-select-sm" onchange="this.form.submit()">
                         <option value="">Semua Unit Kerja RS</option>
@@ -475,6 +485,17 @@
                 </div>
                 {% endif %}
                 <div class="col-12 col-md-3">
+                    <label class="form-label mb-0 small text-muted fw-semibold">Indikator Mutu</label>
+                    <select name="mutu_indikator" class="form-select form-select-sm" onchange="this.form.submit()">
+                        <option value="">Semua Indikator (Rata-rata)</option>
+                        {% for ind in mutu_indikator_choices %}
+                        <option value="{{ ind.pk }}" {% if filter_mutu_indikator == ind.pk %}selected{% endif %}>
+                            [{{ ind.kode_indikator }}] {{ ind.nama_indikator|truncatechars:42 }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-12 col-md-2">
                     <label class="form-label mb-0 small text-muted fw-semibold">Tahun Pengukuran</label>
                     <select name="mutu_tahun" class="form-select form-select-sm" onchange="this.form.submit()">
                         {% for yr in mutu_tahun_choices %}
@@ -482,9 +503,10 @@
                         {% endfor %}
                     </select>
                 </div>
-                <div class="col-12 col-md-2 d-flex align-items-end">
-                    <a href="{% url 'akreditasi:indikator_dashboard' %}?tahun={{ filter_mutu_tahun }}" class="btn btn-sm btn-outline-primary w-100">
-                        <i class="bi bi-box-arrow-up-right me-1"></i>Input & Detail
+                <div class="col-12 col-md-1 d-flex align-items-end">
+                    <a href="{% url 'akreditasi:indikator_dashboard' %}?tahun={{ filter_mutu_tahun }}"
+                       class="btn btn-sm btn-outline-primary w-100 px-1" title="Input &amp; Detail Indikator">
+                        <i class="bi bi-box-arrow-up-right"></i>
                     </a>
                 </div>
             </form>
@@ -496,8 +518,14 @@
                     <div class="row align-items-center mb-2 px-2">
                         <div class="col-12 col-md-7">
                             <span class="small text-muted">
+                                {% if mutu_indikator_terpilih %}
+                                Tren capaian <strong class="font-monospace">[{{ mutu_indikator_terpilih.kode_indikator }}]</strong>
+                                {{ mutu_indikator_terpilih.nama_indikator }} per bulan vs garis target
+                                <strong class="text-danger font-monospace">({{ mutu_indikator_terpilih.arah_target }}{{ chart_mutu_target_val }}%)</strong>.
+                                {% else %}
                                 Realisasi rata-rata per bulan vs garis target standar minimal
                                 <strong class="text-danger font-monospace">({{ chart_mutu_target_val }}%)</strong>.
+                                {% endif %}
                             </span>
                         </div>
                         <div class="col-12 col-md-5 text-md-end">
@@ -533,6 +561,68 @@
                     </div>
                     <div style="position: relative; height: 260px; width: 100%;">
                         <canvas id="chartRenstraTahunan"></canvas>
+                    </div>
+                </div>
+
+                <!-- TAB 3: MULTI-YEAR TREND -->
+                <div class="tab-pane fade" id="pills-tahunan" role="tabpanel">
+                    <div class="row align-items-center mb-2 px-2">
+                        <div class="col-12 col-md-7">
+                            <span class="small text-muted">
+                                Rata-rata capaian tahunan
+                                {% if mutu_indikator_terpilih %}[{{ mutu_indikator_terpilih.kode_indikator }}] {{ mutu_indikator_terpilih.nama_indikator }}{% else %}(semua indikator terfilter){% endif %}
+                                — tahun berjalan dan 4 tahun sebelumnya.
+                            </span>
+                        </div>
+                        <div class="col-12 col-md-5 text-md-end">
+                            <span class="badge bg-success-subtle text-success border border-success-subtle me-1" style="font-size:0.7rem;">
+                                <i class="bi bi-square-fill me-1"></i>Tercapai
+                            </span>
+                            <span class="badge bg-danger-subtle text-danger border border-danger-subtle" style="font-size:0.7rem;">
+                                <i class="bi bi-square-fill me-1"></i>Di bawah Target
+                            </span>
+                        </div>
+                    </div>
+                    <div style="position: relative; height: 260px; width: 100%;">
+                        <canvas id="chartTahunanMulti"></canvas>
+                    </div>
+                </div>
+
+                <!-- TAB 4: MONTHLY x YEARLY RECAP MATRIX -->
+                <div class="tab-pane fade" id="pills-matriks" role="tabpanel">
+                    <div class="px-2 mb-2">
+                        <span class="small text-muted">
+                            Matriks capaian per bulan × tahun ({{ bulan_labels|length }} bulan) untuk filter aktif.
+                            Warna hijau = tercapai, merah = di bawah target ({{ chart_mutu_target_val }}%).
+                        </span>
+                    </div>
+                    <div class="table-responsive" style="max-height: 320px;">
+                        <table class="table table-sm table-bordered align-middle mb-0" id="tabelMatriksRekap" style="font-size:0.78rem;">
+                            <thead class="table-light sticky-top">
+                                <tr>
+                                    <th class="text-center" style="min-width:64px;">Tahun</th>
+                                    {% for bln in bulan_labels %}
+                                    <th class="text-center">{{ bln }}</th>
+                                    {% endfor %}
+                                    <th class="text-center bg-light">Rata²</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for row in matrix_rows %}
+                                <tr>
+                                    <th class="text-center font-monospace">{{ row.year }}</th>
+                                    {% for c in row.months %}
+                                    <td class="text-center font-monospace {% if c.val is None %}text-muted{% elif c.ok %}text-success{% else %}text-danger fw-semibold{% endif %}">
+                                        {% if c.val is None %}–{% else %}{{ c.val }}{% endif %}
+                                    </td>
+                                    {% endfor %}
+                                    <td class="text-center font-monospace fw-bold bg-light">
+                                        {% if row.avg is None %}–{% else %}{{ row.avg }}%{% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
                     </div>
                 </div>
             </div>
@@ -811,12 +901,105 @@
     </div>
 
 </div>
+
+<!-- DRILL-DOWN MODAL: bulan → Analisis Masalah & Form PDCA -->
+<div class="modal fade" id="modalDrilldownMutu" tabindex="-1" aria-labelledby="dd-modal-title" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header py-2">
+                <h6 class="modal-title fw-bold" id="dd-modal-title">
+                    <i class="bi bi-graph-up-arrow text-primary me-1"></i>Detail Capaian <span id="dd-bulan-label"></span>
+                </h6>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tutup"></button>
+            </div>
+            <div class="modal-body">
+                <div id="dd-indikator-nama" class="small text-muted mb-2"></div>
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <span class="fw-bold fs-4 font-monospace" id="dd-nilai"></span>
+                    <span class="badge" id="dd-status"></span>
+                </div>
+                <div class="small text-muted mb-3">
+                    Target: <strong id="dd-target"></strong>% &middot; Selisih: <strong id="dd-gap"></strong>
+                </div>
+                <div class="alert alert-warning py-2 small mb-2 d-none" id="dd-hint-null">
+                    Pilih satu indikator spesifik pada filter di atas untuk membuka Analisis Masalah &amp; Form PDCA.
+                </div>
+                <a href="#" id="dd-btn-pdca" class="btn btn-sm btn-danger w-100 d-none">
+                    <i class="bi bi-clipboard2-pulse me-1"></i>Buka Analisis Masalah &amp; Form PDCA
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
 {% endblock %}
 
 {% block extra_js %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    // ── Shared chart helpers: value labels + drill-down ──────────────────
+    const MUTU_IND_ID   = "{{ filter_mutu_indikator|default:'' }}";
+    const MUTU_IND_NAMA = "{{ mutu_indikator_terpilih.nama_indikator|escapejs|default:'' }}";
+    const MUTU_IND_KODE = "{{ mutu_indikator_terpilih.kode_indikator|escapejs|default:'' }}";
+    const MUTU_TAHUN    = {{ filter_mutu_tahun }};
+    const MUTU_ARAH     = "{{ mutu_arah_target }}";
+    const MUTU_TARGET   = {{ chart_mutu_target_val_json|safe }};
+    const PDCA_URL_BASE = "{% url 'akreditasi:risiko_input' %}";
+    const NAMA_BULAN = ['Januari','Februari','Maret','April','Mei','Juni',
+                        'Juli','Agustus','September','Oktober','November','Desember'];
+
+    // Inline plugin: draws "74.2%" above every non-null bar (dataset index 1)
+    const valueLabelsPlugin = {
+        id: 'valueLabels',
+        afterDatasetsDraw(chart) {
+            const ctx = chart.ctx;
+            const meta = chart.getDatasetMeta(1);
+            const data = chart.data.datasets[1].data;
+            ctx.save();
+            ctx.font = "600 10px 'JetBrains Mono', monospace";
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'bottom';
+            meta.data.forEach(function (bar, i) {
+                const v = data[i];
+                if (v === null || v === undefined) return;
+                ctx.fillStyle = '#334155';
+                ctx.fillText(v.toFixed(1) + '%', bar.x, bar.y - 3);
+            });
+            ctx.restore();
+        }
+    };
+
+    function openDrilldown(idx, val) {
+        const modalEl = document.getElementById('modalDrilldownMutu');
+        if (!modalEl) return;
+        const below = (MUTU_ARAH === 'MAX') ? (val > MUTU_TARGET) : (val < MUTU_TARGET);
+        document.getElementById('dd-bulan-label').textContent = NAMA_BULAN[idx] + ' ' + MUTU_TAHUN;
+        document.getElementById('dd-indikator-nama').textContent = MUTU_IND_ID
+            ? '[' + MUTU_IND_KODE + '] ' + MUTU_IND_NAMA
+            : 'Rata-rata semua indikator terfilter';
+        document.getElementById('dd-nilai').textContent = val.toFixed(1) + '%';
+        document.getElementById('dd-target').textContent = MUTU_TARGET;
+        const gap = val - MUTU_TARGET;
+        document.getElementById('dd-gap').textContent = (gap >= 0 ? '+' : '') + gap.toFixed(1) + '%';
+        const st = document.getElementById('dd-status');
+        st.textContent = below ? 'Di bawah Target' : 'Tercapai';
+        st.className = 'badge ' + (below
+            ? 'bg-danger-subtle text-danger border border-danger-subtle'
+            : 'bg-success-subtle text-success border border-success-subtle');
+        const btn = document.getElementById('dd-btn-pdca');
+        const hint = document.getElementById('dd-hint-null');
+        if (MUTU_IND_ID) {
+            btn.href = PDCA_URL_BASE + '?indikator=' + MUTU_IND_ID +
+                       '&bulan=' + (idx + 1) + '&tahun=' + MUTU_TAHUN;
+            btn.classList.remove('d-none');
+            hint.classList.add('d-none');
+        } else {
+            btn.classList.add('d-none');
+            hint.classList.remove('d-none');
+        }
+        new bootstrap.Modal(modalEl).show();
+    }
+
     // 1. Chart Kepatuhan EP (Doughnut)
     const kepatuhanEl = document.getElementById('kepatuhanChart');
     if (kepatuhanEl) {
@@ -866,6 +1049,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
         chartMutu = new Chart(mutuEl.getContext('2d'), {
             type: 'bar',
+            plugins: [valueLabelsPlugin],
             data: {
                 labels: mutuLabels,
                 datasets: [
@@ -896,6 +1080,17 @@ document.addEventListener('DOMContentLoaded', function() {
                 responsive: true,
                 maintainAspectRatio: false,
                 interaction: { mode: 'index', intersect: false },
+                onClick: function (evt, elements) {
+                    if (!elements.length) return;
+                    const el = elements[0];
+                    if (el.datasetIndex !== 1) return;
+                    const val = mutuData[el.index];
+                    if (val === null || val === undefined) return;
+                    openDrilldown(el.index, val);
+                },
+                onHover: function (evt, elements) {
+                    evt.native.target.style.cursor = elements.length ? 'pointer' : 'default';
+                },
                 plugins: {
                     legend: {
                         position: 'top',
@@ -929,6 +1124,78 @@ document.addEventListener('DOMContentLoaded', function() {
                     x: {
                         grid: { display: false }
                     }
+                }
+            }
+        });
+    }
+
+    // 2b. Chart Tren Tahunan (Multi-Year Bar + Target Line)
+    let chartTahunan = null;
+    const tahunanEl = document.getElementById('chartTahunanMulti');
+    if (tahunanEl) {
+        const thYears  = {{ chart_tahunan_years_json|safe }};
+        const thData   = {{ chart_tahunan_data_json|safe }};
+        const thColors = {{ chart_tahunan_colors_json|safe }};
+
+        chartTahunan = new Chart(tahunanEl.getContext('2d'), {
+            type: 'bar',
+            plugins: [valueLabelsPlugin],
+            data: {
+                labels: thYears.map(y => `Tahun ${y}`),
+                datasets: [
+                    {
+                        type: 'line',
+                        label: `Batas Target (${MUTU_TARGET}%)`,
+                        data: thYears.map(() => MUTU_TARGET),
+                        borderColor: '#dc3545',
+                        borderWidth: 2,
+                        borderDash: [6, 4],
+                        pointRadius: 0,
+                        fill: false,
+                        order: 1
+                    },
+                    {
+                        type: 'bar',
+                        label: 'Rata-rata Capaian Tahunan (%)',
+                        data: thData,
+                        backgroundColor: thColors,
+                        borderRadius: 5,
+                        maxBarThickness: 46,
+                        order: 2
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'top',
+                        labels: {
+                            boxWidth: 14,
+                            usePointStyle: true,
+                            font: { family: "'Plus Jakarta Sans', sans-serif", size: 11 }
+                        }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function (ctx) {
+                                if (ctx.raw === null || ctx.raw === undefined) {
+                                    return `${ctx.dataset.label}: Belum ada data`;
+                                }
+                                return `${ctx.dataset.label}: ${ctx.raw}%`;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        max: 105,
+                        ticks: { stepSize: 20, callback: v => v + '%' },
+                        grid: { color: 'rgba(226, 232, 240, 0.7)' }
+                    },
+                    x: { grid: { display: false } }
                 }
             }
         });
@@ -1009,6 +1276,7 @@ document.addEventListener('DOMContentLoaded', function() {
         pill.addEventListener('shown.bs.tab', function() {
             if (chartMutu) chartMutu.resize();
             if (chartRenstra) chartRenstra.resize();
+            if (chartTahunan) chartTahunan.resize();
         });
     });
 });

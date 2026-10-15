@@ -11,7 +11,7 @@ from django.core.paginator import Paginator
 from django.views.decorators.http import require_GET, require_POST
 from decimal import Decimal
 
-from .risiko_models import RisikoUnit, TindakLanjutRisiko, InsidenKeselamatan, IndikatorMutu
+from .risiko_models import RisikoUnit, TindakLanjutRisiko, InsidenKeselamatan, IndikatorMutu, CatatanIndikator
 from .models import UnitKerja, AuditLog
 
 
@@ -441,6 +441,36 @@ def risiko_input(request):
     from .risiko_models import IndikatorMutu
     indikator_list = IndikatorMutu.objects.filter(aktif=True).order_by('jenis', 'kode_indikator')
 
+    # ── Pre-fill from dashboard drill-down: ?indikator=&bulan=&tahun= ────────
+    prefill_ctx = {}
+    try:
+        pf_ind_id = int(request.GET.get('indikator') or 0)
+        pf_bulan = int(request.GET.get('bulan') or 0)
+        pf_tahun = int(request.GET.get('tahun') or 0)
+    except (ValueError, TypeError):
+        pf_ind_id = pf_bulan = pf_tahun = 0
+
+    if pf_ind_id and 1 <= pf_bulan <= 12 and pf_tahun:
+        pf_ind = IndikatorMutu.objects.filter(pk=pf_ind_id, aktif=True).first()
+        pf_cat = CatatanIndikator.objects.filter(
+            indikator_id=pf_ind_id, bulan=pf_bulan, tahun=pf_tahun
+        ).first() if pf_ind else None
+        if pf_ind:
+            capaian_txt = f"{float(pf_cat.nilai_capaian):.1f}" if pf_cat else 'belum ada data'
+            prefill_ctx = {
+                'prefill_indikator_id': pf_ind.pk,
+                'prefill_unit_id': pf_ind.unit_id,
+                'prefill_bulan': pf_bulan,
+                'prefill_tahun': pf_tahun,
+                'prefill_target': float(pf_ind.target_nilai),
+                'prefill_masalah': (
+                    f"Capaian {pf_ind.nama_indikator} bulan {pf_bulan}/{pf_tahun} sebesar "
+                    f"{capaian_txt}{pf_ind.satuan or '%'} (target "
+                    f"{'≤' if pf_ind.arah_target == 'MAX' else '≥'} {pf_ind.target_nilai}{pf_ind.satuan or '%'}). "
+                    f"Lakukan analisis akar masalah dan susun rencana PDCA."
+                ),
+            }
+
     ctx = {
         'units': units,
         'default_unit_id': default_unit_id,
@@ -449,6 +479,7 @@ def risiko_input(request):
         'strategi_choices': RisikoUnit.STRATEGI_CHOICES,
         'indikator_list': indikator_list,
     }
+    ctx.update(prefill_ctx)
     return render(request, 'akreditasi/risiko_form.html', ctx)
 
 

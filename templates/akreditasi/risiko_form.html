@@ -72,7 +72,7 @@
                     </h6>
                 </div>
                 <div class="card-body p-4">
-                    <form method="post" action="{% if is_edit %}{% url 'akreditasi:risiko_edit' risiko.pk %}{% else %}{% url 'akreditasi:risiko_input' %}{% endif %}" enctype="multipart/form-data" novalidate>
+                    <form method="post" action="{% if is_edit %}{% url 'akreditasi:risiko_edit' risiko.pk %}{% else %}{% url 'akreditasi:risiko_input' %}{% endif %}" enctype="multipart/form-data" {% if prefill_indikator_id %}data-prefill_indikator_id="{{ prefill_indikator_id }}" data-prefill_bulan="{{ prefill_bulan }}" data-prefill_tahun="{{ prefill_tahun }}"{% endif %} novalidate>
                         {% csrf_token %}
 
                         {# ── Bagian 1: Identifikasi ─────────────────── #}
@@ -729,11 +729,40 @@ document.addEventListener('DOMContentLoaded', function() {
                     opt.dataset.nama = ind.nama;
                     indikatorSel.appendChild(opt);
                 });
+                // Apply pending pre-fill selection once options exist (drill-down / edit)
+                if (window._pendingIndikatorId) {
+                    indikatorSel.value = window._pendingIndikatorId;
+                    indikatorSel.dispatchEvent(new Event('change'));
+                    window._pendingIndikatorId = null;
+                }
             })
             .catch(function() {
                 indikatorSel.innerHTML = '<option value="">— Gagal memuat, coba lagi —</option>';
             });
     }
+
+    // ── Pre-fill dari drill-down dashboard (?indikator=&bulan=&tahun=) ────
+    {% if prefill_indikator_id %}
+    (function () {
+        const PF_IND_ID = "{{ prefill_indikator_id }}";
+        const PF_UNIT_ID = "{{ prefill_unit_id|default:'' }}";
+        const PF_MASALAH = `{{ prefill_masalah|escapejs }}`;
+        const PF_TARGET = "{{ prefill_target|default:'' }}";
+
+        if (PF_UNIT_ID && unitSelect) {
+            const hasOpt = Array.prototype.some.call(
+                unitSelect.options, o => o.value === PF_UNIT_ID);
+            if (hasOpt) unitSelect.value = PF_UNIT_ID;
+        }
+        window._pendingIndikatorId = PF_IND_ID;
+
+        const masalahEl = document.getElementById('input_masalah');
+        if (masalahEl && !masalahEl.value) masalahEl.value = PF_MASALAH;
+        if (targetInp && PF_TARGET && !targetInp.value) {
+            targetInp.value = parseFloat(PF_TARGET).toFixed(2);
+        }
+    })();
+    {% endif %}
 
     if (unitSelect) {
         // Load saat halaman pertama dibuka
