@@ -257,6 +257,25 @@ class PerencanaanRisikoTest(TestCase):
         self.assertContains(resp, 'Monitoring')
         self.assertContains(resp, 'Awal:')
 
+    def test_render_structured_plan_numbered(self):
+        """Ensure render_structured_plan parses '1. Step one 2. Step two' into structured items."""
+        from akreditasi.templatetags.akreditasi_tags import render_structured_plan
+        raw_text = "1. Lakukan audit cepat alur triase 2. Revisi dan perbarui SOP Triase IGD"
+        html = render_structured_plan(raw_text)
+        self.assertIn('step-badge', html)
+        self.assertIn('1', html)
+        self.assertIn('2', html)
+        self.assertIn('Lakukan audit cepat', html)
+        self.assertIn('Revisi dan perbarui', html)
+
+    def test_render_structured_plan_bullets(self):
+        """Ensure render_structured_plan parses bulleted multiline text."""
+        from akreditasi.templatetags.akreditasi_tags import render_structured_plan
+        raw_text = "• Penempelan alur Door-to-ECG\n• Penyediaan EKG mobile"
+        html = render_structured_plan(raw_text)
+        self.assertIn('<ul', html)
+        self.assertIn('Door-to-ECG', html)
+
 
 
 

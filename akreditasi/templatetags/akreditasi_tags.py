@@ -170,3 +170,74 @@ def render_rca_whys(text):
                     f'</div>')
     html.append('</div>')
     return mark_safe("".join(html))
+
+
+@register.filter(is_safe=True)
+def render_structured_plan(value):
+    """
+    Render dense action plans (1. ... 2. ...) or bulleted lists into structured, readable steps
+    sesuai rekomendasi tata letak laporan risiko standar STARKES/PMKP.
+    """
+    import re
+    from django.utils.html import escape
+    from django.utils.safestring import mark_safe
+
+    if not value or not str(value).strip():
+        return mark_safe('<span class="text-muted fst-italic">—</span>')
+
+    text = str(value).strip()
+
+    # Detect numbered list: 1. ... 2. ... (baik dalam 1 baris maupun multi-baris)
+    num_pattern = r'(?:^|\s+)(?=\d+[\.\)]\s+)'
+    parts = [p.strip() for p in re.split(num_pattern, text) if p.strip()]
+
+    if len(parts) > 1 or re.match(r'^\d+[\.\)]\s+', text):
+        out = ['<div class="action-plan-container d-flex flex-column gap-2">']
+        for p in parts:
+            m = re.match(r'^(\d+)[\.\)]\s*(.*)', p, re.DOTALL)
+            if m:
+                step_num, content = m.group(1), m.group(2).strip()
+            else:
+                step_num, content = "", p
+
+            # Deteksi sub-poin jika dipisahkan oleh titik dua dengan kalimat lanjutan, atau baris baru
+            sub_bullets = [s.strip() for s in re.split(r'\n+|\r\n+|;\s*', content) if s.strip()]
+
+            out.append(
+                f'<div class="plan-step-item d-flex align-items-start gap-2" style="font-size:0.8rem; line-height:1.5;">'
+            )
+            if step_num:
+                out.append(
+                    f'<span class="badge bg-teal-subtle text-teal fw-bold border border-teal-subtle step-badge px-1.5 py-0.5" '
+                    f'style="font-size:0.7rem; min-width:24px; text-align:center;">{step_num}</span>'
+                )
+            if len(sub_bullets) > 1:
+                out.append('<div class="flex-grow-1">')
+                out.append(f'<div class="fw-semibold text-dark mb-1">{escape(sub_bullets[0])}</div>')
+                out.append('<ul class="mb-0 ps-3 text-muted" style="font-size:0.77rem; list-style-type:circle;">')
+                for sub in sub_bullets[1:]:
+                    clean_sub = re.sub(r'^[•\-\*]\s*', '', sub).strip()
+                    if clean_sub:
+                        out.append(f'<li>{escape(clean_sub)}</li>')
+                out.append('</ul>')
+                out.append('</div>')
+            else:
+                out.append(f'<div class="flex-grow-1 text-dark">{escape(content)}</div>')
+            out.append('</div>')
+        out.append('</div>')
+        return mark_safe("".join(out))
+
+    # Detect bullet points: • or - or *
+    lines = [l.strip() for l in text.split('\n') if l.strip()]
+    if len(lines) > 1 and any(l.startswith(('•', '-', '*')) for l in lines):
+        out = ['<ul class="mb-0 ps-3" style="font-size:0.8rem; line-height:1.5;">']
+        for line in lines:
+            clean_line = re.sub(r'^[•\-\*]\s*', '', line).strip()
+            if clean_line:
+                out.append(f'<li class="mb-1 text-dark">{escape(clean_line)}</li>')
+        out.append('</ul>')
+        return mark_safe("".join(out))
+
+    # Default fallback dengan linebreaksbr & line-height proporsional
+    return mark_safe(f'<div style="font-size:0.8rem; line-height:1.5; word-break:break-word;">{escape(text)}</div>')
+
