@@ -325,6 +325,11 @@ def dashboard(request):
             dampak__gte=3, probabilitas__gte=3
         ).count()
 
+        # PDCA siklus breakdown — untuk widget Dashboard Unit
+        risiko_plan = risiko_unit.filter(status='PLAN').count()
+        risiko_do   = risiko_unit.filter(status='DO').count()
+        risiko_rtl  = risiko_unit.filter(status__in=['SELESAI', 'ACCEPTED']).count()
+
         # Aktivitas terkini unit
         aktivitas_terkini = AuditLog.objects.filter(
             Q(user=request.user) | Q(detail__icontains=unit.name)
@@ -346,6 +351,9 @@ def dashboard(request):
             'pct_belum': pct_belum,
             'total_risiko': total_risiko,
             'risiko_tinggi': risiko_tinggi,
+            'risiko_plan': risiko_plan,
+            'risiko_do': risiko_do,
+            'risiko_rtl': risiko_rtl,
             'aktivitas_terkini': aktivitas_terkini,
             'renstra_years': renstra_years,
         }

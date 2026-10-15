@@ -283,3 +283,51 @@ class IndikatorAlurIntegrasiTest(TestCase):
         self.assertEqual(qr.score, 10)
         self.assertIn('IMRS-CP-01', qr.quality_target)
         self.assertIn('90.0', qr.quality_target)
+
+    # ------------------------------------------------------------------
+    # Integrasi System ARIMA: Unit Dashboard PDCA Breakdown & ERM
+    # ------------------------------------------------------------------
+
+    def test_unit_dashboard_risiko_pdca_breakdown(self):
+        """Unit dashboard context must include risiko_plan, risiko_do, risiko_rtl counts."""
+        from akreditasi.risiko_models import RisikoUnit
+        from django.contrib.auth.models import User
+        from accounts.models import UserProfile
+
+        user = User.objects.create_user(username='dashtest', password='password123')
+        up, _ = UserProfile.objects.get_or_create(user=user)
+        up.unit_kerja = self.unit
+        up.role = 'KEPALA_UNIT'
+        up.save()
+
+        RisikoUnit.objects.create(
+            unit=self.unit, tahun=2026, periode='TRIWULAN_1',
+            kategori_risiko='OPERASIONAL', jenis_risiko='Test Plan',
+            masalah='m', dampak=2, probabilitas=2,
+            strategi_mitigasi='KURANGI', status='PLAN',
+        )
+        RisikoUnit.objects.create(
+            unit=self.unit, tahun=2026, periode='TRIWULAN_1',
+            kategori_risiko='OPERASIONAL', jenis_risiko='Test Do',
+            masalah='m', dampak=2, probabilitas=2,
+            strategi_mitigasi='KURANGI', status='DO',
+        )
+        RisikoUnit.objects.create(
+            unit=self.unit, tahun=2026, periode='TRIWULAN_1',
+            kategori_risiko='OPERASIONAL', jenis_risiko='Test RTL Selesai',
+            masalah='m', dampak=2, probabilitas=2,
+            strategi_mitigasi='KURANGI', status='SELESAI',
+        )
+        RisikoUnit.objects.create(
+            unit=self.unit, tahun=2026, periode='TRIWULAN_1',
+            kategori_risiko='OPERASIONAL', jenis_risiko='Test RTL Accepted',
+            masalah='m', dampak=2, probabilitas=2,
+            strategi_mitigasi='KURANGI', status='ACCEPTED',
+        )
+
+        self.client.force_login(user)
+        resp = self.client.get('/')
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.context['risiko_plan'], 1)
+        self.assertEqual(resp.context['risiko_do'], 1)
+        self.assertEqual(resp.context['risiko_rtl'], 2)  # SELESAI + ACCEPTED
