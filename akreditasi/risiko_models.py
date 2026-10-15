@@ -137,9 +137,26 @@ class RisikoUnit(models.Model):
         ('SELESAI', 'Selesai'),
     ]
 
+    JENIS_DOKUMEN_BUKTI_CHOICES = [
+        ('LAPORAN_BULANAN', 'Laporan Bulanan Unit'),
+        ('LAPORAN_INSIDEN', 'Laporan Insiden Keselamatan (IKP)'),
+        ('FORM_AUDIT',      'Form Audit / Monitoring Kepatuhan'),
+        ('FOTO_BUKTI',      'Foto Bukti Implementasi / Dokumentasi'),
+        ('SOP_KEBIJAKAN',   'SOP / Kebijakan Terkait'),
+        ('LAINNYA',         'Dokumen Pendukung Lainnya'),
+    ]
+
     # Capaian Indikator Mutu
     capaian_nilai         = models.DecimalField('Nilai Capaian Indikator (%)', max_digits=5, decimal_places=2, null=True, blank=True)
     bukti_capaian         = models.FileField('Bukti Dokumen Capaian', upload_to='risiko/bukti_capaian/', null=True, blank=True)
+    jenis_dokumen_capaian = models.CharField(
+        'Jenis Dokumen Bukti Capaian',
+        max_length=50,
+        blank=True,
+        default='',
+        choices=JENIS_DOKUMEN_BUKTI_CHOICES,
+        help_text='Kategori/klasifikasi bukti dokumen capaian indikator mutu.'
+    )
     evaluasi_capaian      = models.TextField('Evaluasi Capaian Indikator Mutu', blank=True, default='')
 
     # Pelaksanaan Tindakan Rencana (Do)
@@ -222,6 +239,27 @@ class RisikoUnit(models.Model):
             if cleaned:
                 result.append(cleaned)
         return result if result else [self.jenis_risiko.strip()]
+
+    @property
+    def rencana_aksi_list(self):
+        """Pecah rencana_aksi menjadi list of item terstruktur bernomor atau berpoin."""
+        if not self.rencana_aksi:
+            return []
+        import re
+        text = self.rencana_aksi.strip()
+        num_pattern = r'(?:^|\s+)(?=\d+[\.\)]\s+)'
+        parts = [p.strip() for p in re.split(num_pattern, text) if p.strip()]
+        if len(parts) > 1 or re.match(r'^\d+[\.\)]\s+', text):
+            res = []
+            for p in parts:
+                m = re.match(r'^(\d+)[\.\)]\s*(.*)', p, re.DOTALL)
+                if m:
+                    res.append({'urutan': int(m.group(1)), 'text': m.group(2).strip()})
+                else:
+                    res.append({'urutan': len(res) + 1, 'text': p.strip()})
+            return res
+        lines = [l.strip() for l in text.splitlines() if l.strip()]
+        return [{'urutan': i + 1, 'text': re.sub(r'^[•\-\*]\s*', '', l).strip()} for i, l in enumerate(lines)]
 
     @property
     def skor_inherent(self):

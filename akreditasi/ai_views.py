@@ -195,6 +195,10 @@ def api_ai_evaluasi_risiko(request):
         dampak_residual=int(data.get('dampak_residual') or 0),
         prob_residual=int(data.get('prob_residual') or 0),
         status=data.get('status', 'EVALUASI'),
+        nama_indikator=data.get('nama_indikator', ''),
+        target_capaian=str(data.get('target_capaian', '')),
+        capaian_nilai=str(data.get('capaian_nilai', '')),
+        gap_persen=str(data.get('gap_persen', '')),
     )
     return JsonResponse(res, status=200 if res['success'] else 400)
 

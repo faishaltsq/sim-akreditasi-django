@@ -92,21 +92,29 @@ Format Output JSON:
 
 # ── 4. EVALUASI & TINDAK LANJUT RISIKO ───────────────────────────────────
 
-PROMPT_EVALUASI_RISIKO = """Konteks Evaluasi Risiko Berkala:
+PROMPT_EVALUASI_RISIKO = """Konteks Evaluasi Risiko Berkala & Indikator Mutu:
 - Unit Kerja: {unit_name}
 - Jenis Risiko: {jenis_risiko}
 - Deskripsi Awal: {deskripsi_risiko}
+- Indikator Mutu Terkait: {nama_indikator}
+- Target Standar Indikator: {target_capaian}
+- Nilai Capaian Realisasi: {capaian_nilai}
+- Status Capaian & Gap: {gap_persen}
 - Skor Awal: {skor_awal} (Dampak {dampak_awal} × Probabilitas {prob_awal})
 - Rencana Mitigasi yang Sudah Dijalankan: {mitigasi_terlaksana}
 - Dampak Residual (Sisa): {dampak_residual}/5
 - Probabilitas Residual: {prob_residual}/5
 - Status Saat Ini: {status}
 
-Tugas: Evaluasi efektivitas mitigasi dan berikan rekomendasi tindak lanjut.
+Tugas: Evaluasi efektivitas mitigasi dan berikan draf analisis capaian mutu berstandar PMKP/STARKES/PDCA Rumah Sakit.
 
 Format Output JSON:
 {{
   "efektivitas": "Efektif / Sebagian Efektif / Belum Efektif",
+  "analisis_capaian": "Uraian rinci penyebab target indikator belum/sudah tercapai berdasarkan data realisasi",
+  "efektivitas_barrier": "Evaluasi apakah barrier/mitigasi yang dipasang berjalan efektif menekan risiko",
+  "kendala_lapangan": "Hambatan atau kendala utama di lapangan dalam implementasi mitigasi",
+  "draf_evaluasi": "1. Analisis Capaian: [isi ringkas]\\n2. Evaluasi Barrier/Mitigasi: [isi ringkas]\\n3. Kendala di Lapangan: [isi ringkas]",
   "analisis": "Analisis singkat apakah risiko sudah menurun dan mengapa",
   "tindak_lanjut": "1. [Langkah lanjutan]\\n2. [Penyesuaian strategi]\\n3. [Eskalasi jika perlu]",
   "rekomendasi_status": "MONITORING / MITIGASI / SELESAI",

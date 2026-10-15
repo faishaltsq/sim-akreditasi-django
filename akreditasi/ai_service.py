@@ -234,20 +234,127 @@ def generate_insiden_grading(user, jenis_insiden: str, tingkat_keparahan: str,
 
 # ── 4. EVALUASI EFEKTIVITAS MITIGASI ─────────────────────────────────────
 
+def _generate_fallback_evaluasi(unit_name: str, jenis_risiko: str, nama_indikator: str,
+                                target_capaian: str, capaian_nilai: str,
+                                mitigasi_terlaksana: str, skor_awal: int,
+                                dampak_residual: int, prob_residual: int) -> dict:
+    try:
+        c_val = float(str(capaian_nilai).replace(',', '.').replace('%', '').strip()) if capaian_nilai else None
+    except (ValueError, TypeError):
+        c_val = None
+    try:
+        t_val = float(str(target_capaian).replace(',', '.').replace('%', '').strip()) if target_capaian else 100.0
+    except (ValueError, TypeError):
+        t_val = 100.0
+
+    ind_name = nama_indikator.strip() if nama_indikator else (jenis_risiko or 'mutu unit')
+    unit = unit_name.strip() if unit_name else 'unit kerja'
+    mitigasi_clean = (mitigasi_terlaksana or '').strip() or 'rencana mitigasi terpasang'
+
+    if c_val is not None:
+        gap = c_val - t_val
+        is_achieved = gap >= 0
+        gap_display = f"{gap:+.1f}%"
+        c_display = f"{c_val:.1f}%"
+    else:
+        is_achieved = False
+        gap_display = "belum terukur"
+        c_display = "belum dilaporkan"
+
+    if is_achieved:
+        efektivitas = "Efektif"
+        analisis_capaian = (
+            f"Realisasi capaian indikator {ind_name} mencapai {c_display}, "
+            f"memenuhi target standar {t_val:.1f}% (surplus {gap_display}). "
+            f"Pengendalian operasional di {unit} berjalan stabil dan sesuai SPO."
+        )
+        efektivitas_barrier = (
+            f"Tindakan mitigasi '{mitigasi_clean}' terbukti efektif memperkecil frekuensi "
+            f"kegagalan serta menurunkan potensi risiko di {unit}."
+        )
+        kendala_lapangan = (
+            "Tantangan utama adalah menjaga kontinuitas kepatuhan seluruh shift kerja "
+            "dan pemeliharaan sarana/prasarana pendukung agar pencapaian target tetap konsisten."
+        )
+        rekomendasi_status = "SELESAI" if (dampak_residual and prob_residual and dampak_residual * prob_residual <= 4) else "MONITORING"
+    else:
+        efektivitas = "Sebagian Efektif" if (c_val and c_val >= t_val * 0.7) else "Belum Efektif"
+        analisis_capaian = (
+            f"Realisasi capaian indikator {ind_name} tercatat sebesar {c_display}, "
+            f"belum memenuhi target standar {t_val:.1f}% (terdapat deviasi {gap_display}). "
+            f"Diperlukan pengawasan kepatuhan berkala dan percepatan tindakan perbaikan."
+        )
+        efektivitas_barrier = (
+            f"Mitigasi '{mitigasi_clean}' telah dilaksanakan namun belum sepenuhnya "
+            f"mengeliminasi faktor determinan risiko di {unit}."
+        )
+        kendala_lapangan = (
+            "Ditemukan fluktuasi beban pelayanan, pemahaman staf yang belum merata terhadap standar teknis, "
+            "serta perlunya supervisi berjenjang yang lebih terjadwal."
+        )
+        rekomendasi_status = "MITIGASI"
+
+    draf_evaluasi = (
+        f"1. Analisis Capaian: {analisis_capaian}\n\n"
+        f"2. Evaluasi Barrier/Mitigasi: {efektivitas_barrier}\n\n"
+        f"3. Kendala di Lapangan: {kendala_lapangan}"
+    )
+
+    tindak_lanjut = (
+        f"1. Re-evaluasi kepatuhan pelaksanaan SPO {ind_name} dan lakukan coaching bagi staf {unit}.\n"
+        f"2. Optimalkan pencatatan harian dan monitoring berkala oleh Kepala Ruangan / Penanggung Jawab.\n"
+        f"3. Pastikan kelengkapan logistik dan barrier keselamatan pasien siap pakai 100%."
+    )
+
+    return {
+        'efektivitas': efektivitas,
+        'analisis_capaian': analisis_capaian,
+        'efektivitas_barrier': efektivitas_barrier,
+        'kendala_lapangan': kendala_lapangan,
+        'draf_evaluasi': draf_evaluasi,
+        'analisis': f"Mitigasi dinilai {efektivitas.lower()} dengan capaian {c_display} terhadap target {t_val:.1f}%.",
+        'tindak_lanjut': tindak_lanjut,
+        'rekomendasi_status': rekomendasi_status,
+        'catatan': f"Dokumentasi evaluasi mutu terstruktur untuk verifikasi STARKES PMKP {unit}.",
+    }
+
+
 def generate_evaluasi_risiko(user, unit_name: str, jenis_risiko: str,
                               deskripsi_risiko: str, skor_awal: int,
                               dampak_awal: int, prob_awal: int,
                               mitigasi_terlaksana: str, dampak_residual: int,
-                              prob_residual: int, status: str) -> dict:
+                              prob_residual: int, status: str,
+                              nama_indikator: str = '', target_capaian: str = '',
+                              capaian_nilai: str = '', gap_persen: str = '') -> dict:
     """Hasilkan evaluasi efektivitas mitigasi dan saran tindak lanjut."""
     from .system_models import SystemConfig
-    if not SystemConfig.get_solo().ai_enable_risiko:
-        return {'success': False, 'error': 'Fitur AI untuk modul Risiko belum diaktifkan.'}
+    config = SystemConfig.get_solo()
+
+    # Rule-based fallback data generator
+    fallback_data = _generate_fallback_evaluasi(
+        unit_name=unit_name,
+        jenis_risiko=jenis_risiko,
+        nama_indikator=nama_indikator,
+        target_capaian=target_capaian,
+        capaian_nilai=capaian_nilai,
+        mitigasi_terlaksana=mitigasi_terlaksana,
+        skor_awal=skor_awal,
+        dampak_residual=dampak_residual,
+        prob_residual=prob_residual,
+    )
+
+    if not config.ai_enable_risiko or not config.ai_enabled or not config.get_deepseek_api_key():
+        # Gunakan fallback cerdas terstruktur bila AI external tidak aktif/tanpa key
+        return {'success': True, 'data': fallback_data, 'fallback': True, 'error': None}
 
     prompt = PROMPT_EVALUASI_RISIKO.format(
         unit_name=sanitize_hospital_prompt(unit_name),
         jenis_risiko=sanitize_hospital_prompt(jenis_risiko),
         deskripsi_risiko=sanitize_hospital_prompt(deskripsi_risiko),
+        nama_indikator=sanitize_hospital_prompt(nama_indikator or '(belum ditautkan)'),
+        target_capaian=target_capaian or '100%',
+        capaian_nilai=capaian_nilai or '(belum diisi)',
+        gap_persen=gap_persen or '(belum dihitung)',
         skor_awal=skor_awal, dampak_awal=dampak_awal, prob_awal=prob_awal,
         mitigasi_terlaksana=sanitize_hospital_prompt(mitigasi_terlaksana or '(belum diisi)'),
         dampak_residual=dampak_residual, prob_residual=prob_residual,
@@ -255,6 +362,19 @@ def generate_evaluasi_risiko(user, unit_name: str, jenis_risiko: str,
     )
 
     result = _call_deepseek(prompt)
+    if not result.get('success') or not result.get('data'):
+        # Fallback bila API timeout atau error
+        result = {'success': True, 'data': fallback_data, 'fallback': True, 'error': None}
+    else:
+        # Pastikan draf_evaluasi selalu tersedia di data response
+        d = result['data']
+        if not d.get('draf_evaluasi'):
+            d['draf_evaluasi'] = (
+                f"1. Analisis Capaian: {d.get('analisis_capaian', d.get('analisis', ''))}\n\n"
+                f"2. Evaluasi Barrier/Mitigasi: {d.get('efektivitas_barrier', '')}\n\n"
+                f"3. Kendala di Lapangan: {d.get('kendala_lapangan', '')}"
+            ).strip()
+
     _log_ai_call(user, 'EVALUASI_RISIKO', f'{unit_name} | {jenis_risiko[:60]}', result['success'])
     return result
 

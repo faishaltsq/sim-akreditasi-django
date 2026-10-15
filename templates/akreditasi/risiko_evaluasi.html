@@ -10,6 +10,40 @@
     .badge-teal { background:#0d9488; color:#fff; }
     .badge-purple { background:#7c3aed; color:#fff; }
     input[type=range] { accent-color:#0d9488; }
+    .matrix-cell {
+        width: 38px;
+        height: 34px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: .75rem;
+        font-weight: 700;
+        color: #fff;
+        border-radius: 4px;
+        cursor: pointer;
+        transition: transform .15s, box-shadow .15s;
+        user-select: none;
+    }
+    .matrix-cell:hover {
+        transform: scale(1.15);
+        box-shadow: 0 4px 8px rgba(0,0,0,.2);
+        z-index: 5;
+    }
+    .matrix-cell.active-cell {
+        outline: 3px solid #0f172a;
+        box-shadow: 0 0 0 2px #fff, 0 4px 10px rgba(0,0,0,.3);
+        transform: scale(1.1);
+        z-index: 4;
+    }
+    .action-step-card {
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        transition: border-color .15s;
+    }
+    .action-step-card:hover {
+        border-color: #cbd5e1;
+    }
 </style>
 {% endblock %}
 
@@ -122,42 +156,90 @@
             </div>
 
             {# Form Evaluasi #}
-            <div class="card border-0 shadow-sm">
+            <div class="card border-0 shadow-sm mb-4">
                 <div class="card-header border-0 py-3" style="background:linear-gradient(135deg,#0f766e,#0d9488); color:#fff;">
                     <h6 class="mb-0 fw-bold"><i class="bi bi-sliders me-2"></i>G. Monitoring dan Evaluasi Risiko</h6>
                 </div>
                 <div class="card-body p-4">
-                    <form method="post" enctype="multipart/form-data">
+                    <form method="post" enctype="multipart/form-data" id="evaluasi-form">
                         {% csrf_token %}
 
-                        {# ── G.1 CAPAIAN INDIKATOR MUTU & BUKTI ── #}
+                        {# ── G.1 CAPAIAN INDIKATOR MUTU & BUKTI PENDUKUNG ── #}
                         <h6 class="fw-bold mb-3 pb-1 border-bottom" style="color:#0f172a; font-size:.82rem;">
                             <i class="bi bi-graph-up-arrow text-primary me-1"></i>G.1 Capaian Indikator Mutu &amp; Bukti Pendukung
                         </h6>
+
+                        {# Read-only Callout Banner Indikator Mutu Terkait #}
+                        <div class="card border-0 shadow-sm p-3 mb-3" style="background:#f0fdfa; border-left:4px solid #0d9488 !important;">
+                            <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
+                                <div>
+                                    <div class="d-flex align-items-center gap-2 mb-1">
+                                        <span class="badge bg-teal text-white" style="font-size:.7rem;">
+                                            {{ risiko.indikator_mutu_terkait.get_jenis_display|default:"Indikator Mutu Terkait" }}
+                                        </span>
+                                        {% if risiko.indikator_mutu_terkait.kode_indikator %}
+                                        <span class="badge bg-light text-dark border font-monospace" style="font-size:.7rem;">
+                                            {{ risiko.indikator_mutu_terkait.kode_indikator }}
+                                        </span>
+                                        {% endif %}
+                                    </div>
+                                    <h6 class="fw-bold mb-0 text-dark" style="font-size:.88rem;">
+                                        {{ risiko.indikator_mutu_terkait.nama_indikator|default:"(Belum ditautkan ke Indikator Mutu formal)" }}
+                                    </h6>
+                                    {% if risiko.indikator_mutu_terkait.dimensi_mutu %}
+                                    <small class="text-muted" style="font-size:.7rem;">Dimensi Mutu: {{ risiko.indikator_mutu_terkait.get_dimensi_mutu_display }}</small>
+                                    {% endif %}
+                                </div>
+                                <div class="text-md-end bg-white p-2 px-3 rounded-3 shadow-sm border">
+                                    <span class="text-muted d-block" style="font-size:.68rem;">Target Standar Mutu:</span>
+                                    <span class="badge bg-success fs-6 fw-bold">
+                                        {% if risiko.indikator_mutu_terkait.arah_target == 'MAX' %}&le;{% else %}&ge;{% endif %}
+                                        {{ target_nilai_display }} {{ risiko.indikator_mutu_terkait.satuan|default:"%" }}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+
                         <div class="row g-3 mb-3">
                             <div class="col-md-4">
                                 <label for="capaian_nilai" class="form-label fw-semibold" style="font-size:.8rem;">
-                                    Nilai Capaian Realisasi (%)
+                                    Nilai Capaian Realisasi (%) <span class="text-danger">*</span>
                                 </label>
                                 <div class="input-group input-group-sm">
-                                    <input type="number" step="0.01" min="0" max="1000" name="capaian_nilai" id="capaian_nilai" class="form-control"
+                                    <input type="number" step="0.01" min="0" max="1000" name="capaian_nilai" id="capaian_nilai" class="form-control fw-bold"
                                            value="{{ risiko.capaian_nilai|default_if_none:'' }}" placeholder="Contoh: 88.5">
                                     <span class="input-group-text">%</span>
                                 </div>
-                                <small class="text-muted" style="font-size:.68rem;">
-                                    Target Indikator: <strong>{{ risiko.target_capaian_indikator|default:"100" }}%</strong>
-                                </small>
+                                <div class="mt-2" id="capaian-gap-wrapper">
+                                    <span id="capaian-status-badge" class="badge bg-light text-muted border" style="font-size:.72rem;">
+                                        <i class="bi bi-clock me-1"></i>Masukkan realisasi untuk evaluasi
+                                    </span>
+                                </div>
                             </div>
-                            <div class="col-md-8">
+                            <div class="col-md-4">
+                                <label for="jenis_dokumen_capaian" class="form-label fw-semibold" style="font-size:.8rem;">
+                                    <i class="bi bi-tag me-1"></i>Kategori Dokumen Bukti
+                                </label>
+                                <select name="jenis_dokumen_capaian" id="jenis_dokumen_capaian" class="form-select form-select-sm">
+                                    <option value="">-- Pilih Kategori Dokumen --</option>
+                                    {% for code, label in jenis_dokumen_choices %}
+                                    <option value="{{ code }}" {% if risiko.jenis_dokumen_capaian == code %}selected{% endif %}>{{ label }}</option>
+                                    {% endfor %}
+                                </select>
+                                <small class="text-muted" style="font-size:.68rem;">Klasifikasi arsip bukti di repositori RDWOS.</small>
+                            </div>
+                            <div class="col-md-4">
                                 <label for="bukti_capaian" class="form-label fw-semibold" style="font-size:.8rem;">
-                                    <i class="bi bi-paperclip me-1"></i>Upload Bukti Dokumen Capaian <span class="text-muted fw-normal">(PDF, Gambar, Video, Excel max 10MB)</span>
+                                    <i class="bi bi-paperclip me-1"></i>Upload Bukti Capaian <span class="text-muted fw-normal">(max 10MB)</span>
                                 </label>
                                 <input type="file" name="bukti_capaian" id="bukti_capaian" class="form-control form-control-sm" accept=".pdf,.jpg,.jpeg,.png,.mp4,.doc,.docx,.xls,.xlsx">
                                 {% if risiko.bukti_capaian %}
-                                <div class="mt-1 d-flex align-items-center gap-2" style="font-size:.72rem;">
-                                    <span class="badge bg-success-subtle text-success border border-success-subtle"><i class="bi bi-check-circle me-1"></i>Bukti tersimpan</span>
+                                <div class="mt-1 d-flex flex-wrap align-items-center gap-1" style="font-size:.72rem;">
+                                    <span class="badge bg-success-subtle text-success border border-success-subtle">
+                                        <i class="bi bi-check-circle me-1"></i>{{ risiko.get_jenis_dokumen_capaian_display|default:"Bukti Tersimpan" }}
+                                    </span>
                                     <a href="{{ risiko.bukti_capaian.url }}" target="_blank" class="text-decoration-none fw-semibold" style="color:#0f766e;">
-                                        <i class="bi bi-download me-1"></i>Lihat Bukti Capaian Saat Ini
+                                        <i class="bi bi-download me-1"></i>Lihat File
                                     </a>
                                 </div>
                                 {% endif %}
@@ -165,57 +247,219 @@
                         </div>
 
                         <div class="mb-4">
-                            <label for="evaluasi_capaian" class="form-label fw-semibold" style="font-size:.8rem;">
-                                Uraian Evaluasi Capaian Indikator Mutu &amp; Kinerja
-                            </label>
-                            <textarea name="evaluasi_capaian" id="evaluasi_capaian" class="form-control form-control-sm" rows="2"
-                                      placeholder="Uraikan evaluasi capaian target indikator mutu terkait dan efektivitas barrier mitigasi yang sudah berjalan…">{{ risiko.evaluasi_capaian }}</textarea>
-                            <small class="text-muted" style="font-size:.65rem;">Bandingkan capaian riil unit dengan target numerik indikator mutu.</small>
+                            <div class="d-flex flex-wrap justify-content-between align-items-center mb-1 gap-2">
+                                <label for="evaluasi_capaian" class="form-label fw-semibold mb-0" style="font-size:.8rem;">
+                                    Uraian Evaluasi Capaian Indikator Mutu &amp; Kinerja
+                                </label>
+                                <div class="btn-group btn-group-sm">
+                                    <button type="button" class="btn btn-outline-secondary btn-sm py-0 px-2" id="btn-insert-template" style="font-size:.72rem;">
+                                        <i class="bi bi-file-earmark-text me-1"></i>📋 Sisipkan Template Panduan
+                                    </button>
+                                    <button type="button" class="btn btn-outline-primary btn-sm py-0 px-2 fw-semibold" id="btn-ai-evaluasi" style="font-size:.72rem;">
+                                        <i class="bi bi-stars me-1 text-warning"></i>✨ Buatkan Draf Analisis AI
+                                    </button>
+                                </div>
+                            </div>
+                            <textarea name="evaluasi_capaian" id="evaluasi_capaian" class="form-control form-control-sm font-monospace" rows="4" style="font-size:.8rem; line-height:1.5;"
+                                      placeholder="1. Analisis Capaian: (Jelaskan penyebab target belum/sudah tercapai)&#10;2. Evaluasi Barrier/Mitigasi: (Apakah tindakan mitigasi yang dipasang berjalan efektif?)&#10;3. Kendala di Lapangan: (Hambatan utama yang ditemukan)">{{ risiko.evaluasi_capaian }}</textarea>
+                            <div class="d-flex justify-content-between align-items-center mt-1">
+                                <small class="text-muted" style="font-size:.68rem;">Gunakan format narasi terstruktur 3-poin PDCA di atas untuk standarisasi penilaian mutu.</small>
+                                <span id="ai-status-msg" class="small" style="font-size:.72rem;"></span>
+                            </div>
                         </div>
 
-                        {# ── G.2 STATUS PELAKSANAAN TINDAKAN (DO) ── #}
+                        {# ── G.2 STATUS PELAKSANAAN TINDAKAN SETIAP RENCANA (DO) ── #}
                         <h6 class="fw-bold mb-3 pb-1 border-bottom pt-2" style="color:#0f172a; font-size:.82rem;">
                             <i class="bi bi-check2-circle text-success me-1"></i>G.2 Status Pelaksanaan Tindakan Setiap Rencana
                         </h6>
-                        <div class="mb-4">
-                            <label class="form-label fw-semibold d-block" style="font-size:.8rem;">Status Pelaksanaan Tindakan:</label>
+
+                        {# Per-Item Action Status Checklist / Cards #}
+                        {% if tindak_lanjut_list %}
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold text-secondary mb-2" style="font-size:.78rem;">
+                                Pelaksanaan Butir Tindakan Mitigasi Terdaftar:
+                            </label>
+                            <div class="d-flex flex-column gap-2 mb-3">
+                                {% for tl in tindak_lanjut_list %}
+                                <div class="action-step-card p-2 px-3 d-flex flex-wrap align-items-center justify-content-between gap-2">
+                                    <div class="d-flex align-items-center gap-2 flex-grow-1" style="min-width:240px;">
+                                        <span class="badge bg-primary-subtle text-primary border border-primary-subtle font-monospace px-2 py-1">
+                                            #{{ tl.urutan }}
+                                        </span>
+                                        <span class="text-dark fw-medium" style="font-size:.82rem;">{{ tl.aksi }}</span>
+                                    </div>
+                                    <div class="d-flex align-items-center gap-3">
+                                        <div class="form-check form-check-inline mb-0">
+                                            <input class="form-check-input" type="radio" name="tl_status_{{ tl.pk }}" id="tl_selesai_{{ tl.pk }}" value="SELESAI"
+                                                   {% if tl.status_aksi == 'SELESAI' %}checked{% endif %}>
+                                            <label class="form-check-label text-success fw-semibold" for="tl_selesai_{{ tl.pk }}" style="font-size:.78rem;">
+                                                ✓ Selesai
+                                            </label>
+                                        </div>
+                                        <div class="form-check form-check-inline mb-0">
+                                            <input class="form-check-input" type="radio" name="tl_status_{{ tl.pk }}" id="tl_sedang_{{ tl.pk }}" value="SEDANG"
+                                                   {% if tl.status_aksi == 'SEDANG' %}checked{% endif %}>
+                                            <label class="form-check-label text-warning-emphasis fw-semibold" for="tl_sedang_{{ tl.pk }}" style="font-size:.78rem;">
+                                                ~ Berjalan
+                                            </label>
+                                        </div>
+                                        <div class="form-check form-check-inline mb-0">
+                                            <input class="form-check-input" type="radio" name="tl_status_{{ tl.pk }}" id="tl_belum_{{ tl.pk }}" value="BELUM"
+                                                   {% if tl.status_aksi == 'BELUM' or not tl.status_aksi %}checked{% endif %}>
+                                            <label class="form-check-label text-secondary fw-semibold" for="tl_belum_{{ tl.pk }}" style="font-size:.78rem;">
+                                                ✗ Belum
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        {% elif rencana_aksi_items %}
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold text-secondary mb-2" style="font-size:.78rem;">
+                                Butir Tindakan Rencana Aksi (Pilih status pelaksanaan per poin):
+                            </label>
+                            <div class="d-flex flex-column gap-2 mb-3">
+                                {% for item in rencana_aksi_items %}
+                                <div class="action-step-card p-2 px-3 d-flex flex-wrap align-items-center justify-content-between gap-2">
+                                    <div class="d-flex align-items-center gap-2 flex-grow-1" style="min-width:240px;">
+                                        <span class="badge bg-primary-subtle text-primary border border-primary-subtle font-monospace px-2 py-1">
+                                            #{{ item.urutan }}
+                                        </span>
+                                        <span class="text-dark fw-medium" style="font-size:.82rem;">{{ item.text }}</span>
+                                    </div>
+                                    <div class="d-flex align-items-center gap-3">
+                                        <div class="form-check form-check-inline mb-0">
+                                            <input class="form-check-input" type="radio" name="step_status_{{ item.urutan }}" id="step_selesai_{{ item.urutan }}" value="SELESAI"
+                                                   {% if risiko.status_pelaksanaan == 'DILAKUKAN' %}checked{% endif %}>
+                                            <label class="form-check-label text-success fw-semibold" for="step_selesai_{{ item.urutan }}" style="font-size:.78rem;">
+                                                ✓ Selesai
+                                            </label>
+                                        </div>
+                                        <div class="form-check form-check-inline mb-0">
+                                            <input class="form-check-input" type="radio" name="step_status_{{ item.urutan }}" id="step_sedang_{{ item.urutan }}" value="SEDANG"
+                                                   {% if risiko.status_pelaksanaan == 'SEBAGIAN' or not risiko.status_pelaksanaan %}checked{% endif %}>
+                                            <label class="form-check-label text-warning-emphasis fw-semibold" for="step_sedang_{{ item.urutan }}" style="font-size:.78rem;">
+                                                ~ Berjalan
+                                            </label>
+                                        </div>
+                                        <div class="form-check form-check-inline mb-0">
+                                            <input class="form-check-input" type="radio" name="step_status_{{ item.urutan }}" id="step_belum_{{ item.urutan }}" value="BELUM"
+                                                   {% if risiko.status_pelaksanaan == 'TIDAK_DILAKUKAN' %}checked{% endif %}>
+                                            <label class="form-check-label text-secondary fw-semibold" for="step_belum_{{ item.urutan }}" style="font-size:.78rem;">
+                                                ✗ Belum
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        {# Status Pelaksanaan Global Agregat #}
+                        <div class="p-3 mb-4 rounded-3 border" style="background:#f8fafc;">
+                            <label class="form-label fw-semibold d-block mb-2" style="font-size:.8rem;">
+                                Ringkasan Status Pelaksanaan Tindakan (Agregat):
+                            </label>
                             <div class="d-flex flex-wrap gap-3">
                                 {% for val, lbl in status_pelaksanaan_choices %}
                                 <div class="form-check form-check-inline">
                                     <input class="form-check-input" type="radio" name="status_pelaksanaan" id="pelaksanaan_{{ val }}" value="{{ val }}"
                                            {% if risiko.status_pelaksanaan == val %}checked{% elif not risiko.status_pelaksanaan and val == 'DILAKUKAN' %}checked{% endif %}>
-                                    <label class="form-check-label" for="pelaksanaan_{{ val }}" style="font-size:.82rem;">
+                                    <label class="form-check-label fw-medium" for="pelaksanaan_{{ val }}" style="font-size:.82rem;">
                                         {% if val == 'DILAKUKAN' %}<span class="badge bg-success me-1">✓</span>{% elif val == 'SEBAGIAN' %}<span class="badge bg-warning text-dark me-1">~</span>{% else %}<span class="badge bg-danger me-1">✗</span>{% endif %}
                                         {{ lbl }}
                                     </label>
                                 </div>
                                 {% endfor %}
                             </div>
-                            <small class="text-muted d-block mt-1" style="font-size:.68rem;">
-                                *Catatan: Berkas bukti dokumen pelaksanaan per tindakan dapat diunggah langsung di tabel Seksi F (Pelaksanaan Risiko).
+                            <small class="text-muted d-block mt-2" style="font-size:.68rem;">
+                                *Otomatis disinkronisasi berdasarkan status butir tindakan di atas (atau dapat disesuaikan manual bila diperlukan).
                             </small>
                         </div>
 
-                        {# ── G.3 PENILAIAN RISIKO SISA (RESIDU) ── #}
+                        {# ── G.3 PENILAIAN RISIKO SISA (RESIDU) & KALKULATOR MATRIKS ── #}
                         <h6 class="fw-bold mb-3 pb-1 border-bottom pt-2" style="color:#0f172a; font-size:.82rem;">
                             <i class="bi bi-shield-shaded text-teal me-1"></i>G.3 Penilaian Risiko Sisa (Residu Pasca Pelaksanaan Tindakan)
                         </h6>
+
+                        {# Interactive Residual Calculation Card & Mini Matrix #}
+                        <div class="card border-0 p-3 mb-3 shadow-sm" style="background:#f8fafc; border:1px solid #e2e8f0;">
+                            <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
+                                {# Inherent #}
+                                <div class="d-flex align-items-center gap-2">
+                                    <span class="badge p-2 px-3 fw-bold fs-6" style="background:{{ risiko.risk_color }}; color:#fff;">
+                                        Inherent: {{ risiko.skor_inherent }}
+                                    </span>
+                                    <small class="text-muted d-block" style="font-size:.72rem;">(D {{ risiko.dampak }} &times; P {{ risiko.probabilitas }})</small>
+                                </div>
+
+                                <div class="text-center text-muted fw-bold fs-5">
+                                    <i class="bi bi-arrow-right text-teal"></i>
+                                </div>
+
+                                {# Residual Live #}
+                                <div class="d-flex align-items-center gap-2">
+                                    <span id="calc-res-badge" class="badge p-2 px-3 fw-bold fs-6" style="background:#16a34a; color:#fff;">
+                                        Residu: <span id="calc-res-score">{{ risiko.skor_residual|default:"4" }}</span>
+                                    </span>
+                                    <small class="text-muted d-block" style="font-size:.72rem;">(D <span id="calc-res-d">{{ risiko.dampak_residual|default:"2" }}</span> &times; P <span id="calc-res-p">{{ risiko.probabilitas_residual|default:"2" }}</span>)</small>
+                                </div>
+
+                                {# Risk Reduction Pill #}
+                                <div class="text-md-end">
+                                    <span id="calc-reduction-pill" class="badge bg-success-subtle text-success border border-success-subtle p-2" style="font-size:.78rem;">
+                                        <i class="bi bi-arrow-down-circle me-1"></i>Reduksi: <strong id="calc-reduction-val">-75%</strong>
+                                    </span>
+                                </div>
+                            </div>
+
+                            {# Mini 5x5 Matrix Selector #}
+                            <div class="mt-3 pt-2 border-top">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <small class="fw-semibold text-secondary" style="font-size:.72rem;">
+                                        <i class="bi bi-grid-3x3 me-1"></i>Matriks Cepat Risiko Residu (Klik kotak untuk memilih Dampak &times; Probabilitas):
+                                    </small>
+                                    <small class="text-muted" style="font-size:.68rem;">Baris: Dampak (5&darr;1) &bull; Kolom: Probabilitas (1&rarr;5)</small>
+                                </div>
+                                <div class="d-flex justify-content-center">
+                                    <div id="mini-matrix" style="display:grid; grid-template-columns: repeat(5, 42px); gap: 4px;">
+                                        {# Cells generated via JS #}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
                         <div class="row g-4 mb-3">
                             <div class="col-md-{% if risiko.is_fmea %}4{% else %}6{% endif %}">
-                                <label class="form-label fw-semibold" style="font-size:.8rem;">Dampak Residu (1–5) &nbsp;<span class="fw-bold text-teal" id="slider-d-display" style="color:#0d9488;">{{ risiko.dampak_residual|default:"2" }}</span></label>
+                                <label class="form-label fw-semibold" style="font-size:.8rem;">
+                                    Dampak Residu (1–5) &nbsp;<span class="fw-bold text-teal" id="slider-d-display" style="color:#0d9488;">{{ risiko.dampak_residual|default:"2" }}</span>
+                                </label>
                                 <input type="range" name="dampak_residual" id="dampak_residual" class="form-range" min="1" max="5" step="1" value="{{ risiko.dampak_residual|default:"2" }}" required>
-                                <div class="d-flex justify-content-between" style="font-size:.65rem; color:#64748b;"><span>1 — Minimal</span><span>5 — Katastrofik</span></div>
+                                <div class="d-flex justify-content-between" style="font-size:.65rem; color:#64748b;">
+                                    <span>1 — Minimal</span><span>5 — Katastrofik</span>
+                                </div>
                             </div>
                             <div class="col-md-{% if risiko.is_fmea %}4{% else %}6{% endif %}">
-                                <label class="form-label fw-semibold" style="font-size:.8rem;">Peluang Residu (1–5) &nbsp;<span class="fw-bold text-teal" id="slider-p-display" style="color:#0d9488;">{{ risiko.probabilitas_residual|default:"2" }}</span></label>
+                                <label class="form-label fw-semibold" style="font-size:.8rem;">
+                                    Peluang Residu (1–5) &nbsp;<span class="fw-bold text-teal" id="slider-p-display" style="color:#0d9488;">{{ risiko.probabilitas_residual|default:"2" }}</span>
+                                </label>
                                 <input type="range" name="probabilitas_residual" id="probabilitas_residual" class="form-range" min="1" max="5" step="1" value="{{ risiko.probabilitas_residual|default:"2" }}" required>
-                                <div class="d-flex justify-content-between" style="font-size:.65rem; color:#64748b;"><span>1 — Sangat Jarang</span><span>5 — Sangat Sering</span></div>
+                                <div class="d-flex justify-content-between" style="font-size:.65rem; color:#64748b;">
+                                    <span>1 — Sangat Jarang</span><span>5 — Sangat Sering</span>
+                                </div>
                             </div>
                             {% if risiko.is_fmea %}
                             <div class="col-md-4">
-                                <label class="form-label fw-semibold" style="font-size:.8rem;">Deteksi Residu FMEA (1–5) &nbsp;<span class="badge bg-warning text-dark" id="slider-det-display">{{ risiko.deteksi_residual|default:"2" }}</span></label>
+                                <label class="form-label fw-semibold" style="font-size:.8rem;">
+                                    Deteksi Residu FMEA (1–5) &nbsp;<span class="badge bg-warning text-dark" id="slider-det-display">{{ risiko.deteksi_residual|default:"2" }}</span>
+                                </label>
                                 <input type="range" name="deteksi_residual" id="deteksi_residual" class="form-range" min="1" max="5" step="1" value="{{ risiko.deteksi_residual|default:"2" }}">
-                                <div class="d-flex justify-content-between" style="font-size:.65rem; color:#64748b;"><span>1 — Mudah Deteksi</span><span>5 — Sulit</span></div>
+                                <div class="d-flex justify-content-between" style="font-size:.65rem; color:#64748b;">
+                                    <span>1 — Mudah Deteksi</span><span>5 — Sulit</span>
+                                </div>
                             </div>
                             {% endif %}
                         </div>
@@ -344,6 +588,161 @@
 {% block extra_js %}
 <script>
 (function() {
+    // ── G.1 Capaian vs Target Live Calculation ──
+    const capaianInput = document.getElementById('capaian_nilai');
+    const targetVal = parseFloat("{{ target_nilai_display }}".replace(',', '.')) || 100;
+    const arahTarget = "{{ risiko.indikator_mutu_terkait.arah_target|default:'MIN' }}";
+    const statusBadge = document.getElementById('capaian-status-badge');
+
+    function evaluateCapaian() {
+        if (!capaianInput) return;
+        const raw = capaianInput.value.trim().replace(',', '.');
+        if (!raw) {
+            statusBadge.className = 'badge bg-light text-muted border';
+            statusBadge.innerHTML = '<i class="bi bi-clock me-1"></i>Masukkan realisasi untuk evaluasi';
+            return;
+        }
+        const val = parseFloat(raw);
+        if (isNaN(val)) return;
+
+        let isAchieved = false;
+        let gap = 0;
+        if (arahTarget === 'MAX') {
+            isAchieved = val <= targetVal;
+            gap = targetVal - val;
+        } else {
+            isAchieved = val >= targetVal;
+            gap = val - targetVal;
+        }
+
+        const gapFormatted = (gap >= 0 ? '+' : '') + gap.toFixed(1) + '%';
+        if (isAchieved) {
+            statusBadge.className = 'badge bg-success text-white p-2';
+            statusBadge.innerHTML = `<i class="bi bi-check-circle-fill me-1"></i>🟢 Tercapai (Gap: ${gapFormatted})`;
+        } else {
+            statusBadge.className = 'badge bg-danger text-white p-2';
+            statusBadge.innerHTML = `<i class="bi bi-exclamation-triangle-fill me-1"></i>🔴 Belum Tercapai (Gap: ${gapFormatted})`;
+        }
+    }
+    if (capaianInput) {
+        capaianInput.addEventListener('input', evaluateCapaian);
+        evaluateCapaian();
+    }
+
+    // ── G.1 Template Panduan Narasi ──
+    const templateBtn = document.getElementById('btn-insert-template');
+    const evaluasiArea = document.getElementById('evaluasi_capaian');
+    if (templateBtn && evaluasiArea) {
+        templateBtn.addEventListener('click', function() {
+            const templateText =
+`1. Analisis Capaian: (Jelaskan penyebab target indikator belum/sudah tercapai berdasarkan realisasi data)
+2. Evaluasi Barrier/Mitigasi: (Apakah tindakan pengendalian/mitigasi yang dipasang berjalan efektif menekan risiko?)
+3. Kendala di Lapangan: (Hambatan atau kendala utama operasional, kepatuhan staf, beban kerja, atau sarana yang ditemukan)`;
+            if (!evaluasiArea.value.trim() || confirm('Sisipkan struktur panduan template ke kolom uraian evaluasi?')) {
+                evaluasiArea.value = templateText;
+                evaluasiArea.focus();
+            }
+        });
+    }
+
+    // ── G.1 AI Assistant Generator ──
+    const aiBtn = document.getElementById('btn-ai-evaluasi');
+    const aiStatusMsg = document.getElementById('ai-status-msg');
+    if (aiBtn && evaluasiArea) {
+        aiBtn.addEventListener('click', async function() {
+            const capaianVal = capaianInput ? capaianInput.value.trim() : '';
+            if (!capaianVal) {
+                alert('Silakan masukkan Nilai Capaian Realisasi (%) terlebih dahulu sebelum membuat analisis AI.');
+                if (capaianInput) capaianInput.focus();
+                return;
+            }
+
+            aiBtn.disabled = true;
+            aiBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status"></span>Menganalisis...';
+            if (aiStatusMsg) {
+                aiStatusMsg.className = 'text-primary';
+                aiStatusMsg.innerHTML = '<i class="bi bi-cpu me-1"></i>AI ARIMA sedang menganalisis data capaian & risiko...';
+            }
+
+            try {
+                const payload = {
+                    unit_name: "{{ risiko.unit.name|escapejs }}",
+                    jenis_risiko: "{{ risiko.jenis_risiko|escapejs }}",
+                    deskripsi_risiko: "{{ risiko.deskripsi_risiko|default:risiko.masalah|escapejs }}",
+                    skor_awal: {{ risiko.skor_inherent }},
+                    dampak_awal: {{ risiko.dampak }},
+                    prob_awal: {{ risiko.probabilitas }},
+                    mitigasi_terlaksana: "{{ risiko.rencana_aksi|escapejs }}",
+                    dampak_residual: parseInt(dEl.value),
+                    prob_residual: parseInt(pEl.value),
+                    status: "EVALUASI",
+                    nama_indikator: "{{ risiko.indikator_mutu_terkait.nama_indikator|default:''|escapejs }}",
+                    target_capaian: targetVal + "%",
+                    capaian_nilai: capaianVal + "%",
+                    gap_persen: statusBadge ? statusBadge.textContent.trim() : "",
+                };
+
+                const resp = await fetch("{% url 'akreditasi:ai_evaluasi_risiko' %}", {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                    },
+                    body: JSON.stringify(payload)
+                });
+
+                const res = await resp.json();
+                if (res.success && res.data) {
+                    const d = res.data;
+                    const draft = d.draf_evaluasi ||
+                        `1. Analisis Capaian: ${d.analisis_capaian || d.analisis || ''}\n\n` +
+                        `2. Evaluasi Barrier/Mitigasi: ${d.efektivitas_barrier || ''}\n\n` +
+                        `3. Kendala di Lapangan: ${d.kendala_lapangan || ''}`;
+                    evaluasiArea.value = draft.trim();
+                    if (aiStatusMsg) {
+                        aiStatusMsg.className = 'text-success fw-semibold';
+                        aiStatusMsg.innerHTML = '<i class="bi bi-check-circle me-1"></i>Draf analisis AI berhasil disematkan!';
+                    }
+                } else {
+                    throw new Error(res.error || 'Respon AI tidak valid');
+                }
+            } catch (err) {
+                if (aiStatusMsg) {
+                    aiStatusMsg.className = 'text-danger';
+                    aiStatusMsg.innerHTML = '<i class="bi bi-exclamation-triangle me-1"></i>Gagal AI: ' + err.message;
+                }
+            } finally {
+                aiBtn.disabled = false;
+                aiBtn.innerHTML = '<i class="bi bi-stars me-1 text-warning"></i>✨ Buatkan Draf Analisis AI';
+            }
+        });
+    }
+
+    // ── G.2 Auto-Sync Aggregate Status Pelaksanaan ──
+    function syncAggregateStatus() {
+        const itemRadios = document.querySelectorAll('input[type=radio][name^="tl_status_"], input[type=radio][name^="step_status_"]');
+        if (!itemRadios.length) return;
+
+        let checkedVals = [];
+        itemRadios.forEach(r => { if (r.checked) checkedVals.push(r.value); });
+        if (!checkedVals.length) return;
+
+        const allSelesai = checkedVals.every(v => v === 'SELESAI');
+        const allBelum = checkedVals.every(v => v === 'BELUM');
+
+        const radDilakukan = document.getElementById('pelaksanaan_DILAKUKAN');
+        const radSebagian = document.getElementById('pelaksanaan_SEBAGIAN');
+        const radTidak = document.getElementById('pelaksanaan_TIDAK_DILAKUKAN');
+
+        if (allSelesai && radDilakukan) radDilakukan.checked = true;
+        else if (allBelum && radTidak) radTidak.checked = true;
+        else if (radSebagian) radSebagian.checked = true;
+    }
+    document.querySelectorAll('input[type=radio][name^="tl_status_"], input[type=radio][name^="step_status_"]').forEach(r => {
+        r.addEventListener('change', syncAggregateStatus);
+    });
+
+    // ── G.3 Sliders, Matrix & Residual Risk Calculation ──
     const dEl = document.getElementById('dampak_residual');
     const pEl = document.getElementById('probabilitas_residual');
     const detEl = document.getElementById('deteksi_residual');
@@ -356,7 +755,17 @@
     const resBadge = document.getElementById('res-badge');
     const resLabel = document.getElementById('res-label');
 
-    const colors = { SANGAT_TINGGI:'#dc2626', TINGGI:'#ea580c', SEDANG:'#ca8a04', RENDAH:'#16a34a', SANGAT_RENDAH:'#64748b' };
+    // Calculator Elements
+    const inherentScore = {{ risiko.skor_inherent }};
+    const calcResScore = document.getElementById('calc-res-score');
+    const calcResD = document.getElementById('calc-res-d');
+    const calcResP = document.getElementById('calc-res-p');
+    const calcResBadge = document.getElementById('calc-res-badge');
+    const calcReductionVal = document.getElementById('calc-reduction-val');
+    const calcReductionPill = document.getElementById('calc-reduction-pill');
+    const matrixContainer = document.getElementById('mini-matrix');
+
+    const colors = { SANGAT_TINGGI:'#dc2626', TINGGI:'#ea580c', SEDANG:'#ca8a04', RENDAH:'#16a34a', SANGAT_RENDAH:'#0d9488' };
     const labels = { SANGAT_TINGGI:'SANGAT TINGGI', TINGGI:'TINGGI', SEDANG:'SEDANG', RENDAH:'RENDAH', SANGAT_RENDAH:'SANGAT RENDAH' };
 
     function getLevel(s) {
@@ -367,20 +776,84 @@
         return 'SANGAT_RENDAH';
     }
 
+    function buildMiniMatrix() {
+        if (!matrixContainer) return;
+        matrixContainer.innerHTML = '';
+        // Rows: Dampak 5 down to 1; Cols: Probabilitas 1 up to 5
+        for (let d = 5; d >= 1; d--) {
+            for (let p = 1; p <= 5; p++) {
+                const s = d * p;
+                const lv = getLevel(s);
+                const cell = document.createElement('div');
+                cell.className = 'matrix-cell';
+                cell.textContent = s;
+                cell.style.backgroundColor = colors[lv];
+                cell.title = `Dampak: ${d}, Probabilitas: ${p} = Skor ${s} (${labels[lv]})`;
+                cell.dataset.d = d;
+                cell.dataset.p = p;
+                cell.addEventListener('click', function() {
+                    dEl.value = d;
+                    pEl.value = p;
+                    updateResidual();
+                });
+                matrixContainer.appendChild(cell);
+            }
+        }
+    }
+
+    function highlightActiveMatrixCell(d, p) {
+        if (!matrixContainer) return;
+        matrixContainer.querySelectorAll('.matrix-cell').forEach(cell => {
+            if (parseInt(cell.dataset.d) === d && parseInt(cell.dataset.p) === p) {
+                cell.classList.add('active-cell');
+            } else {
+                cell.classList.remove('active-cell');
+            }
+        });
+    }
+
     function updateResidual() {
         const d = parseInt(dEl.value);
         const p = parseInt(pEl.value);
         const s = d * p;
         const lv = getLevel(s);
 
-        dDisp.textContent = d;
-        pDisp.textContent = p;
-        resDVal.textContent = d;
-        resPVal.textContent = p;
-        resBadge.textContent = s;
-        resBadge.style.background = colors[lv];
-        resLabel.textContent = labels[lv];
-        resLabel.style.color = colors[lv];
+        if (dDisp) dDisp.textContent = d;
+        if (pDisp) pDisp.textContent = p;
+        if (resDVal) resDVal.textContent = d;
+        if (resPVal) resPVal.textContent = p;
+        if (resBadge) {
+            resBadge.textContent = s;
+            resBadge.style.background = colors[lv];
+        }
+        if (resLabel) {
+            resLabel.textContent = labels[lv];
+            resLabel.style.color = colors[lv];
+        }
+
+        // Update Calculator Card
+        if (calcResScore) calcResScore.textContent = s;
+        if (calcResD) calcResD.textContent = d;
+        if (calcResP) calcResP.textContent = p;
+        if (calcResBadge) calcResBadge.style.background = colors[lv];
+
+        if (calcReductionPill && calcReductionVal) {
+            const diff = inherentScore - s;
+            const pct = Math.round((diff / inherentScore) * 100);
+            if (pct > 0) {
+                calcReductionPill.className = 'badge bg-success-subtle text-success border border-success-subtle p-2';
+                calcReductionPill.innerHTML = `<i class="bi bi-arrow-down-circle me-1"></i>Reduksi: <strong>-${pct}%</strong>`;
+            } else if (pct === 0) {
+                calcReductionPill.className = 'badge bg-secondary-subtle text-secondary border border-secondary-subtle p-2';
+                calcReductionPill.innerHTML = `<i class="bi bi-dash-circle me-1"></i>Risiko Sama (0%)`;
+            } else {
+                const addPct = Math.abs(pct);
+                calcReductionPill.className = 'badge bg-danger-subtle text-danger border border-danger-subtle p-2';
+                calcReductionPill.innerHTML = `<i class="bi bi-arrow-up-circle me-1"></i>Risiko Meningkat (+${addPct}%)`;
+            }
+        }
+
+        highlightActiveMatrixCell(d, p);
 
         if (detEl && detDisp) {
             const det = parseInt(detEl.value) || 2;
@@ -392,10 +865,13 @@
         }
     }
 
-    dEl.addEventListener('input', updateResidual);
-    pEl.addEventListener('input', updateResidual);
-    if (detEl) detEl.addEventListener('input', updateResidual);
-    updateResidual();
+    buildMiniMatrix();
+    if (dEl && pEl) {
+        dEl.addEventListener('input', updateResidual);
+        pEl.addEventListener('input', updateResidual);
+        if (detEl) detEl.addEventListener('input', updateResidual);
+        updateResidual();
+    }
 })();
 </script>
 {% endblock %}

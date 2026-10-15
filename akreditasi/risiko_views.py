@@ -694,11 +694,45 @@ def risiko_evaluasi(request, risiko_id):
             if request.FILES.get('bukti_capaian'):
                 risiko.bukti_capaian = request.FILES['bukti_capaian']
 
+            if 'jenis_dokumen_capaian' in request.POST:
+                risiko.jenis_dokumen_capaian = request.POST.get('jenis_dokumen_capaian', '').strip()
+
             if 'evaluasi_capaian' in request.POST:
                 risiko.evaluasi_capaian = request.POST.get('evaluasi_capaian', '').strip()
 
-            # ── Pelaksanaan Tindakan ──
-            if 'status_pelaksanaan' in request.POST:
+            # ── Pelaksanaan Tindakan (Per Item & Agregat) ──
+            existing_tls = list(risiko.tindak_lanjut.all().order_by('urutan'))
+            collected_statuses = []
+            if existing_tls:
+                for tl in existing_tls:
+                    st_val = request.POST.get(f'tl_status_{tl.pk}')
+                    if st_val in dict(TindakLanjutRisiko.STATUS_AKSI_CHOICES):
+                        tl.status_aksi = st_val
+                        tl.save(update_fields=['status_aksi'])
+                        collected_statuses.append(st_val)
+                    else:
+                        collected_statuses.append(tl.status_aksi)
+            elif risiko.rencana_aksi_list:
+                for item in risiko.rencana_aksi_list:
+                    idx = item['urutan']
+                    st_val = request.POST.get(f'step_status_{idx}')
+                    if st_val in dict(TindakLanjutRisiko.STATUS_AKSI_CHOICES):
+                        TindakLanjutRisiko.objects.create(
+                            risiko=risiko,
+                            urutan=idx,
+                            aksi=item['text'],
+                            status_aksi=st_val,
+                        )
+                        collected_statuses.append(st_val)
+
+            if collected_statuses:
+                if all(s == 'SELESAI' for s in collected_statuses):
+                    risiko.status_pelaksanaan = 'DILAKUKAN'
+                elif any(s in ('SELESAI', 'SEDANG') for s in collected_statuses):
+                    risiko.status_pelaksanaan = 'SEBAGIAN'
+                else:
+                    risiko.status_pelaksanaan = 'TIDAK_DILAKUKAN'
+            elif 'status_pelaksanaan' in request.POST:
                 risiko.status_pelaksanaan = request.POST.get('status_pelaksanaan', 'DILAKUKAN')
 
             # ── RCA Fishbone Terstruktur ──
@@ -733,11 +767,23 @@ def risiko_evaluasi(request, risiko_id):
         except Exception as e:
             messages.error(request, f'Gagal menyimpan evaluasi: {e}')
 
+    tindak_lanjut_list = list(risiko.tindak_lanjut.all().order_by('urutan'))
+    rencana_aksi_items = risiko.rencana_aksi_list
+
+    target_nilai_display = risiko.target_capaian_indikator
+    if not target_nilai_display and risiko.indikator_mutu_terkait:
+        target_nilai_display = risiko.indikator_mutu_terkait.target_nilai
+    target_nilai_display = target_nilai_display or 100
+
     ctx = {
         'risiko': risiko,
         'status_badges': STATUS_BADGES,
         'status_pelaksanaan_choices': RisikoUnit.STATUS_PELAKSANAAN_CHOICES,
         'status_rtl_choices': RisikoUnit.STATUS_RTL_CHOICES,
+        'jenis_dokumen_choices': RisikoUnit.JENIS_DOKUMEN_BUKTI_CHOICES,
+        'tindak_lanjut_list': tindak_lanjut_list,
+        'rencana_aksi_items': rencana_aksi_items,
+        'target_nilai_display': target_nilai_display,
     }
     return render(request, 'akreditasi/risiko_evaluasi.html', ctx)
 
