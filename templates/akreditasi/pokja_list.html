@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load akreditasi_tags %}
+{% load akreditasi_tags l10n %}
 
 {% block title %}Pokja &amp; Standar — ARIMA{% endblock %}
 {% block page_title %}Struktur Pokja &amp; Standar Akreditasi{% endblock %}
@@ -30,7 +30,7 @@
                             <strong>{{ cat.total_score }} / {{ cat.max_possible_score }}</strong>
                         </div>
                         <div class="progress" style="height: 6px;">
-                            <div class="progress-bar bg-{{ cat.status_level.badge }}" role="progressbar" style="width: {{ cat.percentage }}%;"></div>
+                            <div class="progress-bar bg-{{ cat.status_level.badge }}" role="progressbar" style="width: {{ cat.percentage|unlocalize }}%;"></div>
                         </div>
                     </div>
                 </div>

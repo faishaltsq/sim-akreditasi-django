@@ -1,5 +1,5 @@
 {% extends 'base.html' %}
-{% load static %}
+{% load static l10n %}
 
 {% block title %}{{ ind.kode_indikator }} — {{ ind.nama_indikator|truncatechars:40 }} — ARIMA{% endblock %}
 
@@ -147,7 +147,7 @@
   const ctx = document.getElementById('chartCapaian').getContext('2d');
   const labels = {{ chart_labels|safe }};
   const data = {{ chart_data|safe }};
-  const target = {{ target_line }};
+  const target = {{ target_line|unlocalize }};  {# locale id renders comma -> breaks JS #}
   const hasData = data.some(v => v !== null);
 
   // Plugin: tampilkan pesan ketika semua data null

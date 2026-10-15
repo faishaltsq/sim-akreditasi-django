@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 
+{% load l10n %}
 {% block title %}Portal Nakes — {{ profile.full_name|default:request.user.username }} | ARIMA{% endblock %}
 {% block page_title %}Portal Tenaga Kesehatan{% endblock %}
 {% block page_subtitle %}Capaian Akreditasi Unit & Kredensial Pribadi (KPS){% endblock %}
@@ -37,7 +38,7 @@
                                 <span class="fw-bold" style="font-size: 1.25rem; color: {% if percentage >= 80 %}#4ade80{% elif percentage >= 60 %}#fbbf24{% else %}#f87171{% endif %};">{{ percentage }}%</span>
                             </div>
                             <div class="progress" style="height: 6px; background-color: rgba(255,255,255,0.1);">
-                                <div class="progress-bar {% if percentage >= 80 %}bg-success{% elif percentage >= 60 %}bg-warning{% else %}bg-danger{% endif %}" role="progressbar" style="width: {{ percentage }}%"></div>
+                                <div class="progress-bar {% if percentage >= 80 %}bg-success{% elif percentage >= 60 %}bg-warning{% else %}bg-danger{% endif %}" role="progressbar" style="width: {{ percentage|unlocalize }}%"></div>
                             </div>
                             <div class="d-flex justify-content-between mt-2" style="font-size: 0.7rem; color: #cbd5e1;">
                                 <span>Skor: {{ total_score }}/{{ total_possible }}</span>

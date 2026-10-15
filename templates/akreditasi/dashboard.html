@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load akreditasi_tags %}
+{% load akreditasi_tags l10n %}
 
 {% block page_title %}{% if unit_dashboard %}{{ unit.name|upper }}{% else %}ARIMA — RS MonsisKami{% endif %}{% endblock %}
 {% block page_subtitle %}{% if unit_dashboard %}Dashboard Unit — {{ unit.get_tipe_unit_display|default:"Unit Pelayanan" }} | {{ rs_profile.nama_rs|default:"RS MonsisKami Tipe B" }}{% else %}ARIMA — Aplikasi Terpadu Manajemen Risiko dan Tata Kelola Dokumen Akreditasi RS MonsisKami{% endif %}{% endblock %}
@@ -189,7 +189,7 @@
                 </div>
                 <div>
                     <div class="progress" style="height: 6px; border-radius: 6px; background: #E2E8F0;">
-                        <div class="progress-bar bg-success" role="progressbar" style="width: {{ capaian_rata_rata }}%;"></div>
+                        <div class="progress-bar bg-success" role="progressbar" style="width: {{ capaian_rata_rata|unlocalize }}%;"></div>
                     </div>
                     <div class="d-flex justify-content-between kpi-sub mt-1.5">
                         <span>Status Akreditasi</span>
@@ -217,7 +217,7 @@
                     {% if total_target_dokumen > 0 %}
                     {% widthratio total_uploaded_dokumen total_target_dokumen 100 as pct_doc %}
                     <div class="progress" style="height: 8px; border-radius: 6px; background: #E2E8F0;">
-                        <div class="progress-bar bg-primary" role="progressbar" style="width: {{ pct_doc }}%;" title="Dokumen Terunggah (Do): {{ pct_doc }}%"></div>
+                        <div class="progress-bar bg-primary" role="progressbar" style="width: {{ pct_doc|unlocalize }}%;" title="Dokumen Terunggah (Do): {{ pct_doc }}%"></div>
                     </div>
                     <div class="d-flex justify-content-between kpi-sub mt-2" style="font-size:0.75rem;">
                         <span class="text-muted"><i class="bi bi-cloud-arrow-up text-primary me-1"></i>Do: {{ total_uploaded_dokumen }} berkas</span>
@@ -320,7 +320,7 @@
                 </div>
                 <div>
                     <div class="progress" style="height: 6px; border-radius: 6px; background: #E2E8F0;">
-                        <div class="progress-bar bg-warning" role="progressbar" style="width: {{ persen_evaluasi_pdca }}%;"></div>
+                        <div class="progress-bar bg-warning" role="progressbar" style="width: {{ persen_evaluasi_pdca|unlocalize }}%;"></div>
                     </div>
                     <div class="d-flex justify-content-between kpi-sub mt-1.5">
                         <span>Tahap Check / Action</span>
@@ -678,7 +678,7 @@
                             </div>
                             <div class="progress mb-2" style="height: 5px; border-radius: 5px; background: {{ yr.color }}15;">
                                 <div class="progress-bar" role="progressbar"
-                                     style="width: {{ yr.avg_capaian }}%; background: {{ yr.color }}; border-radius: 5px;"></div>
+                                     style="width: {{ yr.avg_capaian|unlocalize }}%; background: {{ yr.color }}; border-radius: 5px;"></div>
                             </div>
                             <div class="d-flex justify-content-between" style="font-size: 0.65rem;">
                                 <span class="text-muted">{{ yr.total_catatan }} data capaian</span>
@@ -884,7 +884,7 @@
                                 <span class="fw-bold text-{{ cat.status_level.badge }}">{{ cat.percentage }}%</span>
                             </div>
                             <div class="progress" style="height: 6px; border-radius: 6px; background: #f1f5f9;">
-                                <div class="progress-bar bg-{{ cat.status_level.badge }}" role="progressbar" style="width: {{ cat.percentage }}%;"></div>
+                                <div class="progress-bar bg-{{ cat.status_level.badge }}" role="progressbar" style="width: {{ cat.percentage|unlocalize }}%;"></div>
                             </div>
                             <div class="mt-2.5 d-flex justify-content-between align-items-center">
                                 <span class="text-muted font-mono" style="font-size:0.68rem;">{{ cat.ep_total }} EP</span>

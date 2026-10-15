@@ -1,4 +1,4 @@
-{% load akreditasi_tags %}
+{% load akreditasi_tags l10n %}
 <div class="sidebar-nav">
     <!-- 1. DASHBOARD UTAMA -->
     <a href="{% url 'akreditasi:dashboard' %}" class="nav-link {% if request.resolver_match.url_name == 'dashboard' or request.resolver_match.url_name == 'dashboard_alias' %}active{% endif %}">
@@ -108,7 +108,7 @@
                         </div>
                         <div class="nav-pokja-bar" style="height:3px;">
                             <div class="nav-pokja-fill {% if cat.percentage >= 80 %}fill-success{% elif cat.percentage >= 50 %}fill-warning{% else %}fill-danger{% endif %}"
-                                 style="width: {{ cat.percentage }}%;"></div>
+                                 style="width: {{ cat.percentage|unlocalize }}%;"></div>
                         </div>
                     </span>
                 </a>
@@ -127,7 +127,7 @@
             </div>
             <div class="nav-pokja-bar">
                 <div class="nav-pokja-fill {% if cat.percentage >= 80 %}fill-success{% elif cat.percentage >= 60 %}fill-warning{% else %}fill-danger{% endif %}"
-                     style="width: {{ cat.percentage }}%;"></div>
+                     style="width: {{ cat.percentage|unlocalize }}%;"></div>
             </div>
         </span>
     </a>

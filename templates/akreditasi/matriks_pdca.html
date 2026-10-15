@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load akreditasi_tags %}
+{% load akreditasi_tags l10n %}
 
 {% block title %}Matriks PDCA — {{ active_category.code }} | ARIMA{% endblock %}
 {% block page_title %}Matriks PDCA: {{ active_category.code }} — {{ active_category.name }}{% endblock %}
@@ -178,7 +178,7 @@
             <span class="small text-muted font-mono">Skor: <strong>{{ total_score }} / {{ total_possible }}</strong></span>
             <div class="progress" style="width: 120px; height: 8px;">
                 <div class="progress-bar {% if percentage >= 80 %}bg-success{% elif percentage >= 60 %}bg-warning{% else %}bg-danger{% endif %}"
-                     role="progressbar" style="width: {{ percentage }}%;"></div>
+                     role="progressbar" style="width: {{ percentage|unlocalize }}%;"></div>
             </div>
             <span class="badge {% if percentage >= 80 %}bg-success{% elif percentage >= 60 %}bg-warning{% else %}bg-danger{% endif %} font-mono">
                 {{ percentage }}%
