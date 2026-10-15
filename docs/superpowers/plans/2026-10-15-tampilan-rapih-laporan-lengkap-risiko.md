@@ -1,6 +1,6 @@
 # Professional Table Layout & Formatting for Laporan Lengkap Risiko Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** Overhaul the table layouts and text rendering across the "Laporan Lengkap Risiko" (ARIMA comprehensive risk report) to be clean, proportional, and professional per STARKES / PMKP standards, adding structured list formatting for action plans, sticky table headers, right-aligned monetary values, capitalized PIC names, and proportional column widths.
 
@@ -54,7 +54,7 @@
 - Consumes: Raw text strings containing numbered items (`1. `, `2. `) or multi-line bullets (`• `, `- `).
 - Produces: Safe HTML (`mark_safe`) containing structured, nicely spaced step blocks with bold number badges and clean sub-items.
 
-- [ ] **Step 1: Write failing unit tests in `akreditasi/tests_perencanaan_risiko.py`**
+- [x] **Step 1: Write failing unit tests in `akreditasi/tests_perencanaan_risiko.py`**
 
 ```python
 def test_render_structured_plan_numbered(self):
@@ -77,7 +77,7 @@ def test_render_structured_plan_bullets(self):
     self.assertIn('Door-to-ECG', html)
 ```
 
-- [ ] **Step 2: Run test to verify failure**
+- [x] **Step 2: Run test to verify failure**
 
 ```bash
 cd "C:/Users/cubeb/OneDrive/Documents/coding/sim-akreditasi-django"
@@ -86,7 +86,7 @@ python manage.py test akreditasi.tests_perencanaan_risiko.PerencanaanRisikoTests
 ```
 Expected: `ImportError: cannot import name 'render_structured_plan'`.
 
-- [ ] **Step 3: Implement `render_structured_plan` in `akreditasi/templatetags/akreditasi_tags.py`**
+- [x] **Step 3: Implement `render_structured_plan` in `akreditasi/templatetags/akreditasi_tags.py`**
 
 Add filter:
 ```python
@@ -157,14 +157,14 @@ def render_structured_plan(value):
     return mark_safe(f'<div style="font-size:0.8rem; line-height:1.5; word-break:break-word;">{escape(text)}</div>')
 ```
 
-- [ ] **Step 4: Run unit test to verify pass**
+- [x] **Step 4: Run unit test to verify pass**
 
 ```bash
 python manage.py test akreditasi.tests_perencanaan_risiko.PerencanaanRisikoTests.test_render_structured_plan_numbered -v2
 ```
 Expected: PASS.
 
-- [ ] **Step 5: Commit Task 1**
+- [x] **Step 5: Commit Task 1**
 
 ```bash
 git add akreditasi/templatetags/akreditasi_tags.py akreditasi/tests_perencanaan_risiko.py
@@ -182,7 +182,7 @@ git commit -m "feat(templates): add render_structured_plan filter for structured
 - Consumes: Standard HTML markup in tables.
 - Produces: Visual styles according to the consultant specification in `integrasi system arima.docx` and `Lakukan Untuk membuat tampilan rapih.docx`.
 
-- [ ] **Step 1: Inspect and enhance `{% block extra_css %}` in `templates/akreditasi/risiko_laporan_lengkap.html`**
+- [x] **Step 1: Inspect and enhance `{% block extra_css %}` in `templates/akreditasi/risiko_laporan_lengkap.html`**
 
 Add CSS rules matching consultant's recommendations:
 ```css
@@ -251,7 +251,7 @@ Add CSS rules matching consultant's recommendations:
 }
 ```
 
-- [ ] **Step 2: Verify template compilation**
+- [x] **Step 2: Verify template compilation**
 
 ```bash
 python manage.py check
@@ -293,16 +293,16 @@ Expected: 0 issues.
 7. **Single Risk View (Fase 2 Do table at line 385)**:
    - Update table padding, right-align costs, capitalize PIC.
 
-- [ ] **Step 1: Apply changes to `templates/akreditasi/risiko_laporan_lengkap.html`**
-- [ ] **Step 2: Run `python manage.py check` to verify template tags and syntax**
-- [ ] **Step 3: Run existing tests to ensure no regressions**
+- [x] **Step 1: Apply changes to `templates/akreditasi/risiko_laporan_lengkap.html`**
+- [x] **Step 2: Run `python manage.py check` to verify template tags and syntax**
+- [x] **Step 3: Run existing tests to ensure no regressions**
 
 ```bash
 python manage.py test akreditasi.tests_perencanaan_risiko -v2 2>&1 | grep -E "^Ran|^OK|FAIL"
 ```
 Expected: PASS.
 
-- [ ] **Step 4: Commit Task 3**
+- [x] **Step 4: Commit Task 3**
 
 ```bash
 git add templates/akreditasi/risiko_laporan_lengkap.html
@@ -316,7 +316,7 @@ git commit -m "feat(ui): update table layouts, alignments, and sticky headers in
 **Files:**
 - Modify: `akreditasi/tests_perencanaan_risiko.py`
 
-- [ ] **Step 1: Add assertions in `test_laporan_lengkap_unit_view` for new CSS classes & alignments**
+- [x] **Step 1: Add assertions in `test_laporan_lengkap_unit_view` for new CSS classes & alignments**
 
 ```python
 # Verify right-aligned cost styling exists in rendered report
@@ -325,14 +325,14 @@ self.assertIn('col-pic-val', content)
 self.assertIn('table-sticky-wrapper', content)
 ```
 
-- [ ] **Step 2: Run all test suites across the project**
+- [x] **Step 2: Run all test suites across the project**
 
 ```bash
 python manage.py test akreditasi.tests_unit_kerja akreditasi.tests_perencanaan_risiko akreditasi.tests_fmea_rca akreditasi.tests_indikator_form akreditasi.tests_indikator_mutu_charts akreditasi.tests_indikator_alur_integrasi -v2 2>&1 | grep -E "^Ran|^OK|FAIL"
 ```
 Expected: All 68+ tests PASS.
 
-- [ ] **Step 3: Commit Task 4**
+- [x] **Step 3: Commit Task 4**
 
 ```bash
 git add akreditasi/tests_perencanaan_risiko.py
@@ -343,17 +343,17 @@ git commit -m "test: add assertions for table alignment and sticky layout in lap
 
 ### Task 5: Deploy & Verification on Vercel
 
-- [ ] **Step 1: Push changes to GitHub master**
+- [x] **Step 1: Push changes to GitHub master**
 
 ```bash
 git push origin master
 ```
 
-- [ ] **Step 2: Verify live deployment response**
+- [x] **Step 2: Verify live deployment response**
 
 ```bash
 curl -sI https://sim-akreditasi-django.vercel.app/ | grep "HTTP/"
 ```
 Expected: `HTTP/2 200` or `302`.
 
-- [ ] **Step 3: Mark plan complete in `docs/superpowers/plans/`**
+- [x] **Step 3: Mark plan complete in `docs/superpowers/plans/`**
