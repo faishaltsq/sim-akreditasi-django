@@ -386,9 +386,9 @@
                                     <span class="text-muted fst-italic">—</span>
                                 {% endif %}
                             </td>
-                            <td>{{ r.pj_mitigasi|default:"—" }}</td>
+                            <td class="text-center" style="text-transform: capitalize;">{{ r.pj_mitigasi|default:"—" }}</td>
                             <td class="text-center">{{ r.target_selesai|date:"d M Y"|default:"—" }}</td>
-                            <td class="text-end">
+                            <td class="text-end font-monospace pe-3">
                                 {% if r.biaya_mitigasi and r.biaya_mitigasi > 0 %}
                                     Rp {{ r.biaya_mitigasi|floatformat:0 }}
                                 {% else %}

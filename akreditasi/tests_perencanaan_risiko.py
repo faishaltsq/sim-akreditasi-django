@@ -218,6 +218,10 @@ class PerencanaanRisikoTest(TestCase):
         self.assertIn('Total Estimasi Biaya Mitigasi', content)
         self.assertIn('Total Biaya Pelaksanaan', content)
         self.assertIn('Rp 5.000.000', content)
+        # Verify clean layout formatting & right-aligned financial styling
+        self.assertIn('col-biaya-val', content)
+        self.assertIn('col-pic-val', content)
+        self.assertIn('table-sticky-wrapper', content)
 
     def test_document_views_contain_edit_and_delete_actions(self):
         """Verify that Perencanaan, Pelaksanaan, and Laporan Lengkap have Edit & Delete buttons."""

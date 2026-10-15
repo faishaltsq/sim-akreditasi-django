@@ -1,5 +1,5 @@
 {% extends 'base.html' %}
-{% load static %}
+{% load static akreditasi_tags %}
 
 {% block title %}Laporan Lengkap Manajemen Risiko (Siklus PDCA) — ARIMA{% endblock %}
 {% block page_title %}Laporan Lengkap Risiko{% endblock %}
@@ -66,56 +66,79 @@
     .banner-check { background: #eff6ff; color: #1e40af; border-left: 5px solid #3b82f6; }
     .banner-action { background: #faf5ff; color: #6b21a8; border-left: 5px solid #a855f7; }
 
-    .table-report {
-        table-layout: fixed;
-        width: 100%;
-        word-wrap: break-word;
-    }
-    .table-report th {
-        background-color: #0f172a !important;
-        color: #ffffff !important;
-        font-size: 0.74rem;
-        font-weight: 600;
-        text-transform: uppercase;
-        letter-spacing: 0.02em;
-        padding: 7px 8px;
-        vertical-align: middle;
-        border: 1px solid #334155 !important;
-        word-break: break-word;
-        overflow-wrap: break-word;
-    }
-    .table-report td {
-        font-size: 0.78rem;
-        padding: 7px 8px;
-        vertical-align: top;
+    /* Style Tabel Formal Sesuai Format Word RS MONSISKAMI ARIMA & Rekomendasi Konsultan */
+    .table-sticky-wrapper {
+        max-height: 80vh;
+        overflow-y: auto;
+        overflow-x: auto;
         border: 1px solid #cbd5e1;
-        word-break: break-word;
-        overflow-wrap: break-word;
-    }
-
-    /* Style Tabel Formal Sesuai Format Word RS MONSISKAMI ARIMA */
-    .table-formal {
-        width: 100%;
+        border-radius: 6px;
         margin-bottom: 1.5rem;
+    }
+    .table-formal, .table-report {
+        width: 100%;
+        margin-bottom: 0;
         border-collapse: collapse;
         table-layout: fixed;
-        font-size: 0.84rem;
-        word-wrap: break-word;
-    }
-    .table-formal th, .table-formal td {
-        border: 1px solid #94a3b8;
-        padding: 7px 9px;
-        vertical-align: top;
+        font-size: 0.82rem;
         word-break: break-word;
         overflow-wrap: break-word;
     }
-    .table-formal th {
-        background-color: #f1f5f9;
-        color: #0f172a;
+    .table-formal th, .table-formal td,
+    .table-report th, .table-report td {
+        border: 1px solid #94a3b8;
+        padding: 10px 12px;
+        vertical-align: top;
+        line-height: 1.5;
+        word-break: break-word;
+        overflow-wrap: break-word;
+    }
+    .table-formal thead th,
+    .table-report thead th {
+        position: sticky;
+        top: 0;
+        z-index: 5;
+        background-color: #f1f5f9 !important;
+        color: #0f172a !important;
         font-weight: 700;
         text-align: center;
         vertical-align: middle;
+        box-shadow: inset 0 -2px 0 #94a3b8;
     }
+    .table-report thead th {
+        background-color: #0f172a !important;
+        color: #ffffff !important;
+        border: 1px solid #334155 !important;
+        box-shadow: inset 0 -2px 0 #334155;
+    }
+
+    /* Column Widths & Layout Classes (Sesuai Panduan Konsultan) */
+    .col-no { width: 4%; min-width: 40px; text-align: center; }
+    .col-masalah { width: 20%; min-width: 220px; text-align: left; }
+    .col-indikator { width: 16%; min-width: 160px; text-align: left; }
+    .col-tindakan { width: 32%; min-width: 280px; text-align: left; }
+    .col-waktu { width: 9%; min-width: 90px; text-align: center; }
+    .col-biaya { width: 10%; min-width: 110px; text-align: right; }
+    .col-pic { width: 10%; min-width: 100px; text-align: center; text-transform: capitalize; }
+    .col-aksi { width: 9%; min-width: 85px; text-align: center; }
+
+    /* Alignment & Typography Helpers */
+    .col-biaya-val {
+        text-align: right !important;
+        font-family: var(--bs-font-monospace, monospace);
+        font-size: 0.8rem;
+        padding-right: 14px !important;
+        white-space: nowrap;
+    }
+    .col-pic-val {
+        text-align: center;
+        text-transform: capitalize;
+        font-size: 0.8rem;
+    }
+    .text-teal { color: #0f766e !important; }
+    .bg-teal-subtle { background-color: #ccfbf1 !important; }
+    .border-teal-subtle { border-color: #99f6e4 !important; }
+
     .section-title-formal {
         font-size: 0.98rem;
         font-weight: 700;
@@ -155,6 +178,15 @@
     }
     @media print {
         .no-print { display: none !important; }
+        .table-sticky-wrapper {
+            max-height: none !important;
+            overflow: visible !important;
+            border: none !important;
+        }
+        .table-formal thead th, .table-report thead th {
+            position: static !important;
+            box-shadow: none !important;
+        }
         .report-sheet {
             box-shadow: none !important;
             border: none !important;
@@ -382,56 +414,58 @@
                 <span class="small text-muted">Progress Tindakan: <strong>{{ selesai_tl }}/{{ total_tl }} Selesai ({{ persen_tl }}%)</strong></span>
             </div>
 
-            <table class="table table-bordered table-report mb-0">
-                <thead>
-                    <tr>
-                        <th style="width:40px;" class="text-center">No</th>
-                        <th>Rincian Tindakan Pelaksanaan</th>
-                        <th style="width:140px;">Penanggung Jawab</th>
-                        <th style="width:110px;" class="text-center">Tenggat</th>
-                        <th style="width:110px;" class="text-center">Status</th>
-                        <th style="width:160px;">Dokumen Bukti</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for tl in tindak_lanjut_list %}
-                    <tr>
-                        <td class="text-center fw-bold text-muted">{{ forloop.counter }}</td>
-                        <td>
-                            <div class="fw-semibold text-dark">{{ tl.aksi }}</div>
-                            {% if tl.keterangan %}
-                            <small class="text-muted d-block mt-1">{{ tl.keterangan }}</small>
-                            {% endif %}
-                        </td>
-                        <td>{{ tl.pj|default:risiko.pj_mitigasi|default:"Ka. Unit" }}</td>
-                        <td class="text-center">{{ tl.deadline|date:"d/m/Y"|default:"—" }}</td>
-                        <td class="text-center">
-                            <span class="badge {% if tl.status_aksi == 'SELESAI' %}bg-success{% elif tl.status_aksi == 'PROSES' %}bg-warning text-dark{% else %}bg-secondary{% endif %}">
-                                {{ tl.get_status_aksi_display }}
-                            </span>
-                        </td>
-                        <td>
-                            {% if tl.bukti_upload %}
-                            <span class="text-success small fw-semibold"><i class="bi bi-file-earmark-check-fill me-1"></i>Tersedia Dokumen</span>
-                            {% elif tl.bukti %}
-                            <span class="small text-dark">{{ tl.bukti }}</span>
-                            {% else %}
-                            <span class="text-muted fst-italic small">Belum ada berkas</span>
-                            {% endif %}
-                        </td>
-                    </tr>
-                    {% empty %}
-                    <tr>
-                        <td class="text-center">1</td>
-                        <td>{{ risiko.rencana_aksi|default:"Tindakan mitigasi sesuai SPO operasional." }}</td>
-                        <td>{{ risiko.pj_mitigasi|default:"Ka. Unit" }}</td>
-                        <td class="text-center">{{ risiko.target_selesai|date:"d/m/Y"|default:"—" }}</td>
-                        <td class="text-center"><span class="badge bg-warning text-dark">Dalam Proses</span></td>
-                        <td><span class="text-muted fst-italic small">Belum ada berkas</span></td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+            <div class="table-responsive table-sticky-wrapper">
+                <table class="table table-bordered table-report mb-0">
+                    <thead>
+                        <tr>
+                            <th class="col-no">No</th>
+                            <th class="text-start">Rincian Tindakan Pelaksanaan</th>
+                            <th class="col-pic">Penanggung Jawab</th>
+                            <th class="col-waktu">Tenggat</th>
+                            <th style="width:110px;" class="text-center">Status</th>
+                            <th style="width:160px;" class="text-start">Dokumen Bukti</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for tl in tindak_lanjut_list %}
+                        <tr>
+                            <td class="text-center fw-bold text-muted">{{ forloop.counter }}</td>
+                            <td class="text-start">
+                                {{ tl.aksi|render_structured_plan }}
+                                {% if tl.keterangan %}
+                                <small class="text-muted d-block mt-1">{{ tl.keterangan }}</small>
+                                {% endif %}
+                            </td>
+                            <td class="col-pic-val">{{ tl.pj|default:risiko.pj_mitigasi|default:"Ka. Unit" }}</td>
+                            <td class="text-center small">{{ tl.deadline|date:"d/m/Y"|default:"—" }}</td>
+                            <td class="text-center">
+                                <span class="badge {% if tl.status_aksi == 'SELESAI' %}bg-success{% elif tl.status_aksi == 'PROSES' %}bg-warning text-dark{% else %}bg-secondary{% endif %}">
+                                    {{ tl.get_status_aksi_display }}
+                                </span>
+                            </td>
+                            <td>
+                                {% if tl.bukti_upload %}
+                                <span class="text-success small fw-semibold"><i class="bi bi-file-earmark-check-fill me-1"></i>Tersedia Dokumen</span>
+                                {% elif tl.bukti %}
+                                <span class="small text-dark">{{ tl.bukti }}</span>
+                                {% else %}
+                                <span class="text-muted fst-italic small">Belum ada berkas</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td class="text-center">1</td>
+                            <td class="text-start">{{ risiko.rencana_aksi|render_structured_plan|default:"Tindakan mitigasi sesuai SPO operasional." }}</td>
+                            <td class="col-pic-val">{{ risiko.pj_mitigasi|default:"Ka. Unit" }}</td>
+                            <td class="text-center small">{{ risiko.target_selesai|date:"d/m/Y"|default:"—" }}</td>
+                            <td class="text-center"><span class="badge bg-warning text-dark">Dalam Proses</span></td>
+                            <td><span class="text-muted fst-italic small">Belum ada berkas</span></td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
         </div>
 
         {# 3. FASE CHECK (MONITORING & EVALUASI / MONEV) #}
@@ -583,24 +617,24 @@
             <p class="small text-muted mb-2">
                 Perhitungan Skor Inherent = Tingkat Dampak (1–5) &times; Tingkat Probabilitas (1–5). Matriks Grading: Ekstrem (15–25), Tinggi (8–14), Sedang (4–7), Rendah (1–3).
             </p>
-            <div class="table-responsive">
+            <div class="table-responsive table-sticky-wrapper">
                 <table class="table-formal">
                     <thead>
                         <tr>
-                            <th style="width: 4%;">No</th>
-                            <th style="width: 32%;">Masalah / Pernyataan Risiko</th>
-                            <th style="width: 12%;">Dampak (1-5)</th>
-                            <th style="width: 12%;">Probabilitas (1-5)</th>
-                            <th style="width: 14%;">Perhitungan Skor</th>
-                            <th style="width: 14%;">Grade Risiko Awal</th>
-                            <th class="no-print text-center" style="width: 12%;">Menu edit</th>
+                            <th class="col-no">No</th>
+                            <th style="width: 34%; min-width: 250px;" class="text-start">Masalah / Pernyataan Risiko</th>
+                            <th style="width: 11%; min-width: 90px;" class="text-center">Dampak (1-5)</th>
+                            <th style="width: 11%; min-width: 90px;" class="text-center">Probabilitas (1-5)</th>
+                            <th style="width: 14%; min-width: 100px;" class="text-center">Perhitungan Skor</th>
+                            <th style="width: 14%; min-width: 110px;" class="text-center">Grade Risiko Awal</th>
+                            <th class="no-print col-aksi">Menu edit</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for row in table_penilaian_awal %}
                         <tr>
-                            <td class="text-center">{{ row.no }}</td>
-                            <td>
+                            <td class="text-center fw-bold text-muted">{{ row.no }}</td>
+                            <td class="text-start">
                                 <a href="{% url 'akreditasi:risiko_laporan_lengkap_single' row.risiko_id %}" class="fw-semibold text-decoration-none text-dark d-block">
                                     {{ row.masalah }}
                                 </a>
@@ -655,24 +689,24 @@
         {# 5. INDIKATOR MUTU TERKAIT RISIKO #}
         <div class="mb-4">
             <div class="section-title-formal">5. Indikator Mutu Terkait Risiko</div>
-            <div class="table-responsive">
+            <div class="table-responsive table-sticky-wrapper">
                 <table class="table-formal">
                     <thead>
                         <tr>
-                            <th style="width: 4%;">No</th>
-                            <th style="width: 32%;">Masalah Resiko</th>
-                            <th style="width: 32%;">Indikator mutu</th>
-                            <th style="width: 10%;">Target</th>
-                            <th style="width: 10%;">Jenis (INM, IM RS/IMUnit)</th>
-                            <th class="no-print text-center" style="width: 12%;">Menu edit</th>
+                            <th class="col-no">No</th>
+                            <th class="col-masalah" style="width: 28%; min-width: 220px;">Masalah Resiko</th>
+                            <th class="col-indikator" style="width: 34%; min-width: 240px;">Indikator mutu</th>
+                            <th style="width: 12%; min-width: 90px;" class="text-center">Target</th>
+                            <th style="width: 14%; min-width: 110px;" class="text-center">Jenis (INM, IM RS/IMUnit)</th>
+                            <th class="no-print col-aksi">Menu edit</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for row in table_indikator %}
                         <tr>
-                            <td class="text-center">{{ row.no }}</td>
-                            <td class="fw-semibold">{{ row.masalah }}</td>
-                            <td>{{ row.indikator_mutu }}</td>
+                            <td class="text-center fw-bold text-muted">{{ row.no }}</td>
+                            <td class="fw-semibold text-start">{{ row.masalah }}</td>
+                            <td class="text-start">{{ row.indikator_mutu }}</td>
                             <td class="text-center fw-bold">{{ row.target }}</td>
                             <td class="text-center">
                                 <span class="badge bg-light text-dark border">{{ row.jenis }}</span>
@@ -700,40 +734,45 @@
         {# 6. RENCANA AKSI MITIGASI RISIKO #}
         <div class="mb-4">
             <div class="section-title-formal">6. Rencana Aksi (Mitigasi) Risiko</div>
-            <div class="table-responsive">
+            <div class="table-responsive table-sticky-wrapper">
                 <table class="table-formal">
                     <thead>
                         <tr>
-                            <th style="width: 4%;">No</th>
-                            <th style="width: 20%;">Masalah resiko</th>
-                            <th style="width: 16%;">Indikator mutu</th>
-                            <th style="width: 24%;">Rencana Aksi</th>
-                            <th style="width: 10%;">waktu</th>
-                            <th style="width: 8%;">Biaya</th>
-                            <th style="width: 10%;">PJ</th>
-                            <th class="no-print text-center" style="width: 8%;">Menu edit</th>
+                            <th class="col-no">No</th>
+                            <th class="col-masalah">Masalah resiko</th>
+                            <th class="col-indikator">Indikator mutu</th>
+                            <th class="col-tindakan">Rencana Aksi</th>
+                            <th class="col-waktu">Waktu</th>
+                            <th class="col-biaya">Biaya</th>
+                            <th class="col-pic">PJ</th>
+                            <th class="no-print col-aksi">Menu edit</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for row in table_rencana_aksi %}
                         <tr>
-                            <td class="text-center">{{ row.no }}</td>
-                            <td class="fw-semibold">{{ row.masalah }}</td>
-                            <td>{{ row.indikator_mutu }}</td>
-                            <td>
-                                <div>{{ row.rencana_aksi|default:"—" }}</div>
+                            <td class="text-center fw-bold text-muted">{{ row.no }}</td>
+                            <td class="fw-semibold text-start">{{ row.masalah }}</td>
+                            <td class="text-start">{{ row.indikator_mutu }}</td>
+                            <td class="text-start">
+                                {{ row.rencana_aksi|render_structured_plan }}
                                 {% if row.tindak_lanjut_items %}
-                                <div class="mt-1 pt-1 border-top small">
-                                    <strong class="text-teal">Rincian Tindakan:</strong>
+                                <div class="mt-2 pt-1 border-top small">
+                                    <strong class="text-teal d-block mb-1">Rincian Tindakan Pelaksanaan:</strong>
+                                    <div class="d-flex flex-column gap-1">
                                     {% for t in row.tindak_lanjut_items %}
-                                        <div class="text-muted">&bull; {{ t.aksi|truncatewords:8 }}</div>
+                                        <div class="text-muted d-flex align-items-start gap-1" style="font-size:0.77rem;">
+                                            <span>&bull;</span>
+                                            <span>{{ t.aksi }}</span>
+                                        </div>
                                     {% endfor %}
+                                    </div>
                                 </div>
                                 {% endif %}
                             </td>
                             <td class="text-center small">{{ row.waktu }}</td>
-                            <td class="text-center small">{{ row.biaya }}</td>
-                            <td class="text-center small fw-semibold">{{ row.pj }}</td>
+                            <td class="col-biaya-val">{{ row.biaya }}</td>
+                            <td class="col-pic-val">{{ row.pj }}</td>
                             <td class="no-print text-center">
                                 <div class="d-inline-flex gap-1">
                                     <a href="{% url 'akreditasi:risiko_edit' row.risiko_id %}" class="btn btn-sm btn-outline-primary py-0 px-2" title="Edit"><i class="bi bi-pencil-square"></i></a>
@@ -753,7 +792,7 @@
                     <tfoot>
                         <tr class="fw-bold" style="background-color: #f8fafc;">
                             <td colspan="5" class="text-end text-uppercase pe-3">Total Estimasi Biaya Mitigasi:</td>
-                            <td class="text-center text-dark" style="background-color: #f1f5f9;">{{ total_biaya_format }}</td>
+                            <td class="col-biaya-val text-dark" style="background-color: #f1f5f9;">{{ total_biaya_format }}</td>
                             <td class="text-center"></td>
                             <td class="no-print"></td>
                         </tr>
@@ -765,46 +804,49 @@
         {# 7. PELAKSANAAN (DO) #}
         <div class="mb-4">
             <div class="section-title-formal">7. Pelaksanaan (Do)</div>
-            <div class="table-responsive">
+            <div class="table-responsive table-sticky-wrapper">
                 <table class="table-formal">
                     <thead>
                         <tr>
-                            <th style="width: 4%;">No</th>
-                            <th style="width: 18%;">Masalah resiko</th>
-                            <th style="width: 14%;">Indikator mutu</th>
-                            <th style="width: 22%;">Pelaksanaan (Do)</th>
-                            <th style="width: 10%;">waktu</th>
-                            <th style="width: 8%;">Biaya</th>
-                            <th style="width: 8%;">PJ</th>
-                            <th style="width: 8%;">Bukti dokumen</th>
-                            <th class="no-print text-center" style="width: 8%;">Menu edit</th>
+                            <th class="col-no">No</th>
+                            <th class="col-masalah" style="width: 18%; min-width: 180px;">Masalah resiko</th>
+                            <th class="col-indikator" style="width: 14%; min-width: 140px;">Indikator mutu</th>
+                            <th class="col-tindakan" style="width: 28%; min-width: 260px;">Pelaksanaan (Do)</th>
+                            <th class="col-waktu">Waktu</th>
+                            <th class="col-biaya">Biaya</th>
+                            <th class="col-pic">PJ</th>
+                            <th style="width: 8%; min-width: 85px;" class="text-center">Bukti dokumen</th>
+                            <th class="no-print col-aksi">Menu edit</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for row in table_pelaksanaan %}
                         <tr>
-                            <td class="text-center">{{ row.no }}</td>
-                            <td class="fw-semibold">{{ row.masalah }}</td>
-                            <td>{{ row.indikator_mutu }}</td>
-                            <td>
-                                <div>{{ row.pelaksanaan_do|default:"—" }}</div>
+                            <td class="text-center fw-bold text-muted">{{ row.no }}</td>
+                            <td class="fw-semibold text-start">{{ row.masalah }}</td>
+                            <td class="text-start">{{ row.indikator_mutu }}</td>
+                            <td class="text-start">
+                                {{ row.pelaksanaan_do|render_structured_plan }}
                                 {% if row.tindak_lanjut_items %}
-                                <div class="mt-1 pt-1 border-top small">
+                                <div class="mt-2 pt-1 border-top small">
+                                    <strong class="text-teal d-block mb-1">Status Rincian Tindakan:</strong>
+                                    <div class="d-flex flex-column gap-1">
                                     {% for t in row.tindak_lanjut_items %}
-                                        <div class="d-flex align-items-center gap-1 mb-1">
-                                            <span class="badge {% if t.status_aksi == 'SELESAI' %}bg-success{% elif t.status_aksi == 'SEDANG' %}bg-warning text-dark{% else %}bg-secondary{% endif %}" style="font-size:0.65rem;">
+                                        <div class="d-flex align-items-center gap-1">
+                                            <span class="badge {% if t.status_aksi == 'SELESAI' %}bg-success{% elif t.status_aksi == 'SEDANG' or t.status_aksi == 'PROSES' %}bg-warning text-dark{% else %}bg-secondary{% endif %}" style="font-size:0.65rem;">
                                                 {{ t.get_status_aksi_display }}
                                             </span>
-                                            <span class="text-dark">{{ t.aksi|truncatewords:6 }}</span>
+                                            <span class="text-dark" style="font-size:0.77rem;">{{ t.aksi }}</span>
                                         </div>
                                     {% endfor %}
+                                    </div>
                                 </div>
                                 {% endif %}
                             </td>
                             <td class="text-center small">{{ row.waktu }}</td>
-                            <td class="text-center small">{{ row.biaya }}</td>
-                            <td class="text-center small fw-semibold">{{ row.pj }}</td>
-                            <td class="small">
+                            <td class="col-biaya-val">{{ row.biaya }}</td>
+                            <td class="col-pic-val">{{ row.pj }}</td>
+                            <td class="text-center small">
                                 {% if row.bukti_dokumen %}
                                     {% for b in row.bukti_dokumen %}
                                     <a href="{{ b.bukti_upload.url }}" target="_blank" rel="noopener" class="d-block text-decoration-none">
@@ -834,7 +876,7 @@
                     <tfoot>
                         <tr class="fw-bold" style="background-color: #f8fafc;">
                             <td colspan="5" class="text-end text-uppercase pe-3">Total Biaya Pelaksanaan:</td>
-                            <td class="text-center text-dark" style="background-color: #f1f5f9;">{{ total_biaya_format }}</td>
+                            <td class="col-biaya-val text-dark" style="background-color: #f1f5f9;">{{ total_biaya_format }}</td>
                             <td class="text-center"></td>
                             <td class="text-center"></td>
                             <td class="no-print"></td>
@@ -847,31 +889,31 @@
         {# 8. MONITORING DAN EVALUASI #}
         <div class="mb-4">
             <div class="section-title-formal">8. Monitoring dan evaluasi</div>
-            <div class="table-responsive">
+            <div class="table-responsive table-sticky-wrapper">
                 <table class="table-formal">
                     <thead>
                         <tr>
-                            <th style="width: 4%;">No</th>
-                            <th style="width: 18%;">Masalah resiko</th>
-                            <th style="width: 10%;">Indikator mutu target</th>
-                            <th style="width: 10%;">Indicator mutu capaian</th>
-                            <th style="width: 20%;">Penyebab/Akar masalah (5 W)</th>
-                            <th style="width: 24%;">RTL</th>
-                            <th class="no-print text-center" style="width: 14%;">Menu edit</th>
+                            <th class="col-no">No</th>
+                            <th class="col-masalah" style="width: 18%; min-width: 180px;">Masalah resiko</th>
+                            <th style="width: 10%; min-width: 85px;" class="text-center">Indikator mutu target</th>
+                            <th style="width: 10%; min-width: 85px;" class="text-center">Indicator mutu capaian</th>
+                            <th style="width: 24%; min-width: 220px;" class="text-start">Penyebab/Akar masalah (5 W)</th>
+                            <th style="width: 25%; min-width: 240px;" class="text-start">RTL</th>
+                            <th class="no-print col-aksi">Menu edit</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for row in table_monev %}
                         <tr>
-                            <td class="text-center">{{ row.no }}</td>
-                            <td class="fw-semibold">{{ row.masalah }}</td>
+                            <td class="text-center fw-bold text-muted">{{ row.no }}</td>
+                            <td class="fw-semibold text-start">{{ row.masalah }}</td>
                             <td class="text-center fw-bold">{{ row.indikator_mutu_target }}</td>
                             <td class="text-center fw-bold">
                                 <span class="{% if row.capaian_nilai >= 85 %}text-success{% elif row.capaian_nilai >= 70 %}text-warning{% elif row.capaian_nilai %}text-danger{% else %}text-muted{% endif %}">
                                     {{ row.indikator_mutu_capaian }}
                                 </span>
                             </td>
-                            <td>
+                            <td class="text-start">
                                 {% if row.rca_items %}
                                 <div class="d-flex flex-column gap-1 small">
                                     {% for item in row.rca_items %}
@@ -879,15 +921,15 @@
                                     {% endfor %}
                                 </div>
                                 {% elif row.akar_masalah_5w %}
-                                <div class="small">{{ row.akar_masalah_5w|linebreaksbr }}</div>
+                                <div class="small" style="line-height:1.5;">{{ row.akar_masalah_5w|linebreaksbr }}</div>
                                 {% else %}
                                 <span class="text-muted fst-italic small">—</span>
                                 {% endif %}
                             </td>
-                            <td>
-                                <div class="fw-semibold small">{{ row.rtl }}</div>
-                                <div class="mt-1 small text-muted">
-                                    <span>PIC: <strong>{{ row.pj_rtl }}</strong></span>
+                            <td class="text-start">
+                                {{ row.rtl|render_structured_plan }}
+                                <div class="mt-2 small text-muted pt-1 border-top">
+                                    <span class="col-pic-val">PIC: <strong>{{ row.pj_rtl }}</strong></span>
                                     {% if row.deadline_rtl %}&bull; <span>Target: {{ row.deadline_rtl|date:"d/m/Y" }}</span>{% endif %}
                                     &bull; <span class="badge bg-{{ row.status_rtl_badge_color }}">{{ row.status_rtl }}</span>
                                 </div>
