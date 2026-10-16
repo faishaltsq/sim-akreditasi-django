@@ -191,6 +191,34 @@ def _get_mutu_renstra_charts_context(request, profile, db_roadmaps, renstra_year
         if c['sum_den'] and c['sum_den'] > 0:
             month_data_map[c['bulan']] = round(float((c['sum_num'] / c['sum_den']) * 100), 1)
 
+    # Per-month tooltip detail: how many measurements back each average, and which
+    # indicators missed their own target that month (the reason a bar is red).
+    month_meta = {}
+    for c in CatatanIndikator.objects.filter(
+            indikator_id__in=filtered_ind_ids, tahun=mutu_tahun
+    ).select_related('indikator').order_by('bulan', 'indikator__kode_indikator'):
+        if not c.nilai_denominator or c.nilai_denominator <= 0:
+            continue
+        slot = month_meta.setdefault(c.bulan, {'n': 0, 'ok': 0, 'miss': []})
+        slot['n'] += 1
+        if c.tercapai:
+            slot['ok'] += 1
+        else:
+            cap = round(float(c.nilai_capaian), 2)
+            slot['miss'].append(
+                f"{c.indikator.kode_indikator} ({cap:g}{c.indikator.satuan or '%'})"
+            )
+
+    chart_mutu_meta = []
+    for m in range(1, 13):
+        s = month_meta.get(m)
+        chart_mutu_meta.append(None if not s else {
+            'n': s['n'],
+            'ok': s['ok'],
+            'miss': s['miss'][:5],
+            'miss_more': max(0, len(s['miss']) - 5),
+        })
+
     chart_mutu_bulanan_data = []
     chart_mutu_colors = []
     has_monthly_data = False
@@ -284,6 +312,15 @@ def _get_mutu_renstra_charts_context(request, profile, db_roadmaps, renstra_year
         'chart_mutu_target_val': chart_target_val,
         'chart_mutu_target_val_json': _json.dumps(chart_target_val),
         'chart_mutu_target_line_json': _json.dumps([chart_target_val] * 12),
+        'chart_mutu_meta_json': _json.dumps(chart_mutu_meta),
+        'chart_mutu_nama_json': _json.dumps(
+            (f"[{selected_indikator.kode_indikator}] {selected_indikator.nama_indikator}"
+             if selected_indikator else 'Rata-rata seluruh indikator terfilter')
+        ),
+        'chart_mutu_rumus_json': _json.dumps(
+            (f"{selected_indikator.numerator} ÷ {selected_indikator.denominator} × 100"
+             if selected_indikator else '')
+        ),
         'has_monthly_data': has_monthly_data,
         'chart_tahunan_years_json': _json.dumps(trend_years),
         'chart_tahunan_data_json': _json.dumps(chart_tahunan_data),

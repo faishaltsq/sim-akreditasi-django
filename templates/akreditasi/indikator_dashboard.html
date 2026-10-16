@@ -215,6 +215,30 @@
         </div>
         <div class="card-body py-2 px-3">
           <canvas id="chartTrenCapaian" height="90"></canvas>
+          {% if indikator_terpilih %}
+          <!-- Panel teks panjang: rincian lengkap indikator terpilih -->
+          <div class="mt-2 p-2 border rounded-2 small" style="background:#f8fafc;">
+            <div class="d-flex flex-wrap align-items-center gap-2 mb-1">
+              <span class="badge text-white" style="background:#12544F;">{{ indikator_terpilih.kode_indikator }}</span>
+              <span class="fw-semibold" style="color:#0f172a;">{{ indikator_terpilih.nama_indikator }}</span>
+              <span class="badge bg-light text-muted border">{{ indikator_terpilih.get_dimensi_mutu_display }}</span>
+              <span class="badge bg-light text-muted border">{{ indikator_terpilih.get_jenis_display }}</span>
+            </div>
+            <div class="row g-1" style="font-size:.72rem; color:#475569;">
+              <div class="col-12 col-md-6"><strong>Rumus:</strong> {{ indikator_terpilih.numerator|default:'-' }} ÷ {{ indikator_terpilih.denominator|default:'-' }} × 100</div>
+              <div class="col-12 col-md-6"><strong>Target:</strong> {{ indikator_terpilih.target_nilai }} {{ indikator_terpilih.satuan }}
+                (arah {% if indikator_terpilih.arah_target == 'MAX' %}MAX — makin kecil makin baik{% else %}MIN — makin besar makin baik{% endif %})</div>
+              {% if indikator_terpilih.pj %}<div class="col-12 col-md-6"><strong>Penanggung Jawab:</strong> {{ indikator_terpilih.pj }}</div>{% endif %}
+              {% if indikator_terpilih.unit %}<div class="col-12 col-md-6"><strong>Unit:</strong> {{ indikator_terpilih.unit.name }}</div>{% endif %}
+              {% if indikator_terpilih.ep_terkait %}<div class="col-12 col-md-6"><strong>EP Terkait:</strong> [{{ indikator_terpilih.ep_terkait.code }}] {{ indikator_terpilih.ep_terkait.description|truncatechars:90 }}</div>{% endif %}
+              {% if indikator_terpilih.rencana_aksi %}
+              <div class="col-12"><strong>Rencana Aksi:</strong>
+                <div class="mt-1 p-2 bg-white border rounded-2" style="white-space:pre-wrap;">{{ indikator_terpilih.rencana_aksi }}</div>
+              </div>
+              {% endif %}
+            </div>
+          </div>
+          {% endif %}
         </div>
       </div>
     </div>
@@ -268,8 +292,8 @@
           <select name="indikator" class="form-select form-select-sm" onchange="this.form.submit()">
             <option value="">Semua Indikator (Rata-rata)</option>
             {% for ind in indikator_choices %}
-            <option value="{{ ind.pk }}" {% if filter_indikator == ind.pk %}selected{% endif %}>
-              [{{ ind.kode_indikator }}] {{ ind.nama_indikator|truncatechars:40 }}
+            <option value="{{ ind.pk }}" title="[{{ ind.kode_indikator }}] {{ ind.nama_indikator }} — Target {{ ind.target_nilai }}{{ ind.satuan }} | PJ: {{ ind.pj|default:'-' }} | Dimensi: {{ ind.get_dimensi_mutu_display }}" {% if filter_indikator == ind.pk %}selected{% endif %}>
+              [{{ ind.kode_indikator }}] {{ ind.nama_indikator }}
             </option>
             {% endfor %}
           </select>
@@ -500,6 +524,15 @@ document.addEventListener('DOMContentLoaded', function() {
     const indTargetLine = {{ chart_indikator_target_line_json|safe }};
     const indSatuan = "{{ chart_indikator_satuan|escapejs }}";
     const indArah   = "{{ chart_indikator_arah|escapejs }}";
+    const indMeta   = {{ chart_indikator_meta_json|safe }};
+    const indNama   = "{{ chart_indikator_nama|escapejs }}";
+    const indKode   = "{{ chart_indikator_kode|escapejs }}";
+    const indDimensi = "{{ chart_indikator_dimensi|escapejs }}";
+    const indNumLabel = "{{ chart_indikator_num_label|escapejs }}";
+    const indDenLabel = "{{ chart_indikator_den_label|escapejs }}";
+    const indPJ     = "{{ chart_indikator_pj|escapejs }}";
+    const indJumlah = {{ chart_indikator_jumlah }};
+    const indRencanaAksi = "{{ chart_indikator_rencana_aksi|escapejs }}";
 
     // Label nilai di atas setiap bar (inline, tanpa plugin CDN)
     const valueLabelsPlugin = {
@@ -521,6 +554,23 @@ document.addEventListener('DOMContentLoaded', function() {
             c.restore();
         }
     };
+
+    // ── Tooltip panjang: rincian per bulan untuk satu indikator ──
+    function indTooltipLines(idx) {
+        const m = indMeta[idx];
+        if (!m) return ['Belum ada data pengukuran pada bulan ini'];
+        const arahTxt = indArah === 'MAX' ? 'maksimal (makin kecil makin baik)' : 'minimal (makin besar makin baik)';
+        const lines = [
+            `Capaian      : ${m.capaian.toFixed(2)} ${indSatuan}`,
+            `Target       : ${indTarget} ${indSatuan} — arah ${arahTxt}`,
+            `Selisih      : ${(m.capaian - indTarget >= 0 ? '+' : '')}${(m.capaian - indTarget).toFixed(2)} ${indSatuan}`,
+            `Rumus        : ${indNumLabel || 'Numerator'} ÷ ${indDenLabel || 'Denominator'} × 100`,
+            `Nilai mentah : ${m.num} ÷ ${m.den}`,
+            `Status       : ${m.tercapai ? 'TERCAPAI' : 'DI BAWAH TARGET'}`,
+        ];
+        if (m.catatan) lines.push(`Catatan      : ${m.catatan}`);
+        return lines;
+    }
 
     // ── Grafik 1a: Bar Chart per Indikator Tunggal ────────────
     const ctx1 = document.getElementById('chartTrenCapaian');
@@ -555,13 +605,33 @@ document.addEventListener('DOMContentLoaded', function() {
             options: {
                 responsive: true,
                 maintainAspectRatio: true,
+                interaction: { mode: 'index', intersect: false },
                 plugins: {
                     legend: { position: 'top', labels: { font: { size: 11, family: 'Inter, sans-serif' }, boxWidth: 12 } },
                     tooltip: {
+                        backgroundColor: 'rgba(15, 23, 42, 0.96)',
+                        titleFont: { size: 12, weight: '700', family: 'Inter, sans-serif' },
+                        bodyFont: { size: 11, family: 'JetBrains Mono, monospace' },
+                        bodySpacing: 4,
+                        padding: 12,
+                        boxPadding: 4,
                         callbacks: {
+                            title: function(items) {
+                                const bulan = items[0].label;
+                                return `${indKode} — ${bulan} ${document.querySelector('select[name="tahun"]') ? document.querySelector('select[name="tahun"]').value : ''}`.trim();
+                            },
                             label: function(c) {
-                                if (c.raw === null) return ' Belum ada data pengukuran';
-                                return ` ${c.dataset.label}: ${c.raw.toFixed(1)}`;
+                                if (c.datasetIndex === 1) return indTooltipLines(c.dataIndex);
+                                return ` Target bulan ini: ${indTarget} ${indSatuan}`;
+                            },
+                            afterBody: function(items) {
+                                const m = indMeta[items[0].dataIndex];
+                                const parts = [indNama];
+                                if (indDimensi) parts.push(`Dimensi: ${indDimensi}`);
+                                if (indPJ) parts.push(`PJ: ${indPJ}`);
+                                parts.push(`Frekuensi pengukuran: bulanan (${indJumlah}/12 bulan terisi)`);
+                                if (indRencanaAksi) parts.push(`Rencana aksi: ${indRencanaAksi}`);
+                                return ['', ...parts];
                             }
                         }
                     }
@@ -615,10 +685,22 @@ document.addEventListener('DOMContentLoaded', function() {
                         labels: { font: { size: 11, family: 'Inter, sans-serif' }, boxWidth: 12 }
                     },
                     tooltip: {
+                        backgroundColor: 'rgba(15, 23, 42, 0.96)',
+                        titleFont: { size: 12, weight: '700', family: 'Inter, sans-serif' },
+                        bodyFont: { size: 11, family: 'JetBrains Mono, monospace' },
+                        bodySpacing: 4,
+                        padding: 12,
                         callbacks: {
+                            title: function(items) {
+                                const th = document.querySelector('select[name="tahun"]');
+                                return `${items[0].label} ${th ? th.value : ''}`.trim() + ' — rata-rata seluruh indikator';
+                            },
                             label: function(c) {
-                                if (c.raw === null) return ' Belum ada data pengukuran';
-                                return ` ${c.dataset.label}: ${c.raw}%`;
+                                if (c.raw === null) return 'Belum ada data pengukuran bulan ini';
+                                return `Rata-rata capaian: ${c.raw.toFixed(2)}% (dari seluruh indikator aktif)`;
+                            },
+                            afterBody: function() {
+                                return ['', 'Agregat lintas indikator — pilih satu indikator di dropdown atas untuk rincian rumus, numerator/denominator, dan catatan pengukuran per bulan.'];
                             }
                         }
                     }

@@ -3,6 +3,7 @@ Unit Tests for Monthly Quality Indicator Trends, Evidence Upload & Renstra Multi
 Targeting: STARKES PMKP 12 & Renstra 2026-2030 Dashboard Integration
 """
 import re
+import json
 from decimal import Decimal
 from django.test import TestCase, Client
 from django.urls import reverse
@@ -341,3 +342,75 @@ class IndikatorMutuChartsAndUploadTest(TestCase):
         opts = re.findall(r'<option value="(\d+)"', m.group(0))
         self.assertIn(str(self.indikator.pk), opts)
         self.assertNotIn(str(empty.pk), opts)
+
+    def _mk(self, bulan, num, den, catatan):
+        return CatatanIndikator.objects.create(
+            indikator=self.indikator, bulan=bulan, tahun=2026,
+            nilai_numerator=Decimal(str(num)), nilai_denominator=Decimal(str(den)),
+            catatan=catatan,
+        )
+
+    def test_tooltip_meta_json_carries_numerator_denominator_and_note(self):
+        """Tooltip panjang butuh num/den/catatan per bulan, bukan hanya capaian."""
+        self._mk(1, '95.11', '135.00', 'Data evaluasi bulan 1/2026 - INM-01')
+        self._mk(2, '70.00', '100.00', 'Ada kekurangan sarana handrub')
+        url = f'/indikator-mutu/?jenis=INM&tahun=2026&indikator={self.indikator.pk}'
+        html = self.client.get(url).content.decode()
+        m = re.search(r'const indMeta\s*=\s*(\[.*?\]);', html, re.S)
+        self.assertIsNotNone(m, 'const indMeta tidak dirender')
+        meta = json.loads(m.group(1))
+        self.assertEqual(len(meta), 12)
+        jan = meta[0]
+        self.assertIsNotNone(jan, 'Bulan 1 harus punya data')
+        for key in ('capaian', 'num', 'den', 'catatan', 'tercapai'):
+            self.assertIn(key, jan)
+        self.assertEqual(jan['num'], 95.11)
+        self.assertEqual(jan['den'], 135.0)
+        self.assertIn('INM-01', jan['catatan'])
+        self.assertIsNone(meta[5], 'Bulan tanpa data harus None')
+        self.assertFalse(jan['tercapai'], '70.45% < target 85 -> tidak tercapai')
+
+    def test_tooltip_indicator_labels_present(self):
+        """Label rumus/PJ/dimensi untuk footer tooltip per-indikator."""
+        self._mk(1, '95.11', '135.00', 'catatan')
+        url = f'/indikator-mutu/?jenis=INM&tahun=2026&indikator={self.indikator.pk}'
+        html = self.client.get(url).content.decode()
+        self.assertRegex(html, r'const indNama\s*=\s*"[^"]+";')
+        self.assertRegex(html, r'const indNumLabel\s*=\s*"[^"]+";')
+        self.assertRegex(html, r'const indDenLabel\s*=\s*"[^"]+";')
+        self.assertRegex(html, r'const indDimensi\s*=\s*"Aman";')
+        self.assertIn('indTooltipLines', html)
+        self.assertIn('Panel teks panjang', html)
+
+    def test_dashboard_tooltip_meta_lists_missed_indicators(self):
+        """Agregat: meta per bulan menyebut indikator yang di bawah target."""
+        self._mk(1, '95.11', '135.00', 'catatan')
+        url = f'/?mutu_jenis=INM&mutu_tahun=2026&mutu_indikator={self.indikator.pk}'
+        html = self.client.get(url).content.decode()
+        m = re.search(r'const mutuMeta\s*=\s*(\[.*?\]);', html, re.S)
+        self.assertIsNotNone(m, 'const mutuMeta tidak dirender')
+        meta = json.loads(m.group(1))
+        self.assertEqual(len(meta), 12)
+        jan = meta[0]
+        self.assertIsNotNone(jan)
+        self.assertEqual(jan['n'], 1)
+        self.assertEqual(jan['ok'], 0)
+        self.assertIn('INM-01', jan['miss'][0])
+
+    def test_dashboard_tooltip_has_formula_and_name(self):
+        self._mk(1, '95.11', '135.00', 'catatan')
+        url = f'/?mutu_jenis=INM&mutu_tahun=2026&mutu_indikator={self.indikator.pk}'
+        html = self.client.get(url).content.decode()
+        self.assertRegex(html, r'const mutuNama\s*=\s*"[^"]*INM-01[^"]*";')
+        m = re.search(r'const mutuRumus\s*=\s*"(.*?)";', html)
+        self.assertIsNotNone(m)
+        self.assertIn('u00f7', m.group(1))  # ÷ ter-escapejs sebagai \u00f7
+        self.assertIn('Di bawah target', html)
+
+    def test_dropdown_options_show_full_name_and_title_attr(self):
+        """Nama panjang tidak dipotong; title memuat detail indikator."""
+        self._mk(1, '95.11', '135.00', 'catatan')
+        url = '/indikator-mutu/?jenis=INM&tahun=2026'
+        html = self.client.get(url).content.decode()
+        self.assertRegex(html, r'<option value="\d+" title="\[INM-01\][^"]*Target 85[^"]*"')
+        self.assertIn(self.indikator.nama_indikator, html)

@@ -283,25 +283,33 @@ def indikator_dashboard(request):
     indikator_choices = list(choices_qs.order_by('jenis', 'kode_indikator'))
     selected_indikator = next((i for i in indikator_choices if i.pk == indikator_id), None)
 
-    ind_data, ind_colors = [], []
+    ind_data, ind_colors, ind_meta = [], [], []
     ind_target, ind_arah = 0.0, 'MIN'
     if selected_indikator:
         ind_target = round(float(selected_indikator.target_nilai), 1)
         ind_arah = getattr(selected_indikator, 'arah_target', 'MIN')
-        ind_cat = {
-            c.bulan: float(c.nilai_capaian)
-            for c in CatatanIndikator.objects.filter(
-                indikator=selected_indikator, tahun=tahun_int)
-            if 1 <= c.bulan <= 12
-        }
+        ind_cat = {}
+        for c in CatatanIndikator.objects.filter(indikator=selected_indikator, tahun=tahun_int):
+            if 1 <= c.bulan <= 12:
+                ind_cat[c.bulan] = c
         for m in range(1, 13):
-            v = ind_cat.get(m)
+            c = ind_cat.get(m)
+            v = float(c.nilai_capaian) if c else None
             ind_data.append(v)
             if v is None:
                 ind_colors.append('rgba(203, 213, 225, 0.4)')
+                ind_meta.append(None)
             else:
                 ok = (v <= ind_target) if ind_arah == 'MAX' else (v >= ind_target)
                 ind_colors.append('#198754' if ok else '#dc3545')
+                # Detail tooltip panjang: formula, teks catatan pengukuran, status
+                ind_meta.append({
+                    'capaian': v,
+                    'num': float(c.nilai_numerator),
+                    'den': float(c.nilai_denominator),
+                    'catatan': (c.catatan or '').strip(),
+                    'tercapai': ok,
+                })
 
     ctx = {
         'indikators': indikators_with_stats,
@@ -332,6 +340,15 @@ def indikator_dashboard(request):
         'chart_indikator_target_line_json': _json.dumps([ind_target] * 12),
         'chart_indikator_satuan': (selected_indikator.satuan if selected_indikator else '%'),
         'chart_indikator_arah': ind_arah,
+        'chart_indikator_meta_json': _json.dumps(ind_meta),
+        'chart_indikator_nama': (selected_indikator.nama_indikator if selected_indikator else ''),
+        'chart_indikator_kode': (selected_indikator.kode_indikator if selected_indikator else ''),
+        'chart_indikator_dimensi': (selected_indikator.get_dimensi_mutu_display() if selected_indikator else ''),
+        'chart_indikator_jumlah': sum(1 for m in ind_meta if m),
+        'chart_indikator_num_label': (selected_indikator.numerator if selected_indikator else ''),
+        'chart_indikator_den_label': (selected_indikator.denominator if selected_indikator else ''),
+        'chart_indikator_pj': (selected_indikator.pj if selected_indikator else ''),
+        'chart_indikator_rencana_aksi': (selected_indikator.rencana_aksi if selected_indikator else ''),
     }
     return render(request, 'akreditasi/indikator_dashboard.html', ctx)
 

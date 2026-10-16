@@ -489,8 +489,8 @@
                     <select name="mutu_indikator" class="form-select form-select-sm" onchange="this.form.submit()">
                         <option value="">Semua Indikator (Rata-rata)</option>
                         {% for ind in mutu_indikator_choices %}
-                        <option value="{{ ind.pk }}" {% if filter_mutu_indikator == ind.pk %}selected{% endif %}>
-                            [{{ ind.kode_indikator }}] {{ ind.nama_indikator|truncatechars:42 }}
+                        <option value="{{ ind.pk }}" title="[{{ ind.kode_indikator }}] {{ ind.nama_indikator }} — Target {{ ind.target_nilai }}{{ ind.satuan }} | PJ: {{ ind.pj|default:'-' }} | Dimensi: {{ ind.get_dimensi_mutu_display }}" {% if filter_mutu_indikator == ind.pk %}selected{% endif %}>
+                            [{{ ind.kode_indikator }}] {{ ind.nama_indikator }}
                         </option>
                         {% endfor %}
                     </select>
@@ -1046,6 +1046,9 @@ document.addEventListener('DOMContentLoaded', function() {
         const targetLine = {{ chart_mutu_target_line_json|safe }};
         const targetVal = {{ chart_mutu_target_val_json|safe }};
         const hasMutuData = {{ has_monthly_data|yesno:"true,false" }};
+        const mutuMeta  = {{ chart_mutu_meta_json|safe }};
+        const mutuNama  = {{ chart_mutu_nama_json|safe }};
+        const mutuRumus = {{ chart_mutu_rumus_json|safe }};
 
         chartMutu = new Chart(mutuEl.getContext('2d'), {
             type: 'bar',
@@ -1101,12 +1104,42 @@ document.addEventListener('DOMContentLoaded', function() {
                         }
                     },
                     tooltip: {
+                        backgroundColor: 'rgba(15, 23, 42, 0.96)',
+                        titleFont: { family: "'Plus Jakarta Sans', sans-serif", size: 12, weight: '700' },
+                        bodyFont: { family: "'JetBrains Mono', monospace", size: 11 },
+                        bodySpacing: 4,
+                        padding: 12,
+                        boxPadding: 4,
                         callbacks: {
+                            title: function(items) {
+                                return NAMA_BULAN[items[0].dataIndex] + ' ' + MUTU_TAHUN;
+                            },
                             label: function(ctx) {
-                                if (ctx.raw === null || ctx.raw === undefined) {
-                                    return `${ctx.dataset.label}: Belum ada data`;
+                                if (ctx.datasetIndex === 0) {
+                                    return ` Batas target: ${targetVal}%`;
                                 }
-                                return `${ctx.dataset.label}: ${ctx.raw}%`;
+                                const meta = mutuMeta[ctx.dataIndex];
+                                if (ctx.raw === null || ctx.raw === undefined) {
+                                    return ' Belum ada pengukuran bulan ini';
+                                }
+                                const lines = [
+                                    ` Capaian      : ${ctx.raw.toFixed(2)}%`,
+                                    ` Target       : ${targetVal}% (${MUTU_ARAH === 'MAX' ? '≤ target, makin kecil makin baik' : '≥ target, makin besar makin baik'})`,
+                                    ` Selisih      : ${(ctx.raw - targetVal >= 0 ? '+' : '')}${(ctx.raw - targetVal).toFixed(2)} poin`,
+                                ];
+                                if (meta) {
+                                    lines.push(` Basis        : ${meta.n} pengukuran (${meta.ok} tercapai, ${meta.n - meta.ok} di bawah target)`);
+                                    if (meta.miss.length) {
+                                        lines.push(` Di bawah target: ${meta.miss.join(', ')}${meta.miss_more ? ` +${meta.miss_more} lainnya` : ''}`);
+                                    }
+                                }
+                                return lines;
+                            },
+                            afterBody: function() {
+                                const parts = ['', mutuNama];
+                                if (mutuRumus) parts.push(`Rumus: ${mutuRumus}`);
+                                parts.push('Klik bar untuk buka rincian PDCA bulan ini.');
+                                return parts;
                             }
                         }
                     }
