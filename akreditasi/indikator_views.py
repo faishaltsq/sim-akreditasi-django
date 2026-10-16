@@ -266,6 +266,43 @@ def indikator_dashboard(request):
         })
     chart_jenis_json = _json.dumps(chart_jenis_datasets)
 
+    # ── Grafik per-indikator tunggal (bukan rata-rata semua indikator) ──────
+    try:
+        indikator_id = int(request.GET.get('indikator') or 0)
+    except (ValueError, TypeError):
+        indikator_id = 0
+
+    # Dropdown: hanya indikator yang punya catatan di tahun terpilih — indikator
+    # tanpa data tidak bisa digrafikkan. Fallback ke semua indikator tier tersebut
+    # bila belum ada satu pun yang berdata (mis. IMU), agar dropdown tak pernah kosong.
+    data_ind_ids = set(
+        CatatanIndikator.objects.filter(tahun=tahun_int, indikator__in=qs)
+        .values_list('indikator_id', flat=True).distinct()
+    )
+    choices_qs = qs.filter(pk__in=data_ind_ids) if data_ind_ids else qs
+    indikator_choices = list(choices_qs.order_by('jenis', 'kode_indikator'))
+    selected_indikator = next((i for i in indikator_choices if i.pk == indikator_id), None)
+
+    ind_data, ind_colors = [], []
+    ind_target, ind_arah = 0.0, 'MIN'
+    if selected_indikator:
+        ind_target = round(float(selected_indikator.target_nilai), 1)
+        ind_arah = getattr(selected_indikator, 'arah_target', 'MIN')
+        ind_cat = {
+            c.bulan: float(c.nilai_capaian)
+            for c in CatatanIndikator.objects.filter(
+                indikator=selected_indikator, tahun=tahun_int)
+            if 1 <= c.bulan <= 12
+        }
+        for m in range(1, 13):
+            v = ind_cat.get(m)
+            ind_data.append(v)
+            if v is None:
+                ind_colors.append('rgba(203, 213, 225, 0.4)')
+            else:
+                ok = (v <= ind_target) if ind_arah == 'MAX' else (v >= ind_target)
+                ind_colors.append('#198754' if ok else '#dc3545')
+
     ctx = {
         'indikators': indikators_with_stats,
         'inm_list': inm_list,
@@ -285,6 +322,16 @@ def indikator_dashboard(request):
         'chart_capaian': chart_capaian,
         'chart_jumlah': chart_jumlah,
         'chart_jenis_json': chart_jenis_json,
+        'indikator_choices': indikator_choices,
+        'filter_indikator': indikator_id,
+        'indikator_terpilih': selected_indikator,
+        'has_indikator': bool(selected_indikator),
+        'chart_indikator_data_json': _json.dumps(ind_data),
+        'chart_indikator_colors_json': _json.dumps(ind_colors),
+        'chart_indikator_target_json': _json.dumps(ind_target),
+        'chart_indikator_target_line_json': _json.dumps([ind_target] * 12),
+        'chart_indikator_satuan': (selected_indikator.satuan if selected_indikator else '%'),
+        'chart_indikator_arah': ind_arah,
     }
     return render(request, 'akreditasi/indikator_dashboard.html', ctx)
 

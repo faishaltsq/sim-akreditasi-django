@@ -2,6 +2,7 @@
 Unit Tests for Monthly Quality Indicator Trends, Evidence Upload & Renstra Multi-Year Charts
 Targeting: STARKES PMKP 12 & Renstra 2026-2030 Dashboard Integration
 """
+import re
 from decimal import Decimal
 from django.test import TestCase, Client
 from django.urls import reverse
@@ -243,3 +244,100 @@ class IndikatorMutuChartsAndUploadTest(TestCase):
         # Bogus params must not crash
         bad = reverse('akreditasi:risiko_input') + '?indikator=999999&bulan=99&tahun=abc'
         self.assertEqual(self.client.get(bad).status_code, 200)
+
+
+    # ── Per-indicator charts on /indikator-mutu/ ───────────────────────────
+
+    def test_mutu_dashboard_dropdown_lists_only_data_bearing_indicators(self):
+        """Choosing tier INM offers exactly the indicators that have catatan for the year."""
+        CatatanIndikator.objects.create(
+            indikator=self.indikator, bulan=1, tahun=2026,
+            nilai_numerator=Decimal('80'), nilai_denominator=Decimal('100'))
+
+        empty = IndikatorMutu.objects.create(
+            nama_indikator='Belum Ada Data', kode_indikator='INM-99',
+            unit=self.unit, jenis='NASIONAL', dimensi_mutu='AMAN',
+            numerator='a', denominator='b', target_nilai=Decimal('80.00'), aktif=True)
+
+        resp = self.client.get('/indikator-mutu/?jenis=INM&tahun=2026')
+        self.assertEqual(resp.status_code, 200)
+        html = resp.content.decode()
+
+        m = re.search(r'<select name="indikator".*?</select>', html, re.S)
+        self.assertIsNotNone(m, 'dropdown indikator tidak dirender')
+        opts = re.findall(r'<option value="(\d+)"', m.group(0))
+        self.assertIn(str(self.indikator.pk), opts)
+        self.assertNotIn(str(empty.pk), opts)
+
+    def test_mutu_dashboard_empty_tier_falls_back_to_all_indicators(self):
+        """A tier with zero catatan still lists its active indicators."""
+        IndikatorMutu.objects.create(
+            nama_indikator='Unit Tanpa Data', kode_indikator='IMU-99',
+            unit=self.unit, jenis='IMP_UNIT', dimensi_mutu='AMAN',
+            numerator='a', denominator='b', target_nilai=Decimal('80.00'), aktif=True)
+
+        resp = self.client.get('/indikator-mutu/?jenis=IMU&tahun=2026')
+        self.assertEqual(resp.status_code, 200)
+        m = re.search(r'<select name="indikator".*?</select>', resp.content.decode(), re.S)
+        self.assertIsNotNone(m)
+        self.assertIn('IMU-99', m.group(0))
+
+    def test_mutu_dashboard_single_indicator_series_and_colors(self):
+        """Selecting one indicator charts its own monthly capaian, not the average."""
+        CatatanIndikator.objects.create(
+            indikator=self.indikator, bulan=1, tahun=2026,
+            nilai_numerator=Decimal('90'), nilai_denominator=Decimal('100'))
+        CatatanIndikator.objects.create(
+            indikator=self.indikator, bulan=2, tahun=2026,
+            nilai_numerator=Decimal('70'), nilai_denominator=Decimal('100'))
+
+        url = f'/indikator-mutu/?jenis=INM&tahun=2026&indikator={self.indikator.pk}'
+        resp = self.client.get(url)
+        self.assertEqual(resp.status_code, 200)
+        html = resp.content.decode()
+
+        self.assertRegex(html, r'const indData\s*=\s*\[90\.0, 70\.0, null')
+        self.assertRegex(html, r'const indTarget\s*=\s*85\.0;')
+        self.assertRegex(html, r'const indColors\s*=\s*\["#198754", "#dc3545"')
+
+    def test_mutu_dashboard_max_indicator_flips_colors(self):
+        """arah_target='MAX' (lower is better) is green when capaian <= target."""
+        ind_max = IndikatorMutu.objects.create(
+            nama_indikator='Waktu Tunggu IGD', kode_indikator='IMRS-98',
+            unit=self.unit, jenis='IMP_RS', dimensi_mutu='EFISIEN',
+            numerator='jumlah kasus', denominator='total kasus',
+            target_nilai=Decimal('5.00'), satuan='Menit', arah_target='MAX', aktif=True)
+        CatatanIndikator.objects.create(
+            indikator=ind_max, bulan=1, tahun=2026,
+            nilai_numerator=Decimal('4'), nilai_denominator=Decimal('100'))
+
+        url = f'/indikator-mutu/?jenis=IMRS&tahun=2026&indikator={ind_max.pk}'
+        self.assertRegex(self.client.get(url).content.decode(), r'const indColors\s*=\s*\["#198754"')
+
+        CatatanIndikator.objects.filter(indikator=ind_max, bulan=1, tahun=2026).update(
+            nilai_numerator=Decimal('8'))
+        self.assertRegex(self.client.get(url).content.decode(), r'const indColors\s*=\s*\["#dc3545"')
+
+    def test_mutu_dashboard_unknown_indicator_falls_back(self):
+        """A bogus or foreign indikator pk must render 200 in aggregate mode."""
+        resp = self.client.get('/indikator-mutu/?jenis=INM&tahun=2026&indikator=999999')
+        self.assertEqual(resp.status_code, 200)
+        self.assertRegex(resp.content.decode(), r'const hasInd\s*=\s*false;')
+
+    def test_dashboard_jenis_canonical_lists_data_bearing_indicators(self):
+        """Category INM must resolve to the legacy NASIONAL rows and offer only those with data."""
+        CatatanIndikator.objects.create(
+            indikator=self.indikator, bulan=1, tahun=2026,
+            nilai_numerator=Decimal('80'), nilai_denominator=Decimal('100'))
+        empty = IndikatorMutu.objects.create(
+            nama_indikator='Belum Ada Data', kode_indikator='INM-98',
+            unit=self.unit, jenis='NASIONAL', dimensi_mutu='AMAN',
+            numerator='a', denominator='b', target_nilai=Decimal('80.00'), aktif=True)
+
+        resp = self.client.get(reverse('akreditasi:dashboard') + '?mutu_jenis=INM&mutu_tahun=2026')
+        self.assertEqual(resp.status_code, 200)
+        m = re.search(r'<select name="mutu_indikator".*?</select>', resp.content.decode(), re.S)
+        self.assertIsNotNone(m)
+        opts = re.findall(r'<option value="(\d+)"', m.group(0))
+        self.assertIn(str(self.indikator.pk), opts)
+        self.assertNotIn(str(empty.pk), opts)
