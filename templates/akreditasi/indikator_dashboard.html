@@ -205,7 +205,11 @@
         <div class="card-header bg-white py-2 border-bottom d-flex align-items-center gap-2">
           <i class="bi bi-graph-up-arrow text-teal"></i>
           <span class="fw-bold text-dark" style="font-size:.84rem;">
-            Tren Rata-Rata Capaian Indikator Mutu (Tahun {{ filter_tahun }})
+            {% if indikator_terpilih %}
+              Tren [{{ indikator_terpilih.kode_indikator }}] {{ indikator_terpilih.nama_indikator }} ({{ filter_tahun }})
+            {% else %}
+              Tren Rata-Rata Capaian Indikator Mutu (Tahun {{ filter_tahun }})
+            {% endif %}
           </span>
           <span class="badge bg-light text-muted border ms-auto" style="font-size:.65rem;">PMK 30/2022 · STARKES PMKP 12</span>
         </div>
@@ -237,7 +241,7 @@
       <form method="GET" class="row g-2 align-items-center">
         <input type="hidden" name="tahun" value="{{ filter_tahun }}">
 
-        <div class="col-12 col-md-4">
+        <div class="col-12 col-md-3">
           <label class="form-label small text-muted mb-1">Filter Kategori Indikator</label>
           <select name="jenis" class="form-select form-select-sm" onchange="this.form.submit()">
             <option value="">Semua Kategori ({{ indikators|length }})</option>
@@ -247,7 +251,7 @@
           </select>
         </div>
 
-        <div class="col-12 col-md-5">
+        <div class="col-12 col-md-4">
           <label class="form-label small text-muted mb-1">Filter Unit Pengampu</label>
           <select name="unit" class="form-select form-select-sm" onchange="this.form.submit()">
             <option value="">Semua Unit Kerja</option>
@@ -259,7 +263,19 @@
           </select>
         </div>
 
-        <div class="col-12 col-md-3 d-flex align-items-end gap-2 pt-2 pt-md-0">
+        <div class="col-12 col-md-3">
+          <label class="form-label small text-muted mb-1">Pilih Indikator Mutu</label>
+          <select name="indikator" class="form-select form-select-sm" onchange="this.form.submit()">
+            <option value="">Semua Indikator (Rata-rata)</option>
+            {% for ind in indikator_choices %}
+            <option value="{{ ind.pk }}" {% if filter_indikator == ind.pk %}selected{% endif %}>
+              [{{ ind.kode_indikator }}] {{ ind.nama_indikator|truncatechars:40 }}
+            </option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="col-12 col-md-2 d-flex align-items-end gap-2 pt-2 pt-md-0">
           <button type="submit" class="btn btn-sm btn-primary flex-fill">
             <i class="bi bi-funnel me-1"></i>Terapkan
           </button>
@@ -476,9 +492,91 @@ document.addEventListener('DOMContentLoaded', function() {
     const capaian  = {{ chart_capaian|safe }};
     const jenisDS  = {{ chart_jenis_json|safe }};
 
-    // ── Grafik 1: Line Chart Tren Capaian (%) ─────────────────
+    // Per-indikator mode
+    const hasInd    = {{ has_indikator|yesno:"true,false" }};
+    const indData   = {{ chart_indikator_data_json|safe }};
+    const indColors = {{ chart_indikator_colors_json|safe }};
+    const indTarget = {{ chart_indikator_target_json|safe }};
+    const indTargetLine = {{ chart_indikator_target_line_json|safe }};
+    const indSatuan = "{{ chart_indikator_satuan|escapejs }}";
+    const indArah   = "{{ chart_indikator_arah|escapejs }}";
+
+    // Label nilai di atas setiap bar (inline, tanpa plugin CDN)
+    const valueLabelsPlugin = {
+        id: 'valueLabels',
+        afterDatasetsDraw(chart) {
+            const c = chart.ctx;
+            c.save();
+            chart.data.datasets.forEach((ds, di) => {
+                if (ds.type !== 'bar') return;
+                chart.getDatasetMeta(di).data.forEach((el, i) => {
+                    const v = ds.data[i];
+                    if (v === null || v === undefined) return;
+                    c.fillStyle = '#334155';
+                    c.font = '600 10px Inter, sans-serif';
+                    c.textAlign = 'center';
+                    c.fillText(v.toFixed(1) + (indSatuan || '%'), el.x, el.y - 4);
+                });
+            });
+            c.restore();
+        }
+    };
+
+    // ── Grafik 1a: Bar Chart per Indikator Tunggal ────────────
     const ctx1 = document.getElementById('chartTrenCapaian');
-    if (ctx1) {
+    if (ctx1 && hasInd) {
+        new Chart(ctx1, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [
+                    {
+                        type: 'line',
+                        label: `Target ${indTarget} ${indSatuan}`,
+                        data: indTargetLine,
+                        borderColor: 'rgba(239, 68, 68, 0.75)',
+                        borderDash: [6, 3],
+                        borderWidth: 1.5,
+                        pointRadius: 0,
+                        fill: false,
+                        order: 1
+                    },
+                    {
+                        type: 'bar',
+                        label: `Capaian (${indSatuan})`,
+                        data: indData,
+                        backgroundColor: indColors,
+                        borderRadius: 4,
+                        maxBarThickness: 38,
+                        order: 2
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                    legend: { position: 'top', labels: { font: { size: 11, family: 'Inter, sans-serif' }, boxWidth: 12 } },
+                    tooltip: {
+                        callbacks: {
+                            label: function(c) {
+                                if (c.raw === null) return ' Belum ada data pengukuran';
+                                return ` ${c.dataset.label}: ${c.raw.toFixed(1)}`;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    y: { beginAtZero: true, ticks: { callback: v => v + (indSatuan || '%'), font: { size: 10 } }, grid: { color: 'rgba(0,0,0,0.05)' } },
+                    x: { grid: { display: false }, ticks: { font: { size: 10 } } }
+                }
+            },
+            plugins: [valueLabelsPlugin]
+        });
+    }
+
+    // ── Grafik 1b: Line Chart Tren Capaian (%) — mode agregat ─
+    if (ctx1 && !hasInd) {
         new Chart(ctx1, {
             type: 'line',
             data: {
