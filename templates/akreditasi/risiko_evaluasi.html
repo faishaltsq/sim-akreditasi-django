@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load l10n %}
 
 {% block title %}G. Monitoring &amp; Evaluasi Risiko — {{ risiko.nomor_risiko }} | ARIMA{% endblock %}
 {% block page_title %}Evaluasi Risiko (Check/Act){% endblock %}
@@ -198,6 +199,39 @@
                                     </span>
                                 </div>
                             </div>
+                            {% if not risiko.indikator_mutu_terkait_id %}
+                            <div class="border-top pt-2 mt-2" style="border-color:#99f6e4 !important;">
+                                <label for="link-indikator-select" class="form-label fw-semibold mb-1" style="font-size:.74rem; color:#0f766e;">
+                                    <i class="bi bi-link-45deg me-1"></i>Tautkan ke Indikator Mutu
+                                </label>
+                                <div class="row g-2 align-items-end">
+                                    <div class="col-md-8">
+                                        <select name="indikator_mutu_terkait" id="link-indikator-select" class="form-select form-select-sm">
+                                            <option value="">— Tidak ditautkan —</option>
+                                            {% for ind in indikator_kandidat %}
+                                            <option value="{{ ind.pk }}"
+                                                    data-target="{{ ind.target_nilai|unlocalize }}"
+                                                    data-arah="{{ ind.arah_target }}"
+                                                    data-satuan="{{ ind.satuan }}"
+                                                    title="[{{ ind.kode_indikator }}] {{ ind.nama_indikator }} — Target {{ ind.target_nilai }}{{ ind.satuan }} | PJ: {{ ind.pj|default:'-' }}">
+                                                [{{ ind.kode_indikator }}] {{ ind.nama_indikator }}
+                                            </option>
+                                            {% empty %}
+                                            <option value="" disabled>Belum ada indikator aktif untuk unit ini</option>
+                                            {% endfor %}
+                                        </select>
+                                        <small class="text-muted" style="font-size:.66rem;">
+                                            Pilihan mencakup indikator unit ini + INM nasional ({{ indikator_kandidat|length }} indikator). Target otomatis terisi saat dipilih.
+                                        </small>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label for="target_capaian_indikator" class="form-label fw-semibold mb-1" style="font-size:.74rem; color:#0f766e;">Target Capaian (%)</label>
+                                        <input type="number" step="0.01" min="0" max="1000" name="target_capaian_indikator" id="target_capaian_indikator"
+                                               class="form-control form-control-sm" value="{{ risiko.target_capaian_indikator|default_if_none:''|unlocalize }}" placeholder="Terisi otomatis">
+                                    </div>
+                                </div>
+                            </div>
+                            {% endif %}
                         </div>
 
                         <div class="row g-3 mb-3">
@@ -588,10 +622,29 @@
 {% block extra_js %}
 <script>
 (function() {
+    // ── G.1 Penautan Indikator: auto-isi target saat dipilih ──
+    const linkSelect = document.getElementById('link-indikator-select');
+    const targetLinkInput = document.getElementById('target_capaian_indikator');
+    let targetVal = parseFloat("{{ target_nilai_display|unlocalize }}".replace(',', '.')) || 100;
+    let arahTarget = "{{ risiko.indikator_mutu_terkait.arah_target|default:'MIN' }}";
+
+    if (linkSelect && targetLinkInput) {
+        linkSelect.addEventListener('change', function() {
+            const opt = linkSelect.options[linkSelect.selectedIndex];
+            if (!opt || !linkSelect.value) return;
+            const tgt = opt.dataset.target;
+            if (tgt && !targetLinkInput.value.trim()) {
+                targetLinkInput.value = tgt;
+            }
+            const t = parseFloat((tgt || '').replace(',', '.'));
+            if (!isNaN(t)) targetVal = t;
+            if (opt.dataset.arah) arahTarget = opt.dataset.arah;
+            evaluateCapaian();
+        });
+    }
+
     // ── G.1 Capaian vs Target Live Calculation ──
     const capaianInput = document.getElementById('capaian_nilai');
-    const targetVal = parseFloat("{{ target_nilai_display }}".replace(',', '.')) || 100;
-    const arahTarget = "{{ risiko.indikator_mutu_terkait.arah_target|default:'MIN' }}";
     const statusBadge = document.getElementById('capaian-status-badge');
 
     function evaluateCapaian() {

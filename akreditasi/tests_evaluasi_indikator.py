@@ -218,3 +218,88 @@ class EvaluasiIndikatorMutuTest(TestCase):
         self.assertTrue(data['success'])
         self.assertIn('data', data)
         self.assertIn('draf_evaluasi', data['data'])
+
+    def test_evaluasi_offers_link_when_indikator_missing(self):
+        """Risiko tanpa indikator harus punya UI penautan di G.1, bukan banner read-only."""
+        self.risiko.indikator_mutu_terkait = None
+        self.risiko.target_capaian_indikator = None
+        self.risiko.save()
+        url = reverse('akreditasi:risiko_evaluasi', kwargs={'risiko_id': self.risiko.pk})
+        resp = self.client.get(url)
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, 'Belum ditautkan ke Indikator Mutu formal')
+        self.assertContains(resp, 'name="indikator_mutu_terkait"')
+        self.assertContains(resp, 'id="link-indikator-select"')
+        self.assertContains(resp, self.indikator.nama_indikator)
+
+    def test_evaluasi_hides_link_ui_when_already_linked(self):
+        """Sudah tertaut -> select penautan tidak dirender (tampilan lama tak berubah)."""
+        url = reverse('akreditasi:risiko_evaluasi', kwargs={'risiko_id': self.risiko.pk})
+        resp = self.client.get(url)
+        self.assertNotContains(resp, 'id="link-indikator-select"')
+
+    def test_evaluasi_post_links_indikator(self):
+        """POST menyimpan tautan indikator + target dari halaman evaluasi."""
+        self.risiko.indikator_mutu_terkait = None
+        self.risiko.target_capaian_indikator = None
+        self.risiko.save()
+        url = reverse('akreditasi:risiko_evaluasi', kwargs={'risiko_id': self.risiko.pk})
+        resp = self.client.post(url, data={
+            'indikator_mutu_terkait': str(self.indikator.pk),
+            'target_capaian_indikator': '90',
+            'dampak_residual': '2',
+            'probabilitas_residual': '1',
+            'status_rtl': 'BELUM',
+        }, follow=True)
+        self.assertEqual(resp.status_code, 200)
+        self.risiko.refresh_from_db()
+        self.assertEqual(self.risiko.indikator_mutu_terkait_id, self.indikator.pk)
+        self.assertEqual(float(self.risiko.target_capaian_indikator), 90.0)
+
+    def test_evaluasi_post_without_link_field_keeps_existing_link(self):
+        """POST lama (tanpa field indikator) tidak boleh menghapus tautan."""
+        url = reverse('akreditasi:risiko_evaluasi', kwargs={'risiko_id': self.risiko.pk})
+        self.client.post(url, data={
+            'capaian_nilai': '92.5',
+            'dampak_residual': '2',
+            'probabilitas_residual': '1',
+            'status_rtl': 'BELUM',
+        }, follow=True)
+        self.risiko.refresh_from_db()
+        self.assertEqual(self.risiko.indikator_mutu_terkait_id, self.indikator.pk)
+
+    def test_evaluasi_candidates_include_parent_unit_indicators(self):
+        """Indikator milik unit INDUK harus muncul sebagai kandidat (kasus Bangsal->IRIN)."""
+        parent = UnitKerja.objects.create(name='Instalasi Rawat Inap', code='IRIN-01', level=2)
+        child = UnitKerja.objects.create(name='Bangsal Anak', code='BANAK-01', level=3, parent=parent)
+        ind_parent = IndikatorMutu.objects.create(
+            kode_indikator='IMP-UNIT-RANAP-02',
+            nama_indikator='Angka Kejadian Phlebitis',
+            jenis='IMP_UNIT', dimensi_mutu='KESELAMATAN',
+            target_nilai=1.5, arah_target='MAX', satuan='%o', unit=parent,
+        )
+        r = RisikoUnit.objects.create(
+            unit=child, periode='TAHUNAN', tahun=2026,
+            jenis_risiko='Phlebitis', kategori_risiko='KLINIS',
+            dampak=3, probabilitas=3, deskripsi_risiko='x',
+            strategi_mitigasi='KURANGI', rencana_aksi='1. a', pj_mitigasi='Ka',
+            status='DO', created_by=self.user,
+        )
+        url = reverse('akreditasi:risiko_evaluasi', kwargs={'risiko_id': r.pk})
+        resp = self.client.get(url)
+        self.assertContains(resp, 'Angka Kejadian Phlebitis')
+        self.assertContains(resp, 'IMP-UNIT-RANAP-02')
+
+    def test_evaluasi_candidates_fallback_inm_when_no_local(self):
+        """Unit tanpa indikator lokal & tanpa induk berindikator -> fallback INM."""
+        lone = UnitKerja.objects.create(name='Unit Tanpa Indikator', code='NOL-01', level=3)
+        r = RisikoUnit.objects.create(
+            unit=lone, periode='TAHUNAN', tahun=2026,
+            jenis_risiko='X', kategori_risiko='MANAJERIAL',
+            dampak=2, probabilitas=2, deskripsi_risiko='x',
+            strategi_mitigasi='KURANGI', rencana_aksi='1. a', pj_mitigasi='Ka',
+            status='DO', created_by=self.user,
+        )
+        url = reverse('akreditasi:risiko_evaluasi', kwargs={'risiko_id': r.pk})
+        resp = self.client.get(url)
+        self.assertContains(resp, 'INM-UGD-01')

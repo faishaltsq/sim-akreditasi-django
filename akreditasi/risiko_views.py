@@ -714,11 +714,20 @@ def risiko_evaluasi(request, risiko_id):
                 d = risiko.deteksi_fmea or 1
                 risiko.rpn_residual = risiko.dampak_residual * risiko.probabilitas_residual * d
 
+            # ── Penautan Indikator Mutu (bila belum tertaut) ──
+            if 'indikator_mutu_terkait' in request.POST:
+                link_id = (request.POST.get('indikator_mutu_terkait') or '').strip()
+                risiko.indikator_mutu_terkait_id = int(link_id) if link_id else None
+                tgt_raw = (request.POST.get('target_capaian_indikator') or '').strip().replace(',', '.')
+                try:
+                    risiko.target_capaian_indikator = Decimal(tgt_raw) if tgt_raw else None
+                except (ArithmeticError, ValueError, TypeError):
+                    risiko.target_capaian_indikator = None
+
             # ── Capaian Indikator Mutu ──
             capaian_raw = request.POST.get('capaian_nilai', '').strip()
             if capaian_raw:
                 try:
-                    from decimal import Decimal
                     risiko.capaian_nilai = Decimal(capaian_raw.replace(',', '.'))
                 except Exception:
                     pass
@@ -806,6 +815,23 @@ def risiko_evaluasi(request, risiko_id):
         target_nilai_display = risiko.indikator_mutu_terkait.target_nilai
     target_nilai_display = target_nilai_display or 100
 
+    # Kandidat indikator untuk penautan bila belum tertaut:
+    # indikator unit ini + seluruh leluhur (induk) + INM global (unit=null).
+    # Fallback ke INM bila unit & leluhur tak punya indikator lokal sama sekali.
+    indikator_kandidat = []
+    if not risiko.indikator_mutu_terkait_id:
+        # Kumpulkan rantai leluhur unit (induk, induknya induk, dst.)
+        ancestor_ids = []
+        cur = getattr(risiko, 'unit', None)
+        while cur is not None and cur.pk not in ancestor_ids:
+            ancestor_ids.append(cur.pk)
+            cur = cur.parent
+        qs_ind = IndikatorMutu.objects.filter(aktif=True).select_related('unit')
+        qs_sel = qs_ind.filter(Q(unit_id__in=ancestor_ids) | Q(unit__isnull=True))
+        indikator_kandidat = list(qs_sel.order_by('jenis', 'kode_indikator'))
+        if not indikator_kandidat:
+            indikator_kandidat = list(qs_ind.filter(jenis='NASIONAL').order_by('kode_indikator'))
+
     ctx = {
         'risiko': risiko,
         'status_badges': STATUS_BADGES,
@@ -815,6 +841,7 @@ def risiko_evaluasi(request, risiko_id):
         'tindak_lanjut_list': tindak_lanjut_list,
         'rencana_aksi_items': rencana_aksi_items,
         'target_nilai_display': target_nilai_display,
+        'indikator_kandidat': indikator_kandidat,
     }
     return render(request, 'akreditasi/risiko_evaluasi.html', ctx)
 
