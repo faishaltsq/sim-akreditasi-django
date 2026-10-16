@@ -151,10 +151,19 @@ def _get_mutu_renstra_charts_context(request, profile, db_roadmaps, renstra_year
         ind_qs = ind_qs.filter(unit_id=mutu_unit)
 
     if mutu_jenis:
-        ind_qs = ind_qs.filter(jenis=mutu_jenis)
+        # Canonical tier codes (INM/IMRS/IMU) must reach the legacy rows the DB actually stores
+        _JENIS_MAP = {'INM': ['INM', 'NASIONAL'], 'IMRS': ['IMRS', 'IMP_RS'], 'IMU': ['IMU', 'IMP_UNIT']}
+        ind_qs = ind_qs.filter(jenis__in=_JENIS_MAP.get(mutu_jenis, [mutu_jenis]))
 
-    # Dropdown choices: every indicator matching the unit+jenis filters
-    mutu_indikator_choices = list(ind_qs.order_by('jenis', 'kode_indikator'))
+    # Dropdown choices: indicators that actually have measurements this year — an
+    # indicator without data cannot be charted. Fallback to every active indicator
+    # in the filter when the year holds no data at all, so the dropdown is never empty.
+    _data_ids = set(
+        CatatanIndikator.objects.filter(tahun=mutu_tahun, indikator__in=ind_qs)
+        .values_list('indikator_id', flat=True).distinct()
+    )
+    _choices_qs = ind_qs.filter(pk__in=_data_ids) if _data_ids else ind_qs
+    mutu_indikator_choices = list(_choices_qs.order_by('jenis', 'kode_indikator'))
     selected_indikator = next((i for i in mutu_indikator_choices if i.pk == mutu_indikator_id), None)
 
     chart_qs = IndikatorMutu.objects.filter(pk=selected_indikator.pk) if selected_indikator else ind_qs
