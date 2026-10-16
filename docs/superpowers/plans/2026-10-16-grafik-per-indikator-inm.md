@@ -1,6 +1,6 @@
 # Per-Indicator Quality Charts (INM tier) Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** Make both mutu dashboards chart ONE selected indicator instead of an average across all of them, and make the category → indicator cascade actually work, so choosing category INM offers the 13 INM indicators that have measurement data.
 
@@ -59,7 +59,7 @@
   - `chart_indikator_satuan`: `str`
   - `chart_indikator_arah`: `str` (`'MIN'`/`'MAX'`)
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Append to `akreditasi/tests_indikator_mutu_charts.py` (add `import re` at the top of the file):
 
@@ -143,12 +143,12 @@ Append to `akreditasi/tests_indikator_mutu_charts.py` (add `import re` at the to
         self.assertIn('const hasInd = false;', resp.content.decode())
 ```
 
-- [ ] **Step 2: Run tests to verify they fail**
+- [x] **Step 2: Run tests to verify they fail**
 
 Run: `.venv/Scripts/python.exe manage.py test akreditasi.tests_indikator_mutu_charts -v1`
 Expected: FAIL — `dropdown indikator tidak dirender` and `assertIn('const indData = [90.0, ...')` on a page that has no such markup.
 
-- [ ] **Step 3: Implement the backend**
+- [x] **Step 3: Implement the backend**
 
 In `akreditasi/indikator_views.py`, inside `indikator_dashboard`, insert this block immediately **before** `ctx = {` (after `chart_jenis_json = _json.dumps(chart_jenis_datasets)` at line 267 — `_json` is already imported at line 223 and `qs` is in scope):
 
@@ -206,12 +206,12 @@ Then add these keys to the `ctx` dict (after `'chart_jenis_json': chart_jenis_js
         'chart_indikator_arah': ind_arah,
 ```
 
-- [ ] **Step 4: Run tests to verify the backend half passes**
+- [x] **Step 4: Run tests to verify the backend half passes**
 
 Run: `.venv/Scripts/python.exe manage.py test akreditasi.tests_indikator_mutu_charts -v1`
 Expected: the four data assertions pass; `test_mutu_dashboard_dropdown_lists_only_data_bearing_indicators` still FAILS on `dropdown indikator tidak dirender` (template not written yet — Task 2).
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add akreditasi/indikator_views.py akreditasi/tests_indikator_mutu_charts.py
@@ -230,7 +230,7 @@ git commit -m "feat(mutu): per-indicator series context for /indikator-mutu/ cha
 - Consumes: every context key produced by Task 1.
 - Produces: `<select name="indikator">` markup and the JS constants `hasInd`, `indData`, `indColors`, `indTarget`, `indTargetLine`, `indSatuan`, `indArah` — asserted verbatim by Task 1's tests.
 
-- [ ] **Step 1: Add the dropdown to the filter form**
+- [x] **Step 1: Add the dropdown to the filter form**
 
 In `templates/akreditasi/indikator_dashboard.html`, insert between the unit select's closing `</div>` (line 260) and the button row (line 262):
 
@@ -250,7 +250,7 @@ In `templates/akreditasi/indikator_dashboard.html`, insert between the unit sele
 
 Widen the button row from `col-12 col-md-3` to `col-12 col-md-2` so the four controls fit one line.
 
-- [ ] **Step 2: Make the card title follow the selection**
+- [x] **Step 2: Make the card title follow the selection**
 
 Replace lines 207-209 (the `<span class="fw-bold text-dark" ...>` block) with:
 
@@ -264,7 +264,7 @@ Replace lines 207-209 (the `<span class="fw-bold text-dark" ...>` block) with:
           </span>
 ```
 
-- [ ] **Step 3: Branch chart 1 on the selection**
+- [x] **Step 3: Branch chart 1 on the selection**
 
 In the `{% block extra_js %}` script, replace the constant block at lines 475-477 with:
 
@@ -359,7 +359,7 @@ Then wrap the existing line chart: change `if (ctx1) {` (line 481) to `if (ctx1 
     }
 ```
 
-- [ ] **Step 4: Verify the page renders and the inline JS parses**
+- [x] **Step 4: Verify the page renders and the inline JS parses**
 
 Run:
 ```bash
@@ -368,12 +368,12 @@ node --check C:/Users/cubeb/AppData/Local/hermes/cache/scratch/mutu_dash.js
 ```
 Expected: `EXTRACTED <n>` then no output from `node --check` (exit 0). Any `SyntaxError` means a float or string reached the template unescaped.
 
-- [ ] **Step 5: Run the tests**
+- [x] **Step 5: Run the tests**
 
 Run: `.venv/Scripts/python.exe manage.py test akreditasi.tests_indikator_mutu_charts -v1`
 Expected: PASS (all Task 1 tests now green).
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add templates/akreditasi/indikator_dashboard.html
@@ -392,7 +392,7 @@ git commit -m "feat(mutu): indicator dropdown and per-indicator bar chart on /in
 - Consumes: `IndikatorMutu`, `CatatanIndikator` (imported at `views.py:125`).
 - Produces: `mutu_indikator_choices` narrowed to data-bearing indicators; `mutu_jenis` accepts both canonical (`INM`) and legacy (`NASIONAL`) values.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Append to `akreditasi/tests_indikator_mutu_charts.py`:
 
@@ -416,12 +416,12 @@ Append to `akreditasi/tests_indikator_mutu_charts.py`:
         self.assertNotIn(str(empty.pk), opts)
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `.venv/Scripts/python.exe manage.py test akreditasi.tests_indikator_mutu_charts.IndikatorMutuChartsAndUploadTest.test_dashboard_jenis_canonical_lists_data_bearing_indicators -v1`
 Expected: FAIL — `jenis=INM` matches no rows, so the dropdown holds zero options and `assertIn(str(self.indikator.pk), opts)` fails.
 
-- [ ] **Step 3: Fix the mapping and narrow the choices**
+- [x] **Step 3: Fix the mapping and narrow the choices**
 
 In `akreditasi/views.py`, replace lines 153-158:
 
@@ -452,12 +452,12 @@ with:
     mutu_indikator_choices = list(_choices_qs.order_by('jenis', 'kode_indikator'))
 ```
 
-- [ ] **Step 4: Run the tests**
+- [x] **Step 4: Run the tests**
 
 Run: `.venv/Scripts/python.exe manage.py test akreditasi.tests_indikator_mutu_charts -v1`
 Expected: PASS — including the pre-existing `test_dashboard_single_indicator_selection_and_colors`, `test_dashboard_arah_target_max_flips_bar_colors`, `test_dashboard_filtered_by_category_and_unit` and `test_dashboard_unknown_indikator_param_falls_back`, whose indicators all carry catatan.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add akreditasi/views.py akreditasi/tests_indikator_mutu_charts.py
@@ -471,7 +471,7 @@ git commit -m "fix(dashboard): map canonical tier codes to legacy jenis rows and
 **Files:**
 - No source changes; verification only.
 
-- [ ] **Step 1: Confirm the 13 INM choices against real data**
+- [x] **Step 1: Confirm the 13 INM choices against real data**
 
 Run:
 ```bash
@@ -490,17 +490,17 @@ for url in ['/indikator-mutu/?jenis=INM&tahun=2026', '/?mutu_jenis=INM&mutu_tahu
 ```
 Expected: both lines print `13`.
 
-- [ ] **Step 2: Confirm the aggregate chart is untouched**
+- [x] **Step 2: Confirm the aggregate chart is untouched**
 
 Run: `.venv/Scripts/python.exe manage.py shell -c "import re; from django.test import Client; from django.contrib.auth import get_user_model; c=Client(); c.force_login(get_user_model().objects.filter(is_superuser=True).first()); h=c.get('/indikator-mutu/?tahun=2026').content.decode(); print(re.search(r'const capaian\s*=\s*(\[[^\]]*\])', h).group(1))"`
 Expected: `[57.6, 59.5, 59.8, 60.6, 62.6, 61.4, 62.4, 56.9, 61.9, 61.9, 62.9, 63.2]` — byte-identical to the pre-change baseline.
 
-- [ ] **Step 3: Run the full suite**
+- [x] **Step 3: Run the full suite**
 
 Run: `.venv/Scripts/python.exe manage.py test akreditasi.tests_indikator_mutu_charts akreditasi.tests_evaluasi_indikator akreditasi.tests_perencanaan_risiko akreditasi.tests_unit_kerja akreditasi.tests_fmea_rca akreditasi.tests_indikator_form akreditasi.tests_indikator_alur_integrasi -v1 && .venv/Scripts/python.exe manage.py check`
 Expected: 86/86 OK (81 baseline + 5 new), `check` reports 0 issues. The known pre-existing failure `tests_ai.EndpointAIIntegrationTest.test_anon_user_redirected` is outside this suite and stays unfixed.
 
-- [ ] **Step 4: Confirm query count stays sane**
+- [x] **Step 4: Confirm query count stays sane**
 
 Run: `.venv/Scripts/python.exe manage.py shell -c "from django.test import Client; from django.test.utils import CaptureQueriesContext; from django.db import connection; from django.contrib.auth import get_user_model; c=Client(); c.force_login(get_user_model().objects.filter(is_superuser=True).first()); [print(u, len(CaptureQueriesContext(connection, lambda: c.get(u)).captured_queries) if False else '') for u in []]"` — instead use the existing probe:
 ```bash
@@ -508,7 +508,7 @@ Run: `.venv/Scripts/python.exe manage.py shell -c "from django.test import Clien
 ```
 Expected: `/indikator-mutu/` stays at or below ~35 queries (baseline 30 warm / 32 cold) — the two extra aggregates (data-bearing ids, per-indicator catatan) must not reintroduce N+1.
 
-- [ ] **Step 5: Commit the verification note and push**
+- [x] **Step 5: Commit the verification note and push**
 
 ```bash
 git add -A
