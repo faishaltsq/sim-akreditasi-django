@@ -85,8 +85,19 @@ class SystemConfig(models.Model):
 
     @classmethod
     def get_solo(cls):
+        import time
+        cached = getattr(cls, '_solo_cache', None)
+        if cached is not None and (time.monotonic() - cached[1]) <= cls._SOLO_TTL:
+            return cached[0]
         obj, _ = cls.objects.get_or_create(id=1)
+        cls._solo_cache = (obj, time.monotonic())
         return obj
+
+    _SOLO_TTL = 60  # detik — batasi stale lintas worker proses
+
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+        type(self)._solo_cache = None  # invalidasi instan di proses ini
 
     def get_deepseek_api_key(self):
         """Ambil API Key dari database (SystemConfig) atau fallback ke environment variable."""

@@ -110,13 +110,25 @@ class Category(models.Model):
 
     @property
     def total_score(self):
-        records = QualityRecord.objects.filter(standard_item__category=self)
-        return sum(r.score for r in records)
+        # _pre_total diisi sidebar_context (1 query agregat untuk semua pokja);
+        # fallback: aggregate + memo per-instance untuk pemakaian di luar sidebar
+        if '_pre_total' in self.__dict__:
+            return self._pre_total
+        if '_total_score_cache' not in self.__dict__:
+            from django.db.models import Sum
+            agg = QualityRecord.objects.filter(
+                standard_item__category=self
+            ).aggregate(s=Sum('score'))
+            self._total_score_cache = agg['s'] or 0
+        return self._total_score_cache
 
     @property
     def max_possible_score(self):
-        items_count = self.items.count()
-        return items_count * 10
+        if '_pre_max' in self.__dict__:
+            return self._pre_max
+        if '_max_possible_score_cache' not in self.__dict__:
+            self._max_possible_score_cache = self.items.count() * 10
+        return self._max_possible_score_cache
 
     @property
     def percentage(self):

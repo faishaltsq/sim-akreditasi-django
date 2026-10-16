@@ -45,6 +45,29 @@ def sidebar_context(request):
         cache.set('sidebar_categories', categories, _SIDEBAR_CACHE_TTL)
         cache.set('sidebar_categories_by_kelompok', categories_by_kelompok, _SIDEBAR_CACHE_TTL)
 
+    # Precompute stat per pokja (2 query total). Tanpa ini, property model
+    # (total_score/max_possible_score) menembak 2 query per kategori di setiap
+    # render sidebar = 32 query di semua halaman.
+    if categories:
+        from django.db.models import Count, Sum
+        from .models import QualityRecord, StandardItem
+        cat_ids = [c.id for c in categories]
+        sums = {
+            row['standard_item__category']: (row['s'] or 0)
+            for row in QualityRecord.objects
+            .filter(standard_item__category_id__in=cat_ids)
+            .values('standard_item__category').annotate(s=Sum('score'))
+        }
+        counts = {
+            row['category']: row['n']
+            for row in StandardItem.objects
+            .filter(category_id__in=cat_ids)
+            .values('category').annotate(n=Count('id'))
+        }
+        for c in categories:
+            c._pre_total = sums.get(c.id, 0)
+            c._pre_max = counts.get(c.id, 0) * 10
+
     rs_profile = cache.get('sidebar_rs_profile')
     if rs_profile is None:
         try:

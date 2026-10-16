@@ -85,7 +85,9 @@ def get_dynamic_renstra_dict():
         result = {}
         for rm in roadmaps:
             fokus_list = []
-            for item in rm.fokus_items.order_by('nomor'):
+            # .all() memakai cache prefetch (Meta.ordering sudah ['nomor']);
+            # .order_by() membuat queryset baru & membatalkan prefetch indikator_mutu
+            for item in rm.fokus_items.all():
                 kode = item.indikator_mutu.kode_indikator if item.indikator_mutu else item.kode_ref
                 fokus_list.append({
                     'nomor':       item.nomor,
@@ -167,7 +169,15 @@ def indikator_dashboard(request):
         qs = qs.filter(Q(unit_id__in=unit_ids) | Q(jenis='NASIONAL'))
 
     # Ambil catatan capaian terakhir untuk tahun ini per indikator
-    indikators = qs.order_by('jenis', 'kode_indikator')
+    # (prefetch sekali — dulu 1 query per indikator di loop)
+    from django.db.models import Prefetch
+    indikators = qs.order_by('jenis', 'kode_indikator').prefetch_related(
+        Prefetch(
+            'catatan',
+            queryset=CatatanIndikator.objects.filter(tahun=tahun_int).order_by('-bulan'),
+            to_attr='catatan_tahun_cache',
+        )
+    )
     _renstra_data = get_dynamic_renstra_dict()
     _fallback_year = next(iter(_renstra_data.keys())) if _renstra_data else 2026
     current_renstra = _renstra_data.get(tahun_int, _renstra_data.get(_fallback_year, {}))
@@ -186,7 +196,8 @@ def indikator_dashboard(request):
             summary[jenis_label] = {'total': 0, 'tercapai': 0, 'belum': 0}
         summary[jenis_label]['total'] += 1
 
-        last = ind.catatan.filter(tahun=tahun_int).order_by('-bulan').first()
+        _ct = ind.catatan_tahun_cache
+        last = _ct[0] if _ct else None
         is_tercapai = bool(last and last.tercapai)
         if is_tercapai:
             summary[jenis_label]['tercapai'] += 1
