@@ -93,7 +93,8 @@ class SystemConfig(models.Model):
         cls._solo_cache = (obj, time.monotonic())
         return obj
 
-    _SOLO_TTL = 60  # detik — batasi stale lintas worker proses
+    _SOLO_TTL = 10  # ponytail: stale ≤10s lintas worker proses. Turunkan ke 0
+                    # kalau config harus selalu real-time (biaya: 1 query/panggilan).
 
     def save(self, *args, **kwargs):
         super().save(*args, **kwargs)
