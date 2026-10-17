@@ -303,3 +303,94 @@ class EvaluasiIndikatorMutuTest(TestCase):
         url = reverse('akreditasi:risiko_evaluasi', kwargs={'risiko_id': r.pk})
         resp = self.client.get(url)
         self.assertContains(resp, 'INM-UGD-01')
+
+    # ── Filter kandidat: hanya indikator yang berkaitan dengan rencana ──
+
+    def test_candidates_only_include_planned_indicators(self):
+        """Indikator yang tak pernah direncanakan unit ini tidak muncul di dropdown."""
+        unplanned = IndikatorMutu.objects.create(
+            kode_indikator='INM-UGD-02',
+            nama_indikator='Kepatuhan Identifikasi Pasien UGD',
+            jenis='NASIONAL', dimensi_mutu='KESELAMATAN',
+            target_nilai=100.0, arah_target='MIN', satuan='%', unit=self.unit,
+        )
+        # Risiko lain di unit yang sama tetap tertaut -> set rencana tidak kosong.
+        RisikoUnit.objects.create(
+            unit=self.unit, periode='TAHUNAN', tahun=2026,
+            jenis_risiko='Risiko lain UGD', kategori_risiko='KLINIS',
+            dampak=3, probabilitas=3, deskripsi_risiko='y',
+            strategi_mitigasi='KURANGI', rencana_aksi='1. a', pj_mitigasi='Ka',
+            status='DO', created_by=self.user,
+            indikator_mutu_terkait=self.indikator,
+            target_capaian_indikator=90.0,
+        )
+        self.risiko.indikator_mutu_terkait = None
+        self.risiko.target_capaian_indikator = None
+        self.risiko.save()
+
+        url = reverse('akreditasi:risiko_evaluasi', kwargs={'risiko_id': self.risiko.pk})
+        resp = self.client.get(url)
+        self.assertContains(resp, self.indikator.nama_indikator)
+        self.assertNotContains(resp, unplanned.nama_indikator)
+        self.assertContains(resp, 'Hanya indikator yang sudah direncanakan')
+        self.assertContains(resp, 'data-target-rencana="90')
+
+    def test_candidates_fall_back_when_unit_has_no_plan(self):
+        """Unit tanpa rencana -> dropdown tetap terisi (perilaku lama), bukan kosong."""
+        self.risiko.indikator_mutu_terkait = None
+        self.risiko.target_capaian_indikator = None
+        self.risiko.save()
+
+        url = reverse('akreditasi:risiko_evaluasi', kwargs={'risiko_id': self.risiko.pk})
+        resp = self.client.get(url)
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, 'id="link-indikator-select"')
+        self.assertContains(resp, 'data-target=')
+        self.assertContains(resp, 'belum memiliki indikator pada tahap perencanaan')
+        self.assertContains(resp, self.indikator.nama_indikator)
+
+    def test_candidates_include_ancestor_unit_plan(self):
+        """Rencana di unit INDUK harus ikut jadi kandidat (kasus Bangsal Anak -> IRIN)."""
+        parent = UnitKerja.objects.create(name='Instalasi Rawat Inap', code='IRIN-T', level=2)
+        ind_parent = IndikatorMutu.objects.create(
+            kode_indikator='IMP-PARENT-01',
+            nama_indikator='Kepatuhan Double Check Obat High Alert',
+            jenis='IMP_UNIT', dimensi_mutu='KESELAMATAN',
+            target_nilai=100.0, arah_target='MIN', satuan='%', unit=parent,
+        )
+        # Rencana dibuat oleh risiko di unit induk.
+        RisikoUnit.objects.create(
+            unit=parent, periode='TAHUNAN', tahun=2026,
+            jenis_risiko='High alert', kategori_risiko='KLINIS',
+            dampak=3, probabilitas=3, deskripsi_risiko='z',
+            strategi_mitigasi='KURANGI', rencana_aksi='1. a', pj_mitigasi='Ka',
+            status='DO', created_by=self.user,
+            indikator_mutu_terkait=ind_parent,
+            target_capaian_indikator=100.0,
+        )
+        child = UnitKerja.objects.create(name='Bangsal Anak', code='BANAK-T', level=3, parent=parent)
+        rc = RisikoUnit.objects.create(
+            unit=child, periode='TAHUNAN', tahun=2026,
+            jenis_risiko='Obat high alert', kategori_risiko='KLINIS',
+            dampak=3, probabilitas=3, deskripsi_risiko='w',
+            strategi_mitigasi='KURANGI', rencana_aksi='1. a', pj_mitigasi='Ka',
+            status='DO', created_by=self.user,
+        )
+        url = reverse('akreditasi:risiko_evaluasi', kwargs={'risiko_id': rc.pk})
+        resp = self.client.get(url)
+        self.assertContains(resp, 'IMP-PARENT-01')
+        self.assertContains(resp, 'Hanya indikator yang sudah direncanakan')
+
+    def test_manual_marker_renders_as_hint(self):
+        """Nama indikator yang dulu diketik manual muncul sebagai hint, bukan hilang."""
+        self.risiko.indikator_mutu_terkait = None
+        self.risiko.target_capaian_indikator = None
+        self.risiko.deskripsi_risiko += (
+            "\n\n[Indikator Mutu Manual: kepatuhan double-check obat high alert]"
+        )
+        self.risiko.save()
+
+        url = reverse('akreditasi:risiko_evaluasi', kwargs={'risiko_id': self.risiko.pk})
+        resp = self.client.get(url)
+        self.assertContains(resp, 'kepatuhan double-check obat high alert')
+        self.assertContains(resp, 'Indikator yang Anda tulis manual')

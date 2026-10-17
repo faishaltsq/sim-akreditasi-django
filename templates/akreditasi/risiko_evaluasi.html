@@ -211,6 +211,7 @@
                                             {% for ind in indikator_kandidat %}
                                             <option value="{{ ind.pk }}"
                                                     data-target="{{ ind.target_nilai|unlocalize }}"
+                                                    data-target-rencana="{% if ind.rencana_target is not None %}{{ ind.rencana_target|unlocalize }}{% endif %}"
                                                     data-arah="{{ ind.arah_target }}"
                                                     data-satuan="{{ ind.satuan }}"
                                                     title="[{{ ind.kode_indikator }}] {{ ind.nama_indikator }} — Target {{ ind.target_nilai }}{{ ind.satuan }} | PJ: {{ ind.pj|default:'-' }}">
@@ -221,8 +222,17 @@
                                             {% endfor %}
                                         </select>
                                         <small class="text-muted" style="font-size:.66rem;">
-                                            Pilihan mencakup indikator unit ini + INM nasional ({{ indikator_kandidat|length }} indikator). Target otomatis terisi saat dipilih.
+                                            {% if indikator_kandidat_mode == 'RENCANA' %}
+                                            Hanya indikator yang sudah direncanakan pada unit ini ({{ indikator_kandidat|length }} indikator). Target terisi otomatis dari tahap perencanaan.
+                                            {% else %}
+                                            Unit ini belum memiliki indikator pada tahap perencanaan, sehingga ditampilkan indikator unit + INM nasional ({{ indikator_kandidat|length }} indikator). Lengkapi <a href="{% url 'akreditasi:risiko_edit' risiko_id=risiko.pk %}">perencanaan risiko</a> agar pilihan menyempit otomatis.
+                                            {% endif %}
                                         </small>
+                                        {% if indikator_manual_hint %}
+                                        <div class="alert alert-warning py-1 px-2 mt-1 mb-0" style="font-size:.66rem;">
+                                            <i class="bi bi-pencil-square me-1"></i>Indikator yang Anda tulis manual saat perencanaan: <strong>{{ indikator_manual_hint }}</strong> — pilih indikator master yang paling mendekati.
+                                        </div>
+                                        {% endif %}
                                     </div>
                                     <div class="col-md-4">
                                         <label for="target_capaian_indikator" class="form-label fw-semibold mb-1" style="font-size:.74rem; color:#0f766e;">Target Capaian (%)</label>
@@ -632,7 +642,7 @@
         linkSelect.addEventListener('change', function() {
             const opt = linkSelect.options[linkSelect.selectedIndex];
             if (!opt || !linkSelect.value) return;
-            const tgt = opt.dataset.target;
+            const tgt = opt.dataset.targetRencana || opt.dataset.target;
             if (tgt && !targetLinkInput.value.trim()) {
                 targetLinkInput.value = tgt;
             }
