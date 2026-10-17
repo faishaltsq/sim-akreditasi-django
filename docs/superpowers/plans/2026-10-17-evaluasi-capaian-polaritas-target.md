@@ -536,7 +536,7 @@ open(r'$TMPDIR/eval.js','w',encoding='utf-8').write(js)
 
 Render the same risk (`EV_MODE=pk:140`) before and after, then diff. Expected differences: only the target badge and status badge lines. No `<script>` line may differ except the two changed JS initialisers.
 
-- [ ] **Step 6: Commit, push, confirm deploy**
+- [x] **Step 6: Commit, push, confirm deploy**
 
 ```bash
 git add akreditasi/risiko_models.py akreditasi/migrations/0040_risikounit_arah_capaian.py \
