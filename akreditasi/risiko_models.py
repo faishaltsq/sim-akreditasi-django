@@ -107,6 +107,15 @@ class RisikoUnit(models.Model):
         'Target Capaian Indikator (%)', max_digits=5, decimal_places=2,
         null=True, blank=True
     )
+    # Polaritas untuk risiko yang indikatornya belum ditautkan ke master.
+    # Kosong = ikut master (atau MIN bila master tidak ada). Hanya dipakai
+    # bila target_capaian_indikator diisi manual tanpa indikator_mutu_terkait.
+    arah_capaian = models.CharField(
+        'Arah Target Capaian', max_length=3, blank=True, default='',
+        choices=[('', 'Ikuti Master'), ('MIN', '≥ Target (makin besar makin baik)'),
+                 ('MAX', '≤ Target (makin kecil makin baik)')],
+        help_text='Hanya berlaku bila indikator mutu belum ditautkan ke master.'
+    )
 
     status     = models.CharField('Status PDCA', max_length=12, choices=STATUS_CHOICES, default='IDENTIFIKASI')
 
@@ -195,11 +204,54 @@ class RisikoUnit(models.Model):
         return f"Mengendalikan dan memitigasi {kat.lower()} guna mencegah insiden keselamatan pasien serta memastikan kepatuhan terhadap standar pelayanan di {unit_name}."
 
     @property
+    def capaian_evaluasi(self):
+        """Satu sumber kebenaran untuk (target, arah, status, gap) capaian risiko.
+
+        Urutan target: target rencana (diisi di tahap Plan) -> target master
+        indikator -> None. Arah: arah_capaian manual -> master -> 'MIN'.
+        Return dict; nilai None berarti belum bisa dievaluasi.
+        """
+        ind = self.indikator_mutu_terkait
+        arah = (self.arah_capaian
+                or (getattr(ind, 'arah_target', '') if ind else '')
+                or 'MIN')
+        satuan = (getattr(ind, 'satuan', '') if ind else '') or '%'
+
+        if self.target_capaian_indikator is not None:
+            target, sumber = float(self.target_capaian_indikator), 'rencana'
+        elif ind is not None and ind.target_nilai is not None:
+            target, sumber = float(ind.target_nilai), 'master'
+        else:
+            target, sumber = None, 'tidak_ada'
+
+        capaian = float(self.capaian_nilai) if self.capaian_nilai is not None else None
+        if capaian is None or target is None:
+            return {'target': target, 'arah': arah, 'satuan': satuan,
+                    'sumber': sumber, 'capaian': capaian,
+                    'tercapai': None, 'gap': None, 'gap_abs': None}
+
+        tercapai = capaian <= target if arah == 'MAX' else capaian >= target
+        # Gap selalu bertanda "seberapa baik": positif = margin aman,
+        # negatif = seberapa jauh di luar target. Simetris untuk kedua arah.
+        gap = (target - capaian) if arah == 'MAX' else (capaian - target)
+        return {'target': target, 'arah': arah, 'satuan': satuan,
+                'sumber': sumber, 'capaian': capaian, 'tercapai': tercapai,
+                'gap': round(gap, 2), 'gap_abs': round(abs(gap), 2)}
+
+    @property
     def capaian_persen_display(self):
         """Format tampilan persen capaian indikator."""
         if self.capaian_nilai is not None:
             return f"{self.capaian_nilai:.1f}%"
         return "—"
+
+    @property
+    def capaian_status_label(self):
+        """Label status singkat dari resolver; None bila belum bisa dievaluasi."""
+        ev = self.capaian_evaluasi
+        if ev['tercapai'] is None:
+            return None
+        return 'Tercapai' if ev['tercapai'] else 'Belum Tercapai'
 
     @property
     def rca_fishbone_items(self):

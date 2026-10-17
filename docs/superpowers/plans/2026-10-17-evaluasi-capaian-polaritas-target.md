@@ -60,7 +60,7 @@ With `MIN`, `capaian >= target` is `1.0 >= 1.5` → false → the row renders re
 
 **Why:** `target_capaian_indikator` is `DecimalField(max_digits=5, decimal_places=2)`. It physically cannot hold `"<1,5"`, so an unlinked risk has no way to record that its target is a ceiling. Without this field, the fallback branch in the spec (Tahap B) can only guess.
 
-- [ ] **Step 1: Add the field**
+- [x] **Step 1: Add the field**
 
 ```python
     target_capaian_indikator = models.DecimalField(
@@ -78,7 +78,7 @@ With `MIN`, `capaian >= target` is `1.0 >= 1.5` → false → the row renders re
     )
 ```
 
-- [ ] **Step 2: Generate and inspect the migration**
+- [x] **Step 2: Generate and inspect the migration**
 
 ```bash
 .venv/Scripts/python.exe manage.py makemigrations akreditasi --name risikounit_arah_capaian
@@ -87,7 +87,7 @@ With `MIN`, `capaian >= target` is `1.0 >= 1.5` → false → the row renders re
 
 Expected: a single `ALTER TABLE ... ADD COLUMN "arah_capaian" varchar(3) NOT NULL DEFAULT ''`. No data migration, no destructive statement.
 
-- [ ] **Step 3: Apply locally and confirm the suite is untouched**
+- [x] **Step 3: Apply locally and confirm the suite is untouched**
 
 ```bash
 .venv/Scripts/python.exe manage.py migrate akreditasi
@@ -105,7 +105,7 @@ Expected: 16/16 OK. A new column with a default cannot break existing assertions
 
 **Why:** the status rule is currently written four times (view, two templates, two exports) with three different target fallbacks. Every divergence is a bug waiting to happen — the monev template already ignores polarity, and the CSV export already invents `100`.
 
-- [ ] **Step 1: Add the resolver and keep `capaian_persen_display` as a thin wrapper**
+- [x] **Step 1: Add the resolver and keep `capaian_persen_display` as a thin wrapper**
 
 ```python
     @property
@@ -158,7 +158,7 @@ Expected: 16/16 OK. A new column with a default cannot break existing assertions
         return 'Tercapai' if ev['tercapai'] else 'Belum Tercapai'
 ```
 
-- [ ] **Step 2: Verify the resolver against the three production rows by hand**
+- [x] **Step 2: Verify the resolver against the three production rows by hand**
 
 ```bash
 .venv/Scripts/python.exe manage.py shell -c "
@@ -181,7 +181,7 @@ Expected for a Phlebitis risk with `capaian_nilai=1.0` and `arah='MAX'`: `tercap
 
 **Why:** the spec's Tahap B wants a string parser on free text. A parser on a `type=number` field is dead code — the browser rejects `<1,5` before submit. A two-option selector next to the number captures the same information exactly, with no regex guesswork and no ambiguity when the value is `100` (which is both `≥100` and `≤100` depending on intent).
 
-- [ ] **Step 1: Widen the input and add the polarity select**
+- [x] **Step 1: Widen the input and add the polarity select**
 
 ```html
                                 <div class="col-md-3">
@@ -206,7 +206,7 @@ Expected for a Phlebitis risk with `capaian_nilai=1.0` and `arah='MAX'`: `tercap
 
 `max` moves from `100` to `1000` because `target_capaian_indikator` is `max_digits=5` and a rate per-mille can exceed 100.
 
-- [ ] **Step 2: Persist it on create and edit**
+- [x] **Step 2: Persist it on create and edit**
 
 In the create block (`risiko_views.py` ~line 404) and the edit block (~line 631), alongside the existing `target_capaian_indikator` assignment:
 
@@ -214,7 +214,7 @@ In the create block (`risiko_views.py` ~line 404) and the edit block (~line 631)
                 arah_capaian=(request.POST.get('arah_capaian') or '').strip()[:3],
 ```
 
-- [ ] **Step 3: Confirm the edit-form prefill carries it**
+- [x] **Step 3: Confirm the edit-form prefill carries it**
 
 The edit JSON payload already ships `target_capaian_indikator`; add `arah_capaian` to the same serializer so the JS at `risiko_form.html:1846` restores it:
 
@@ -241,7 +241,7 @@ and in the JS prefill block next to the target assignment:
 
 **Why:** `target_nilai_display = target_nilai_display or 100` is the literal source of the `≥ 100%` the spec complains about. And the banner picks `≤`/`≥` from `risiko.indikator_mutu_terkait.arah_target`, which is empty for an unlinked risk — so it always shows `≥`.
 
-- [ ] **Step 1: Replace the three-line fallback with the resolver**
+- [x] **Step 1: Replace the three-line fallback with the resolver**
 
 ```python
     _ev = risiko.capaian_evaluasi
@@ -252,7 +252,7 @@ and in the JS prefill block next to the target assignment:
 
 Keep `target_nilai_display` as the variable name — the template and the JS block already read it, so nothing downstream changes shape.
 
-- [ ] **Step 2: Point the banner at the resolved values**
+- [x] **Step 2: Point the banner at the resolved values**
 
 ```html
                                     <span class="text-muted d-block" style="font-size:.68rem;">
@@ -265,7 +265,7 @@ Keep `target_nilai_display` as the variable name — the template and the JS blo
                                     </span>
 ```
 
-- [ ] **Step 3: Feed the live JS the resolved polarity**
+- [x] **Step 3: Feed the live JS the resolved polarity**
 
 Replace `let arahTarget = "{{ risiko.indikator_mutu_terkait.arah_target|default:'MIN' }}";` with:
 
@@ -300,7 +300,7 @@ and replace the `targetVal` initialiser's `|| 100` with a null-safe read:
 
 **Why:** `risiko_monitoring_evaluasi.html:269` compares `r.capaian_nilai >= r.target_capaian_indikator|default:100` with no polarity at all — every lower-is-better indicator in that table is wrong today. And four report paths each carry their own `or 100`.
 
-- [ ] **Step 1: Rewrite the monev target + status cell**
+- [x] **Step 1: Rewrite the monev target + status cell**
 
 ```html
                                 <span class="badge bg-secondary-subtle text-secondary" style="font-size:.68rem;">
@@ -324,7 +324,7 @@ and replace the `targetVal` initialiser's `|| 100` with a null-safe read:
 
 Note `is not None` — Django templates treat `False` and `None` alike in `{% if %}`, so `{% if r.capaian_evaluasi.tercapai %}` alone would silently drop the red badge.
 
-- [ ] **Step 2: Replace every `or 100` in the report paths**
+- [x] **Step 2: Replace every `or 100` in the report paths**
 
 At `risiko_views.py:1063`, `:1596`, `:1698`, `:2013` the pattern is the same. Replace with:
 
@@ -345,7 +345,7 @@ and for the monev CSV indicator column specifically:
                     else (r.indikator_mutu_terkait.nama_indikator if r.indikator_mutu_terkait else '—'))
 ```
 
-- [ ] **Step 3: Add a status column to the monev CSV so the export matches the screen**
+- [x] **Step 3: Add a status column to the monev CSV so the export matches the screen**
 
 Append `'Status Capaian'` to the header row at `:1044` and the corresponding value in the body loop:
 
@@ -362,7 +362,7 @@ Append `'Status Capaian'` to the header row at `:1044` and the corresponding val
 
 **Why:** the code can honour polarity all it likes; with `arah_target='MAX'` on zero rows the display stays wrong. The audit must be a reviewable list, not an UPDATE — 219 `IMP_UNIT` rows include both "Kepatuhan …" (higher-is-better) and "Angka Kejadian …" (lower-is-better), and a regex over Indonesian indicator names will get some wrong.
 
-- [ ] **Step 1: Write the command**
+- [x] **Step 1: Write the command**
 
 ```python
 from django.core.management.base import BaseCommand
@@ -420,7 +420,7 @@ class Command(BaseCommand):
             self.stdout.write(self.style.WARNING('Dry run. Jalankan dengan --apply untuk menerapkan.'))
 ```
 
-- [ ] **Step 2: Run it against production and read the list before applying**
+- [x] **Step 2: Run it against production and read the list before applying**
 
 ```bash
 .venv/Scripts/python.exe manage.py audit_arah_target
@@ -428,7 +428,7 @@ class Command(BaseCommand):
 
 Expected: roughly 100–150 rows in the FIX bucket (every "Angka Kejadian…", "…Infeksi…", "Phlebitis", "Dekubitus", "Re-admisi", "waktu tunggu" indicator), a handful in RAGU (names containing both "kepatuhan" and "kejadian"). Apply only after reading the FIX list.
 
-- [ ] **Step 3: Apply, then re-run to confirm zero FIX rows remain**
+- [x] **Step 3: Apply, then re-run to confirm zero FIX rows remain**
 
 ```bash
 .venv/Scripts/python.exe manage.py audit_arah_target --apply
@@ -444,7 +444,7 @@ Expected: roughly 100–150 rows in the FIX bucket (every "Angka Kejadian…", "
 
 **Why:** the polarity rule is the whole point of the spec and currently has no test that would fail if someone re-hardcoded `>=`.
 
-- [ ] **Step 1: Add the resolver tests**
+- [x] **Step 1: Add the resolver tests**
 
 ```python
 class EvaluasiCapaianPolaritasTest(TestCase):
@@ -501,7 +501,7 @@ class EvaluasiCapaianPolaritasTest(TestCase):
         self.assertEqual(ev['sumber'], 'rencana')
 ```
 
-- [ ] **Step 2: Add a render test for the monev table**
+- [x] **Step 2: Add a render test for the monev table**
 
 ```python
     def test_monev_menampilkan_le_bukan_ge_untuk_indikator_max(self):
@@ -512,7 +512,7 @@ class EvaluasiCapaianPolaritasTest(TestCase):
         self.assertIn('Tercapai', html)
 ```
 
-- [ ] **Step 3: Run the module, then the full suite**
+- [x] **Step 3: Run the module, then the full suite**
 
 ```bash
 .venv/Scripts/python.exe manage.py test akreditasi.tests_evaluasi_indikator -v1
@@ -521,7 +521,7 @@ class EvaluasiCapaianPolaritasTest(TestCase):
 
 Expected: 21/21 module (16 + 5 resolver + 1 render = 22 if all land), then 108/108 suite.
 
-- [ ] **Step 4: `node --check` on the touched JS**
+- [x] **Step 4: `node --check` on the touched JS**
 
 ```bash
 .venv/Scripts/python.exe manage.py shell -c "
@@ -532,7 +532,7 @@ open(r'$TMPDIR/eval.js','w',encoding='utf-8').write(js)
 " && node --check "$TMPDIR/eval.js"
 ```
 
-- [ ] **Step 5: Render-diff against the pre-change baseline**
+- [x] **Step 5: Render-diff against the pre-change baseline**
 
 Render the same risk (`EV_MODE=pk:140`) before and after, then diff. Expected differences: only the target badge and status badge lines. No `<script>` line may differ except the two changed JS initialisers.
 

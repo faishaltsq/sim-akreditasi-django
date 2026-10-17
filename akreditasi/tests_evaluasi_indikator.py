@@ -1,4 +1,6 @@
 import json
+from decimal import Decimal
+
 from django.test import TestCase, Client
 from django.urls import reverse
 from django.contrib.auth.models import User
@@ -394,3 +396,84 @@ class EvaluasiIndikatorMutuTest(TestCase):
         resp = self.client.get(url)
         self.assertContains(resp, 'kepatuhan double-check obat high alert')
         self.assertContains(resp, 'Indikator yang Anda tulis manual')
+
+class EvaluasiCapaianPolaritasTest(TestCase):
+    """Polaritas + gap harus benar untuk kedua arah, dengan dan tanpa master."""
+
+    def setUp(self):
+        self.user = User.objects.create_superuser(
+            username='admin_pol', password='secret123', email='admin_pol@test.com'
+        )
+        self.client = Client()
+        self.client.force_login(self.user)
+        self.unit = UnitKerja.objects.create(
+            name='Bangsal Pol', code='POL-01', level=3
+        )
+        self.ind_max = IndikatorMutu.objects.create(
+            nama_indikator='Angka Kejadian Phlebitis', kode_indikator='POL-MAX',
+            jenis='IMP_UNIT', dimensi_mutu='AMAN',
+            numerator='Jumlah kejadian', denominator='Jumlah pasien',
+            target_nilai=Decimal('1.50'), satuan='permil', arah_target='MAX',
+            unit=self.unit,
+        )
+
+    def _mk(self, **kw):
+        base = dict(unit=self.unit, periode='TAHUNAN', tahun=2026,
+                    jenis_risiko='Angka kejadian phlebitis bangsal pol',
+                    kategori_risiko='KLINIS', dampak=3, probabilitas=3,
+                    deskripsi_risiko='x', strategi_mitigasi='KURANGI',
+                    rencana_aksi='1. a', pj_mitigasi='Ka', status='DO',
+                    created_by=self.user)
+        base.update(kw)
+        return RisikoUnit.objects.create(**base)
+
+    def test_lower_is_better_di_bawah_target_tercapai(self):
+        """Phlebitis 1.00 dengan target <= 1.50 dianggap tercapai (gap positif)."""
+        r = self._mk(indikator_mutu_terkait=self.ind_max, capaian_nilai=Decimal('1.00'))
+        ev = r.capaian_evaluasi
+        self.assertEqual(ev['arah'], 'MAX')
+        self.assertTrue(ev['tercapai'])
+        self.assertAlmostEqual(ev['gap'], 0.5)
+
+    def test_lower_is_better_di_atas_target_tidak_tercapai(self):
+        """Phlebitis 2.50 melebihi target <= 1.50 (gap negatif)."""
+        r = self._mk(indikator_mutu_terkait=self.ind_max, capaian_nilai=Decimal('2.50'))
+        ev = r.capaian_evaluasi
+        self.assertFalse(ev['tercapai'])
+        self.assertAlmostEqual(ev['gap'], -1.0)
+
+    def test_arah_manual_menimpa_master_saat_belum_tertaut(self):
+        """Risiko belum tertaut: arah_capaian manual dipakai, bukan fallback 'MIN'."""
+        r = self._mk(arah_capaian='MAX', target_capaian_indikator=Decimal('1.50'),
+                     capaian_nilai=Decimal('0.80'))
+        ev = r.capaian_evaluasi
+        self.assertEqual(ev['arah'], 'MAX')
+        self.assertTrue(ev['tercapai'])
+        self.assertEqual(ev['sumber'], 'rencana')
+
+    def test_tanpa_target_tidak_dianggap_gagal(self):
+        """Tanpa target, status None — bukan diam-diam dianggap tidak tercapai."""
+        r = self._mk(capaian_nilai=Decimal('90'))
+        ev = r.capaian_evaluasi
+        self.assertIsNone(ev['tercapai'])
+        self.assertIsNone(ev['target'])
+        self.assertIsNone(r.capaian_status_label)
+
+    def test_target_rencana_menang_atas_master(self):
+        """Target yang diisi di tahap Plan menimpa target master indikator."""
+        r = self._mk(indikator_mutu_terkait=self.ind_max,
+                     target_capaian_indikator=Decimal('0.50'),
+                     capaian_nilai=Decimal('1.00'))
+        ev = r.capaian_evaluasi
+        self.assertEqual(ev['sumber'], 'rencana')
+        self.assertFalse(ev['tercapai'])
+
+    def test_monev_menampilkan_le_bukan_ge_untuk_indikator_max(self):
+        """Tabel MONEV harus menulis simbol arah dari resolver, bukan hardcode '>='."""
+        self._mk(indikator_mutu_terkait=self.ind_max, capaian_nilai=Decimal('1.00'))
+        resp = self.client.get(reverse('akreditasi:risiko_monev') + '?tahun=2026')
+        html = resp.content.decode()
+        self.assertIn('Target: &le;1.5permil', html)
+        self.assertIn('Tercapai', html)
+        self.assertNotIn('Target: &ge;1.5permil', html)
+

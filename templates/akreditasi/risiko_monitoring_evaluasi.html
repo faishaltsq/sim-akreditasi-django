@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load l10n %}
 
 {% block title %}Tabel Monitoring &amp; Evaluasi Risiko Mutu (MONEV) | ARIMA{% endblock %}
 {% block page_title %}Monitoring &amp; Evaluasi Risiko{% endblock %}
@@ -252,7 +253,9 @@
                             </div>
                             <div class="d-flex flex-wrap gap-1 align-items-center mb-1">
                                 <span class="badge bg-light text-secondary border" style="font-size:.68rem;">{{ r.unit.name }}</span>
-                                <span class="badge bg-secondary-subtle text-secondary" style="font-size:.68rem;">Target: {{ r.target_capaian_indikator|default:"100" }}%</span>
+                                <span class="badge bg-secondary-subtle text-secondary" style="font-size:.68rem;">
+                                    Target: {% if r.capaian_evaluasi.arah == 'MAX' %}&le;{% else %}&ge;{% endif %}{{ r.capaian_evaluasi.target|default_if_none:"—"|unlocalize }}{{ r.capaian_evaluasi.satuan }}
+                                </span>
                             </div>
                             <div class="text-muted" style="font-size:.72rem;">
                                 <i class="bi bi-tag me-1"></i>{{ r.get_kategori_risiko_display }} &bull; Periode {{ r.get_periode_display }} {{ r.tahun }}
@@ -266,10 +269,17 @@
                                     {{ r.capaian_persen_display }}
                                 </span>
                                 {% if r.capaian_nilai is not None %}
-                                    {% if r.capaian_nilai >= r.target_capaian_indikator|default:100 %}
-                                    <span class="badge bg-success-subtle text-success border border-success-subtle" style="font-size:.65rem;">Tercapai</span>
-                                    {% else %}
-                                    <span class="badge bg-danger-subtle text-danger border border-danger-subtle" style="font-size:.65rem;">Belum Target</span>
+                                    {# ponytail: `is not None` wajib — Django {% if %} memperlakukan False sama dengan None. #}
+                                    {% if r.capaian_evaluasi.tercapai is not None %}
+                                        {% if r.capaian_evaluasi.tercapai %}
+                                        <span class="badge bg-success-subtle text-success border border-success-subtle" style="font-size:.65rem;">
+                                            Tercapai &middot; margin {{ r.capaian_evaluasi.gap_abs|unlocalize }}
+                                        </span>
+                                        {% else %}
+                                        <span class="badge bg-danger-subtle text-danger border border-danger-subtle" style="font-size:.65rem;">
+                                            Belum Target &middot; gap {{ r.capaian_evaluasi.gap_abs|unlocalize }}
+                                        </span>
+                                        {% endif %}
                                     {% endif %}
                                 {% endif %}
                             </div>

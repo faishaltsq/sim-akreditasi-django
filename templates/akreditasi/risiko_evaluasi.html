@@ -192,10 +192,13 @@
                                     {% endif %}
                                 </div>
                                 <div class="text-md-end bg-white p-2 px-3 rounded-3 shadow-sm border">
-                                    <span class="text-muted d-block" style="font-size:.68rem;">Target Standar Mutu:</span>
+                                    <span class="text-muted d-block" style="font-size:.68rem;">
+                                        Target Standar Mutu:
+                                        {% if ev_capaian.sumber == 'rencana' %}<span class="badge bg-info-subtle text-info border" style="font-size:.6rem;">Rencana</span>{% endif %}
+                                    </span>
                                     <span class="badge bg-success fs-6 fw-bold">
-                                        {% if risiko.indikator_mutu_terkait.arah_target == 'MAX' %}&le;{% else %}&ge;{% endif %}
-                                        {{ target_nilai_display }} {{ risiko.indikator_mutu_terkait.satuan|default:"%" }}
+                                        {% if arah_nilai_display == 'MAX' %}&le;{% else %}&ge;{% endif %}
+                                        {{ target_nilai_display|default_if_none:"—"|unlocalize }} {{ satuan_nilai_display }}
                                     </span>
                                 </div>
                             </div>
@@ -635,8 +638,9 @@
     // ── G.1 Penautan Indikator: auto-isi target saat dipilih ──
     const linkSelect = document.getElementById('link-indikator-select');
     const targetLinkInput = document.getElementById('target_capaian_indikator');
-    let targetVal = parseFloat("{{ target_nilai_display|unlocalize }}".replace(',', '.')) || 100;
-    let arahTarget = "{{ risiko.indikator_mutu_terkait.arah_target|default:'MIN' }}";
+    let targetVal = parseFloat("{{ target_nilai_display|default_if_none:''|unlocalize }}".replace(',', '.'));
+    if (isNaN(targetVal)) targetVal = null;
+    let arahTarget = "{{ arah_nilai_display|default:'MIN' }}";
 
     if (linkSelect && targetLinkInput) {
         linkSelect.addEventListener('change', function() {
@@ -667,6 +671,12 @@
         }
         const val = parseFloat(raw);
         if (isNaN(val)) return;
+
+        if (targetVal === null) {
+            statusBadge.className = 'badge bg-light text-muted border';
+            statusBadge.innerHTML = '<i class="bi bi-dash-circle me-1"></i>Target belum diisi';
+            return;
+        }
 
         let isAchieved = false;
         let gap = 0;

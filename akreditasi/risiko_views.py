@@ -402,6 +402,7 @@ def risiko_input(request):
                 pengendalian_ada=(request.POST.get('pengendalian_ada') or '').strip(),
                 indikator_mutu_terkait_id=int(indikator_id) if indikator_id else None,
                 target_capaian_indikator=float(target_capaian) if target_capaian else None,
+                arah_capaian=(request.POST.get('arah_capaian') or '').strip()[:3],
                 strategi_mitigasi=request.POST['strategi_mitigasi'],
                 rencana_aksi=request.POST['rencana_aksi'],
                 pj_mitigasi=request.POST['pj_mitigasi'],
@@ -629,6 +630,7 @@ def risiko_edit(request, risiko_id):
             risiko.pengendalian_ada = (request.POST.get('pengendalian_ada') or '').strip()
             risiko.indikator_mutu_terkait_id = int(indikator_id) if indikator_id else None
             risiko.target_capaian_indikator = float(target_capaian) if target_capaian else None
+            risiko.arah_capaian = (request.POST.get('arah_capaian') or '').strip()[:3]
             risiko.strategi_mitigasi = request.POST['strategi_mitigasi']
             risiko.rencana_aksi = request.POST['rencana_aksi']
             risiko.pj_mitigasi = request.POST['pj_mitigasi']
@@ -869,10 +871,12 @@ def risiko_evaluasi(request, risiko_id):
     tindak_lanjut_list = list(risiko.tindak_lanjut.all().order_by('urutan'))
     rencana_aksi_items = risiko.rencana_aksi_list
 
-    target_nilai_display = risiko.target_capaian_indikator
-    if not target_nilai_display and risiko.indikator_mutu_terkait:
-        target_nilai_display = risiko.indikator_mutu_terkait.target_nilai
-    target_nilai_display = target_nilai_display or 100
+    _ev = risiko.capaian_evaluasi
+    target_nilai_display = _ev['target']
+    arah_nilai_display = _ev['arah']
+    satuan_nilai_display = _ev['satuan']
+    # ponytail: nama konteks tanpa underscore awal — Django menolak
+    # nama variabel template yang diawali underscore (TemplateSyntaxError).
 
     # Kandidat indikator untuk penautan bila belum tertaut.
     # Sumber: indikator yang SUDAH DIRENCANAKAN unit ini + leluhurnya.
@@ -899,6 +903,9 @@ def risiko_evaluasi(request, risiko_id):
         'tindak_lanjut_list': tindak_lanjut_list,
         'rencana_aksi_items': rencana_aksi_items,
         'target_nilai_display': target_nilai_display,
+        'arah_nilai_display': arah_nilai_display,
+        'satuan_nilai_display': satuan_nilai_display,
+        'ev_capaian': _ev,
         'indikator_kandidat': indikator_kandidat,
         'indikator_kandidat_mode': indikator_kandidat_mode,
         'indikator_manual_hint': indikator_manual_hint,
@@ -1056,11 +1063,19 @@ def risiko_monev_export_csv(request):
         'Status RTL',
         'Skor Risiko Awal (D x P)',
         'Skor Risiko Residual (D x P)',
+        'Status Capaian',
     ])
 
     for i, r in enumerate(qs.order_by('-tahun', '-dampak', '-probabilitas'), start=1):
         # Indikator
-        ind_text = f"{r.indikator_mutu_terkait.nama_indikator} (Target: {r.target_capaian_indikator or 100}%)" if r.indikator_mutu_terkait else "—"
+        _ev = r.capaian_evaluasi
+        if r.indikator_mutu_terkait:
+            ind_text = (f"{r.indikator_mutu_terkait.nama_indikator} "
+                        f"(Target: {'≤' if _ev['arah'] == 'MAX' else '≥'}{_ev['target']:.1f}{_ev['satuan']})"
+                        if _ev['target'] is not None
+                        else f"{r.indikator_mutu_terkait.nama_indikator} (Target: —)")
+        else:
+            ind_text = "—"
 
         # Capaian
         capaian_str = f"{r.capaian_nilai}%" if r.capaian_nilai is not None else "Belum Diisi"
@@ -1101,6 +1116,7 @@ def risiko_monev_export_csv(request):
             r.get_status_rtl_display(),
             skor_awal,
             skor_res,
+            r.capaian_status_label or 'Belum Dievaluasi',
         ])
 
     return response
@@ -1593,10 +1609,9 @@ def risiko_perencanaan_unit(request, unit_id=None):
         ind = r.indikator_mutu_terkait
         nama_ind = ind.nama_indikator if ind else '—'
         kode_ind = f"[{ind.kode_indikator}] " if ind else ''
-        if r.target_capaian_indikator is not None:
-            target_str = f"{r.target_capaian_indikator:.1f}%"
-        elif ind and ind.target_nilai is not None:
-            target_str = f"{ind.target_nilai:.1f}%"
+        _ev = r.capaian_evaluasi
+        if _ev['target'] is not None:
+            target_str = f"{_ev['target']:.1f}{_ev['satuan']}"
         else:
             target_str = "—"
 
@@ -1695,7 +1710,8 @@ def risiko_perencanaan_export_csv(request):
     for idx, r in enumerate(risiko_qs, start=1):
         ind = r.indikator_mutu_terkait
         nama_ind = ind.nama_indikator if ind else 'Belum ditentukan'
-        target_val = f"{r.target_capaian_indikator:.1f}%" if r.target_capaian_indikator is not None else (f"{ind.target_nilai:.1f}%" if ind and ind.target_nilai is not None else '—')
+        _ev = r.capaian_evaluasi
+        target_val = f"{_ev['target']:.1f}{_ev['satuan']}" if _ev['target'] is not None else '—'
         jenis_val = ind.get_jenis_display() if ind else 'IMP Unit'
         writer.writerow([idx, r.masalah or r.jenis_risiko, nama_ind, target_val, jenis_val])
 

@@ -473,12 +473,21 @@
                                 </div>
                                 <div class="col-md-4">
                                     <label class="form-label" style="font-size:.8rem; font-weight:600;">
-                                        <i class="bi bi-bullseye text-success me-1"></i>Target Capaian (%)
+                                        <i class="bi bi-bullseye text-success me-1"></i>Target Capaian
                                     </label>
-                                    <input type="number" name="target_capaian_indikator" id="target_capaian_indikator"
-                                           class="form-control form-control-sm" placeholder="cth: 100.00"
-                                           min="0" max="100" step="0.01">
-                                    <small class="text-muted" style="font-size:.65rem;">Target capaian indikator mutu terkait risiko ini</small>
+                                    <div class="input-group input-group-sm">
+                                        <select name="arah_capaian" id="arah_capaian" class="form-select" style="max-width:120px;">
+                                            <option value="">Ikuti Master</option>
+                                            <option value="MIN">&ge; Target</option>
+                                            <option value="MAX">&le; Target</option>
+                                        </select>
+                                        <input type="number" name="target_capaian_indikator" id="target_capaian_indikator"
+                                               class="form-control form-control-sm" placeholder="cth: 100.00"
+                                               min="0" max="1000" step="0.01">
+                                    </div>
+                                    <small class="text-muted" style="font-size:.65rem;">
+                                        Pilih &le; Target untuk indikator risiko (mis. Phlebitis &le; 1,5&permil;).
+                                    </small>
                                 </div>
                             </div>
                             {# Preset Rencana Aksi per Indikator #}
@@ -1765,6 +1774,7 @@ document.addEventListener('DOMContentLoaded', function() {
             tanggal_evaluasi: "{{ risiko.tanggal_evaluasi|date:'Y-m-d'|default:'' }}",
             indikator_mutu_terkait: "{{ risiko.indikator_mutu_terkait_id|default:'' }}",
             target_capaian_indikator: "{{ risiko.target_capaian_indikator|default:'' }}",
+            arah_capaian: "{{ risiko.arah_capaian|default:'' }}",
             strategi_mitigasi: "{{ risiko.strategi_mitigasi }}",
             pj_mitigasi: `{{ risiko.pj_mitigasi|escapejs }}`,
             biaya_mitigasi: "{{ risiko.biaya_mitigasi|floatformat:0 }}",
@@ -1845,6 +1855,10 @@ document.addEventListener('DOMContentLoaded', function() {
         if (editData.target_capaian_indikator) {
             const el = document.querySelector('[name="target_capaian_indikator"]');
             if (el) el.value = editData.target_capaian_indikator;
+        }
+        if (editData.arah_capaian !== undefined) {
+            const el = document.querySelector('[name="arah_capaian"]');
+            if (el) el.value = editData.arah_capaian;
         }
         if (editData.strategi_mitigasi) {
             const el = document.querySelector('[name="strategi_mitigasi"]');
