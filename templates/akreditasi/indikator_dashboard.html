@@ -1,5 +1,5 @@
 {% extends 'base.html' %}
-{% load static %}
+{% load static l10n %}
 
 {% block title %}Capaian Indikator Mutu RS &amp; Renstra 2026–2030 — ARIMA{% endblock %}
 {% block page_title %}ARIMA: Capaian Indikator Mutu &amp; Target Renstra{% endblock %}
@@ -8,34 +8,22 @@
 {% block extra_css %}
 <style>
   .renstra-banner {
-    background: linear-gradient(135deg, #0f172a 0%, #1e293b 60%, #0f766e 100%);
+    background: #0F172A;
     border-radius: 1rem;
     color: #ffffff;
     position: relative;
     overflow: hidden;
   }
-  .renstra-banner::after {
-    content: '';
-    position: absolute;
-    right: -40px;
-    bottom: -40px;
-    width: 220px;
-    height: 220px;
-    background: radial-gradient(circle, rgba(13,148,136,0.25) 0%, rgba(15,23,42,0) 70%);
-    border-radius: 50%;
-    pointer-events: none;
-  }
   .fokus-card {
-    background: rgba(255, 255, 255, 0.08);
-    backdrop-filter: blur(8px);
-    border: 1px solid rgba(255, 255, 255, 0.16);
-    border-radius: 0.75rem;
+    background: #1E293B;
+    border: 1px solid #334155;
+    border-radius: var(--radius);
     padding: 1rem 1.15rem;
-    transition: transform 0.18s ease, background 0.18s ease;
+    transition: background 0.15s ease, border-color 0.15s ease;
   }
   .fokus-card:hover {
-    background: rgba(255, 255, 255, 0.13);
-    transform: translateY(-2px);
+    background: #27364B;
+    border-color: #475569;
   }
   .year-pill-btn {
     border-radius: 50rem;
@@ -292,8 +280,8 @@
           <select name="indikator" class="form-select form-select-sm" onchange="this.form.submit()">
             <option value="">Semua Indikator (Rata-rata)</option>
             {% for ind in indikator_choices %}
-            <option value="{{ ind.pk }}" title="[{{ ind.kode_indikator }}] {{ ind.nama_indikator }} — Target {{ ind.target_nilai }}{{ ind.satuan }} | PJ: {{ ind.pj|default:'-' }} | Dimensi: {{ ind.get_dimensi_mutu_display }}" {% if filter_indikator == ind.pk %}selected{% endif %}>
-              [{{ ind.kode_indikator }}] {{ ind.nama_indikator }}
+            <option value="{{ ind.pk }}" title="[{{ ind.kode_indikator }}] {{ ind.nama_indikator }} — Target {{ ind.target_nilai|unlocalize }}{{ ind.satuan }} | PJ: {{ ind.pj|default:'-' }} | Dimensi: {{ ind.get_dimensi_mutu_display }}" {% if filter_indikator == ind.pk %}selected{% endif %}>
+              [{{ ind.kode_indikator }}] {{ ind.nama_indikator }}{% if not ind.punya_data %} — belum ada data {{ filter_tahun }}{% endif %}
             </option>
             {% endfor %}
           </select>
@@ -496,7 +484,19 @@
           <tr>
             <td colspan="8" class="text-center py-5 text-muted">
               <i class="bi bi-inbox fs-1 d-block mb-2 text-secondary"></i>
-              Tidak ada indikator mutu yang sesuai kriteria pencarian.
+              <span class="d-block fw-semibold text-dark">Tidak ada indikator pada filter ini</span>
+              <span class="d-block small mt-1">
+                {% if filter_jenis %}
+                  Belum ada indikator terdaftar untuk kategori <strong>{{ filter_jenis }}</strong>{% if filter_unit %} di unit yang dipilih{% endif %}.
+                {% else %}
+                  Belum ada indikator mutu aktif di sistem.
+                {% endif %}
+              </span>
+              {% if is_manager %}
+              <a href="{% url 'akreditasi:indikator_tambah' %}" class="btn btn-sm btn-outline-primary mt-2">
+                <i class="bi bi-plus-lg me-1"></i>Tambah Indikator Mutu
+              </a>
+              {% endif %}
             </td>
           </tr>
           {% endfor %}

@@ -5,7 +5,7 @@ from decimal import Decimal, InvalidOperation
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
-from django.db.models import Avg, Count, Q, Sum
+from django.db.models import Avg, Count, Q, Sum, Exists, OuterRef
 from django.http import JsonResponse
 
 from .risiko_models import IndikatorMutu, CatatanIndikator
@@ -272,15 +272,20 @@ def indikator_dashboard(request):
     except (ValueError, TypeError):
         indikator_id = 0
 
-    # Dropdown: hanya indikator yang punya catatan di tahun terpilih — indikator
-    # tanpa data tidak bisa digrafikkan. Fallback ke semua indikator tier tersebut
-    # bila belum ada satu pun yang berdata (mis. IMU), agar dropdown tak pernah kosong.
+    # Semua indikator pada filter tetap ada di dropdown; yang belum diukur tahun
+    # ini hanya diberi penanda. Menyembunyikannya membuat unit mengira indikator
+    # miliknya belum terdaftar.
     data_ind_ids = set(
         CatatanIndikator.objects.filter(tahun=tahun_int, indikator__in=qs)
         .values_list('indikator_id', flat=True).distinct()
     )
-    choices_qs = qs.filter(pk__in=data_ind_ids) if data_ind_ids else qs
-    indikator_choices = list(choices_qs.order_by('jenis', 'kode_indikator'))
+    indikator_choices = list(
+        qs.annotate(
+            punya_data=Exists(
+                CatatanIndikator.objects.filter(indikator=OuterRef('pk'), tahun=tahun_int)
+            )
+        ).order_by('jenis', 'kode_indikator')
+    )
     selected_indikator = next((i for i in indikator_choices if i.pk == indikator_id), None)
 
     ind_data, ind_colors, ind_meta = [], [], []
@@ -319,7 +324,11 @@ def indikator_dashboard(request):
         'current_renstra': current_renstra,
         'renstra_all': _renstra_data,
         'summary': summary,
-        'jenis_choices': IndikatorMutu.JENIS_CHOICES,
+        'jenis_choices': [
+            ('INM',  'INM — Indikator Nasional Mutu'),
+            ('IMRS', 'IMRS — Indikator Mutu Rumah Sakit'),
+            ('IMU',  'IMU — Indikator Mutu Unit'),
+        ],
         'units': units,
         'filter_jenis': jenis,
         'filter_unit': unit_id,

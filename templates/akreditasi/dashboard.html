@@ -80,7 +80,7 @@
     <!-- ========================================================================= -->
     <!-- HERO BANNER KHUSUS UNIT KERJA (BRANDED UNIT LANDING)                     -->
     <!-- ========================================================================= -->
-    <div class="card border-0 shadow-sm mb-4" style="background: linear-gradient(135deg, #12544F 0%, #2A835F 50%, #14b8a6 100%); border-radius: 1rem; color: #ffffff;">
+    <div class="card border-0 shadow-sm mb-4" style="background: #115E59; border-radius: var(--radius-lg); color: #ffffff;">
         <div class="card-body p-4 p-md-5">
             <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3">
                 <div>
@@ -128,9 +128,8 @@
     <!-- HERO BANNER GLOBAL: ARIMA — RS MonsisKami (SEMUA USER)                    -->
     <!-- ========================================================================= -->
     {% if not unit_dashboard %}
-    <div class="card border-0 mb-4 overflow-hidden" style="border-radius: var(--radius-xl); background: linear-gradient(135deg, #060D0F 0%, #0B1E22 45%, #0D3D30 85%, #0A2E22 100%); border: 1px solid #1A3040; box-shadow: 0 8px 32px rgba(0,0,0,0.35);">
+    <div class="card border-0 mb-4 overflow-hidden" style="border-radius: var(--radius-lg); background: #0F172A; border: 1px solid #1E293B; box-shadow: var(--shadow-md);">
         <!-- Decorative grid overlay -->
-        <div style="position:absolute; inset:0; background-image: linear-gradient(rgba(16,185,129,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(16,185,129,0.03) 1px, transparent 1px); background-size: 32px 32px; pointer-events:none;"></div>
         <div class="card-body p-4 p-md-4 text-white position-relative">
             <div class="d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-3">
                 <div class="d-flex align-items-center gap-3">
@@ -364,7 +363,7 @@
         <div class="row g-0">
 
           <!-- VISI & MOTTO -->
-          <div class="col-12 col-lg-5 p-4" style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 60%, #12544F 100%);">
+          <div class="col-12 col-lg-5 p-4" style="background: #0F172A;">
             <span class="badge bg-white text-dark fw-bold font-monospace px-2.5 py-1 mb-3 d-inline-block" style="font-size:0.7rem;">
               <i class="bi bi-eye-fill me-1 text-primary"></i>VISI RS
             </span>
@@ -464,8 +463,8 @@
             <form method="GET" class="row g-2 align-items-center p-2 mb-3 rounded-3 bg-light border">
                 <div class="col-12 col-md-3">
                     <label class="form-label mb-0 small text-muted fw-semibold">Kategori Indikator</label>
-                    <select name="mutu_jenis" class="form-select form-select-sm" onchange="this.form.submit()">
-                        <option value="">Semua Kategori (INM / IMP)</option>
+                    <select name="mutu_jenis" id="filterMutuJenis" class="form-select form-select-sm">
+                        <option value="">Semua Kategori (INM + IMRS + IMU)</option>
                         {% for jval, jtxt in mutu_jenis_choices %}
                         <option value="{{ jval }}" {% if filter_mutu_jenis == jval %}selected{% endif %}>{{ jtxt }}</option>
                         {% endfor %}
@@ -486,18 +485,18 @@
                 {% endif %}
                 <div class="col-12 col-md-3">
                     <label class="form-label mb-0 small text-muted fw-semibold">Indikator Mutu</label>
-                    <select name="mutu_indikator" class="form-select form-select-sm" onchange="this.form.submit()">
+                    <select name="mutu_indikator" id="filterMutuIndikator" class="form-select form-select-sm" onchange="this.form.submit()">
                         <option value="">Semua Indikator (Rata-rata)</option>
                         {% for ind in mutu_indikator_choices %}
-                        <option value="{{ ind.pk }}" title="[{{ ind.kode_indikator }}] {{ ind.nama_indikator }} — Target {{ ind.target_nilai }}{{ ind.satuan }} | PJ: {{ ind.pj|default:'-' }} | Dimensi: {{ ind.get_dimensi_mutu_display }}" {% if filter_mutu_indikator == ind.pk %}selected{% endif %}>
-                            [{{ ind.kode_indikator }}] {{ ind.nama_indikator }}
+                        <option value="{{ ind.pk }}" title="[{{ ind.kode_indikator }}] {{ ind.nama_indikator }} — Target {{ ind.target_nilai|unlocalize }}{{ ind.satuan }} | PJ: {{ ind.pj|default:'-' }} | Dimensi: {{ ind.get_dimensi_mutu_display }}" {% if filter_mutu_indikator == ind.pk %}selected{% endif %}>
+                            [{{ ind.kode_indikator }}] {{ ind.nama_indikator }}{% if not ind.punya_data %} — belum ada data {{ filter_mutu_tahun }}{% endif %}
                         </option>
                         {% endfor %}
                     </select>
                 </div>
                 <div class="col-12 col-md-2">
                     <label class="form-label mb-0 small text-muted fw-semibold">Tahun Pengukuran</label>
-                    <select name="mutu_tahun" class="form-select form-select-sm" onchange="this.form.submit()">
+                    <select name="mutu_tahun" id="filterMutuTahun" class="form-select form-select-sm">
                         {% for yr in mutu_tahun_choices %}
                         <option value="{{ yr }}" {% if filter_mutu_tahun == yr %}selected{% endif %}>Tahun {{ yr }}</option>
                         {% endfor %}
@@ -521,24 +520,42 @@
                                 {% if mutu_indikator_terpilih %}
                                 Tren capaian <strong class="font-monospace">[{{ mutu_indikator_terpilih.kode_indikator }}]</strong>
                                 {{ mutu_indikator_terpilih.nama_indikator }} per bulan vs garis target
-                                <strong class="text-danger font-monospace">({{ mutu_indikator_terpilih.arah_target }}{{ chart_mutu_target_val }}%)</strong>.
+                                <strong class="text-danger font-monospace">({% if mutu_arah_target == 'MAX' %}&le;{% else %}&ge;{% endif %} {{ chart_mutu_target_val }}{{ mutu_indikator_terpilih.satuan }})</strong>.
                                 {% else %}
                                 Realisasi rata-rata per bulan vs garis target standar minimal
-                                <strong class="text-danger font-monospace">({{ chart_mutu_target_val }}%)</strong>.
+                                <strong class="text-danger font-monospace">({% if mutu_arah_target == 'MAX' %}&le;{% else %}&ge;{% endif %} {{ chart_mutu_target_val }}%)</strong>.
                                 {% endif %}
                             </span>
                         </div>
                         <div class="col-12 col-md-5 text-md-end">
                             <span class="badge bg-success-subtle text-success border border-success-subtle me-1" style="font-size:0.7rem;">
-                                <i class="bi bi-square-fill me-1"></i>Tercapai (≥ {{ chart_mutu_target_val }}%)
+                                <i class="bi bi-square-fill me-1"></i>Tercapai ({% if mutu_arah_target == 'MAX' %}&le;{% else %}&ge;{% endif %} {{ chart_mutu_target_val }}{% if mutu_indikator_terpilih %}{{ mutu_indikator_terpilih.satuan }}{% else %}%{% endif %})
                             </span>
                             <span class="badge bg-danger-subtle text-danger border border-danger-subtle" style="font-size:0.7rem;">
-                                <i class="bi bi-square-fill me-1"></i>Di bawah Target (< {{ chart_mutu_target_val }}%)
+                                <i class="bi bi-square-fill me-1"></i>Di luar Target ({% if mutu_arah_target == 'MAX' %}&gt;{% else %}&lt;{% endif %} {{ chart_mutu_target_val }}{% if mutu_indikator_terpilih %}{{ mutu_indikator_terpilih.satuan }}{% else %}%{% endif %})
                             </span>
                         </div>
                     </div>
                     <div style="position: relative; height: 260px; width: 100%;">
                         <canvas id="chartMutuBulanan"></canvas>
+                        <div id="mutuEmpty" class="h-100 d-none flex-column align-items-center justify-content-center text-center px-3">
+                            <i class="bi bi-bar-chart text-secondary" style="font-size:2rem;"></i>
+                            {% if mutu_indikator_terpilih %}
+                            <span class="fw-semibold text-dark mt-2" style="font-size:.85rem;">Belum ada pengukuran {{ filter_mutu_tahun }}</span>
+                            <span class="text-muted" style="font-size:.72rem;">
+                                Indikator ini belum punya catatan bulanan. Input capaian lewat menu Indikator Mutu.
+                            </span>
+                            {% else %}
+                            <span class="fw-semibold text-dark mt-2" style="font-size:.85rem;">Belum ada catatan untuk kategori ini</span>
+                            <span class="text-muted" style="font-size:.72rem;">
+                                Pilih indikator lain, ganti kategori, atau ganti tahun.
+                            </span>
+                            {% endif %}
+                            <a href="{% url 'akreditasi:indikator_dashboard' %}?tahun={{ filter_mutu_tahun }}"
+                               class="btn btn-sm btn-outline-primary mt-2">
+                                <i class="bi bi-box-arrow-up-right me-1"></i>Buka Indikator Mutu
+                            </a>
+                        </div>
                     </div>
                 </div>
 
@@ -650,7 +667,7 @@
                     <a href="{% url 'akreditasi:indikator_dashboard' %}?tahun={{ yr.year }}"
                        class="text-decoration-none d-block">
                         <div class="border rounded-3 p-3 h-100 position-relative overflow-hidden transition-all {% if yr.year == 2026 %}renstra-year-active{% endif %}"
-                             style="background: linear-gradient(135deg, {{ yr.color }}10, {{ yr.color }}05); border-color: {{ yr.color }}30 !important;"
+                             style="background: {{ yr.color }}0D; border-color: {{ yr.color }}40 !important;"
                              onmouseover="this.style.transform='translateY(-3px)'; this.style.boxShadow='0 6px 20px {{ yr.color }}25'"
                              onmouseout="this.style.transform=''; this.style.boxShadow=''">
                             <!-- Year Badge -->
@@ -822,7 +839,7 @@
                 <div class="col-12 col-md-6 col-xl-3">
                     <div class="border rounded p-3 h-100" style="background:#f8fafc;">
                         <div class="d-flex align-items-center gap-2 mb-2">
-                            <span class="d-inline-flex align-items-center justify-content-center rounded" style="width:32px; height:32px; background:linear-gradient(135deg,#12544F,#2A835F); color:white; font-size:0.7rem; font-weight:700;">L1</span>
+                            <span class="d-inline-flex align-items-center justify-content-center rounded" style="width:32px; height:32px; background:#115E59; color:white; font-size:0.7rem; font-weight:700;">L1</span>
                             <div>
                                 <div class="fw-bold" style="font-size:0.8rem; color:#0f172a;">{{ root.name|truncatechars:40 }}</div>
                                 <div class="text-muted" style="font-size:0.65rem;">{{ root.code }} — {{ root.pic_name|default:"-" }}</div>
@@ -937,6 +954,37 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    // Kategori / tahun berubah → muat ulang daftar indikator, kosongkan
+    // pilihan indikator (indikator lama milik kategori lain), lalu submit
+    // supaya grafik langsung menampilkan rata-rata kategori baru.
+    function reloadIndikator(andSubmit) {
+        const jenis = document.getElementById('filterMutuJenis');
+        const tahun = document.getElementById('filterMutuTahun');
+        const ind = document.getElementById('filterMutuIndikator');
+        if (!jenis || !tahun || !ind) return;
+        const url = "{% url 'akreditasi:api_mutu_indikator' %}?jenis="
+            + encodeURIComponent(jenis.value) + "&tahun=" + encodeURIComponent(tahun.value);
+        fetch(url).then(r => r.json()).then(data => {
+            ind.innerHTML = '<option value="">Semua Indikator (Rata-rata)</option>';
+            (data.indikator || []).forEach(function (i) {
+                const o = document.createElement('option');
+                o.value = i.id;
+                o.textContent = '[' + i.kode + '] ' + i.nama + (i.punya_data ? '' : ' — belum ada data');
+                ind.appendChild(o);
+            });
+            if (andSubmit) ind.form.submit();
+        });
+    }
+    document.getElementById('filterMutuJenis')?.addEventListener('change', function () { reloadIndikator(true); });
+    document.getElementById('filterMutuTahun')?.addEventListener('change', function () { reloadIndikator(true); });
+
+    // Validasi form: "Semua Indikator" = rata-rata, bukan error. Kontrol
+    // dinonaktifkan agar URL bersih (tanpa mutu_indikator=).
+    document.querySelector('form[method="GET"]')?.addEventListener('submit', function (e) {
+        const ind = document.getElementById('filterMutuIndikator');
+        if (ind && ind.value === '') ind.disabled = true;
+    });
+
     // ── Shared chart helpers: value labels + drill-down ──────────────────
     const MUTU_IND_ID   = "{{ filter_mutu_indikator|default:'' }}";
     const MUTU_IND_NAMA = "{{ mutu_indikator_terpilih.nama_indikator|escapejs|default:'' }}";
@@ -1050,6 +1098,12 @@ document.addEventListener('DOMContentLoaded', function() {
         const mutuNama  = {{ chart_mutu_nama_json|safe }};
         const mutuRumus = {{ chart_mutu_rumus_json|safe }};
 
+        if (!hasMutuData) {
+            // Tidak ada catatan bulanan: ganti canvas dengan penjelasan sebabnya.
+            const empty = document.getElementById('mutuEmpty');
+            mutuEl.classList.add('d-none');
+            if (empty) { empty.classList.remove('d-none'); empty.classList.add('d-flex'); }
+        } else {
         chartMutu = new Chart(mutuEl.getContext('2d'), {
             type: 'bar',
             plugins: [valueLabelsPlugin],
@@ -1104,6 +1158,9 @@ document.addEventListener('DOMContentLoaded', function() {
                         }
                     },
                     tooltip: {
+                        // ponytail: selalu di atas bar — tooltip tebal (rumus + 
+                        // rincian PDCA) tidak boleh menutup label bulan di sumbu X.
+                        position: 'top',
                         backgroundColor: 'rgba(15, 23, 42, 0.96)',
                         titleFont: { family: "'Plus Jakarta Sans', sans-serif", size: 12, weight: '700' },
                         bodyFont: { family: "'JetBrains Mono', monospace", size: 11 },
@@ -1160,6 +1217,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             }
         });
+        }
     }
 
     // 2b. Chart Tren Tahunan (Multi-Year Bar + Target Line)

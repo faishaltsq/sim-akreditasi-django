@@ -249,8 +249,8 @@ class IndikatorMutuChartsAndUploadTest(TestCase):
 
     # ── Per-indicator charts on /indikator-mutu/ ───────────────────────────
 
-    def test_mutu_dashboard_dropdown_lists_only_data_bearing_indicators(self):
-        """Choosing tier INM offers exactly the indicators that have catatan for the year."""
+    def test_mutu_dashboard_dropdown_lists_all_indicators_and_flags_empty(self):
+        """Every indicator in the tier is listed; the unmeasured ones carry a marker."""
         CatatanIndikator.objects.create(
             indikator=self.indikator, bulan=1, tahun=2026,
             nilai_numerator=Decimal('80'), nilai_denominator=Decimal('100'))
@@ -267,8 +267,10 @@ class IndikatorMutuChartsAndUploadTest(TestCase):
         m = re.search(r'<select name="indikator".*?</select>', html, re.S)
         self.assertIsNotNone(m, 'dropdown indikator tidak dirender')
         opts = re.findall(r'<option value="(\d+)"', m.group(0))
+        # Kontrak baru: indikator tanpa data tetap muncul, hanya ditandai.
         self.assertIn(str(self.indikator.pk), opts)
-        self.assertNotIn(str(empty.pk), opts)
+        self.assertIn(str(empty.pk), opts)
+        self.assertIn('belum ada data', m.group(0))
 
     def test_mutu_dashboard_empty_tier_falls_back_to_all_indicators(self):
         """A tier with zero catatan still lists its active indicators."""
@@ -325,8 +327,8 @@ class IndikatorMutuChartsAndUploadTest(TestCase):
         self.assertEqual(resp.status_code, 200)
         self.assertRegex(resp.content.decode(), r'const hasInd\s*=\s*false;')
 
-    def test_dashboard_jenis_canonical_lists_data_bearing_indicators(self):
-        """Category INM must resolve to the legacy NASIONAL rows and offer only those with data."""
+    def test_dashboard_jenis_canonical_lists_all_tier_indicators(self):
+        """Category INM must resolve to the legacy NASIONAL rows, data or no data."""
         CatatanIndikator.objects.create(
             indikator=self.indikator, bulan=1, tahun=2026,
             nilai_numerator=Decimal('80'), nilai_denominator=Decimal('100'))
@@ -340,8 +342,10 @@ class IndikatorMutuChartsAndUploadTest(TestCase):
         m = re.search(r'<select name="mutu_indikator".*?</select>', resp.content.decode(), re.S)
         self.assertIsNotNone(m)
         opts = re.findall(r'<option value="(\d+)"', m.group(0))
+        # Kontrak baru: tier lengkap ditampilkan; yang belum diukur ditandai.
         self.assertIn(str(self.indikator.pk), opts)
-        self.assertNotIn(str(empty.pk), opts)
+        self.assertIn(str(empty.pk), opts)
+        self.assertIn('belum ada data', m.group(0))
 
     def _mk(self, bulan, num, den, catatan):
         return CatatanIndikator.objects.create(
@@ -414,3 +418,50 @@ class IndikatorMutuChartsAndUploadTest(TestCase):
         html = self.client.get(url).content.decode()
         self.assertRegex(html, r'<option value="\d+" title="\[INM-01\][^"]*Target 85[^"]*"')
         self.assertIn(self.indikator.nama_indikator, html)
+
+
+class IndikatorDropdownTanpaDataTest(TestCase):
+    """Indikator tanpa pengukuran tetap muncul di dropdown, dengan penanda."""
+
+    def setUp(self):
+        self.user = User.objects.create_superuser('admin_dd', 'dd@rs.id', 'secret123')
+        self.unit = UnitKerja.objects.create(name='Bangsal Dropdown', code='DD-01', tipe_unit='RUANGAN')
+        self.ind_kosong = IndikatorMutu.objects.create(
+            nama_indikator='Kepatuhan Identifikasi Pasien', kode_indikator='DD-IMU-01',
+            unit=self.unit, jenis='IMP_UNIT', dimensi_mutu='AMAN',
+            numerator='n', denominator='d', target_nilai=Decimal('100.00'), satuan='%',
+        )
+        self.ind_berisi = IndikatorMutu.objects.create(
+            nama_indikator='Kepatuhan Kebersihan Tangan', kode_indikator='DD-INM-01',
+            unit=None, jenis='NASIONAL', dimensi_mutu='AMAN',
+            numerator='n', denominator='d', target_nilai=Decimal('85.00'), satuan='%',
+        )
+        CatatanIndikator.objects.create(
+            indikator=self.ind_berisi, tahun=2026, bulan=1,
+            nilai_numerator=Decimal('90'), nilai_denominator=Decimal('100'),
+        )
+        self.client.force_login(self.user)
+
+    def test_indikator_tanpa_data_tetap_ada_di_dropdown(self):
+        html = self.client.get('/?mutu_jenis=IMU&mutu_tahun=2026').content.decode()
+        self.assertIn('DD-IMU-01', html)
+        self.assertIn('belum ada data', html)
+
+    def test_kategori_legacy_tidak_ditawarkan(self):
+        html = self.client.get('/?mutu_tahun=2026').content.decode()
+        self.assertNotIn('IMP Unit (Legacy)', html)
+        self.assertNotIn('IMP Rumah Sakit (Legacy)', html)
+
+    def test_api_mutu_indikator_menghormati_jenis(self):
+        r = self.client.get('/api/mutu-indikator/?jenis=IMU&tahun=2026')
+        kode = [i['kode'] for i in r.json()['indikator']]
+        self.assertIn('DD-IMU-01', kode)
+        self.assertNotIn('DD-INM-01', kode)
+
+    def test_arah_target_dirender_sebagai_simbol(self):
+        self.ind_berisi.arah_target = 'MAX'
+        self.ind_berisi.save(update_fields=['arah_target'])
+        html = self.client.get(f'/?mutu_indikator={self.ind_berisi.pk}&mutu_tahun=2026').content.decode()
+        # Simbol perbandingan, bukan kode arah mentah; angkanya tetap ter-lokalisasi.
+        self.assertNotRegex(html, r'MIN[\d,\.]')
+        self.assertIn('&le;', html)

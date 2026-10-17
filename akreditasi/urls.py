@@ -72,6 +72,7 @@ urlpatterns = [
     path('risiko/fmea-rca/', risiko_views.risiko_fmea_rca, name='risiko_fmea_rca'),
     path('risiko/laporan/<int:unit_id>/', risiko_views.risiko_laporan, name='risiko_laporan_unit'),
     path('risiko/api/indikator-by-unit/', risiko_views.api_indikator_by_unit, name='api_indikator_by_unit'),
+    path('api/mutu-indikator/', views.api_mutu_indikator, name='api_mutu_indikator'),
     path('risiko/<int:risiko_id>/', risiko_views.risiko_detail, name='risiko_detail'),
     path('risiko/<int:risiko_id>/edit/', risiko_views.risiko_edit, name='risiko_edit'),
     path('risiko/<int:risiko_id>/hapus/', risiko_views.risiko_hapus, name='risiko_hapus'),

@@ -55,7 +55,7 @@ Consequence: with `mutu_jenis=IMU&mutu_tahun=2026`, `_data_ids` is the empty set
 
 **Why:** the "has data" post-filter makes the dropdown a lie — it presents itself as the list of indicators in the category, but hides the ones the user is most likely looking for (the unmeasured ones).
 
-- [ ] **Step 0: Add `{% load l10n %}` to both templates**
+- [x] **Step 0: Add `{% load l10n %}` to both templates**
 
 `dashboard.html` already has it (line 8). Add at the top of `templates/akreditasi/indikator_dashboard.html`, right after the existing `{% load static %}`:
 
@@ -66,7 +66,7 @@ Consequence: with `mutu_jenis=IMU&mutu_tahun=2026`, `_data_ids` is the empty set
 Reason: any `|unlocalize` below renders as an empty string unless the library is loaded — locale `id` emits `85,0` inside attributes otherwise.
 
 
-- [ ] **Step 1: Replace the filter with an annotation in `views.py`**
+- [x] **Step 1: Replace the filter with an annotation in `views.py`**
 
 Current code, `akreditasi/views.py:158-167`:
 
@@ -111,7 +111,7 @@ Extend the existing import at `akreditasi/views.py:10`:
 from django.db.models import Count, Q, Sum, F, Avg, Exists, OuterRef
 ```
 
-- [ ] **Step 2: Same change in `indikator_views.py`**
+- [x] **Step 2: Same change in `indikator_views.py`**
 
 Current code, `akreditasi/indikator_views.py:275-284`:
 
@@ -154,7 +154,7 @@ Extend the existing import at `akreditasi/indikator_views.py:7`:
 from django.db.models import Avg, Count, Q, Sum, Exists, OuterRef
 ```
 
-- [ ] **Step 3: Mark the empty ones in both dropdowns**
+- [x] **Step 3: Mark the empty ones in both dropdowns**
 
 `templates/akreditasi/dashboard.html:492-494`:
 
@@ -168,7 +168,7 @@ from django.db.models import Avg, Count, Q, Sum, Exists, OuterRef
 
 `templates/akreditasi/indikator_dashboard.html:295-297`: same `{% if not ind.punya_data %}` suffix, and swap `{{ ind.target_nilai }}` for `{{ ind.target_nilai|unlocalize }}` in the `title` (it currently emits `85,00` inside an attribute — harmless, but inconsistent with the rest).
 
-- [ ] **Step 4: Confirm the count grows on a unit-scoped account**
+- [x] **Step 4: Confirm the count grows on a unit-scoped account**
 
 ```bash
 .venv/Scripts/python.exe manage.py shell -c "
@@ -198,7 +198,7 @@ Expected: the option count equals the number of `IMP_UNIT` indicators reachable 
 
 **Why:** `mutu_jenis_choices = IndikatorMutu.JENIS_CHOICES` offers `IMU`, `IMP Unit (Legacy)`, `IMRS`, `IMP Rumah Sakit (Legacy)`, `INM`, `Indikator Nasional Mutu (Legacy)`, `SNI`. Picking the legacy entry bypasses `_JENIS_MAP` and filters on the raw code alone, so `IMP Unit (Legacy)` returns only the 219 legacy rows while `IMU` returns `IMU` + `IMP_UNIT` — two menu entries that look like the same thing and behave differently. That is a direct cause of "menunya tidak muncul / datanya kosong".
 
-- [ ] **Step 1: Define the canonical tier list once, next to `_JENIS_MAP`**
+- [x] **Step 1: Define the canonical tier list once, next to `_JENIS_MAP`**
 
 ```python
     # Tiga tier kanonik. Kode legacy (IMP_RS / IMP_UNIT / NASIONAL) tidak
@@ -212,7 +212,7 @@ Expected: the option count equals the number of `IMP_UNIT` indicators reachable 
     ]
 ```
 
-- [ ] **Step 2: Expose it in the context**
+- [x] **Step 2: Expose it in the context**
 
 `views.py` line ~303:
 
@@ -232,7 +232,7 @@ Expected: the option count equals the number of `IMP_UNIT` indicators reachable 
 
 Leave `JENIS_CHOICES` on the model untouched — the indicator create/edit form legitimately needs all seven.
 
-- [ ] **Step 3: Fix the empty-value label so it matches what it does**
+- [x] **Step 3: Fix the empty-value label so it matches what it does**
 
 `dashboard.html:468`:
 
@@ -259,7 +259,7 @@ The second one is already accurate. The first one previously said "INM / IMP" wh
 
 **Why:** every `<select>` in the toolbar is `onchange="this.form.submit()"`. Picking a category submits the form with whatever indicator was previously selected — which now belongs to a different category, so the server drops it and the chart reverts to the average. The spec explicitly asks for the dropdown chain to repopulate via AJAX.
 
-- [ ] **Step 1: Make `api_indikator_by_unit` accept `jenis` and `tahun`**
+- [x] **Step 1: Make `api_indikator_by_unit` accept `jenis` and `tahun`**
 
 The function is at `akreditasi/risiko_views.py:170-208` and currently keys only on `unit_id`. Change the first half, keep the `rencana_aksi` preset logic and every existing key untouched:
 
@@ -310,7 +310,7 @@ Imports for that module — confirm `Exists`, `OuterRef`, and `CatatanIndikator`
 from django.db.models import Q, Min, Exists, OuterRef
 ```
 
-- [ ] **Step 2: Add the dashboard-specific route**
+- [x] **Step 2: Add the dashboard-specific route**
 
 `akreditasi/urls.py`, next to the existing API route:
 
@@ -318,7 +318,7 @@ from django.db.models import Q, Min, Exists, OuterRef
     path('api/mutu-indikator/', views.api_mutu_indikator, name='api_mutu_indikator'),
 ```
 
-- [ ] **Step 3: Write the view it points at**
+- [x] **Step 3: Write the view it points at**
 
 In `akreditasi/views.py`, after `_get_mutu_renstra_charts_context`:
 
@@ -362,7 +362,7 @@ def api_mutu_indikator(request):
     ]})
 ```
 
-- [ ] **Step 4: Wire the toolbar to it**
+- [x] **Step 4: Wire the toolbar to it**
 
 In `dashboard.html`, give the three selects ids and replace the two `onchange="this.form.submit()"` handlers on category and year with a JS function; leave the indicator select's own submit behaviour alone.
 
@@ -406,7 +406,7 @@ In `dashboard.html`, give the three selects ids and replace the two `onchange="t
 
 Place it in the existing `DOMContentLoaded` block at `dashboard.html:1041` area, before the Chart construction, so the handlers exist even when the canvas is absent.
 
-- [ ] **Step 5: Never submit an empty `mutu_indikator` when one was chosen**
+- [x] **Step 5: Never submit an empty `mutu_indikator` when one was chosen**
 
 The spec's "Validasi Form" item. Guard in the same handler:
 
@@ -434,7 +434,7 @@ Disabling the control drops it from the query string entirely, which is the corr
 
 Locale note: this project runs `LANGUAGE_CODE = 'id'`, so `{{ chart_mutu_target_val }}` renders `85,0`. That is correct for on-screen text and must stay localized — `|unlocalize` belongs only inside JS/CSS literals (Global Constraints). The bug is not the comma; it is that the raw choice code `MIN` is printed where a comparison symbol belongs.
 
-- [ ] **Step 1: Fix the header line at `dashboard.html:521-528`**
+- [x] **Step 1: Fix the header line at `dashboard.html:521-528`**
 
 Current `:524` renders `(MIN85,0%)` — the raw choice code where a comparison symbol belongs. The `{% else %}` branch at `:527` is fine (no code leaked) but says nothing about polarity; give it the symbol too so the two branches read consistently.
 
@@ -462,7 +462,7 @@ and `:527`:
 
 Note `mutu_indikator_terpilih.satuan` replaces the hardcoded `%`: several indicators use `‰` or `hari`, and the current line prints `%` for all of them.
 
-- [ ] **Step 2: Make the legend badges polarity-aware at `:532-537`**
+- [x] **Step 2: Make the legend badges polarity-aware at `:532-537`**
 
 These are hardcoded `≥` / `<`, so for a `MAX` indicator (lower is better) the legend states the opposite of what the chart colours mean. Same conditional as Step 1:
 
@@ -475,7 +475,7 @@ These are hardcoded `≥` / `<`, so for a `MAX` indicator (lower is better) the 
                             </span>
 ```
 
-- [ ] **Step 3: Replace the dead `hasMutuData` with a real empty-state panel**
+- [x] **Step 3: Replace the dead `hasMutuData` with a real empty-state panel**
 
 `hasMutuData` at line 1048 is assigned and never read — dead code. Use it. Do **not** build the panel by string-concatenating a `yesno` filter inside JS: nested quotes break the script block and one syntax error kills every chart on the page. Put the two variants in markup and let JS toggle visibility.
 
@@ -517,7 +517,7 @@ and close the `else` after the `new Chart(...)` statement.
 
 `hasMutuData` is already wired to the server at `:1048`: `const hasMutuData = {{ has_monthly_data|yesno:"true,false" }};`. Keep the server value — it is computed from the filtered queryset including `jenis`, `unit`, and the unit-scope gate, which the JS cannot see. Do not re-derive it from the data array.
 
-- [ ] **Step 4: Point the empty list state at a page the user can actually open**
+- [x] **Step 4: Point the empty list state at a page the user can actually open**
 
 `templates/akreditasi/indikator_dashboard.html:495-501`. `indikator_tambah` is manager-only, so gate the link — a unit-scoped account clicking a 403 is worse than no link:
 
@@ -554,7 +554,7 @@ Note: with Task 1 in place this branch only renders when the tier genuinely hold
 
 **Why:** the "has data" filter was introduced deliberately (an indicator with no rows cannot be charted), so a future reader will be tempted to re-add it. The test has to pin the distinction: the option must be present, and the chart must say why it is empty.
 
-- [ ] **Step 0: Rewrite the two existing tests that pin the behaviour this plan removes**
+- [x] **Step 0: Rewrite the two existing tests that pin the behaviour this plan removes**
 
 Task 1 deliberately deletes the "has data" filter, and two tests in this module assert that filter. They will go red on a correct implementation — update them in the same commit, do not "fix" the production code to keep them green.
 
@@ -573,7 +573,7 @@ and rename the method to `test_mutu_dashboard_dropdown_lists_all_indicators_and_
 
 `akreditasi/tests_indikator_mutu_charts.py:410` — `test_dropdown_options_show_full_name_and_title_attr` matches `Target 85` on the `title` attribute and only checks that the name appears somewhere; the added suffix and `|unlocalize` do not break either. Leave it.
 
-- [ ] **Step 1: Add the new tests**
+- [x] **Step 1: Add the new tests**
 
 ```python
 class IndikatorDropdownTanpaDataTest(TestCase):
@@ -623,7 +623,7 @@ class IndikatorDropdownTanpaDataTest(TestCase):
         self.assertIn('&le;', html)
 ```
 
-- [ ] **Step 2: Run the module, then the full suite**
+- [x] **Step 2: Run the module, then the full suite**
 
 ```bash
 .venv/Scripts/python.exe manage.py test akreditasi.tests_indikator_mutu_charts -v1
@@ -632,7 +632,7 @@ class IndikatorDropdownTanpaDataTest(TestCase):
 
 Expected: 21 + 4 = 25 in the module (one existing test rewritten, none deleted), 106/106 total across the seven modules.
 
-- [ ] **Step 3: `node --check` the inline JS**
+- [x] **Step 3: `node --check` the inline JS**
 
 ```bash
 .venv/Scripts/python.exe manage.py shell -c "
@@ -643,7 +643,7 @@ open(r'$TMPDIR/dash.js','w',encoding='utf-8').write(js)
 " && node --check "$TMPDIR/dash.js"
 ```
 
-- [ ] **Step 4: Render-diff `/` for an admin account before and after**
+- [x] **Step 4: Render-diff `/` for an admin account before and after**
 
 Expected differences: the category `<option>` list shrinks from seven to four (blank + three tiers), the indicator `<option>` text gains `— belum ada data 2026` suffixes, the header/legend gain `≥`/`≤`, and the JS gains the fetch block. No chart data array may change.
 

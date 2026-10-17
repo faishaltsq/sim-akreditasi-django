@@ -7,7 +7,7 @@ from django.contrib import messages
 from django.http import JsonResponse, HttpResponse
 from django.db import transaction
 from django.views.decorators.http import require_POST
-from django.db.models import Count, Q, Sum, F, Avg
+from django.db.models import Count, Q, Sum, F, Avg, Exists, OuterRef
 from openpyxl import Workbook
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 
@@ -155,15 +155,30 @@ def _get_mutu_renstra_charts_context(request, profile, db_roadmaps, renstra_year
         _JENIS_MAP = {'INM': ['INM', 'NASIONAL'], 'IMRS': ['IMRS', 'IMP_RS'], 'IMU': ['IMU', 'IMP_UNIT']}
         ind_qs = ind_qs.filter(jenis__in=_JENIS_MAP.get(mutu_jenis, [mutu_jenis]))
 
-    # Dropdown choices: indicators that actually have measurements this year — an
-    # indicator without data cannot be charted. Fallback to every active indicator
-    # in the filter when the year holds no data at all, so the dropdown is never empty.
+    # Tiga tier kanonik. Kode legacy (IMP_RS / IMP_UNIT / NASIONAL) tidak
+    # ditawarkan terpisah: _JENIS_MAP sudah memetakannya ke tier yang sama,
+    # dan dua entri dropdown yang berperilaku beda untuk hal yang sama
+    # membingungkan pengguna.
+    _TIER_CHOICES = [
+        ('INM',  'INM — Indikator Nasional Mutu'),
+        ('IMRS', 'IMRS — Indikator Mutu Rumah Sakit'),
+        ('IMU',  'IMU — Indikator Mutu Unit'),
+    ]
+
+    # Setiap indikator pada filter tetap muncul di dropdown; yang belum punya
+    # pengukuran tahun ini diberi penanda, bukan disembunyikan. Menyembunyikan
+    # indikator tanpa data membuat unit mengira indikatornya tidak ada.
     _data_ids = set(
         CatatanIndikator.objects.filter(tahun=mutu_tahun, indikator__in=ind_qs)
         .values_list('indikator_id', flat=True).distinct()
     )
-    _choices_qs = ind_qs.filter(pk__in=_data_ids) if _data_ids else ind_qs
-    mutu_indikator_choices = list(_choices_qs.order_by('jenis', 'kode_indikator'))
+    mutu_indikator_choices = list(
+        ind_qs.annotate(
+            punya_data=Exists(
+                CatatanIndikator.objects.filter(indikator=OuterRef('pk'), tahun=mutu_tahun)
+            )
+        ).order_by('jenis', 'kode_indikator')
+    )
     selected_indikator = next((i for i in mutu_indikator_choices if i.pk == mutu_indikator_id), None)
 
     chart_qs = IndikatorMutu.objects.filter(pk=selected_indikator.pk) if selected_indikator else ind_qs
@@ -300,7 +315,7 @@ def _get_mutu_renstra_charts_context(request, profile, db_roadmaps, renstra_year
         'filter_mutu_tahun': mutu_tahun,
         'filter_mutu_indikator': mutu_indikator_id,
         'mutu_tahun_choices': renstra_years_list,
-        'mutu_jenis_choices': IndikatorMutu.JENIS_CHOICES,
+        'mutu_jenis_choices': _TIER_CHOICES,
         'mutu_units_choices': UnitKerja.objects.filter(is_active=True).order_by('code'),
         'mutu_indikator_choices': mutu_indikator_choices,
         'mutu_indikator_terpilih': selected_indikator,
@@ -338,6 +353,44 @@ def _get_mutu_renstra_charts_context(request, profile, db_roadmaps, renstra_year
 # ==============================================================================
 # 1. DASHBOARD UTAMA (SIK AP Overview)
 # ==============================================================================
+@login_required
+def api_mutu_indikator(request):
+    """AJAX: opsi dropdown Indikator Mutu untuk toolbar dashboard.
+
+    Memakai ulang filter unit-scope yang sama dengan _get_mutu_renstra_charts_context
+    agar pengguna unit tidak pernah melihat indikator unit lain.
+    """
+    from .risiko_models import IndikatorMutu, CatatanIndikator
+
+    profile = getattr(request.user, 'profile', None)
+    jenis = request.GET.get('jenis', '')
+    try:
+        tahun = int(request.GET.get('tahun') or 2026)
+    except (ValueError, TypeError):
+        tahun = 2026
+
+    qs = IndikatorMutu.objects.filter(aktif=True)
+    if profile and profile.is_unit_scoped and profile.unit_kerja:
+        u = profile.unit_kerja
+        unit_ids = list(UnitKerja.objects.filter(
+            Q(pk=u.pk) | Q(parent=u) | Q(parent__parent=u)
+        ).values_list('pk', flat=True))
+        qs = qs.filter(Q(unit_id__in=unit_ids) | Q(jenis='NASIONAL'))
+    if jenis:
+        _JENIS_MAP = {'INM': ['INM', 'NASIONAL'], 'IMRS': ['IMRS', 'IMP_RS'], 'IMU': ['IMU', 'IMP_UNIT']}
+        qs = qs.filter(jenis__in=_JENIS_MAP.get(jenis, [jenis]))
+
+    qs = qs.annotate(punya_data=Exists(
+        CatatanIndikator.objects.filter(indikator=OuterRef('pk'), tahun=tahun)
+    )).order_by('jenis', 'kode_indikator')
+
+    return JsonResponse({'indikator': [
+        {'id': i.pk, 'kode': i.kode_indikator, 'nama': i.nama_indikator,
+         'punya_data': bool(i.punya_data)}
+        for i in qs
+    ]})
+
+
 @login_required
 def dashboard(request):
     profile = getattr(request.user, 'profile', None)

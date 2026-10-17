@@ -7,7 +7,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.http import JsonResponse, HttpResponse, Http404
-from django.db.models import Count, Q, Min
+from django.db.models import Count, Q, Min, Exists, OuterRef
 from django.utils import timezone
 from django.core.paginator import Paginator
 from django.views.decorators.http import require_GET, require_POST
@@ -168,15 +168,36 @@ def _get_preset_rencana_aksi(kode_indikator: str) -> list:
 @login_required
 @require_GET
 def api_indikator_by_unit(request):
-    """AJAX: Return daftar IndikatorMutu aktif berdasarkan unit_id.
-    Tanpa unit_id → return semua. Termasuk preset rencana aksi per indikator.
+    """AJAX: daftar IndikatorMutu aktif berdasarkan unit_id, jenis, dan tahun.
+
+    Dipakai form risiko (unit_id) dan filter dashboard (jenis + tahun).
+    Menyertakan penanda punya_data agar UI bisa membedakan indikator yang
+    sudah diukur dari yang belum.
     """
     unit_id = request.GET.get('unit_id')
+    jenis = request.GET.get('jenis', '')
+    try:
+        tahun = int(request.GET.get('tahun') or 0)
+    except (ValueError, TypeError):
+        tahun = 0
+
     qs = IndikatorMutu.objects.filter(aktif=True).select_related('unit')
     if unit_id:
         # Tampilkan indikator milik unit ini + indikator INM global (unit=null)
         qs = qs.filter(Q(unit_id=unit_id) | Q(unit__isnull=True))
+    if jenis:
+        _JENIS_MAP = {'INM': ['INM', 'NASIONAL'], 'IMRS': ['IMRS', 'IMP_RS'], 'IMU': ['IMU', 'IMP_UNIT']}
+        qs = qs.filter(jenis__in=_JENIS_MAP.get(jenis, [jenis]))
     qs = qs.order_by('jenis', 'kode_indikator')
+
+    # Fallback: jika unit ada tapi tidak punya indikator sama sekali,
+    # tampilkan semua indikator NASIONAL (INM) sebagai indikator universal
+    if unit_id and not qs.exists():
+        qs = IndikatorMutu.objects.filter(aktif=True, jenis='NASIONAL').order_by('kode_indikator')
+
+    if tahun:
+        qs = qs.annotate(punya_data=Exists(
+            CatatanIndikator.objects.filter(indikator=OuterRef('pk'), tahun=tahun)))
 
     # Fallback: jika unit ada tapi tidak punya indikator sama sekali,
     # tampilkan semua indikator NASIONAL (INM) sebagai indikator universal
@@ -204,6 +225,8 @@ def api_indikator_by_unit(request):
             'unit_name': ind.unit.name if ind.unit else 'Global / Nasional',
             'pj': getattr(ind, 'pj', '') or '',
             'preset_rencana_aksi': presets,
+            'punya_data': bool(getattr(ind, 'punya_data', False)) if tahun else None,
+            'arah': getattr(ind, 'arah_target', 'MIN'),
         })
     return JsonResponse({'indikator': data})
 
