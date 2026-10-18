@@ -15,6 +15,7 @@ from decimal import Decimal
 
 from .risiko_models import RisikoUnit, TindakLanjutRisiko, InsidenKeselamatan, IndikatorMutu, CatatanIndikator
 from .models import UnitKerja, AuditLog
+from .indikator_views import _is_manager
 
 
 # ── helpers ──────────────────────────────────────────────────────────────
@@ -932,6 +933,7 @@ def risiko_evaluasi(request, risiko_id):
         'indikator_kandidat': indikator_kandidat,
         'indikator_kandidat_mode': indikator_kandidat_mode,
         'indikator_manual_hint': indikator_manual_hint,
+        'is_manager': _is_manager(request.user),
     }
     return render(request, 'akreditasi/risiko_evaluasi.html', ctx)
 
@@ -1026,6 +1028,7 @@ def risiko_monitoring_evaluasi(request, unit_id=None):
         'query': query,
         'status_rtl_choices': RisikoUnit.STATUS_RTL_CHOICES,
         'status_pelaksanaan_choices': RisikoUnit.STATUS_PELAKSANAAN_CHOICES,
+        'is_manager': _is_manager(request.user),
     }
     return render(request, 'akreditasi/risiko_monitoring_evaluasi.html', ctx)
 

@@ -191,6 +191,22 @@
                                     <small class="text-muted" style="font-size:.7rem;">Dimensi Mutu: {{ risiko.indikator_mutu_terkait.get_dimensi_mutu_display }}</small>
                                     {% endif %}
                                 </div>
+                                {% if is_manager and risiko.linked_indikator %}
+                                <div class="d-flex gap-2 flex-wrap">
+                                    <a href="{% url 'akreditasi:indikator_edit' risiko.linked_indikator.pk %}"
+                                       class="btn btn-sm btn-outline-primary" title="Edit Indikator Mutu">
+                                        <i class="bi bi-pencil me-1"></i>Edit Indikator
+                                    </a>
+                                    <a href="{% url 'akreditasi:indikator_input_capaian' risiko.linked_indikator.pk %}"
+                                       class="btn btn-sm btn-success" title="Input Capaian Bulanan">
+                                        <i class="bi bi-plus-lg me-1"></i>Input Capaian
+                                    </a>
+                                </div>
+                                {% elif is_manager and not risiko.linked_indikator %}
+                                <small class="text-muted fst-italic" style="font-size:.7rem;">
+                                    Tautkan indikator mutu terlebih dahulu untuk membuka Input Capaian / Edit Indikator.
+                                </small>
+                                {% endif %}
                                 <div class="text-md-end bg-white p-2 px-3 rounded-3 shadow-sm border">
                                     <span class="text-muted d-block" style="font-size:.68rem;">
                                         Target Standar Mutu:
