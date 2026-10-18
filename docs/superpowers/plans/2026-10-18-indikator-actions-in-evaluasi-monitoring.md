@@ -45,7 +45,7 @@ Both views fetch `IndikatorMutu` by pk and redirect non-managers to `indikator_d
 
 ### Task 1: `linked_indikator` helper on `RisikoUnit`
 
-- [ ] **Step 1: Add the property** in `akreditasi/risiko_models.py`, right after `capaian_status_label` (or next to `capaian_evaluasi`), returning the linked indicator or `None`:
+- [x] **Step 1: Add the property** in `akreditasi/risiko_models.py`, right after `capaian_status_label` (or next to `capaian_evaluasi`), returning the linked indicator or `None`:
 
   ```python
   @property
@@ -60,7 +60,7 @@ Both views fetch `IndikatorMutu` by pk and redirect non-managers to `indikator_d
 
   (Thin wrapper on purpose: `indikator_mutu_terkait` is the FK and is already select_related everywhere; the wrapper exists only to make the template contract explicit and to leave room for the access-matrix plan to swap the source later without touching templates.)
 
-- [ ] **Step 2: Tests** in `akreditasi/tests_risiko_indikator_actions.py` (new file):
+- [x] **Step 2: Tests** in `akreditasi/tests_risiko_indikator_actions.py` (new file):
   - `test_linked_indikator_none_when_not_tied` — a `RisikoUnit` with no linked indicator returns `None`.
   - `test_linked_indikator_returns_linked_master` — returns the same `IndikatorMutu` instance.
 
@@ -68,9 +68,9 @@ Both views fetch `IndikatorMutu` by pk and redirect non-managers to `indikator_d
 
 ### Task 2: Evaluasi page (G.1) — add the two buttons
 
-- [ ] **Step 1: Locate the insertion point** — the G.1 header already has a right-hand block with the target badge (`templates/akreditasi/risiko_evaluasi.html`, around the `bg-white p-2 px-3 rounded-3 shadow-sm border` div). Place the buttons **above** that block, inside the same `d-flex ... justify-content-between` row, so they do not push the target badge down.
+- [x] **Step 1: Locate the insertion point** — the G.1 header already has a right-hand block with the target badge (`templates/akreditasi/risiko_evaluasi.html`, around the `bg-white p-2 px-3 rounded-3 shadow-sm border` div). Place the buttons **above** that block, inside the same `d-flex ... justify-content-between` row, so they do not push the target badge down.
 
-- [ ] **Step 2: Render, manager-gated**
+- [x] **Step 2: Render, manager-gated**
 
   ```django
   {% if is_manager and risiko.linked_indikator %}
@@ -89,17 +89,17 @@ Both views fetch `IndikatorMutu` by pk and redirect non-managers to `indikator_d
 
   Use the same classes as the indicator detail page (`btn-outline-primary` / `btn-success`) so the two pages look identical.
 
-- [ ] **Step 3: When the risk is *not* linked** to a master indicator, render a muted hint instead of the buttons: "Tautkan indikator mutu terlebih dahulu untuk membuka Input Capaian / Edit Indikator." This keeps the header from collapsing to an empty gap.
+- [x] **Step 3: When the risk is *not* linked** to a master indicator, render a muted hint instead of the buttons: "Tautkan indikator mutu terlebih dahulu untuk membuka Input Capaian / Edit Indikator." This keeps the header from collapsing to an empty gap.
 
-- [ ] **Step 4: Tests** — render the evaluasi page for a manager with a linked indicator; assert both button URLs appear (`/indikator-mutu/<pk>/edit/` and `/indikator-mutu/<pk>/capaian/`). Render for a non-manager; assert neither URL appears.
+- [x] **Step 4: Tests** — render the evaluasi page for a manager with a linked indicator; assert both button URLs appear (`/indikator-mutu/<pk>/edit/` and `/indikator-mutu/<pk>/capaian/`). Render for a non-manager; assert neither URL appears.
 
 ---
 
 ### Task 3: Monitoring page — indicator name becomes a link + two small buttons
 
-- [ ] **Step 1: Make the indicator name clickable** in the "Indikator Mutu & Target" cell (`risiko_monitoring_evaluasi.html`, the `{{ r.indikator_mutu_terkait.nama_indikator }}` block). Wrap it in an `<a>` to `indikator_detail` when `r.linked_indikator` exists, opening in a new tab (`target="_blank" rel="noopener"`) so the MONEV table stays put. Keep the muted "Risiko: …" fallback for risks without a linked indicator.
+- [x] **Step 1: Make the indicator name clickable** in the "Indikator Mutu & Target" cell (`risiko_monitoring_evaluasi.html`, the `{{ r.indikator_mutu_terkait.nama_indikator }}` block). Wrap it in an `<a>` to `indikator_detail` when `r.linked_indikator` exists, opening in a new tab (`target="_blank" rel="noopener"`) so the MONEV table stays put. Keep the muted "Risiko: …" fallback for risks without a linked indicator.
 
-- [ ] **Step 2: Add two small buttons below the name**, manager-gated, `no-print`, opening in a new tab:
+- [x] **Step 2: Add two small buttons below the name**, manager-gated, `no-print`, opening in a new tab:
 
   ```django
   {% if is_manager and r.linked_indikator %}
@@ -118,26 +118,26 @@ Both views fetch `IndikatorMutu` by pk and redirect non-managers to `indikator_d
 
   Reuse the `btn-xs` + `monev-action-btn` classes already defined in this template so the buttons match the rest of the row.
 
-- [ ] **Step 3: Print-safety check** — `@media print` already hides `.no-print`. Verify the new buttons carry the class and that the print preview (manual or `window.print()` in headless) does not show them. Add a regression test that renders the page and asserts `no-print` is present on the button container.
+- [x] **Step 3: Print-safety check** — `@media print` already hides `.no-print`. Verify the new buttons carry the class and that the print preview (manual or `window.print()` in headless) does not show them. Add a regression test that renders the page and asserts `no-print` is present on the button container.
 
-- [ ] **Step 4: Tests** — render the monev page for a manager with a linked indicator; assert both new URLs and `indikator_detail` appear. Render for a non-manager; assert the new URLs do not appear (the name link to `indikator_detail` stays, since detail is read-only).
+- [x] **Step 4: Tests** — render the monev page for a manager with a linked indicator; assert both new URLs and `indikator_detail` appear. Render for a non-manager; assert the new URLs do not appear (the name link to `indikator_detail` stays, since detail is read-only).
 
 ---
 
 ### Task 4: Permission plumbing (one small view change)
 
-- [ ] **Step 1: Expose `is_manager` in the monev view context.** The evaluasi view already does (`ctx['is_manager']`? check — if not, add). The monev view does not pass it today, so the template gate cannot work without it. Add `'is_manager': _is_manager(request.user)` to the monev context dict. `_is_manager` lives in `indikator_views`; import it (or duplicate the 4-line helper) — prefer importing to keep one source of truth.
+- [x] **Step 1: Expose `is_manager` in the monev view context.** The evaluasi view already does (`ctx['is_manager']`? check — if not, add). The monev view does not pass it today, so the template gate cannot work without it. Add `'is_manager': _is_manager(request.user)` to the monev context dict. `_is_manager` lives in `indikator_views`; import it (or duplicate the 4-line helper) — prefer importing to keep one source of truth.
 
-- [ ] **Step 2: Tests** — `tests_risiko_indikator_actions.py` (or extend an existing monev test module) covers the context flag for a manager and a non-manager.
+- [x] **Step 2: Tests** — `tests_risiko_indikator_actions.py` (or extend an existing monev test module) covers the context flag for a manager and a non-manager.
 
 ---
 
 ### Task 5: Verification & commit
 
-- [ ] **Step 1: Run `manage.py test akreditasi`** — must stay at 159 + new tests, 0 failures.
-- [ ] **Step 2: Render probe** — fetch `/risiko/<id>/evaluasi/` and `/risiko/monitoring-evaluasi/` via the test client for a manager user; grep the HTML for both new URLs and `no-print`.
-- [ ] **Step 3: `node --check`** on any inline JS touched (none expected, but run if a script block changed).
-- [ ] **Step 4: Commit** — `feat(indikator): surface Input Capaian / Edit Indikator in Evaluasi and Monitoring`. Push after Vercel green.
+- [x] **Step 1: Run `manage.py test akreditasi`** — must stay at 159 + new tests, 0 failures.
+- [x] **Step 2: Render probe** — fetch `/risiko/<id>/evaluasi/` and `/risiko/monitoring-evaluasi/` via the test client for a manager user; grep the HTML for both new URLs and `no-print`.
+- [x] **Step 3: `node --check`** on any inline JS touched (none expected, but run if a script block changed).
+- [x] **Step 4: Commit** — `feat(indikator): surface Input Capaian / Edit Indikator in Evaluasi and Monitoring`. Push after Vercel green.
 
 ## Review Focus
 
