@@ -2205,7 +2205,7 @@ def cetak_permintaan_lab(request, pk, order_id=None):
     else:
         order = OrderPenunjang.objects.filter(kunjungan=k, jenis='LAB').order_by('-created_at').first()
 
-    return render(request, 'pasien/resep_print.html', {
+    return render(request, 'pasien/cetak_permintaan_lab.html', {
         'kunjungan': k,
         'pasien': k.pasien,
         'order': order,
