@@ -686,8 +686,7 @@ a:hover { color: var(--primary-deep); }
     font-size: 0.8rem;
     border-radius: var(--radius);
     padding: 0.42rem 0.9rem;
-    border: 1px solid transparent;
-    transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+    transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
 }
 .btn-sm { padding: 0.32rem 0.65rem; font-size: 0.75rem; }
 .btn-xs { padding: 0.18rem 0.5rem; font-size: 0.7rem; }
@@ -712,7 +711,10 @@ a:hover { color: var(--primary-deep); }
 .btn-warning:hover { background: #D97706; border-color: #D97706; color: #fff; }
 
 .btn-light { background: var(--surface-subtle); border-color: var(--border-strong); color: var(--text-secondary); }
-.btn-light:hover { background: #E2E8F0; border-color: #94A3B8; color: var(--text-primary); }
+/* Hover ke putih (bukan #E2E8F0): teks inline #0F766E / .text-teal / #334155
+   semuanya lolos AA di putih (5.47 / 7.58 / 10.35) — di #E2E8F0 teks teal
+   jatuh ke 4.44. Border digelapkan agar umpan balik hover tetap jelas. */
+.btn-light:hover { background: #FFFFFF; border-color: #64748B; color: var(--text-primary); }
 
 /* Tombol teal (nama kelas historis dipertahankan) */
 .btn-teal {
@@ -743,6 +745,92 @@ a:hover { color: var(--primary-deep); }
     color: #ffffff;
     border-color: var(--primary-deep);
 }
+
+/* ------------------------------------------------------------
+   Tombol outline — hover TIDAK mengisi latar dengan warna pekat.
+   Bootstrap CDN mengisi latar + memutihkan teks, yang menelan teks
+   ber-inline-color (mis. .btn-outline-light di header gelap).
+   Di sini hover hanya menaikkan kontras: latar tipis, teks & garis tegas.
+   ------------------------------------------------------------ */
+.btn-outline-secondary,
+.btn-outline-success,
+.btn-outline-danger,
+.btn-outline-warning,
+.btn-outline-info,
+.btn-outline-dark,
+.btn-outline-light {
+    border-width: 1px;
+    border-style: solid;
+}
+
+.btn-outline-secondary { color: var(--text-secondary); border-color: var(--border-input); }
+.btn-outline-secondary:hover, .btn-outline-secondary:focus,
+.btn-outline-secondary:active {
+    background-color: var(--surface-subtle);
+    color: var(--text-primary);
+    border-color: var(--text-primary);
+}
+
+.btn-outline-success { color: var(--success); border-color: var(--success); }
+.btn-outline-success:hover, .btn-outline-success:focus,
+.btn-outline-success:active {
+    background-color: var(--success-light);
+    color: var(--success-deep);
+    border-color: var(--success-deep);
+}
+
+.btn-outline-danger { color: var(--danger); border-color: var(--danger); }
+.btn-outline-danger:hover, .btn-outline-danger:focus,
+.btn-outline-danger:active {
+    background-color: var(--danger-light);
+    color: var(--danger-deep);
+    border-color: var(--danger-deep);
+}
+
+.btn-outline-warning { color: var(--warning); border-color: var(--warning); }
+.btn-outline-warning:hover, .btn-outline-warning:focus,
+.btn-outline-warning:active {
+    background-color: var(--warning-light);
+    color: var(--warning-deep);
+    border-color: var(--warning-deep);
+}
+
+.btn-outline-info { color: var(--info); border-color: var(--info); }
+.btn-outline-info:hover, .btn-outline-info:focus,
+.btn-outline-info:active {
+    background-color: var(--info-light);
+    color: var(--info-deep);
+    border-color: var(--info-deep);
+}
+
+.btn-outline-dark { color: var(--text-primary); border-color: var(--border-strong); }
+.btn-outline-dark:hover, .btn-outline-dark:focus,
+.btn-outline-dark:active {
+    background-color: #E2E8F0;
+    color: var(--text-primary);
+    border-color: var(--text-primary);
+}
+
+/* Dipakai di atas header/panel gelap MAUPUN berwarna (teal/biru):
+   hover menggelapkan latar tipis, sehingga teks putih selalu naik kontrasnya.
+   Menerangkan latar (rgba putih) justru menurunkan kontras di header teal. */
+.btn-outline-light { color: #FFFFFF; border-color: rgba(255, 255, 255, 0.55); }
+.btn-outline-light:hover, .btn-outline-light:focus,
+.btn-outline-light:active {
+    background-color: rgba(0, 0, 0, 0.22);
+    color: #FFFFFF;
+    border-color: rgba(255, 255, 255, 0.9);
+}
+
+/* .text-teal memakai !important; di dalam tombol terang, hover menggelapkan
+   latar sehingga teal-medium turun ke ~4.4. Paksa ke nada paling gelap. */
+.btn-light.text-teal:hover, .btn-light.text-teal:focus,
+.btn-light.text-teal:active {
+    color: var(--primary-strong) !important;
+}
+
+/* Variasi tombol solid yang memakai gaya inline tetap butuh hover terbaca. */
+.btn.text-white:hover, .btn.text-white:focus { color: #FFFFFF !important; }
 
 /* ============================================================
    10. NAV TABS

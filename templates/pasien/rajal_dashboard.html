@@ -187,7 +187,7 @@
                                                 </a>
                                             </li>
                                             <li>
-                                                <a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#modalConsentR{{ k.pk }}" style="color:#0d9488;">
+                                                <a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#modalConsentR{{ k.pk }}" style="color:#0F766E;">
                                                     <i class="bi bi-file-earmark-check me-1"></i> General Consent Ranap
                                                 </a>
                                             </li>
@@ -513,7 +513,7 @@
                                     <form method="POST" action="{% url 'pasien:general_consent_simpan' k.pk %}">
                                         {% csrf_token %}
                                         <div class="modal-header" style="background:#ccfbf1;">
-                                            <h6 class="modal-title fw-bold" style="color:#0d9488;"><i class="bi bi-file-earmark-check me-1"></i> Formulir General Consent Rawat Inap — {{ k.pasien.nama_lengkap }}</h6>
+                                            <h6 class="modal-title fw-bold" style="color:#0F766E;"><i class="bi bi-file-earmark-check me-1"></i> Formulir General Consent Rawat Inap — {{ k.pasien.nama_lengkap }}</h6>
                                             <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                                         </div>
                                         <div class="modal-body">
@@ -555,7 +555,7 @@
                                                 </div>
                                             </div>
                                             <hr class="my-2">
-                                            <div class="small fw-bold mb-2" style="color:#0d9488;"><i class="bi bi-shield-check me-1"></i> Persetujuan (STARKES HPK 1.1)</div>
+                                            <div class="small fw-bold mb-2" style="color:#0F766E;"><i class="bi bi-shield-check me-1"></i> Persetujuan (STARKES HPK 1.1)</div>
                                             <div class="form-check mb-1"><input class="form-check-input" type="checkbox" name="setuju_perawatan_umum" value="1" checked id="conRPerawatan{{ k.pk }}"><label class="form-check-label small" for="conRPerawatan{{ k.pk }}">Setuju Perawatan & Tindakan Medis Umum</label></div>
                                             <div class="form-check mb-1"><input class="form-check-input" type="checkbox" name="setuju_pelepasan_informasi" value="1" checked id="conRInfo{{ k.pk }}"><label class="form-check-label small" for="conRInfo{{ k.pk }}">Setuju Pelepasan Informasi Medis & Privasi</label></div>
                                             <div class="form-check mb-1"><input class="form-check-input" type="checkbox" name="setuju_tata_tertib" value="1" checked id="conRTatib{{ k.pk }}"><label class="form-check-label small" for="conRTatib{{ k.pk }}">Setuju Tata Tertib Rawat Inap & Jam Besuk</label></div>
@@ -568,7 +568,7 @@
                                         <div class="modal-footer">
                                             <a href="{% url 'pasien:cetak_general_consent' k.pk %}" class="btn btn-outline-secondary btn-sm me-auto" target="_blank"><i class="bi bi-printer me-1"></i> Cetak A4</a>
                                             <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Batal</button>
-                                            <button type="submit" class="btn btn-sm px-3 fw-semibold" style="background:#0d9488; color:#fff; border:none;"><i class="bi bi-check-circle me-1"></i> Simpan Consent</button>
+                                            <button type="submit" class="btn btn-sm px-3 fw-semibold" style="background:#0F766E; color:#fff; border:none;"><i class="bi bi-check-circle me-1"></i> Simpan Consent</button>
                                         </div>
                                     </form>
                                 </div>

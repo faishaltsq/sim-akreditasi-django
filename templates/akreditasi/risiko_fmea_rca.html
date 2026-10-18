@@ -12,7 +12,7 @@
     .kpi-label { font-size: .72rem; text-transform: uppercase; letter-spacing: .05em; opacity: .85; }
     .rpn-badge { font-family: ui-monospace, monospace; font-weight: 700; }
     .metode-tabs .nav-link { font-size: .82rem; font-weight: 600; border-radius: 8px 8px 0 0; }
-    .metode-tabs .nav-link.active { background: #0d9488; color: #fff; }
+    .metode-tabs .nav-link.active { background: #0F766E; color: #fff; }
     .risk-row-card {
         border-left: 4px solid #e2e8f0;
         transition: box-shadow .15s;
@@ -46,7 +46,7 @@
             </p>
         </div>
         <div class="d-flex gap-2 no-print">
-            <a href="{% url 'akreditasi:risiko_input' %}" class="btn btn-sm text-white" style="background:#0d9488;">
+            <a href="{% url 'akreditasi:risiko_input' %}" class="btn btn-sm text-white" style="background:#0F766E;">
                 <i class="bi bi-plus-circle me-1"></i>Input Risiko Baru
             </a>
             <button onclick="window.print()" class="btn btn-sm btn-outline-secondary">
@@ -121,7 +121,7 @@
                     </select>
                 </div>
                 <div class="col-6 col-md-4 d-flex gap-2">
-                    <button type="submit" class="btn btn-sm text-white" style="background:#0d9488;">
+                    <button type="submit" class="btn btn-sm text-white" style="background:#0F766E;">
                         <i class="bi bi-funnel me-1"></i>Terapkan
                     </button>
                     <a href="{% url 'akreditasi:risiko_fmea_rca' %}" class="btn btn-sm btn-outline-secondary">
@@ -218,7 +218,7 @@
                                     <a href="{% url 'akreditasi:risiko_detail' risiko_id=r.pk %}" class="btn btn-sm btn-outline-secondary py-0 px-2" style="font-size:.68rem;">
                                         <i class="bi bi-eye"></i>
                                     </a>
-                                    <a href="{% url 'akreditasi:risiko_evaluasi' risiko_id=r.pk %}" class="btn btn-sm py-0 px-2 text-white" style="font-size:.68rem; background:#0d9488;">
+                                    <a href="{% url 'akreditasi:risiko_evaluasi' risiko_id=r.pk %}" class="btn btn-sm py-0 px-2 text-white" style="font-size:.68rem; background:#0F766E;">
                                         <i class="bi bi-pencil-square"></i>
                                     </a>
                                 </div>
@@ -274,7 +274,7 @@
                     <p class="text-muted mb-3" style="font-size:.75rem;">
                         Pilih metode <strong>FMEA Proaktif</strong> saat menginput risiko baru untuk menganalisis mode kegagalan proses berisiko tinggi.
                     </p>
-                    <a href="{% url 'akreditasi:risiko_input' %}" class="btn btn-sm text-white" style="background:#0d9488;">
+                    <a href="{% url 'akreditasi:risiko_input' %}" class="btn btn-sm text-white" style="background:#0F766E;">
                         <i class="bi bi-plus-circle me-1"></i>Input Risiko dengan FMEA
                     </a>
                 </div>
@@ -316,7 +316,7 @@
                                     <a href="{% url 'akreditasi:risiko_detail' risiko_id=r.pk %}" class="btn btn-sm btn-outline-secondary py-0 px-2" style="font-size:.68rem;">
                                         <i class="bi bi-eye"></i>
                                     </a>
-                                    <a href="{% url 'akreditasi:risiko_evaluasi' risiko_id=r.pk %}" class="btn btn-sm py-0 px-2 text-white" style="font-size:.68rem; background:#0d9488;">
+                                    <a href="{% url 'akreditasi:risiko_evaluasi' risiko_id=r.pk %}" class="btn btn-sm py-0 px-2 text-white" style="font-size:.68rem; background:#0F766E;">
                                         <i class="bi bi-pencil-square"></i>
                                     </a>
                                 </div>
@@ -379,7 +379,7 @@
                     <p class="text-muted mb-3" style="font-size:.75rem;">
                         Pilih metode <strong>RCA Reaktif</strong> saat menginput risiko untuk menganalisis akar masalah pasca kejadian sentinel / KTD berat.
                     </p>
-                    <a href="{% url 'akreditasi:risiko_input' %}" class="btn btn-sm text-white" style="background:#0d9488;">
+                    <a href="{% url 'akreditasi:risiko_input' %}" class="btn btn-sm text-white" style="background:#0F766E;">
                         <i class="bi bi-plus-circle me-1"></i>Input Risiko dengan RCA
                     </a>
                 </div>

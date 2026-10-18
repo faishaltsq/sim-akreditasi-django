@@ -10,7 +10,7 @@
     <!-- BREADCRUMB -->
     <nav aria-label="breadcrumb" class="mb-3">
         <ol class="breadcrumb mb-0" style="font-size:.8rem;">
-            <li class="breadcrumb-item"><a href="{% url 'pasien:dashboard' %}" class="text-decoration-none" style="color:#0d9488;">Dashboard</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'pasien:dashboard' %}" class="text-decoration-none" style="color:#0F766E;">Dashboard</a></li>
             <li class="breadcrumb-item active">Daftar Pasien</li>
         </ol>
     </nav>
@@ -19,14 +19,14 @@
     <div class="card border-0 shadow-sm mb-4">
         <div class="card-body py-3 d-flex flex-wrap gap-2 align-items-center justify-content-between">
             <div>
-                <h6 class="fw-bold mb-0" style="font-size:.95rem;"><i class="bi bi-people-fill me-2" style="color:#0d9488;"></i>Data Pasien</h6>
+                <h6 class="fw-bold mb-0" style="font-size:.95rem;"><i class="bi bi-people-fill me-2" style="color:#0F766E;"></i>Data Pasien</h6>
             </div>
             <div class="d-flex gap-2 align-items-center">
                 <form method="get" class="d-flex gap-2">
                     <input type="text" name="q" value="{{ q }}" class="form-control form-control-sm" placeholder="Cari nama / No. RM / NIK / BPJS…" style="min-width:240px; font-size:.82rem;">
-                    <button type="submit" class="btn btn-sm fw-semibold px-3" style="background:#0d9488;color:#fff;"><i class="bi bi-search"></i></button>
+                    <button type="submit" class="btn btn-sm fw-semibold px-3" style="background:#0F766E;color:#fff;"><i class="bi bi-search"></i></button>
                 </form>
-                <a href="{% url 'pasien:pasien_baru' %}" class="btn btn-sm fw-semibold px-3" style="background:#0d9488;color:#fff;">
+                <a href="{% url 'pasien:pasien_baru' %}" class="btn btn-sm fw-semibold px-3" style="background:#0F766E;color:#fff;">
                     <i class="bi bi-person-plus me-1"></i>Daftarkan Pasien Baru
                 </a>
             </div>
@@ -51,7 +51,7 @@
                     <tbody>
                         {% for p in pasien_list %}
                         <tr style="cursor:pointer;" onclick="location.href='{% url 'pasien:pasien_detail' pk=p.pk %}'">
-                            <td class="font-monospace fw-semibold" style="color:#0d9488;">{{ p.no_rm }}</td>
+                            <td class="font-monospace fw-semibold" style="color:#0F766E;">{{ p.no_rm }}</td>
                             <td class="fw-semibold">{{ p.nama_lengkap }}</td>
                             <td>
                                 {% if p.jenis_kelamin == 'L' %}

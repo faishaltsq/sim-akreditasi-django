@@ -10,8 +10,8 @@
     <!-- BREADCRUMB -->
     <nav aria-label="breadcrumb" class="mb-3">
         <ol class="breadcrumb mb-0" style="font-size:.8rem;">
-            <li class="breadcrumb-item"><a href="{% url 'pasien:dashboard' %}" class="text-decoration-none" style="color:#0d9488;">Dashboard</a></li>
-            <li class="breadcrumb-item"><a href="{% url 'pasien:pasien_daftar' %}" class="text-decoration-none" style="color:#0d9488;">Daftar Pasien</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'pasien:dashboard' %}" class="text-decoration-none" style="color:#0F766E;">Dashboard</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'pasien:pasien_daftar' %}" class="text-decoration-none" style="color:#0F766E;">Daftar Pasien</a></li>
             <li class="breadcrumb-item active">Pasien Baru</li>
         </ol>
     </nav>
@@ -25,7 +25,7 @@
                 {% csrf_token %}
 
                 <!-- IDENTITAS -->
-                <p class="fw-bold mb-2" style="font-size:.78rem; text-transform:uppercase; letter-spacing:.05em; color:#0d9488;"><i class="bi bi-id-card me-1"></i>Identitas Pasien</p>
+                <p class="fw-bold mb-2" style="font-size:.78rem; text-transform:uppercase; letter-spacing:.05em; color:#0F766E;"><i class="bi bi-id-card me-1"></i>Identitas Pasien</p>
                 <div class="row g-3 mb-4">
                     <div class="col-md-4">
                         <label class="form-label" style="font-size:.8rem; font-weight:600;">No. Rekam Medis <span class="text-danger">*</span></label>
@@ -89,7 +89,7 @@
 
                 <!-- BUTTONS -->
                 <div class="d-flex gap-2">
-                    <button type="submit" class="btn btn-sm fw-bold px-4" style="background:#0d9488;color:#fff;">
+                    <button type="submit" class="btn btn-sm fw-bold px-4" style="background:#0F766E;color:#fff;">
                         <i class="bi bi-person-check me-1"></i>Daftarkan Pasien
                     </button>
                     <a href="{% url 'pasien:pasien_daftar' %}" class="btn btn-sm btn-outline-secondary fw-semibold px-3">Batal</a>

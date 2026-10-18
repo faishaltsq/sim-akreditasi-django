@@ -58,7 +58,7 @@
         <div class="col-6 col-lg">
             <div class="kpi-card">
                 <div class="kpi-label"><i class="bi bi-people me-1"></i>Total Pasien</div>
-                <div class="kpi-value" style="color:#0d9488;">{{ total_pasien }}</div>
+                <div class="kpi-value" style="color:#0F766E;">{{ total_pasien }}</div>
                 <div class="kpi-sub">Master pasien terdaftar</div>
             </div>
         </div>
@@ -97,7 +97,7 @@
         <div class="col-6 col-md-3">
             <div class="kpi-card">
                 <div class="kpi-label"><i class="bi bi-building me-1"></i>Ranap</div>
-                <div class="kpi-value" style="font-size:1.5rem; color:#0d9488;">{{ pasien_ranap }}</div>
+                <div class="kpi-value" style="font-size:1.5rem; color:#0F766E;">{{ pasien_ranap }}</div>
             </div>
         </div>
         <div class="col-6 col-md-3">
@@ -127,7 +127,7 @@
         <div class="col-12 col-lg-7">
             <div class="card border-0 shadow-sm h-100">
                 <div class="card-header bg-white py-3 border-0 d-flex justify-content-between align-items-center">
-                    <span class="fw-bold" style="font-size:.85rem;"><i class="bi bi-graph-up-arrow me-2" style="color:#0d9488;"></i>Tren Kunjungan 7 Hari</span>
+                    <span class="fw-bold" style="font-size:.85rem;"><i class="bi bi-graph-up-arrow me-2" style="color:#0F766E;"></i>Tren Kunjungan 7 Hari</span>
                 </div>
                 <div class="card-body">
                     <div class="chart-container"><canvas id="trenChart"></canvas></div>
@@ -138,7 +138,7 @@
         <div class="col-12 col-lg-5">
             <div class="card border-0 shadow-sm h-100">
                 <div class="card-header bg-white py-3 border-0 d-flex justify-content-between align-items-center">
-                    <span class="fw-bold" style="font-size:.85rem;"><i class="bi bi-pie-chart-fill me-2" style="color:#0d9488;"></i>Distribusi Penjamin</span>
+                    <span class="fw-bold" style="font-size:.85rem;"><i class="bi bi-pie-chart-fill me-2" style="color:#0F766E;"></i>Distribusi Penjamin</span>
                 </div>
                 <div class="card-body d-flex align-items-center justify-content-center">
                     <div class="chart-container"><canvas id="penjaminChart"></canvas></div>
@@ -150,7 +150,7 @@
     <!-- TABEL KUNJUNGAN TERBARU -->
     <div class="card border-0 shadow-sm mb-4">
         <div class="card-header bg-white py-3 border-0 d-flex justify-content-between align-items-center">
-            <span class="fw-bold" style="font-size:.85rem;"><i class="bi bi-clock-history me-2" style="color:#0d9488;"></i>10 Kunjungan Terbaru</span>
+            <span class="fw-bold" style="font-size:.85rem;"><i class="bi bi-clock-history me-2" style="color:#0F766E;"></i>10 Kunjungan Terbaru</span>
             <a href="{% url 'pasien:kunjungan_daftar' %}" class="text-decoration-none small">Lihat Semua &rarr;</a>
         </div>
         <div class="card-body p-0">
@@ -169,7 +169,7 @@
                         {% for kj in kunjungan_terbaru %}
                         <tr>
                             <td class="font-monospace fw-semibold">
-                                <a href="{% url 'pasien:kunjungan_detail' pk=kj.pk %}" class="text-decoration-none" style="color:#0d9488;">{{ kj.no_kunjungan }}</a>
+                                <a href="{% url 'pasien:kunjungan_detail' pk=kj.pk %}" class="text-decoration-none" style="color:#0F766E;">{{ kj.no_kunjungan }}</a>
                             </td>
                             <td>{{ kj.pasien.nama_lengkap }}</td>
                             <td><span class="badge bg-light text-dark border" style="font-size:.7rem;">{{ kj.get_jenis_kunjungan_display }}</span></td>
@@ -197,7 +197,7 @@
     <!-- QUICK LINKS -->
     <div class="row g-3 mb-4">
         <div class="col-auto">
-            <a href="{% url 'pasien:pasien_baru' %}" class="btn btn-sm fw-semibold px-3" style="background:#0d9488;color:#fff;"><i class="bi bi-person-plus me-1"></i>Daftarkan Pasien Baru</a>
+            <a href="{% url 'pasien:pasien_baru' %}" class="btn btn-sm fw-semibold px-3" style="background:#0F766E;color:#fff;"><i class="bi bi-person-plus me-1"></i>Daftarkan Pasien Baru</a>
         </div>
         <div class="col-auto">
             <a href="{% url 'pasien:kunjungan_baru' %}" class="btn btn-sm btn-outline-dark fw-semibold px-3"><i class="bi bi-plus-circle me-1"></i>Kunjungan Baru</a>
@@ -227,10 +227,10 @@ document.addEventListener('DOMContentLoaded', function() {
             datasets: [{
                 label: 'Kunjungan',
                 data: trenData,
-                borderColor: '#0d9488',
+                borderColor: '#0F766E',
                 backgroundColor: 'rgba(13,148,136,.1)',
                 fill: true, tension: .35, pointRadius: 4,
-                pointBackgroundColor: '#0d9488', borderWidth: 2,
+                pointBackgroundColor: '#0F766E', borderWidth: 2,
             }]
         },
         options: {
@@ -252,7 +252,7 @@ document.addEventListener('DOMContentLoaded', function() {
             labels: penjaminLabels,
             datasets: [{
                 data: penjaminData,
-                backgroundColor: ['#0d9488','#3b82f6','#f59e0b','#ef4444','#8b5cf6'],
+                backgroundColor: ['#0F766E','#3b82f6','#f59e0b','#ef4444','#8b5cf6'],
                 borderWidth: 2, borderColor: '#fff', hoverOffset: 4,
             }]
         },

@@ -10,8 +10,8 @@
     <!-- BREADCRUMB -->
     <nav aria-label="breadcrumb" class="mb-3">
         <ol class="breadcrumb mb-0" style="font-size:.8rem;">
-            <li class="breadcrumb-item"><a href="{% url 'pasien:dashboard' %}" class="text-decoration-none" style="color:#0d9488;">Dashboard</a></li>
-            <li class="breadcrumb-item"><a href="{% url 'pasien:pasien_daftar' %}" class="text-decoration-none" style="color:#0d9488;">Daftar Pasien</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'pasien:dashboard' %}" class="text-decoration-none" style="color:#0F766E;">Dashboard</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'pasien:pasien_daftar' %}" class="text-decoration-none" style="color:#0F766E;">Daftar Pasien</a></li>
             <li class="breadcrumb-item active">{{ pasien.nama_lengkap }}</li>
         </ol>
     </nav>
@@ -47,7 +47,7 @@
                     {% endif %}
                 </div>
                 <div class="d-flex gap-2 align-self-start">
-                    <a href="{% url 'pasien:kunjungan_baru' %}?pasien={{ pasien.pk }}" class="btn btn-sm fw-bold px-3" style="background:#0d9488;color:#fff;">
+                    <a href="{% url 'pasien:kunjungan_baru' %}?pasien={{ pasien.pk }}" class="btn btn-sm fw-bold px-3" style="background:#0F766E;color:#fff;">
                         <i class="bi bi-plus-circle me-1"></i>Buka Kunjungan Baru
                     </a>
                 </div>
@@ -70,7 +70,7 @@
     <!-- RIWAYAT KUNJUNGAN -->
     <div class="card border-0 shadow-sm">
         <div class="card-header bg-white py-3 border-0 d-flex justify-content-between align-items-center">
-            <span class="fw-bold" style="font-size:.9rem;"><i class="bi bi-clock-history me-2" style="color:#0d9488;"></i>Riwayat Kunjungan ({{ kunjungan_list.count }})</span>
+            <span class="fw-bold" style="font-size:.9rem;"><i class="bi bi-clock-history me-2" style="color:#0F766E;"></i>Riwayat Kunjungan ({{ kunjungan_list.count }})</span>
             <a href="{% url 'pasien:kunjungan_baru' %}?pasien={{ pasien.pk }}" class="btn btn-sm btn-outline-dark fw-semibold" style="font-size:.78rem;">
                 <i class="bi bi-plus me-1"></i>Kunjungan Baru
             </a>
@@ -93,7 +93,7 @@
                     <tbody>
                         {% for k in kunjungan_list %}
                         <tr style="cursor:pointer;" onclick="location.href='{% url 'pasien:kunjungan_detail' pk=k.pk %}'">
-                            <td class="font-monospace fw-semibold" style="color:#0d9488;">{{ k.no_kunjungan }}</td>
+                            <td class="font-monospace fw-semibold" style="color:#0F766E;">{{ k.no_kunjungan }}</td>
                             <td><span class="badge bg-light text-dark border" style="font-size:.7rem;">{{ k.get_jenis_kunjungan_display }}</span></td>
                             <td>
                                 {% if k.status == 'DAFTAR' %}<span class="badge bg-secondary">Terdaftar</span>

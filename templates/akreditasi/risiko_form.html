@@ -7,8 +7,8 @@
 {% block extra_css %}
 <style>
     .skor-badge { display:inline-block; padding:6px 18px; border-radius:20px; font-weight:700; font-size:1rem; color:#fff; transition:background .2s; }
-    input[type=range] { accent-color:#0d9488; }
-    .slider-val { display:inline-block; min-width:28px; text-align:center; font-weight:700; color:#0d9488; }
+    input[type=range] { accent-color:#0F766E; }
+    .slider-val { display:inline-block; min-width:28px; text-align:center; font-weight:700; color:#0F766E; }
     
     /* Realtime Required Field Indicators */
     .field-req-empty {
@@ -17,7 +17,7 @@
         transition: border-color .2s, background-color .2s;
     }
     .field-req-filled {
-        border-bottom: 2px solid #0d9488 !important;
+        border-bottom: 2px solid #0F766E !important;
         background-color: #ffffff !important;
         transition: border-color .2s, background-color .2s;
     }
@@ -34,7 +34,7 @@
         color: #e11d48 !important;
     }
     .req-note-filled {
-        color: #0d9488 !important;
+        color: #0F766E !important;
     }
 </style>
 {% endblock %}
@@ -47,9 +47,9 @@
             {# Breadcrumb #}
             <nav aria-label="breadcrumb" class="mb-3">
                 <ol class="breadcrumb" style="font-size:.8rem;">
-                    <li class="breadcrumb-item"><a href="{% url 'akreditasi:risiko_daftar' %}" style="color:#0d9488;">Daftar Risiko</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'akreditasi:risiko_daftar' %}" style="color:#0F766E;">Daftar Risiko</a></li>
                     {% if is_edit %}
-                    <li class="breadcrumb-item"><a href="{% url 'akreditasi:risiko_detail' risiko.pk %}" style="color:#0d9488;">Detail #{{ risiko.pk }}</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'akreditasi:risiko_detail' risiko.pk %}" style="color:#0F766E;">Detail #{{ risiko.pk }}</a></li>
                     <li class="breadcrumb-item active">Edit Risiko</li>
                     {% else %}
                     <li class="breadcrumb-item active">Input Risiko Baru</li>
@@ -506,7 +506,7 @@
                                 <div class="col-md-6">
                                     <label class="form-label d-flex justify-content-between align-items-center" style="font-size:.8rem; font-weight:600;">
                                         <span>Strategi Mitigasi <span class="text-danger">*</span></span>
-                                        <span id="ai-strategi-badge" class="badge d-none" style="font-size:.68rem; background:#0d9488; color:#fff; border-radius:10px; padding:2px 7px;">✨ AI: —</span>
+                                        <span id="ai-strategi-badge" class="badge d-none" style="font-size:.68rem; background:#0F766E; color:#fff; border-radius:10px; padding:2px 7px;">✨ AI: —</span>
                                     </label>
                                     <select name="strategi_mitigasi" id="strategi_mitigasi_select" class="form-select form-select-sm" required>
                                         <option value="">— Pilih —</option>
@@ -537,7 +537,7 @@
                             <div class="mb-3">
                                 <div class="d-flex justify-content-between align-items-center">
                                     <label class="form-label" style="font-size:.8rem; font-weight:600;">Rencana Aksi <span class="text-danger">*</span></label>
-                                    <button type="button" class="btn btn-sm btn-outline-teal px-2 py-0" id="btn-ai-mitigasi" style="font-size:.72rem; border-color:#0d9488; color:#0d9488;">
+                                    <button type="button" class="btn btn-sm btn-outline-teal px-2 py-0" id="btn-ai-mitigasi" style="font-size:.72rem; border-color:#0F766E; color:#0F766E;">
                                         <i class="bi bi-stars me-1"></i>Bantu Susun dengan AI DeepSeek
                                     </button>
                                 </div>
@@ -550,7 +550,7 @@
                             <a href="{% if is_edit %}{% url 'akreditasi:risiko_detail' risiko.pk %}{% else %}{% url 'akreditasi:risiko_daftar' %}{% endif %}" class="btn btn-sm btn-outline-secondary px-3">
                                 <i class="bi bi-x-lg me-1"></i>Batal
                             </a>
-                            <button type="submit" class="btn btn-sm text-white px-4 fw-semibold shadow-sm" style="background:#0d9488;">
+                            <button type="submit" class="btn btn-sm text-white px-4 fw-semibold shadow-sm" style="background:#0F766E;">
                                 <i class="bi bi-save me-1"></i>{% if is_edit %}Simpan Perubahan Risiko{% else %}Simpan Risiko{% endif %}
                             </button>
                         </div>
@@ -676,14 +676,14 @@ document.addEventListener('DOMContentLoaded', function() {
             const chip = document.createElement('button');
             chip.type = 'button';
             chip.className = 'btn btn-sm';
-            chip.style.cssText = 'font-size:.72rem; border:1px solid #0d9488; color:#0f766e; background:#f0fdfa; border-radius:20px; padding:3px 12px;';
+            chip.style.cssText = 'font-size:.72rem; border:1px solid #0F766E; color:#0f766e; background:#f0fdfa; border-radius:20px; padding:3px 12px;';
             chip.innerHTML = '<i class="bi bi-plus-circle me-1"></i>' + text;
             chip.addEventListener('click', function() {
                 if (!rencanaAksiTA) return;
                 const cur = rencanaAksiTA.value.trim();
                 rencanaAksiTA.value = cur ? cur + '\n• ' + text : '• ' + text;
                 // Visual feedback
-                chip.style.background = '#0d9488';
+                chip.style.background = '#0F766E';
                 chip.style.color = '#fff';
                 setTimeout(function() {
                     chip.style.background = '#f0fdfa';

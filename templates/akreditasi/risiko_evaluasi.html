@@ -8,9 +8,9 @@
 {% block extra_css %}
 <style>
     .comparison-card { border-radius:12px; transition:transform .2s; }
-    .badge-teal { background:#0d9488; color:#fff; }
+    .badge-teal { background:#0F766E; color:#fff; }
     .badge-purple { background:#7c3aed; color:#fff; }
-    input[type=range] { accent-color:#0d9488; }
+    input[type=range] { accent-color:#0F766E; }
     .matrix-cell {
         width: 38px;
         height: 34px;
@@ -56,8 +56,8 @@
             {# Breadcrumb #}
             <nav aria-label="breadcrumb" class="mb-3">
                 <ol class="breadcrumb" style="font-size:.8rem;">
-                    <li class="breadcrumb-item"><a href="{% url 'akreditasi:risiko_daftar' %}" style="color:#0d9488;">Daftar Risiko</a></li>
-                    <li class="breadcrumb-item"><a href="{% url 'akreditasi:risiko_detail' risiko_id=risiko.pk %}" style="color:#0d9488;">Detail Risiko</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'akreditasi:risiko_daftar' %}" style="color:#0F766E;">Daftar Risiko</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'akreditasi:risiko_detail' risiko_id=risiko.pk %}" style="color:#0F766E;">Detail Risiko</a></li>
                     <li class="breadcrumb-item active">Evaluasi</li>
                 </ol>
             </nav>
@@ -116,7 +116,7 @@
             {% endif %}
 
             {# Perbandingan Sebelum vs Sesudah #}
-            <h6 class="fw-bold mb-3" style="color:#0f172a;"><i class="bi bi-arrow-left-right me-1" style="color:#0d9488;"></i>Perbandingan Risiko Inherent vs Residual</h6>
+            <h6 class="fw-bold mb-3" style="color:#0f172a;"><i class="bi bi-arrow-left-right me-1" style="color:#0F766E;"></i>Perbandingan Risiko Inherent vs Residual</h6>
 
             <div class="row g-3 mb-4">
                 {# SEBELUM (Inherent) #}
@@ -139,9 +139,9 @@
 
                 {# SESUDAH (Residual - Live Preview) #}
                 <div class="col-md-6">
-                    <div class="card border-0 shadow-sm comparison-card h-100" style="background:#fff; border-top:4px solid #0d9488 !important;">
+                    <div class="card border-0 shadow-sm comparison-card h-100" style="background:#fff; border-top:4px solid #0F766E !important;">
                         <div class="card-body p-4 text-center">
-                            <span class="badge mb-2 text-white" style="background:#0d9488; font-size:.75rem;">SESUDAH MITIGASI (RESIDUAL)</span>
+                            <span class="badge mb-2 text-white" style="background:#0F766E; font-size:.75rem;">SESUDAH MITIGASI (RESIDUAL)</span>
                             <div class="my-3">
                                 <span id="res-badge" class="d-inline-flex align-items-center justify-content-center" style="width:72px; height:72px; border-radius:50%; background:#16a34a; color:#fff; font-size:1.8rem; font-weight:800;">
                                     {{ risiko.skor_residual|default:"4" }}
@@ -171,7 +171,7 @@
                         </h6>
 
                         {# Read-only Callout Banner Indikator Mutu Terkait #}
-                        <div class="card border-0 shadow-sm p-3 mb-3" style="background:#f0fdfa; border-left:4px solid #0d9488 !important;">
+                        <div class="card border-0 shadow-sm p-3 mb-3" style="background:#f0fdfa; border-left:4px solid #0F766E !important;">
                             <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
                                 <div>
                                     <div class="d-flex align-items-center gap-2 mb-1">
@@ -482,7 +482,7 @@
                         <div class="row g-4 mb-3">
                             <div class="col-md-{% if risiko.is_fmea %}4{% else %}6{% endif %}">
                                 <label class="form-label fw-semibold" style="font-size:.8rem;">
-                                    Dampak Residu (1–5) &nbsp;<span class="fw-bold text-teal" id="slider-d-display" style="color:#0d9488;">{{ risiko.dampak_residual|default:"2" }}</span>
+                                    Dampak Residu (1–5) &nbsp;<span class="fw-bold text-teal" id="slider-d-display" style="color:#0F766E;">{{ risiko.dampak_residual|default:"2" }}</span>
                                 </label>
                                 <input type="range" name="dampak_residual" id="dampak_residual" class="form-range" min="1" max="5" step="1" value="{{ risiko.dampak_residual|default:"2" }}" required>
                                 <div class="d-flex justify-content-between" style="font-size:.65rem; color:#64748b;">
@@ -491,7 +491,7 @@
                             </div>
                             <div class="col-md-{% if risiko.is_fmea %}4{% else %}6{% endif %}">
                                 <label class="form-label fw-semibold" style="font-size:.8rem;">
-                                    Peluang Residu (1–5) &nbsp;<span class="fw-bold text-teal" id="slider-p-display" style="color:#0d9488;">{{ risiko.probabilitas_residual|default:"2" }}</span>
+                                    Peluang Residu (1–5) &nbsp;<span class="fw-bold text-teal" id="slider-p-display" style="color:#0F766E;">{{ risiko.probabilitas_residual|default:"2" }}</span>
                                 </label>
                                 <input type="range" name="probabilitas_residual" id="probabilitas_residual" class="form-range" min="1" max="5" step="1" value="{{ risiko.probabilitas_residual|default:"2" }}" required>
                                 <div class="d-flex justify-content-between" style="font-size:.65rem; color:#64748b;">
@@ -621,7 +621,7 @@
 
                         <div class="d-flex gap-2 justify-content-end">
                             <a href="{% url 'akreditasi:risiko_detail' risiko_id=risiko.pk %}" class="btn btn-sm btn-outline-secondary">Batal</a>
-                            <button type="submit" class="btn btn-sm text-white px-4" style="background:#0d9488;"><i class="bi bi-check2-circle me-1"></i>Simpan Evaluasi &amp; RTL</button>
+                            <button type="submit" class="btn btn-sm text-white px-4" style="background:#0F766E;"><i class="bi bi-check2-circle me-1"></i>Simpan Evaluasi &amp; RTL</button>
                         </div>
                     </form>
                 </div>
@@ -838,7 +838,7 @@
     const calcReductionPill = document.getElementById('calc-reduction-pill');
     const matrixContainer = document.getElementById('mini-matrix');
 
-    const colors = { SANGAT_TINGGI:'#dc2626', TINGGI:'#ea580c', SEDANG:'#ca8a04', RENDAH:'#16a34a', SANGAT_RENDAH:'#0d9488' };
+    const colors = { SANGAT_TINGGI:'#dc2626', TINGGI:'#ea580c', SEDANG:'#ca8a04', RENDAH:'#16a34a', SANGAT_RENDAH:'#0F766E' };
     const labels = { SANGAT_TINGGI:'SANGAT TINGGI', TINGGI:'TINGGI', SEDANG:'SEDANG', RENDAH:'RENDAH', SANGAT_RENDAH:'SANGAT RENDAH' };
 
     function getLevel(s) {
