@@ -106,7 +106,9 @@
 
 - [ ] **Step 2: Migration with a `RunPython` backfill.** Branch on `satuan`: `''`/`%` → (`persen`, 100); `‰` → (`rate_absolut`, 1000); anything else → (`rate_absolut`, 1). Print a per-branch row count. `reverse` is a no-op — both fields carry defaults.
 
-- [ ] **Step 3: Fix `nilai_capaian`** (`akreditasi/risiko_models.py:629-633`) to read the shape:
+- [ ] **Step 3: Expose both fields on the indicator form** (`templates/akreditasi/indikator_form.html` — `Satuan Pengukuran` at `:213-218`, `Arah Target` at `:220-226`): a `tipe_pengukuran` select next to `satuan` and a `faktor_pengali` select showing `× 1 / × 100 / × 1000 / × 100.000`, preselected from the indicator when editing. Persist both in `indikator_tambah` (`akreditasi/indikator_views.py:479-495`, alongside `satuan` at `:488`) and `indikator_edit` (`:539`, `:559`). If an operator picks `rate_absolut` with `satuan=%`, that is their call — the validation logic follows `tipe_pengukuran`, and the mismatch is visible on one screen.
+
+- [ ] **Step 3a: Fix `nilai_capaian`** (`akreditasi/risiko_models.py:629-633`) to read the shape:
 
   ```python
   @property
