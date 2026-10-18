@@ -1,3 +1,38 @@
+document.addEventListener('DOMContentLoaded', function() {
+    const searchInput = document.getElementById('sidebarPokjaSearch');
+    if (searchInput) {
+        searchInput.addEventListener('input', function() {
+            const query = this.value.toLowerCase().trim();
+            const kelompokContainers = document.querySelectorAll('.sidebar-kelompok');
+            
+            kelompokContainers.forEach(container => {
+                const pokjaLinks = container.querySelectorAll('.nav-pokja');
+                let hasVisible = false;
+                
+                pokjaLinks.forEach(link => {
+                    const text = link.textContent.toLowerCase();
+                    if (text.includes(query)) {
+                        link.style.display = '';
+                        hasVisible = true;
+                    } else {
+                        link.style.display = 'none';
+                    }
+                });
+                
+                const collapseEl = container.querySelector('.collapse');
+                if (query.length > 0) {
+                    container.style.display = hasVisible ? '' : 'none';
+                    if (collapseEl && hasVisible) {
+                        collapseEl.classList.add('show');
+                    }
+                } else {
+                    container.style.display = '';
+                }
+            });
+        });
+    }
+});
+
 function getCookie(name) {
     let c = document.cookie.match('(^|;)\\s*' + name + '\\s*=\\s*([^;]+)');
     return c ? c.pop() : '';

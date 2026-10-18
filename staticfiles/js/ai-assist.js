@@ -20,6 +20,23 @@
         return cookie ? cookie.split('=')[1] : '';
     }
 
+    async function parseJsonResponse(resp) {
+        if (resp.redirected || resp.status === 401) {
+            throw new Error('Sesi login telah berakhir. Harap muat ulang halaman atau login kembali.');
+        }
+        if (resp.status === 403) {
+            throw new Error('Akses ditolak atau token keamanan (CSRF) kedaluwarsa. Harap muat ulang halaman.');
+        }
+        if (resp.status === 429) {
+            throw new Error('Terlalu banyak permintaan AI. Harap tunggu beberapa saat.');
+        }
+        const contentType = resp.headers.get('content-type') || '';
+        if (!contentType.includes('application/json')) {
+            throw new Error(`Server mengembalikan respons tidak terduga (HTTP ${resp.status}). Harap muat ulang halaman.`);
+        }
+        return await resp.json();
+    }
+
     // Modal Builder Dinamis
     function createOrGetAiModal() {
         let modalEl = document.getElementById('aiAssistModal');
@@ -28,7 +45,7 @@
             <div class="modal fade" id="aiAssistModal" tabindex="-1" aria-hidden="true">
                 <div class="modal-dialog modal-dialog-centered modal-lg">
                     <div class="modal-content shadow border-0" style="border-radius: 14px; overflow: hidden;">
-                        <div class="modal-header text-white" style="background: linear-gradient(135deg, #0f766e, #0d9488);">
+                        <div class="modal-header text-white" style="background: #0F766E;">
                             <div class="d-flex align-items-center gap-2">
                                 <span class="badge bg-white text-teal px-2 py-1" style="color: #0f766e !important; font-weight: 700;">
                                     <i class="bi bi-stars me-1"></i>DeepSeek AI
@@ -69,10 +86,15 @@
             const unitName = unitSelect && unitSelect.selectedOptions[0] ? unitSelect.selectedOptions[0].text : '';
             const katSelect = document.querySelector('select[name="kategori_risiko"]');
             const kategoriRisiko = katSelect ? katSelect.value : '';
-            const jenisInput = document.querySelector('input[name="jenis_risiko"]');
-            const jenisRisiko = jenisInput ? jenisInput.value.trim() : '';
+            const jenisInputs = Array.from(document.querySelectorAll('input[name="jenis_risiko"], textarea[name="jenis_risiko"]'));
+            const jenisList = jenisInputs.map(el => el.value.trim()).filter(Boolean);
+            const jenisRisiko = jenisList.join('; ');
             const descInput = document.querySelector('textarea[name="deskripsi_risiko"]');
             const deskripsiRisiko = descInput ? descInput.value.trim() : '';
+            const masalahInput = document.querySelector('textarea[name="masalah"]');
+            const masalah = masalahInput ? masalahInput.value.trim() : '';
+            const dataInput = document.querySelector('textarea[name="data"]');
+            const dataPendukung = dataInput ? dataInput.value.trim() : '';
             const dampakInput = document.querySelector('select[name="dampak"]') || document.querySelector('input[name="dampak"]');
             const dampak = dampakInput ? dampakInput.value : 3;
             const probInput = document.querySelector('select[name="probabilitas"]') || document.querySelector('input[name="probabilitas"]');
@@ -89,7 +111,7 @@
 
             if (!jenisRisiko && !deskripsiRisiko && !indDesc) {
                 alert('Silakan pilih Indikator Mutu atau ketik dahulu "Jenis Risiko" / "Deskripsi Risiko" agar AI memiliki konteks.');
-                if (jenisInput) jenisInput.focus();
+                if (jenisInputs.length && jenisInputs[0]) jenisInputs[0].focus();
                 return;
             }
 
@@ -111,6 +133,8 @@
                         unit_name: unitName,
                         kategori_risiko: kategoriRisiko,
                         jenis_risiko: jenisRisiko || (indCtx ? `Risiko capaian ${indCtx.nama}` : ''),
+                        masalah: masalah,
+                        data_pendukung: dataPendukung,
                         deskripsi_risiko: deskripsiRisiko + (indDesc ? `\n${indDesc}` : ''),
                         dampak: dampak,
                         probabilitas: probabilitas,
@@ -118,7 +142,7 @@
                     }),
                 });
 
-                const res = await resp.json();
+                const res = await parseJsonResponse(resp);
                 document.getElementById('aiModalLoading').style.display = 'none';
                 const contentEl = document.getElementById('aiModalContent');
                 contentEl.style.display = 'block';
@@ -215,7 +239,7 @@
                     }),
                 });
 
-                const res = await resp.json();
+                const res = await parseJsonResponse(resp);
                 document.getElementById('aiModalLoading').style.display = 'none';
                 const contentEl = document.getElementById('aiModalContent');
                 contentEl.style.display = 'block';
@@ -272,7 +296,7 @@
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() },
                 });
-                const res = await resp.json();
+                const res = await parseJsonResponse(resp);
                 btnTestDeepseek.disabled = false;
 
                 if (res.success) {

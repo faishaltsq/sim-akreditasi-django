@@ -58,28 +58,28 @@
     {# ── KPI Cards ─────────────────────────────────────────────────────── #}
     <div class="row g-3 mb-3">
         <div class="col-6 col-md-3">
-            <div class="kpi-card" style="background:linear-gradient(135deg,#fffbeb,#fef3c7); color:#78350f;">
+            <div class="kpi-card" style="background:#FEF3C7; color:#78350f;">
                 <div class="kpi-label"><i class="bi bi-diagram-3-fill me-1"></i>Kajian FMEA</div>
                 <div class="kpi-value">{{ kpi.total_fmea }}</div>
                 <small style="font-size:.7rem;">{{ kpi.fmea_berjalan }} berjalan &bull; {{ kpi.fmea_selesai }} selesai</small>
             </div>
         </div>
         <div class="col-6 col-md-3">
-            <div class="kpi-card" style="background:linear-gradient(135deg,#fef2f2,#fee2e2); color:#7f1d1d;">
+            <div class="kpi-card" style="background:#FEE2E2; color:#7f1d1d;">
                 <div class="kpi-label"><i class="bi bi-search me-1"></i>Investigasi RCA</div>
                 <div class="kpi-value">{{ kpi.total_rca }}</div>
                 <small style="font-size:.7rem;">{{ kpi.rca_selesai }} selesai &bull; {{ kpi.korektif_berjalan }} korektif berjalan</small>
             </div>
         </div>
         <div class="col-6 col-md-3">
-            <div class="kpi-card" style="background:linear-gradient(135deg,#f0fdfa,#ccfbf1); color:#134e4a;">
+            <div class="kpi-card" style="background:#F0FDFA; color:#134e4a;">
                 <div class="kpi-label"><i class="bi bi-speedometer2 me-1"></i>RPN Rata-rata</div>
                 <div class="kpi-value">{{ kpi.rpn_avg }}</div>
                 <small style="font-size:.7rem;">RPN tertinggi: <strong>{{ kpi.rpn_max }}</strong></small>
             </div>
         </div>
         <div class="col-6 col-md-3">
-            <div class="kpi-card" style="background:linear-gradient(135deg,#eff6ff,#dbeafe); color:#1e3a8a;">
+            <div class="kpi-card" style="background:#EFF6FF; color:#1e3a8a;">
                 <div class="kpi-label"><i class="bi bi-list-check me-1"></i>Total Terdaftar</div>
                 <div class="kpi-value">{{ kpi.total_fmea|add:kpi.total_rca }}</div>
                 <small style="font-size:.7rem;">risiko dengan evaluasi mendalam</small>
@@ -269,7 +269,7 @@
             {% else %}
             <div class="card border-0 shadow-sm">
                 <div class="card-body text-center py-5">
-                    <i class="bi bi-diagram-3" style="font-size:2.5rem; color:#cbd5e1;"></i>
+                    <i class="bi bi-diagram-3" style="font-size:2.5rem; color:#64748b;"></i>
                     <p class="text-muted mt-2 mb-1" style="font-size:.85rem;">Belum ada kajian FMEA terdaftar.</p>
                     <p class="text-muted mb-3" style="font-size:.75rem;">
                         Pilih metode <strong>FMEA Proaktif</strong> saat menginput risiko baru untuk menganalisis mode kegagalan proses berisiko tinggi.
@@ -374,7 +374,7 @@
             {% else %}
             <div class="card border-0 shadow-sm">
                 <div class="card-body text-center py-5">
-                    <i class="bi bi-search" style="font-size:2.5rem; color:#cbd5e1;"></i>
+                    <i class="bi bi-search" style="font-size:2.5rem; color:#64748b;"></i>
                     <p class="text-muted mt-2 mb-1" style="font-size:.85rem;">Belum ada investigasi RCA terdaftar.</p>
                     <p class="text-muted mb-3" style="font-size:.75rem;">
                         Pilih metode <strong>RCA Reaktif</strong> saat menginput risiko untuk menganalisis akar masalah pasca kejadian sentinel / KTD berat.

@@ -45,7 +45,7 @@
             <div class="modal fade" id="aiAssistModal" tabindex="-1" aria-hidden="true">
                 <div class="modal-dialog modal-dialog-centered modal-lg">
                     <div class="modal-content shadow border-0" style="border-radius: 14px; overflow: hidden;">
-                        <div class="modal-header text-white" style="background: linear-gradient(135deg, #0f766e, #0d9488);">
+                        <div class="modal-header text-white" style="background: #0F766E;">
                             <div class="d-flex align-items-center gap-2">
                                 <span class="badge bg-white text-teal px-2 py-1" style="color: #0f766e !important; font-weight: 700;">
                                     <i class="bi bi-stars me-1"></i>DeepSeek AI
