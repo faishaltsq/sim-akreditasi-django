@@ -254,6 +254,16 @@ class RisikoUnit(models.Model):
         return 'Tercapai' if ev['tercapai'] else 'Belum Tercapai'
 
     @property
+    def linked_indikator(self):
+        """Master IndikatorMutu yang ditautkan ke risiko ini (atau None).
+
+        Tipis di atas FK indikator_mutu_terkait: template bisa guard + URL-build
+        dalam satu ekspresi ({% if r.linked_indikator %}...pk...). Jika plan
+        access-matrix (4.07) nanti ganti sumber linking, cukup properti ini.
+        """
+        return self.indikator_mutu_terkait
+
+    @property
     def rca_fishbone_items(self):
         """Kembalikan list of (label, text) untuk fishbone yang tidak kosong."""
         if not isinstance(self.rca_fishbone, dict):
@@ -566,6 +576,30 @@ class IndikatorMutu(models.Model):
     denominator    = models.CharField('Denominator', max_length=300)
     target_nilai   = models.DecimalField('Target Nilai', max_digits=5, decimal_places=2)
     satuan         = models.CharField('Satuan', max_length=20, default='%')
+    # Tipe pengukuran: 'persen' → (N/D) × 100, validasi 0–100.
+    # 'rate_absolut' → (N/D) × faktor_pengali, tanpa batas atas (per mil,
+    # rerata, jumlah kasus). Lihat CatatanIndikator.nilai_capaian.
+    TIPE_PENGUKURAN_CHOICES = [
+        ('persen', 'Persentase (%)'),
+        ('rate_absolut', 'Angka absolut / rate (per mil, rerata, jumlah kasus)'),
+    ]
+    FAKTOR_PENGALI_CHOICES = [
+        (1, '× 1  (rerata / jumlah kasus)'),
+        (100, '× 100  (persentase)'),
+        (1000, '× 1000  (per mil ‰)'),
+        (100000, '× 100.000  (per 100.000)'),
+    ]
+    tipe_pengukuran = models.CharField(
+        'Tipe Pengukuran', max_length=15, choices=TIPE_PENGUKURAN_CHOICES,
+        default='persen',
+        help_text='persen → (N/D) × 100, validasi 0–100. rate_absolut → '
+                  '(N/D) × faktor_pengali, tanpa batas atas.'
+    )
+    faktor_pengali = models.IntegerField(
+        'Faktor Pengali', default=100, choices=FAKTOR_PENGALI_CHOICES,
+        help_text='Pengali pada rumus capaian. Autoritatif untuk aritmetika; '
+                  'kolom satuan hanya label tampilan dan tidak mengubah perhitungan.'
+    )
     ep_terkait     = models.ForeignKey(StandardItem, on_delete=models.SET_NULL, null=True, blank=True, related_name='indikator_mutu', verbose_name='EP Terkait')
     rencana_aksi   = models.TextField('Rencana Aksi (Preset)', blank=True, default='')
     pj             = models.CharField('Penanggung Jawab', max_length=200, blank=True, default='')
@@ -628,9 +662,23 @@ class CatatanIndikator(models.Model):
 
     @property
     def nilai_capaian(self):
-        if self.nilai_denominator and self.nilai_denominator > 0:
-            return (self.nilai_numerator / self.nilai_denominator) * Decimal('100')
-        return Decimal('0')
+        if not self.nilai_denominator or self.nilai_denominator <= 0:
+            return Decimal('0')
+        ind = self.indikator
+        if getattr(ind, 'tipe_pengukuran', 'persen') == 'persen':
+            # persen selalu dari literal 100 — faktor_pengali kolom tidak
+            # pernah mengubah aritmetika persentase.
+            faktor = Decimal('100')
+        else:
+            faktor = Decimal(str(getattr(ind, 'faktor_pengali', 100) or 100))
+        num = self.nilai_numerator
+        den = self.nilai_denominator
+        try:
+            return (num / den) * faktor
+        except TypeError:
+            # nilai disimpan sebagai literal float/int (bukan Decimal) —
+            # lewat Decimal(str(...)) agar hasil tetap presisi.
+            return (Decimal(str(num)) / Decimal(str(den))) * faktor
 
 
     @property
@@ -654,31 +702,33 @@ class CatatanIndikator(models.Model):
             arah = getattr(self.indikator, 'arah_target', 'MIN')
             arah_label = '≥' if arah == 'MIN' else '≤'
             # Idempotent: only create ONE draft per indicator per unit
-            RisikoUnit.objects.get_or_create(
+            if not RisikoUnit.objects.filter(
                 unit=self.indikator.unit,
                 indikator_mutu_terkait=self.indikator,
-                defaults={
-                    'tahun': self.tahun,
-                    'periode': 'TRIWULAN_1',
-                    'kategori_risiko': 'OPERASIONAL',
-                    'jenis_risiko': 'Risiko Kegagalan Mutu & Layanan',
-                    'masalah': (
+            ).exists():
+                RisikoUnit.objects.create(
+                    unit=self.indikator.unit,
+                    indikator_mutu_terkait=self.indikator,
+                    tahun=self.tahun,
+                    periode='TRIWULAN_1',
+                    kategori_risiko='OPERASIONAL',
+                    jenis_risiko='Risiko Kegagalan Mutu & Layanan',
+                    masalah=(
                         f"Capaian {self.indikator.nama_indikator} di bawah target "
                         f"({capaian:.1f} {satuan} vs target {arah_label} {target} {satuan})"
                     ),
-                    'deskripsi_risiko': (
+                    deskripsi_risiko=(
                         f"Indikator [{self.indikator.kode_indikator}] "
                         f"{self.indikator.nama_indikator} tidak mencapai target Renstra. "
                         f"Capaian: {capaian:.1f} {satuan} | Target: {arah_label} {target} {satuan}."
                     ),
-                    'dampak': 3,
-                    'probabilitas': 3,
-                    'strategi_mitigasi': 'KURANGI',
-                    'rencana_aksi': self.indikator.rencana_aksi or 'Lakukan analisis akar masalah (Fishbone/5-Why) dan susun PDCA RTL.',
-                    'pj_mitigasi': self.indikator.pj or 'Ka. Unit',
-                    'status': 'IDENTIFIKASI',
-                },
-            )
+                    dampak=3,
+                    probabilitas=3,
+                    strategi_mitigasi='KURANGI',
+                    rencana_aksi=self.indikator.rencana_aksi or 'Lakukan analisis akar masalah (Fishbone/5-Why) dan susun PDCA RTL.',
+                    pj_mitigasi=self.indikator.pj or 'Ka. Unit',
+                    status='IDENTIFIKASI',
+                )
         elif self.tercapai and self.indikator.ep_terkait_id:
             # Auto-tag: update QualityRecord for the linked EP when indicator achieved
             from akreditasi.models import QualityRecord  # lazy — prevents circular import
