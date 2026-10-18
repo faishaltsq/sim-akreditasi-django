@@ -202,8 +202,10 @@
           <span class="badge bg-light text-muted border ms-auto" style="font-size:.65rem;">PMK 30/2022 · STARKES PMKP 12</span>
         </div>
         <div class="card-body py-2 px-3">
-          <canvas id="chartTrenCapaian" height="90"></canvas>
-          {% if indikator_terpilih %}
+          <div style="position: relative; height: 260px; width: 100%;">
+                <canvas id="chartTrenCapaian"></canvas>
+              </div>
+              {% if indikator_terpilih %}
           <!-- Panel teks panjang: rincian lengkap indikator terpilih -->
           <div class="mt-2 p-2 border rounded-2 small" style="background:#f8fafc;">
             <div class="d-flex flex-wrap align-items-center gap-2 mb-1">
@@ -604,7 +606,7 @@ document.addEventListener('DOMContentLoaded', function() {
             },
             options: {
                 responsive: true,
-                maintainAspectRatio: true,
+                maintainAspectRatio: false,
                 interaction: { mode: 'index', intersect: false },
                 plugins: {
                     legend: { position: 'top', labels: { font: { size: 11, family: 'Inter, sans-serif' }, boxWidth: 12 } },
