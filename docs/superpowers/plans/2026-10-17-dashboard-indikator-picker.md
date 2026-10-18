@@ -647,7 +647,7 @@ open(r'$TMPDIR/dash.js','w',encoding='utf-8').write(js)
 
 Expected differences: the category `<option>` list shrinks from seven to four (blank + three tiers), the indicator `<option>` text gains `— belum ada data 2026` suffixes, the header/legend gain `≥`/`≤`, and the JS gains the fetch block. No chart data array may change.
 
-- [ ] **Step 5: Commit, push, confirm deploy**
+- [x] **Step 5: Commit, push, confirm deploy**
 
 ```bash
 git add akreditasi/views.py akreditasi/indikator_views.py akreditasi/risiko_views.py akreditasi/urls.py \
