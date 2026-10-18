@@ -4,24 +4,12 @@ Menambahkan Content-Security-Policy (CSP), Referrer-Policy, dan Permissions-Poli
 """
 from django.utils.deprecation import MiddlewareMixin
 from django.conf import settings
-from django.http import JsonResponse
 
 
 class SecurityHeadersMiddleware(MiddlewareMixin):
-    """Set security headers not covered by Django's default SecurityMiddleware,
-    serta memastikan endpoint API (/ai/, /api/) mengembalikan JSON 401 saat sesi kedaluwarsa."""
+    """Set security headers not covered by Django's default SecurityMiddleware."""
 
     def process_response(self, request, response):
-        # Jika request API diarahkan (302) ke halaman login karena unauthenticated,
-        # ubah menjadi JSON 401 agar frontend tidak menerima HTML tak terduga.
-        if response.status_code == 302 and (request.path.startswith('/ai/') or request.path.startswith('/api/')):
-            location = response.get('Location', '')
-            if 'login' in location:
-                return JsonResponse({
-                    'success': False,
-                    'error': 'Sesi login telah berakhir. Silakan muat ulang halaman atau login kembali.',
-                    'authenticated': False
-                }, status=401)
         # Content Security Policy — protect against XSS and unauthorized resource loading
         csp_directives = [
             "default-src 'self'",
