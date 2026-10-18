@@ -9,10 +9,12 @@ from akreditasi.risiko_models import (
     RisikoUnit, IndikatorMutu, TindakLanjutRisiko
 )
 from akreditasi.ai_service import generate_evaluasi_risiko
+from akreditasi.tests_utils import reset_rate_limit
 
 
 class EvaluasiIndikatorMutuTest(TestCase):
     def setUp(self):
+        reset_rate_limit()
         self.user = User.objects.create_superuser(
             username='evaladmin',
             password='password123',

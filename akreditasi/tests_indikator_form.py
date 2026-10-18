@@ -3,6 +3,7 @@ from django.urls import reverse
 from django.contrib.auth import get_user_model
 from akreditasi.models import UnitKerja
 from akreditasi.risiko_models import IndikatorMutu
+from akreditasi.tests_utils import reset_rate_limit
 
 User = get_user_model()
 
@@ -76,6 +77,7 @@ class IndikatorFormViewTest(TestCase):
 
 class IndikatorAIEndpointTest(TestCase):
     def setUp(self):
+        reset_rate_limit()
         User = get_user_model()
         self.user = User.objects.create_superuser('admin_ai_test', 'ai@rs.id', 'password123')
         self.client = Client()
