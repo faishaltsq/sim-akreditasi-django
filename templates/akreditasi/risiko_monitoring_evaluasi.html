@@ -333,6 +333,7 @@
                                 {% for tl in r.daftar_tindak_lanjut %}
                                 <li class="mb-1 border-bottom pb-1">
                                     <span class="fw-semibold text-dark">&bull; {{ tl.aksi|truncatewords:12 }}</span>
+                                    {% if tl.ep_terkait %}<span class="badge text-bg-light border font-monospace ms-1" style="font-size:.6rem;" title="{{ tl.ep_terkait.description }} | {{ tl.ep_terkait.category.code }}">{{ tl.ep_terkait.code }}</span>{% elif tl.standar_terkait %}<span class="badge text-bg-light border font-monospace ms-1" style="font-size:.6rem;">{{ tl.standar_terkait.code }}</span>{% endif %}
                                     <div class="d-flex align-items-center gap-1 mt-1">
                                         <span class="badge {% if tl.status_aksi == 'SELESAI' %}bg-success-subtle text-success{% elif tl.status_aksi == 'PROSES' %}bg-warning-subtle text-warning-emphasis{% else %}bg-secondary-subtle text-secondary{% endif %}" style="font-size:.62rem;">
                                             {{ tl.get_status_aksi_display }}
@@ -347,6 +348,7 @@
                                 {% endfor %}
                             </ul>
                             {% elif r.rencana_aksi %}
+                            {% if r.indikator_mutu_terkait.ep_terkait %}<span class="badge text-bg-light border font-monospace mb-1 d-inline-block" style="font-size:.6rem;" title="{{ r.indikator_mutu_terkait.ep_terkait.description }}">{{ r.indikator_mutu_terkait.ep_terkait.code }}</span>{% endif %}
                             <div class="text-secondary mb-2" style="font-size:.73rem;">
                                 {{ r.rencana_aksi|truncatewords:18 }}
                             </div>

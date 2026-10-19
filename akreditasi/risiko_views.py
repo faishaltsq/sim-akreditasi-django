@@ -860,7 +860,8 @@ def risiko_evaluasi(request, risiko_id):
         except Exception as e:
             messages.error(request, f'Gagal menyimpan evaluasi: {e}')
 
-    tindak_lanjut_list = list(risiko.tindak_lanjut.all().order_by('urutan'))
+    tindak_lanjut_list = list(
+        risiko.tindak_lanjut.select_related('standar_terkait', 'ep_terkait').order_by('urutan'))
     rencana_aksi_items = risiko.rencana_aksi_list
 
     _ev = risiko.capaian_evaluasi
@@ -932,7 +933,7 @@ def risiko_monitoring_evaluasi(request, unit_id=None):
     status_pelaksanaan = request.GET.get('status_pelaksanaan', '')
     query = request.GET.get('q', '').strip()
 
-    qs = RisikoUnit.objects.select_related('unit', 'indikator_mutu_terkait', 'created_by').prefetch_related('tindak_lanjut').all()
+    qs = RisikoUnit.objects.select_related('unit', 'indikator_mutu_terkait', 'indikator_mutu_terkait__ep_terkait', 'created_by').prefetch_related('tindak_lanjut').all()
 
     if is_scoped and allowed_ids:
         qs = qs.filter(unit_id__in=allowed_ids)
@@ -967,7 +968,8 @@ def risiko_monitoring_evaluasi(request, unit_id=None):
 
     # Prefetch tindak lanjut per risiko (model properties handle skor_* calculations)
     for r in risiko_list:
-        r.daftar_tindak_lanjut = list(r.tindak_lanjut.all())
+        r.daftar_tindak_lanjut = list(
+            r.tindak_lanjut.select_related('standar_terkait', 'ep_terkait'))
 
     ctx = {
         'risiko_list': risiko_list,
@@ -1162,7 +1164,7 @@ def risiko_laporan(request, unit_id=None):
     tahun   = request.GET.get('tahun', '2026')
     periode = request.GET.get('periode', '')
 
-    qs = RisikoUnit.objects.select_related('unit', 'indikator_mutu_terkait', 'created_by').prefetch_related('tindak_lanjut').all()
+    qs = RisikoUnit.objects.select_related('unit', 'indikator_mutu_terkait', 'indikator_mutu_terkait__ep_terkait', 'created_by').prefetch_related('tindak_lanjut').all()
     if is_scoped and allowed_ids:
         qs = qs.filter(unit_id__in=allowed_ids)
     if sel_unit:
@@ -1507,7 +1509,7 @@ def risiko_perencanaan_dokumen(request, risiko_id):
     Sesuai format resmi dokumen perencanaan RS Monsiskami ARIMA.
     """
     risiko = get_object_or_404(
-        RisikoUnit.objects.select_related('unit', 'indikator_mutu_terkait', 'created_by').prefetch_related('tindak_lanjut'),
+        RisikoUnit.objects.select_related('unit', 'indikator_mutu_terkait', 'indikator_mutu_terkait__ep_terkait', 'created_by').prefetch_related('tindak_lanjut'),
         pk=risiko_id
     )
     profile = getattr(request.user, 'profile', None)
@@ -1576,7 +1578,8 @@ def risiko_perencanaan_unit(request, unit_id=None):
         tahun_list = [2026]
 
     risiko_qs = RisikoUnit.objects.filter(unit=selected_unit).select_related(
-        'unit', 'indikator_mutu_terkait', 'created_by'
+        'unit', 'indikator_mutu_terkait', 'indikator_mutu_terkait__ep_terkait',
+        'created_by'
     ).prefetch_related('tindak_lanjut').order_by('-dampak', '-probabilitas', 'id')
 
     if tahun:
@@ -1630,6 +1633,10 @@ def risiko_perencanaan_unit(request, unit_id=None):
             'waktu': waktu_str,
             'biaya': biaya_str,
             'pj': r.pj_mitigasi or 'Ka. Unit',
+            # Kolom EP (Pelaksanaan): turunan indikator, sama seperti tautan
+            # yang diwarisi oleh pelaksanaan.
+            'ep': ind.ep_terkait if ind else None,
+            'standar': ind.ep_terkait.category if (ind and ind.ep_terkait_id) else None,
         })
 
     total_biaya = sum((r.biaya_mitigasi or Decimal('0')) for r in risiko_list)
@@ -1844,7 +1851,8 @@ def risiko_pelaksanaan_export_csv(request):
     writer.writerow([])
 
     writer.writerow(['TABEL PELAKSANAAN TINDAKAN RISIKO (SIKLUS DO)'])
-    writer.writerow(['No', 'Jenis Risiko', 'Rencana Aksi Mitigasi', 'No. Aksi', 'Deskripsi Pelaksanaan', 'Status', 'Tgl Mulai', 'Tgl Selesai', 'Catatan', 'Bukti Dokumen', 'PJ Mitigasi'])
+    writer.writerow(['No', 'Jenis Risiko', 'Rencana Aksi Mitigasi', 'No. Aksi', 'Deskripsi Pelaksanaan', 'Status', 'Tgl Mulai', 'Tgl Selesai', 'Catatan', 'Bukti Dokumen', 'PJ Mitigasi',
+                     'standar', 'kode_ep', 'judul_ep', 'ada_bukti'])
 
     row_no = 1
     for r in risiko_qs:
@@ -1863,6 +1871,12 @@ def risiko_pelaksanaan_export_csv(request):
                     tl.catatan or '—',
                     'Ada' if tl.bukti_upload else 'Belum ada',
                     r.pj_mitigasi or 'Ka. Unit',
+                    # Kolom tambahan ditambah di belakang, tanpa menggeser yang
+                    # lama -- pihak lain bisa mem-parse file ini secara posisional.
+                    tl.standar_terkait.code if tl.standar_terkait_id else '—',
+                    tl.ep_terkait.code if tl.ep_terkait_id else '—',
+                    tl.ep_terkait.description if tl.ep_terkait_id else '—',
+                    'Ada' if tl.bukti_upload else 'Belum ada',
                 ])
                 row_no += 1
         else:
@@ -1873,6 +1887,7 @@ def risiko_pelaksanaan_export_csv(request):
                 '—', 'Belum ada pelaksanaan dicatat',
                 'BELUM', '—', '—', '—', '—',
                 r.pj_mitigasi or 'Ka. Unit',
+                '—', '—', '—', 'Belum ada',
             ])
             row_no += 1
 
@@ -1892,7 +1907,7 @@ def risiko_laporan_lengkap(request, risiko_id):
     4. Action (RTL): Rencana Tindak Lanjut, PIC, Target Waktu, Status RTL & Matriks Perubahan Risiko
     """
     risiko = get_object_or_404(
-        RisikoUnit.objects.select_related('unit', 'indikator_mutu_terkait', 'created_by').prefetch_related('tindak_lanjut'),
+        RisikoUnit.objects.select_related('unit', 'indikator_mutu_terkait', 'indikator_mutu_terkait__ep_terkait', 'created_by').prefetch_related('tindak_lanjut'),
         pk=risiko_id
     )
     profile = getattr(request.user, 'profile', None)
@@ -1973,7 +1988,8 @@ def risiko_laporan_lengkap_unit(request, unit_id=None):
         tahun_list = [2026]
 
     risiko_qs = RisikoUnit.objects.filter(unit=selected_unit).select_related(
-        'unit', 'indikator_mutu_terkait', 'created_by'
+        'unit', 'indikator_mutu_terkait', 'indikator_mutu_terkait__ep_terkait',
+        'created_by'
     ).prefetch_related('tindak_lanjut').order_by('-dampak', '-probabilitas', 'id')
 
     if tahun:

@@ -420,6 +420,7 @@
                         <tr>
                             <th class="col-no">No</th>
                             <th class="text-start">Rincian Tindakan Pelaksanaan</th>
+                            <th style="width:120px;" class="text-start">Standar / EP</th>
                             <th class="col-pic">Penanggung Jawab</th>
                             <th class="col-waktu">Tenggat</th>
                             <th style="width:110px;" class="text-center">Status</th>
@@ -435,6 +436,11 @@
                                 {% if tl.keterangan %}
                                 <small class="text-muted d-block mt-1">{{ tl.keterangan }}</small>
                                 {% endif %}
+                            </td>
+                            <td class="text-start">
+                                {% if tl.standar_terkait %}<span class="font-monospace" style="font-size:.7rem;" title="{{ tl.standar_terkait.name }}">{{ tl.standar_terkait.code }}</span>{% endif %}
+                                {% if tl.ep_terkait %}<span class="badge text-bg-light border font-monospace ms-1" style="font-size:.66rem;" title="{{ tl.ep_terkait.description }}">{{ tl.ep_terkait.code }}</span>{% endif %}
+                                {% if not tl.standar_terkait and not tl.ep_terkait %}<span class="text-muted fst-italic small">&mdash;</span>{% endif %}
                             </td>
                             <td class="col-pic-val">{{ tl.pj|default:risiko.pj_mitigasi|default:"Ka. Unit" }}</td>
                             <td class="text-center small">{{ tl.deadline|date:"d/m/Y"|default:"—" }}</td>
@@ -457,6 +463,7 @@
                         <tr>
                             <td class="text-center">1</td>
                             <td class="text-start">{{ risiko.rencana_aksi|render_structured_plan|default:"Tindakan mitigasi sesuai SPO operasional." }}</td>
+                            <td class="text-start">{% if risiko.indikator_mutu_terkait.ep_terkait %}<span class="badge text-bg-light border font-monospace" style="font-size:.66rem;" title="{{ risiko.indikator_mutu_terkait.ep_terkait.description }}">{{ risiko.indikator_mutu_terkait.ep_terkait.code }}</span>{% else %}<span class="text-muted fst-italic small">&mdash;</span>{% endif %}</td>
                             <td class="col-pic-val">{{ risiko.pj_mitigasi|default:"Ka. Unit" }}</td>
                             <td class="text-center small">{{ risiko.target_selesai|date:"d/m/Y"|default:"—" }}</td>
                             <td class="text-center"><span class="badge bg-warning text-dark">Dalam Proses</span></td>

@@ -322,3 +322,94 @@ class BuktiWajibTidakMengubahBarisLama(TestCase):
             'aksi': 'Aksi valid', 'status_aksi': 'SEDANG'}, follow=True)
         self.assertEqual(res.status_code, 200)
         self.assertEqual(self.risiko.tindak_lanjut.order_by('-urutan').first().urutan, 2)
+
+
+# ── Task 3: kolom Standar/EP di semua permukaan lain yang me-loop pelaksanaan ──
+
+class SurfaceLinkPropagationTest(TestCase):
+    """Setiap halaman yang mencetak pelaksanaan ikut menyebut standar & EP."""
+
+    def setUp(self):
+        from django.contrib.auth.models import User
+        self.user = User.objects.create_user('pel-k', 'k@x.id', 'x')
+        self.client = Client()
+        self.client.force_login(self.user)
+        self.cat = _mk_category()
+        self.ep = _mk_ep(self.cat)
+        self.risiko = _mk_risiko()
+        # Indikator menentukan EP pada permukaan perencanaan yang tidak
+        # me-loop pelaksanaan -- kolom EP-nya diturunkan dari indikator.
+        self.ind = IndikatorMutu.objects.create(
+            kode_indikator='SURF-EP', nama_indikator='Indikator Permukaan',
+            jenis='INM', dimensi_mutu='AMAN',
+            target_nilai='90', ep_terkait=self.ep)
+        self.risiko.indikator_mutu_terkait = self.ind
+        self.risiko.save(update_fields=['indikator_mutu_terkait'])
+        self.tl = TindakLanjutRisiko.objects.create(
+            risiko=self.risiko, urutan=1, aksi='Aksi permukaan',
+            status_aksi='SEDANG', standar_terkait=self.cat, ep_terkait=self.ep)
+        self.unit_id = self.risiko.unit_id
+        self.tahun = str(self.risiko.tahun)
+
+    def _assert_links(self, html):
+        self.assertIn(self.ep.code, html, 'kode EP tidak muncul')
+        self.assertIn(self.cat.code, html, 'kode standar tidak muncul')
+
+    def test_per_unit_do_page(self):
+        res = self.client.get(reverse(
+            'akreditasi:risiko_pelaksanaan_unit', args=[self.unit_id]))
+        self.assertEqual(res.status_code, 200)
+        self._assert_links(res.content.decode())
+
+    def test_print_do_sheet(self):
+        res = self.client.get(reverse(
+            'akreditasi:risiko_pelaksanaan_dokumen', args=[self.risiko.pk]))
+        self.assertEqual(res.status_code, 200)
+        self._assert_links(res.content.decode())
+
+    def test_csv_export_appends_new_columns(self):
+        res = self.client.get(reverse('akreditasi:risiko_pelaksanaan_export_csv'))
+        self.assertEqual(res.status_code, 200)
+        lines = res.content.decode('utf-8-sig').splitlines()
+        # baris 0 adalah judul dokumen; header kolom adalah baris ber-Deskripsi
+        header = next(ln for ln in lines if 'Deskripsi Pelaksanaan' in ln)
+        cols = [c.strip() for c in header.split(',')]
+        # urutan kolom lama tidak boleh bergeser, kolom baru menempel di belakang
+        self.assertEqual(cols[:11], [
+            'No', 'Jenis Risiko', 'Rencana Aksi Mitigasi', 'No. Aksi',
+            'Deskripsi Pelaksanaan', 'Status', 'Tgl Mulai', 'Tgl Selesai',
+            'Catatan', 'Bukti Dokumen', 'PJ Mitigasi'], f'header berubah: {cols}')
+        for col in ('standar', 'kode_ep', 'judul_ep', 'ada_bukti'):
+            self.assertIn(col, cols, f'kolom {col} hilang dari header CSV')
+        self.assertEqual(cols[11:], ['standar', 'kode_ep', 'judul_ep', 'ada_bukti'])
+
+    def test_csv_row_carry_values(self):
+        # export tanpa param memakai UnitKerja.objects.first(); sebutkan unitnya
+        text = self.client.get(reverse('akreditasi:risiko_pelaksanaan_export_csv') +
+                               f'?unit={self.unit_id}&tahun={self.tahun}'
+        ).content.decode('utf-8-sig')
+        row = [ln for ln in text.splitlines() if 'Aksi permukaan' in ln][0]
+        self.assertIn(self.ep.code, row)
+        self.assertIn(self.cat.code, row)
+
+    def test_laporan_lengkap(self):
+        res = self.client.get(reverse('akreditasi:risiko_laporan_lengkap_single',
+                                      args=[self.risiko.pk]))
+        self.assertEqual(res.status_code, 200)
+        self._assert_links(res.content.decode())
+
+    def test_monitoring_evaluasi(self):
+        res = self.client.get(reverse('akreditasi:risiko_monev_unit',
+                                      args=[self.unit_id]))
+        self.assertEqual(res.status_code, 200)
+        self._assert_links(res.content.decode())
+
+    def test_perencanaan_preview(self):
+        # Perencanaan tidak me-loop pelaksanaan, jadi kolomnya cukup EP --
+        # standarnya tersirat dari EP, mengikuti aturan kategori.
+        res = self.client.get(reverse('akreditasi:risiko_perencanaan_unit',
+                                      args=[self.unit_id]))
+        self.assertEqual(res.status_code, 200)
+        html = res.content.decode()
+        self.assertIn(self.ep.code, html, 'kode EP tidak muncul')
+        self.assertIn('EP (Pelaksanaan)', html, 'kolom EP hilang')

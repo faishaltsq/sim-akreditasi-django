@@ -518,10 +518,11 @@
                             <th style="width: 4%;">No</th>
                             <th style="width: 18%;">Masalah resiko</th>
                             <th style="width: 16%;">Indikator mutu</th>
-                            <th style="width: 22%;">Rencana Aksi</th>
+                            <th style="width: 17%;">Rencana Aksi</th>
                             <th style="width: 9%;">waktu</th>
                             <th style="width: 7%;">Biaya</th>
                             <th style="width: 9%;">PJ</th>
+                            <th style="width: 7%;">EP (Pelaksanaan)</th>
                             <th class="no-print text-center" style="width: 10%;">Aksi</th>
                         </tr>
                     </thead>
@@ -567,6 +568,7 @@
                             <td class="text-center fw-semibold">
                                 {{ risiko.pj_mitigasi|default:"Ka. Unit Kerja" }}
                             </td>
+                            <td class="text-center">{% if risiko.indikator_mutu_terkait.ep_terkait %}<span class="font-monospace" style="font-size:.7rem;" title="{{ risiko.indikator_mutu_terkait.ep_terkait.description }}">{{ risiko.indikator_mutu_terkait.ep_terkait.code }}</span>{% else %}<span class="text-muted">&mdash;</span>{% endif %}</td>
                             <td class="no-print text-center">
                                 <div class="d-inline-flex gap-1">
                                     <a href="{% url 'akreditasi:risiko_edit' risiko.pk %}" class="btn btn-sm btn-outline-primary py-0 px-2" title="Edit"><i class="bi bi-pencil-square"></i></a>
@@ -594,6 +596,7 @@
                             <td class="text-center">{{ row.waktu }}</td>
                             <td class="text-center">{{ row.biaya }}</td>
                             <td class="text-center fw-semibold">{{ row.pj }}</td>
+                            <td class="text-center">{% if row.ep %}<span class="font-monospace" style="font-size:.7rem;" title="{{ row.ep.description }}">{{ row.ep.code }}</span>{% else %}<span class="text-muted">&mdash;</span>{% endif %}</td>
                             <td class="no-print text-center">
                                 <div class="d-inline-flex gap-1">
                                     <a href="{% url 'akreditasi:risiko_edit' row.risiko_id %}" class="btn btn-sm btn-outline-primary py-0 px-2" title="Edit"><i class="bi bi-pencil-square"></i></a>
@@ -603,7 +606,7 @@
                         </tr>
                         {% empty %}
                         <tr>
-                            <td colspan="8" class="text-center text-muted py-3">Belum ada data rencana aksi mitigasi.</td>
+                            <td colspan="9" class="text-center text-muted py-3">Belum ada data rencana aksi mitigasi.</td>
                         </tr>
                         {% endfor %}
                         {% endif %}
@@ -612,6 +615,7 @@
                         <tr class="fw-bold" style="background-color: #f8fafc;">
                             <td colspan="5" class="text-end text-uppercase pe-3">Total Estimasi Biaya Mitigasi:</td>
                             <td class="text-center text-dark" style="background-color: #f1f5f9;">{{ total_biaya_format }}</td>
+                            <td class="text-center"></td>
                             <td class="text-center"></td>
                             <td class="no-print"></td>
                         </tr>
