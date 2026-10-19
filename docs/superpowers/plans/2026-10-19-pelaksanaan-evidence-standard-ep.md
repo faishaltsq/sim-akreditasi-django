@@ -468,15 +468,19 @@ OK, check clean.** Expected after: 281 + every test added here, all OK.
 
 ## Task 6: data decision and deploy
 
-- [ ] **Step 1: The stale rows.** Measured on Supabase
+- [x] **Step 1: The stale rows.** DECIDED 2026-10-19: leave the data alone,
+  the stakeholder fixes each row by hand (attach the document, set the
+  standar/EP, or drop the status) as it comes up in normal use. No bulk SQL,
+  no migration touching status. Measured on Supabase
   `gwaeuzbbdawbekrmrvfd` 2026-10-19 after 0043: **16** actions are
   `SELESAI`, **all 16** have `standar_terkait_id = ep_terkait_id = NULL`, and
   **12** of them have an empty `bukti_upload`. (The "6" originally written here
   was the local SQLite dev DB, which holds different rows: ids 4, 11, 15, 16,
   20, 21.) The new rule does not retroactively reject them — Django
-  never re-validates saved rows. Decide with the stakeholder: attach real
-  documents and links, or drop them back to `SEDANG`. Do **not** write a
-  migration that silently flips status.
+  never re-validates saved rows, so they render as `—` until an operator
+  touches them. The agreed fix per row: attach the real document, set the
+  standar/EP, or drop it back to `SEDANG`. No migration silently flips status,
+  and none was written.
 - [x] **Step 2: Apply `0043` to Supabase by hand** after deploy. Memory note:
   migrations do not run on Vercel. Already done before this step was reached:
   `django_migrations` shows `0043` applied 2026-10-19 08:58:12 UTC, and both
