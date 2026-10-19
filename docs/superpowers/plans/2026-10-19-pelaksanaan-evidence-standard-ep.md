@@ -568,14 +568,36 @@ Executed in full. All six tasks landed, all steps ticked.
 - **`ep_list` in `risiko_evaluasi` orders by `category__order`, not
   `category__code`** — matches how the G.2 page groups standards.
 
+**Deployment and production state — 2026-10-19**
+
+- Pushed `64fa28b..efc96ec` to `origin/master`.
+- Vercel production deployment `dpl_oKwcNkEHEG8qq5NiBcAZ8ay8MMdQ` — **Ready**,
+  alias `https://sim-akreditasi-django.vercel.app`, built from commit
+  `efc96ecde79d66a8bb87cc2903c5f6b4ee6179a9` (matches HEAD), 31s build.
+- Migration `0043` was already applied to Supabase — recorded in
+  `django_migrations` at `2026-10-19 08:58:12 UTC`. Verified directly against
+  the live schema: both columns present and nullable, both FK constraints
+  (`ep_terkait_id` → `akreditasi_standarditem`, `standar_terkait_id` →
+  `akreditasi_category`) in place, both btree indexes created. No re-apply
+  needed.
+
+**Live data at close-out (Supabase, production)**
+
+| Metric | Value |
+|---|---|
+| `akreditasi_tindaklanjutrisiko` rows | 45 |
+| Rows with `bukti_upload` | 45 |
+| `SELESAI` rows | 16 |
+| `SELESAI` without evidence | **0** |
+| Rows linked to an EP | 0 (columns new, nothing backfilled) |
+| Rows linked to a standard | 0 |
+
 **Still open (needs a human decision, not code)**
 
-- **The six stale rows.** Six `SELESAI` actions predate the evidence rule and
-  have no `bukti_upload`, no standar, no EP. Django never re-validates saved
-  rows, so they stay as they are. Decide: attach real documents, or drop them
-  back to `SEDANG`. Do not write a migration that flips status silently.
-- **Migration `0043` must be applied to Supabase by hand** after deploy.
-  Migrations do not run on Vercel.
+- **Backfill the links.** All 45 existing actions predate the new columns and
+  carry neither a standard nor an EP. The rule now enforces both going forward;
+  history stays blank until someone maps each action to its standard/EP. This
+  is a clinical/accreditation judgement, not a migration.
 - **Multiple attachments per action** remain unsupported (`bukti_upload` is a
   single `FileField`). A surveyor wanting several documents per action needs a
   through-model, not a patch to this one.
