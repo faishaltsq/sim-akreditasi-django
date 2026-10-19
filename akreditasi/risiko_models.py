@@ -557,6 +557,13 @@ class IndikatorMutu(models.Model):
         ('MAX', 'Maksimal — Capaian ≤ Target (lower is better)'),
     ]
 
+    EP_SUMBER_CHOICES = [
+        ('MANUAL', 'Dipilih manual'),
+        ('AI',     'Rekomendasi AI'),
+        ('RULE',   'Auto (unit terkait)'),
+        ('LEXICAL', 'Auto (kecocokan kata)'),
+    ]
+
     DIMENSI_CHOICES = [
         ('EFEKTIF',           'Efektif'),
         ('EFISIEN',           'Efisien'),
@@ -601,6 +608,15 @@ class IndikatorMutu(models.Model):
                   'kolom satuan hanya label tampilan dan tidak mengubah perhitungan.'
     )
     ep_terkait     = models.ForeignKey(StandardItem, on_delete=models.SET_NULL, null=True, blank=True, related_name='indikator_mutu', verbose_name='EP Terkait')
+    ep_sumber      = models.CharField(
+        'Sumber Link EP', max_length=10, choices=EP_SUMBER_CHOICES,
+        default='MANUAL', blank=True,
+        help_text='Bagaimana ep_terkait terisi. MANUAL tidak pernah ditimpa auto-sync.'
+    )
+    ep_skor        = models.DecimalField(
+        'Skor Kecocokan EP', max_digits=5, decimal_places=4,
+        null=True, blank=True,
+    )
     rencana_aksi   = models.TextField('Rencana Aksi (Preset)', blank=True, default='')
     pj             = models.CharField('Penanggung Jawab', max_length=200, blank=True, default='')
     aktif          = models.BooleanField('Aktif', default=True)

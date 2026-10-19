@@ -288,3 +288,51 @@ Format Output JSON:
   "tim_investigasi": "Ketua Komite Mutu, Ka. Unit, IPCN, ...",
   "verifikasi_efektivitas": "Cara memantau apakah tindakan perbaikan efektif mencegah berulangnya insiden"
 }}"""
+
+# ── Section F: Sinkronisasi Indikator Mutu ↔ Elemen Penilaian (EP) ───────────
+#
+# Katalog dikirim penuh (1053 EP, ~33–46k token) alih-alih dipangkas secara
+# katas: 17 dari 36 link manual yang gagal ditemukan prefilter justru tidak
+# berbagi SATU kata pun dengan teks EP ("sisa makanan tidak dimakan pasien"
+# vs "instruksi pengobatan ditulis jelas di CPPT"), jadi penyaring berbasis
+# kata tak akan pernah meneruskan EP yang benar ke model.
+
+PROMPT_EP_MATCH = """Konteks Perumusan Indikator Mutu vs Elemen Penilaian (EP) STARKES:
+- Kode Indikator: {kode}
+- Nama Indikator: {nama}
+- Numerator: {numerator}
+- Denominator: {denominator}
+- Jenis Indikator: {jenis}
+- Dimensi Mutu: {dimensi}
+- Unit Kerja: {unit}
+- Pemetaan pokja unit ini (bila ada): {petunjuk_unit}
+
+Katalog EP ({n_ep} baris). Format tiap baris: KODE | POKJA | BUNYI EP
+{daftar_ep}
+
+Tugas: pilih MAKSIMAL 5 EP yang paling relevan dengan indikator di atas.
+
+Cara menilai:
+- Nilai MAKNAnya, bukan kesamaan kata. Indikator memakai istilah klinis atau
+  administratif, sedangkan EP memakai bahasa standar — keduanya sering tidak
+  berbagi kata yang sama meski membahas hal yang sama.
+- Cocokkan juga dengan unit kerja dan pemetaan pokja bila membantu.
+- Utamakan EP yang benar-benar mengatur hal yang diukur indikator, bukan EP
+  pokja yang sekadar mirip topik.
+
+Aturan keras:
+- ep_code HARUS persis salah satu kode pada katalog. JANGAN mengarang kode,
+  jangan memodifikasi kode, jangan menebak kelanjutan pola kode.
+- Urutkan dari confidence tertinggi.
+- confidence antara 0.0 dan 1.0. Pakai di bawah 0.60 bila ragu-ragu; jangan
+  mengisi semua dengan 0.9.
+- alasan maksimal 25 kata dalam Bahasa Indonesia, sebutkan hubungan spesifik
+  antara indikator dan EP itu.
+- Bila memang tidak ada EP yang relevan, kembalikan "rekomendasi": [].
+
+Format Output JSON:
+{{
+  "rekomendasi": [
+    {{"ep_code": "TKRS 1 EP 1", "confidence": 0.9, "alasan": "contoh alasan singkat"}}
+  ]
+}}"""

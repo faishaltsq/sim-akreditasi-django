@@ -9,6 +9,7 @@ from django.db.models import Avg, Count, Q, Sum, Exists, OuterRef
 from django.http import JsonResponse
 
 from .akses_indikator import indikator_aktif_scoped
+from .ep_sync import bukti_ringkas
 from .risiko_models import IndikatorMutu, CatatanIndikator
 from .models import UnitKerja, AuditLog, StandardItem
 
@@ -345,6 +346,9 @@ def indikator_dashboard(request):
         'filter_indikator': indikator_id,
         'indikator_terpilih': selected_indikator,
         'has_indikator': bool(selected_indikator),
+        # Satu baris status bukti di bawah badge EP (Task 6, tanpa tabel kedua).
+        'bukti_ringkas': bukti_ringkas(
+            selected_indikator.ep_terkait if selected_indikator else None),
         'chart_indikator_data_json': _json.dumps(ind_data),
         'chart_indikator_colors_json': _json.dumps(ind_colors),
         'chart_indikator_target_json': _json.dumps(ind_target),
@@ -380,6 +384,20 @@ def indikator_detail(request, indikator_id):
         if 1 <= c.bulan <= 12:
             chart_data_raw[c.bulan - 1] = float(c.nilai_capaian)
 
+    # Dokumen bukti dari EP terkait (IndikatorMutu -> EP -> EvidenceReq -> EvidenceFile).
+    # Panel ini menutup segitiga sinkronisasi "indikator mutu - dokumen bukti -
+    # standar akreditasi" yang diminta di dokumen.
+    ringkas = bukti_ringkas(ind.ep_terkait if ind.ep_terkait_id else None)
+    evidence = []
+    if ind.ep_terkait_id:
+        for r in ind.ep_terkait.evidence_reqs.prefetch_related('files').order_by('category_type', 'id'):
+            files = list(r.files.all())
+            evidence.append({'req': r, 'files': files, 'ada': bool(files)})
+    # Hitung dari satu sumber (bukti_ringkas) supaya panel dan badge tidak
+    # pernah menampilkan dua angka yang berbeda.
+    total_req = ringkas['total'] if ringkas else 0
+    terpenuhi = ringkas['terunggah'] if ringkas else 0
+
     ctx = {
         'ind': ind,
         'catatan': catatan,
@@ -388,6 +406,11 @@ def indikator_detail(request, indikator_id):
         'chart_data': _json.dumps(chart_data_raw),
         'target_line': float(ind.target_nilai),
         'is_manager': _is_manager(request.user),
+        'evidence': evidence,
+        'evidence_total_req': total_req,
+        'evidence_terpenuhi': terpenuhi,
+        'evidence_total_file': sum(len(e['files']) for e in evidence),
+        'evidence_pct': round(100 * terpenuhi / total_req) if total_req else 0,
     }
     return render(request, 'akreditasi/indikator_detail.html', ctx)
 
@@ -489,6 +512,9 @@ def indikator_tambah(request):
                 target_nilai=target_val,
                 satuan=satuan,
                 ep_terkait_id=int(ep_id) if ep_id else None,
+                # Pilihan eksplisit operator: auto-sync tidak boleh menimpanya.
+                ep_sumber='MANUAL',
+                ep_skor=None,
                 rencana_aksi=rencana,
                 pj=pj,
                 aktif=True,
@@ -559,7 +585,14 @@ def indikator_edit(request, indikator_id):
             ind.denominator = den
             ind.target_nilai = target_val
             ind.satuan = satuan
-            ind.ep_terkait_id = int(ep_id) if ep_id else None
+            baru_ep = int(ep_id) if ep_id else None
+            if baru_ep is None or baru_ep != ind.ep_terkait_id:
+                # Operator mengambil atau mengosongkan EP = keputusan manusia:
+                # reset provenance supaya sync_ep_indikator --ulang tidak
+                # menimpa pilihannya di kemudian hari.
+                ind.ep_sumber = 'MANUAL'
+                ind.ep_skor = None
+            ind.ep_terkait_id = baru_ep
             ind.rencana_aksi = rencana
             ind.pj = pj
             ind.arah_target = arah_target

@@ -25,6 +25,7 @@ from .ai_prompts import (
     PROMPT_ANALISIS_MASALAH_RISIKO,
     PROMPT_FMEA_SUGGESTION,
     PROMPT_RCA_SUGGESTION,
+    PROMPT_EP_MATCH,
 )
 
 logger = logging.getLogger(__name__)
@@ -69,7 +70,7 @@ def sanitize_hospital_prompt(text: str) -> str:
 
 def _call_deepseek(prompt: str, system_prompt: str = SYSTEM_PROMPT_RS,
                    model: str = None, temperature: float = None,
-                   max_tokens: int = None) -> dict:
+                   max_tokens: int = None, timeout: int = None) -> dict:
     """
     Panggil DeepSeek API dari backend. API Key TIDAK pernah bocor ke frontend.
 
@@ -106,16 +107,18 @@ def _call_deepseek(prompt: str, system_prompt: str = SYSTEM_PROMPT_RS,
         'response_format': {'type': 'json_object'},
     }
 
+    _timeout = timeout or DEFAULT_TIMEOUT
+
     try:
-        resp = requests.post(DEEPSEEK_API_URL, headers=headers, json=payload, timeout=DEFAULT_TIMEOUT)
+        resp = requests.post(DEEPSEEK_API_URL, headers=headers, json=payload, timeout=_timeout)
         resp.raise_for_status()
         content = resp.json()['choices'][0]['message']['content']
         parsed = json.loads(content)
         return {'success': True, 'data': parsed, 'error': None}
 
     except requests.exceptions.Timeout:
-        logger.warning('DeepSeek API timeout setelah %ds', DEFAULT_TIMEOUT)
-        return {'success': False, 'error': f'Koneksi ke AI timeout ({DEFAULT_TIMEOUT}s). Coba lagi sebentar.'}
+        logger.warning('DeepSeek API timeout setelah %ds', _timeout)
+        return {'success': False, 'error': f'Koneksi ke AI timeout ({_timeout}s). Coba lagi sebentar.'}
 
     except requests.exceptions.HTTPError as e:
         body = {}
@@ -567,6 +570,105 @@ def generate_rca_suggestion(user, unit_name: str, jenis_risiko: str,
 
 
 # ── UTILITY: Cek Koneksi API ─────────────────────────────────────────────
+
+# ── SINKRONISASI INDIKATOR MUTU <-> EP (STARKES) ────────────────────────────
+#
+# Tier C: katalog EP dikirim UTUH dalam satu panggilan (terukur 1053 baris,
+# ~116 KB, ~33-46k token — masih di bawah konteks deepseek-chat 64k). Penyaring
+# lexical sengaja TIDAK dipakai sebagai gerbang: presisi@1-nya hanya 10% pada
+# 72 link manual, dan 17 dari 36 kasus yang meleset tidak berbagi satu kata pun
+# dengan teks EP yang benar, sehingga gerbang katas akan mematikan jawaban yang
+# sebenarnya mampu ditemukan model.
+
+def generate_ep_rekomendasi(user, ind, petunjuk_unit: str = '') -> dict:
+    """Rekomendasi EP untuk sebuah indikator mutu via DeepSeek.
+
+    Mengembalikan ``{'success': bool, 'data': {...}, 'error': str|None,
+    'ai_terpakai': bool}``. Saat AI mati/gagal, hasil lexical Tier B tetap
+    dikembalikan agar pemanggil tidak pernah pecah.
+    """
+    from .system_models import SystemConfig
+    from . import ep_sync
+
+    def _lexical(reason: str, ai_terpakai: bool = False) -> dict:
+        kandidat = ep_sync.lexical_top(ind, n=5)
+        return {
+            'success': True,
+            'ai_terpakai': ai_terpakai,
+            'error': None if ai_terpakai else reason,
+            'data': {
+                'sumber': 'LEXICAL',
+                'rekomendasi': [{
+                    'ep_code': k['code'], 'confidence': float(k['skor']),
+                    'alasan': 'Kecocokan kata dengan teks EP.', 'dari_unit': k['dari_unit'],
+                } for k in kandidat],
+            },
+        }
+
+    config = SystemConfig.get_solo()
+    if not getattr(config, 'ai_enable_ep_sync', True):
+        return _lexical('Fitur AI sinkronisasi EP dimatikan; memakai kecocokan kata.')
+    if not config.ai_enabled:
+        return _lexical('AI belum diaktifkan; memakai kecocokan kata.')
+
+    lines, codes, n_ep = ep_sync.build_ep_catalog()
+    prompt = PROMPT_EP_MATCH.format(
+        kode=sanitize_hospital_prompt(getattr(ind, 'kode_indikator', '') or '-'),
+        nama=sanitize_hospital_prompt(getattr(ind, 'nama_indikator', '') or '-'),
+        numerator=sanitize_hospital_prompt(getattr(ind, 'numerator', '') or '-'),
+        denominator=sanitize_hospital_prompt(getattr(ind, 'denominator', '') or '-'),
+        jenis=getattr(ind, 'jenis', '') or '-',
+        dimensi=getattr(ind, 'get_dimensi_mutu_display', lambda: '-')() if hasattr(ind, 'get_dimensi_mutu_display') else '-',
+        unit=sanitize_hospital_prompt(getattr(getattr(ind, 'unit', None), 'name', '') or '-'),
+        petunjuk_unit=petunjuk_unit or '(tidak ada pemetaan pokja untuk unit ini)',
+        n_ep=n_ep,
+        daftar_ep='\n'.join(lines),
+    )
+
+    # Output kecil (maks 5 entri) tapi input ~35k token: timeout 30s default
+    # terlalu ketat untuk prompt sebesar ini.
+    result = _call_deepseek(prompt, max_tokens=1200, timeout=120)
+    if not result.get('success'):
+        return _lexical(result.get('error') or 'Panggilan AI gagal; memakai kecocokan kata.')
+
+    raw = result.get('data') or {}
+    items = raw.get('rekomendasi')
+    if not isinstance(items, list):
+        return _lexical('Balasan AI tidak berisi daftar rekomendasi.')
+
+    cleaned = []
+    ditolak = 0
+    for it in items[:5]:
+        if not isinstance(it, dict):
+            ditolak += 1
+            continue
+        code = str(it.get('ep_code') or '').strip()
+        if code not in codes:          # anti-halusinasi: kode harus ada di katalog
+            ditolak += 1
+            continue
+        try:
+            conf = float(it.get('confidence', 0))
+        except (TypeError, ValueError):
+            conf = 0.0
+        conf = min(max(conf, 0.0), 1.0)
+        alasan = str(it.get('alasan') or '').strip()[:300]
+        cleaned.append({'ep_code': code, 'confidence': conf, 'alasan': alasan})
+
+    if not cleaned:
+        return _lexical(f'AI tidak mengembalikan kode EP yang valid ({ditolak} ditolak).')
+
+    cleaned.sort(key=lambda x: -x['confidence'])
+    _log_ai_call(user, 'EP_SYNC',
+                 f'{getattr(ind, "kode_indikator", "-")} -> {len(cleaned)}/{n_ep} EP, '
+                 f'{ditolak} ditolak', True)
+    return {
+        'success': True,
+        'ai_terpakai': True,
+        'error': None,
+        'ditolak': ditolak,
+        'data': {'sumber': 'AI', 'rekomendasi': cleaned},
+    }
+
 
 def test_deepseek_connection() -> dict:
     """Tes koneksi ke DeepSeek API — digunakan di Pusat Kontrol Admin."""

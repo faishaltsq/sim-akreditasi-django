@@ -17,6 +17,7 @@ from django.contrib.auth.decorators import login_required
 from .security_utils import rate_limit
 from .ai_service import (
     generate_risk_mitigation,
+    generate_ep_rekomendasi,
     generate_pdca_action_plan,
     generate_insiden_grading,
     generate_evaluasi_risiko,
@@ -223,6 +224,74 @@ def api_ai_rdwos_analisis(request):
         jenis_dokumen=data.get('jenis_dokumen') or [],
     )
     return JsonResponse(res, status=200 if res['success'] else 400)
+
+
+# ── SINKRONISASI EP <-> INDIKATOR MUTU ────────────────────────────────────
+
+@login_required
+@require_POST
+@rate_limit(max_calls=12, window=60, scope='ai')
+def api_ai_ep_rekomendasi(request):
+    """Rekomendasi Elemen Penilaian (EP) untuk satu indikator mutu.
+
+    Menggabungkan saran cepat berbasis kata (Tier B, instan) dengan rekomendasi
+    DeepSeek atas katalog EP penuh (Tier C). Keduanya selalu ikut dikembalikan,
+    karena AI bisa mati dan operator tetap perlu melihat sesuatu.
+    """
+    from .indikator_views import _is_manager          # lazy: hindari siklus impor
+    from .ep_sync import prefilter_candidates, rule_boost_map
+    from .risiko_models import IndikatorMutu
+
+    if not _is_manager(request.user):
+        return JsonResponse(
+            {'success': False, 'error': 'Anda tidak memiliki hak akses sinkronisasi EP.'},
+            status=403)
+
+    data = _parse_json_body(request)
+    if not data:
+        return JsonResponse({'success': False, 'error': 'Payload tidak valid (bukan JSON).'},
+                            status=400)
+
+    try:
+        ind_id = int(data.get('indikator_id'))
+    except (TypeError, ValueError):
+        return JsonResponse({'success': False, 'error': 'indikator_id tidak valid.'},
+                            status=400)
+
+    ind = (IndikatorMutu.objects.select_related('unit', 'ep_terkait')
+           .filter(pk=ind_id).first())
+    if ind is None:
+        return JsonResponse({'success': False, 'error': 'Indikator tidak ditemukan.'},
+                            status=404)
+
+    # Link manual adalah keputusan manusia — jangan diusik.
+    if ind.ep_terkait_id and ind.ep_sumber == 'MANUAL':
+        return JsonResponse({
+            'success': False,
+            'error': 'EP sudah terhubung manual. Kosongkan dulu kolom EP bila ingin mengganti.',
+        }, status=400)
+
+    boost = rule_boost_map(ind.unit)
+    petunjuk = '; '.join(f'{k}: {", ".join(sorted(v))}' for k, v in sorted(boost.items()))
+
+    cepat = [{
+        'id': c['ep'].id, 'code': c['code'], 'deskripsi': c['deskripsi'],
+        'pokja': c['pokja'], 'skor': float(c['skor']), 'dari_unit': c['dari_unit'],
+    } for c in prefilter_candidates(ind, top_k=10)]
+
+    res = generate_ep_rekomendasi(user=request.user, ind=ind, petunjuk_unit=petunjuk)
+
+    return JsonResponse({
+        'success': bool(res.get('success')),
+        'kandidat': cepat,
+        'rekomendasi': (res.get('data') or {}).get('rekomendasi') or [],
+        'sumber': (res.get('data') or {}).get('sumber'),
+        'ai_terpakai': bool(res.get('ai_terpakai')),
+        'notice': res.get('error'),
+        'ep_terkait': (
+            {'id': ind.ep_terkait_id, 'code': ind.ep_terkait.code,
+             'sumber': ind.ep_sumber} if ind.ep_terkait_id else None),
+    }, status=200 if res.get('success') else 400)
 
 
 # ── 7. PERUMUSAN INDIKATOR MUTU CERDAS ────────────────────────────────────
