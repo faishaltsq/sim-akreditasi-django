@@ -237,7 +237,8 @@ def api_indikator_by_unit(request):
 @login_required
 def risiko_daftar(request):
     profile = getattr(request.user, 'profile', None)
-    qs = RisikoUnit.objects.select_related('unit', 'indikator_mutu_terkait', 'created_by').all()
+    qs = RisikoUnit.objects.select_related('unit', 'indikator_mutu_terkait', 'created_by') \
+        .prefetch_related('tindak_lanjut__ep_terkait__category').all()
 
     # Scope filtering untuk unit-scoped users
     if profile and profile.is_unit_scoped and profile.unit_kerja:

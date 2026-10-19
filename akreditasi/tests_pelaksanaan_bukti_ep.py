@@ -203,3 +203,37 @@ class RisikoDetailFormTest(TestCase):
         tl = TindakLanjutRisiko.objects.latest('id')
         self.assertEqual(tl.status_aksi, 'SELESAI')
         self.assertTrue(tl.bukti_upload.name)
+
+
+# ── Task 3: kolom EP di daftar risiko (register) ──────────────────────────
+
+class RisikoDaftarEPTest(TestCase):
+    """Daftar risiko ikut menampilkan EP yang dilayani pelaksanaannya."""
+
+    def setUp(self):
+        from django.contrib.auth.models import User
+        self.user = User.objects.create_user('pel-h', 'h@x.id', 'x')
+        self.client = Client()
+        self.client.force_login(self.user)
+        self.cat = _mk_category()
+        self.ep = _mk_ep(self.cat)
+        self.risiko = _mk_risiko()
+        self.url = reverse('akreditasi:risiko_daftar')
+
+    def test_register_has_ep_column(self):
+        res = self.client.get(self.url)
+        self.assertEqual(res.status_code, 200)
+        self.assertContains(res, 'EP (Pelaksanaan)')
+
+    def test_register_shows_ep_code_for_each_risk(self):
+        TindakLanjutRisiko.objects.create(
+            risiko=self.risiko, urutan=1, aksi='Aksi register',
+            status_aksi='SEDANG', standar_terkait=self.cat, ep_terkait=self.ep)
+        res = self.client.get(self.url)
+        self.assertContains(res, self.ep.code)
+
+    def test_register_without_action_shows_dash(self):
+        res = self.client.get(self.url)
+        # baris risiko tanpa pelaksanaan tetap dirender, EP kosong
+        self.assertEqual(res.status_code, 200)
+        self.assertContains(res, self.risiko.masalah)

@@ -194,6 +194,7 @@
                         <th class="text-center" style="color:#0f172a;">Skor</th>
                         <th class="text-center" style="color:#0f172a;">Level</th>
                         <th class="text-center" style="color:#0f172a;">Status</th>
+                        <th style="color:#0f172a;">EP (Pelaksanaan)</th>
                         <th style="color:#0f172a;">Aksi</th>
                     </tr>
                 </thead>
@@ -231,6 +232,19 @@
                             <span class="badge {% if r.status == 'IDENTIFIKASI' %}bg-secondary{% elif r.status == 'PLAN' %}bg-primary{% elif r.status == 'DO' %}bg-warning text-dark{% elif r.status == 'EVALUASI' %}badge-purple{% elif r.status == 'SELESAI' %}bg-success{% elif r.status == 'ACCEPTED' %}badge-teal{% endif %}" style="font-size:.65rem;">{{ r.get_status_display }}</span>
                         </td>
                         <td>
+                            {% with eps=r.tindak_lanjut.all %}
+                            {% if eps %}
+                            <div class="d-flex flex-column gap-1">
+                                {% for tl in eps %}{% if tl.ep_terkait %}
+                                <span class="font-monospace" style="font-size:.68rem;" title="{{ tl.ep_terkait.code }} — {{ tl.ep_terkait.description }}">{{ tl.ep_terkait.code }}</span>
+                                {% endif %}{% endfor %}
+                            </div>
+                            {% else %}
+                            <span class="text-muted" style="font-size:.7rem;">—</span>
+                            {% endif %}
+                            {% endwith %}
+                        </td>
+                        <td>
                             <div class="d-flex gap-1">
                             <a href="{% url 'akreditasi:risiko_detail' risiko_id=r.pk %}" class="btn btn-sm btn-outline-secondary py-0 px-1" title="Detail"><i class="bi bi-eye"></i></a>
                             <a href="{% url 'akreditasi:risiko_evaluasi' risiko_id=r.pk %}" class="btn btn-sm btn-outline-primary py-0 px-1" title="Evaluasi"><i class="bi bi-pencil-square"></i></a>
@@ -240,7 +254,7 @@
                         </td>
                     </tr>
                     {% empty %}
-                    <tr><td colspan="10" class="text-center text-muted py-4">Belum ada data risiko.</td></tr>
+                    <tr><td colspan="11" class="text-center text-muted py-4">Belum ada data risiko.</td></tr>
                     {% endfor %}
                 </tbody>
             </table>
