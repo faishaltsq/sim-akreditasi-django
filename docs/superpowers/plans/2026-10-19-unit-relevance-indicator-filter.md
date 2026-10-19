@@ -410,13 +410,26 @@ git commit -m "fix(indikator): indicator pages apply the same unit scope as the 
 
 ---
 
-### Task 4: Drop "Semua Indikator" and name the empty state
+### Task 4: Name the empty state (scope reduced 2026-10-19)
+
+**Decision — "Semua Indikator" stays.** Step 3–5 below were drafted to delete
+the average mode entirely. Checked against the source document before
+implementing: the doc lists the default as something to *verify*
+("perlu dicek apakah diganti"), not an instruction to remove. After Task 2
+the average is already scoped to the unit's own subtree + ancestors, so the
+reported complaint (a unit seeing other units' indicators) is fixed without
+touching the control. Deleting it would strand `views.py:193-196`
+(`avg_target_raw` for the no-selection case) as dead code and remove a
+working view from units that use it. Steps 3–5 are therefore **dropped**;
+Step 6 is the whole of this task.
+
+**Out of scope:** `templates/akreditasi/indikator_dashboard.html:283` also
+carries a "Semua Indikator (Rata-rata)" option, but that is the indicator
+input/detail page, not the unit dashboard filter this document is about.
+Left untouched.
 
 **Files:**
-- Modify: `templates/akreditasi/dashboard.html:483-496`
-- Modify: `templates/akreditasi/dashboard.html:960-986`
-- Modify: `templates/akreditasi/indikator_dashboard.html:283`
-- Modify: `akreditasi/views.py:182` (default selection)
+- Modify: `templates/akreditasi/dashboard.html` (notice before the tab content)
 - Test: `akreditasi/tests_akses_indikator_unit.py`
 
 **Interfaces:**

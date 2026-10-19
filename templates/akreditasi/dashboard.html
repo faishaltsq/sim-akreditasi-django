@@ -510,6 +510,23 @@
                 </div>
             </form>
 
+            {% if not mutu_indikator_choices %}
+            <!-- Spesifikasi 19.10: unit tanpa indikator dalam lingkupnya harus
+                 diberi tahu, bukan dibiarkan melihat grafik rata-rata kosong tanpa
+                 penjelasan. Lingkup sudah mencakup rantai induk, jadi unit ini
+                 memang tidak punya indikator sama sekali. -->
+            <div class="alert alert-info d-flex align-items-start gap-2 py-2 px-3 mb-3" role="alert">
+                <i class="bi bi-info-circle mt-1"></i>
+                <div>
+                    <strong class="small">Unit Ini Belum Memiliki Indikator</strong>
+                    <div class="text-muted" style="font-size:.78rem;">
+                        Unit ini belum memiliki indikator mutu, termasuk dari unit induknya.
+                        Silakan hubungi Pokja Mutu RS untuk pengisian indikator.
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
             <!-- TAB CONTENT -->
             <div class="tab-content" id="pills-mutu-tabContent">
                 <!-- TAB 1: TREN BULANAN COMBO CHART -->
