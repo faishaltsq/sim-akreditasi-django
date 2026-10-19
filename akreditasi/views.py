@@ -140,14 +140,17 @@ def _get_mutu_renstra_charts_context(request, profile, db_roadmaps, renstra_year
     except (ValueError, TypeError):
         mutu_indikator_id = 0
 
-    ind_qs = IndikatorMutu.objects.filter(aktif=True)
-    if profile and profile.is_unit_scoped and profile.unit_kerja:
-        user_unit = profile.unit_kerja
-        user_unit_ids = list(UnitKerja.objects.filter(
-            Q(pk=user_unit.pk) | Q(parent=user_unit) | Q(parent__parent=user_unit)
-        ).values_list('pk', flat=True))
-        ind_qs = ind_qs.filter(Q(unit_id__in=user_unit_ids) | Q(jenis='NASIONAL'))
-    elif mutu_unit:
+    # Spesifikasi 19.10: lingkup unit menentukan IMRS/IMU/INM yang relevan.
+    # Berjalan naik ke leluhur, dan tanpa pengecualian Q(jenis='NASIONAL')
+    # yang dulu menyerahkan seluruh INM aktif ke setiap unit. INM tetap
+    # terfilter per unit karena setiap barisnya membawa unit pengumpulnya.
+    from .akses_indikator import indikator_aktif_scoped
+    ind_qs = indikator_aktif_scoped(profile)
+
+    # Pengguna non unit-scoped memilih unit lewat dropdown: lingkupnya unit
+    # itu persis, bukan seluruh pohonnya, agar perbandingan tetap bisa
+    # diarahkan ke satu unit.
+    if mutu_unit and not (profile and profile.is_unit_scoped and profile.unit_kerja):
         ind_qs = ind_qs.filter(unit_id=mutu_unit)
 
     if mutu_jenis:

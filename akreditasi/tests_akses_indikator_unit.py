@@ -16,6 +16,7 @@ import itertools
 
 from django.contrib.auth import get_user_model
 from django.test import TestCase
+from django.urls import reverse
 
 from accounts.models import UserProfile
 from akreditasi.akses_indikator import (
@@ -131,12 +132,17 @@ class IndikatorAktifScopedTest(TestCase):
     def test_nasional_is_filtered_by_unit_not_leaked(self):
         """Regression pin for the original bug: both views filtered with
         ``Q(unit_id__in=...) | Q(jenis='NASIONAL')``, which handed all 36
-        active INM to every unit-scoped user regardless of involvement."""
+        active INM to every unit-scoped user regardless of involvement.
+
+        ``NASIONAL`` (legacy code) is used deliberately: production stores
+        only legacy codes — NASIONAL 36, IMP_RS 98, IMP_UNIT 76 — so a
+        fixture written with the canonical ``INM`` would not exercise the
+        clause that leaked."""
         irin = _mk_unit('IRIN', 'Instalasi Rawat Inap', level=2)
         anak = _mk_unit('BANGSAL-ANAK', 'Bangsal Anak', parent=irin, level=3)
         inter = _mk_unit('BANGSAL-INTERNA', 'Interna', level=3)
-        mine = _mk_ind(irin, 'INM', 'INM-IRIN')
-        theirs = _mk_ind(inter, 'INM', 'INM-INTERNA')
+        mine = _mk_ind(irin, 'NASIONAL', 'INM-IRIN')
+        theirs = _mk_ind(inter, 'NASIONAL', 'INM-INTERNA')
 
         user = _unit_scoped_user('kepala-anak2', anak)
         got = list(indikator_aktif_scoped(user.profile)
@@ -149,8 +155,8 @@ class IndikatorAktifScopedTest(TestCase):
         (36 rows, 21 unique names). Each unit must see only its own copy."""
         irin = _mk_unit('IRIN', 'IRIN', level=2)
         anak = _mk_unit('BANGSAL-ANAK', 'Anak', parent=irin, level=3)
-        a = _mk_ind(irin, 'INM', 'KKT-IRIN')
-        b = _mk_ind(anak, 'INM', 'KKT-ANAK')
+        a = _mk_ind(irin, 'NASIONAL', 'KKT-IRIN')
+        b = _mk_ind(anak, 'NASIONAL', 'KKT-ANAK')
 
         user = _unit_scoped_user('kepala-anak3', anak)
         got = set(indikator_aktif_scoped(user.profile)
@@ -255,3 +261,59 @@ class IndikatorAktifScopedTest(TestCase):
         irin = _mk_unit('IRIN', 'Instalasi Rawat Inap', level=2)
         _mk_ind(irin, 'IMRS', 'RS-A')
         self.assertEqual(indikator_aktif_scoped(None).count(), 1)
+
+
+class DashboardScopeTest(TestCase):
+    """The dashboard chart builds its indicator list through the resolver.
+
+    Before this change the block at views.py did two wrong things at once:
+    it walked only downward (so a bangsal never saw its instalasi's
+    indicators) and it OR'd an unconditional ``Q(jenis='NASIONAL')`` (so
+    every unit-scoped user received all 36 active INM). The fixture below
+    fails on both counts — the parent indicator is missing and the other
+    unit's INM leaks in.
+    """
+
+    def _build(self):
+        irin = _mk_unit('IRIN', 'Instalasi Rawat Inap', level=2)
+        anak = _mk_unit('BANGSAL-ANAK', 'Bangsal Anak', parent=irin, level=3)
+        inter = _mk_unit('BANGSAL-INTERNA', 'Interna', level=3)
+        # Legacy codes only — that is what production stores, and
+        # ``Q(jenis='NASIONAL')`` only ever matched the legacy spelling.
+        parent_ind = _mk_ind(irin, 'IMP_RS', 'RS-IRIN')
+        other = _mk_ind(inter, 'IMP_RS', 'RS-INTERNA')
+        other_inm = _mk_ind(inter, 'NASIONAL', 'INM-INTERNA')
+        return anak, (parent_ind, other, other_inm)
+
+    def test_dashboard_indicator_list_is_unit_scoped(self):
+        anak, (parent_ind, other, other_inm) = self._build()
+        user = _unit_scoped_user('dash-kepala', anak)
+        self.client.force_login(user)
+
+        res = self.client.get(reverse('akreditasi:dashboard'))
+        self.assertEqual(res.status_code, 200)
+        got = {i.pk for i in res.context['mutu_indikator_choices']}
+
+        self.assertIn(parent_ind.pk, got, 'parent (IRIN) indicator missing')
+        self.assertNotIn(other.pk, got, "sibling bangsal's indicator leaked")
+        self.assertNotIn(other_inm.pk, got, 'INM leaked via Q(jenis=NASIONAL)')
+        self.assertEqual(got, {parent_ind.pk})
+
+    def test_admin_without_scope_sees_unit_selected_in_dropdown(self):
+        """A non-unit-scoped user who picks mutu_unit gets that unit only."""
+        irin = _mk_unit('IRIN', 'Instalasi Rawat Inap', level=2)
+        anak = _mk_unit('BANGSAL-ANAK', 'Bangsal Anak', parent=irin, level=3)
+        inter = _mk_unit('BANGSAL-INTERNA', 'Interna', level=3)
+        own = _mk_ind(anak, 'IMP_UNIT', 'U-ANAK')
+        other = _mk_ind(inter, 'IMP_UNIT', 'U-INTERNA')
+
+        user = _user('dash-admin', None, role='ADMIN_RS')
+        self.assertFalse(user.profile.is_unit_scoped)
+        self.client.force_login(user)
+
+        res = self.client.get(reverse('akreditasi:dashboard'),
+                              {'mutu_unit': str(anak.pk)})
+        self.assertEqual(res.status_code, 200)
+        got = {i.pk for i in res.context['mutu_indikator_choices']}
+        self.assertEqual(got, {own.pk})
+        self.assertNotIn(other.pk, got)
