@@ -184,22 +184,62 @@ def api_ai_evaluasi_risiko(request):
     if not data:
         return JsonResponse({'success': False, 'error': 'Payload tidak valid.'}, status=400)
 
+    # Sumber konteks: halaman evaluasi tidak lagi memuat input capaian inline,
+    # jadi klien kirim risiko_id dan nilai diambil dari model — capaian berasal
+    # dari agregat Input Capaian (CatatanIndikator), bukan angka yang dirender
+    # ke JS. Field eksplisit pada payload tetap didahulukan agar payload lama
+    # (dipakai test & klien lama) tetap berfungsi.
+    derived = {}
+    if data.get('risiko_id'):
+        from .risiko_models import RisikoUnit
+        try:
+            rk = RisikoUnit.objects.select_related(
+                'unit', 'indikator_mutu_terkait').get(pk=int(data['risiko_id']))
+        except (RisikoUnit.DoesNotExist, TypeError, ValueError):
+            return JsonResponse({'success': False, 'error': 'Risiko tidak ditemukan.'}, status=400)
+
+        ev = rk.capaian_evaluasi
+        gap_str = ''
+        if ev['gap'] is not None:
+            gap_str = ('+' if ev['gap'] >= 0 else '') + f"{ev['gap']:.1f}%"
+        capaian_disp = rk.capaian_persen_display
+        derived = {
+            'unit_name': rk.unit.name if rk.unit_id else '',
+            'jenis_risiko': rk.jenis_risiko or '',
+            'deskripsi_risiko': rk.deskripsi_risiko or rk.masalah or '',
+            'skor_awal': rk.skor_inherent,
+            'dampak_awal': rk.dampak,
+            'prob_awal': rk.probabilitas,
+            'mitigasi_terlaksana': rk.rencana_aksi or '',
+            'nama_indikator': (rk.indikator_mutu_terkait.nama_indikator
+                               if rk.indikator_mutu_terkait_id else ''),
+            'target_capaian': f"{ev['target']}%" if ev['target'] is not None else '',
+            'capaian_nilai': '' if capaian_disp == '—' else capaian_disp,
+            'gap_persen': gap_str,
+        }
+
+    def pick(key, default=''):
+        val = data.get(key)
+        if val not in (None, ''):
+            return val
+        return derived.get(key, default)
+
     res = generate_evaluasi_risiko(
         user=request.user,
-        unit_name=data.get('unit_name', ''),
-        jenis_risiko=data.get('jenis_risiko', ''),
-        deskripsi_risiko=data.get('deskripsi_risiko', ''),
-        skor_awal=int(data.get('skor_awal') or 0),
-        dampak_awal=int(data.get('dampak_awal') or 0),
-        prob_awal=int(data.get('prob_awal') or 0),
-        mitigasi_terlaksana=data.get('mitigasi_terlaksana', ''),
+        unit_name=pick('unit_name'),
+        jenis_risiko=pick('jenis_risiko'),
+        deskripsi_risiko=pick('deskripsi_risiko'),
+        skor_awal=int(pick('skor_awal', 0) or 0),
+        dampak_awal=int(pick('dampak_awal', 0) or 0),
+        prob_awal=int(pick('prob_awal', 0) or 0),
+        mitigasi_terlaksana=pick('mitigasi_terlaksana'),
         dampak_residual=int(data.get('dampak_residual') or 0),
         prob_residual=int(data.get('prob_residual') or 0),
-        status=data.get('status', 'EVALUASI'),
-        nama_indikator=data.get('nama_indikator', ''),
-        target_capaian=str(data.get('target_capaian', '')),
-        capaian_nilai=str(data.get('capaian_nilai', '')),
-        gap_persen=str(data.get('gap_persen', '')),
+        status=pick('status', 'EVALUASI'),
+        nama_indikator=pick('nama_indikator'),
+        target_capaian=str(pick('target_capaian')),
+        capaian_nilai=str(pick('capaian_nilai')),
+        gap_persen=str(pick('gap_persen')),
     )
     return JsonResponse(res, status=200 if res['success'] else 400)
 

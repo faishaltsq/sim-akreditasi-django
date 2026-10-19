@@ -85,7 +85,8 @@ class IndikatorActionsRenderTest(TestCase):
         resp = self.client.get(reverse('akreditasi:risiko_evaluasi',
                                        kwargs={'risiko_id': self.risiko.pk}))
         self.assertEqual(resp.status_code, 200)
-        self.assertContains(resp, 'Tautkan indikator mutu terlebih dahulu')
+        self.assertContains(resp, 'Tautkan indikator mutu pada tahap perencanaan')
+        self.assertNotContains(resp, 'name="capaian_nilai"')
 
     def test_monev_manager_sees_buttons_dan_link_detail(self):
         self._login(self.manager)

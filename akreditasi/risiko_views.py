@@ -1,13 +1,12 @@
 """
 Fase 2 — Views Manajemen Risiko PDCA + Insiden Keselamatan
 """
-import re
 
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.http import JsonResponse, HttpResponse, Http404
-from django.db.models import Count, Q, Min, Exists, OuterRef
+from django.db.models import Count, Q, Exists, OuterRef
 from django.utils import timezone
 from django.core.paginator import Paginator
 from django.views.decorators.http import require_GET, require_POST
@@ -722,63 +721,6 @@ def risiko_hapus(request, risiko_id):
 
 # ── 4. Evaluasi Risiko ───────────────────────────────────────────────────
 
-def _indikator_rencana(risiko):
-    """Indikator mutu yang sudah direncanakan untuk unit risiko ini.
-
-    Sumber: RisikoUnit.indikator_mutu_terkait milik risiko lain di unit yang
-    sama + seluruh rantai leluhur unit. Dipakai untuk menyaring dropdown
-    penautan di G.1 agar hanya menampilkan indikator yang memang direncanakan
-    (bukan seluruh katalog unit + INM nasional).
-
-    Return (list_indikator, mode) dengan mode:
-      'RENCANA'  -> ada indikator hasil perencanaan
-      'FALLBACK' -> unit belum merencanakan apa pun; kembalikan set lama
-    """
-    ancestor_ids = []
-    cur = getattr(risiko, 'unit', None)
-    while cur is not None and cur.pk not in ancestor_ids:
-        ancestor_ids.append(cur.pk)
-        cur = cur.parent
-
-    planned_ids = list(
-        RisikoUnit.objects
-        .filter(unit_id__in=ancestor_ids, indikator_mutu_terkait__isnull=False)
-        .exclude(pk=risiko.pk)
-        .values_list('indikator_mutu_terkait_id', flat=True)
-        .distinct()
-    )
-
-    # rencana_target = target capaian yang dipilih di tahap Plan oleh risiko
-    # unit yang sama (Min = paling longgar bila dua risiko beda nilai).
-    # Risiko unit leluhur tidak dihitung -> None -> template/JS jatuh ke
-    # target_nilai master.
-    rencana_target = Min('risiko_terkait__target_capaian_indikator',
-                         filter=Q(risiko_terkait__unit_id=risiko.unit_id))
-
-    if planned_ids:
-        qs = (IndikatorMutu.objects
-              .filter(aktif=True, pk__in=planned_ids)
-              .select_related('unit')
-              .annotate(rencana_target=rencana_target)
-              .order_by('jenis', 'kode_indikator'))
-        return list(qs), 'RENCANA'
-
-    # ponytail: unit belum punya rencana sama sekali -> perilaku lama
-    # (unit + leluhur + INM global). Naikkan ke 'hanya rencana' begitu
-    # seluruh unit sudah mengisi section D.
-    qs = (IndikatorMutu.objects
-          .filter(aktif=True)
-          .filter(Q(unit_id__in=ancestor_ids) | Q(unit__isnull=True))
-          .select_related('unit')
-          .annotate(rencana_target=rencana_target)
-          .order_by('jenis', 'kode_indikator'))
-    out = list(qs)
-    if not out:
-        out = list(IndikatorMutu.objects.filter(aktif=True, jenis='NASIONAL')
-                   .order_by('kode_indikator'))
-    return out, 'FALLBACK'
-
-
 @login_required
 def risiko_evaluasi(request, risiko_id):
     risiko = get_object_or_404(RisikoUnit.objects.select_related('unit', 'indikator_mutu_terkait', 'created_by'), pk=risiko_id)
@@ -902,37 +844,25 @@ def risiko_evaluasi(request, risiko_id):
     # ponytail: nama konteks tanpa underscore awal — Django menolak
     # nama variabel template yang diawali underscore (TemplateSyntaxError).
 
-    # Kandidat indikator untuk penautan bila belum tertaut.
-    # Sumber: indikator yang SUDAH DIRENCANAKAN unit ini + leluhurnya.
-    # Fallback ke set lama (unit + leluhur + INM global) bila unit belum
-    # merencanakan apa pun, supaya dropdown tidak pernah kosong.
-    indikator_kandidat = []
-    indikator_kandidat_mode = ''
-    indikator_manual_hint = ''
-    if not risiko.indikator_mutu_terkait_id:
-        indikator_kandidat, indikator_kandidat_mode = _indikator_rencana(risiko)
-        # Indikator yang dulu diketik manual (marker di deskripsi_risiko)
-        # ditampilkan apa adanya sebagai petunjuk pilihan, tanpa pencocokan
-        # otomatis — nama bebas tidak bisa dipetakan ke master secara andal.
-        m = re.search(r'\[Indikator Mutu Manual:\s*(.+?)\]', risiko.deskripsi_risiko or '', re.S)
-        if m:
-            indikator_manual_hint = m.group(1).strip()
+    # G.1 kini hanya membaca: input inline capaian/bukti sudah dihapus, sumber
+    # datanya halaman Input Capaian (CatatanIndikator) lewat agregat tahunan.
+    # Penautan indikator dilakukan di form perencanaan/edit risiko, bukan di sini.
+    agregat = None
+    if risiko.indikator_mutu_terkait_id:
+        agregat = risiko.indikator_mutu_terkait.agregat_capaian(risiko.tahun)
 
     ctx = {
         'risiko': risiko,
         'status_badges': STATUS_BADGES,
         'status_pelaksanaan_choices': RisikoUnit.STATUS_PELAKSANAAN_CHOICES,
         'status_rtl_choices': RisikoUnit.STATUS_RTL_CHOICES,
-        'jenis_dokumen_choices': RisikoUnit.JENIS_DOKUMEN_BUKTI_CHOICES,
         'tindak_lanjut_list': tindak_lanjut_list,
         'rencana_aksi_items': rencana_aksi_items,
         'target_nilai_display': target_nilai_display,
         'arah_nilai_display': arah_nilai_display,
         'satuan_nilai_display': satuan_nilai_display,
         'ev_capaian': _ev,
-        'indikator_kandidat': indikator_kandidat,
-        'indikator_kandidat_mode': indikator_kandidat_mode,
-        'indikator_manual_hint': indikator_manual_hint,
+        'agregat': agregat,
         'is_manager': _is_manager(request.user),
     }
     return render(request, 'akreditasi/risiko_evaluasi.html', ctx)

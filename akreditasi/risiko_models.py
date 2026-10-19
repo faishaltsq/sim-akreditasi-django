@@ -6,6 +6,7 @@ from decimal import Decimal
 from django.db import models
 from django.contrib.auth.models import User
 from django.core.validators import MinValueValidator, MaxValueValidator
+from django.db.models import Count, Sum
 from .models import UnitKerja, StandardItem
 
 
@@ -224,10 +225,20 @@ class RisikoUnit(models.Model):
         else:
             target, sumber = None, 'tidak_ada'
 
+        # Capaian: nilai manual yang diketik di form evaluasi selalu menang;
+        # bila kosong dan indikator sudah tertaut, jatuh ke agregat bulanan
+        # (CatatanIndikator) sehingga halaman evaluasi tidak pernah "kosong"
+        # selama unit sudah mengisi Input Capaian.
         capaian = float(self.capaian_nilai) if self.capaian_nilai is not None else None
+        capaian_sumber = 'manual' if capaian is not None else None
+        if capaian is None and ind is not None:
+            capaian = ind.agregat_capaian(self.tahun)['capaian']
+            if capaian is not None:
+                capaian_sumber = 'catatan'
         if capaian is None or target is None:
             return {'target': target, 'arah': arah, 'satuan': satuan,
                     'sumber': sumber, 'capaian': capaian,
+                    'capaian_sumber': capaian_sumber,
                     'tercapai': None, 'gap': None, 'gap_abs': None}
 
         tercapai = capaian <= target if arah == 'MAX' else capaian >= target
@@ -235,15 +246,17 @@ class RisikoUnit(models.Model):
         # negatif = seberapa jauh di luar target. Simetris untuk kedua arah.
         gap = (target - capaian) if arah == 'MAX' else (capaian - target)
         return {'target': target, 'arah': arah, 'satuan': satuan,
-                'sumber': sumber, 'capaian': capaian, 'tercapai': tercapai,
+                'sumber': sumber, 'capaian': capaian,
+                'capaian_sumber': capaian_sumber, 'tercapai': tercapai,
                 'gap': round(gap, 2), 'gap_abs': round(abs(gap), 2)}
 
     @property
     def capaian_persen_display(self):
-        """Format tampilan persen capaian indikator."""
-        if self.capaian_nilai is not None:
-            return f"{self.capaian_nilai:.1f}%"
-        return "—"
+        """Format tampilan persen capaian indikator (manual, lalu agregat bulanan)."""
+        val = self.capaian_evaluasi['capaian']
+        if val is None:
+            return "—"
+        return f"{val:.1f}%"
 
     @property
     def capaian_status_label(self):
@@ -647,6 +660,42 @@ class IndikatorMutu(models.Model):
             'IMP_UNIT': 'IMU',
         }
         return mapping.get(self.jenis, self.jenis)
+
+    def agregat_capaian(self, tahun):
+        """Agregat capaian satu tahun dari CatatanIndikator.
+
+        Rasio Σnumerator / Σdenominator × faktor — bukan rerata persen bulanan,
+        karena rerata menyetarakan bobot bulan ber-denominator kecil dengan
+        bulan ber-denominator besar. Rumus identik dengan
+        CatatanIndikator.nilai_capaian (lihat baris tipe_pengukuran/faktor_pengali).
+        `capaian` None bila belum ada bulan dengan denominator > 0.
+        """
+        cache = getattr(self, '_agregat_cache', None)
+        if cache is None:
+            cache = self._agregat_cache = {}
+        if tahun in cache:
+            return cache[tahun]
+
+        agg = self.catatan.filter(tahun=tahun, nilai_denominator__gt=0).aggregate(
+            num=Sum('nilai_numerator'),
+            den=Sum('nilai_denominator'),
+            bulan_terisi=Count('id'),
+        )
+        num, den, bulan = agg['num'], agg['den'], agg['bulan_terisi'] or 0
+        capaian = None
+        if den is not None and den > 0:
+            if self.tipe_pengukuran == 'persen':
+                faktor = Decimal('100')
+            else:
+                faktor = Decimal(str(self.faktor_pengali or 100))
+            capaian = round(float((num / den) * faktor), 2)
+
+        hasil = {
+            'tahun': tahun, 'num': num, 'den': den,
+            'bulan_terisi': bulan, 'capaian': capaian,
+        }
+        cache[tahun] = hasil
+        return hasil
 
 
 # ---------------------------------------------------------------------------

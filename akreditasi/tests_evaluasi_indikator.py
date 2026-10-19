@@ -1,4 +1,5 @@
 import json
+from unittest import mock
 from decimal import Decimal
 
 from django.test import TestCase, Client
@@ -6,7 +7,7 @@ from django.urls import reverse
 from django.contrib.auth.models import User
 from akreditasi.models import UnitKerja
 from akreditasi.risiko_models import (
-    RisikoUnit, IndikatorMutu, TindakLanjutRisiko
+    RisikoUnit, IndikatorMutu, TindakLanjutRisiko, CatatanIndikator,
 )
 from akreditasi.ai_service import generate_evaluasi_risiko
 from akreditasi.tests_utils import reset_rate_limit
@@ -99,15 +100,24 @@ class EvaluasiIndikatorMutuTest(TestCase):
         self.assertEqual(resp.status_code, 200)
 
         # Context checks
-        self.assertIn('jenis_dokumen_choices', resp.context)
         self.assertIn('rencana_aksi_items', resp.context)
+        # Ringkasan agregat Input Capaian disiapkan view (belum ada catatan)
+        self.assertIn('agregat', resp.context)
+        self.assertEqual(resp.context['agregat']['bulan_terisi'], 0)
+        self.assertIsNone(resp.context['agregat']['capaian'])
+        # Pilihan jenis dokumen tidak lagi dikirim: input inline G.1 dihapus
+        self.assertNotIn('jenis_dokumen_choices', resp.context)
 
         # G.1 Indikator Mutu Callout, gap calculation & AI buttons
         self.assertContains(resp, 'G.1 Capaian Indikator Mutu &amp; Bukti Pendukung')
         self.assertContains(resp, 'Waktu Tanggap Pelayanan Gawat Darurat')
+        self.assertContains(resp, 'Input Capaian Bulanan')
         self.assertContains(resp, 'btn-insert-template')
         self.assertContains(resp, 'btn-ai-evaluasi')
-        self.assertContains(resp, 'jenis_dokumen_capaian')
+        # Form penautan & input capaian/bukti inline sudah tidak dirender
+        self.assertNotContains(resp, 'link-indikator-select')
+        self.assertNotContains(resp, 'name="capaian_nilai"')
+        self.assertNotContains(resp, 'name="jenis_dokumen_capaian"')
 
         # G.2 Monitoring Per-Item
         self.assertContains(resp, 'G.2 Status Pelaksanaan Tindakan Setiap Rencana')
@@ -135,8 +145,8 @@ class EvaluasiIndikatorMutuTest(TestCase):
 
         url = reverse('akreditasi:risiko_evaluasi', kwargs={'risiko_id': self.risiko.pk})
         post_data = {
-            'capaian_nilai': '92.5',
-            'jenis_dokumen_capaian': 'LAPORAN_BULANAN',
+            # capaian_nilai & jenis_dokumen_capaian tidak dikirim lagi: input
+            # inline G.1 dihapus, sumbernya halaman Input Capaian.
             'evaluasi_capaian': '1. Analisis Capaian: Target 90% terlampaui 92.5%\n2. Evaluasi Barrier: Efektif\n3. Kendala: Tidak ada',
             f'tl_status_{tl1.pk}': 'SELESAI',
             f'tl_status_{tl2.pk}': 'SELESAI',
@@ -165,8 +175,9 @@ class EvaluasiIndikatorMutuTest(TestCase):
         self.assertEqual(self.risiko.probabilitas_residual, 1)
         self.assertEqual(self.risiko.skor_residual, 2)
         self.assertEqual(self.risiko.status, 'EVALUASI')
-        self.assertEqual(float(self.risiko.capaian_nilai), 92.5)
-        self.assertEqual(self.risiko.jenis_dokumen_capaian, 'LAPORAN_BULANAN')
+        # Kedua field itu tidak dikirim form dan tidak diubah oleh POST
+        self.assertIsNone(self.risiko.capaian_nilai)
+        self.assertEqual(self.risiko.jenis_dokumen_capaian, '')
 
     def test_ai_service_evaluasi_risiko_fallback(self):
         """Test generate_evaluasi_risiko produces structured PDCA text when offline."""
@@ -223,8 +234,8 @@ class EvaluasiIndikatorMutuTest(TestCase):
         self.assertIn('data', data)
         self.assertIn('draf_evaluasi', data['data'])
 
-    def test_evaluasi_offers_link_when_indikator_missing(self):
-        """Risiko tanpa indikator harus punya UI penautan di G.1, bukan banner read-only."""
+    def test_evaluasi_hints_perencanaan_when_indikator_missing(self):
+        """Risiko tanpa indikator -> diarahkan ke form perencanaan, tanpa select."""
         self.risiko.indikator_mutu_terkait = None
         self.risiko.target_capaian_indikator = None
         self.risiko.save()
@@ -232,18 +243,22 @@ class EvaluasiIndikatorMutuTest(TestCase):
         resp = self.client.get(url)
         self.assertEqual(resp.status_code, 200)
         self.assertContains(resp, 'Belum ditautkan ke Indikator Mutu formal')
-        self.assertContains(resp, 'name="indikator_mutu_terkait"')
-        self.assertContains(resp, 'id="link-indikator-select"')
-        self.assertContains(resp, self.indikator.nama_indikator)
+        self.assertContains(resp, 'Tautkan di Perencanaan Risiko')
+        self.assertContains(
+            resp, reverse('akreditasi:risiko_edit', kwargs={'risiko_id': self.risiko.pk}))
+        # G.1 kini read-only: select penautan tidak pernah dirender
+        self.assertNotContains(resp, 'name="indikator_mutu_terkait"')
+        self.assertNotContains(resp, 'id="link-indikator-select"')
 
     def test_evaluasi_hides_link_ui_when_already_linked(self):
-        """Sudah tertaut -> select penautan tidak dirender (tampilan lama tak berubah)."""
+        """Sudah tertaut -> G.1 hanya membaca, tanpa select/input penautan."""
         url = reverse('akreditasi:risiko_evaluasi', kwargs={'risiko_id': self.risiko.pk})
         resp = self.client.get(url)
         self.assertNotContains(resp, 'id="link-indikator-select"')
+        self.assertNotContains(resp, 'name="indikator_mutu_terkait"')
 
     def test_evaluasi_post_links_indikator(self):
-        """POST menyimpan tautan indikator + target dari halaman evaluasi."""
+        """Payload lama yang memuat indikator_mutu_terkait tetap menyimpan tautan."""
         self.risiko.indikator_mutu_terkait = None
         self.risiko.target_capaian_indikator = None
         self.risiko.save()
@@ -271,133 +286,125 @@ class EvaluasiIndikatorMutuTest(TestCase):
         }, follow=True)
         self.risiko.refresh_from_db()
         self.assertEqual(self.risiko.indikator_mutu_terkait_id, self.indikator.pk)
+        # payload lama yang masih memuat capaian_nilai tetap diterima
+        self.assertEqual(float(self.risiko.capaian_nilai), 92.5)
 
-    def test_evaluasi_candidates_include_parent_unit_indicators(self):
-        """Indikator milik unit INDUK harus muncul sebagai kandidat (kasus Bangsal->IRIN)."""
-        parent = UnitKerja.objects.create(name='Instalasi Rawat Inap', code='IRIN-01', level=2)
-        child = UnitKerja.objects.create(name='Bangsal Anak', code='BANAK-01', level=3, parent=parent)
-        ind_parent = IndikatorMutu.objects.create(
-            kode_indikator='IMP-UNIT-RANAP-02',
-            nama_indikator='Angka Kejadian Phlebitis',
-            jenis='IMP_UNIT', dimensi_mutu='KESELAMATAN',
-            target_nilai=1.5, arah_target='MAX', satuan='%o', unit=parent,
-        )
-        r = RisikoUnit.objects.create(
-            unit=child, periode='TAHUNAN', tahun=2026,
-            jenis_risiko='Phlebitis', kategori_risiko='KLINIS',
-            dampak=3, probabilitas=3, deskripsi_risiko='x',
-            strategi_mitigasi='KURANGI', rencana_aksi='1. a', pj_mitigasi='Ka',
-            status='DO', created_by=self.user,
-        )
-        url = reverse('akreditasi:risiko_evaluasi', kwargs={'risiko_id': r.pk})
-        resp = self.client.get(url)
-        self.assertContains(resp, 'Angka Kejadian Phlebitis')
-        self.assertContains(resp, 'IMP-UNIT-RANAP-02')
+    # ── G.1 membaca agregat Input Capaian (input inline sudah dihapus) ──
 
-    def test_evaluasi_candidates_fallback_inm_when_no_local(self):
-        """Unit tanpa indikator lokal & tanpa induk berindikator -> fallback INM."""
-        lone = UnitKerja.objects.create(name='Unit Tanpa Indikator', code='NOL-01', level=3)
-        r = RisikoUnit.objects.create(
-            unit=lone, periode='TAHUNAN', tahun=2026,
-            jenis_risiko='X', kategori_risiko='MANAJERIAL',
-            dampak=2, probabilitas=2, deskripsi_risiko='x',
-            strategi_mitigasi='KURANGI', rencana_aksi='1. a', pj_mitigasi='Ka',
-            status='DO', created_by=self.user,
-        )
-        url = reverse('akreditasi:risiko_evaluasi', kwargs={'risiko_id': r.pk})
-        resp = self.client.get(url)
-        self.assertContains(resp, 'INM-UGD-01')
-
-    # ── Filter kandidat: hanya indikator yang berkaitan dengan rencana ──
-
-    def test_candidates_only_include_planned_indicators(self):
-        """Indikator yang tak pernah direncanakan unit ini tidak muncul di dropdown."""
-        unplanned = IndikatorMutu.objects.create(
-            kode_indikator='INM-UGD-02',
-            nama_indikator='Kepatuhan Identifikasi Pasien UGD',
-            jenis='NASIONAL', dimensi_mutu='KESELAMATAN',
-            target_nilai=100.0, arah_target='MIN', satuan='%', unit=self.unit,
-        )
-        # Risiko lain di unit yang sama tetap tertaut -> set rencana tidak kosong.
-        RisikoUnit.objects.create(
-            unit=self.unit, periode='TAHUNAN', tahun=2026,
-            jenis_risiko='Risiko lain UGD', kategori_risiko='KLINIS',
-            dampak=3, probabilitas=3, deskripsi_risiko='y',
-            strategi_mitigasi='KURANGI', rencana_aksi='1. a', pj_mitigasi='Ka',
-            status='DO', created_by=self.user,
-            indikator_mutu_terkait=self.indikator,
-            target_capaian_indikator=90.0,
-        )
-        self.risiko.indikator_mutu_terkait = None
-        self.risiko.target_capaian_indikator = None
-        self.risiko.save()
-
+    def test_evaluasi_menampilkan_agregat_capaian_tahunan(self):
+        """8 bulan catatan (10/100) -> agregat 80/800 = 10.0% tampil di panel."""
+        for b in range(1, 9):
+            CatatanIndikator.objects.create(
+                indikator=self.indikator, bulan=b, tahun=2026,
+                nilai_numerator=Decimal('10.00'), nilai_denominator=Decimal('100.00'),
+            )
         url = reverse('akreditasi:risiko_evaluasi', kwargs={'risiko_id': self.risiko.pk})
         resp = self.client.get(url)
-        self.assertContains(resp, self.indikator.nama_indikator)
-        self.assertNotContains(resp, unplanned.nama_indikator)
-        self.assertContains(resp, 'Hanya indikator yang sudah direncanakan')
-        self.assertContains(resp, 'data-target-rencana="90')
+        self.assertContains(resp, '>8</strong>/12 bulan tercatat (2026)')
+        self.assertContains(resp, 'Σ Numerator <strong>80,00</strong>')
+        self.assertContains(resp, '/ Denominator <strong>800,00</strong>')
+        self.assertContains(resp, 'dari Input Capaian')
+        # capaian 10 < target 90 (arah MIN = wajib >=) -> belum tercapai
+        self.assertContains(resp, 'bg-danger')
+        self.assertContains(resp, '10,0%')
+        self.assertContains(resp, 'selisih -80,0')
+        # input inline capaian/bukti dan form penautan sudah tidak dirender
+        self.assertNotContains(resp, 'name="capaian_nilai"')
+        self.assertNotContains(resp, 'name="jenis_dokumen_capaian"')
+        self.assertNotContains(resp, 'id="link-indikator-select"')
+        self.assertNotContains(resp, 'name="indikator_mutu_terkait"')
 
-    def test_candidates_fall_back_when_unit_has_no_plan(self):
-        """Unit tanpa rencana -> dropdown tetap terisi (perilaku lama), bukan kosong."""
-        self.risiko.indikator_mutu_terkait = None
-        self.risiko.target_capaian_indikator = None
+    def test_capaian_sumber_dan_faktor_rate_absolut(self):
+        """capaian_sumber menandai asal angka; tipe rate_absolut pakai faktor_pengali."""
+        CatatanIndikator.objects.create(
+            indikator=self.indikator, bulan=2, tahun=2026,
+            nilai_numerator=Decimal('30.00'), nilai_denominator=Decimal('100.00'),
+        )
+        ev = self.risiko.capaian_evaluasi
+        self.assertEqual(ev['capaian_sumber'], 'catatan')
+        self.assertEqual(float(ev['capaian']), 30.0)
+
+        # capaian manual menang dan menandai sumber 'manual'
+        self.risiko.capaian_nilai = Decimal('77.77')
         self.risiko.save()
+        self.assertEqual(self.risiko.capaian_evaluasi['capaian_sumber'], 'manual')
+        self.assertEqual(float(self.risiko.capaian_evaluasi['capaian']), 77.77)
 
+        # tipe rate_absolut -> (Σnum/Σden) x faktor_pengali, bukan x100
+        ind = IndikatorMutu.objects.create(
+            unit=self.unit, kode_indikator='INM-UGD-02',
+            nama_indikator='Tambahan Indikator Rate Absolut', jenis='NASIONAL',
+            dimensi_mutu='EFISIENSI', numerator='n', denominator='d',
+            target_nilai=40.0, satuan='x', tipe_pengukuran='rate_absolut',
+            faktor_pengali=10,
+        )
+        CatatanIndikator.objects.create(
+            indikator=ind, bulan=3, tahun=2026,
+            nilai_numerator=Decimal('5.00'), nilai_denominator=Decimal('10.00'),
+        )
+        self.assertEqual(float(ind.agregat_capaian(2026)['capaian']), 5.0)
+
+    def test_evaluasi_tanpa_catatan_pakai_capaian_manual(self):
+        """Tanpa catatan bulanan: capaian manual lama tetap tampil (fallback)."""
+        self.risiko.capaian_nilai = Decimal('92.50')
+        self.risiko.save()
+        url = reverse('akreditasi:risiko_evaluasi', kwargs={'risiko_id': self.risiko.pk})
+        resp = self.client.get(url)
+        self.assertContains(resp, '92,5%')
+        # arah MIN = capaian wajib >= target 90 -> tercapai, selisih 2,5
+        self.assertContains(resp, 'bg-success')
+        self.assertContains(resp, 'Tercapai (selisih 2,5)')
+        self.assertNotContains(resp, 'dari Input Capaian')
+        self.assertContains(resp, '>0</strong>/12 bulan tercatat (2026)')
+
+    def test_evaluasi_denominator_nol_tidak_render_garpu(self):
+        """Baris ber-denominator 0 diabaikan agregat (nilai_numerator__gt=0) -> panel aman."""
+        for b in range(1, 4):
+            CatatanIndikator.objects.create(
+                indikator=self.indikator, bulan=b, tahun=2026,
+                nilai_numerator=Decimal('5.00'), nilai_denominator=Decimal('0.00'),
+            )
         url = reverse('akreditasi:risiko_evaluasi', kwargs={'risiko_id': self.risiko.pk})
         resp = self.client.get(url)
         self.assertEqual(resp.status_code, 200)
-        self.assertContains(resp, 'id="link-indikator-select"')
-        self.assertContains(resp, 'data-target=')
-        self.assertContains(resp, 'belum memiliki indikator pada tahap perencanaan')
-        self.assertContains(resp, self.indikator.nama_indikator)
+        self.assertContains(resp, '>0</strong>/12 bulan tercatat (2026)')
+        self.assertContains(resp, 'Belum ada data Input Capaian untuk 2026')
+        self.assertNotContains(resp, 'Belum Tercapai')
 
-    def test_candidates_include_ancestor_unit_plan(self):
-        """Rencana di unit INDUK harus ikut jadi kandidat (kasus Bangsal Anak -> IRIN)."""
-        parent = UnitKerja.objects.create(name='Instalasi Rawat Inap', code='IRIN-T', level=2)
-        ind_parent = IndikatorMutu.objects.create(
-            kode_indikator='IMP-PARENT-01',
-            nama_indikator='Kepatuhan Double Check Obat High Alert',
-            jenis='IMP_UNIT', dimensi_mutu='KESELAMATAN',
-            target_nilai=100.0, arah_target='MIN', satuan='%', unit=parent,
+    def test_ai_evaluasi_risiko_konteks_dari_model(self):
+        """Payload kini berisi risiko_id: seluruh konteks AI diambil dari model."""
+        CatatanIndikator.objects.create(
+            indikator=self.indikator, bulan=1, tahun=2026,
+            nilai_numerator=Decimal('45.00'), nilai_denominator=Decimal('100.00'),
         )
-        # Rencana dibuat oleh risiko di unit induk.
-        RisikoUnit.objects.create(
-            unit=parent, periode='TAHUNAN', tahun=2026,
-            jenis_risiko='High alert', kategori_risiko='KLINIS',
-            dampak=3, probabilitas=3, deskripsi_risiko='z',
-            strategi_mitigasi='KURANGI', rencana_aksi='1. a', pj_mitigasi='Ka',
-            status='DO', created_by=self.user,
-            indikator_mutu_terkait=ind_parent,
-            target_capaian_indikator=100.0,
-        )
-        child = UnitKerja.objects.create(name='Bangsal Anak', code='BANAK-T', level=3, parent=parent)
-        rc = RisikoUnit.objects.create(
-            unit=child, periode='TAHUNAN', tahun=2026,
-            jenis_risiko='Obat high alert', kategori_risiko='KLINIS',
-            dampak=3, probabilitas=3, deskripsi_risiko='w',
-            strategi_mitigasi='KURANGI', rencana_aksi='1. a', pj_mitigasi='Ka',
-            status='DO', created_by=self.user,
-        )
-        url = reverse('akreditasi:risiko_evaluasi', kwargs={'risiko_id': rc.pk})
-        resp = self.client.get(url)
-        self.assertContains(resp, 'IMP-PARENT-01')
-        self.assertContains(resp, 'Hanya indikator yang sudah direncanakan')
+        url = reverse('akreditasi:ai_evaluasi_risiko')
+        with mock.patch('akreditasi.ai_views.generate_evaluasi_risiko') as gen:
+            gen.return_value = {'success': True, 'data': {'draf_evaluasi': 'Draf uji'}}
+            resp = self.client.post(
+                url,
+                data=json.dumps({'risiko_id': self.risiko.pk,
+                                 'dampak_residual': 2, 'prob_residual': 1}),
+                content_type='application/json',
+            )
+        self.assertEqual(resp.status_code, 200)
+        kwargs = gen.call_args.kwargs
+        self.assertEqual(kwargs['unit_name'], 'Unit Gawat Darurat')
+        self.assertIn('Emergency Response Time', kwargs['nama_indikator'])
+        self.assertEqual(kwargs['target_capaian'], '90.0%')
+        self.assertEqual(kwargs['capaian_nilai'], '45.0%')     # 45/100
+        self.assertEqual(kwargs['gap_persen'], '-45.0%')       # capaian - target
+        self.assertEqual(kwargs['dampak_residual'], 2)
+        self.assertEqual(kwargs['prob_residual'], 1)
 
-    def test_manual_marker_renders_as_hint(self):
-        """Nama indikator yang dulu diketik manual muncul sebagai hint, bukan hilang."""
-        self.risiko.indikator_mutu_terkait = None
-        self.risiko.target_capaian_indikator = None
-        self.risiko.deskripsi_risiko += (
-            "\n\n[Indikator Mutu Manual: kepatuhan double-check obat high alert]"
-        )
-        self.risiko.save()
+    def test_ai_evaluasi_risiko_id_tak_valid_400(self):
+        """risiko_id tidak ada -> 400 tanpa memanggil layanan AI."""
+        url = reverse('akreditasi:ai_evaluasi_risiko')
+        with mock.patch('akreditasi.ai_views.generate_evaluasi_risiko') as gen:
+            resp = self.client.post(url, data=json.dumps({'risiko_id': 999999}),
+                                    content_type='application/json')
+        self.assertEqual(resp.status_code, 400)
+        gen.assert_not_called()
 
-        url = reverse('akreditasi:risiko_evaluasi', kwargs={'risiko_id': self.risiko.pk})
-        resp = self.client.get(url)
-        self.assertContains(resp, 'kepatuhan double-check obat high alert')
-        self.assertContains(resp, 'Indikator yang Anda tulis manual')
 
 class EvaluasiCapaianPolaritasTest(TestCase):
     """Polaritas + gap harus benar untuk kedua arah, dengan dan tanpa master."""
