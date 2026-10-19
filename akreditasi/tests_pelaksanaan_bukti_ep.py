@@ -19,6 +19,7 @@ from django.urls import reverse
 
 from akreditasi.models import Category, Framework, StandardItem, UnitKerja
 from akreditasi.risiko_models import RisikoUnit, TindakLanjutRisiko
+from akreditasi.models import IndikatorMutu
 
 _seq = count(1)
 
@@ -237,3 +238,87 @@ class RisikoDaftarEPTest(TestCase):
         # baris risiko tanpa pelaksanaan tetap dirender, EP kosong
         self.assertEqual(res.status_code, 200)
         self.assertContains(res, self.risiko.masalah)
+
+
+# ── Task 4: materialisasi rencana_aksi membawa tautan EP/standar ──────────
+
+class StepMaterializationLinkTest(TestCase):
+    """Tahap rencana yang dijadikan pelaksanaan tidak boleh yatim tautannya."""
+
+    def setUp(self):
+        from django.contrib.auth.models import User
+        self.user = User.objects.create_user('pel-i', 'i@x.id', 'x')
+        self.client = Client()
+        self.client.force_login(self.user)
+        self.cat = _mk_category()
+        self.ep = _mk_ep(self.cat)
+        ind = IndikatorMutu.objects.create(
+            kode_indikator='IM-404', nama_indikator='Kepatuhan EP',
+            jenis='INM', dimensi_mutu='AMAN',
+            numerator='Barang sesuai', denominator='Total barang',
+            target_nilai=90, ep_terkait=self.ep)
+        self.risiko = _mk_risiko()
+        self.risiko.rencana_aksi = '1. Langkah satu\n2. Langkah dua'
+        self.risiko.indikator_mutu_terkait = ind
+        self.risiko.save()
+        self.url = reverse('akreditasi:risiko_evaluasi', args=[self.risiko.pk])
+
+    def test_materialized_steps_inherit_ep_and_standar(self):
+        res = self.client.post(self.url, {
+            'dampak_residual': '3', 'probabilitas_residual': '3',
+            'step_status_1': 'SELESAI',
+            'step_status_2': 'SEDANG',
+        }, follow=True)
+        self.assertEqual(res.status_code, 200)
+        self.assertEqual(self.risiko.tindak_lanjut.count(), 2)
+        for tl in self.risiko.tindak_lanjut.all():
+            self.assertEqual(tl.ep_terkait_id, self.ep.pk)
+            self.assertEqual(tl.standar_terkait_id, self.cat.pk)
+
+    def test_ep_yang_tanpa_konflik_tetap_lolos_validasi(self):
+        res = self.client.post(self.url, {
+            'dampak_residual': '3', 'probabilitas_residual': '3',
+            'step_status_1': 'SEDANG'}, follow=True)
+        self.assertEqual(res.status_code, 200)
+        from django.contrib.messages import get_messages
+        msgs = [m for m in get_messages(res.wsgi_request)]
+        self.assertFalse([m for m in msgs if m.level_tag == 'error'],
+                         'materialisasi tahap tidak boleh memunculkan pesan error')
+        self.assertEqual(self.risiko.tindak_lanjut.count(), 1)
+
+
+class BuktiWajibTidakMengubahBarisLama(TestCase):
+    """Penolakan SELESAI tanpa bukti tidak boleh menyentuh baris yang sudah ada."""
+
+    def setUp(self):
+        from django.contrib.auth.models import User
+        self.user = User.objects.create_user('pel-j', 'j@x.id', 'x')
+        self.client = Client()
+        self.client.force_login(self.user)
+        self.cat = _mk_category()
+        self.ep = _mk_ep(self.cat)
+        self.risiko = _mk_risiko()
+        self.url = reverse('akreditasi:risiko_detail', args=[self.risiko.pk])
+        self.existing = TindakLanjutRisiko.objects.create(
+            risiko=self.risiko, urutan=1, aksi='Aksi lama',
+            status_aksi='SEDANG', standar_terkait=self.cat, ep_terkait=self.ep)
+
+    def test_baris_lama_tetap_utuh_setelah_posting_gagal(self):
+        before = {tl.pk: (tl.aksi, tl.status_aksi, tl.standar_terkait_id,
+                          tl.ep_terkait_id)
+                  for tl in self.risiko.tindak_lanjut.all()}
+        self.client.post(self.url, {'aksi': 'Aksi baru', 'status_aksi': 'SELESAI'})
+        after = {tl.pk: (tl.aksi, tl.status_aksi, tl.standar_terkait_id,
+                         tl.ep_terkait_id)
+                 for tl in self.risiko.tindak_lanjut.all()}
+        self.assertEqual(before, after)
+        # hanya baris lama, tidak ada duplikat terselundup
+        self.assertEqual(self.risiko.tindak_lanjut.count(), 1)
+
+    def test_posting_gagal_tidak_menambah_urutan_kotor(self):
+        self.client.post(self.url, {'aksi': 'Aksi gagal', 'status_aksi': 'SELESAI'})
+        # urutan berikutnya tetap 2, bukan 3 (gagal sebelum save)
+        res = self.client.post(self.url, {
+            'aksi': 'Aksi valid', 'status_aksi': 'SEDANG'}, follow=True)
+        self.assertEqual(res.status_code, 200)
+        self.assertEqual(self.risiko.tindak_lanjut.order_by('-urutan').first().urutan, 2)

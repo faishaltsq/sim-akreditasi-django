@@ -804,11 +804,17 @@ def risiko_evaluasi(request, risiko_id):
                     idx = item['urutan']
                     st_val = request.POST.get(f'step_status_{idx}')
                     if st_val in dict(TindakLanjutRisiko.STATUS_AKSI_CHOICES):
+                        # Tautan diwarisi dari indikator terkait agar pelaksanaan
+                        # hasil materialisasi tidak pernah yatim EP/standarnya.
+                        ep_warisan = risiko.indikator_mutu_terkait.ep_terkait \
+                            if risiko.indikator_mutu_terkait_id else None
                         TindakLanjutRisiko.objects.create(
                             risiko=risiko,
                             urutan=idx,
                             aksi=item['text'],
                             status_aksi=st_val,
+                            ep_terkait=ep_warisan,
+                            standar_terkait=ep_warisan.category if ep_warisan else None,
                         )
                         collected_statuses.append(st_val)
 
