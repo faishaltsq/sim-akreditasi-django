@@ -10,10 +10,11 @@ from django.db.models import Count, Q, Exists, OuterRef
 from django.utils import timezone
 from django.core.paginator import Paginator
 from django.views.decorators.http import require_GET, require_POST
+from django.core.exceptions import ValidationError
 from decimal import Decimal
 
 from .risiko_models import RisikoUnit, TindakLanjutRisiko, InsidenKeselamatan, IndikatorMutu, CatatanIndikator
-from .models import UnitKerja, AuditLog
+from .models import UnitKerja, AuditLog, Category, StandardItem
 from .indikator_views import _is_manager
 
 
@@ -520,6 +521,14 @@ def risiko_detail(request, risiko_id):
     if request.method == 'POST':
         try:
             last_urutan = tindak_lanjut.order_by('-urutan').values_list('urutan', flat=True).first() or 0
+            standar_id = request.POST.get('standar_terkait') or None
+            ep_id = request.POST.get('ep_terkait') or None
+            # EP memutuskan standarnya bila keduanya dikirim: form memfilter EP
+            # berdasarkan standar, jadi selisih berarti halaman sudah usang dan
+            # EP yang menang supaya tautan tidak pernah drift.
+            if ep_id:
+                standar_id = StandardItem.objects.filter(pk=ep_id) \
+                    .values_list('category_id', flat=True).first() or standar_id
             tl = TindakLanjutRisiko(
                 risiko=risiko,
                 urutan=last_urutan + 1,
@@ -528,15 +537,23 @@ def risiko_detail(request, risiko_id):
                 tanggal_mulai=request.POST.get('tanggal_mulai') or None,
                 tanggal_selesai=request.POST.get('tanggal_selesai') or None,
                 catatan=request.POST.get('catatan', ''),
+                standar_terkait_id=standar_id,
+                ep_terkait_id=ep_id,
             )
-            tl.full_clean(exclude=['bukti_upload'])
-            tl.save()
+            # Bukti ikut divalidasi (status SELESAI wajib punya bukti), jadi
+            # filenya dipasang sebelum full_clean, bukan sesudah save.
             if request.FILES.get('bukti_upload'):
                 tl.bukti_upload = request.FILES['bukti_upload']
-                tl.save(update_fields=['bukti_upload'])
+            tl.full_clean()
+            tl.save()
             _log(request.user, 'CREATE', tl, f'Tindak lanjut #{tl.urutan}')
             messages.success(request, 'Tindak lanjut ditambahkan.')
             return redirect('akreditasi:risiko_detail', risiko_id=risiko.pk)
+        except ValidationError as e:
+            pesan = '; '.join(
+                f'{k}: {" ".join(v)}' if k != '__all__' else ' '.join(v)
+                for k, v in e.message_dict.items()) if hasattr(e, 'message_dict')                 else '; '.join(e.messages)
+            messages.error(request, f'Gagal menyimpan pelaksanaan — {pesan}')
         except Exception as e:
             messages.error(request, f'Gagal: {e}')
 
@@ -557,6 +574,8 @@ def risiko_detail(request, risiko_id):
         'matrix': matrix,
         'status_badges': STATUS_BADGES,
         'status_aksi_choices': TindakLanjutRisiko.STATUS_AKSI_CHOICES,
+        'standar_list': Category.objects.order_by('code'),
+        'ep_list': StandardItem.objects.select_related('category').order_by('category__code', 'code'),
     }
     return render(request, 'akreditasi/risiko_detail.html', ctx)
 
