@@ -6,6 +6,7 @@ from decimal import Decimal
 from django.db import models
 from django.contrib.auth.models import User
 from django.core.validators import MinValueValidator, MaxValueValidator
+from django.core.exceptions import ValidationError
 from django.db.models import Count, Sum
 from .models import UnitKerja, StandardItem
 
@@ -485,10 +486,37 @@ class TindakLanjutRisiko(models.Model):
     bukti_upload   = models.FileField('Bukti Upload', upload_to='risiko/bukti/', null=True, blank=True)
     catatan        = models.TextField('Catatan', blank=True)
 
+    # Spec pelaksanaan: tiap aksi mitigasi membawa bukti dokumen dan tautan ke
+    # standar akreditasi (pokja) beserta EP yang dilayaninya. SET_NULL bukan
+    # CASCADE — menghapus standar/EP tidak boleh menghapus riwayat tindakan RS;
+    # tautan jadi usang dan template menampilkan '—', aksinya tetap ada.
+    standar_terkait = models.ForeignKey(
+        'akreditasi.Category', on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='tindak_lanjut_set', verbose_name='Standar Akreditasi Terkait')
+    ep_terkait      = models.ForeignKey(
+        'akreditasi.StandardItem', on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='tindak_lanjut_set', verbose_name='EP Terkait')
+
     class Meta:
         verbose_name        = 'Tindak Lanjut Risiko'
         verbose_name_plural = 'Tindak Lanjut Risiko'
         ordering            = ['risiko', 'urutan']
+
+    def clean(self):
+        """Konsistensi tautan + aturan bukti dokumen.
+
+        View selalu menurunkan standar dari EP yang dipilih; keduanya terisi
+        tapi berbeda kategori berarti halaman usang (stale) dan ditolak di
+        sini, bukan 500 di server.
+        """
+        super().clean()
+        if self.ep_terkait_id and self.standar_terkait_id:
+            if self.ep_terkait.category_id != self.standar_terkait_id:
+                raise ValidationError({
+                    'ep_terkait': 'EP harus berasal dari standar yang dipilih.'})
+        if self.status_aksi == 'SELESAI' and not self.bukti_upload:
+            raise ValidationError({
+                'bukti_upload': 'Pelaksanaan berstatus Selesai wajib punya bukti dokumen.'})
 
     def __str__(self):
         return f"{self.risiko} — Aksi #{self.urutan}: {self.aksi[:60]}"
