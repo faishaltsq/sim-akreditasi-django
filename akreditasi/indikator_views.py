@@ -8,6 +8,7 @@ from django.contrib import messages
 from django.db.models import Avg, Count, Q, Sum, Exists, OuterRef
 from django.http import JsonResponse
 
+from .akses_indikator import indikator_aktif_scoped
 from .risiko_models import IndikatorMutu, CatatanIndikator
 from .models import UnitKerja, AuditLog, StandardItem
 
@@ -124,7 +125,10 @@ def _is_manager(user):
     if user.is_superuser:
         return True
     p = getattr(user, 'profile', None)
-    return p and p.role in ('SUPER_ADMIN', 'ADMIN_RS', 'KOORDINATOR', 'KEPALA_UNIT')
+    # Nilai role yang ada di UserProfile.ROLE_CHOICES adalah 'KOORDINATOR_POKJA'
+    # ('KOORDINATOR' tidak pernah ada; disimpan agar baris legacy tetap cocok).
+    return p and p.role in ('SUPER_ADMIN', 'ADMIN_RS', 'KOORDINATOR',
+                            'KOORDINATOR_POKJA', 'KEPALA_UNIT')
 
 
 # ── 1. Dashboard Indikator Mutu ──────────────────────────────────────────
@@ -141,7 +145,13 @@ def indikator_dashboard(request):
         tahun_int = 2026
     tahun = str(tahun_int)
 
-    qs = IndikatorMutu.objects.filter(aktif=True).select_related('unit', 'ep_terkait')
+    # Lingkup unit jadi dasar, lalu filter tier diaplikasikan di atasnya,
+    # supaya /indikator-mutu/ selalu menjawab sama dengan dashboard untuk
+    # user yang sama. Spesifikasi 19.10: tanpa Q(jenis='NASIONAL') yang
+    # bocor, dan berjalan naik ke leluhur (indikator induk instalasi
+    # tetap terlihat).
+    profile = getattr(request.user, 'profile', None)
+    qs = indikator_aktif_scoped(profile).select_related('unit', 'ep_terkait')
 
     # Normalize canonical 3-tier filter → DB codes (support both old and new)
     JENIS_CANONICAL_MAP = {
@@ -154,19 +164,11 @@ def indikator_dashboard(request):
     if jenis:
         db_codes = JENIS_CANONICAL_MAP.get(jenis, [jenis])
         qs = qs.filter(jenis__in=db_codes)
+    # Pemilih unit eksplisit menyilang dengan lingkup, bukan menggantinya:
+    # unit-scoped user yang memilih unit lain mendapat daftar kosong, bukan
+    # akses ke indikator unit tersebut.
     if unit_id:
         qs = qs.filter(unit_id=unit_id)
-
-    # Unit-scoped user: hanya lihat indikator unit sendiri + NASIONAL
-    profile = getattr(request.user, 'profile', None)
-    is_unit_scoped = profile and profile.is_unit_scoped
-    if is_unit_scoped and profile.unit_kerja:
-        user_unit = profile.unit_kerja
-        # Ambil unit sendiri + semua child
-        unit_ids = list(UnitKerja.objects.filter(
-            Q(pk=user_unit.pk) | Q(parent=user_unit) | Q(parent__parent=user_unit)
-        ).values_list('pk', flat=True))
-        qs = qs.filter(Q(unit_id__in=unit_ids) | Q(jenis='NASIONAL'))
 
     # Ambil catatan capaian terakhir untuk tahun ini per indikator
     # (prefetch sekali — dulu 1 query per indikator di loop)
@@ -501,7 +503,7 @@ def indikator_tambah(request):
                 messages.error(request, f'Gagal membuat indikator: {e}')
 
     units = UnitKerja.objects.filter(is_active=True).order_by('name')
-    ep_list = StandardItem.objects.select_related('category').order_by('category__code', 'code')[:200]
+    ep_list = StandardItem.objects.select_related('category').order_by('category__code', 'code')
     from .risiko_models import RenstraRoadmap as _RR
     renstra_list = _RR.objects.filter(aktif=True).order_by('tahun')
     ctx = {
@@ -572,7 +574,7 @@ def indikator_edit(request, indikator_id):
                 messages.error(request, f'Gagal menyimpan perubahan: {e}')
 
     units = UnitKerja.objects.filter(is_active=True).order_by('name')
-    ep_list = StandardItem.objects.select_related('category').order_by('category__code', 'code')[:200]
+    ep_list = StandardItem.objects.select_related('category').order_by('category__code', 'code')
     from .risiko_models import RenstraRoadmap as _RR2
     renstra_list = _RR2.objects.filter(aktif=True).order_by('tahun')
     ctx = {

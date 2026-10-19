@@ -317,3 +317,52 @@ class DashboardScopeTest(TestCase):
         got = {i.pk for i in res.context['mutu_indikator_choices']}
         self.assertEqual(got, {own.pk})
         self.assertNotIn(other.pk, got)
+
+
+class IndicatorPagesScopeTest(TestCase):
+    """``/indikator-mutu/`` carried the same two defects as the dashboard,
+    in its own copy of the filter block. It must agree with the dashboard
+    for the same user."""
+
+    def _build(self):
+        irin = _mk_unit('IRIN', 'Instalasi Rawat Inap', level=2)
+        anak = _mk_unit('BANGSAL-ANAK', 'Bangsal Anak', parent=irin, level=3)
+        inter = _mk_unit('BANGSAL-INTERNA', 'Interna', level=3)
+        parent_ind = _mk_ind(irin, 'IMP_RS', 'RS-IRIN')
+        other = _mk_ind(inter, 'IMP_RS', 'RS-INTERNA')
+        other_inm = _mk_ind(inter, 'NASIONAL', 'INM-INTERNA')
+        return anak, (parent_ind, other, other_inm)
+
+    def test_indikator_dashboard_applies_same_scope(self):
+        anak, (parent_ind, other, other_inm) = self._build()
+        user = _unit_scoped_user('page-kepala', anak)
+        self.client.force_login(user)
+
+        res = self.client.get(reverse('akreditasi:indikator_dashboard'))
+        self.assertEqual(res.status_code, 200)
+        got = {i.pk for i in res.context['indikators']}
+
+        self.assertIn(parent_ind.pk, got, 'parent (IRIN) indicator missing')
+        self.assertNotIn(other.pk, got, "sibling bangsal's indicator leaked")
+        self.assertNotIn(other_inm.pk, got, 'INM leaked via Q(jenis=NASIONAL)')
+        self.assertEqual(got, {parent_ind.pk})
+
+    def test_tier_filter_still_works_after_scoping(self):
+        """Scoping and the canonical tier filter must compose."""
+        irin = _mk_unit('IRIN', 'Instalasi Rawat Inap', level=2)
+        anak = _mk_unit('BANGSAL-ANAK', 'Bangsal Anak', parent=irin, level=3)
+        rs = _mk_ind(irin, 'IMP_RS', 'RS-X')
+        inm = _mk_ind(anak, 'NASIONAL', 'INM-X')
+
+        user = _unit_scoped_user('page-tiers', anak)
+        self.client.force_login(user)
+
+        got_rs = {i.pk for i in self.client.get(
+            reverse('akreditasi:indikator_dashboard'), {'jenis': 'IMRS'}
+        ).context['indikators']}
+        got_inm = {i.pk for i in self.client.get(
+            reverse('akreditasi:indikator_dashboard'), {'jenis': 'INM'}
+        ).context['indikators']}
+
+        self.assertEqual(got_rs, {rs.pk})
+        self.assertEqual(got_inm, {inm.pk})
