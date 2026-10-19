@@ -155,7 +155,7 @@ can trace.
 - Create: `akreditasi/migrations/0043_tindaklanjutrisiko_standar_terkait_ep_terkait.py`
 - Test: `akreditasi/tests_pelaksanaan_bukti_ep.py` (new)
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```python
 from django.core.exceptions import ValidationError
@@ -208,12 +208,12 @@ class PelaksanaanLinkTest(TestCase):
             tl.full_clean()
 ```
 
-- [ ] **Step 2: Run to confirm failure**
+- [x] **Step 2: Run to confirm failure**
 
 Run: `.venv/Scripts/python.exe manage.py test akreditasi.tests_pelaksanaan_bukti_ep -v1`
 Expected: `AttributeError`/`TypeError` — the fields do not exist.
 
-- [ ] **Step 3: Add the fields**
+- [x] **Step 3: Add the fields**
 
 ```python
     standar_terkait = models.ForeignKey(
@@ -235,15 +235,15 @@ Expected: `AttributeError`/`TypeError` — the fields do not exist.
 hospital's record of what it did. The link goes stale and the template shows
 "tidak lagi tersedia"; the action itself survives.
 
-- [ ] **Step 4: Migrate**
+- [x] **Step 4: Migrate**
 
 Run: `.venv/Scripts/python.exe manage.py makemigrations akreditasi`
 Expected: a single migration creating `0043`, two `AddField`s, no data
 operation. Confirm the file name starts with `0043` and contains nothing else.
 
-- [ ] **Step 5: Run to confirm pass**
+- [x] **Step 5: Run to confirm pass**
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ---
 
@@ -254,7 +254,7 @@ operation. Confirm the file name starts with `0043` and contains nothing else.
 - Modify: `templates/akreditasi/risiko_detail.html` (L506-598)
 - Test: `akreditasi/tests_pelaksanaan_bukti_ep.py`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```python
 from django.urls import reverse
@@ -285,9 +285,9 @@ class RisikoDetailFormTest(TestCase):
         ...  # assert the other standar's EP code is absent from the page
 ```
 
-- [ ] **Step 2: Run to confirm failure**
+- [x] **Step 2: Run to confirm failure**
 
-- [ ] **Step 3: Teach the view**
+- [x] **Step 3: Teach the view**
 
 In `risiko_detail`:
 
@@ -314,7 +314,7 @@ Context gains the two pickers, built the same way `indikator_views.py:532` does:
     ep_list = StandardItem.objects.select_related('category').order_by('category__code', 'code')
 ```
 
-- [ ] **Step 4: Add the form controls and the table columns**
+- [x] **Step 4: Add the form controls and the table columns**
 
 In the add form (after the existing `row g-2 mb-2` holding dates and file):
 Standar select, then EP select. Both plain `<select>` with
@@ -334,9 +334,9 @@ rendering `{{ tl.standar_terkait.code }} — {{ tl.standar_terkait.name }}` and,
 for the EP, its code plus a `title` carrying `description` (the bunyi EP), with
 `—` when unset. Bump the `{% empty %}` `colspan` from 7 to 9.
 
-- [ ] **Step 5: Run to confirm pass**
+- [x] **Step 5: Run to confirm pass**
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ---
 
@@ -346,27 +346,27 @@ The spec applies to the section as a whole, not just the risk detail page. Each
 of these already loops `tindak_lanjut`; each gains the two columns and the
 evidence state.
 
-- [ ] **Step 1: Per-unit Do page** — `templates/akreditasi/risiko_pelaksanaan.html`
+- [x] **Step 1: Per-unit Do page** — `templates/akreditasi/risiko_pelaksanaan.html`
   (L294 and the rowspan table at L360-415). Add Standar and EP columns. Note the
   rowspan layout: cells at L363-368 are per-*risiko*, cells at L415 is
   per-action, so the new columns join the per-action group. Read the table
   before editing; a misplaced cell will silently break the rowspan arithmetic.
-- [ ] **Step 2: Print view** — `risiko_views.py:1697`
+- [x] **Step 2: Print view** — `risiko_views.py:1697`
   `risiko_pelaksanaan_dokumen`. Add the columns to its template so the printed
   Do sheet a surveyor receives names the standard and EP each action served.
-- [ ] **Step 3: CSV export** — `risiko_views.py:1788`
+- [x] **Step 3: CSV export** — `risiko_views.py:1788`
   `risiko_pelaksanaan_export_csv`. Append `standar`, `kode_ep`, `judul_ep`,
   `ada_bukti` columns at the end of each row; do not reorder existing ones,
   something may parse that file positionally.
-- [ ] **Step 4: Full report** —
+- [x] **Step 4: Full report** —
   `templates/akreditasi/risiko_laporan_lengkap.html:430,763,834`. Same two
   columns; there are three separate loops here, all three.
-- [ ] **Step 5: Monitoring** —
+- [x] **Step 5: Monitoring** —
   `templates/akreditasi/risiko_monitoring_evaluasi.html:333`. Same.
-- [ ] **Step 6: Planning preview** —
+- [x] **Step 6: Planning preview** —
   `templates/akreditasi/risiko_perencanaan.html:546,588`. Same; two loops.
-- [ ] **Step 7: Run tests + a manual render of each page**
-- [ ] **Step 8: Commit**
+- [x] **Step 7: Run tests + a manual render of each page**
+- [x] **Step 8: Commit**
 
 ---
 
@@ -377,14 +377,14 @@ evidence state.
 - Modify: `templates/akreditasi/risiko_evaluasi.html` (L289-390)
 - Modify: `templates/akreditasi/risiko_detail.html` (evidence column)
 
-- [ ] **Step 1: Carry the link into the bulk create**
+- [x] **Step 1: Carry the link into the bulk create**
 
 `risiko_views.py:788` creates an action per bullet from the G.2 form, currently
 reading only `status_aksi`. The G.2 form gains one standar/EP pair per bullet,
 so the record made during evaluation already satisfies the spec instead of
 being born incomplete. Failing test first, as everywhere else.
 
-- [ ] **Step 2: Show the EP's existing proof requirements on the action row**
+- [x] **Step 2: Show the EP's existing proof requirements on the action row**
 
 In `risiko_detail.html`'s "Bukti Dokumen" column, when `tl.ep_terkait` is set,
 append a compact line built from `ep_sync.buktiringkas(ep)` — how many
@@ -396,9 +396,9 @@ the row points at the EP, and from there at the documents that EP demands.
 Import `buktiringkas` from `.ep_sync` in `risiko_views.py`. Guard against an EP
 with no `EvidenceReq` — `indikator_detail.html:182` already models that copy.
 
-- [ ] **Step 3: Run tests**
+- [x] **Step 3: Run tests**
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ---
 
@@ -410,7 +410,7 @@ with no `EvidenceReq` — `indikator_detail.html:182` already models that copy.
 - Modify: `templates/akreditasi/risiko_detail.html` (advisory `required` on the
   file input when status is SELESAI)
 
-- [ ] **Step 1: Failing test for the rule**
+- [x] **Step 1: Failing test for the rule**
 
 ```python
 class BuktiWajibSaatSelesaiTest(TestCase):
@@ -428,7 +428,7 @@ class BuktiWajibSaatSelesaiTest(TestCase):
         tl.full_clean()  # must not raise
 ```
 
-- [ ] **Step 2: Implement in `clean()`**
+- [x] **Step 2: Implement in `clean()`**
 
 Add to the `clean()` from Task 1:
 
@@ -438,21 +438,21 @@ Add to the `clean()` from Task 1:
                 'bukti_upload': 'Pelaksanaan berstatus Selesai wajib punya bukti dokumen.'})
 ```
 
-- [ ] **Step 3: Surface it**
+- [x] **Step 3: Surface it**
 
 `risiko_detail` already catches broadly at L541 and re-renders with
 `messages.error`. Make the message read as a fix, not a stack trace:
 `'Gagal: {e}'` will print the Django error dict verbatim — replace with a
 branch that renders `e.message_dict` cleanly when it is a validation error.
 
-- [ ] **Step 4: Advisory client-side hint**
+- [x] **Step 4: Advisory client-side hint**
 
 In the add form, `required` on the file input only when `status_aksi` is
 `SELESAI`. This page has no AJAX, so the honest approach is a tiny `<script>`
 toggling the attribute on the status `<select>`'s `change` event. Keep it
 advisory — the server rule is the real one.
 
-- [ ] **Step 5: Full regression**
+- [x] **Step 5: Full regression**
 
 Run:
 `.venv/Scripts/python.exe manage.py test akreditasi -v1`
@@ -462,7 +462,7 @@ Run:
 Baseline before this plan: **akreditasi 196, accounts+pasien 85, full 281, all
 OK, check clean.** Expected after: 281 + every test added here, all OK.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ---
 

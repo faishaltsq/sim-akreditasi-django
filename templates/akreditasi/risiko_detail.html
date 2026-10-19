@@ -610,6 +610,19 @@
                                 {% else %}
                                 <span class="text-muted" style="font-size:.75rem;">—</span>
                                 {% endif %}
+                                {% if tl.ep_terkait %}
+                                <div class="mt-1 pt-1 border-top" style="font-size:.68rem;">
+                                    {% if tl.ep_ringkas and tl.ep_ringkas.total %}
+                                    <span class="text-muted">{{ tl.ep_ringkas.terunggah }}/{{ tl.ep_ringkas.total }} kebutuhan punya berkas</span>
+                                    {% else %}
+                                    <span class="text-muted">tidak memiliki daftar kebutuhan bukti</span>
+                                    {% endif %}
+                                    <a href="{% url 'akreditasi:modal_bukti_data' tl.ep_terkait_id %}"
+                                       class="d-block text-decoration-none text-primary" style="font-size:.68rem;">
+                                        <i class="bi bi-folder2-open me-1"></i>Kelola Berkas EP {{ tl.ep_terkait.code }}
+                                    </a>
+                                </div>
+                                {% endif %}
                             </td>
                             <td title="{{ tl.standar_terkait.name|default_if_none:"" }}">{{ tl.standar_terkait.code|default:"—"}}{% if tl.standar_terkait %} — {{ tl.standar_terkait.name }}{% endif %}</td>
                             <td>{% if tl.ep_terkait %}<span class="font-monospace" style="font-size:.72rem;" title="{{ tl.ep_terkait.description }}">{{ tl.ep_terkait.code }}</span>{% else %}<span class="text-muted">—</span>{% endif %}</td>

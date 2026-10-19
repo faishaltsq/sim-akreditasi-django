@@ -413,3 +413,111 @@ class SurfaceLinkPropagationTest(TestCase):
         html = res.content.decode()
         self.assertIn(self.ep.code, html, 'kode EP tidak muncul')
         self.assertIn('EP (Pelaksanaan)', html, 'kolom EP hilang')
+
+
+class StepEpPickerTest(TestCase):
+    """Butir G.2 bisa memilih EP-nya sendiri, bukan hanya mewarisi indikator."""
+
+    def setUp(self):
+        from django.contrib.auth.models import User
+        self.user = User.objects.create_user('pel-m', 'm@x.id', 'x')
+        self.client = Client()
+        self.client.force_login(self.user)
+        self.cat = _mk_category()
+        self.ep = _mk_ep(self.cat)
+        self.ep2 = StandardItem.objects.create(
+            code='TK146-147 EP 2', description='EP kedua', category=self.cat,
+            order=2)
+        self.risiko = _mk_risiko()
+        self.risiko.rencana_aksi = '- butir satu\n- butir dua'
+        self.risiko.save(update_fields=['rencana_aksi'])
+        self.url = reverse('akreditasi:risiko_evaluasi', args=[self.risiko.pk])
+
+    def _post(self, ep1, ep2):
+        data = {'dampak_residual': '3', 'probabilitas_residual': '3',
+                'step_status_1': 'SEDANG', 'step_status_2': 'BELUM'}
+        if ep1 is not None:
+            data['step_ep_1'] = str(ep1.pk)
+        if ep2 is not None:
+            data['step_ep_2'] = str(ep2.pk)
+        return self.client.post(self.url, data, follow=True)
+
+    def test_ep_per_butir_terpakai_bukan_warisan(self):
+        self._post(self.ep2, None)
+        tl = list(self.risiko.tindak_lanjut.order_by('urutan'))
+        self.assertEqual(len(tl), 2)
+        self.assertEqual(tl[0].ep_terkait_id, self.ep2.pk)
+        self.assertEqual(tl[0].standar_terkait_id, self.cat.pk)
+        # butir kedua tidak memilih: jatuh ke warisan indikator (NULL di sini)
+        self.assertIsNone(tl[1].ep_terkait_id)
+
+    def test_kosong_berarti_tanpa_ep(self):
+        # EP kosong harus benar-benar kosong, bukan diisi EP pilihan lain
+        self._post(None, None)
+        tl = list(self.risiko.tindak_lanjut.order_by('urutan'))
+        self.assertEqual(len(tl), 2)
+        for item in tl:
+            self.assertIsNone(item.ep_terkait_id, item.aksi)
+            self.assertIsNone(item.standar_terkait_id)
+
+    def test_id_ep_tidak_valid_ditolak_bukan_diam(self):
+        # ID EP ngawur harus bikin seluruh materialisasi gagal, bukan diam-diam
+        # menyimpan butir tanpa tautan lalu sukses palsu.
+        data = {'dampak_residual': '3', 'probabilitas_residual': '3',
+                'step_status_1': 'SEDANG', 'step_status_2': 'BELUM',
+                'step_ep_1': '999999'}
+        self.client.post(self.url, data, follow=True)
+        self.assertEqual(self.risiko.tindak_lanjut.count(), 0)
+
+    def test_form_menyediakan_daftar_ep(self):
+        res = self.client.get(self.url)
+        self.assertEqual(res.status_code, 200)
+        self.assertContains(res, 'step_ep_1')
+        self.assertContains(res, self.ep.code)
+        self.assertContains(res, self.ep2.code)
+
+
+class EpEvidenceDeepLinkTest(TestCase):
+    """Baris pelaksanaan menampilkan kebutuhan bukti EP dan tautan kelolanya."""
+
+    def setUp(self):
+        from django.contrib.auth.models import User
+        self.user = User.objects.create_user('pel-n', 'n@x.id', 'x')
+        self.client = Client()
+        self.client.force_login(self.user)
+        self.cat = _mk_category()
+        self.ep = _mk_ep(self.cat)
+        self.risiko = _mk_risiko()
+        self.url = reverse('akreditasi:risiko_detail', args=[self.risiko.pk])
+
+    def _tl(self, ep=None):
+        return TindakLanjutRisiko.objects.create(
+            risiko=self.risiko, urutan=1, aksi='Aksi bukti EP',
+            status_aksi='SEDANG',
+            standar_terkait=self.cat if ep else None, ep_terkait=ep)
+
+    def test_ep_tanpa_kebutuhan_bukti_diberi_keterangan(self):
+        self._tl(self.ep)
+        html = self.client.get(self.url).content.decode()
+        self.assertIn('tidak memiliki daftar kebutuhan', html.lower())
+
+    def test_ep_dengan_kebutuhan_bukti_menampilkan_rasio(self):
+        from akreditasi.models import EvidenceReq
+        EvidenceReq.objects.create(standard_item=self.ep, category_type='R',
+                                   title='SK Kebijakan', is_mandatory=True)
+        EvidenceReq.objects.create(standard_item=self.ep, category_type='D',
+                                   title='Laporan Bulanan', is_mandatory=False)
+        self._tl(self.ep)
+        html = self.client.get(self.url).content.decode()
+        self.assertIn('0/2', html)
+        self.assertIn('kebutuhan punya berkas', html.lower())
+
+    def test_tautan_kelola_berkas_menunjuk_ep(self):
+        self._tl(self.ep)
+        html = self.client.get(self.url).content.decode()
+        self.assertIn(reverse('akreditasi:modal_bukti_data', args=[self.ep.pk]), html)
+
+    def test_tanpa_ep_tidak_menampilkan_blok_bukti(self):
+        self._tl(None)
+        html = self.client.get(self.url).content.decode()
+        self.assertNotIn('kebutuhan punya berkas', html.lower())

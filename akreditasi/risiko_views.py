@@ -13,6 +13,7 @@ from django.views.decorators.http import require_GET, require_POST
 from django.core.exceptions import ValidationError
 from decimal import Decimal
 
+from .ep_sync import bukti_ringkas
 from .risiko_models import RisikoUnit, TindakLanjutRisiko, InsidenKeselamatan, IndikatorMutu, CatatanIndikator
 from .models import UnitKerja, AuditLog, Category, StandardItem
 from .indikator_views import _is_manager
@@ -558,6 +559,16 @@ def risiko_detail(request, risiko_id):
         except Exception as e:
             messages.error(request, f'Gagal: {e}')
 
+    # Ringkasan kebutuhan bukti EP per baris. Sekali per EP, bukan sekali
+    # per baris -- beberapa aksi boleh menunjuk EP yang sama.
+    _ringkas_ep = {}
+    tindak_lanjut = list(
+        tindak_lanjut.select_related('standar_terkait', 'ep_terkait').order_by('urutan'))
+    for tl in tindak_lanjut:
+        if tl.ep_terkait_id and tl.ep_terkait_id not in _ringkas_ep:
+            _ringkas_ep[tl.ep_terkait_id] = bukti_ringkas(tl.ep_terkait)
+        tl.ep_ringkas = _ringkas_ep.get(tl.ep_terkait_id)
+
     # Build risk matrix 5×5 for this risiko's position
     matrix = {}
     for d in range(1, 6):
@@ -800,21 +811,35 @@ def risiko_evaluasi(request, risiko_id):
                     else:
                         collected_statuses.append(tl.status_aksi)
             elif risiko.rencana_aksi_list:
+                # Tautan diwarisi dari indikator terkait agar pelaksanaan hasil
+                # materialisasi tidak pernah yatim EP/standarnya; pilihan butir
+                # pada form G.2 menimpanya kalau operator mengisinya.
+                ep_warisan = risiko.indikator_mutu_terkait.ep_terkait \
+                    if risiko.indikator_mutu_terkait_id else None
                 for item in risiko.rencana_aksi_list:
                     idx = item['urutan']
                     st_val = request.POST.get(f'step_status_{idx}')
                     if st_val in dict(TindakLanjutRisiko.STATUS_AKSI_CHOICES):
-                        # Tautan diwarisi dari indikator terkait agar pelaksanaan
-                        # hasil materialisasi tidak pernah yatim EP/standarnya.
-                        ep_warisan = risiko.indikator_mutu_terkait.ep_terkait \
-                            if risiko.indikator_mutu_terkait_id else None
+                        ep_pilihan = ep_warisan
+                        raw_ep = request.POST.get(f'step_ep_{idx}')
+                        if raw_ep is not None:
+                            raw_ep = raw_ep.strip()
+                            if raw_ep:
+                                try:
+                                    ep_pilihan = StandardItem.objects.get(pk=raw_ep)
+                                except (StandardItem.DoesNotExist, ValueError, TypeError):
+                                    raise ValidationError(
+                                        f'EP untuk butir {idx} tidak ditemukan.')
+                            else:
+                                # kolom sengaja dikosongkan = tanpa tautan
+                                ep_pilihan = None
                         TindakLanjutRisiko.objects.create(
                             risiko=risiko,
                             urutan=idx,
                             aksi=item['text'],
                             status_aksi=st_val,
-                            ep_terkait=ep_warisan,
-                            standar_terkait=ep_warisan.category if ep_warisan else None,
+                            ep_terkait=ep_pilihan,
+                            standar_terkait=ep_pilihan.category if ep_pilihan else None,
                         )
                         collected_statuses.append(st_val)
 
@@ -878,6 +903,10 @@ def risiko_evaluasi(request, risiko_id):
     if risiko.indikator_mutu_terkait_id:
         agregat = risiko.indikator_mutu_terkait.agregat_capaian(risiko.tahun)
 
+    # Daftar EP untuk picker per-butir pada form G.2.
+    ep_list = StandardItem.objects.select_related('category').order_by(
+        'category__order', 'code')
+
     ctx = {
         'risiko': risiko,
         'status_badges': STATUS_BADGES,
@@ -885,6 +914,7 @@ def risiko_evaluasi(request, risiko_id):
         'status_rtl_choices': RisikoUnit.STATUS_RTL_CHOICES,
         'tindak_lanjut_list': tindak_lanjut_list,
         'rencana_aksi_items': rencana_aksi_items,
+        'ep_list': ep_list,
         'target_nilai_display': target_nilai_display,
         'arah_nilai_display': arah_nilai_display,
         'satuan_nilai_display': satuan_nilai_display,
