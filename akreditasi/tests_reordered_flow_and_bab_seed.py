@@ -96,9 +96,10 @@ class ReorderedRiskViewsTest(TestCase):
         self.assertEqual(resp.status_code, 200)
         data = resp.json()
         indicators = data.get('indikator', [])
-        self.assertEqual(len(indicators), 1)
-        self.assertEqual(indicators[0]['jenis_code'], 'NASIONAL')
-        self.assertEqual(indicators[0]['kode'], 'INM-VK-01')
+        # Endpoint ikut mengembalikan INM global (unit NULL), jadi hitung per baris.
+        milik_unit = [i for i in indicators if i['kode'] == 'INM-VK-01']
+        self.assertEqual(len(milik_unit), 1)
+        self.assertEqual(milik_unit[0]['jenis_code'], 'NASIONAL')
 
     def test_risiko_input_post_section_a_to_g(self):
         """POST risiko_input menyimpan field A-G secara menyeluruh."""

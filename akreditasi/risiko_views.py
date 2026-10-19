@@ -767,7 +767,8 @@ def _indikator_rencana(risiko):
     # seluruh unit sudah mengisi section D.
     qs = (IndikatorMutu.objects
           .filter(aktif=True)
-          .filter(Q(unit_id__in=ancestor_ids) | Q(unit__isnull=True))
+          .filter(Q(unit_id__in=ancestor_ids) | Q(unit__isnull=True)
+                  | Q(jenis__in=('NASIONAL', 'INM')))
           .select_related('unit')
           .annotate(rencana_target=rencana_target)
           .order_by('jenis', 'kode_indikator'))

@@ -1,0 +1,108 @@
+{% extends 'base.html' %}
+
+{% block title %}Peta Distribusi INM — ARIMA{% endblock %}
+{% block page_title %}Peta Distribusi Indikator Nasional Mutu{% endblock %}
+{% block page_subtitle %}Atur unit mana yang melihat &amp; menginput tiap INM. Tanpa pemetaan, semua unit melihat semua INM.{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-wrap align-items-center gap-2 mb-3">
+  <span class="badge text-white" style="background:#12544F;">{{ rows|length }} INM kanonik</span>
+  <span class="badge bg-light text-muted border">{{ total_mapping }} baris pemetaan</span>
+  {% if unmapped %}<span class="badge bg-warning-subtle text-warning-emphasis border">{{ unmapped|length }} INM belum dipetakan</span>{% endif %}
+  <a href="{% url 'akreditasi:indikator_dashboard' %}" class="btn btn-sm btn-outline-secondary ms-auto">Kembali ke Dashboard</a>
+</div>
+
+{% if messages %}
+  {% for m in messages %}
+    <div class="alert alert-{{ m.tags|default:'info' }} py-2 small mb-2">{{ m }}</div>
+  {% endfor %}
+{% endif %}
+
+{% if unmapped %}
+<div class="alert alert-warning py-2 small mb-3">
+  <strong>Perhatian:</strong> INM berikut belum punya satu pun pemetaan, jadi masih terlihat oleh semua unit:
+  {% for ind in unmapped %}<span class="badge bg-warning-subtle text-warning-emphasis border me-1">{{ ind.kode_indikator }}</span>{% endfor %}
+</div>
+{% endif %}
+
+<div class="table-responsive">
+  <table class="table table-sm align-middle" style="font-size:.8rem;">
+    <thead>
+      <tr style="background:#f1f5f9;">
+        <th style="min-width:220px;">Indikator (INM)</th>
+        <th style="min-width:90px;">Target</th>
+        <th>Unit / Cakupan Role</th>
+        <th style="min-width:260px;">Tambah pemetaan</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for ind, maps in rows %}
+      <tr>
+        <td>
+          <span class="badge text-white" style="background:#12544F;">{{ ind.kode_indikator }}</span>
+          <div class="fw-semibold mt-1" style="color:#0f172a;">{{ ind.nama_indikator|truncatechars:90 }}</div>
+        </td>
+        <td class="text-nowrap">
+          {{ ind.target_nilai|floatformat:1 }} {{ ind.satuan }}
+          <div class="text-muted" style="font-size:.7rem;">{% if ind.arah_target == 'MAX' %}MAX (makin kecil makin baik){% else %}MIN (makin besar makin baik){% endif %}</div>
+        </td>
+        <td>
+          {% for m in maps %}
+          <div class="d-flex flex-wrap align-items-center gap-1 mb-1">
+            {% if m.unit %}
+              <span class="badge bg-light text-dark border">{{ m.unit.code }}</span>
+            {% else %}
+              <span class="badge bg-light text-dark border">role: {{ m.get_role_scope_display }}</span>
+            {% endif %}
+
+            <form method="post" class="d-inline">{% csrf_token %}
+              <input type="hidden" name="action" value="pj">
+              <input type="hidden" name="indikator" value="{{ ind.pk }}">
+              <input type="hidden" name="mapping" value="{{ m.pk }}">
+              <button class="btn btn-sm py-0 px-1 {% if m.is_pj %}btn-success{% else %}btn-outline-secondary{% endif %}" title="Tandai/batalkan sebagai Unit PJ">PJ</button>
+            </form>
+            <form method="post" class="d-inline">{% csrf_token %}
+              <input type="hidden" name="action" value="input">
+              <input type="hidden" name="indikator" value="{{ ind.pk }}">
+              <input type="hidden" name="mapping" value="{{ m.pk }}">
+              <button class="btn btn-sm py-0 px-1 {% if m.boleh_input %}btn-outline-success{% else %}btn-outline-danger{% endif %}" title="Izinkan/larang input capaian">{% if m.boleh_input %}input: ya{% else %}input: tidak{% endif %}</button>
+            </form>
+            <form method="post" class="d-inline" onsubmit="return confirm('Hapus pemetaan ini?');">{% csrf_token %}
+              <input type="hidden" name="action" value="hapus">
+              <input type="hidden" name="indikator" value="{{ ind.pk }}">
+              <input type="hidden" name="mapping" value="{{ m.pk }}">
+              <button class="btn btn-sm py-0 px-1 btn-outline-danger" title="Hapus pemetaan">&times;</button>
+            </form>
+          </div>
+          {% empty %}
+          <span class="text-muted">— belum ada —</span>
+          {% endfor %}
+        </td>
+        <td>
+          <form method="post" class="d-flex flex-wrap gap-1">{% csrf_token %}
+            <input type="hidden" name="action" value="tambah">
+            <input type="hidden" name="indikator" value="{{ ind.pk }}">
+            <select name="unit" class="form-select form-select-sm" style="max-width:190px;">
+              <option value="">— pilih unit —</option>
+              {% for u in units %}<option value="{{ u.pk }}">{{ u.prefix }}{{ u.name }}</option>{% endfor %}
+            </select>
+            <select name="role_scope" class="form-select form-select-sm" style="max-width:170px;">
+              <option value="">(tanpa role)</option>
+              {% for val, label in role_choices %}<option value="{{ val }}">{{ label }}</option>{% endfor %}
+            </select>
+            <label class="d-flex align-items-center gap-1 small text-muted">
+              <input type="checkbox" name="is_pj" value="1"> PJ
+            </label>
+            <button class="btn btn-sm btn-success">Simpan</button>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<p class="text-muted small mt-3 mb-0">
+  Semantik: unit anak mewarisi pemetaan induknya. Pemetaan dipasang di unit induk (mis. IRIN) akan berlaku untuk seluruh bangsal di bawahnya.
+</p>
+{% endblock %}

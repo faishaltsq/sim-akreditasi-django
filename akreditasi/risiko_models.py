@@ -4,6 +4,7 @@ Fase 5 — Insiden Anonim, Indikator Mutu Prioritas (IMP)
 """
 from decimal import Decimal
 from django.db import models
+from django.db.models import Q
 from django.contrib.auth.models import User
 from django.core.validators import MinValueValidator, MaxValueValidator
 from .models import UnitKerja, StandardItem
@@ -579,6 +580,11 @@ class IndikatorMutu(models.Model):
         related_name='indikator_list', verbose_name='Sasaran Strategis (Renstra)',
         help_text='Hubungkan indikator ke Roadmap Renstra tahunan RS.'
     )
+    inm_induk = models.ForeignKey(
+        'self', on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='realisasi_unit', verbose_name='INM Induk',
+        help_text='Kosong = indikator ini INM kanonik. Terisi = realisasi INM tersebut di satu unit.'
+    )
 
     class Meta:
         verbose_name        = 'Indikator Mutu'
@@ -695,6 +701,60 @@ class CatatanIndikator(models.Model):
                 qr.save(update_fields=['quality_target', 'score'])
             except QualityRecord.DoesNotExist:
                 pass  # no QualityRecord yet — don't create, let accreditation team do it
+
+
+# ── 5b. InmUnitMapping — peta distribusi INM per unit ─────────────────────────
+
+class InmUnitMapping(models.Model):
+    """Pemetaan INM - unit yang berhak melihat/menginput (peta distribusi INM).
+
+    Tabel kosong untuk sebuah unit berarti unit tersebut belum dipetakan ->
+    perilaku lama dipertahankan (unit tetap melihat daftar penuh). Auto-hide
+    hanya aktif untuk unit yang sudah punya baris di sini.
+    """
+
+    ROLE_KEPALA_UNIT = 'KEPALA_UNIT'
+    ROLE_DPJP = 'DPJP'
+    ROLE_CHOICES = [
+        (ROLE_KEPALA_UNIT, 'Semua Kepala Unit / Ruangan'),
+        (ROLE_DPJP, 'Semua Dokter DPJP'),
+    ]
+
+    indikator = models.ForeignKey(
+        IndikatorMutu, on_delete=models.CASCADE, related_name='pemetaan_unit'
+    )
+    unit = models.ForeignKey(
+        UnitKerja, on_delete=models.CASCADE, related_name='pemetaan_inm',
+        null=True, blank=True,
+        help_text='Kosong bila cakupan ditentukan oleh role_scope, bukan unit.'
+    )
+    role_scope = models.CharField(
+        'Cakupan Role', max_length=20, choices=ROLE_CHOICES, blank=True, default='',
+        help_text='Untuk INM seperti Fornas (semua DPJP) atau Komplain (semua Ka. Instalasi).'
+    )
+    is_pj = models.BooleanField('Unit PJ (Penanggung Jawab Utama)', default=False)
+    boleh_input = models.BooleanField('Boleh Input Capaian', default=True)
+    berlaku_mulai = models.DateField('Berlaku Mulai', null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = 'Pemetaan INM — Unit'
+        verbose_name_plural = 'Pemetaan INM — Unit'
+        constraints = [
+            models.UniqueConstraint(
+                fields=['indikator', 'unit', 'role_scope'],
+                name='uniq_inm_unit_role',
+            ),
+            models.CheckConstraint(
+                condition=Q(unit__isnull=False) | ~Q(role_scope=''),
+                name='inm_mapping_butuh_unit_atau_role',
+            ),
+        ]
+        ordering = ['indikator_id', 'unit_id']
+
+    def __str__(self):
+        scope = self.unit.code if self.unit_id else f"role:{self.role_scope}"
+        return f"{self.indikator.kode_indikator} -> {scope}"
 
 
 # ── 6. Renstra RS Roadmap (Dynamic Admin CRUD) ────────────────────────────────

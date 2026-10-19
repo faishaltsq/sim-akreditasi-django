@@ -97,6 +97,7 @@ urlpatterns = [
     # Modul Indikator Mutu — INM + IMP-RS (Renstra 2026–2030)
     path('indikator-mutu/', indikator_views.indikator_dashboard, name='indikator_dashboard'),
     path('indikator-mutu/baru/', indikator_views.indikator_tambah, name='indikator_tambah'),
+    path('indikator-mutu/matriks-inm/', indikator_views.indikator_inm_matrix, name='indikator_inm_matrix'),
     path('indikator-mutu/<int:indikator_id>/', indikator_views.indikator_detail, name='indikator_detail'),
     path('indikator-mutu/<int:indikator_id>/edit/', indikator_views.indikator_edit, name='indikator_edit'),
     path('indikator-mutu/<int:indikator_id>/capaian/', indikator_views.indikator_input_capaian, name='indikator_input_capaian'),

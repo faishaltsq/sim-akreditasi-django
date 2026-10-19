@@ -141,12 +141,9 @@ def _get_mutu_renstra_charts_context(request, profile, db_roadmaps, renstra_year
         mutu_indikator_id = 0
 
     ind_qs = IndikatorMutu.objects.filter(aktif=True)
+    from .indikator_views import inm_qs_for_user
     if profile and profile.is_unit_scoped and profile.unit_kerja:
-        user_unit = profile.unit_kerja
-        user_unit_ids = list(UnitKerja.objects.filter(
-            Q(pk=user_unit.pk) | Q(parent=user_unit) | Q(parent__parent=user_unit)
-        ).values_list('pk', flat=True))
-        ind_qs = ind_qs.filter(Q(unit_id__in=user_unit_ids) | Q(jenis='NASIONAL'))
+        ind_qs = inm_qs_for_user(profile, ind_qs)
     elif mutu_unit:
         ind_qs = ind_qs.filter(unit_id=mutu_unit)
 
@@ -370,12 +367,9 @@ def api_mutu_indikator(request):
         tahun = 2026
 
     qs = IndikatorMutu.objects.filter(aktif=True)
+    from .indikator_views import inm_qs_for_user
     if profile and profile.is_unit_scoped and profile.unit_kerja:
-        u = profile.unit_kerja
-        unit_ids = list(UnitKerja.objects.filter(
-            Q(pk=u.pk) | Q(parent=u) | Q(parent__parent=u)
-        ).values_list('pk', flat=True))
-        qs = qs.filter(Q(unit_id__in=unit_ids) | Q(jenis='NASIONAL'))
+        qs = inm_qs_for_user(profile, qs)
     if jenis:
         _JENIS_MAP = {'INM': ['INM', 'NASIONAL'], 'IMRS': ['IMRS', 'IMP_RS'], 'IMU': ['IMU', 'IMP_UNIT']}
         qs = qs.filter(jenis__in=_JENIS_MAP.get(jenis, [jenis]))

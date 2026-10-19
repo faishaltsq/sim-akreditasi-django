@@ -424,6 +424,13 @@
               {% else %}
                 <span class="badge bg-light text-secondary border">Rumah Sakit (Seluruh Unit)</span>
               {% endif %}
+              {% if ind.unit_row %}
+              <span class="badge bg-info-subtle text-info border border-info-subtle d-block mt-1 font-monospace"
+                    style="font-size:0.6rem;"
+                    title="Capaian yang tampil baris ini adalah milik {{ ind.unit_row.unit.name }}">
+                <i class="bi bi-person-check-fill me-0.5"></i>UNIT ANDA: {{ ind.unit_row.unit.code }}
+              </span>
+              {% endif %}
             </td>
 
             <!-- TARGET -->
@@ -475,7 +482,7 @@
                   <i class="bi bi-graph-up"></i>
                 </a>
                 {% if is_manager %}
-                <a href="{% url 'akreditasi:indikator_input_capaian' ind.pk %}" class="btn btn-outline-success" title="Input Capaian Bulanan">
+                <a href="{% url 'akreditasi:indikator_input_capaian' ind.unit_row.pk|default:ind.pk %}" class="btn btn-outline-success" title="Input Capaian Bulanan{% if ind.unit_row %} (unit Anda){% endif %}">
                   <i class="bi bi-plus-lg"></i>
                 </a>
                 {% endif %}
@@ -516,6 +523,8 @@
 document.addEventListener('DOMContentLoaded', function() {
     const labels   = {{ chart_labels|safe }};
     const capaian  = {{ chart_capaian|safe }};
+    const unitLabel = "{{ chart_unit_label|escapejs }}";
+    const unitCapaian = {{ chart_unit_capaian|safe }};
     const jenisDS  = {{ chart_jenis_json|safe }};
 
     // Per-indikator mode
@@ -667,6 +676,20 @@ document.addEventListener('DOMContentLoaded', function() {
                         pointBackgroundColor: '#0d9488',
                         spanGaps: true,
                     },
+                    ...(unitLabel && unitCapaian.some(v => v !== null && v !== undefined) ? [{
+                        label: `Realisasi Unit — ${unitLabel} (%)`,
+                        data: unitCapaian,
+                        borderColor: '#f59e0b',
+                        backgroundColor: 'rgba(245, 158, 11, 0.08)',
+                        borderWidth: 2,
+                        borderDash: [4, 3],
+                        tension: 0.3,
+                        fill: false,
+                        pointRadius: 3,
+                        pointHoverRadius: 5,
+                        pointBackgroundColor: '#f59e0b',
+                        spanGaps: true,
+                    }] : []),
                     {
                         label: 'Garis Target Standar (100%)',
                         data: Array(12).fill(100),
