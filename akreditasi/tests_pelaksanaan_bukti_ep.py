@@ -379,9 +379,13 @@ class SurfaceLinkPropagationTest(TestCase):
             'No', 'Jenis Risiko', 'Rencana Aksi Mitigasi', 'No. Aksi',
             'Deskripsi Pelaksanaan', 'Status', 'Tgl Mulai', 'Tgl Selesai',
             'Catatan', 'Bukti Dokumen', 'PJ Mitigasi'], f'header berubah: {cols}')
-        for col in ('standar', 'kode_ep', 'judul_ep', 'ada_bukti'):
+        # Kolom bukti sudah ada di posisi 10 ('Bukti Dokumen'); kolom 'ada_bukti'
+        # duplikat di belakang dihapus supaya tidak ada dua kolom berisi hal sama.
+        for col in ('standar', 'kode_ep', 'judul_ep'):
             self.assertIn(col, cols, f'kolom {col} hilang dari header CSV')
-        self.assertEqual(cols[11:], ['standar', 'kode_ep', 'judul_ep', 'ada_bukti'])
+        self.assertEqual(cols[11:], ['standar', 'kode_ep', 'judul_ep'])
+        self.assertEqual(cols.count('Bukti Dokumen'), 1,
+                         f'kolom bukti ganda: {cols}')
 
     def test_csv_row_carry_values(self):
         # export tanpa param memakai UnitKerja.objects.first(); sebutkan unitnya

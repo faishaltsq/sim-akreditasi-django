@@ -1,7 +1,7 @@
 # Pelaksanaan: bukti dokumen + tautan standar akreditasi & EP
 
 **Date:** 2026-10-19
-**Status:** Not started
+**Status:** Complete — executed 2026-10-19, all 6 tasks, 355/355 tests green
 **Spec:** `D:\Downloads\Dibagian pelaksanaan.docx` — verbatim:
 
 > Dibagian pelaksanaan;
@@ -520,3 +520,62 @@ OK, check clean.** Expected after: 281 + every test added here, all OK.
   right now, but `risiko_models.py` was just edited by the EP-sync work.**
   Re-read before each patch and re-check `git status` before each commit; the
   other session's tree is live.
+
+---
+
+## Completion record — 2026-10-19
+
+Executed in full. All six tasks landed, all steps ticked.
+
+| Commit | Scope |
+|---|---|
+| `9744791` | Task 1 — FK `standar_terkait` + `ep_terkait`, `clean()` (drift guard + evidence rule), migration `0043` |
+| `23eab81` | Task 2 — Standar/EP pickers on the risk detail Do form, EP-wins logic, clean `ValidationError` surface |
+| `4ecf473` | Task 3a — EP column on the risk register (`risiko_daftar.html`) |
+| `2f14ff2` | Task 3b — EP link inherited through step materialisation from the Plan phase |
+| `19dab75` | Task 3c — Standar and EP columns across the six remaining surfaces |
+| `f75c044` | Task 4 — per-item EP picker in G.2 + EP evidence deep-link via `bukti_ringkas` |
+| `1c7f547`, `64fa28b` | Task 6 — plan close-out, data decision recorded |
+
+**Verification**
+
+- `akreditasi.tests_pelaksanaan_bukti_ep` — 33 tests, OK
+- `akreditasi.tests_pelaksanaan_csv` — 3 tests, OK (added during review)
+- Full suite `akreditasi accounts pasien` — **355 tests, OK** in 255.8s
+  (baseline before this plan was 281)
+- `manage.py check` — no issues
+- `makemigrations --check --dry-run` — no changes detected
+- Working tree clean, HEAD == `origin/master`
+
+**Corrections made during execution**
+
+1. **CSV export had a duplicate evidence column.** `risiko_pelaksanaan_export_csv`
+   emitted both `'Bukti Dokumen'` (position 10) and `'ada_bukti'` (position 15),
+   and wrote `'Ada'/'Belum ada'` twice per row. Removed the trailing duplicate;
+   header and body are now 14 fields. Covered by
+   `akreditasi/tests_pelaksanaan_csv.py`, which asserts header/body length
+   equality, single evidence column, and that the three new columns sit last
+   (so positional consumers of the old file still work).
+
+**Deviations from the plan as written**
+
+- **Task 3 gained a surface the plan missed:** step materialisation
+  (`2f14ff2`) inherits the EP from `risiko.indikator_mutu_terkait.ep_terkait`,
+  so actions created from the Plan phase are never born without a link. The
+  G.2 picker overrides it when the operator chooses.
+- **Task 2's `full_clean(exclude=['bukti_upload'])` became plain `full_clean()`.**
+  The file is now attached before validation, so the evidence rule can fire.
+- **`ep_list` in `risiko_evaluasi` orders by `category__order`, not
+  `category__code`** — matches how the G.2 page groups standards.
+
+**Still open (needs a human decision, not code)**
+
+- **The six stale rows.** Six `SELESAI` actions predate the evidence rule and
+  have no `bukti_upload`, no standar, no EP. Django never re-validates saved
+  rows, so they stay as they are. Decide: attach real documents, or drop them
+  back to `SEDANG`. Do not write a migration that flips status silently.
+- **Migration `0043` must be applied to Supabase by hand** after deploy.
+  Migrations do not run on Vercel.
+- **Multiple attachments per action** remain unsupported (`bukti_upload` is a
+  single `FileField`). A surveyor wanting several documents per action needs a
+  through-model, not a patch to this one.

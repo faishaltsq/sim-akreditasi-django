@@ -1882,7 +1882,7 @@ def risiko_pelaksanaan_export_csv(request):
 
     writer.writerow(['TABEL PELAKSANAAN TINDAKAN RISIKO (SIKLUS DO)'])
     writer.writerow(['No', 'Jenis Risiko', 'Rencana Aksi Mitigasi', 'No. Aksi', 'Deskripsi Pelaksanaan', 'Status', 'Tgl Mulai', 'Tgl Selesai', 'Catatan', 'Bukti Dokumen', 'PJ Mitigasi',
-                     'standar', 'kode_ep', 'judul_ep', 'ada_bukti'])
+                     'standar', 'kode_ep', 'judul_ep'])
 
     row_no = 1
     for r in risiko_qs:
@@ -1906,7 +1906,6 @@ def risiko_pelaksanaan_export_csv(request):
                     tl.standar_terkait.code if tl.standar_terkait_id else '—',
                     tl.ep_terkait.code if tl.ep_terkait_id else '—',
                     tl.ep_terkait.description if tl.ep_terkait_id else '—',
-                    'Ada' if tl.bukti_upload else 'Belum ada',
                 ])
                 row_no += 1
         else:
@@ -1917,7 +1916,7 @@ def risiko_pelaksanaan_export_csv(request):
                 '—', 'Belum ada pelaksanaan dicatat',
                 'BELUM', '—', '—', '—', '—',
                 r.pj_mitigasi or 'Ka. Unit',
-                '—', '—', '—', 'Belum ada',
+                '—', '—', '—',
             ])
             row_no += 1
 
