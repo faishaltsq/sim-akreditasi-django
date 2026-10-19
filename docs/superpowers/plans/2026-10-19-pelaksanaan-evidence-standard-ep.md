@@ -468,17 +468,23 @@ OK, check clean.** Expected after: 281 + every test added here, all OK.
 
 ## Task 6: data decision and deploy
 
-- [ ] **Step 1: The six stale rows.** 6 actions are `SELESAI` with no evidence
-  and no standar/EP. The new rule does not retroactively reject them — Django
+- [ ] **Step 1: The stale rows.** Measured on Supabase
+  `gwaeuzbbdawbekrmrvfd` 2026-10-19 after 0043: **16** actions are
+  `SELESAI`, **all 16** have `standar_terkait_id = ep_terkait_id = NULL`, and
+  **12** of them have an empty `bukti_upload`. (The "6" originally written here
+  was the local SQLite dev DB, which holds different rows: ids 4, 11, 15, 16,
+  20, 21.) The new rule does not retroactively reject them — Django
   never re-validates saved rows. Decide with the stakeholder: attach real
   documents and links, or drop them back to `SEDANG`. Do **not** write a
   migration that silently flips status.
-- [ ] **Step 2: Apply `0043` to Supabase by hand** after deploy. Memory note:
-  migrations do not run on Vercel.
-- [ ] **Step 3: `collectstatic` only if a static asset changed.** This plan
+- [x] **Step 2: Apply `0043` to Supabase by hand** after deploy. Memory note:
+  migrations do not run on Vercel. Already done before this step was reached:
+  `django_migrations` shows `0043` applied 2026-10-19 08:58:12 UTC, and both
+  columns exist in `akreditasi_tindaklanjutrisiko`.
+- [x] **Step 3: `collectstatic` only if a static asset changed.** This plan
   should not need it — verify `git status -- staticfiles` is clean instead of
   assuming.
-- [ ] **Step 4: Push and verify the deployment** the same way as the last plan:
+- [x] **Step 4: Push and verify the deployment** the same way as the last plan:
   `vercel ls` for a Production Ready deployment, then a smoke check that the
   routes still answer.
 
