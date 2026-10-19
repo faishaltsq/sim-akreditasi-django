@@ -62,7 +62,7 @@
 - Produces: `unit_scope_ids(unit: UnitKerja) -> set[int]`
 - Produces: `indikator_aktif_scoped(profile) -> QuerySet[IndikatorMutu]`
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```python
 # akreditasi/tests_akses_indikator_unit.py
@@ -169,12 +169,12 @@ class IndikatorAktifScopedTest(TestCase):
 
 Fixtures need `UnitKerja.code` and `UserProfile.role`/`unit_kerja`; check the real field names in `akreditasi/models.py:20-49` and `accounts/models.py` before writing if any assertion fails on a missing field.
 
-- [ ] **Step 2: Run to confirm failure**
+- [x] **Step 2: Run to confirm failure**
 
 Run: `.venv/Scripts/python.exe manage.py test akreditasi.tests_akses_indikator_unit -v1`
 Expected: `ImportError: cannot import name 'akses_indikator'` — exit code non-zero, `0 failed` is **not** the expected result here.
 
-- [ ] **Step 3: Write the resolver**
+- [x] **Step 3: Write the resolver**
 
 ```python
 # akreditasi/akses_indikator.py
@@ -254,12 +254,12 @@ def indikator_aktif_scoped(profile):
     return base.filter(unit_id__in=unit_scope_ids(unit))
 ```
 
-- [ ] **Step 4: Run to confirm pass**
+- [x] **Step 4: Run to confirm pass**
 
 Run: `.venv/Scripts/python.exe manage.py test akreditasi.tests_akses_indikator_unit -v1`
 Expected: `OK`, exit code 0.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add akreditasi/akses_indikator.py akreditasi/tests_akses_indikator_unit.py
@@ -277,7 +277,7 @@ git commit -m "feat(indikator): unit-scope resolver walks ancestors and drops th
 **Interfaces:**
 - Consumes: `indikator_aktif_scoped(profile)` from Task 1.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```python
 class DashboardScopeTest(TestCase):
@@ -301,12 +301,12 @@ class DashboardScopeTest(TestCase):
 
 Confirm the route path against `akreditasi/urls.py:11` before running.
 
-- [ ] **Step 2: Run to confirm failure**
+- [x] **Step 2: Run to confirm failure**
 
 Run: `.venv/Scripts/python.exe manage.py test akreditasi.tests_akses_indikator_unit.DashboardScopeTest -v1`
 Expected: FAIL — the choice list still contains `RS-INTERNA` and `INM-INTERNA`.
 
-- [ ] **Step 3: Replace the scope block**
+- [x] **Step 3: Replace the scope block**
 
 In `akreditasi/views.py`, the block at lines 143-156 becomes:
 
@@ -328,12 +328,12 @@ In `akreditasi/views.py`, the block at lines 143-156 becomes:
 
 Move the `from .akses_indikator import ...` line to the module imports at the top of the file instead of inside the function if the file already imports sibling modules there — check lines 1-40 first.
 
-- [ ] **Step 4: Run to confirm pass**
+- [x] **Step 4: Run to confirm pass**
 
 Run: `.venv/Scripts/python.exe manage.py test akreditasi.tests_akses_indikator_unit -v1`
 Expected: `OK`.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add akreditasi/views.py akreditasi/tests_akses_indikator_unit.py
@@ -352,7 +352,7 @@ git commit -m "fix(dashboard): indicator chart lists only indicators relevant to
 - Consumes: `indikator_aktif_scoped(profile)` from Task 1.
 - Produces: none new — `api_indikator_tren` and `api_indikator_komparasi_unit` must keep their current JSON shapes.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```python
 class IndicatorPagesScopeTest(TestCase):
@@ -374,12 +374,12 @@ class IndicatorPagesScopeTest(TestCase):
         self.assertEqual(got, {'RS-IRIN'})
 ```
 
-- [ ] **Step 2: Run to confirm failure**
+- [x] **Step 2: Run to confirm failure**
 
 Run: `.venv/Scripts/python.exe manage.py test akreditasi.tests_akses_indikator_unit.IndicatorPagesScopeTest -v1`
 Expected: FAIL — `INM-INTERNA` still present.
 
-- [ ] **Step 3: Replace the scope block in `indikator_dashboard`**
+- [x] **Step 3: Replace the scope block in `indikator_dashboard`**
 
 Lines 160-169 become:
 
@@ -392,16 +392,16 @@ Lines 160-169 become:
 
 Read lines 133-158 first and fold the `jenis` / `unit_id` filters in so the ordering stays: base scope → jenis → explicit `unit_id`. The resolver returns the `aktif=True` base, so the earlier `qs = qs.filter(jenis__in=db_codes)` and `qs = qs.filter(unit_id=unit_id)` calls must be re-pointed at the resolver's queryset rather than duplicated.
 
-- [ ] **Step 4: Verify the two APIs diverge from nothing**
+- [x] **Step 4: Verify the two APIs diverge from nothing**
 
 Confirm `api_indikator_tren` (line 594) and `api_indikator_komparasi_unit` (line 621) build their indicator queryset. If either queries `IndikatorMutu.objects.filter(jenis='NASIONAL')` directly for a unit-scoped user, route it through the resolver. If `api_indikator_komparasi_unit` is intentionally cross-unit (a comparison table), leave it and say so in the commit message.
 
-- [ ] **Step 5: Run to confirm pass**
+- [x] **Step 5: Run to confirm pass**
 
 Run: `.venv/Scripts/python.exe manage.py test akreditasi.tests_akses_indikator_unit -v1`
 Expected: `OK`.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add akreditasi/indikator_views.py akreditasi/tests_akses_indikator_unit.py
@@ -434,9 +434,14 @@ Left untouched.
 
 **Interfaces:**
 - Consumes: `mutu_indikator_choices` (unchanged shape), `mutu_jenis_choices`.
-- Produces: the `mutu_indikator` GET parameter is now always non-empty after a redirect from a bare `/dashboard/`.
+- Produces: nothing new — `mutu_indikator` may still be absent, and the
+  average-across-scope view behind that absence still works. The only new
+  signal is the empty-state notice, which reads the already-published
+  `mutu_indikator_choices`.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test** — written as `UnitScopeNoticeTest`
+instead; the plan's `NoAllIndicatorsOptionTest` was premised on the dropped
+removal.
 
 ```python
 class NoAllIndicatorsOptionTest(TestCase):
@@ -460,12 +465,13 @@ class NoAllIndicatorsOptionTest(TestCase):
         self.assertIn('belum memiliki indikator mutu', body)
 ```
 
-- [ ] **Step 2: Run to confirm failure**
+- [x] **Step 2: Run to confirm failure**
 
 Run: `.venv/Scripts/python.exe manage.py test akreditasi.tests_akses_indikator_unit.NoAllIndicatorsOptionTest -v1`
 Expected: FAIL on both.
 
-- [ ] **Step 3: Auto-select the first indicator server-side**
+> **Step 3: DROPPED** — removing "Semua Indikator" was not mandated by the
+> source document; see the decision note at the top of this task.
 
 In `akreditasi/views.py` at line 182, after `mutu_indikator_choices` is built, add:
 
@@ -479,7 +485,9 @@ In `akreditasi/views.py` at line 182, after `mutu_indikator_choices` is built, a
 
 Keep `selected_indikator` resolution on the next line unchanged.
 
-- [ ] **Step 4: Remove the option from both templates**
+> **Step 4: DROPPED** — same reason. `indikator_dashboard.html` was also
+> found to be out of scope: it is the indicator input page, not the unit
+> dashboard filter.
 
 In `dashboard.html:489`, delete the line:
 
@@ -489,7 +497,10 @@ In `dashboard.html:489`, delete the line:
 
 In `indikator_dashboard.html:283`, delete the same option.
 
-- [ ] **Step 5: Update the JS rebuild and the submit guard**
+> **Step 5: DROPPED** — there is no rebuild or guard change because the
+> option stays. The submit guard still disables the empty select, which is
+> now harmless: the empty-state notice renders server-side without a submit,
+> so a unit with no indicators is never at a dead end.
 
 In `dashboard.html:968`, the rebuilt list must not re-introduce the option:
 
@@ -520,7 +531,7 @@ Replace the submit guard at lines 981-986 — it can no longer disable a select 
     });
 ```
 
-- [ ] **Step 6: Name the empty state**
+- [x] **Step 6: Name the empty state**
 
 Locate the existing "belum ada pengukuran" panel (around `dashboard.html:540-560`, added in `fda160e`) and give the zero-indicators case its own branch. Render, from the view context, a flag `mutu_unit_kosong = bool(profile and profile.is_unit_scoped and profile.unit_kerja and not mutu_indikator_choices)`, then:
 
@@ -535,12 +546,12 @@ Locate the existing "belum ada pengukuran" panel (around `dashboard.html:540-560
                         {% endif %}
 ```
 
-- [ ] **Step 7: Run to confirm pass**
+- [x] **Step 7: Run to confirm pass**
 
 Run: `.venv/Scripts/python.exe manage.py test akreditasi.tests_akses_indikator_unit -v1`
 Expected: `OK`.
 
-- [ ] **Step 8: Check the rendered inline JS parses**
+> **Step 8: DROPPED** — no inline JS was changed in the reduced scope.
 
 The template contains `{{ }}` inside `<script>`, so parse the blocks from a rendered response, not the template file:
 
@@ -565,7 +576,7 @@ node --check "$TEMP/dash_blocks.js" && echo "JS OK"
 
 Expected: `JS OK`. A parse failure here is the failure mode that shipped `MIN85,0%` before — do not skip this step.
 
-- [ ] **Step 9: Commit**
+- [x] **Step 9: Commit**
 
 ```bash
 git add templates/akreditasi/dashboard.html templates/akreditasi/indikator_dashboard.html akreditasi/views.py akreditasi/tests_akses_indikator_unit.py
@@ -578,22 +589,22 @@ git commit -m "feat(dashboard): drop 'Semua Indikator' and name the empty-unit s
 
 **Files:** none new.
 
-- [ ] **Step 1: Run the indicator suites**
+- [x] **Step 1: Run the indicator suites**
 
 Run: `.venv/Scripts/python.exe manage.py test akreditasi -v1`
 Expected: `OK`, and the failure list identical to baseline (zero failures as of 2026-10-19).
 
-- [ ] **Step 2: Run the other two apps**
+- [x] **Step 2: Run the other two apps**
 
 Run: `.venv/Scripts/python.exe manage.py test accounts pasien -v1`
 Expected: `OK` — 22 and 63 tests respectively.
 
-- [ ] **Step 3: System check**
+- [x] **Step 3: System check**
 
 Run: `.venv/Scripts/python.exe manage.py check`
 Expected: `System check identified no issues (0 silenced).`
 
-- [ ] **Step 4: Tick every checkbox in this file and commit**
+- [x] **Step 4: Tick every checkbox in this file and commit**
 
 ```bash
 git add docs/superpowers/plans/2026-10-19-unit-relevance-indicator-filter.md
@@ -611,3 +622,39 @@ git commit -m "docs(plans): tick unit-relevance indicator filter plan"
 - **187 units will see an empty state instead of 36 indicators.** That is the point of the spec, but it is also the change most likely to be reported as a regression. Ship the Task 4 wording in the same release as the Task 2 filter — never separately.
 - **The JS submit guard now blocks instead of disabling.** A user on a unit with no indicators cannot submit the filter form at all. Verify the empty-state panel is visible without submitting, or the page becomes a dead end.
 - **`mutu_unit` for non-unit-scoped users stays exact-match.** An admin picking a unit from the dropdown gets that unit only, not its subtree. If comparison across sibling units is expected, that is a separate decision and not covered here.
+
+---
+
+## Completion record (2026-10-19)
+
+| Task | Commit | What actually shipped |
+|------|--------|-----------------------|
+| 1 | `2914439` | `akreditasi/akses_indikator.py` — `HOSPITAL_WIDE_ROLES`, `unit_scope_ids` (subtree down + 2-level ancestors up), `indikator_aktif_scoped` |
+| 2 | `91344fc` | `akreditasi/views.py` `_get_mutu_renstra_charts_context` routed through the resolver |
+| 3 | `1cbbd4f` | `akreditasi/indikator_views.py` `indikator_dashboard` routed through the resolver |
+| 4 | `92d9bf2` | server-rendered empty-state notice; removal half dropped, see the decision note above |
+| 5 | — | full regression below |
+
+**Verification.** `akreditasi` 196 tests (173 baseline + 23 new), `accounts +
+pasien` 85 (22 + 63), full suite 281/281 OK, `manage.py check` clean.
+
+**Corrections made to this plan while executing it.**
+
+1. `HOSPITAL_WIDE_ROLES` was drafted as `('DIREKTUR', 'KOORDINATOR_POKJA',
+   'SURVEYOR_INTERNAL', 'ASESOR')`. Two of those values do not exist in
+   `ROLE_CHOICES` — `DIREKTUR` is a stale literal and `SURVEYOR_INTERNAL`
+   never existed. The shipped constant is `('KOORDINATOR_POKJA', 'ASESOR')`,
+   the two unit-attached roles that genuinely need hospital-wide visibility.
+2. The test fixtures had to use legacy jenis codes (`IMP_RS`, `IMP_UNIT`,
+   `NASIONAL`). The plan's examples used the canonical spellings, but
+   production stores only legacy codes — 98/76/36 rows, zero canonical — and
+   `Q(jenis='NASIONAL')` only ever matched the legacy spelling. A fixture
+   written with `INM` passes against the leaking code and does not reproduce
+   the defect.
+
+**Still open, needs a human decision.** `Review Focus` point 2: a child unit
+now sees its instalasi's indicators. The spec's example (Bangsal Perawatan
+Anak vs IRIN) implies this is wanted, but the spec never states the rule for
+units that *do* own indicators — whether they should still inherit the
+parent's rows alongside their own. Shipped as inheritance, since an empty
+list is the worse failure.
