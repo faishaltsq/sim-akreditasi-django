@@ -163,7 +163,7 @@ Each rendered page must stay within **12 queries** against the primary DB, measu
 | 8.4 | Suite + checks | Done — see log below. |
 | 8.5 | Sidebar entry | Done — "Integrated Control" first item in `templates/includes/sidebar.html`. |
 | 2.5, 8.2, 8.3 | A11y focus rings, print stylesheet, entrance animation | **Partial/none** — halos `:focus` default Bootstrap; tidak ada print CSS, tidak ada entrance animation. |
-| 8.6 | Deploy | Pending. |
+| 8.6 | Deploy | Done — `8bb2e57` → production `sim-akreditasi-django-7t8580flp`, alias `sim-akreditasi-django.vercel.app`. |
 
 ### Deviations from the written plan
 
@@ -179,6 +179,26 @@ Each rendered page must stay within **12 queries** against the primary DB, measu
 ```
 manage.py check                                  → no issues (1 silenced)
 manage.py makemigrations --check --dry-run       → No changes detected
-manage.py test akreditasi.tests_kontrol_dasbor   → Ran 13 tests … OK
-manage.py test akreditasi accounts               → (isi di bawah saat selesai)
+manage.py test akreditasi.tests_kontrol_dasbor   → Ran 13 tests in 7.157s, OK
+manage.py test akreditasi accounts               → Ran 392 tests in 260.125s, OK
+collectstatic                                    → kontrol.54966c05a826.css + staticfiles.json
 ```
+
+Production probe (anon, alias):
+
+```
+/                          302  → /accounts/login/?next=/
+/control/                  302  → /accounts/login/?next=/control/
+/control/risiko/           302  → /accounts/login/?next=/control/risiko/
+/control/emr/              302  → /accounts/login/?next=/control/emr/
+/control/dokumen/          302  → /accounts/login/?next=/control/dokumen/
+/control/ringkasan-ai/     405  (POST only)
+/control/tidak-ada/        404
+```
+
+### Migration yang masih menunggu di production
+
+`0044_ep_sumber_kosong`, `0045_laporanmutu_and_kpc_insiden`, `0047_ai_enable_laporan`
+belum diterapkan. Vercel tidak menjalankan migration. Jalankan
+`python manage.py migrate akreditasi` (atau SQL-nya di Supabase) sebelum memakai
+menu Laporan Mutu dan tombol narasi AI.
