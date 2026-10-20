@@ -1,11 +1,12 @@
 import json
 import logging
-from django.shortcuts import render, redirect, get_object_or_404
+from django.shortcuts import render, redirect, get_object_or_404, reverse
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.core.exceptions import PermissionDenied
 from django.contrib import messages
 from django.http import JsonResponse, HttpResponse
 from django.db import transaction
+from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.http import require_POST
 from django.db.models import Count, Q, Sum, F, Avg, Exists, OuterRef
 from openpyxl import Workbook
@@ -1134,22 +1135,47 @@ def ep_detail(request, item_id):
     })
 
 
+def _safe_next_target(request, fallback):
+    """
+    Tujuan kembali setelah unggah (?next= / ?next=). Hanya path lokal yang
+    diterima agar parameter ini tidak membuka celah open redirect.
+    """
+    next_url = request.POST.get('next') or request.GET.get('next') or ''
+    if next_url and url_has_allowed_host_and_scheme(next_url, allowed_hosts={request.get_host()}):
+        return next_url
+    return fallback
+
+
 @login_required
-@require_POST
 def upload_bukti(request, req_id):
     evidence_req = get_object_or_404(EvidenceReq, id=req_id)
+    ep = evidence_req.standard_item
     # K-1 IDOR guard
-    if not _can_modify_ep(request.user, evidence_req.standard_item):
+    if not _can_modify_ep(request.user, ep):
         messages.error(request, "Akses ditolak: EP di luar cakupan unit Anda.")
         return redirect('akreditasi:matriks')
 
+    ep_detail_url = reverse('akreditasi:ep_detail', args=[ep.pk])
+
+    # GET: halaman unggah per kebutuhan bukti. View ini dulu hanya menerima POST,
+    # sehingga link "unggah" di /indikator-mutu/<id>/ membalas 405 Method Not Allowed.
+    if request.method != 'POST':
+        return render(request, 'akreditasi/upload_bukti.html', {
+            'req': evidence_req,
+            'ep': ep,
+            'files': evidence_req.files.all(),
+            'next': request.GET.get('next', ''),
+            'back_url': _safe_next_target(request, ep_detail_url),
+        })
+
+    next_url = _safe_next_target(request, ep_detail_url)
     file_obj = request.FILES.get('file')
 
     # K-3 file validation
     is_valid, error_msg = validate_uploaded_file(file_obj)
     if not is_valid:
         messages.error(request, f"Gagal unggah: {error_msg}")
-        return redirect('akreditasi:ep_detail', item_id=evidence_req.standard_item.id)
+        return redirect(next_url)
 
     safe_name = sanitize_filename(file_obj.name)
     res = upload_to_supabase_storage(file_obj, safe_name)
@@ -1174,7 +1200,7 @@ def upload_bukti(request, req_id):
     else:
         messages.error(request, f"Gagal mengunggah berkas: {res.get('error', 'Unknown error')}")
 
-    return redirect('akreditasi:ep_detail', item_id=evidence_req.standard_item.id)
+    return redirect(next_url)
 
 
 @login_required

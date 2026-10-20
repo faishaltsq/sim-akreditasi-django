@@ -220,7 +220,8 @@
                   <i class="bi bi-x-circle me-1"></i>Belum ada berkas
                 </span>
                 {% if is_manager %}
-                <a href="{% url 'akreditasi:upload_bukti' e.req.pk %}" class="small ms-2">unggah</a>
+                <a href="{% url 'akreditasi:upload_bukti' e.req.pk %}?next={{ request.get_full_path|urlencode }}"
+                   class="small ms-2">unggah</a>
                 {% endif %}
               {% endif %}
             </td>
