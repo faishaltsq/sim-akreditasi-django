@@ -418,7 +418,7 @@ def update_system_config(request):
                   'ai_model_name']
     bool_fields = ['allow_nakes_self_upload', 'ai_enabled',
                    'ai_enable_risiko', 'ai_enable_pdca', 'ai_enable_insiden',
-                   'ai_enable_rdwos', 'ai_enable_kps']
+                   'ai_enable_rdwos', 'ai_enable_kps', 'ai_enable_laporan']
     float_fields = ['ai_temperature']
 
     # API Key: hanya simpan jika user kirim nilai baru (tidak kosong)

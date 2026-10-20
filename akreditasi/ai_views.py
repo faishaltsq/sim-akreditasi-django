@@ -611,3 +611,47 @@ def api_ai_test_connection(request):
 
     res = test_deepseek_connection()
     return JsonResponse(res, status=200 if res['success'] else 400)
+
+
+# ── 7. NARASI LAPORAN CAPAIAN INDIKATOR MUTU ─────────────────────────────
+
+@login_required
+@require_POST
+@rate_limit(max_calls=12, window=60, scope='ai')
+def api_ai_narasi_laporan(request):
+    """Endpoint tombol '✨ Bantu AI Tulis' pada bagian naratif laporan mutu.
+
+    Konteks (angka capaian, rekap IKP, identitas laporan) dibangun ulang di
+    server dari ``laporan_id`` — klien tidak boleh menyuplai angka yang akan
+    dikutip AI, supaya narasi tidak pernah memuat data yang tidak ada di tabel.
+    """
+    from .risiko_models import LaporanMutu
+    from .mutu_laporan import boleh_sunting
+    from .ai_service import generate_narasi_laporan
+
+    data = _parse_json_body(request)
+    if not data:
+        return JsonResponse({'success': False,
+                             'error': 'Payload request tidak valid (bukan JSON).'},
+                            status=400)
+
+    laporan = (LaporanMutu.objects.select_related('unit')
+               .filter(pk=data.get('laporan_id')).first())
+    if laporan is None:
+        return JsonResponse({'success': False, 'error': 'Laporan tidak ditemukan.'},
+                            status=404)
+
+    if not boleh_sunting(request.user, laporan):
+        return JsonResponse({
+            'success': False,
+            'error': 'Laporan ini sudah terkunci atau berada di luar lingkup Anda.'},
+            status=403)
+
+    res = generate_narasi_laporan(
+        user=request.user,
+        laporan=laporan,
+        kunci=(data.get('kunci') or '').strip().upper(),
+        instruksi=(data.get('instruksi') or '').strip()[:800],
+        isi_sekarang=(data.get('isi_sekarang') or '').strip()[:4000],
+    )
+    return JsonResponse(res, status=200 if res['success'] else 400)

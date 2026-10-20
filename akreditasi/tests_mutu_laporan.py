@@ -4,7 +4,9 @@ Regresi kalender pelaporan (BAB I dokumen model laporan): laporan bulanan
 maksimum tanggal 10 bulan berikutnya, semesteran maksimum 20 Juli (Sem I) dan
 20 Januari (Sem II), tahunan maksimum 31 Januari.
 """
+import json
 from datetime import date
+from unittest import mock
 
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
@@ -800,3 +802,134 @@ class MonevKeAnalisisLaporanTest(TestCase):
         res = self.client.get(
             reverse('akreditasi:laporan_mutu_detail', args=[laporan.pk]))
         self.assertNotContains(res, 'Tarik dari MONEV')
+
+
+class AiNarasiLaporanTest(TestCase):
+    """Bantuan AI untuk bagian naratif laporan (endpoint + tombol di halaman)."""
+
+    def setUp(self):
+        from django.core.cache import cache
+        from akreditasi.system_models import SystemConfig
+        cache.clear()          # rate-limit AI disimpan di cache
+
+        self.unit = _unit('AINAR')
+        self.unit_lain = _unit('AINAR2')
+        self.ind = _ind(self.unit, 'AINAR')
+        CatatanIndikator.objects.create(
+            indikator=self.ind, tahun=2026, bulan=3,
+            nilai_numerator=50, nilai_denominator=100)
+
+        self.admin = _user('admin-narasi', 'ADMIN_RS')
+        self.kepala = _user('kepala-narasi', 'KEPALA_UNIT', self.unit)
+        self.kepala_lain = _user('kepala-narasi2', 'KEPALA_UNIT', self.unit_lain)
+
+        self.config = SystemConfig.get_solo()
+        self.config.ai_enabled = True
+        self.config.ai_enable_laporan = True
+        self.config.ai_api_key = 'sk-uji-narasi'
+        self.config.save()
+
+        self.laporan = LaporanMutu.objects.create(
+            jenis='BULANAN', tahun=2026, bulan=3, scope='UNIT',
+            unit=self.unit, pembuat=self.admin)
+        # Snapshot baris dibangun seperti saat laporan dibuat lewat form —
+        # tanpa baris, tidak ada angka yang bisa dikutip narasi.
+        from akreditasi.mutu_laporan import build_baris
+        build_baris(self.laporan)
+
+    def _url(self):
+        return reverse('akreditasi:api_ai_narasi_laporan')
+
+    def _post(self, user=None, **payload):
+        self.client.force_login(user or self.admin)
+        body = {'laporan_id': self.laporan.pk, 'kunci': 'RINGKASAN_EKSEKUTIF'}
+        body.update(payload)
+        return self.client.post(self._url(), data=json.dumps(body),
+                                content_type='application/json')
+
+    def test_butuh_login(self):
+        res = self.client.post(self._url(), data='{}',
+                               content_type='application/json')
+        self.assertEqual(res.status_code, 302)
+
+    def test_laporan_tidak_ada_404(self):
+        res = self._post(laporan_id=999999)
+        self.assertEqual(res.status_code, 404)
+
+    def test_bagian_tidak_dipakai_jenis_laporan_ditolak(self):
+        res = self._post(kunci='BAB_II')       # BAB hanya ada di laporan tahunan
+        self.assertEqual(res.status_code, 400)
+        self.assertIn('tidak dipakai', res.json()['error'])
+
+    def test_laporan_terkunci_ditolak(self):
+        LaporanMutu.objects.filter(pk=self.laporan.pk).update(status='DIVERIFIKASI')
+        res = self._post()
+        self.assertEqual(res.status_code, 403)
+        self.assertIn('terkunci', res.json()['error'])
+
+    def test_unit_lain_ditolak(self):
+        res = self._post(user=self.kepala_lain)
+        self.assertEqual(res.status_code, 403)
+
+    def test_ai_mati_ditolak(self):
+        self.config.ai_enabled = False
+        self.config.save()
+        res = self._post()
+        self.assertEqual(res.status_code, 400)
+        self.assertIn('belum diaktifkan', res.json()['error'])
+
+    def test_modul_laporan_dimatikan_ditolak(self):
+        self.config.ai_enable_laporan = False
+        self.config.save()
+        res = self._post()
+        self.assertEqual(res.status_code, 400)
+        self.assertIn('Laporan Mutu', res.json()['error'])
+
+    def test_sukses_mengembalikan_narasi_dan_mengirim_angka_laporan(self):
+        ditangkap = {}
+
+        def _palsu(prompt, **kwargs):
+            ditangkap['prompt'] = prompt
+            return {'success': True, 'error': None,
+                    'data': {'narasi': 'Paragraf satu.\n\nParagraf dua.'}}
+
+        with mock.patch('akreditasi.ai_service._call_deepseek', side_effect=_palsu):
+            res = self._post(instruksi='tekankan kepatuhan hand hygiene')
+
+        self.assertEqual(res.status_code, 200)
+        self.assertEqual(res.json()['data']['narasi'],
+                         'Paragraf satu.\n\nParagraf dua.')
+        self.assertEqual(res.json()['data']['kunci'], 'RINGKASAN_EKSEKUTIF')
+        prompt = ditangkap['prompt']
+        # Angka diambil dari snapshot baris laporan, bukan dari klien.
+        self.assertIn('50', prompt)
+        self.assertIn('tidak mencapai target', prompt)
+        self.assertIn('tekankan kepatuhan hand hygiene', prompt)
+        # Setiap panggilan AI tercatat untuk audit akreditasi.
+        self.assertTrue(AuditLog.objects.filter(model_name='AI_DEEPSEEK').exists())
+
+    def test_balasan_ai_tanpa_narasi_ditolak(self):
+        with mock.patch('akreditasi.ai_service._call_deepseek',
+                        return_value={'success': True, 'error': None, 'data': {}}):
+            res = self._post()
+        self.assertEqual(res.status_code, 400)
+        self.assertIn('tidak mengembalikan narasi', res.json()['error'])
+
+    def test_halaman_detail_menampilkan_tombol_ai(self):
+        self.client.force_login(self.kepala)
+        res = self.client.get(
+            reverse('akreditasi:laporan_mutu_detail', args=[self.laporan.pk]))
+        self.assertEqual(res.status_code, 200)
+        self.assertTrue(res.context['ai_narasi_aktif'])
+        self.assertContains(res, 'Bantu AI')
+        self.assertContains(res, 'ai-instruksi-narasi')
+
+    def test_tombol_ai_tersembunyi_saat_modul_dimatikan(self):
+        self.config.ai_enable_laporan = False
+        self.config.save()
+        self.client.force_login(self.kepala)
+        res = self.client.get(
+            reverse('akreditasi:laporan_mutu_detail', args=[self.laporan.pk]))
+        self.assertEqual(res.status_code, 200)
+        self.assertFalse(res.context['ai_narasi_aktif'])
+        self.assertNotContains(res, 'Bantu AI')

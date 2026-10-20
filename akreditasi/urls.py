@@ -4,10 +4,18 @@ from . import risiko_views
 from . import ai_views
 from . import indikator_views
 from . import mutu_laporan
+from . import kontrol_views
 
 app_name = 'akreditasi'
 
 urlpatterns = [
+    # Dasbor Eksekutif — Hospital Integrated Control (tanpa sidebar)
+    path('control/', kontrol_views.kontrol_hub, name='kontrol_hub'),
+    path('control/risiko/', kontrol_views.kontrol_risiko, name='kontrol_risiko'),
+    path('control/emr/', kontrol_views.kontrol_emr, name='kontrol_emr'),
+    path('control/dokumen/', kontrol_views.kontrol_dokumen, name='kontrol_dokumen'),
+    path('control/ringkasan-ai/', kontrol_views.kontrol_ringkasan_ai, name='kontrol_ringkasan_ai'),
+
     # Dashboard Utama
     path('', views.dashboard, name='dashboard'),
     path('dashboard/', views.dashboard, name='dashboard_alias'),
@@ -134,4 +142,5 @@ urlpatterns = [
     path('ai/ep-lepas/', ai_views.api_ai_ep_lepas, name='api_ai_ep_lepas'),
     path('ai/analisis-masalah-risiko/', ai_views.api_ai_analisis_masalah_risiko, name='api_ai_analisis_masalah_risiko'),
     path('ai/test-connection/', ai_views.api_ai_test_connection, name='ai_test_connection'),
+    path('ai/narasi-laporan/', ai_views.api_ai_narasi_laporan, name='api_ai_narasi_laporan'),
 ]

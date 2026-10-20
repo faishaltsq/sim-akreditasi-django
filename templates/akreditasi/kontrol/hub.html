@@ -1,0 +1,68 @@
+{% extends "akreditasi/kontrol/base_kontrol.html" %}
+{% block title %}ARIMA — Hospital Integrated Control{% endblock %}
+
+{% block content %}
+<section class="kontrol-hero">
+    <span class="kontrol-eyebrow">Executive Dashboard for Quality, Risk &amp; EHR Integration</span>
+    <h1 class="kontrol-title">ARIMA <span>Hospital Integrated Control</span></h1>
+    <p class="kontrol-lede">
+        Satu pintu masuk untuk tiga kendali rumah sakit. Pilih unit contoh, lalu masuk ke
+        sub-dasbor yang Anda butuhkan — setiap sub-dasbor berlanjut ke modul yang sudah ada.
+    </p>
+    {% include "akreditasi/kontrol/_unit_switch.html" %}
+</section>
+
+{% if not snapshot %}
+<section class="kontrol-empty">
+    <i class="bi bi-inbox"></i>
+    <h3>Belum ada unit kerja aktif</h3>
+    <p>Aktifkan minimal satu unit kerja agar dasbor bisa menampilkan angka.</p>
+</section>
+{% else %}
+
+<section class="kontrol-quickstrip">
+    <div class="quick-item">
+        <span class="quick-value">{% if snapshot.risk.total %}{{ snapshot.risk.high_count }}{% else %}—{% endif %}</span>
+        <span class="quick-label">risiko tinggi / sangat tinggi</span>
+    </div>
+    <div class="quick-item">
+        <span class="quick-value">{% if snapshot.incident.total_12m %}{{ snapshot.incident.open }}{% else %}—{% endif %}</span>
+        <span class="quick-label">insiden masih terbuka</span>
+    </div>
+    <div class="quick-item">
+        <span class="quick-value">{{ snapshot.indicator.below_target|default:"—" }}</span>
+        <span class="quick-label">indikator di bawah target</span>
+    </div>
+    <div class="quick-item">
+        <span class="quick-value">{% if snapshot.ep.pct is not None %}{{ snapshot.ep.pct }}%{% else %}—{% endif %}</span>
+        <span class="quick-label">cakupan EP (RS)</span>
+    </div>
+</section>
+
+<section class="kontrol-portals">
+    {% for portal in portal_cards %}
+    <a class="portal-card" href="{{ portal.url }}?unit={{ snapshot.unit.id }}"
+       style="--accent: {{ portal.accent }};">
+        <div class="portal-top">
+            <span class="portal-icon"><i class="bi {{ portal.icon }}"></i></span>
+            <span class="portal-band portal-band-{{ portal.band }}">{{ portal.band_label }}</span>
+        </div>
+        <h2>{{ portal.title }}</h2>
+        <p class="portal-sub">{{ portal.subtitle }}</p>
+        <div class="portal-metric">
+            <strong>{{ portal.headline }}</strong>
+            <span>{{ portal.headline_label }}</span>
+        </div>
+        <p class="portal-foot">{{ portal.foot }}</p>
+        <span class="portal-cta">Buka sub-dasbor <i class="bi bi-arrow-right"></i></span>
+    </a>
+    {% endfor %}
+</section>
+
+<p class="kontrol-disclaimer">
+    <i class="bi bi-info-circle"></i>
+    Angka diambil langsung dari tabel yang sudah ada — tidak ada model data baru.
+    Okupansi bed dan cakupan EP bersifat RS-wide; sisanya mengikuti lingkup unit.
+</p>
+{% endif %}
+{% endblock %}

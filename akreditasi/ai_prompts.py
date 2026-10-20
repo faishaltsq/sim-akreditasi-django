@@ -336,3 +336,124 @@ Format Output JSON:
     {{"ep_code": "TKRS 1 EP 1", "confidence": 0.9, "alasan": "contoh alasan singkat"}}
   ]
 }}"""
+
+
+# ── 12. NARASI LAPORAN CAPAIAN INDIKATOR MUTU ────────────────────────────
+
+# Panduan isi per bagian. Dipakai bersama oleh prompt AI dan oleh UI supaya
+# penyusun tahu apa yang diharapkan surveyor pada bagian tersebut.
+PANDUAN_NARASI_BAB = {
+    'RINGKASAN_EKSEKUTIF': (
+        'Ringkas capaian indikator mutu periode ini dalam satu tarikan napas: '
+        'berapa indikator terukur, berapa mencapai target, indikator mana yang '
+        'paling bermasalah, dan apa rekomendasi pokok manajemen.'),
+    'KENDALA': (
+        'Uraikan hambatan nyata yang membuat target tidak tercapai — keterbatasan '
+        'SDM, alat, alur, kepatuhan pengisian data, atau koordinasi lintas unit. '
+        'Sebutkan dampaknya terhadap angka capaian, bukan keluhan umum.'),
+    'REKOMENDASI': (
+        'Rumuskan upaya perbaikan yang spesifik dan dapat dieksekusi: apa yang '
+        'dilakukan, siapa penanggung jawabnya, kapan tenggatnya, dan bagaimana '
+        'keberhasilannya diukur.'),
+    'BAB_I': (
+        'Bagian umum: dasar penyusunan laporan (regulasi, standar PMKP/KARS '
+        'STARKES, kebijakan internal), tujuan penyusunan, ruang lingkup unit dan '
+        'periode, serta sistematika laporan.'),
+    'BAB_II': (
+        'Analisis dan evaluasi capaian kinerja pelayanan: bandingkan angka capaian '
+        'dengan standar/target, jelaskan tren antar bulan atau antar periode, '
+        'kelompokkan indikator yang tercapai dan tidak tercapai, lalu analisis '
+        'penyebabnya dengan kerangka PDSA.'),
+    'BAB_III': (
+        'Analisis dan evaluasi program kerja: program mutu apa yang dijalankan '
+        'periode ini, capaian tiap program, kesesuaiannya dengan rencana kerja, '
+        'serta kendala pelaksanaan dan penyesuaian yang diperlukan.'),
+    'BAB_IV': (
+        'Analisis dan evaluasi komponen biaya: dampak efisiensi biaya terhadap '
+        'mutu pelayanan, sumber pembiayaan kegiatan mutu, dan implikasi capaian '
+        'indikator terhadap biaya pelayanan. Bila data biaya belum tersedia, '
+        'nyatakan keterbatasan data secara eksplisit.'),
+    'BAB_V': (
+        'Rekap kejadian keselamatan pasien (IKP), klaim, dan risiko: jumlah '
+        'kejadian per jenis dan grading, tindak lanjut investigasi, status klaim, '
+        'serta risiko yang teridentifikasi pada periode ini.'),
+    'BAB_VI': (
+        'Kesimpulan dan usulan: simpulkan tingkat capaian mutu periode ini, '
+        'usulan prioritas perbaikan periode berikutnya, dan kebutuhan dukungan '
+        'manajemen.'),
+    'KESIMPULAN': (
+        'Simpulkan capaian, penyebab utama masalah, dan usulan tindak lanjut '
+        'prioritas beserta penanggung jawab dan tenggatnya.'),
+    'PENUTUP': (
+        'Penutup laporan: pernyataan bahwa laporan disusun sebagai bagian siklus '
+        'penjaminan mutu, ucapan terima kasih kepada pihak yang berkontribusi, '
+        'dan harapan tindak lanjut.'),
+}
+
+PROMPT_NARASI_LAPORAN = """Konteks Laporan Capaian Indikator Mutu Rumah Sakit:
+- Unit Kerja / Lingkup: {unit}
+- Periode Laporan: {periode}
+- Jenis Laporan: {jenis}
+- Bagian yang Diminta: {judul_bab}
+- Panduan Isi Bagian: {panduan}
+- Statistik Capaian: {statistik}
+- Indikator Tidak Tercapai (prioritas analisis): {tidak_tercapai}
+- Indikator Tercapai: {tercapai}
+- Rekap Insiden Keselamatan Pasien (IKP): {ikp}
+- Arahan Tambahan Penyusun: {instruksi}
+- Narasi yang Sudah Ada (pertahankan substansinya bila masih relevan): {isi_sekarang}
+
+Tugas: tulis narasi resmi untuk bagian "{judul_bab}" pada laporan di atas.
+
+Aturan:
+- Bahasa Indonesia formal perumahsakitan, siap dimasukkan ke dokumen akreditasi.
+- Hanya paragraf prosa. TANPA markdown, TANPA bullet, TANPA penomoran, TANPA
+  mengulang judul bagian.
+- 3 sampai 6 paragraf; tiap paragraf 3–6 kalimat dan mengalir, bukan daftar.
+- Gunakan ANGKA dari statistik yang diberikan. Jangan mengarang angka, nama
+  orang, atau data yang tidak ada pada konteks.
+- Bila data pendukung tidak tersedia, tulis keterbatasannya secara wajar —
+  jangan mengisi dengan asumsi.
+- Analisis memakai kerangka PDSA (Plan-Do-Study-Act): apa yang direncanakan,
+  apa yang dijalankan, apa hasil ukurnya, apa tindak lanjutnya.
+- Jangan menyebut nama pasien atau data identitas pribadi apa pun.
+
+Format Output JSON:
+{{
+  "narasi": "paragraf pertama...\n\nparagraf kedua...\n\nparagraf ketiga..."
+}}"""
+
+
+PROMPT_KONTROL_RINGKASAN = """Anda analis mutu dan keselamatan pasien rumah sakit. Anda menerima RINGKASAN ANGKA satu unit kerja dari dasbor eksekutif. Tugas Anda: menjelaskan apa arti angka itu dan apa yang harus dikerjakan minggu ini.
+
+KONTEKS
+- Unit Kerja: {unit_name}
+- Portal: {portal_name}
+- Tanggal: {tanggal}
+- Cakupan data: {scope_note}
+
+ANGKA (satu-satunya sumber yang boleh Anda pakai)
+{data_block}
+
+Aturan:
+- Bahasa Indonesia formal perumahsakitan, ringkas, tanpa basa-basi.
+- Sebut HANYA angka yang ada di blok ANGKA di atas. Bila sebuah bagian tidak
+  ada datanya, katakan datanya belum tersedia — jangan menebak, jangan
+  mengarang, jangan menghitung sendiri angka baru.
+- Okupansi bed dan cakupan EP bersifat RS-wide: jangan menyebutnya sebagai
+  angka unit ini.
+- "risiko_utama": 3 poin paling mendesak, masing-masing satu kalimat, boleh
+  menyebut angka.
+- "aksi_minggu_ini": 3 tindakan konkret yang bisa dieksekusi kepala unit,
+  kalimat perintah, bukan rencana abstrak.
+- "batas_data": satu atau dua kalimat tentang apa yang TIDAK bisa disimpulkan
+  dari angka ini (mis. tidak ada data insiden, belum ada catatan indikator).
+- Jangan menyebut nama pasien, nama pegawai, atau data identitas apa pun.
+
+Format Output JSON:
+{{
+  "ringkasan": "2-4 kalimat...",
+  "risiko_utama": ["...", "...", "..."],
+  "aksi_minggu_ini": ["...", "...", "..."],
+  "batas_data": "..."
+}}"""

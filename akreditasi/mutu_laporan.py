@@ -519,6 +519,31 @@ def _cek_laporan(user, laporan):
         raise PermissionDenied('Laporan ini berada di luar lingkup Anda.')
 
 
+def ai_narasi_aktif():
+    """True bila asisten AI untuk narasi laporan boleh dipakai.
+
+    Tombol disembunyikan saat fitur mati: tombol yang selalu berujung pesan
+    error lebih membingungkan daripada tombol yang tidak ada.
+    """
+    try:
+        from .system_models import SystemConfig
+        config = SystemConfig.get_solo()
+        return bool(config.ai_enabled
+                    and getattr(config, 'ai_enable_laporan', True)
+                    and config.get_deepseek_api_key())
+    except Exception:
+        return False
+
+
+def boleh_sunting(user, laporan):
+    """True bila ``user`` boleh mengubah isi laporan: masih draf + dalam lingkup.
+
+    Dipakai endpoint AI narasi supaya tombol dan API memakai aturan yang sama
+    dengan penyimpanan isian.
+    """
+    return bool(laporan.boleh_ubah and _boleh_lapor_unit(user, laporan.unit))
+
+
 # ---------------------------------------------------------------------------
 # 5. View: daftar laporan
 # ---------------------------------------------------------------------------
@@ -678,6 +703,7 @@ def laporan_mutu_detail(request, pk):
         'tanpa_pj': tanpa_pj,
         'tanpa_ep': tanpa_ep,
         'boleh_ubah': laporan.boleh_ubah and dalam_lingkup,
+        'ai_narasi_aktif': ai_narasi_aktif(),
         'boleh_verifikasi': boleh_verifikasi,
         'boleh_setujui': boleh_setujui,
         'seksi_list': seksi_laporan(laporan),

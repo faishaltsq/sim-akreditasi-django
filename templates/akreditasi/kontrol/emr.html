@@ -1,0 +1,86 @@
+{% extends "akreditasi/kontrol/base_kontrol.html" %}
+{% block title %}Smart EMR &amp; Clinical Quality — ARIMA{% endblock %}
+
+{% block content %}
+<section class="kontrol-subhead">
+    <div class="subhead-left">
+        <a class="kontrol-back" href="{% url 'akreditasi:kontrol_hub' %}?unit={{ snapshot.unit.id }}">
+            <i class="bi bi-arrow-left"></i> Control
+        </a>
+        <span class="kontrol-eyebrow"><i class="bi bi-activity"></i> Sub-dasbor 2</span>
+        <h1 class="kontrol-title-sm">Smart EMR &amp; Clinical Quality STARKES</h1>
+        <p class="kontrol-lede-sm">Kunjungan aktif, kelengkapan dokumentasi klinis, dan kredensial PPA.</p>
+    </div>
+    {% include "akreditasi/kontrol/_unit_switch.html" %}
+</section>
+
+<section class="kontrol-kpis">
+    <div class="kpi">
+        <span class="kpi-label">Kunjungan aktif</span>
+        <strong class="kpi-value">{{ snapshot.emr.active_total }}</strong>
+        <span class="kpi-foot">status terdaftar s.d. rawat inap</span>
+    </div>
+    <div class="kpi {% if snapshot.emr.cppt_gap %}kpi-critical{% endif %}">
+        <span class="kpi-label">Tanpa CPPT</span>
+        <strong class="kpi-value">{{ snapshot.emr.cppt_gap|default:"—" }}</strong>
+        <span class="kpi-foot">{{ snapshot.emr.cppt_total|default:0 }} catatan CPPT tercatat</span>
+    </div>
+    <div class="kpi {% if snapshot.emr.assessment_gap %}kpi-critical{% endif %}">
+        <span class="kpi-label">Tanpa asesmen risiko klinis</span>
+        <strong class="kpi-value">{{ snapshot.emr.assessment_gap|default:"—" }}</strong>
+        <span class="kpi-foot">{{ snapshot.emr.assessment_total|default:0 }} asesmen tercatat</span>
+    </div>
+    <div class="kpi">
+        <span class="kpi-label">Okupansi bed <span class="kpi-scope">RS-wide</span></span>
+        <strong class="kpi-value">{% if snapshot.emr.bed_occupancy_pct is not None %}{{ snapshot.emr.bed_occupancy_pct }}%{% else %}—{% endif %}</strong>
+        <span class="kpi-foot">{{ snapshot.emr.bed_total|default:0 }} bed aktif</span>
+    </div>
+</section>
+
+<div class="kontrol-grid-2">
+    <section class="kontrol-panel">
+        <header class="panel-head">
+            <h2><i class="bi bi-people"></i> Kunjungan aktif per jenis</h2>
+            <span class="panel-hint">snapshot saat ini</span>
+        </header>
+        {% if snapshot.emr.active_total %}
+        <ul class="bar-list bar-list-lg">
+            <li><span class="bar-label">IGD</span><span class="bar-count">{{ snapshot.emr.active_by_jenis.IGD|default:0 }}</span></li>
+            <li><span class="bar-label">Rawat Jalan</span><span class="bar-count">{{ snapshot.emr.active_by_jenis.RAJAL|default:0 }}</span></li>
+            <li><span class="bar-label">Rawat Inap</span><span class="bar-count">{{ snapshot.emr.active_by_jenis.RANAP|default:0 }}</span></li>
+        </ul>
+        {% else %}
+        <p class="kontrol-empty-inline"><i class="bi bi-inbox"></i> Belum ada kunjungan aktif.</p>
+        {% endif %}
+    </section>
+
+    <section class="kontrol-panel">
+        <header class="panel-head">
+            <h2><i class="bi bi-patch-check"></i> Kredensial PPA</h2>
+            <span class="panel-hint">kredensial dinamis</span>
+        </header>
+        {% if snapshot.ppa.total %}
+        <div class="gauge">
+            <strong class="gauge-value">{{ snapshot.ppa.pct }}%</strong>
+            <span class="gauge-label">{{ snapshot.ppa.compliant }} dari {{ snapshot.ppa.total }} kredensial patuh</span>
+            <div class="gauge-track"><span style="width: {{ snapshot.ppa.pct }}%"></span></div>
+        </div>
+        <p class="kontrol-note">
+            Patuh = status terverifikasi dan masa berlaku belum lewat.
+        </p>
+        {% else %}
+        <p class="kontrol-empty-inline"><i class="bi bi-inbox"></i> Belum ada kredensial PPA terdaftar di unit ini.</p>
+        {% endif %}
+    </section>
+</div>
+
+{% include "akreditasi/kontrol/_ai_panel.html" %}
+
+<section class="kontrol-modlinks">
+    <a href="{% url 'pasien:kunjungan_daftar' %}"><i class="bi bi-clipboard2-pulse"></i> Daftar kunjungan</a>
+    <a href="{% url 'pasien:igd_dashboard' %}"><i class="bi bi-hospital"></i> IGD</a>
+    <a href="{% url 'pasien:rajal_dashboard' %}"><i class="bi bi-door-open"></i> Rawat jalan</a>
+    <a href="{% url 'pasien:bed_management' %}"><i class="bi bi-layout-three-columns"></i> Bed management</a>
+    <a href="{% url 'akreditasi:rekap_kps' %}"><i class="bi bi-person-badge"></i> Rekap KPS</a>
+</section>
+{% endblock %}

@@ -454,12 +454,49 @@
                 </div>
                 {% endfor %}
             {% else %}
-            <form method="post" action="{% url 'akreditasi:laporan_mutu_simpan_seksi' laporan.pk %}">
+            {% if ai_narasi_aktif %}
+            <div class="alert alert-light border py-2 px-3 mb-3 small">
+                <div class="d-flex align-items-center gap-2 mb-1">
+                    <i class="bi bi-stars text-warning"></i>
+                    <span class="fw-semibold">Bantuan AI penulisan narasi</span>
+                    <span class="text-muted">— AI menyusun draf dari angka capaian laporan ini; periksa dan sunting sebelum disimpan.</span>
+                </div>
+                <input type="text" id="ai-instruksi-narasi" class="form-control form-control-sm"
+                       placeholder="Arahan tambahan (opsional) — mis. tekankan kepatuhan kebersihan tangan di ruang rawat inap">
+            </div>
+            {% endif %}
+            <form method="post" action="{% url 'akreditasi:laporan_mutu_simpan_seksi' laporan.pk %}" id="form-seksi-naratif">
                 {% csrf_token %}
                 {% for s in seksi_list %}
-                <div class="mb-3">
-                    <label class="form-label small fw-semibold mb-1">{{ s.judul }}</label>
-                    <textarea name="seksi_{{ s.kunci }}" rows="4" class="form-control form-control-sm">{{ s.isi }}</textarea>
+                <div class="mb-3" data-seksi="{{ s.kunci }}">
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <label class="form-label small fw-semibold mb-0">{{ s.judul }}</label>
+                        {% if ai_narasi_aktif %}
+                        <button type="button" class="btn btn-outline-secondary btn-sm py-0 btn-ai-narasi"
+                                data-kunci="{{ s.kunci }}" data-judul="{{ s.judul }}">
+                            <i class="bi bi-stars me-1"></i><span class="lbl">Bantu AI</span>
+                        </button>
+                        {% endif %}
+                    </div>
+                    <textarea name="seksi_{{ s.kunci }}" id="seksi-{{ s.kunci }}" rows="4"
+                              class="form-control form-control-sm">{{ s.isi }}</textarea>
+                    <div class="ai-preview mt-2 d-none" id="ai-preview-{{ s.kunci }}">
+                        <div class="border rounded p-2 bg-light">
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <span class="small fw-semibold text-warning-emphasis">
+                                    <i class="bi bi-stars me-1"></i>Usulan AI — belum disimpan
+                                </span>
+                                <div class="d-flex gap-1">
+                                    <button type="button" class="btn btn-primary btn-sm py-0 btn-ai-pakai"
+                                            data-kunci="{{ s.kunci }}">Ganti isi dengan usulan</button>
+                                    <button type="button" class="btn btn-outline-secondary btn-sm py-0 btn-ai-tutup"
+                                            data-kunci="{{ s.kunci }}">Tutup</button>
+                                </div>
+                            </div>
+                            <div class="small ai-preview-text" style="white-space:pre-wrap;"></div>
+                        </div>
+                    </div>
+                    <div class="small text-danger mt-1 d-none ai-error" id="ai-error-{{ s.kunci }}"></div>
                 </div>
                 {% endfor %}
                 <button type="submit" class="btn btn-outline-primary btn-sm py-0">
@@ -471,4 +508,77 @@
     </div>
     {% endif %}
 </div>
+{% endblock %}
+
+{% block extra_js %}
+{{ block.super }}
+<script>
+(function () {
+    const laporanId = {{ laporan.pk }};
+    const csrfInput = document.querySelector('#form-seksi-naratif [name=csrfmiddlewaretoken]');
+    if (!csrfInput) return;                       // laporan terkunci: tanpa form
+    const token = csrfInput.value;
+    const url = "{% url 'akreditasi:api_ai_narasi_laporan' %}";
+    const instruksi = document.getElementById('ai-instruksi-narasi');
+    const usulan = {};
+
+    document.querySelectorAll('.btn-ai-narasi').forEach(function (btn) {
+        btn.addEventListener('click', async function () {
+            const kunci = btn.dataset.kunci;
+            const ta = document.getElementById('seksi-' + kunci);
+            const preview = document.getElementById('ai-preview-' + kunci);
+            const err = document.getElementById('ai-error-' + kunci);
+            const lbl = btn.querySelector('.lbl');
+            const teksAsli = lbl.textContent;
+            btn.disabled = true;
+            lbl.textContent = 'Menyusun...';
+            err.classList.add('d-none');
+            try {
+                const resp = await fetch(url, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json', 'X-CSRFToken': token},
+                    body: JSON.stringify({
+                        laporan_id: laporanId,
+                        kunci: kunci,
+                        instruksi: instruksi ? instruksi.value : '',
+                        isi_sekarang: ta.value
+                    })
+                });
+                const j = await resp.json();
+                if (j.success && j.data) {
+                    usulan[kunci] = j.data.narasi;
+                    preview.querySelector('.ai-preview-text').textContent = j.data.narasi;
+                    preview.classList.remove('d-none');
+                } else {
+                    err.textContent = j.error || 'AI gagal menyusun narasi.';
+                    err.classList.remove('d-none');
+                }
+            } catch (e) {
+                err.textContent = 'Gagal menghubungi AI: ' + e.message;
+                err.classList.remove('d-none');
+            } finally {
+                btn.disabled = false;
+                lbl.textContent = teksAsli;
+            }
+        });
+    });
+
+    document.querySelectorAll('.btn-ai-pakai').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            const kunci = btn.dataset.kunci;
+            const ta = document.getElementById('seksi-' + kunci);
+            if (!ta || !usulan[kunci]) return;
+            ta.value = usulan[kunci];
+            document.getElementById('ai-preview-' + kunci).classList.add('d-none');
+            ta.focus();
+        });
+    });
+
+    document.querySelectorAll('.btn-ai-tutup').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            document.getElementById('ai-preview-' + btn.dataset.kunci).classList.add('d-none');
+        });
+    });
+})();
+</script>
 {% endblock %}
