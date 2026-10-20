@@ -288,3 +288,14 @@ Task 6 (all tests, suite green).
   migration. Two `0044_*` files would collide cosmetically; renumber one of them
   before both land.
 
+**Deployed 2026-10-20 12:31 WIB:** `76a59c9` pushed to `master` (`4aad974..76a59c9`,
+fast-forward) and built by Vercel — production deployment
+`2YJxoyLmxcaFasuRLZAJUSVq5W2G`, GitHub status `Vercel success`. Verified on
+`https://sim-akreditasi-django.vercel.app`: `POST /ai/ep-lepas/` and `POST /ai/ep-terapkan/`
+answer 403 (CSRF, route present) while a bogus path answers 404.
+
+**Migration `0044` is still unapplied in production** — deploys do not run migrations here.
+It is not required for the reported bug: the guard at `ai_views.py:311` requires a real
+`ep_terkait_id`, so rows marked `MANUAL` with no link are already unlocked. `0044` only
+corrects the stored `ep_sumber` label. Apply with `python manage.py migrate akreditasi`.
+
