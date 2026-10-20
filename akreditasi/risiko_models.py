@@ -599,6 +599,7 @@ class IndikatorMutu(models.Model):
     ]
 
     EP_SUMBER_CHOICES = [
+        ('',       'Belum ditautkan'),
         ('MANUAL', 'Dipilih manual'),
         ('AI',     'Rekomendasi AI'),
         ('RULE',   'Auto (unit terkait)'),
@@ -652,7 +653,9 @@ class IndikatorMutu(models.Model):
     ep_sumber      = models.CharField(
         'Sumber Link EP', max_length=10, choices=EP_SUMBER_CHOICES,
         default='MANUAL', blank=True,
-        help_text='Bagaimana ep_terkait terisi. MANUAL tidak pernah ditimpa auto-sync.'
+        help_text=('Bagaimana ep_terkait terisi. Nilai kosong berarti belum '
+                   'ditautkan dan baris tetap terbuka untuk auto-sync; '
+                   'MANUAL tidak pernah ditimpa.')
     )
     ep_skor        = models.DecimalField(
         'Skor Kecocokan EP', max_digits=5, decimal_places=4,

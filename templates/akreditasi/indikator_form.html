@@ -259,11 +259,33 @@
                                     <span class="form-section-title d-block mb-0">Sinkronisasi EP</span>
                                     <small class="text-muted" style="font-size:0.72rem;">
                                         Saran kata dihitung otomatis; rekomendasi AI membaca seluruh katalog EP.
+                                        {# Status AI ditampilkan SEBELUM operator menekan tombol. #}
+                                        {% if ai_status %}
+                                        <span id="ep-ai-status"
+                                              class="badge ms-1 {% if ai_status.aktif %}bg-success-subtle text-success border border-success-subtle{% else %}bg-warning-subtle text-warning border border-warning-subtle{% endif %}"
+                                              title="{{ ai_status.keterangan }}"
+                                              style="font-size:0.62rem; vertical-align:middle;">{{ ai_status.keterangan }}</span>
+                                        {% endif %}
                                     </small>
                                 </div>
-                                <button type="button" id="btn-ep-sync" class="btn btn-sm btn-primary px-3">
-                                    <i class="bi bi-stars me-1"></i> Cocokkan dengan AI
-                                </button>
+                                <div class="d-flex gap-2">
+                                    <button type="button" id="btn-ep-lepas"
+                                            class="btn btn-sm btn-outline-danger px-2{% if not ind or not ind.ep_terkait_id %} d-none{% endif %}">
+                                        <i class="bi bi-x-circle me-1"></i> Lepas &amp; cari ulang
+                                    </button>
+                                    <button type="button" id="btn-ep-sync" class="btn btn-sm btn-primary px-3">
+                                        <i class="bi bi-stars me-1"></i> Cocokkan dengan AI
+                                    </button>
+                                </div>
+                            </div>
+
+                            {# State yang dibaca guard AI: link di DATABASE, bukan isi form. #}
+                            <div id="ep-link-chip"
+                                 class="alert {% if ind and ind.ep_terkait_id %}alert-secondary{% else %}d-none{% endif %} py-1 px-2 mb-2"
+                                 style="font-size:0.72rem;">
+                                Tertaut saat ini: <code id="ep-link-code">{% if ind and ind.ep_terkait_id %}{{ ind.ep_terkait.code }}{% endif %}</code>
+                                <span class="text-muted">(sumber: <span id="ep-link-sumber">{% if ind %}{{ ind.ep_sumber|default:'-' }}{% endif %}</span>)</span>
+                                — inilah yang dibaca tombol AI, bukan isi kolom EP.
                             </div>
 
                             {% if ind and ind.ep_sumber and ind.ep_sumber != 'MANUAL' %}
@@ -315,6 +337,7 @@
                         {# Actions #}
                         <div class="d-flex justify-content-between align-items-center pt-3 border-top">
                             <a href="{% if is_edit %}{% url 'akreditasi:indikator_detail' ind.pk %}{% else %}{% url 'akreditasi:indikator_dashboard' %}{% endif %}"
+                               id="btn-batal"
                                class="btn btn-sm btn-outline-secondary px-3">
                                 <i class="bi bi-arrow-left me-1"></i> Batal
                             </a>
@@ -462,6 +485,12 @@ document.addEventListener('DOMContentLoaded', function () {
     var result = document.getElementById('ep-sync-result');
     var form = btn.closest('form');
     var csrf = form ? form.querySelector('[name=csrfmiddlewaretoken]') : null;
+
+    // Chip + tombol yang menampilkan state di DATABASE (bukan isi form).
+    var chipWrap = document.getElementById('ep-link-chip');
+    var chipCode = document.getElementById('ep-link-code');
+    var chipSumber = document.getElementById('ep-link-sumber');
+    var btnLepas = document.getElementById('btn-ep-lepas');
     {% if ind %}
     var indId = '{{ ind.pk|unlocalize }}';
     {% else %}
@@ -480,6 +509,26 @@ document.addEventListener('DOMContentLoaded', function () {
             .replace(/"/g, '&quot;');
     }
     function pct(v) { return Math.round((Number(v) || 0) * 100) + '%'; }
+
+    // D4: perubahan EP yang belum disimpan harus terlihat sebelum halaman
+    // ditinggalkan — tanpa ini hasil AI hilang diam-diam (penyebab utama
+    // "hasilnya tidak masuk").
+    var epKotor = false;
+    sel.addEventListener('change', function () { epKotor = true; });
+    window.addEventListener('beforeunload', function (e) {
+        if (!epKotor) return;
+        e.preventDefault();
+        e.returnValue = '';
+        return '';
+    });
+    var btnBatal = document.getElementById('btn-batal');
+    if (btnBatal) {
+        btnBatal.addEventListener('click', function (e) {
+            if (epKotor && !window.confirm('Perubahan EP belum disimpan. Tinggalkan halaman?')) {
+                e.preventDefault();
+            }
+        });
+    }
 
     if (!indId) {
         btn.disabled = true;
@@ -555,8 +604,13 @@ document.addEventListener('DOMContentLoaded', function () {
                 throw new Error(b.error || 'Permintaan gagal.');
             }
             if (b.notice) {
-                notice.className = 'alert alert-warning py-1 px-2 mb-2';
-                notice.textContent = b.notice;
+                // Tier B tidak boleh terbaca sebagai analisis AI: labelnya
+                // abu-abu dan bertahan setelah daftar dirender.
+                notice.className = 'alert alert-' + (b.ai_terpakai ? 'warning' : 'secondary')
+                    + ' py-1 px-2 mb-2';
+                notice.textContent = (b.ai_terpakai ? ''
+                    : 'Hasil di bawah adalah kecocokan kata, BUKAN analisis AI. ')
+                    + b.notice;
                 notice.classList.remove('d-none');
             }
             if (!(b.rekomendasi || []).length && !(b.kandidat || []).length) {
@@ -576,16 +630,104 @@ document.addEventListener('DOMContentLoaded', function () {
         .then(function () { setBusy(false); });
     });
 
-    // Klik "Pakai": pindahkan dropdown tanpa menyimpan form.
+    function kirim(url, body) {
+        return fetch(url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrf ? csrf.value : ''
+            },
+            body: JSON.stringify(body)
+        }).then(function (r) {
+            return r.json().then(function (b) { return { ok: r.ok, body: b }; });
+        });
+    }
+
+    function setState(ep) {
+        // Satu sumber kebenaran untuk chip: apa yang benar-benar ada di database.
+        if (!chipWrap) return;
+        if (ep && ep.code) {
+            chipWrap.classList.remove('d-none');
+            chipWrap.className = 'alert alert-secondary py-1 px-2 mb-2';
+            if (chipCode) chipCode.textContent = ep.code;
+            if (chipSumber) chipSumber.textContent = ep.sumber || '-';
+            if (btnLepas) btnLepas.classList.remove('d-none');
+        } else {
+            chipWrap.className = 'd-none';
+            if (chipCode) chipCode.textContent = '';
+            if (chipSumber) chipSumber.textContent = '-';
+            if (btnLepas) btnLepas.classList.add('d-none');
+        }
+    }
+
+    function tampilkanNotice(teks, jenis, tombol) {
+        notice.className = 'alert alert-' + (jenis || 'danger') + ' py-1 px-2 mb-2';
+        notice.innerHTML = esc(teks);
+        if (tombol) {
+            var b = document.createElement('button');
+            b.type = 'button';
+            b.className = 'btn btn-sm btn-outline-danger ms-2 py-0 px-2';
+            b.style.fontSize = '0.68rem';
+            b.textContent = tombol.label;
+            b.addEventListener('click', tombol.aksi);
+            notice.appendChild(b);
+        }
+        notice.classList.remove('d-none');
+    }
+
+    // "Pakai" menyimpan SEKARANG. Sebelumnya ia hanya menggerakkan dropdown,
+    // jadi link baru hilang bila operator tidak menekan Simpan Perubahan.
     result.addEventListener('click', function (e) {
         var t = e.target.closest('.ep-pick');
         if (!t) return;
-        sel.value = t.getAttribute('data-id');
-        sel.dispatchEvent(new Event('change'));
-        t.textContent = 'Dipakai ✓';
-        t.classList.remove('btn-outline-success');
-        t.classList.add('btn-success');
+        var id = t.getAttribute('data-id');
+        if (!id) return;
+        t.disabled = true;
+        kirim('{% url "akreditasi:api_ai_ep_terapkan" %}',
+              { indikator_id: parseInt(indId, 10), ep_id: parseInt(id, 10) })
+            .then(function (o) {
+                var b = o.body || {};
+                if (!o.ok || b.success === false) {
+                    throw new Error(b.error || 'Gagal menyimpan EP.');
+                }
+                sel.value = id;
+                epKotor = false;         // sudah tersimpan, tak ada yang perlu dibuang
+                setState(b.ep_terkait);
+                t.textContent = 'Tersimpan ✓';
+                t.classList.remove('btn-outline-success');
+                t.classList.add('btn-success');
+                tampilkanNotice(b.pesan || 'EP tersimpan.', 'success');
+            })
+            .catch(function (err) {
+                t.disabled = false;
+                tampilkanNotice(err.message || 'Gagal menyimpan EP.', 'danger');
+            });
     });
+
+    if (btnLepas) {
+        btnLepas.addEventListener('click', function () {
+            if (!window.confirm('Lepas tautan EP ini? Baris akan terbuka untuk auto-sync.')) return;
+            btnLepas.disabled = true;
+            kirim('{% url "akreditasi:api_ai_ep_lepas" %}', { indikator_id: parseInt(indId, 10) })
+                .then(function (o) {
+                    var b = o.body || {};
+                    if (!o.ok || b.success === false) {
+                        throw new Error(b.error || 'Gagal melepas EP.');
+                    }
+                    sel.value = '';
+                    epKotor = false;
+                    setState(null);
+                    result.innerHTML = '';
+                    tampilkanNotice(b.pesan || 'EP dilepas.', 'success');
+                    // Langsung cari ulang: inilah alasan operator menekan tombol ini.
+                    btn.click();
+                })
+                .catch(function (err) {
+                    tampilkanNotice(err.message || 'Gagal melepas EP.', 'danger');
+                })
+                .then(function () { btnLepas.disabled = false; });
+        });
+    }
 });
 </script>
 {% endblock %}

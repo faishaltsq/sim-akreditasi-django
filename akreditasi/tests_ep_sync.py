@@ -167,8 +167,13 @@ class EPRekomendasiServiceTest(_EPFixture, TestCase):
             ai_service.generate_ep_rekomendasi(None, self.ind)
         self.assertIn('SKP 5 EP 901', ditangkap['prompt'])
         self.assertIn('Katalog EP', ditangkap['prompt'])
-        self.assertGreaterEqual(ditangkap['kw'].get('timeout', 0), 60,
-                                'prompt besar perlu timeout lebih longgar')
+        # Kontraknya: client timeout HARUS di bawah maxDuration Vercel (60s).
+        # Kalau di atasnya, Lambda dipotong lebih dulu dan fallback Tier B tak
+        # sempat berjalan — operator menerima 504 HTML, bukan daftar. (Tes ini
+        # sebelumnya menuntut timeout >= 60: itulah defeknya.)
+        self.assertGreater(ditangkap['kw'].get('timeout', 0), 0)
+        self.assertLess(ditangkap['kw']['timeout'], 60,
+                        'client timeout harus di bawah batas durasi lambda')
 
     def test_balasan_bukan_list_jatuh_ke_lexical(self):
         with patch.object(ai_service, '_call_deepseek',
@@ -500,6 +505,13 @@ class ProvenanceSaveTest(_EPFixture, TestCase):
             'ep_terkait': '' if ep_value is None else str(ep_value),
         })
 
+    def _post_ai(self, user, payload):
+        reset_rate_limit()
+        c = Client()
+        c.force_login(user)
+        return c.post(reverse('akreditasi:api_ai_ep_rekomendasi'),
+                      data=json.dumps(payload), content_type='application/json')
+
     def test_mengganti_ep_menjadi_pilihan_manual(self):
         ind = self._indikator(ep_terkait=self.ep, ep_sumber='AI', ep_skor='0.8000')
         r = self._post_edit(ind, self.ep2.pk)
@@ -518,13 +530,37 @@ class ProvenanceSaveTest(_EPFixture, TestCase):
         self.assertEqual(ind.ep_sumber, 'AI', 'edit bidang lain tidak boleh merusak riwayat AI')
 
     def test_mengosongkan_ep_mereset_provenance(self):
+        """Kosong = terbuka untuk auto-sync, bukan sentuhan manual.
+
+        Regresi dari docx 2026-10-20: kalau pengosongan ditandai MANUAL, guard
+        "EP sudah terhubung manual" tidak pernah lepas dan auto-sync menolak
+        mengisi baris yang di layar terlihat kosong.
+        """
         ind = self._indikator(ep_terkait=self.ep, ep_sumber='AI', ep_skor='0.8000')
         r = self._post_edit(ind, None)
         self.assertEqual(r.status_code, 302)
         ind.refresh_from_db()
         self.assertIsNone(ind.ep_terkait_id)
-        self.assertEqual(ind.ep_sumber, 'MANUAL')
+        self.assertEqual(ind.ep_sumber, '')
         self.assertIsNone(ind.ep_skor)
+
+    def test_baris_kosong_tidak_dikunci_guard_manual(self):
+        """Setelah dikosongkan, permintaan rekomendasi AI harus 200.
+
+        Inilah keluhan aslinya: kolom EP sudah kosong tetapi tombol AI tetap
+        menolak dengan banner "sudah terhubung manual".
+        """
+        ind = self._indikator(kode_indikator='TEST-LEPAS', ep_terkait=self.ep,
+                              ep_sumber='AI', ep_skor='0.8000')
+        self._post_edit(ind, None)
+        ind.refresh_from_db()
+        fake = {'success': True, 'error': None,
+                'data': {'rekomendasi': [{'ep_code': 'SKP 5 EP 901',
+                                          'confidence': 0.9, 'alasan': 'relevan'}]}}
+        with patch.object(ai_service, '_call_deepseek', return_value=fake):
+            r = self._post_ai(self.mgr, {'indikator_id': ind.pk})
+        self.assertEqual(r.status_code, 200, r.content[:300])
+        self.assertTrue(r.json()['rekomendasi'])
 
     def test_dashboard_menampilkan_ringkasan_bukti_ep(self):
         EvidenceReq.objects.create(standard_item=self.ep, category_type='D',
@@ -541,3 +577,206 @@ class ProvenanceSaveTest(_EPFixture, TestCase):
         html = resp.content.decode()
         self.assertIn('EP Terkait:', html)
         self.assertIn('2 kebutuhan bukti, 0 terunggah', html)
+
+
+class EPLockoutRegressionTest(_EPFixture, TestCase):
+    """Docx 20-10-2026: "tidak bisa sinkronisasi AI walaupun sudah dikosongkan".
+
+    Mengunci D1 (guard menebak), D2 (kosong != manual), D3 (laci status),
+    D4 (Pakai tidak menyimpan), D5 (render tidak jujur), D6 (AI di balik batas
+    durasi lambda).
+    """
+
+    def setUp(self):
+        self.mgr = self._manager('mgr_lock')
+        self.url_rekom = reverse('akreditasi:api_ai_ep_rekomendasi')
+        self.url_terapkan = reverse('akreditasi:api_ai_ep_terapkan')
+        self.url_lepas = reverse('akreditasi:api_ai_ep_lepas')
+        self._set_ai()
+
+    def _post(self, url, user, payload, scope='ai'):
+        reset_rate_limit(scope)
+        c = Client()
+        c.force_login(user)
+        return c.post(url, data=json.dumps(payload), content_type='application/json')
+
+    # ── D1: guard melaporkan fakta yang memblokir, bukan menebak ──────────
+    def test_guard_menyebut_ep_dan_state_blokir(self):
+        ind = self._indikator(kode_indikator='LOCK-01', ep_terkait=self.ep,
+                              ep_sumber='MANUAL')
+        r = self._post(self.url_rekom, self.mgr, {'indikator_id': ind.pk})
+        self.assertEqual(r.status_code, 400)
+        b = r.json()
+        self.assertFalse(b['success'])
+        self.assertEqual(b['ep_terkait']['code'], 'SKP 5 EP 901')
+        self.assertTrue(b['butuh_simpan'], 'pesan harus bilang apa yang kurang')
+        self.assertIn('SKP 5 EP 901', b['error'])
+
+    # ── D2: lepas menulis '' dan membuka auto-sync ────────────────────────
+    def test_lepas_mereset_ke_kosong(self):
+        ind = self._indikator(kode_indikator='LOCK-02', ep_terkait=self.ep,
+                              ep_sumber='MANUAL')
+        r = self._post(self.url_lepas, self.mgr, {'indikator_id': ind.pk})
+        self.assertEqual(r.status_code, 200, r.content[:300])
+        ind.refresh_from_db()
+        self.assertIsNone(ind.ep_terkait_id)
+        self.assertEqual(ind.ep_sumber, '')
+
+    def test_setelah_lepas_guard_tidak_mengunci_lagi(self):
+        ind = self._indikator(kode_indikator='LOCK-03', ep_terkait=self.ep,
+                              ep_sumber='MANUAL')
+        self._post(self.url_lepas, self.mgr, {'indikator_id': ind.pk})
+        fake = {'success': True, 'error': None,
+                'data': {'rekomendasi': [{'ep_code': 'SKP 5 EP 901',
+                                          'confidence': 0.9, 'alasan': 'relevan'}]}}
+        with patch.object(ai_service, '_call_deepseek', return_value=fake):
+            r = self._post(self.url_rekom, self.mgr, {'indikator_id': ind.pk})
+        self.assertEqual(r.status_code, 200, r.content[:300])
+        self.assertEqual(r.json()['sumber'], 'AI')
+
+    def test_baris_kosong_lolos_seleksi_auto_sync(self):
+        """Eligibility memakai ep_terkait IS NULL — baris kosong harus terisi."""
+        ind = self._indikator(kode_indikator='LOCK-04')
+        ind.ep_terkait = self.ep
+        ind.ep_sumber = 'MANUAL'
+        ind.save(update_fields=['ep_terkait', 'ep_sumber', 'ep_skor'])
+        self._post(self.url_lepas, self.mgr, {'indikator_id': ind.pk})
+
+        fake = {'success': True, 'error': None,
+                'data': {'rekomendasi': [{'ep_code': 'SKP 5 EP 901',
+                                          'confidence': 0.91, 'alasan': 'relevan'}]}}
+        from io import StringIO
+        with patch.object(ai_service, '_call_deepseek', return_value=fake):
+            buf = StringIO()
+            call_command('sync_ep_indikator', '--kode', 'LOCK-',
+                         '--apply', '--ai', '--throttle', '0', stdout=buf)
+        ind.refresh_from_db()
+        self.assertIsNotNone(ind.ep_terkait_id,
+                             'baris kosong harus lolos seleksi auto-sync')
+        self.assertEqual(ind.ep_sumber, 'AI')
+
+    # ── D4: Pakai menyimpan, dengan kontrol akses ─────────────────────────
+    def test_terapkan_menulis_link_langsung(self):
+        ind = self._indikator(kode_indikator='LOCK-05')
+        r = self._post(self.url_terapkan, self.mgr,
+                       {'indikator_id': ind.pk, 'ep_id': self.ep2.pk},
+                       scope='ep_write')
+        self.assertEqual(r.status_code, 200, r.content[:300])
+        ind.refresh_from_db()
+        self.assertEqual(ind.ep_terkait_id, self.ep2.pk)
+        self.assertEqual(ind.ep_sumber, 'MANUAL')
+        self.assertIsNone(ind.ep_skor)
+        self.assertEqual(r.json()['ep_terkait']['code'], 'TKRS 1 EP 901')
+
+    def test_terapkan_dibatasi_manager(self):
+        ind = self._indikator(kode_indikator='LOCK-06')
+        staf = self._manager('staf_lock', 'STAF_NAKES')
+        for bad in ({'indikator_id': ind.pk, 'ep_id': self.ep.pk},
+                    {'indikator_id': ind.pk}):
+            r = self._post(self.url_terapkan, staf, bad, scope='ep_write')
+            self.assertEqual(r.status_code, 403)
+            ind.refresh_from_db()
+            self.assertIsNone(ind.ep_terkait_id)
+
+    def test_terapkan_payload_tidak_valid(self):
+        ind = self._indikator(kode_indikator='LOCK-07')
+        self.assertEqual(
+            self._post(self.url_terapkan, self.mgr,
+                       {'indikator_id': ind.pk, 'ep_id': 'xx'},
+                       scope='ep_write').status_code, 400)
+        self.assertEqual(
+            self._post(self.url_terapkan, self.mgr,
+                       {'indikator_id': 999999, 'ep_id': self.ep.pk},
+                       scope='ep_write').status_code, 404)
+        self.assertEqual(
+            self._post(self.url_terapkan, self.mgr,
+                       {'indikator_id': ind.pk, 'ep_id': 999999},
+                       scope='ep_write').status_code, 400)
+        ind.refresh_from_db()
+        self.assertIsNone(ind.ep_terkait_id, 'balasan gagal tidak boleh menulis')
+
+    def test_terapkan_dibatasi_rate_limit(self):
+        ind = self._indikator(kode_indikator='LOCK-08')
+        reset_rate_limit('ep_write')
+        c = Client()
+        c.force_login(self.mgr)
+        status_terakhir = 200
+        for i in range(31):
+            r = c.post(self.url_terapkan,
+                       data=json.dumps({'indikator_id': ind.pk,
+                                        'ep_id': self.ep.pk}),
+                       content_type='application/json')
+            status_terakhir = r.status_code
+            if status_terakhir == 429:
+                break
+        self.assertEqual(status_terakhir, 429,
+                         'penulis tanpa batas = API EP bisa digiling')
+        # Satu laci rate limit: endpoint lepas ikut berhenti setelah 429.
+        reset_rate_limit('ep_write')
+        for i in range(31):
+            r = c.post(self.url_lepas,
+                       data=json.dumps({'indikator_id': ind.pk}),
+                       content_type='application/json')
+            if r.status_code == 429:
+                break
+        self.assertEqual(r.status_code, 429)
+
+    # ── D5: render ulang harus memakai nilai tersimpan ────────────────────
+    def test_render_ulang_setelah_gagal_simpan_menampilkan_state_db(self):
+        ind = self._indikator(kode_indikator='LOCK-09', ep_terkait=self.ep,
+                              ep_sumber='MANUAL')
+        reset_rate_limit()
+        c = Client()
+        c.force_login(self.mgr)
+        with patch.object(IndikatorMutu, 'save',
+                          side_effect=Exception('database bawah')) as m:
+            r = c.post(reverse('akreditasi:indikator_edit', args=[ind.pk]), {
+                'kode_indikator': ind.kode_indikator,
+                'nama_indikator': ind.nama_indikator,
+                'unit': ind.unit_id or '',
+                'jenis': ind.jenis,
+                'dimensi_mutu': ind.dimensi_mutu,
+                'numerator': ind.numerator,
+                'denominator': ind.denominator,
+                'target_nilai': str(ind.target_nilai),
+                'satuan': ind.satuan,
+                'ep_terkait': '',
+            })
+        self.assertTrue(m.called, 'tes ini harus benar-benar gagal menyimpan')
+        self.assertEqual(r.status_code, 200)
+        html = r.content.decode()
+        self.assertIn('SKP 5 EP 901', html,
+                      'layar harus menampilkan nilai TERSIMPAN, bukan form yang gagal')
+
+    # ── D6: AI di balik batas durasi ──────────────────────────────────────
+    def test_timeout_model_di_bawah_batas_lambda(self):
+        ind = self._indikator(kode_indikator='LOCK-10')
+        with patch.object(ai_service, '_call_deepseek') as m:
+            m.return_value = {'success': False, 'error': 'timeout'}
+            ai_service.generate_ep_rekomendasi(self.mgr, ind)
+        dipanggil = m.call_args.kwargs.get('timeout')
+        self.assertIsNotNone(dipanggil)
+        self.assertLessEqual(dipanggil, 55,
+                             'client timeout harus di bawah maxDuration 60s Vercel')
+
+    def test_timeout_tetap_mengembalikan_daftar_terbaca(self):
+        ind = self._indikator(kode_indikator='LOCK-11')
+        with patch.object(ai_service, '_call_deepseek',
+                          return_value={'success': False, 'error': 'HTTP 504 timeout'}):
+            r = self._post(self.url_rekom, self.mgr, {'indikator_id': ind.pk})
+        b = r.json()
+        self.assertTrue(b['success'])
+        self.assertEqual(b['sumber'], 'LEXICAL')
+        self.assertTrue(b['kandidat'], 'fallback harus tetap mengembalikan daftar')
+        self.assertIn('ai_status', b, 'status AI ikut dalam payload')
+
+    # ── Status AI tampil SEBELUM tombol ditekan ───────────────────────────
+    def test_status_ai_ditampilkan_sebelum_klik(self):
+        self._set_ai(ai_enabled=False)
+        ind = self._indikator(kode_indikator='LOCK-12')
+        reset_rate_limit()
+        c = Client()
+        c.force_login(self.mgr)
+        html = c.get(reverse('akreditasi:indikator_edit', args=[ind.pk])).content.decode()
+        self.assertIn('id="ep-ai-status"', html)
+        self.assertIn('AI nonaktif', html)

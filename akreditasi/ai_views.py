@@ -305,10 +305,19 @@ def api_ai_ep_rekomendasi(request):
                             status=404)
 
     # Link manual adalah keputusan manusia — jangan diusik.
+    # Guard ini membaca DATABASE, sedangkan layar menampilkan FORM; keduanya bisa
+    # berbeda (dropdown sudah dikosongkan tapi belum disimpan). Karena itu pesan
+    # menyebut EP yang menghalangi dan memberi jalan keluar sekali klik.
     if ind.ep_terkait_id and ind.ep_sumber == 'MANUAL':
+        ep = ind.ep_terkait
         return JsonResponse({
             'success': False,
-            'error': 'EP sudah terhubung manual. Kosongkan dulu kolom EP bila ingin mengganti.',
+            'error': (f'EP {ep.code} masih tertaut manual di database. '
+                      f'Kosongkan kolom EP lalu tekan "Simpan Perubahan", '
+                      f'atau pakai tombol "Lepas & cari ulang".'),
+            'ep_terkait': {'id': ep.id, 'code': ep.code, 'sumber': ind.ep_sumber},
+            'butuh_simpan': True,
+            'bisa_lepas': True,
         }, status=400)
 
     boost = rule_boost_map(ind.unit)
@@ -328,10 +337,139 @@ def api_ai_ep_rekomendasi(request):
         'sumber': (res.get('data') or {}).get('sumber'),
         'ai_terpakai': bool(res.get('ai_terpakai')),
         'notice': res.get('error'),
+        'ai_status': _ai_status(),
         'ep_terkait': (
             {'id': ind.ep_terkait_id, 'code': ind.ep_terkait.code,
              'sumber': ind.ep_sumber} if ind.ep_terkait_id else None),
     }, status=200 if res.get('success') else 400)
+
+
+def _ai_status() -> dict:
+    """Ketersediaan AI untuk kartu Sinkronisasi EP, SEBELUM operator menekan tombol.
+
+    Tanpa ini operator baru tahu AI mati setelah klik, dan hasil Tier B
+    (kecocokan kata, precision@1 terukur 10%) terbaca sebagai hasil AI.
+    """
+    from .system_models import SystemConfig
+    cfg = SystemConfig.get_solo()
+    try:
+        ada_kunci = bool(cfg.get_deepseek_api_key())
+    except Exception:            # konfigurasi rusak tidak boleh merontokkan kartu
+        ada_kunci = False
+    flag = bool(getattr(cfg, 'ai_enable_ep_sync', True))
+    aktif = bool(flag and cfg.ai_enabled and ada_kunci)
+    return {
+        'aktif': aktif,
+        'flag_ep_sync': flag,
+        'ai_enabled': bool(cfg.ai_enabled),
+        'api_key_terkonfigurasi': ada_kunci,
+        'keterangan': ('AI aktif' if aktif else
+                       'AI nonaktif — hasil akan berupa kecocokan kata'),
+    }
+
+
+@login_required
+@require_POST
+@rate_limit(max_calls=30, window=60, scope='ep_write')
+def api_ai_ep_terapkan(request):
+    """Tulis link EP pilihan operator SEKARANG (tombol 'Pakai' di kartu sinkron).
+
+    Sebelumnya 'Pakai' hanya menggerakkan dropdown di browser — link baru masuk
+    database hanya bila *Simpan Perubahan* ditekan, jadi hasil AI sering hilang
+    begitu operator menutup halaman. Keputusan operator tetap menang:
+    ``ep_sumber='MANUAL'`` sehingga auto-sync takkan pernah menimpanya; asal
+    usul AI-nya tercatat di AuditLog.
+    """
+    from .indikator_views import _is_manager          # lazy: hindari siklus impor
+    from .ai_service import _log_ai_call
+    from .risiko_models import IndikatorMutu
+
+    if not _is_manager(request.user):
+        return JsonResponse(
+            {'success': False, 'error': 'Anda tidak memiliki hak akses sinkronisasi EP.'},
+            status=403)
+
+    data = _parse_json_body(request)
+    if not data:
+        return JsonResponse({'success': False, 'error': 'Payload tidak valid (bukan JSON).'},
+                            status=400)
+    try:
+        ind_id = int(data.get('indikator_id'))
+        ep_id = int(data.get('ep_id'))
+    except (TypeError, ValueError):
+        return JsonResponse({'success': False, 'error': 'indikator_id atau ep_id tidak valid.'},
+                            status=400)
+
+    ind = IndikatorMutu.objects.filter(pk=ind_id).first()
+    if ind is None:
+        return JsonResponse({'success': False, 'error': 'Indikator tidak ditemukan.'},
+                            status=404)
+    ep = StandardItem.objects.filter(pk=ep_id).first()
+    if ep is None:
+        return JsonResponse({'success': False, 'error': 'EP tidak ada di katalog.'},
+                            status=400)
+
+    ind.ep_terkait = ep
+    ind.ep_sumber = 'MANUAL'
+    ind.ep_skor = None
+    ind.save(update_fields=['ep_terkait', 'ep_sumber', 'ep_skor'])
+    _log_ai_call(request.user, 'EP_SYNC',
+                 f'{ind.kode_indikator} -> {ep.code} (diterapkan operator)', True)
+    return JsonResponse({
+        'success': True,
+        'ep_terkait': {'id': ep.id, 'code': ep.code, 'sumber': ind.ep_sumber},
+        'pesan': f'EP {ep.code} tersimpan.',
+    })
+
+
+@login_required
+@require_POST
+@rate_limit(max_calls=30, window=60, scope='ep_write')
+def api_ai_ep_lepas(request):
+    """Lepas link EP dari database (jalan keluar satu klik dari guard manual).
+
+    Guard ``ep-rekomendasi`` membaca database, bukan form: dropdown yang sudah
+    dikosongkan tapi belum disimpan tetap dianggap tertaut. Tombol ini
+    merekonsiliasi keduanya tanpa operator harus menebak state mana yang benar.
+    """
+    from .indikator_views import _is_manager
+    from .ai_service import _log_ai_call
+    from .risiko_models import IndikatorMutu
+
+    if not _is_manager(request.user):
+        return JsonResponse(
+            {'success': False, 'error': 'Anda tidak memiliki hak akses sinkronisasi EP.'},
+            status=403)
+
+    data = _parse_json_body(request)
+    if not data:
+        return JsonResponse({'success': False, 'error': 'Payload tidak valid (bukan JSON).'},
+                            status=400)
+    try:
+        ind_id = int(data.get('indikator_id'))
+    except (TypeError, ValueError):
+        return JsonResponse({'success': False, 'error': 'indikator_id tidak valid.'},
+                            status=400)
+
+    ind = IndikatorMutu.objects.select_related('ep_terkait').filter(pk=ind_id).first()
+    if ind is None:
+        return JsonResponse({'success': False, 'error': 'Indikator tidak ditemukan.'},
+                            status=404)
+
+    if not ind.ep_terkait_id:
+        return JsonResponse({'success': True, 'ep_terkait': None,
+                             'pesan': 'Tidak ada EP yang tertaut.'})
+
+    lama = ind.ep_terkait.code
+    ind.ep_terkait = None
+    # Kosong bukan keputusan manual: baris harus tetap bisa diisi auto-sync.
+    ind.ep_sumber = ''
+    ind.ep_skor = None
+    ind.save(update_fields=['ep_terkait', 'ep_sumber', 'ep_skor'])
+    _log_ai_call(request.user, 'EP_SYNC',
+                 f'{ind.kode_indikator} lepas {lama} (operator)', True)
+    return JsonResponse({'success': True, 'ep_terkait': None,
+                         'pesan': f'EP {lama} dilepas.'})
 
 
 # ── 7. PERUMUSAN INDIKATOR MUTU CERDAS ────────────────────────────────────

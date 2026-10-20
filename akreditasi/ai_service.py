@@ -9,6 +9,7 @@ KEAMANAN:
 """
 import re
 import json
+import time
 import logging
 import requests
 from typing import Optional
@@ -589,9 +590,18 @@ def generate_ep_rekomendasi(user, ind, petunjuk_unit: str = '') -> dict:
     """
     from .system_models import SystemConfig
     from . import ep_sync
+    # Durasi ikut tercatat: regresi 60s batas Vercel terlihat di AuditLog tanpa
+    # perlu mereproduksi secara manual.
+    _mulai = time.monotonic()
 
     def _lexical(reason: str, ai_terpakai: bool = False) -> dict:
         kandidat = ep_sync.lexical_top(ind, n=5)
+        # Tier B ikut tercatat: tanpa ini kegagalan AI (timeout, kunci mati,
+        # kehabisan durasi) tidak meninggalkan jejak dan tidak pernah diperbaiki.
+        _log_ai_call(user, 'EP_SYNC',
+                     f'{time.monotonic() - _mulai:.1f}s | '
+                     f'{getattr(ind, "kode_indikator", "-")} -> LEXICAL, {reason[:60]}',
+                     ai_terpakai)
         return {
             'success': True,
             'ai_terpakai': ai_terpakai,
@@ -625,9 +635,13 @@ def generate_ep_rekomendasi(user, ind, petunjuk_unit: str = '') -> dict:
         daftar_ep='\n'.join(lines),
     )
 
-    # Output kecil (maks 5 entri) tapi input ~35k token: timeout 30s default
-    # terlalu ketat untuk prompt sebesar ini.
-    result = _call_deepseek(prompt, max_tokens=1200, timeout=120)
+    # Output kecil (maks 5 entri) tapi input ~35k token: default 30s terlalu
+    # ketat untuk prompt sebesar ini — tetapi 120s juga salah. `vercel.json`
+    # membatasi fungsi ini 60 detik; HTTP client yang menunggu lebih lama dari
+    # itu mendapat 504 HTML dari Lambda sebelum proses sempat mencapai fallback
+    # Tier B, sehingga operator menerima "Unexpected token <". Batasi client di
+    # bawah batas fungsi: 45s menyisakan ruang untuk fallback dan render.
+    result = _call_deepseek(prompt, max_tokens=1200, timeout=45)
     if not result.get('success'):
         return _lexical(result.get('error') or 'Panggilan AI gagal; memakai kecocokan kata.')
 
@@ -659,6 +673,7 @@ def generate_ep_rekomendasi(user, ind, petunjuk_unit: str = '') -> dict:
 
     cleaned.sort(key=lambda x: -x['confidence'])
     _log_ai_call(user, 'EP_SYNC',
+                 f'{time.monotonic() - _mulai:.1f}s | '
                  f'{getattr(ind, "kode_indikator", "-")} -> {len(cleaned)}/{n_ep} EP, '
                  f'{ditolak} ditolak', True)
     return {

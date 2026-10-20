@@ -121,6 +121,27 @@ def _log(user, aksi, obj, detail=''):
     )
 
 
+def _ep_ai_status() -> dict:
+    """Status AI untuk kartu Sinkronisasi EP, ditampilkan saat halaman dibuka.
+
+    Operasional: operator perlu tahu AI mati SEBELUM menekan tombol, bukan dari
+    hasil Tier B yang terbaca seperti analisis. Kegagalan konfigurasi ditelan —
+    render form tidak boleh rusak hanya karena kartu AI tak bisa membaca
+    konfigurasi.
+    """
+    from .ai_views import _ai_status
+    try:
+        return _ai_status()
+    except Exception:
+        return {
+            'aktif': False,
+            'flag_ep_sync': False,
+            'ai_enabled': False,
+            'api_key_terkonfigurasi': False,
+            'keterangan': 'AI tidak terkonfigurasi — hasil akan berupa kecocokan kata',
+        }
+
+
 def _is_manager(user):
     """SUPER_ADMIN, ADMIN_RS, KOORDINATOR, KEPALA_UNIT."""
     if user.is_superuser:
@@ -513,7 +534,9 @@ def indikator_tambah(request):
                 satuan=satuan,
                 ep_terkait_id=int(ep_id) if ep_id else None,
                 # Pilihan eksplisit operator: auto-sync tidak boleh menimpanya.
-                ep_sumber='MANUAL',
+                # Baris yang lahir tanpa EP bukan keputusan manual — tetap
+                # terbuka untuk auto-sync (lihat cabang '' pada saat dikosongkan).
+                ep_sumber='MANUAL' if ep_id else '',
                 ep_skor=None,
                 rencana_aksi=rencana,
                 pj=pj,
@@ -541,6 +564,7 @@ def indikator_tambah(request):
         'jenis_choices': IndikatorMutu.JENIS_CHOICES,
         'dimensi_choices': IndikatorMutu.DIMENSI_CHOICES,
         'arah_choices': IndikatorMutu.ARAH_CHOICES,
+        'ai_status': _ep_ai_status(),
     }
     return render(request, 'akreditasi/indikator_form.html', ctx)
 
@@ -586,10 +610,15 @@ def indikator_edit(request, indikator_id):
             ind.target_nilai = target_val
             ind.satuan = satuan
             baru_ep = int(ep_id) if ep_id else None
-            if baru_ep is None or baru_ep != ind.ep_terkait_id:
-                # Operator mengambil atau mengosongkan EP = keputusan manusia:
-                # reset provenance supaya sync_ep_indikator --ulang tidak
-                # menimpa pilihannya di kemudian hari.
+            if baru_ep is None:
+                # Mengosongkan bukan keputusan manual: baris harus tetap bisa
+                # diisi auto-sync, dan guard "link manual" tidak boleh mengunci
+                # operator pada kolom yang sudah kosong.
+                ind.ep_sumber = ''
+                ind.ep_skor = None
+            elif baru_ep != ind.ep_terkait_id:
+                # Operator memilih EP = keputusan manusia:
+                # sync_ep_indikator --ulang tidak boleh menimpanya nanti.
                 ind.ep_sumber = 'MANUAL'
                 ind.ep_skor = None
             ind.ep_terkait_id = baru_ep
@@ -605,6 +634,14 @@ def indikator_edit(request, indikator_id):
         except Exception as e:
             if 'Kode indikator sudah ada' not in str(e):
                 messages.error(request, f'Gagal menyimpan perubahan: {e}')
+            # Render ulang harus memakai nilai TERSIMPAN, bukan nilai dalam
+            # memori yang gagal disimpan. Tanpa ini layar menampilkan kolom EP
+            # kosong padahal database masih tertaut — divergensi yang membuat
+            # guard AI menolak kolom yang terlihat sudah kosong.
+            try:
+                ind.refresh_from_db()
+            except Exception:
+                pass
 
     units = UnitKerja.objects.filter(is_active=True).order_by('name')
     ep_list = StandardItem.objects.select_related('category').order_by('category__code', 'code')
@@ -619,6 +656,7 @@ def indikator_edit(request, indikator_id):
         'jenis_choices': IndikatorMutu.JENIS_CHOICES,
         'dimensi_choices': IndikatorMutu.DIMENSI_CHOICES,
         'arah_choices': IndikatorMutu.ARAH_CHOICES,
+        'ai_status': _ep_ai_status(),
     }
     return render(request, 'akreditasi/indikator_form.html', ctx)
 
