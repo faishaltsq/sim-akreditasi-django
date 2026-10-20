@@ -201,6 +201,11 @@ MEDIA_ROOT = BASE_DIR / 'media'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
+# SQLite (lokal & uji) tidak mendukung UniqueConstraint.nulls_distinct (W047).
+# Aturan "satu laporan per periode per cakupan" dijaga LaporanMutu.save() pada
+# semua backend; constraint database tetap dipakai di Postgres produksi.
+SILENCED_SYSTEM_CHECKS = ['models.W047']
+
 CRISPY_ALLOWED_TEMPLATE_PACKS = 'bootstrap5'
 CRISPY_TEMPLATE_PACK = 'bootstrap5'
 

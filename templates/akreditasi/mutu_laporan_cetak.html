@@ -1,0 +1,250 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<title>{{ laporan.get_jenis_display }} — {{ laporan.periode_label }}</title>
+<style>
+    * { box-sizing: border-box; }
+    body { font-family: "Segoe UI", Arial, sans-serif; font-size: 11px; color: #0f172a; margin: 0; padding: 16px; }
+    .kop { text-align: center; border-bottom: 3px double #0f172a; padding-bottom: 6px; margin-bottom: 10px; }
+    .kop h1 { font-size: 17px; margin: 0; letter-spacing: .04em; }
+    .kop .alamat { font-size: 10px; color: #475569; margin-top: 2px; }
+    .kop .judul { font-size: 13px; font-weight: 800; margin-top: 8px; text-transform: uppercase; }
+    .kop .nomor { font-size: 10px; color: #475569; }
+    .meta { width: 100%; border-collapse: collapse; margin-bottom: 12px; }
+    .meta td { border: 1px solid #94a3b8; padding: 4px 6px; vertical-align: top; }
+    .meta td.label { width: 160px; font-weight: 700; background: #f1f5f9; }
+    h2.tier { font-size: 12px; margin: 14px 0 5px; }
+    table.data { width: 100%; border-collapse: collapse; font-size: 9.5px; }
+    table.data th, table.data td { border: 1px solid #94a3b8; padding: 3px 4px; vertical-align: top; }
+    table.data thead th { background: #e2e8f0; text-align: center; }
+    table.data td.num { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+    table.data td.ctr { text-align: center; }
+    .analisis { width: 100%; border-collapse: collapse; font-size: 9.5px; margin-top: 4px; }
+    .analisis th, .analisis td { border: 1px solid #94a3b8; padding: 4px 5px; vertical-align: top; }
+    .analisis thead th { background: #e2e8f0; }
+    .ringkasan { display: flex; gap: 8px; margin: 8px 0 4px; }
+    .ringkasan div { border: 1px solid #94a3b8; padding: 4px 10px; text-align: center; font-size: 10px; }
+    .ringkasan strong { display: block; font-size: 14px; }
+    .ttd { width: 100%; border-collapse: collapse; margin-top: 24px; page-break-inside: avoid; }
+    .ttd td { width: 25%; text-align: center; font-size: 10px; padding-top: 10px; vertical-align: top; }
+    .ttd .nama { font-weight: 700; }
+    .narasi { margin: 0 0 8px; font-size: 9.5px; }
+    .narasi-judul { font-weight: 700; margin-bottom: 2px; }
+    .narasi-isi { text-align: justify; }
+    .kosong { text-align: center; padding: 24px; color: #64748b; border: 1px dashed #94a3b8; }
+    .footer { margin-top: 16px; font-size: 9px; color: #64748b; text-align: center; }
+    @page { size: A4 landscape; margin: 12mm; }
+    @media print { body { padding: 0; } .no-print { display: none; } }
+</style>
+</head>
+<body>
+
+<div class="kop">
+    <h1>{{ rs_profile.name|upper }}</h1>
+    <div class="alamat">
+        {{ rs_profile.address|default:"" }}
+        {% if rs_profile.phone %} · Telp {{ rs_profile.phone }}{% endif %}
+    </div>
+    <div class="judul">{{ laporan.get_jenis_display }}</div>
+    <div class="nomor">
+        {% if laporan.nomor %}Nomor: {{ laporan.nomor }} · {% endif %}
+        Periode {{ laporan.periode_label }} · {{ laporan.scope_label }}
+    </div>
+</div>
+
+<table class="meta">
+    <tr>
+        <td class="label">Jenis Laporan</td><td>{{ laporan.get_jenis_display }}</td>
+        <td class="label">Status</td><td>{{ laporan.get_status_display }}</td>
+    </tr>
+    <tr>
+        <td class="label">Periode</td><td>{{ laporan.periode_label }}</td>
+        <td class="label">Batas Waktu</td><td>{{ laporan.batas_waktu|date:'d F Y' }}</td>
+    </tr>
+    <tr>
+        <td class="label">Cakupan</td><td>{{ laporan.scope_label }}</td>
+        <td class="label">Dibuat Oleh</td>
+        <td>{{ laporan.pembuat_nama|default:"—" }} · {{ laporan.dibuat_pada|date:'d/m/Y' }}</td>
+    </tr>
+</table>
+
+<div class="ringkasan">
+    <div><strong>{{ jumlah_baris }}</strong>Indikator</div>
+    <div><strong>{{ jumlah_tercapai }}</strong>Tercapai</div>
+    <div><strong>{{ jumlah_tidak_tercapai }}</strong>Tidak Tercapai</div>
+    <div><strong>{{ jumlah_tanpa_data }}</strong>Tanpa Data</div>
+</div>
+
+{% if not baris %}
+<div class="kosong">Belum ada data capaian untuk periode {{ laporan.periode_label }}.</div>
+{% endif %}
+
+{% for kode, judul, rows in baris_per_jenis %}
+{% if rows %}
+<h2 class="tier">{{ judul }} ({{ rows|length }})</h2>
+<table class="data">
+    <thead>
+        <tr>
+            <th style="width:26px;">No</th>
+            <th style="width:70px;">Kode</th>
+            <th>Indikator</th>
+            <th style="width:90px;">Unit</th>
+            <th style="width:34px;">N</th>
+            <th style="width:34px;">D</th>
+            <th style="width:62px;">Capaian</th>
+            <th style="width:56px;">Target</th>
+            <th style="width:56px;">Status</th>
+            <th style="width:90px;">PJ</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for b in rows %}
+        <tr>
+            <td class="ctr">{{ forloop.counter }}</td>
+            <td>{{ b.kode }}</td>
+            <td>{{ b.nama }}</td>
+            <td>{{ b.unit_nama|default:"—" }}</td>
+            <td class="num">{{ b.numerator|default:"—" }}</td>
+            <td class="num">{{ b.denominator|default:"—" }}</td>
+            <td class="num">{% if b.nilai_capaian is not None %}{{ b.nilai_capaian }} {{ b.satuan }}{% else %}—{% endif %}</td>
+            <td class="ctr">{{ b.arah }} {{ b.target }}</td>
+            <td class="ctr">
+                {% if b.status_tercapai is True %}✓{% elif b.status_tercapai is False %}✗{% else %}—{% endif %}
+            </td>
+            <td>{{ b.indikator.pj|default:"—" }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endif %}
+{% endfor %}
+
+{% if pdsa_rows %}
+<h2 class="tier">Analisis PDSA &amp; Tindak Lanjut</h2>
+<table class="analisis">
+    <thead>
+        <tr><th style="width:80px;">Kode</th><th>Analisis PDSA</th><th>Tindak Lanjut</th></tr>
+    </thead>
+    <tbody>
+        {% for b in pdsa_rows %}
+        <tr>
+            <td>{{ b.kode }}</td>
+            <td>{{ b.analisis|linebreaksbr|default:"—" }}</td>
+            <td>{{ b.tindak_lanjut|linebreaksbr|default:"—" }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endif %}
+
+{% if tren %}
+<h2 class="tier">Tren Capaian Bulanan ({{ tren.bulan_header|length }} bulan)</h2>
+<table class="analisis">
+    <thead>
+        <tr>
+            <th style="width:70px;">Kode</th>
+            <th>Indikator</th>
+            {% for h in tren.bulan_header %}<th style="width:30px;">{{ h }}</th>{% endfor %}
+            <th style="width:44px;">Min</th>
+            <th style="width:44px;">Maks</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for t in tren.baris %}
+        <tr>
+            <td>{{ t.kode }}</td>
+            <td>{{ t.nama }}</td>
+            {% for v in t.nilai_bulan %}<td class="num">{% if v is None %}—{% else %}{{ v|floatformat:1 }}{% endif %}</td>{% endfor %}
+            <td class="num">{% if t.terendah is None %}—{% else %}{{ t.terendah|floatformat:1 }}{% endif %}</td>
+            <td class="num">{% if t.tertinggi is None %}—{% else %}{{ t.tertinggi|floatformat:1 }}{% endif %}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+<div class="narasi-isi">Capaian periode memakai ΣN/ΣD, bukan rerata kolom bulan di atas.</div>
+{% endif %}
+
+{% if seksi_list %}
+<h2 class="tier">Narasi Laporan</h2>
+{% for s in seksi_list %}
+<div class="narasi">
+    <div class="narasi-judul">{{ s.judul }}</div>
+    <div class="narasi-isi">{{ s.isi|linebreaksbr }}</div>
+</div>
+{% endfor %}
+{% endif %}
+
+{% if ikp %}
+<h2 class="tier">Rekap Kejadian IKP — {{ ikp.tahun }}</h2>
+<table class="analisis">
+    <thead>
+        <tr>
+            <th>Jenis Insiden</th>
+            <th style="width:70px;">Jumlah</th>
+            {% for b in ikp.bulan_header %}<th style="width:34px;">{{ b|slice:":3" }}</th>{% endfor %}
+        </tr>
+    </thead>
+    <tbody>
+        {% for r in ikp.baris %}
+        <tr>
+            <td>{{ r.label }}</td>
+            <td class="num">{{ r.jumlah }}</td>
+            {% for j in r.per_bulan %}<td class="num">{{ j }}</td>{% endfor %}
+        </tr>
+        {% endfor %}
+    </tbody>
+    <tfoot>
+        <tr>
+            <td><strong>Total</strong></td>
+            <td class="num"><strong>{{ ikp.total }}</strong></td>
+            <td colspan="{{ ikp.bulan_header|length }}"></td>
+        </tr>
+    </tfoot>
+</table>
+{% if ikp.jenis_lain %}
+<div class="narasi-isi">{{ ikp.jenis_lain }} kejadian berkategori lain tidak termasuk lima jenis di atas.</div>
+{% endif %}
+{% endif %}
+
+<table class="ttd">
+    <tr>
+        <td>
+            <div>Diverifikasi Oleh</div><br><br>
+            <div class="nama">({{ laporan.diverifikasi_oleh_nama|default:"............................" }})</div>
+            <div>{{ laporan.diverifikasi_jabatan|default:"Kepala Unit" }}</div>
+            <div>{% if laporan.diverifikasi_pada %}{{ laporan.diverifikasi_pada|date:'d/m/Y' }}{% else %}............................{% endif %}</div>
+        </td>
+        <td>
+            <div>Disetujui Oleh</div><br><br>
+            <div class="nama">({{ laporan.disetujui_oleh_nama|default:"............................" }})</div>
+            <div>Komite Mutu</div>
+            <div>{% if laporan.disetujui_pada %}{{ laporan.disetujui_pada|date:'d/m/Y' }}{% else %}............................{% endif %}</div>
+        </td>
+        <td>
+            <div>Diterbitkan Oleh</div><br><br>
+            <div class="nama">(............................)</div>
+            <div>Direksi</div>
+            <div>{% if laporan.terbit_pada %}{{ laporan.terbit_pada|date:'d/m/Y' }}{% else %}............................{% endif %}</div>
+        </td>
+        <td>
+            <div>Diterima Oleh</div><br><br>
+            <div class="nama">(............................)</div>
+            <div>Dewan Pengawas / ASESOR</div>
+            <div>............................</div>
+        </td>
+    </tr>
+</table>
+
+<div class="footer">
+    Dokumen dicetak dari ARIMA · {{ laporan.periode_label }} ·
+    status {{ laporan.get_status_display }} · batas waktu {{ laporan.batas_waktu|date:'d/m/Y' }}
+</div>
+
+<div class="no-print" style="text-align:center; margin-top:14px;">
+    <button onclick="window.print()">Cetak</button>
+</div>
+
+</body>
+</html>

@@ -3,6 +3,7 @@ from . import views
 from . import risiko_views
 from . import ai_views
 from . import indikator_views
+from . import mutu_laporan
 
 app_name = 'akreditasi'
 
@@ -102,6 +103,18 @@ urlpatterns = [
     path('indikator-mutu/<int:indikator_id>/capaian/', indikator_views.indikator_input_capaian, name='indikator_input_capaian'),
     path('indikator-mutu/api/tren/<int:indikator_id>/', indikator_views.api_indikator_tren, name='api_indikator_tren'),
     path('indikator-mutu/api/komparasi-unit/', indikator_views.api_indikator_komparasi_unit, name='api_indikator_komparasi_unit'),
+
+    # Modul Laporan Capaian Indikator Mutu (bulanan / semester / tahunan)
+    path('laporan-mutu/', mutu_laporan.laporan_mutu_daftar, name='laporan_mutu_daftar'),
+    path('laporan-mutu/baru/', mutu_laporan.laporan_mutu_create, name='laporan_mutu_create'),
+    path('laporan-mutu/<int:pk>/', mutu_laporan.laporan_mutu_detail, name='laporan_mutu_detail'),
+    path('laporan-mutu/<int:pk>/analisis/', mutu_laporan.laporan_mutu_simpan_analisis, name='laporan_mutu_simpan_analisis'),
+    path('laporan-mutu/<int:pk>/seksi/', mutu_laporan.laporan_mutu_simpan_seksi, name='laporan_mutu_simpan_seksi'),
+    path('laporan-mutu/<int:pk>/verifikasi/', mutu_laporan.laporan_mutu_verifikasi, name='laporan_mutu_verifikasi'),
+    path('laporan-mutu/<int:pk>/setujui/', mutu_laporan.laporan_mutu_setujui, name='laporan_mutu_setujui'),
+    path('laporan-mutu/<int:pk>/regenerasi/', mutu_laporan.laporan_mutu_regenerasi, name='laporan_mutu_regenerasi'),
+    path('laporan-mutu/<int:pk>/cetak/', mutu_laporan.laporan_mutu_cetak, name='laporan_mutu_cetak'),
+    path('laporan-mutu/<int:pk>/pdf/', mutu_laporan.laporan_mutu_pdf, name='laporan_mutu_pdf'),
 
     # Panduan / Dokumentasi Interaktif
     path('panduan/', views.panduan_dokumentasi, name='panduan'),

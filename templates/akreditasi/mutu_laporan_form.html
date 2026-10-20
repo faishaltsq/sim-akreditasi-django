@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+
+{% block title %}Buat Laporan Mutu — ARIMA{% endblock %}
+{% block page_title %}Buat Laporan Capaian Indikator Mutu{% endblock %}
+{% block page_subtitle %}Pilih periode & cakupan — angka akan dibekukan saat laporan dibuat{% endblock %}
+
+{% block content %}
+<div class="container py-3" style="max-width:640px;">
+    <form method="post">
+        {% csrf_token %}
+
+        <div class="mb-3">
+            <label class="form-label fw-semibold">Jenis Laporan</label>
+            <select name="jenis" id="f-jenis" class="form-select form-select-sm" onchange="ubahJenis()">
+                <option value="BULANAN">Laporan Bulanan</option>
+                <option value="SEMESTER">Laporan Semester</option>
+                <option value="TAHUNAN">Laporan Tahunan</option>
+            </select>
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label fw-semibold">Tahun</label>
+            <select name="tahun" class="form-select form-select-sm">
+                {% for t in tahun_choices %}
+                <option value="{{ t }}"{% if t == tahun_sekarang %} selected{% endif %}>{{ t }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="mb-3" id="wrap-bulan">
+            <label class="form-label fw-semibold">Bulan</label>
+            <select name="bulan" class="form-select form-select-sm">
+                <option value="">— pilih bulan —</option>
+                {% for no, nama in bulan_choices %}
+                <option value="{{ no }}">{{ nama }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="mb-3 d-none" id="wrap-semester">
+            <label class="form-label fw-semibold">Semester</label>
+            <select name="semester" class="form-select form-select-sm">
+                <option value="1">Semester I (Januari – Juni)</option>
+                <option value="2">Semester II (Juli – Desember)</option>
+            </select>
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label fw-semibold">Cakupan</label>
+            <select name="scope" id="f-scope" class="form-select form-select-sm" {% if not boleh_rs %}disabled{% endif %} onchange="ubahScope()">
+                <option value="UNIT">Unit Kerja</option>
+                {% if boleh_rs %}<option value="RS">Seluruh Rumah Sakit</option>{% endif %}
+            </select>
+            {% if not boleh_rs %}
+            <input type="hidden" name="scope" value="UNIT">
+            {% endif %}
+        </div>
+
+        <div class="mb-3" id="wrap-unit">
+            <label class="form-label fw-semibold">Unit Kerja</label>
+            <select name="unit" class="form-select form-select-sm">
+                {% for u in daftar_unit %}
+                <option value="{{ u.pk }}" {% if unit_awal and u.pk == unit_awal.pk %}selected{% endif %}>{{ u.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="alert alert-light border small mb-3">
+            <i class="bi bi-info-circle me-1"></i>
+            Batas waktu pelaporan akan dihitung otomatis: bulanan maksimum tgl 10 bulan
+            berikutnya, Semester I maksimum 20 Juli, Semester II maksimum 20 Januari,
+            tahunan maksimum 31 Januari tahun berikutnya.
+        </div>
+
+        <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-primary btn-sm">
+                <i class="bi bi-file-earmark-plus me-1"></i> Buat &amp; Bekukan Angka
+            </button>
+            <a href="{% url 'akreditasi:laporan_mutu_daftar' %}" class="btn btn-outline-secondary btn-sm">Batal</a>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function ubahJenis() {
+    const j = document.getElementById('f-jenis').value;
+    document.getElementById('wrap-bulan').classList.toggle('d-none', j !== 'BULANAN');
+    document.getElementById('wrap-semester').classList.toggle('d-none', j !== 'SEMESTER');
+}
+function ubahScope() {
+    const s = document.getElementById('f-scope').value;
+    document.getElementById('wrap-unit').classList.toggle('d-none', s === 'RS');
+}
+</script>
+{% endblock %}

@@ -262,6 +262,13 @@
             <span class="nav-desc">INM / IMP-RS / IMP-Unit</span>
         </span>
     </a>
+    <a href="{% url 'akreditasi:laporan_mutu_daftar' %}" class="nav-link {% if request.resolver_match.url_name|slice:':12' == 'laporan_mutu' %}active{% endif %}">
+        <span class="nav-icon"><i class="bi bi-file-earmark-ruled-fill"></i></span>
+        <span class="nav-text">
+            <span class="nav-title">Laporan Mutu</span>
+            <span class="nav-desc">Bulanan · Semester · Tahunan</span>
+        </span>
+    </a>
 
     <!-- 4. LAPORAN (HANYA ADMIN/DIREKTUR) -->
     {% if not request.user.profile.is_unit_scoped %}
