@@ -229,6 +229,12 @@ class ViewLaporanMutuTest(TestCase):
         status = {b.kode: b.status_tercapai for b in baris}
         self.assertTrue(status[self.ind_baik.kode_indikator])
         self.assertFalse(status[self.ind_buruk.kode_indikator])
+        # Angka N/D periode ikut dibekukan — kolom N/D di laporan menampilkan
+        # angka, bukan deskripsi rumus dari master.
+        n = {b.kode: b.nilai_numerator for b in baris}
+        d = {b.kode: b.nilai_denominator for b in baris}
+        self.assertEqual(str(n[self.ind_baik.kode_indikator]), '90.00')
+        self.assertEqual(str(d[self.ind_baik.kode_indikator]), '100.00')
 
     def test_snapshot_tidak_berubah_ketika_data_dikoreksi(self):
         self._buat_laporan()
@@ -628,3 +634,169 @@ class ViewLaporanMutuTest(TestCase):
         self.assertIn(b'Laporan Mutu', res.content)  # judul di metadata
         self.assertIn('attachment', res['Content-Disposition'])
         self.assertIn('.pdf', res['Content-Disposition'])
+
+
+class MonevKeAnalisisLaporanTest(TestCase):
+    """Analisis & tindak lanjut laporan diambil dari Monitoring-Evaluasi.
+
+    Sumbernya RisikoUnit (halaman risiko/monitoring-evaluasi) yang indikatornya
+    tertaut ke master; periode triwulan harus cocok dengan bulan laporan.
+    """
+
+    def setUp(self):
+        from akreditasi.risiko_models import RisikoUnit
+
+        self.unit = _unit('MONEV')
+        self.ind = _ind(self.unit, 'MONEV-1', target=Decimal('85.00'))
+        CatatanIndikator.objects.create(
+            indikator=self.ind, tahun=2026, bulan=3,
+            nilai_numerator=50, nilai_denominator=100)
+        self.admin = _user('admin-monev', 'ADMIN_RS')
+
+        self.risiko = RisikoUnit.objects.create(
+            unit=self.unit, tahun=2026, periode='TRIWULAN_1',
+            kategori_risiko='KLINIS',
+            jenis_risiko='Kegagalan triase IGD',
+            masalah='Response time > 5 menit',
+            deskripsi_risiko='Response time triase melampaui standar',
+            dampak=3, probabilitas=3, strategi_mitigasi='KURANGI',
+            rencana_aksi='Sosialisasi SOP triase',
+            pj_mitigasi='Ka. IGD',
+            status='EVALUASI',
+            indikator_mutu_terkait=self.ind,
+            evaluasi_capaian='Capaian turun karena beban kunjungan naik.',
+            akar_masalah_rca='Jumlah perawat triase kurang pada shift malam.',
+            rencana_tindak_lanjut='Tambah satu perawat triase shift malam.',
+            pj_rtl='Ka. IGD', status_rtl='PROSES',
+        )
+
+    def _laporan(self, jenis='BULANAN', bulan='3'):
+        payload = {'jenis': jenis, 'tahun': '2026', 'scope': 'UNIT',
+                   'unit': self.unit.pk}
+        if jenis == 'BULANAN':
+            payload['bulan'] = bulan
+        elif jenis == 'SEMESTER':
+            payload['semester'] = '1'
+        self.client.force_login(self.admin)
+        self.client.post(reverse('akreditasi:laporan_mutu_create'), payload)
+        return LaporanMutu.objects.latest('id')
+
+    def test_periode_monev_mengikuti_bulan_laporan(self):
+        from akreditasi.mutu_laporan import periode_monev_relevan
+
+        self.assertEqual(periode_monev_relevan('BULANAN', 3),
+                         ['TRIWULAN_1', 'TAHUNAN'])
+        self.assertEqual(periode_monev_relevan('BULANAN', 8),
+                         ['TRIWULAN_3', 'TAHUNAN'])
+        self.assertEqual(periode_monev_relevan('SEMESTER', semester=2),
+                         ['TRIWULAN_3', 'TRIWULAN_4', 'TAHUNAN'])
+
+    def test_tarik_monev_mengisi_analisis_dan_tindak_lanjut(self):
+        laporan = self._laporan()
+        res = self.client.post(
+            reverse('akreditasi:laporan_mutu_tarik_monev', args=[laporan.pk]))
+        self.assertEqual(res.status_code, 302)
+
+        baris = laporan.baris.get(kode=self.ind.kode_indikator)
+        self.assertIn('beban kunjungan naik', baris.analisis)
+        self.assertIn('perawat triase kurang', baris.analisis)
+        self.assertIn('Tambah satu perawat triase', baris.tindak_lanjut)
+        self.assertIn('Ka. IGD', baris.tindak_lanjut)
+
+    def test_tarik_monev_tidak_menimpa_tanpa_centang(self):
+        laporan = self._laporan()
+        baris = laporan.baris.get(kode=self.ind.kode_indikator)
+        baris.analisis = 'Analisis manual petugas'
+        baris.save(update_fields=['analisis'])
+
+        self.client.post(
+            reverse('akreditasi:laporan_mutu_tarik_monev', args=[laporan.pk]))
+        baris.refresh_from_db()
+        self.assertEqual(baris.analisis, 'Analisis manual petugas')
+        # Kolom yang masih kosong tetap terisi.
+        self.assertIn('Tambah satu perawat triase', baris.tindak_lanjut)
+
+    def test_tarik_monev_dengan_timpa_mengganti_analisis_manual(self):
+        laporan = self._laporan()
+        baris = laporan.baris.get(kode=self.ind.kode_indikator)
+        baris.analisis = 'Analisis manual petugas'
+        baris.save(update_fields=['analisis'])
+
+        self.client.post(
+            reverse('akreditasi:laporan_mutu_tarik_monev', args=[laporan.pk]),
+            {'timpa': '1'})
+        baris.refresh_from_db()
+        self.assertIn('beban kunjungan naik', baris.analisis)
+
+    def test_tarik_monev_ditolak_setelah_verifikasi(self):
+        laporan = self._laporan()
+        laporan.status = 'DIVERIFIKASI'
+        laporan.save(update_fields=['status'])
+
+        self.client.post(
+            reverse('akreditasi:laporan_mutu_tarik_monev', args=[laporan.pk]))
+        baris = laporan.baris.get(kode=self.ind.kode_indikator)
+        self.assertEqual(baris.analisis, '')
+
+    def test_detail_menandai_baris_yang_punya_sumber_monev(self):
+        laporan = self._laporan()
+        res = self.client.get(
+            reverse('akreditasi:laporan_mutu_detail', args=[laporan.pk]))
+        self.assertEqual(res.status_code, 200)
+        self.assertContains(res, 'Tarik dari MONEV')
+        self.assertContains(res, 'MONEV · Triwulan I')
+
+    def test_laporan_bulan_di_luar_triwulan_tidak_menarik_analisis(self):
+        """MONEV Triwulan I tidak boleh bocor ke laporan bulan April."""
+        laporan = self._laporan(bulan='4')
+        res = self.client.post(
+            reverse('akreditasi:laporan_mutu_tarik_monev', args=[laporan.pk]))
+        self.assertEqual(res.status_code, 302)
+        baris = laporan.baris.get(kode=self.ind.kode_indikator)
+        self.assertEqual(baris.analisis, '')
+
+    def test_cetak_memakai_analisis_monev_tanpa_menyimpan(self):
+        """Dokumen cetak menampilkan analisis MONEV walau baris masih kosong."""
+        laporan = self._laporan()
+        res = self.client.get(
+            reverse('akreditasi:laporan_mutu_cetak', args=[laporan.pk]))
+        self.assertEqual(res.status_code, 200)
+        self.assertContains(res, 'beban kunjungan naik')
+        self.assertContains(res, 'Tambah satu perawat triase')
+        # Cetak tidak boleh menulis ke baris draf.
+        baris = laporan.baris.get(kode=self.ind.kode_indikator)
+        self.assertEqual(baris.analisis, '')
+        self.assertEqual(baris.tindak_lanjut, '')
+
+    def test_pdf_memuat_analisis_monev(self):
+        import io
+
+        from pypdf import PdfReader
+
+        laporan = self._laporan()
+        res = self.client.get(
+            reverse('akreditasi:laporan_mutu_pdf', args=[laporan.pk]))
+        teks = "\n".join(p.extract_text() or "" for p in
+                          PdfReader(io.BytesIO(res.content)).pages)
+        self.assertIn('beban kunjungan naik', teks)
+
+    def test_monev_kosong_tidak_mengisi_apa_pun(self):
+        """RisikoUnit tanpa evaluasi/RTL tidak boleh menulis teks sampah."""
+        from akreditasi.risiko_models import RisikoUnit
+
+        RisikoUnit.objects.filter(pk=self.risiko.pk).update(
+            evaluasi_capaian='', akar_masalah_rca='', rca_fishbone={},
+            failure_mode_fmea='', rca_ulang='',
+            rencana_tindak_lanjut='', pj_rtl='', deadline_rtl=None)
+
+        laporan = self._laporan()
+        self.client.post(
+            reverse('akreditasi:laporan_mutu_tarik_monev', args=[laporan.pk]))
+        baris = laporan.baris.get(kode=self.ind.kode_indikator)
+        self.assertEqual(baris.analisis, '')
+        self.assertEqual(baris.tindak_lanjut, '')
+
+        # Halaman detail pun tidak menandai baris itu punya sumber MONEV.
+        res = self.client.get(
+            reverse('akreditasi:laporan_mutu_detail', args=[laporan.pk]))
+        self.assertNotContains(res, 'Tarik dari MONEV')

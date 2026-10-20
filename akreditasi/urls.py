@@ -109,6 +109,7 @@ urlpatterns = [
     path('laporan-mutu/baru/', mutu_laporan.laporan_mutu_create, name='laporan_mutu_create'),
     path('laporan-mutu/<int:pk>/', mutu_laporan.laporan_mutu_detail, name='laporan_mutu_detail'),
     path('laporan-mutu/<int:pk>/analisis/', mutu_laporan.laporan_mutu_simpan_analisis, name='laporan_mutu_simpan_analisis'),
+    path('laporan-mutu/<int:pk>/tarik-monev/', mutu_laporan.laporan_mutu_tarik_monev, name='laporan_mutu_tarik_monev'),
     path('laporan-mutu/<int:pk>/seksi/', mutu_laporan.laporan_mutu_simpan_seksi, name='laporan_mutu_simpan_seksi'),
     path('laporan-mutu/<int:pk>/verifikasi/', mutu_laporan.laporan_mutu_verifikasi, name='laporan_mutu_verifikasi'),
     path('laporan-mutu/<int:pk>/setujui/', mutu_laporan.laporan_mutu_setujui, name='laporan_mutu_setujui'),

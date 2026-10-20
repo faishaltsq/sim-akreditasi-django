@@ -16,13 +16,13 @@
     .meta td { border: 1px solid #94a3b8; padding: 4px 6px; vertical-align: top; }
     .meta td.label { width: 160px; font-weight: 700; background: #f1f5f9; }
     h2.tier { font-size: 12px; margin: 14px 0 5px; }
-    table.data { width: 100%; border-collapse: collapse; font-size: 9.5px; }
-    table.data th, table.data td { border: 1px solid #94a3b8; padding: 3px 4px; vertical-align: top; }
+    table.data { width: 100%; border-collapse: collapse; font-size: 9.5px; table-layout: fixed; }
+    table.data th, table.data td { border: 1px solid #94a3b8; padding: 3px 4px; vertical-align: top; word-break: break-word; overflow-wrap: anywhere; }
     table.data thead th { background: #e2e8f0; text-align: center; }
     table.data td.num { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
     table.data td.ctr { text-align: center; }
-    .analisis { width: 100%; border-collapse: collapse; font-size: 9.5px; margin-top: 4px; }
-    .analisis th, .analisis td { border: 1px solid #94a3b8; padding: 4px 5px; vertical-align: top; }
+    .analisis { width: 100%; border-collapse: collapse; font-size: 9.5px; margin-top: 4px; table-layout: fixed; }
+    .analisis th, .analisis td { border: 1px solid #94a3b8; padding: 4px 5px; vertical-align: top; word-break: break-word; overflow-wrap: anywhere; }
     .analisis thead th { background: #e2e8f0; }
     .ringkasan { display: flex; gap: 8px; margin: 8px 0 4px; }
     .ringkasan div { border: 1px solid #94a3b8; padding: 4px 10px; text-align: center; font-size: 10px; }
@@ -106,8 +106,8 @@
             <td>{{ b.kode }}</td>
             <td>{{ b.nama }}</td>
             <td>{{ b.unit_nama|default:"—" }}</td>
-            <td class="num">{{ b.numerator|default:"—" }}</td>
-            <td class="num">{{ b.denominator|default:"—" }}</td>
+            <td class="num" title="Numerator: {{ b.numerator }}">{{ b.nilai_numerator|default_if_none:"—" }}</td>
+            <td class="num" title="Denominator: {{ b.denominator }}">{{ b.nilai_denominator|default_if_none:"—" }}</td>
             <td class="num">{% if b.nilai_capaian is not None %}{{ b.nilai_capaian }} {{ b.satuan }}{% else %}—{% endif %}</td>
             <td class="ctr">{{ b.arah }} {{ b.target }}</td>
             <td class="ctr">
@@ -124,15 +124,20 @@
 {% if pdsa_rows %}
 <h2 class="tier">Analisis PDSA &amp; Tindak Lanjut</h2>
 <table class="analisis">
+    <colgroup>
+        <col style="width:90px;">
+        <col style="width:50%;">
+        <col style="width:50%;">
+    </colgroup>
     <thead>
-        <tr><th style="width:80px;">Kode</th><th>Analisis PDSA</th><th>Tindak Lanjut</th></tr>
+        <tr><th>Kode</th><th>Analisis PDSA</th><th>Tindak Lanjut</th></tr>
     </thead>
     <tbody>
         {% for b in pdsa_rows %}
         <tr>
             <td>{{ b.kode }}</td>
-            <td>{{ b.analisis|linebreaksbr|default:"—" }}</td>
-            <td>{{ b.tindak_lanjut|linebreaksbr|default:"—" }}</td>
+            <td>{{ b.analisis_dokumen|linebreaksbr|default:"—" }}</td>
+            <td>{{ b.tindak_lanjut_dokumen|linebreaksbr|default:"—" }}</td>
         </tr>
         {% endfor %}
     </tbody>

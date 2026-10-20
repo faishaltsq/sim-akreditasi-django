@@ -4,6 +4,14 @@
 {% block page_title %}Laporan Capaian Indikator Mutu{% endblock %}
 {% block page_subtitle %}Bulanan, semesteran, dan tahunan — angka dibekukan saat laporan dibuat{% endblock %}
 
+{% block extra_css %}
+<style>
+    .tbl-daftar { table-layout: fixed; width: 100%; min-width: 880px; font-size: .8rem; }
+    .tbl-daftar th, .tbl-daftar td { word-break: break-word; overflow-wrap: anywhere; vertical-align: middle; }
+    .tbl-daftar th.aksi, .tbl-daftar td.aksi { white-space: nowrap; }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="container-fluid py-3">
 
@@ -22,7 +30,16 @@
     </div>
     {% else %}
     <div class="table-responsive">
-        <table class="table table-sm table-hover align-middle" style="font-size:.8rem;">
+        <table class="table table-sm table-hover tbl-daftar">
+            <colgroup>
+                <col style="width:130px;">
+                <col style="width:auto; min-width:200px;">
+                <col style="width:170px;">
+                <col style="width:130px;">
+                <col style="width:130px;">
+                <col style="width:140px;">
+                <col style="width:170px;">
+            </colgroup>
             <thead class="table-light">
                 <tr>
                     <th>Periode</th>
@@ -31,7 +48,7 @@
                     <th>Status</th>
                     <th class="text-center">Sisa Batas Waktu</th>
                     <th>Pembuat</th>
-                    <th class="text-end">Aksi</th>
+                    <th class="text-end aksi">Aksi</th>
                 </tr>
             </thead>
             <tbody>
@@ -49,7 +66,7 @@
                         {% endif %}
                     </td>
                     <td>{{ l.pembuat_nama|default:"—" }}</td>
-                    <td class="text-end">
+                    <td class="text-end aksi">
                         <a href="{% url 'akreditasi:laporan_mutu_detail' l.pk %}" class="btn btn-outline-primary btn-sm py-0">
                             <i class="bi bi-eye"></i> Detail
                         </a>

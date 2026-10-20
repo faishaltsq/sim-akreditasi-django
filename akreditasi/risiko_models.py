@@ -1088,12 +1088,18 @@ class LaporanMutuBaris(models.Model):
     nama              = models.CharField('Nama Indikator', max_length=300)
     jenis             = models.CharField('Jenis Indikator', max_length=10)
     unit_nama         = models.CharField('Unit Kerja', max_length=150, blank=True, default='')
+    # Deskripsi rumus dari master — bukan angka. Angka periode ada di
+    # nilai_numerator / nilai_denominator di bawah.
     numerator         = models.CharField('Numerator', max_length=300, blank=True, default='')
     denominator       = models.CharField('Denominator', max_length=300, blank=True, default='')
     satuan            = models.CharField('Satuan', max_length=20, blank=True, default='%')
     arah              = models.CharField('Arah Target', max_length=3, default='MIN')
     target            = models.DecimalField('Target Nilai', max_digits=8, decimal_places=2, default=Decimal('0'))
     # ── snapshot angka periode ──
+    nilai_numerator   = models.DecimalField('N Periode', max_digits=12, decimal_places=2,
+                         null=True, blank=True)
+    nilai_denominator = models.DecimalField('D Periode', max_digits=12, decimal_places=2,
+                         null=True, blank=True)
     nilai_capaian     = models.DecimalField('Capaian', max_digits=10, decimal_places=2, null=True, blank=True)
     status_tercapai   = models.BooleanField('Tercapai', null=True, blank=True)
     bulan_terisi      = models.PositiveSmallIntegerField('Bulan Terisi', default=0)

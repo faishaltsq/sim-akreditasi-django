@@ -42,7 +42,12 @@ __all__ = [
     'laporan_mutu_create',
     'laporan_mutu_detail',
     'laporan_mutu_simpan_analisis',
+    'laporan_mutu_tarik_monev',
     'laporan_mutu_simpan_seksi',
+    'monev_per_indikator',
+    'isi_analisis_dari_monev',
+    'teks_monev_untuk_baris',
+    'periode_monev_relevan',
     'rekap_ikp',
     'benchmarking_laporan',
     'tren_indikator',
@@ -160,18 +165,212 @@ def status_tercapai(capaian, target, arah):
 
 def _capaian_bulanan(ind, tahun, bulan):
     """Capaian satu bulan, memakai properti model yang sama dengan dashboard."""
+    kosong = {'capaian': None, 'status': None, 'bulan_terisi': 0,
+              'num': None, 'den': None}
     if bulan is None:
-        return {'capaian': None, 'status': None, 'bulan_terisi': 0}
+        return kosong
     try:
         catatan = ind.catatan.get(tahun=tahun, bulan=bulan)
     except CatatanIndikator.DoesNotExist:
-        return {'capaian': None, 'status': None, 'bulan_terisi': 0}
+        return kosong
     return {
         'capaian': catatan.nilai_capaian,
         # .tercapai sudah menerapkan arah MIN/MAX — jangan dihitung ulang.
         'status': catatan.tercapai,
         'bulan_terisi': 1 if (catatan.nilai_denominator or 0) > 0 else 0,
+        'num': catatan.nilai_numerator,
+        'den': catatan.nilai_denominator,
     }
+
+
+# ---------------------------------------------------------------------------
+# 2B. Jembatan Monitoring & Evaluasi (RisikoUnit) → analisis laporan
+# ---------------------------------------------------------------------------
+
+# RisikoUnit menyimpan periode triwulanan; laporan mutu bulanan harus menarik
+# baris triwulan yang memuat bulannya, bukan triwulan lain di tahun yang sama.
+TRIWULAN_DARI_BULAN = {
+    1: 'TRIWULAN_1', 2: 'TRIWULAN_1', 3: 'TRIWULAN_1',
+    4: 'TRIWULAN_2', 5: 'TRIWULAN_2', 6: 'TRIWULAN_2',
+    7: 'TRIWULAN_3', 8: 'TRIWULAN_3', 9: 'TRIWULAN_3',
+    10: 'TRIWULAN_4', 11: 'TRIWULAN_4', 12: 'TRIWULAN_4',
+}
+
+
+def periode_monev_relevan(jenis, bulan=None, semester=None):
+    """Periode MONEV yang relevan untuk satu laporan, urut prioritas.
+
+    Prioritas pertama yang punya baris dipakai; periode di luar rentang laporan
+    tidak pernah ditarik supaya angka triwulan lain tidak bocor ke laporan
+    bulan yang berbeda.
+    """
+    if jenis == 'BULANAN':
+        return [TRIWULAN_DARI_BULAN.get(bulan, 'TAHUNAN'), 'TAHUNAN']
+    if jenis == 'SEMESTER':
+        awal = ['TRIWULAN_1', 'TRIWULAN_2'] if semester == 1 else ['TRIWULAN_3', 'TRIWULAN_4']
+        return awal + ['TAHUNAN']
+    return ['TRIWULAN_1', 'TRIWULAN_2', 'TRIWULAN_3', 'TRIWULAN_4', 'TAHUNAN']
+
+
+def monev_per_indikator(laporan):
+    """Peta ``kode_indikator`` → daftar RisikoUnit (MONEV) yang relevan.
+
+    Dipakai untuk mengisi awal kolom Analisis PDSA & Tindak Lanjut dan untuk
+    tombol "Tarik dari MONEV" pada laporan draf. Hanya baris yang indikatornya
+    tertaut ke master yang bisa dipetakan — risiko tanpa tautan tidak punya
+    kode pembanding.
+    """
+    from .risiko_models import RisikoUnit
+
+    qs = (RisikoUnit.objects
+          .filter(tahun=laporan.tahun, indikator_mutu_terkait__isnull=False)
+          .select_related('unit', 'indikator_mutu_terkait')
+          .prefetch_related('tindak_lanjut')
+          .order_by('-dampak', '-probabilitas', 'id'))
+    if laporan.scope == 'UNIT' and laporan.unit_id:
+        qs = qs.filter(unit_id__in=unit_scope_ids(laporan.unit))
+
+    per_kode = {}
+    for risiko in qs:
+        kode = risiko.indikator_mutu_terkait.kode_indikator
+        per_kode.setdefault(kode, {}).setdefault(risiko.periode, []).append(risiko)
+
+    prioritas = periode_monev_relevan(laporan.jenis, laporan.bulan, laporan.semester)
+    hasil = {}
+    for kode, per_periode in per_kode.items():
+        for periode in prioritas:
+            if per_periode.get(periode):
+                hasil[kode] = per_periode[periode]
+                break
+    return hasil
+
+
+def _teks_analisis_monev(risiko):
+    """Rangkai analisis PDSA dari kolom evaluasi/RCA satu RisikoUnit."""
+    bagian = []
+    if (risiko.evaluasi_capaian or '').strip():
+        bagian.append(f'Evaluasi capaian: {risiko.evaluasi_capaian.strip()}')
+    if (risiko.akar_masalah_rca or '').strip():
+        bagian.append(f'Akar masalah: {risiko.akar_masalah_rca.strip()}')
+    if (risiko.failure_mode_fmea or '').strip():
+        bagian.append(f'Mode kegagalan (FMEA): {risiko.failure_mode_fmea.strip()}')
+    if (risiko.rca_ulang or '').strip():
+        bagian.append(f'RCA lanjutan: {risiko.rca_ulang.strip()}')
+    for item in risiko.rca_fishbone_items:
+        bagian.append(f'Fishbone — {item["label"]}: {item["text"]}')
+    return '\n'.join(bagian)
+
+
+def _teks_tindak_lanjut_monev(risiko):
+    """Rangkai tindak lanjut dari RTL + daftar aksi TindakLanjutRisiko.
+
+    Baris MONEV yang belum punya RTL maupun aksi mengembalikan string kosong —
+    tanpa ini, semua indikator yang sekadar punya RisikoUnit akan terisi teks
+    "status Belum Dimulai" yang tidak bermakna di laporan.
+    """
+    aksi = [f'{tl.urutan}) {tl.aksi} [{tl.get_status_aksi_display()}]'
+            for tl in risiko.tindak_lanjut.all()]
+    rencana = (risiko.rencana_tindak_lanjut or '').strip()
+    if not rencana and not aksi:
+        return ''
+
+    bagian = []
+    if rencana:
+        bagian.append(f'RTL: {rencana}')
+        jejak = []
+        if (risiko.pj_rtl or '').strip():
+            jejak.append(f'PJ {risiko.pj_rtl.strip()}')
+        if risiko.deadline_rtl:
+            jejak.append(f'tenggat {risiko.deadline_rtl:%d/%m/%Y}')
+        jejak.append(f'status {risiko.get_status_rtl_display()}')
+        bagian.append(' · '.join(jejak))
+    if aksi:
+        bagian.append('Aksi: ' + '; '.join(aksi))
+    return '\n'.join(bagian)
+
+
+def teks_monev_untuk_baris(risiko_list):
+    """(analisis, tindak_lanjut) gabungan untuk satu indikator.
+
+    Beberapa RisikoUnit bisa menunjuk indikator yang sama (mis. risiko klinis
+    dan operasional); semuanya digabung agar tidak ada analisis yang hilang.
+    """
+    analisis = [t for t in (_teks_analisis_monev(r) for r in risiko_list) if t]
+    tindak = [t for t in (_teks_tindak_lanjut_monev(r) for r in risiko_list) if t]
+    return '\n\n'.join(analisis), '\n\n'.join(tindak)
+
+
+def isi_analisis_dari_monev(laporan, timpa=False):
+    """Isi kolom analisis/tindak lanjut laporan dari MONEV.
+
+    ``timpa=False`` hanya mengisi kolom yang masih kosong, sehingga tulisan
+    manual pada draf tidak pernah hilang saat tombol tarik ditekan. Kembalikan
+    (jumlah_baris_terisi, jumlah_baris_dilewati).
+    """
+    peta = monev_per_indikator(laporan)
+    terisi = dilewati = 0
+    for baris in laporan.baris.all():
+        risiko_list = peta.get(baris.kode)
+        if not risiko_list:
+            continue
+        analisis, tindak = teks_monev_untuk_baris(risiko_list)
+        if not analisis and not tindak:
+            continue
+        ubah = []
+        if analisis and (timpa or not baris.analisis.strip()):
+            baris.analisis = analisis
+            ubah.append('analisis')
+        if tindak and (timpa or not baris.tindak_lanjut.strip()):
+            baris.tindak_lanjut = tindak
+            ubah.append('tindak_lanjut')
+        if ubah:
+            baris.save(update_fields=ubah)
+            terisi += 1
+        else:
+            dilewati += 1
+    return terisi, dilewati
+
+
+def _ringkas_monev(laporan):
+    """Ringkasan MONEV untuk halaman detail (tanpa menulis apa pun).
+
+    Template memakainya untuk menandai baris yang punya sumber MONEV, sehingga
+    pengguna tahu baris mana yang bisa ditarik sebelum menekan tombol.
+    """
+    peta = monev_per_indikator(laporan)
+    per_kode = {}
+    for kode, risiko_list in peta.items():
+        analisis, tindak = teks_monev_untuk_baris(risiko_list)
+        # RisikoUnit yang belum diisi evaluasi/RTL tidak dianggap sumber:
+        # menandainya di laporan hanya menjanjikan data yang tidak ada.
+        if not analisis and not tindak:
+            continue
+        per_kode[kode] = {
+            'jumlah_risiko': len(risiko_list),
+            'periode': ', '.join(sorted({r.get_periode_display() for r in risiko_list})),
+            'ada_analisis': bool(analisis),
+            'ada_tindak_lanjut': bool(tindak),
+            'pratinjau_analisis': analisis,
+            'pratinjau_tindak_lanjut': tindak,
+        }
+    return {
+        'per_kode': per_kode,
+        'jumlah_kode': len(per_kode),
+        'ada': bool(per_kode),
+    }
+
+
+def tempel_monev_ke_baris(baris_list, ringkasan):
+    """Tempel ringkasan MONEV ke tiap baris agar template tak butuh filter dict.
+
+    Template Django tidak bisa mengindeks dict dengan kunci dinamis tanpa
+    custom filter; menempelkan atribut di view jauh lebih sederhana dan
+    tidak menambah tag library baru.
+    """
+    per_kode = ringkasan['per_kode']
+    for baris in baris_list:
+        baris.monev = per_kode.get(baris.kode)
+    return baris_list
 
 
 # ---------------------------------------------------------------------------
@@ -222,6 +421,8 @@ def build_baris(laporan):
                 'status': status_tercapai(agg['capaian'], ind.target_nilai,
                                           ind.arah_target),
                 'bulan_terisi': agg['bulan_terisi'],
+                'num': agg['num'],
+                'den': agg['den'],
             }
         nilai = {
             'urutan': urutan,
@@ -237,6 +438,8 @@ def build_baris(laporan):
             'nilai_capaian': hitung['capaian'],
             'status_tercapai': hitung['status'],
             'bulan_terisi': hitung['bulan_terisi'],
+            'nilai_numerator': hitung.get('num'),
+            'nilai_denominator': hitung.get('den'),
         }
         baris = ada.get(ind.kode_indikator)
         if baris is None:
@@ -443,7 +646,6 @@ def laporan_mutu_detail(request, pk):
         (kode, judul, [b for b in baris if b.jenis == kode])
         for kode, judul in JENIS_LABEL
     ]
-
     # Keterbacaan data master: PJ & EP yang belum diisi ditampilkan sebagai
     # angka di kepala laporan, bukan disembunyikan sebagai sel kosong.
     tanpa_pj = sum(1 for b in baris if not _pj_baris(b))
@@ -460,6 +662,11 @@ def laporan_mutu_detail(request, pk):
         (laporan.status == 'DIVERIFIKASI' and role in APPROVER_L3) or
         (laporan.status == 'DISETUJUI' and role in APPROVER_L2))
 
+    # Sumber MONEV ditempel ke tiap baris supaya template bisa menandai baris
+    # yang punya analisis/tindak lanjut siap tarik.
+    monev = _ringkas_monev(laporan)
+    tempel_monev_ke_baris(baris, monev)
+
     return render(request, 'akreditasi/mutu_laporan_detail.html', {
         'laporan': laporan,
         'baris': baris,
@@ -474,6 +681,7 @@ def laporan_mutu_detail(request, pk):
         'boleh_verifikasi': boleh_verifikasi,
         'boleh_setujui': boleh_setujui,
         'seksi_list': seksi_laporan(laporan),
+        'monev': monev,
         'ikp': rekap_ikp(
             laporan.tahun, *rentang_bulan(laporan.jenis, laporan.bulan,
                                           laporan.semester),
@@ -531,6 +739,46 @@ def laporan_mutu_simpan_analisis(request, pk):
         messages.success(request, f'Analisis [{baris_list[0].kode}] tersimpan.')
     else:
         messages.success(request, f'Analisis {tersimpan} indikator tersimpan.')
+    return redirect('akreditasi:laporan_mutu_detail', pk=laporan.pk)
+
+
+@login_required
+@require_http_methods(['POST'])
+def laporan_mutu_tarik_monev(request, pk):
+    """Tarik analisis & tindak lanjut dari Monitoring-Evaluasi risiko.
+
+    Hanya laporan draf yang boleh diisi; tombol "timpa" eksplisit diperlukan
+    untuk menimpa tulisan manual yang sudah ada di baris.
+    """
+    laporan = get_object_or_404(LaporanMutu, pk=pk)
+    _cek_laporan(request.user, laporan)
+
+    if not laporan.boleh_ubah:
+        messages.warning(
+            request,
+            'Laporan sudah diverifikasi — analisis hanya dapat diubah melalui revisi.')
+        return redirect('akreditasi:laporan_mutu_detail', pk=laporan.pk)
+    if not _boleh_lapor_unit(request.user, laporan.unit):
+        raise PermissionDenied('Laporan ini berada di luar lingkup Anda.')
+
+    timpa = request.POST.get('timpa') == '1'
+    terisi, dilewati = isi_analisis_dari_monev(laporan, timpa=timpa)
+
+    if terisi:
+        pesan = f'{terisi} baris terisi dari MONEV.'
+        if dilewati:
+            pesan += f' {dilewati} baris dilewati karena sudah berisi analisis.'
+        messages.success(request, pesan)
+    elif dilewati:
+        messages.info(
+            request,
+            f'{dilewati} baris sudah berisi analisis. Centang "timpa" untuk '
+            'menggantinya dengan data MONEV.')
+    else:
+        messages.warning(
+            request,
+            'Tidak ada data Monitoring & Evaluasi yang tertaut ke indikator '
+            'pada laporan ini.')
     return redirect('akreditasi:laporan_mutu_detail', pk=laporan.pk)
 
 
@@ -955,6 +1203,18 @@ def laporan_mutu_simpan_seksi(request, pk):
 def _konteks_dokumen(request, laporan):
     """Konteks bersama untuk halaman cetak dan pembangkit PDF."""
     baris = list(laporan.baris.select_related('indikator'))
+
+    # Analisis/tindak lanjut dokumen memakai isian baris; bila masih kosong,
+    # jatuh ke data Monitoring & Evaluasi yang sudah ada. Nilainya hanya
+    # ditempel di memori (tidak disimpan) supaya cetak tidak mengubah draf.
+    monev = _ringkas_monev(laporan)
+    tempel_monev_ke_baris(baris, monev)
+    for b in baris:
+        b.analisis_dokumen = b.analisis or (
+            b.monev['pratinjau_analisis'] if b.monev else '')
+        b.tindak_lanjut_dokumen = b.tindak_lanjut or (
+            b.monev['pratinjau_tindak_lanjut'] if b.monev else '')
+
     return {
         'laporan': laporan,
         'baris': baris,
@@ -966,10 +1226,12 @@ def _konteks_dokumen(request, laporan):
         'jumlah_tercapai': sum(1 for b in baris if b.status_tercapai is True),
         'jumlah_tidak_tercapai': sum(1 for b in baris if b.status_tercapai is False),
         'jumlah_tanpa_data': sum(1 for b in baris if b.status_tercapai is None),
-        # PDSA hanya dicetak untuk indikator yang tidak tercapai dan sudah
-        # dianalisis — dokumen tidak menampilkan blok kosong.
+        # PDSA hanya dicetak untuk indikator yang tidak tercapai dan punya
+        # analisis (dari baris atau dari MONEV) — dokumen tidak menampilkan
+        # blok kosong.
         'pdsa_rows': [b for b in baris
-                      if b.status_tercapai is False and (b.analisis or b.tindak_lanjut)],
+                      if b.status_tercapai is False
+                      and (b.analisis_dokumen or b.tindak_lanjut_dokumen)],
         'seksi': {s.kunci: s for s in laporan.seksi.all()},
         'seksi_list': [s for s in seksi_laporan(laporan) if s['isi']],
         # Rekap IKP hanya bermakna untuk periode agregat (BAB V laporan
@@ -1087,15 +1349,18 @@ def _laporan_pdf(laporan, ctx):
                 Paragraph(b.kode, kecil),
                 Paragraph(b.nama, kecil_kiri),
                 Paragraph(b.unit_nama or '—', kecil),
-                Paragraph(str(b.numerator or '—'), kecil),
-                Paragraph(str(b.denominator or '—'), kecil),
+                Paragraph('—' if b.nilai_numerator is None else f'{b.nilai_numerator:g}', kecil),
+                Paragraph('—' if b.nilai_denominator is None else f'{b.nilai_denominator:g}', kecil),
                 Paragraph(capaian, kecil),
                 Paragraph(f'{b.arah} {b.target}', kecil),
                 Paragraph(status, kecil),
                 Paragraph((b.indikator.pj if b.indikator_id else '') or '—', kecil),
             ])
         tt = Table(data, repeatRows=1,
-                   colWidths=[8 * mm, 22 * mm, 78 * mm, 30 * mm, 20 * mm, 20 * mm,
+                   # Total 269 mm = lebar A4 landscape (297) dikurangi margin
+                   # 14 mm kiri-kanan. Lebih dari itu membuat kolom terakhir
+                   # terpotong di tepi halaman.
+                   colWidths=[8 * mm, 22 * mm, 75 * mm, 30 * mm, 20 * mm, 20 * mm,
                               20 * mm, 17 * mm, 22 * mm, 35 * mm])
         tt.setStyle(TableStyle([
             ('GRID', (0, 0), (-1, -1), 0.4, MUTED),
@@ -1109,7 +1374,8 @@ def _laporan_pdf(laporan, ctx):
 
     # ── Analisis PDSA baris yang tidak tercapai ──
     analisis = [b for b in ctx['baris']
-                if b.status_tercapai is False and (b.analisis or b.tindak_lanjut)]
+                if b.status_tercapai is False
+                and (b.analisis_dokumen or b.tindak_lanjut_dokumen)]
     if analisis:
         story.append(Paragraph('<b>ANALISIS PDSA &amp; TINDAK LANJUT</b>', kepala))
         story.append(Spacer(1, 2 * mm))
@@ -1119,8 +1385,8 @@ def _laporan_pdf(laporan, ctx):
         for b in analisis:
             rows_a.append([
                 Paragraph(b.kode, kecil),
-                Paragraph((b.analisis or '—').replace('\n', '<br/>'), kecil_kiri),
-                Paragraph((b.tindak_lanjut or '—').replace('\n', '<br/>'), kecil_kiri),
+                Paragraph((b.analisis_dokumen or '—').replace('\n', '<br/>'), kecil_kiri),
+                Paragraph((b.tindak_lanjut_dokumen or '—').replace('\n', '<br/>'), kecil_kiri),
             ])
         at = Table(rows_a, repeatRows=1, colWidths=[25 * mm, 120 * mm, 120 * mm])
         at.setStyle(TableStyle([
