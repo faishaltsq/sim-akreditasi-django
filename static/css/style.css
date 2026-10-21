@@ -698,3 +698,89 @@ code, .font-mono, .mono { font-family: 'JetBrains Mono', ui-monospace, SFMono-Re
     .top-bar { padding: 0.8rem 1rem; }
     .content-area { padding: 1rem; }
 }
+
+/* ============================================================
+   COLLAPSIBLE DESKTOP SIDEBAR — ICON RAIL MODE
+   ============================================================ */
+
+:root {
+    --sidebar-width-collapsed: 74px;
+}
+
+.sidebar-desktop { transition: width 0.2s ease; }
+.sidebar-brand-text { flex: 1; min-width: 0; }
+
+/* Logo berfungsi sebagai tombol toggle */
+button.brand-icon {
+    border: 0;
+    padding: 0;
+    cursor: pointer;
+    transition: filter 0.15s ease, box-shadow 0.15s ease;
+}
+button.brand-icon:hover {
+    filter: brightness(1.08);
+    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.18), 0 4px 10px var(--primary-shadow, rgba(13, 148, 136, 0.3));
+}
+button.brand-icon:focus-visible { outline: 2px solid #10B981; outline-offset: 2px; }
+
+.sidebar-toggle-btn {
+    flex-shrink: 0;
+    width: 26px; height: 26px;
+    display: flex; align-items: center; justify-content: center;
+    border: 1px solid #1A2E33;
+    border-radius: 6px;
+    background: transparent;
+    color: #5B8A8A;
+    font-size: 0.72rem; line-height: 1;
+    cursor: pointer;
+    transition: color 0.15s ease, border-color 0.15s ease, background 0.15s ease;
+}
+.sidebar-toggle-btn:hover { color: #E2E8F0; border-color: #10B981; background: rgba(16, 185, 129, 0.12); }
+.sidebar-toggle-btn:focus-visible { outline: 2px solid #10B981; outline-offset: 2px; }
+
+@media (min-width: 768px) {
+    html.sidebar-collapsed .sidebar-desktop { width: var(--sidebar-width-collapsed); }
+    html.sidebar-collapsed .main-content { margin-left: var(--sidebar-width-collapsed); }
+
+    /* Brand: hanya logo yang tersisa, jadi tombol expand */
+    html.sidebar-collapsed .sidebar-brand { padding: 1.1rem 0; justify-content: center; }
+    html.sidebar-collapsed .sidebar-brand-text,
+    html.sidebar-collapsed .sidebar-toggle-btn { display: none; }
+
+    /* Sembunyikan seluruh teks & elemen non-ikon */
+    html.sidebar-collapsed .sidebar-desktop .nav-text,
+    html.sidebar-collapsed .sidebar-desktop .nav-link .badge,
+    html.sidebar-collapsed .sidebar-desktop .sidebar-search,
+    html.sidebar-collapsed .sidebar-desktop .collapse,
+    html.sidebar-collapsed .sidebar-desktop .nav-pokja-bar,
+    html.sidebar-collapsed .sidebar-desktop .sidebar-footer { display: none !important; }
+
+    /* Label di dalam header kelompok/bab (bukan .nav-text) ikut disembunyikan */
+    html.sidebar-collapsed .sidebar-desktop .sidebar-kelompok > .nav-link > span > span.text-truncate,
+    html.sidebar-collapsed .sidebar-desktop .sidebar-bab > .nav-link > span > span:not(.nav-icon),
+    html.sidebar-collapsed .sidebar-desktop .sidebar-rajal > .nav-link > span > span:not(.nav-icon) { display: none !important; }
+
+    /* Header kelompok yang hanya berfungsi sebagai toggle collapse tidak berguna
+       tanpa label & anak menu — sembunyikan agar tidak jadi ikon mati. */
+    html.sidebar-collapsed .sidebar-desktop .sidebar-kelompok > .nav-link[data-bs-toggle="collapse"],
+    html.sidebar-collapsed .sidebar-desktop .sidebar-bab > .nav-link[data-bs-toggle="collapse"] { display: none !important; }
+
+    /* Item navigasi menjadi ikon saja, terpusat */
+    html.sidebar-collapsed .sidebar-desktop .nav-link {
+        justify-content: center !important;
+        align-items: center !important;
+        padding: 0.55rem 0;
+        margin: 0.12rem 0.6rem;
+        gap: 0;
+    }
+    html.sidebar-collapsed .sidebar-desktop .nav-link .nav-icon { padding-top: 0; font-size: 1.02rem; }
+    html.sidebar-collapsed .sidebar-desktop .nav-link.nav-pokja { background: transparent !important; }
+
+    /* Judul seksi menjadi garis pemisah tipis */
+    html.sidebar-collapsed .sidebar-desktop .nav-section {
+        padding: 0.55rem 0.85rem 0.45rem;
+        font-size: 0;
+        justify-content: center;
+    }
+    html.sidebar-collapsed .sidebar-desktop .nav-section i { display: none; }
+}

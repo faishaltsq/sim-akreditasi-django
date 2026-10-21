@@ -12,6 +12,16 @@
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{% static 'css/style.css' %}">
     {% block extra_css %}{% endblock %}
+    <script>
+        // Terapkan state sidebar sebelum paint agar tidak ada flash lebar penuh.
+        (function () {
+            try {
+                if (localStorage.getItem('arima.sidebar.collapsed') === '1') {
+                    document.documentElement.classList.add('sidebar-collapsed');
+                }
+            } catch (e) {}
+        })();
+    </script>
 </head>
 <body data-theme="{{ sys_config.theme_color|default:'teal' }}">
 
@@ -56,9 +66,10 @@
     <!-- DESKTOP SIDEBAR -->
     <aside class="sidebar-desktop d-none d-md-flex flex-column">
         <div class="sidebar-brand">
-            <div class="brand-icon">
+            <button type="button" class="brand-icon" data-sidebar-toggle
+                    title="Perkecil sidebar" aria-label="Perkecil atau perbesar sidebar" aria-expanded="true">
                 <i class="bi bi-building-fill"></i>
-            </div>
+            </button>
             <div class="sidebar-brand-text">
                 <div class="d-flex align-items-center gap-1.5">
                     <h6 style="font-size:0.88rem; font-weight:800; color:#E2E8F0; letter-spacing:0.04em; margin:0;">ARIMA</h6>
@@ -66,6 +77,10 @@
                 </div>
                 <small style="font-size:0.6rem; color:#5B8A8A; font-family:'JetBrains Mono',monospace; font-weight:600; line-height:1.2; display:block;">v2.6 &bull; COMMAND CENTER</small>
             </div>
+            <button type="button" class="sidebar-toggle-btn" data-sidebar-toggle
+                    title="Perkecil sidebar" aria-label="Perkecil sidebar" aria-expanded="true">
+                <i class="bi bi-chevron-double-left"></i>
+            </button>
         </div>
         {% include "includes/sidebar.html" %}
     </aside>
