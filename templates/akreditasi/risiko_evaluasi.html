@@ -370,6 +370,20 @@
                                             </label>
                                         </div>
                                     </div>
+                                    {# Picker EP per-butir: pilihan operator menimpa warisan indikator. #}
+                                    <div class="d-flex align-items-center gap-2">
+                                        <label class="form-label mb-0 text-secondary" style="font-size:.7rem;" for="step_ep_{{ item.urutan }}">EP</label>
+                                        <select class="form-select form-select-sm font-monospace" id="step_ep_{{ item.urutan }}"
+                                                name="step_ep_{{ item.urutan }}" style="font-size:.7rem; width:auto; min-width:170px;">
+                                            <option value="">— tanpa tautan —</option>
+                                            {% for ep in ep_list %}
+                                            <option value="{{ ep.pk }}"
+                                                {% if ep.pk == risiko.indikator_mutu_terkait.ep_terkait_id %}selected{% endif %}>
+                                                {{ ep.category.code }} · {{ ep.code }}
+                                            </option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
                                 </div>
                                 {% endfor %}
                             </div>

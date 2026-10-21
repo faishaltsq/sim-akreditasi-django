@@ -193,6 +193,7 @@
                         <th class="text-center" style="color:var(--text-primary);">P</th>
                         <th class="text-center" style="color:var(--text-primary);">Skor</th>
                         <th class="text-center" style="color:var(--text-primary);">Level</th>
+                        <th style="color:var(--text-primary);">EP (Pelaksanaan)</th>
                         <th class="text-center" style="color:var(--text-primary);">Status</th>
                         <th style="color:var(--text-primary);">Aksi</th>
                     </tr>
@@ -227,6 +228,13 @@
                         <td class="text-center">{{ r.probabilitas }}</td>
                         <td class="text-center fw-bold" style="color:{{ r.risk_color }};">{{ r.skor_inherent }}</td>
                         <td class="text-center"><span class="badge" style="background:{{ r.risk_color }}; font-size:.65rem;">{{ r.risk_level|cut:"_" }}</span></td>
+                        <td>
+                            {% for tl in r.tindak_lanjut.all|slice:":3" %}
+                                {% if tl.ep_terkait %}<span class="badge text-bg-light border font-monospace me-1" style="font-size:.64rem;" title="{{ tl.ep_terkait.description }}">{{ tl.ep_terkait.code }}</span>{% elif tl.standar_terkait %}<span class="badge text-bg-light border font-monospace me-1" style="font-size:.64rem;">{{ tl.standar_terkait.code }}</span>{% endif %}
+                            {% empty %}
+                                {% if r.indikator_mutu_terkait.ep_terkait %}<span class="badge text-bg-light border font-monospace" style="font-size:.64rem;" title="{{ r.indikator_mutu_terkait.ep_terkait.description }}">{{ r.indikator_mutu_terkait.ep_terkait.code }}</span>{% else %}<span class="text-muted">—</span>{% endif %}
+                            {% endfor %}
+                        </td>
                         <td class="text-center">
                             <span class="badge {% if r.status == 'IDENTIFIKASI' %}bg-secondary{% elif r.status == 'PLAN' %}bg-primary{% elif r.status == 'DO' %}bg-warning text-dark{% elif r.status == 'EVALUASI' %}badge-purple{% elif r.status == 'SELESAI' %}bg-success{% elif r.status == 'ACCEPTED' %}badge-teal{% endif %}" style="font-size:.65rem;">{{ r.get_status_display }}</span>
                         </td>

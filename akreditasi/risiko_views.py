@@ -14,7 +14,7 @@ from django.views.decorators.http import require_GET, require_POST
 from decimal import Decimal
 
 from .risiko_models import RisikoUnit, TindakLanjutRisiko, InsidenKeselamatan, IndikatorMutu, CatatanIndikator
-from .models import UnitKerja, AuditLog
+from .models import UnitKerja, AuditLog, Category, StandardItem
 # Peran pengelola dipakai template evaluasi (tombol Input Capaian/Edit Indikator).
 from .indikator_views import _is_manager
 
@@ -516,12 +516,23 @@ def risiko_input(request):
 @login_required
 def risiko_detail(request, risiko_id):
     risiko = get_object_or_404(RisikoUnit.objects.select_related('unit', 'indikator_mutu_terkait', 'created_by'), pk=risiko_id)
-    tindak_lanjut = risiko.tindak_lanjut.all()
+    # Ringkasan kebutuhan bukti EP per baris. Sekali per EP, bukan sekali per
+    # baris — beberapa aksi boleh menunjuk EP yang sama.
+    from .ep_sync import bukti_ringkas
+    tindak_lanjut = risiko.tindak_lanjut.select_related('standar_terkait', 'ep_terkait')
 
     # Tambah tindak lanjut inline
     if request.method == 'POST':
         try:
             last_urutan = tindak_lanjut.order_by('-urutan').values_list('urutan', flat=True).first() or 0
+            standar_id = request.POST.get('standar_terkait') or None
+            ep_id = request.POST.get('ep_terkait') or None
+            # EP memutuskan standarnya bila keduanya dikirim: form memfilter EP
+            # berdasarkan standar, jadi selisih berarti halaman sudah usang dan
+            # EP yang menang supaya tautan tidak pernah drift.
+            if ep_id:
+                standar_id = StandardItem.objects.filter(pk=ep_id) \
+                    .values_list('category_id', flat=True).first() or standar_id
             tl = TindakLanjutRisiko(
                 risiko=risiko,
                 urutan=last_urutan + 1,
@@ -530,12 +541,15 @@ def risiko_detail(request, risiko_id):
                 tanggal_mulai=request.POST.get('tanggal_mulai') or None,
                 tanggal_selesai=request.POST.get('tanggal_selesai') or None,
                 catatan=request.POST.get('catatan', ''),
+                standar_terkait_id=standar_id,
+                ep_terkait_id=ep_id,
             )
-            tl.full_clean(exclude=['bukti_upload'])
-            tl.save()
+            # Bukti ikut divalidasi (status SELESAI wajib punya bukti), jadi
+            # filenya dipasang sebelum full_clean, bukan sesudah save.
             if request.FILES.get('bukti_upload'):
                 tl.bukti_upload = request.FILES['bukti_upload']
-                tl.save(update_fields=['bukti_upload'])
+            tl.full_clean()
+            tl.save()
             _log(request.user, 'CREATE', tl, f'Tindak lanjut #{tl.urutan}')
             messages.success(request, 'Tindak lanjut ditambahkan.')
             return redirect('akreditasi:risiko_detail', risiko_id=risiko.pk)
@@ -559,7 +573,17 @@ def risiko_detail(request, risiko_id):
         'matrix': matrix,
         'status_badges': STATUS_BADGES,
         'status_aksi_choices': TindakLanjutRisiko.STATUS_AKSI_CHOICES,
+        # Form tambah pelaksanaan: pilih standar lalu EP-nya (difilter di klien
+        # lewat data-standar pada tiap opsi).
+        'standar_list': Category.objects.order_by('code'),
+        'ep_list': StandardItem.objects.select_related('category').order_by('category__code', 'code'),
     }
+    # ep_ringkas per baris: ringkasan kebutuhan bukti EP (sekali per EP).
+    _ringkas_ep = {}
+    for _tl in tindak_lanjut:
+        if _tl.ep_terkait_id and _tl.ep_terkait_id not in _ringkas_ep:
+            _ringkas_ep[_tl.ep_terkait_id] = bukti_ringkas(_tl.ep_terkait)
+        _tl.ep_ringkas = _ringkas_ep.get(_tl.ep_terkait_id)
     return render(request, 'akreditasi/risiko_detail.html', ctx)
 
 
@@ -843,15 +867,38 @@ def risiko_evaluasi(request, risiko_id):
                     else:
                         collected_statuses.append(tl.status_aksi)
             elif risiko.rencana_aksi_list:
+                # Tautan diwarisi dari indikator terkait agar pelaksanaan hasil
+                # materialisasi tidak pernah yatim EP/standarnya; picker EP
+                # per-butir di form G.2 menimpanya bila operator mengisinya.
+                ep_warisan = (risiko.indikator_mutu_terkait.ep_terkait
+                              if risiko.indikator_mutu_terkait_id else None)
                 for item in risiko.rencana_aksi_list:
                     idx = item['urutan']
                     st_val = request.POST.get(f'step_status_{idx}')
                     if st_val in dict(TindakLanjutRisiko.STATUS_AKSI_CHOICES):
+                        ep_pilihan = ep_warisan
+                        raw_ep = request.POST.get(f'step_ep_{idx}')
+                        if raw_ep is not None:
+                            raw_ep = raw_ep.strip()
+                            if raw_ep:
+                                try:
+                                    ep_pilihan = StandardItem.objects.get(pk=raw_ep)
+                                except (StandardItem.DoesNotExist, ValueError, TypeError):
+                                    messages.error(
+                                        request,
+                                        f'EP untuk butir {idx} tidak ditemukan; '
+                                        'tidak ada butir yang disimpan.')
+                                    raise ValueError('EP butir tidak valid')
+                            else:
+                                # kolom sengaja dikosongkan = tanpa tautan
+                                ep_pilihan = None
                         TindakLanjutRisiko.objects.create(
                             risiko=risiko,
                             urutan=idx,
                             aksi=item['text'],
                             status_aksi=st_val,
+                            ep_terkait=ep_pilihan,
+                            standar_terkait=ep_pilihan.category if ep_pilihan else None,
                         )
                         collected_statuses.append(st_val)
 
@@ -897,7 +944,8 @@ def risiko_evaluasi(request, risiko_id):
         except Exception as e:
             messages.error(request, f'Gagal menyimpan evaluasi: {e}')
 
-    tindak_lanjut_list = list(risiko.tindak_lanjut.all().order_by('urutan'))
+    tindak_lanjut_list = list(
+        risiko.tindak_lanjut.select_related('standar_terkait', 'ep_terkait').order_by('urutan'))
     rencana_aksi_items = risiko.rencana_aksi_list
 
     _ev = risiko.capaian_evaluasi
@@ -929,6 +977,10 @@ def risiko_evaluasi(request, risiko_id):
     if risiko.indikator_mutu_terkait_id:
         agregat = risiko.indikator_mutu_terkait.agregat_capaian(risiko.tahun)
 
+    # Daftar EP untuk picker per-butir pada form G.2.
+    ep_list = StandardItem.objects.select_related('category').order_by(
+        'category__order', 'code')
+
     ctx = {
         'risiko': risiko,
         'status_badges': STATUS_BADGES,
@@ -936,6 +988,7 @@ def risiko_evaluasi(request, risiko_id):
         'status_rtl_choices': RisikoUnit.STATUS_RTL_CHOICES,
         'tindak_lanjut_list': tindak_lanjut_list,
         'rencana_aksi_items': rencana_aksi_items,
+        'ep_list': ep_list,
         'target_nilai_display': target_nilai_display,
         'arah_nilai_display': arah_nilai_display,
         'satuan_nilai_display': satuan_nilai_display,
@@ -987,7 +1040,7 @@ def risiko_monitoring_evaluasi(request, unit_id=None):
     status_pelaksanaan = request.GET.get('status_pelaksanaan', '')
     query = request.GET.get('q', '').strip()
 
-    qs = RisikoUnit.objects.select_related('unit', 'indikator_mutu_terkait', 'created_by').prefetch_related('tindak_lanjut').all()
+    qs = RisikoUnit.objects.select_related('unit', 'indikator_mutu_terkait', 'indikator_mutu_terkait__ep_terkait', 'created_by').prefetch_related('tindak_lanjut').all()
 
     if is_scoped and allowed_ids:
         qs = qs.filter(unit_id__in=allowed_ids)
@@ -1022,7 +1075,8 @@ def risiko_monitoring_evaluasi(request, unit_id=None):
 
     # Prefetch tindak lanjut per risiko (model properties handle skor_* calculations)
     for r in risiko_list:
-        r.daftar_tindak_lanjut = list(r.tindak_lanjut.all())
+        r.daftar_tindak_lanjut = list(
+            r.tindak_lanjut.select_related('standar_terkait', 'ep_terkait'))
 
     ctx = {
         'risiko_list': risiko_list,
@@ -1039,6 +1093,8 @@ def risiko_monitoring_evaluasi(request, unit_id=None):
         'query': query,
         'status_rtl_choices': RisikoUnit.STATUS_RTL_CHOICES,
         'status_pelaksanaan_choices': RisikoUnit.STATUS_PELAKSANAAN_CHOICES,
+        # Tombol aksi (Edit Indikator / Input Capaian / Detail) hanya untuk pengelola.
+        'is_manager': _is_manager(request.user),
     }
     return render(request, 'akreditasi/risiko_monitoring_evaluasi.html', ctx)
 
@@ -1216,7 +1272,7 @@ def risiko_laporan(request, unit_id=None):
     tahun   = request.GET.get('tahun', '2026')
     periode = request.GET.get('periode', '')
 
-    qs = RisikoUnit.objects.select_related('unit', 'indikator_mutu_terkait', 'created_by').prefetch_related('tindak_lanjut').all()
+    qs = RisikoUnit.objects.select_related('unit', 'indikator_mutu_terkait', 'indikator_mutu_terkait__ep_terkait', 'created_by').prefetch_related('tindak_lanjut').all()
     if is_scoped and allowed_ids:
         qs = qs.filter(unit_id__in=allowed_ids)
     if sel_unit:
@@ -1684,6 +1740,10 @@ def risiko_perencanaan_unit(request, unit_id=None):
             'waktu': waktu_str,
             'biaya': biaya_str,
             'pj': r.pj_mitigasi or 'Ka. Unit',
+            # Kolom EP (Pelaksanaan): turunan indikator, sama seperti tautan
+            # yang diwarisi oleh pelaksanaan.
+            'ep': ind.ep_terkait if ind else None,
+            'standar': ind.ep_terkait.category if (ind and ind.ep_terkait_id) else None,
         })
 
     total_biaya = sum((r.biaya_mitigasi or Decimal('0')) for r in risiko_list)
@@ -1881,7 +1941,7 @@ def risiko_pelaksanaan_export_csv(request):
     tahun = int(tahun_raw) if tahun_raw and tahun_raw.isdigit() else 2026
 
     risiko_qs = RisikoUnit.objects.filter(unit=target_unit, tahun=tahun).select_related(
-        'unit', 'indikator_mutu_terkait'
+        'unit', 'indikator_mutu_terkait', 'indikator_mutu_terkait__ep_terkait'
     ).prefetch_related('tindak_lanjut').order_by('-dampak', '-probabilitas', 'id')
 
     unit_slug = (target_unit.name if target_unit else 'Unit').replace(' ', '_')
@@ -1898,7 +1958,10 @@ def risiko_pelaksanaan_export_csv(request):
     writer.writerow([])
 
     writer.writerow(['TABEL PELAKSANAAN TINDAKAN RISIKO (SIKLUS DO)'])
-    writer.writerow(['No', 'Jenis Risiko', 'Rencana Aksi Mitigasi', 'No. Aksi', 'Deskripsi Pelaksanaan', 'Status', 'Tgl Mulai', 'Tgl Selesai', 'Catatan', 'Bukti Dokumen', 'PJ Mitigasi'])
+    # Kolom tambahan menempel di belakang: 11 kolom lama tidak bergeser supaya
+    # konsumen yang mem-parse posisional tetap aman.
+    writer.writerow(['No', 'Jenis Risiko', 'Rencana Aksi Mitigasi', 'No. Aksi', 'Deskripsi Pelaksanaan', 'Status', 'Tgl Mulai', 'Tgl Selesai', 'Catatan', 'Bukti Dokumen', 'PJ Mitigasi',
+                     'standar', 'kode_ep', 'judul_ep'])
 
     row_no = 1
     for r in risiko_qs:
@@ -1917,6 +1980,9 @@ def risiko_pelaksanaan_export_csv(request):
                     tl.catatan or '—',
                     'Ada' if tl.bukti_upload else 'Belum ada',
                     r.pj_mitigasi or 'Ka. Unit',
+                    tl.standar_terkait.code if tl.standar_terkait_id else '—',
+                    tl.ep_terkait.code if tl.ep_terkait_id else '—',
+                    tl.ep_terkait.description if tl.ep_terkait_id else '—',
                 ])
                 row_no += 1
         else:
@@ -1927,6 +1993,7 @@ def risiko_pelaksanaan_export_csv(request):
                 '—', 'Belum ada pelaksanaan dicatat',
                 'BELUM', '—', '—', '—', '—',
                 r.pj_mitigasi or 'Ka. Unit',
+                '—', '—', '—',
             ])
             row_no += 1
 

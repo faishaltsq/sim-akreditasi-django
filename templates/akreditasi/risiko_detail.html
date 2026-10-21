@@ -523,6 +523,27 @@
                             </div>
                         </div>
                         <div class="row g-2 mb-2">
+                            <div class="col-md-6">
+                                <label class="form-label" style="font-size:.75rem;">Standar Akreditasi (Pokja)</label>
+                                <select name="standar_terkait" id="pel-standar-select" class="form-select form-select-sm">
+                                    <option value="">— Pilih standar —</option>
+                                    {% for s in standar_list %}
+                                    <option value="{{ s.pk }}">{{ s.code }} — {{ s.name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label" style="font-size:.75rem;">Elemen Penilaian (EP)</label>
+                                <select name="ep_terkait" id="pel-ep-select" class="form-select form-select-sm">
+                                    <option value="">— Pilih EP (opsional) —</option>
+                                    {% for ep in ep_list %}
+                                    <option value="{{ ep.pk }}" data-standar="{{ ep.category_id }}" title="{{ ep.description|escape }}">{{ ep.code }} — {{ ep.sub_title }}</option>
+                                    {% endfor %}
+                                </select>
+                                <small class="text-muted" style="font-size:.68rem;">Daftar EP menyusut mengikuti standar yang dipilih.</small>
+                            </div>
+                        </div>
+                        <div class="row g-2 mb-2">
                             <div class="col-md-3">
                                 <label class="form-label" style="font-size:.75rem;">Tanggal Mulai</label>
                                 <input type="date" name="tanggal_mulai" class="form-control form-control-sm">
@@ -555,6 +576,8 @@
                         <tr>
                             <th style="width:40px;">#</th>
                             <th>Pelaksanaan Risiko</th>
+                            <th>Standar</th>
+                            <th>EP</th>
                             <th>Status</th>
                             <th>Tgl Mulai</th>
                             <th>Tgl Selesai</th>
@@ -566,7 +589,23 @@
                         {% for tl in tindak_lanjut %}
                         <tr>
                             <td>{{ tl.urutan }}</td>
-                            <td class="fw-semibold">{{ tl.aksi }}</td>
+                            <td title="{{ tl.standar_terkait.name|default_if_none:'' }}">{{ tl.standar_terkait.code|default:"—" }}{% if tl.standar_terkait %} — {{ tl.standar_terkait.name }}{% endif %}</td>
+                            <td>{% if tl.ep_terkait %}<span class="font-monospace" style="font-size:.72rem;" title="{{ tl.ep_terkait.description }}">{{ tl.ep_terkait.code }}</span>{% else %}<span class="text-muted">—</span>{% endif %}</td>
+                            <td class="fw-semibold">{{ tl.aksi }}
+                                {% if tl.ep_terkait %}
+                                <div class="mt-1 pt-1 border-top" style="font-size:.68rem;">
+                                    {% if tl.ep_ringkas and tl.ep_ringkas.total %}
+                                    <span class="text-muted">{{ tl.ep_ringkas.terunggah }}/{{ tl.ep_ringkas.total }} kebutuhan punya berkas</span>
+                                    {% else %}
+                                    <span class="text-muted">tidak memiliki daftar kebutuhan bukti</span>
+                                    {% endif %}
+                                    <a href="{% url 'akreditasi:modal_bukti_data' tl.ep_terkait_id %}"
+                                       class="d-block text-decoration-none text-primary" style="font-size:.68rem;">
+                                        <i class="bi bi-folder2-open me-1"></i>Kelola Berkas EP {{ tl.ep_terkait.code }}
+                                    </a>
+                                </div>
+                                {% endif %}
+                            </td>
                             <td>
                                 {% if tl.status_aksi == 'SELESAI' %}
                                 <span class="badge bg-success">Selesai</span>
@@ -591,7 +630,7 @@
                             <td>{{ tl.catatan|default:"—" }}</td>
                         </tr>
                         {% empty %}
-                        <tr><td colspan="7" class="text-center text-muted py-3">Belum ada pelaksanaan risiko dicatat. Silakan klik "Tambah Pelaksanaan".</td></tr>
+                        <tr><td colspan="9" class="text-center text-muted py-3">Belum ada pelaksanaan risiko dicatat. Silakan klik "Tambah Pelaksanaan".</td></tr>
                         {% endfor %}
                     </tbody>
                 </table>
@@ -609,3 +648,55 @@
 
 </div>
 {% endblock %}
+{% block extra_js %}
+<script>
+// Filter EP mengikuti standar yang dipilih + kaitkan required bukti ke status.
+// Halaman ini tanpa AJAX, jadi filtering murni klien: tiap opsi EP membawa
+// data-standar dengan id Category miliknya.
+(function() {
+    var standarSel = document.getElementById('pel-standar-select');
+    var epSel = document.getElementById('pel-ep-select');
+    var fileSel = document.querySelector('[name="bukti_upload"]');
+    var statusSel = document.querySelector('[name="status_aksi"]');
+
+    function filterEp() {
+        if (!standarSel || !epSel) return;
+        var val = standarSel.value;
+        var keepCurrent = false;
+        epSel.querySelectorAll('option').forEach(function(opt) {
+            if (!opt.dataset.standar) return;          // placeholder
+            var cocok = !val || opt.dataset.standar === val;
+            opt.hidden = !cocok;
+            opt.disabled = !cocok;
+            if (cocok && opt.selected) keepCurrent = true;
+        });
+        if (!keepCurrent) epSel.value = '';
+    }
+
+    // Pilih EP -> standar ikut mengikuti (sumber kebenaran di server juga begitu)
+    function standarDariEp() {
+        if (!standarSel || !epSel) return;
+        var opt = epSel.selectedOptions[0];
+        if (opt && opt.dataset.standar) {
+            standarSel.value = opt.dataset.standar;
+            filterEp();
+            standarSel.value = opt.dataset.standar;
+        }
+    }
+
+    // Aturan server: status SELESAI wajib bukti. Ini hanya isyarat (advisory).
+    function sinkronBuktiWajib() {
+        if (!fileSel || !statusSel) return;
+        fileSel.required = (statusSel.value === 'SELESAI');
+    }
+
+    if (standarSel) standarSel.addEventListener('change', filterEp);
+    if (epSel) epSel.addEventListener('change', standarDariEp);
+    if (statusSel) statusSel.addEventListener('change', sinkronBuktiWajib);
+    filterEp();
+    standarDariEp();
+    sinkronBuktiWajib();
+})();
+</script>
+{% endblock %}
+
