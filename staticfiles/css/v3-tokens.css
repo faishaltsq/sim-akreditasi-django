@@ -218,6 +218,21 @@ small, .small { font-size: var(--fs-micro); }
 /* --------------------------------------------------------------------------
    5. Application shell
    -------------------------------------------------------------------------- */
+/* Nav adalah satu-satunya yang men-scroll: brand dan footer menempel,
+   70+ item menu masuk ke dalam viewport 100vh. Tanpa aturan ini
+   .sidebar-nav (flex: 1) mendorong kontainer melebihi 100vh, lalu
+   flex-shrink menekan .sidebar-brand sampai tingginya 1px — terukur di
+   Chromium — sehingga ikon brand dan menu di bawahnya saling menimpa. */
+.sidebar-desktop { overflow: hidden; }
+.sidebar-nav {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: var(--sidebar-border) transparent;
+}
+.sidebar-footer { flex: 0 0 auto; }
+
 .sidebar-desktop {
     width: var(--sidebar-width);
     background: var(--sidebar-bg);
@@ -244,6 +259,10 @@ small, .small { font-size: var(--fs-micro); }
     column-gap: 0.6rem;
     row-gap: 5px;
     overflow: hidden;
+    /* .sidebar-desktop adalah flex column setinggi viewport dengan 70+ item
+       menu di dalamnya. Tanpa ini brand ikut menyusut — terukur tingginya
+       jatuh ke 1px dan isinya menimpa ikon menu di bawahnya. */
+    flex: 0 0 auto;
 }
 .sidebar-brand .brand-icon {
     grid-area: icon;
