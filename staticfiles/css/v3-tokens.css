@@ -231,6 +231,9 @@ small, .small { font-size: var(--fs-micro); }
     gap: 0.65rem;
     background: var(--sidebar-bg);
     border-bottom: 1px solid var(--sidebar-border);
+    display: flex;
+    align-items: center;
+    flex-wrap: nowrap;
 }
 .sidebar-brand .brand-icon {
     width: 34px;
@@ -238,10 +241,47 @@ small, .small { font-size: var(--fs-micro); }
     border-radius: 10px;
     background: var(--primary);
     font-size: 1rem;
+    flex: 0 0 34px;
 }
-.sidebar-brand-text h6 { font-size: 0.86rem !important; color: #FFFFFF !important; letter-spacing: 0.06em; }
-.sidebar-brand-text small { color: var(--sidebar-section) !important; letter-spacing: 0.02em; }
-.sidebar-brand-text .sidebar-status-dot { background: var(--success); }
+/* Blok teks brand: dua baris saja, keduanya di-clip agar tidak pernah
+   meluber melewati min-height header (dulu tiga baris membuat teks mentok
+   ke tepi atas dan bawah). */
+.sidebar-brand-text {
+    min-width: 0;
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 1px;
+    overflow: hidden;
+}
+.sidebar-brand-text .brand-title-row {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    min-width: 0;
+}
+.sidebar-brand-text h6 {
+    margin: 0;
+    font-size: 0.86rem !important;
+    line-height: 1.15;
+    color: #FFFFFF !important;
+    letter-spacing: 0.06em;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.sidebar-brand-text small {
+    display: block;
+    font-size: 0.6rem;
+    line-height: 1.25;
+    color: var(--sidebar-section) !important;
+    letter-spacing: 0.02em;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.sidebar-brand-text .sidebar-status-dot { background: var(--success); flex: 0 0 auto; }
 
 /* Collapse control */
 .sidebar-collapse-btn {
@@ -341,9 +381,15 @@ small, .small { font-size: var(--fs-micro); }
     /* Collapsed sidebar — icons only, tooltips from [data-tooltip] */
     .sb-collapsed { --sidebar-width: var(--sidebar-width-collapsed); }
     .sb-collapsed .sidebar-desktop { overflow: visible; }
-    .sb-collapsed .sidebar-brand { justify-content: center; padding: 0.75rem 0.5rem; }
-    .sb-collapsed .sidebar-brand-text,
-    .sb-collapsed .sidebar-collapse-btn { display: none; }
+    .sb-collapsed .sidebar-brand { justify-content: center; padding: 0.75rem 0.5rem; flex-wrap: wrap; }
+    /* Teks brand disembunyikan, TETAPI tombol collapse tetap tampil — tanpa itu
+       rail yang sudah diciutkan tidak punya jalan kembali ke mode penuh. */
+    .sb-collapsed .sidebar-brand-text { display: none; }
+    .sb-collapsed .sidebar-collapse-btn {
+        display: inline-flex;
+        margin: 0.25rem auto 0;
+        position: static;
+    }
     .sb-collapsed .sidebar-nav .nav-section {
         font-size: 0; letter-spacing: 0; text-align: center;
         padding: 0.55rem 0 0.15rem;
