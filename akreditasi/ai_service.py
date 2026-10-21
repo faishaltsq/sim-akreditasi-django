@@ -25,6 +25,7 @@ from .ai_prompts import (
     PROMPT_ANALISIS_MASALAH_RISIKO,
     PROMPT_FMEA_SUGGESTION,
     PROMPT_RCA_SUGGESTION,
+    PROMPT_INVESTIGASI_RTL,
 )
 
 logger = logging.getLogger(__name__)
@@ -599,3 +600,157 @@ def test_deepseek_connection() -> dict:
         return {'success': False, 'error': 'Timeout — server DeepSeek tidak merespons dalam 15 detik.'}
     except Exception as e:
         return {'success': False, 'error': str(e)[:150]}
+
+# --- SECTION G: RINGKASAN INVESTIGASI LANJUTAN & RENCANA TINDAK LANJUT (RTL) ---
+
+_INVESTIGASI_CONTRACT = (
+    'analisis_investigasi', 'fishbone', 'akar_masalah_sistemik', 'verifikasi_efektivitas',
+    'rencana_tindak_lanjut', 'pj_saran', 'target_hari', 'indikator_keberhasilan',
+    'status_rtl_saran',
+)
+_FISHBONE_KEYS = ('manpower', 'process', 'material', 'machine', 'environment', 'system')
+
+
+def _fallback_fishbone(unit: str) -> dict:
+    return {
+        'manpower': f'Beban kerja dan variasi kompetensi staf {unit} belum terpetakan per shift.',
+        'process': 'Alur kerja dan SPO belum mengatur titik verifikasi ulang saat kondisi sibuk.',
+        'material': 'Ketersediaan bahan, formulir, dan dokumen pendukung belum dijamin per shift.',
+        'machine': 'Sarana, alat, dan dukungan SIMRS belum sepenuhnya mendukung pencatatan real-time.',
+        'environment': f'Lingkungan kerja {unit} dan budaya keselamatan belum konsisten antar shift.',
+        'system': 'Kebijakan, monitoring berjenjang, dan umpan balik hasil audit belum berjalan rutin.',
+    }
+
+
+def _generate_fallback_investigasi_rtl(unit_name: str, jenis_risiko: str, masalah: str,
+                                       dampak: int, probabilitas: int,
+                                       capaian_nilai: str = '', target_capaian: str = '',
+                                       fishbone: dict = None) -> dict:
+    """Payload deterministik saat AI eksternal tidak tersedia - form tidak boleh kosong."""
+    unit = (unit_name or 'unit kerja').strip()
+    issue = (masalah or jenis_risiko or 'masalah mutu').strip().rstrip('.')
+    skor = (dampak or 3) * (probabilitas or 3)
+    fb = _fallback_fishbone(unit)
+    if isinstance(fishbone, dict):
+        for k in _FISHBONE_KEYS:
+            v = fishbone.get(k)
+            if v and str(v).strip():
+                fb[k] = str(v).strip()
+
+    analisis = (
+        f"1. Kronologi & Dampak: {issue} teridentifikasi di {unit} dengan skor risiko {skor} "
+        f"(D{dampak or 3} x P{probabilitas or 3}), berdampak langsung pada mutu dan keselamatan pasien.\n"
+        f"2. Analisis 5-Whys: 1) Mengapa terjadi? Karena {issue.lower()}. "
+        f"2) Mengapa hal itu terjadi? Karena alur kerja belum mengunci titik verifikasi. "
+        f"3) Mengapa alur belum mengunci? Karena SPO belum direvisi mengikuti beban kerja nyata. "
+        f"4) Mengapa SPO belum direvisi? Karena hasil audit belum menjadi agenda rutin. "
+        f"5) Akar masalah: lemahnya siklus umpan balik audit ke perbaikan kebijakan di {unit}.\n"
+        f"3. Akar Masalah Sistemik: tata kelola monitoring berjenjang dan peninjauan SPO di {unit} "
+        f"belum berjalan periodik, sehingga deviasi berulang tidak terkoreksi di tingkat sistem.\n"
+        f"4. Penyebab Langsung: {issue.lower()} pada kondisi beban kerja tinggi.\n"
+        f"5. Kesimpulan Investigasi: diperlukan perbaikan sistemik pada SPO, kompetensi, dan "
+        f"mekanisme audit internal {unit}, bukan sekadar koreksi individual."
+    )
+
+    rtl = (
+        f"1. Revisi SPO dan alur kerja {unit} untuk menutup titik kegagalan yang ditemukan.\n"
+        f"2. Penyesuaian sarana/prasarana dan dukungan SIMRS agar pencatatan berjalan real-time.\n"
+        f"3. Pelatihan ulang dan sertifikasi kompetensi staf {unit} sesuai kebutuhan per shift.\n"
+        f"4. Audit kepatuhan berkala (mingguan) dengan umpan balik langsung ke kepala unit.\n"
+        f"5. Pelaporan hasil perbaikan ke Komite Mutu dan penetapan target capaian berikutnya."
+    )
+
+    return {
+        'analisis_investigasi': analisis,
+        'fishbone': fb,
+        'akar_masalah_sistemik': (
+            f'Lemahnya siklus umpan balik audit ke perbaikan kebijakan di {unit} '
+            f'sehingga deviasi pada {jenis_risiko or issue} berulang.'
+        ),
+        'verifikasi_efektivitas': (
+            f'Pantau capaian indikator terkait secara bulanan terhadap target '
+            f'{target_capaian or "yang ditetapkan"}; dinyatakan efektif bila capaian '
+            f'kembali ke ambang target selama 3 bulan berturut-turut.'
+        ),
+        'rencana_tindak_lanjut': rtl,
+        'pj_saran': f'Kepala {unit} bersama Komite Mutu',
+        'target_hari': 30,
+        'indikator_keberhasilan': (
+            f'Capaian indikator membaik dari {capaian_nilai or "kondisi awal"} menuju '
+            f'target {target_capaian or "yang ditetapkan"} tanpa deviasi berulang.'
+        ),
+        'status_rtl_saran': 'PROSES',
+    }
+
+
+def generate_investigasi_rtl(user, unit_name: str, jenis_risiko: str, masalah: str,
+                             data_pendukung: str, dampak: int, probabilitas: int,
+                             evaluasi_capaian: str = '', capaian_nilai: str = '',
+                             target_capaian: str = '', fishbone: dict = None,
+                             metode_evaluasi: str = 'RCA') -> dict:
+    """Hasilkan Ringkasan Investigasi Lanjutan (G.4) + Rencana Tindak Lanjut (G.5)."""
+    from .system_models import SystemConfig
+    config = SystemConfig.get_solo()
+
+    dampak = int(dampak or 3)
+    probabilitas = int(probabilitas or 3)
+    skor = dampak * probabilitas
+    level_map = {range(1, 6): 'RENDAH', range(6, 11): 'SEDANG',
+                 range(11, 16): 'TINGGI', range(16, 26): 'SANGAT TINGGI'}
+    level = next((v for k, v in level_map.items() if skor in k), 'SEDANG')
+
+    fallback_data = _generate_fallback_investigasi_rtl(
+        unit_name=unit_name, jenis_risiko=jenis_risiko, masalah=masalah,
+        dampak=dampak, probabilitas=probabilitas,
+        capaian_nilai=capaian_nilai, target_capaian=target_capaian, fishbone=fishbone,
+    )
+
+    if not config.ai_enabled or not config.ai_enable_risiko or not config.get_deepseek_api_key():
+        _log_ai_call(user, 'INVESTIGASI_RTL', f'{unit_name} | {(jenis_risiko or masalah)[:60]}', True)
+        return {'success': True, 'data': fallback_data, 'fallback': True, 'error': None}
+
+    fishbone_txt = '(belum diisi)'
+    if isinstance(fishbone, dict) and fishbone:
+        fishbone_txt = '; '.join(
+            f'{k}: {v}' for k, v in fishbone.items() if v and str(v).strip()
+        ) or '(belum diisi)'
+
+    prompt = PROMPT_INVESTIGASI_RTL.format(
+        unit_name=sanitize_hospital_prompt(unit_name or 'Unit Kerja'),
+        jenis_risiko=sanitize_hospital_prompt(jenis_risiko or '(belum diisi)'),
+        masalah=sanitize_hospital_prompt(masalah or '(belum diisi)'),
+        data_pendukung=sanitize_hospital_prompt(data_pendukung or '(belum diisi)'),
+        dampak=dampak, probabilitas=probabilitas, skor=skor, level=level,
+        evaluasi_capaian=sanitize_hospital_prompt(evaluasi_capaian or '(belum diisi)'),
+        capaian_nilai=capaian_nilai or '(belum diisi)',
+        target_capaian=target_capaian or '(belum diisi)',
+        fishbone_terisi=sanitize_hospital_prompt(fishbone_txt),
+        metode_evaluasi=metode_evaluasi or 'RCA',
+    )
+
+    result = _call_deepseek(prompt, max_tokens=2500)
+    if not result.get('success') or not isinstance(result.get('data'), dict):
+        _log_ai_call(user, 'INVESTIGASI_RTL', f'{unit_name} | {(jenis_risiko or masalah)[:60]}', False)
+        return {'success': True, 'data': fallback_data, 'fallback': True, 'error': None}
+
+    data = result['data']
+    # A partial model answer must not leave a form field empty: fill each missing
+    # contract key from the deterministic fallback instead of dropping it.
+    for key in _INVESTIGASI_CONTRACT:
+        if key == 'fishbone':
+            fb = data.get('fishbone') if isinstance(data.get('fishbone'), dict) else {}
+            merged = dict(fallback_data['fishbone'])
+            for k in _FISHBONE_KEYS:
+                v = fb.get(k)
+                if v and str(v).strip():
+                    merged[k] = str(v).strip()
+            data['fishbone'] = merged
+        elif not data.get(key):
+            data[key] = fallback_data[key]
+    try:
+        data['target_hari'] = int(str(data['target_hari']).strip()[:3] or 30)
+    except (ValueError, TypeError):
+        data['target_hari'] = 30
+
+    _log_ai_call(user, 'INVESTIGASI_RTL', f'{unit_name} | {(jenis_risiko or masalah)[:60]}', True)
+    return {'success': True, 'data': data, 'fallback': False, 'error': None}

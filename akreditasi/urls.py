@@ -112,6 +112,7 @@ urlpatterns = [
     path('ai/risiko-fmea-saran/', ai_views.api_ai_fmea_saran, name='ai_fmea_saran'),
     path('ai/risiko-rca-saran/', ai_views.api_ai_rca_saran, name='ai_rca_saran'),
     path('ai/evaluasi-risiko/', ai_views.api_ai_evaluasi_risiko, name='ai_evaluasi_risiko'),
+    path('ai/investigasi-rtl/', ai_views.api_ai_investigasi_rtl, name='ai_investigasi_rtl'),
     path('ai/rdwos-analisis/', ai_views.api_ai_rdwos_analisis, name='ai_rdwos_analisis'),
     path('ai/rumus-indikator/', ai_views.api_ai_rumus_indikator, name='api_ai_rumus_indikator'),
     path('ai/analisis-masalah-risiko/', ai_views.api_ai_analisis_masalah_risiko, name='api_ai_analisis_masalah_risiko'),
