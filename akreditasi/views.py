@@ -166,6 +166,11 @@ def _get_mutu_renstra_charts_context(request, profile, db_roadmaps, renstra_year
     mutu_indikator_choices = list(_choices_qs.order_by('jenis', 'kode_indikator'))
     selected_indikator = next((i for i in mutu_indikator_choices if i.pk == mutu_indikator_id), None)
 
+    # A stale id carried over from another category/unit/year must not survive into the
+    # client context: MUTU_IND_ID drives the drill-down modal and its "Buat PDCA" link,
+    # so an unresolved id would make the page act on an indicator the filter excludes.
+    filter_mutu_indikator = selected_indikator.pk if selected_indikator else 0
+
     chart_qs = IndikatorMutu.objects.filter(pk=selected_indikator.pk) if selected_indikator else ind_qs
     filtered_ind_ids = list(chart_qs.values_list('id', flat=True))
 
@@ -298,7 +303,7 @@ def _get_mutu_renstra_charts_context(request, profile, db_roadmaps, renstra_year
         'filter_mutu_jenis': mutu_jenis,
         'filter_mutu_unit': mutu_unit,
         'filter_mutu_tahun': mutu_tahun,
-        'filter_mutu_indikator': mutu_indikator_id,
+        'filter_mutu_indikator': filter_mutu_indikator,
         'mutu_tahun_choices': renstra_years_list,
         'mutu_jenis_choices': IndikatorMutu.JENIS_CHOICES,
         'mutu_units_choices': UnitKerja.objects.filter(is_active=True).order_by('code'),

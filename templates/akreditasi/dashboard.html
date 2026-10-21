@@ -464,7 +464,7 @@
             <form method="GET" class="row g-2 align-items-center p-2 mb-3 rounded-3 bg-light border">
                 <div class="col-12 col-md-3">
                     <label class="form-label mb-0 small text-muted fw-semibold">Kategori Indikator</label>
-                    <select name="mutu_jenis" class="form-select form-select-sm" onchange="this.form.submit()">
+                    <select name="mutu_jenis" class="form-select form-select-sm" onchange="arimaMutuFilterChange(this)">
                         <option value="">Semua Kategori (INM / IMP)</option>
                         {% for jval, jtxt in mutu_jenis_choices %}
                         <option value="{{ jval }}" {% if filter_mutu_jenis == jval %}selected{% endif %}>{{ jtxt }}</option>
@@ -474,7 +474,7 @@
                 {% if not unit_dashboard %}
                 <div class="col-12 col-md-3">
                     <label class="form-label mb-0 small text-muted fw-semibold">Unit Kerja</label>
-                    <select name="mutu_unit" class="form-select form-select-sm" onchange="this.form.submit()">
+                    <select name="mutu_unit" class="form-select form-select-sm" onchange="arimaMutuFilterChange(this)">
                         <option value="">Semua Unit Kerja RS</option>
                         {% for u in mutu_units_choices %}
                         <option value="{{ u.id }}" {% if filter_mutu_unit == u.id|stringformat:"s" %}selected{% endif %}>
@@ -497,7 +497,7 @@
                 </div>
                 <div class="col-12 col-md-2">
                     <label class="form-label mb-0 small text-muted fw-semibold">Tahun Pengukuran</label>
-                    <select name="mutu_tahun" class="form-select form-select-sm" onchange="this.form.submit()">
+                    <select name="mutu_tahun" class="form-select form-select-sm" onchange="arimaMutuFilterChange(this)">
                         {% for yr in mutu_tahun_choices %}
                         <option value="{{ yr }}" {% if filter_mutu_tahun == yr %}selected{% endif %}>Tahun {{ yr }}</option>
                         {% endfor %}
@@ -936,6 +936,14 @@
 {% block extra_js %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
+// Changing category/unit/year invalidates the indicator selection: clear it before
+// the GET submit so the URL never carries an id from the previous filter set.
+window.arimaMutuFilterChange = function (el) {
+    const form = el.form;
+    const ind = form ? form.querySelector('[name="mutu_indikator"]') : null;
+    if (ind) { ind.value = ''; }
+    if (form) { form.submit(); }
+};
 document.addEventListener('DOMContentLoaded', function() {
     // ── Shared chart helpers: value labels + drill-down ──────────────────
     const MUTU_IND_ID   = "{{ filter_mutu_indikator|default:'' }}";
