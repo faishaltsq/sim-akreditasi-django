@@ -658,4 +658,13 @@ def api_ai_narasi_laporan(request):
     if not res.get('success'):
         return JsonResponse({'success': False, 'error': 'Gagal menyusun narasi laporan.'},
                             status=400)
-    return JsonResponse(res, status=200)
+    data_res = res.get('data') or {}
+    return JsonResponse({
+        'success': True,
+        'error': None,
+        'data': {
+            'kunci': str(data_res.get('kunci') or ''),
+            'judul': str(data_res.get('judul') or ''),
+            'narasi': str(data_res.get('narasi') or ''),
+        },
+    }, status=200)
