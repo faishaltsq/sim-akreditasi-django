@@ -616,6 +616,25 @@ def api_ai_test_connection(request):
 
 # ── 7. NARASI LAPORAN CAPAIAN INDIKATOR MUTU ─────────────────────────────
 
+# Pesan yang berasal dari alur kita sendiri (bukan teks mentah upstream) dan
+# aman ditampilkan ke pengguna. Selain ini diganti pesan generik supaya detail
+# internal (respons API, stack, kuota) tidak bocor ke klien.
+_PESAN_NARASI_AMAN = (
+    'belum diaktifkan',
+    'tidak dipakai pada laporan',
+    'tidak mengembalikan narasi',
+    'timeout',
+    'kuota',
+)
+
+
+def _pesan_aman_narasi(pesan):
+    teks = str(pesan or '').strip()
+    if teks and any(k in teks.lower() for k in _PESAN_NARASI_AMAN):
+        return teks
+    return 'Gagal menyusun narasi laporan.'
+
+
 @login_required
 @require_POST
 @rate_limit(max_calls=12, window=60, scope='ai')
@@ -656,7 +675,8 @@ def api_ai_narasi_laporan(request):
         isi_sekarang=(data.get('isi_sekarang') or '').strip()[:4000],
     )
     if not res.get('success'):
-        return JsonResponse({'success': False, 'error': 'Gagal menyusun narasi laporan.'},
+        return JsonResponse({'success': False,
+                             'error': _pesan_aman_narasi(res.get('error'))},
                             status=400)
     data_res = res.get('data') or {}
     return JsonResponse({

@@ -1,5 +1,14 @@
 {% load akreditasi_tags l10n %}
 <div class="sidebar-nav">
+    <!-- 0. EXECUTIVE CONTROL (tanpa sidebar di halamannya) -->
+    <a href="{% url 'akreditasi:kontrol_hub' %}" class="nav-link {% if request.resolver_match.url_name == 'kontrol_hub' or request.resolver_match.url_name == 'kontrol_risiko' or request.resolver_match.url_name == 'kontrol_emr' or request.resolver_match.url_name == 'kontrol_dokumen' %}active{% endif %}">
+        <span class="nav-icon"><i class="bi bi-broadcast-pin"></i></span>
+        <span class="nav-text">
+            <span class="nav-title">Integrated Control</span>
+            <span class="nav-desc">Dasbor Eksekutif per Unit</span>
+        </span>
+    </a>
+
     <!-- 1. DASHBOARD UTAMA -->
     <a href="{% url 'akreditasi:dashboard' %}" class="nav-link {% if request.resolver_match.url_name == 'dashboard' or request.resolver_match.url_name == 'dashboard_alias' %}active{% endif %}">
         <span class="nav-icon"><i class="bi bi-house-door-fill"></i></span>
@@ -260,6 +269,21 @@
         <span class="nav-text">
             <span class="nav-title">Tambah Indikator Mutu</span>
             <span class="nav-desc">INM / IMP-RS / IMP-Unit</span>
+        </span>
+    </a>
+    <a href="{% url 'akreditasi:laporan_mutu_daftar' %}" class="nav-link {% if request.resolver_match.url_name|slice:':12' == 'laporan_mutu' %}active{% endif %}">
+        <span class="nav-icon"><i class="bi bi-file-earmark-ruled-fill"></i></span>
+        <span class="nav-text">
+            <span class="nav-title">Laporan Mutu</span>
+            <span class="nav-desc">Bulanan · Semester · Tahunan</span>
+        </span>
+    </a>
+
+    <a href="{% url 'akreditasi:logbook_daftar' %}" class="nav-link {% if request.resolver_match.url_name|slice:':7' == 'logbook' %}active{% endif %}">
+        <span class="nav-icon"><i class="bi bi-journal-medical"></i></span>
+        <span class="nav-text">
+            <span class="nav-title">Logbook Harian</span>
+            <span class="nav-desc">IGD &amp; Rawat Inap · per shift</span>
         </span>
     </a>
 

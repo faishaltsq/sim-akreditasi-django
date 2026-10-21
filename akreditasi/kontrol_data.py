@@ -154,7 +154,12 @@ def _indicator_block(unit_ids, year, profile=None):
         return {'total': ind_qs.count() or None, 'on_target': None,
                 'below_target': None, 'avg_pct': None, 'catatan_total': 0}
 
-    on_target = cat.filter(tercapai=True).count()
+    # `tercapai` adalah @property pada model, bukan kolom DB: evaluasi di Python.
+    rows = cat.select_related('indikator').only(
+        'nilai_numerator', 'nilai_denominator',
+        'indikator__target_nilai', 'indikator__arah_target',
+    )
+    on_target = sum(1 for row in rows if row.tercapai)
     avg_raw = (
         cat.filter(nilai_denominator__gt=0)
         .annotate(pct=ExpressionWrapper(
