@@ -225,37 +225,39 @@ small, .small { font-size: var(--fs-micro); }
     transition: width var(--dur-slow) var(--ease);
 }
 
+/* Brand: grid dua baris supaya subjudul mendapat lebar penuh sidebar.
+   Sebelumnya subjudul berbagi baris dengan ikon dan tombol, menyisakan
+   ~133px — tidak cukup untuk "Akreditasi & Manajemen Risiko", sehingga
+   terpotong ellipsis dan terbaca tidak jelas. */
 .sidebar-brand {
-    min-height: var(--topbar-h);
-    padding: 0.75rem 1rem;
-    gap: 0.65rem;
+    height: var(--topbar-h);
+    padding: 0 1rem;
     background: var(--sidebar-bg);
     border-bottom: 1px solid var(--sidebar-border);
-    display: flex;
+    display: grid;
+    grid-template-columns: 30px minmax(0, 1fr) 28px;
+    grid-template-areas:
+        "icon title btn"
+        ".    sub   sub";
+    align-content: center;
     align-items: center;
-    flex-wrap: nowrap;
-}
-.sidebar-brand .brand-icon {
-    width: 34px;
-    height: 34px;
-    border-radius: 10px;
-    background: var(--primary);
-    font-size: 1rem;
-    flex: 0 0 34px;
-}
-/* Blok teks brand: dua baris saja, keduanya di-clip agar tidak pernah
-   meluber melewati min-height header (dulu tiga baris membuat teks mentok
-   ke tepi atas dan bawah). */
-.sidebar-brand-text {
-    min-width: 0;
-    flex: 1 1 auto;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    gap: 1px;
+    column-gap: 0.6rem;
+    row-gap: 5px;
     overflow: hidden;
 }
+.sidebar-brand .brand-icon {
+    grid-area: icon;
+    width: 30px;
+    height: 30px;
+    border-radius: 9px;
+    background: var(--primary);
+    font-size: 0.92rem;
+}
+.sidebar-brand-text {
+    display: contents;
+}
 .sidebar-brand-text .brand-title-row {
+    grid-area: title;
     display: flex;
     align-items: center;
     gap: 0.35rem;
@@ -263,20 +265,23 @@ small, .small { font-size: var(--fs-micro); }
 }
 .sidebar-brand-text h6 {
     margin: 0;
-    font-size: 0.86rem !important;
-    line-height: 1.15;
+    font-size: 0.9rem !important;
+    line-height: 1.2;
     color: #FFFFFF !important;
     letter-spacing: 0.06em;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
 }
+/* Subjudul: lebar penuh, ukuran terbaca, kontras dinaikkan dari
+   --sidebar-section ke --sidebar-text. */
 .sidebar-brand-text small {
+    grid-area: sub;
     display: block;
-    font-size: 0.6rem;
-    line-height: 1.25;
-    color: var(--sidebar-section) !important;
-    letter-spacing: 0.02em;
+    font-size: 0.68rem;
+    line-height: 1.3;
+    color: var(--sidebar-text) !important;
+    letter-spacing: 0.015em;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -285,7 +290,10 @@ small, .small { font-size: var(--fs-micro); }
 
 /* Collapse control */
 .sidebar-collapse-btn {
-    margin-left: auto;
+    grid-area: btn;
+    align-self: center;
+    justify-self: end;
+    margin: 0;
     width: 28px;
     height: 28px;
     flex: 0 0 28px;
@@ -381,13 +389,20 @@ small, .small { font-size: var(--fs-micro); }
     /* Collapsed sidebar — icons only, tooltips from [data-tooltip] */
     .sb-collapsed { --sidebar-width: var(--sidebar-width-collapsed); }
     .sb-collapsed .sidebar-desktop { overflow: visible; }
-    .sb-collapsed .sidebar-brand { justify-content: center; padding: 0.75rem 0.5rem; flex-wrap: wrap; }
+    .sb-collapsed .sidebar-brand {
+        grid-template-columns: 34px;
+        grid-template-areas: "icon" "btn";
+        justify-items: center;
+        row-gap: 0.35rem;
+        padding: 0.75rem 0.5rem;
+    }
     /* Teks brand disembunyikan, TETAPI tombol collapse tetap tampil — tanpa itu
        rail yang sudah diciutkan tidak punya jalan kembali ke mode penuh. */
     .sb-collapsed .sidebar-brand-text { display: none; }
     .sb-collapsed .sidebar-collapse-btn {
+        grid-area: btn;
         display: inline-flex;
-        margin: 0.25rem auto 0;
+        margin: 0;
         position: static;
     }
     .sb-collapsed .sidebar-nav .nav-section {
