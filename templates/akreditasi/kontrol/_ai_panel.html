@@ -1,0 +1,95 @@
+{% if snapshot %}
+<section class="kontrol-ai" data-portal="{{ active_portal }}" data-unit="{{ snapshot.unit.id }}">
+    {% csrf_token %}
+    <div class="kontrol-ai-head">
+        <div>
+            <span class="kontrol-eyebrow"><i class="bi bi-stars"></i> AI Briefing</span>
+            <h3>Bacaan cepat untuk kepala unit</h3>
+            <p class="kontrol-note">
+                AI hanya membaca angka di halaman ini. Angka yang tidak ada tidak akan dikarangnya.
+            </p>
+        </div>
+        <button type="button" class="kontrol-btn kontrol-btn-ai js-ai-run">
+            <i class="bi bi-lightning-charge"></i> Buat ringkasan
+        </button>
+    </div>
+    <div class="kontrol-ai-body js-ai-body" hidden></div>
+</section>
+
+<script>
+(function () {
+    var panel = document.querySelector('.kontrol-ai');
+    if (!panel || panel.dataset.ready === '1') { return; }
+    panel.dataset.ready = '1';
+
+    var btn = panel.querySelector('.js-ai-run');
+    var body = panel.querySelector('.js-ai-body');
+    var token = panel.querySelector('input[name="csrfmiddlewaretoken"]');
+    var endpoint = "{% url 'akreditasi:kontrol_ringkasan_ai' %}";
+
+    function esc(value) {
+        var div = document.createElement('div');
+        div.textContent = value == null ? '' : String(value);
+        return div.innerHTML;
+    }
+
+    function render(data) {
+        var html = '<p>' + esc(data.ringkasan) + '</p>';
+        if (data.risiko_utama && data.risiko_utama.length) {
+            html += '<h4>Risiko utama</h4><ul>';
+            data.risiko_utama.forEach(function (item) { html += '<li>' + esc(item) + '</li>'; });
+            html += '</ul>';
+        }
+        if (data.aksi_minggu_ini && data.aksi_minggu_ini.length) {
+            html += '<h4>Aksi minggu ini</h4><ul>';
+            data.aksi_minggu_ini.forEach(function (item) { html += '<li>' + esc(item) + '</li>'; });
+            html += '</ul>';
+        }
+        if (data.batas_data) {
+            html += '<p class="ai-limit">' + esc(data.batas_data) + '</p>';
+        }
+        body.innerHTML = html;
+        body.hidden = false;
+    }
+
+    btn.addEventListener('click', function () {
+        var form = new FormData();
+        form.append('portal', panel.dataset.portal);
+        form.append('unit', panel.dataset.unit);
+        if (token) { form.append('csrfmiddlewaretoken', token.value); }
+
+        btn.disabled = true;
+        btn.innerHTML = '<i class="bi bi-hourglass-split"></i> Menyusun…';
+        body.hidden = false;
+        body.innerHTML = '<p class="ai-limit">Menyusun ringkasan dari angka di halaman ini…</p>';
+
+        fetch(endpoint, {
+            method: 'POST',
+            body: form,
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRFToken': token ? token.value : ''
+            },
+            credentials: 'same-origin'
+        }).then(function (response) {
+            return response.json().then(function (payload) {
+                return { ok: response.ok, payload: payload };
+            });
+        }).then(function (result) {
+            if (result.ok && result.payload.ok) {
+                render(result.payload.data);
+            } else {
+                body.innerHTML = '<p class="ai-error"><i class="bi bi-exclamation-triangle"></i> '
+                    + esc((result.payload && result.payload.error) || 'Gagal menyusun ringkasan.') + '</p>';
+            }
+        }).catch(function () {
+            body.innerHTML = '<p class="ai-error"><i class="bi bi-exclamation-triangle"></i> '
+                + 'Koneksi ke server gagal. Coba lagi.</p>';
+        }).then(function () {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="bi bi-arrow-clockwise"></i> Susun ulang';
+        });
+    });
+})();
+</script>
+{% endif %}

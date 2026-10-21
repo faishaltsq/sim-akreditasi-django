@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+
+{% block title %}Laporan Capaian Indikator Mutu — ARIMA{% endblock %}
+{% block page_title %}Laporan Capaian Indikator Mutu{% endblock %}
+{% block page_subtitle %}Bulanan, semesteran, dan tahunan — angka dibekukan saat laporan dibuat{% endblock %}
+
+{% block extra_css %}
+<style>
+    .tbl-daftar { table-layout: auto; width: 100%; font-size: .8rem; }
+    .tbl-daftar th, .tbl-daftar td { word-break: break-word; overflow-wrap: anywhere; vertical-align: middle; }
+    /* judul kolom utuh, tidak pecah per karakter */
+    .tbl-daftar thead th { word-break: normal; overflow-wrap: normal; }
+    .tbl-daftar th.aksi, .tbl-daftar td.aksi { white-space: nowrap; }
+    /* isi pendek: biarkan selebar teksnya */
+    .tbl-daftar td.periode, .tbl-daftar td.status, .tbl-daftar td.tanggal { white-space: nowrap; }
+    .tbl-daftar td:nth-child(2) { max-width: 260px; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-3">
+
+    {% if boleh_buat %}
+    <div class="d-flex justify-content-end mb-3">
+        <a href="{% url 'akreditasi:laporan_mutu_create' %}" class="btn btn-primary btn-sm">
+            <i class="bi bi-file-earmark-plus me-1"></i> Buat Laporan
+        </a>
+    </div>
+    {% endif %}
+
+    {% if not laporan_list %}
+    <div class="text-center py-5">
+        <i class="bi bi-file-earmark-text" style="font-size:2.2rem; opacity:.35;"></i>
+        <p class="text-muted mt-2 mb-0">Belum ada laporan indikator mutu yang dapat Anda akses.</p>
+    </div>
+    {% else %}
+    <div class="table-responsive">
+        <table class="table table-sm table-hover tbl-daftar">
+            <thead class="table-light">
+                <tr>
+                    <th>Periode</th>
+                    <th>Jenis</th>
+                    <th>Cakupan</th>
+                    <th>Status</th>
+                    <th class="text-center">Sisa Batas Waktu</th>
+                    <th>Pembuat</th>
+                    <th class="text-end aksi">Aksi</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for l in laporan_list %}
+                <tr>
+                    <td><strong>{{ l.periode_label }}</strong></td>
+                    <td>{{ l.get_jenis_display }}</td>
+                    <td>{{ l.scope_label }}</td>
+                    <td><span class="badge {{ l.status_badge }}">{{ l.get_status_display }}</span></td>
+                    <td class="text-center">
+                        {% if l.sisa_hari >= 0 %}
+                            <span class="badge bg-success-subtle text-success">{{ l.sisa_hari }} hari lagi</span>
+                        {% else %}
+                            <span class="badge bg-danger-subtle text-danger">telat {{ l.telat_hari }} hari</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ l.pembuat_nama|default:"—" }}</td>
+                    <td class="text-end aksi">
+                        <a href="{% url 'akreditasi:laporan_mutu_detail' l.pk %}" class="btn btn-outline-primary btn-sm py-0">
+                            <i class="bi bi-eye"></i> Detail
+                        </a>
+                        <a href="{% url 'akreditasi:laporan_mutu_cetak' l.pk %}" class="btn btn-outline-secondary btn-sm py-0" title="Cetak">
+                            <i class="bi bi-printer"></i>
+                        </a>
+                        <a href="{% url 'akreditasi:laporan_mutu_pdf' l.pk %}" class="btn btn-outline-danger btn-sm py-0" title="Unduh PDF">
+                            <i class="bi bi-file-earmark-pdf"></i>
+                        </a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

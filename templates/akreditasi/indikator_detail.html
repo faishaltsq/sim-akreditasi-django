@@ -140,6 +140,99 @@
     </div>
   </div>
 
+  <!-- Dokumen bukti: segitiga indikator mutu - dokumen bukti - standar akreditasi -->
+  <div class="card border-0 shadow-sm rounded-3 mt-4">
+    <div class="card-header bg-white py-3 border-0 d-flex flex-wrap justify-content-between align-items-center gap-2">
+      <h6 class="fw-bold mb-0">
+        <i class="bi bi-folder2-open text-primary me-2"></i>Dokumen Bukti dari Standar Akreditasi
+      </h6>
+      {% if ind.ep_terkait and evidence_total_req %}
+      <div class="d-flex align-items-center gap-3">
+        <span class="small text-muted">
+          {{ evidence_terpenuhi }}/{{ evidence_total_req }} kebutuhan punya berkas
+          ({{ evidence_total_file }} berkas)
+        </span>
+        <span class="badge {% if evidence_pct == 100 %}bg-success-subtle text-success
+                            {% elif evidence_pct >= 50 %}bg-warning-subtle text-warning
+                            {% else %}bg-danger-subtle text-danger{% endif %}">
+          {{ evidence_pct }}%
+        </span>
+        <a href="{% url 'akreditasi:modal_bukti_data' ind.ep_terkait_id %}"
+           class="btn btn-sm btn-outline-primary">
+          <i class="bi bi-upload me-1"></i>Kelola Berkas EP {{ ind.ep_terkait.code }}
+        </a>
+      </div>
+      {% endif %}
+    </div>
+
+    {% if not ind.ep_terkait %}
+    <div class="card-body border-top py-4">
+      <p class="text-muted small mb-2">
+        Indikator ini belum tertaut ke Elemen Penilaian (EP), sehingga kebutuhan
+        dokumen bukti belum bisa ditampilkan.
+      </p>
+      {% if is_manager %}
+      <a href="{% url 'akreditasi:indikator_edit' ind.pk %}" class="btn btn-sm btn-primary">
+        <i class="bi bi-link-45deg me-1"></i>Tautkan ke EP
+      </a>
+      {% endif %}
+    </div>
+    {% elif not evidence %}
+    <div class="card-body border-top py-4 text-muted small">
+      EP <strong>{{ ind.ep_terkait.code }}</strong> tidak memiliki daftar kebutuhan
+      bukti (EvidenceReq) — tidak ada dokumen yang dipersyaratkan standar ini.
+    </div>
+    {% else %}
+    <div class="table-responsive">
+      <table class="table table-sm align-middle mb-0">
+        <thead class="table-light small text-uppercase text-muted">
+          <tr>
+            <th class="ps-3" style="width:56px;">Kategori</th>
+            <th>Kebutuhan Pembuktian</th>
+            <th style="width:110px;" class="text-center">Wajib</th>
+            <th>Berkas Terunggah</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for e in evidence %}
+          <tr>
+            <td class="ps-3">
+              <span class="badge bg-secondary-subtle text-secondary"
+                    title="{{ e.req.get_category_type_display }}">{{ e.req.category_type }}</span>
+            </td>
+            <td class="small">{{ e.req.title }}</td>
+            <td class="text-center">
+              {% if e.req.is_mandatory %}
+              <i class="bi bi-exclamation-circle text-danger" title="Wajib dilengkapi"></i>
+              {% else %}
+              <span class="text-muted small">opsional</span>
+              {% endif %}
+            </td>
+            <td>
+              {% if e.files %}
+                {% for f in e.files %}
+                <span class="badge bg-primary-subtle text-primary me-1" title="v{{ f.version }} — {{ f.get_status_display }}">
+                  <i class="bi bi-file-earmark me-1"></i>{{ f.file_name|truncatechars:42 }}
+                </span>
+                {% endfor %}
+              {% else %}
+                <span class="text-danger small">
+                  <i class="bi bi-x-circle me-1"></i>Belum ada berkas
+                </span>
+                {% if is_manager %}
+                <a href="{% url 'akreditasi:upload_bukti' e.req.pk %}?next={{ request.get_full_path|urlencode }}"
+                   class="small ms-2">unggah</a>
+                {% endif %}
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% endif %}
+  </div>
+
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>

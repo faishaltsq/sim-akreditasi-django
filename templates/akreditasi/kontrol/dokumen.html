@@ -1,0 +1,83 @@
+{% extends "akreditasi/kontrol/base_kontrol.html" %}
+{% block title %}Accreditation Document Hub — ARIMA{% endblock %}
+
+{% block content %}
+<section class="kontrol-subhead">
+    <div class="subhead-left">
+        <a class="kontrol-back" href="{% url 'akreditasi:kontrol_hub' %}?unit={{ snapshot.unit.id }}">
+            <i class="bi bi-arrow-left"></i> Control
+        </a>
+        <span class="kontrol-eyebrow"><i class="bi bi-folder2-open"></i> Sub-dasbor 3</span>
+        <h1 class="kontrol-title-sm">Electronic Accreditation Document &amp; Automation Hub</h1>
+        <p class="kontrol-lede-sm">Kepatuhan elemen penilaian, dokumen bukti, dan antrean laporan mutu.</p>
+    </div>
+    {% include "akreditasi/kontrol/_unit_switch.html" %}
+</section>
+
+<section class="kontrol-kpis">
+    <div class="kpi">
+        <span class="kpi-label">Cakupan EP <span class="kpi-scope">RS-wide</span></span>
+        <strong class="kpi-value">{% if snapshot.ep.pct is not None %}{{ snapshot.ep.pct }}%{% else %}—{% endif %}</strong>
+        <span class="kpi-foot">{{ snapshot.ep.filled|default:0 }} dari {{ snapshot.ep.total|default:0 }} item berskor</span>
+    </div>
+    <div class="kpi">
+        <span class="kpi-label">Item berskor di unit ini</span>
+        <strong class="kpi-value">{{ snapshot.ep.unit_filled }}</strong>
+        <span class="kpi-foot">QualityRecord dengan skor &gt; 0</span>
+    </div>
+    <div class="kpi">
+        <span class="kpi-label">Dokumen bukti unit</span>
+        <strong class="kpi-value">{{ snapshot.ep.evidence_total }}</strong>
+        <span class="kpi-foot">berkas terunggah</span>
+    </div>
+    <div class="kpi {% if snapshot.laporan.pending %}kpi-watch{% endif %}">
+        <span class="kpi-label">Laporan mutu menunggu</span>
+        <strong class="kpi-value">{{ snapshot.laporan.pending }}</strong>
+        <span class="kpi-foot">{{ snapshot.laporan.published }} terbit · {{ snapshot.laporan.total|default:0 }} total</span>
+    </div>
+</section>
+
+<div class="kontrol-grid-2">
+    <section class="kontrol-panel">
+        <header class="panel-head">
+            <h2><i class="bi bi-bar-chart-steps"></i> Kepatuhan EP rumah sakit</h2>
+            <span class="panel-hint">Standar nasional</span>
+        </header>
+        <div class="gauge">
+            <strong class="gauge-value">{% if snapshot.ep.pct is not None %}{{ snapshot.ep.pct }}%{% else %}—{% endif %}</strong>
+            <span class="gauge-label">{{ snapshot.ep.filled|default:0 }} dari {{ snapshot.ep.total|default:0 }} elemen penilaian punya skor</span>
+            {% if snapshot.ep.pct is not None %}
+            <div class="gauge-track"><span style="width: {{ snapshot.ep.pct }}%"></span></div>
+            {% endif %}
+        </div>
+        <p class="kontrol-note">
+            <i class="bi bi-info-circle"></i>
+            Elemen penilaian tidak terikat unit kerja, jadi cakupan ini selalu dihitung
+            untuk seluruh rumah sakit. Kolom "item berskor di unit ini" yang membedakan unit.
+        </p>
+    </section>
+
+    <section class="kontrol-panel">
+        <header class="panel-head">
+            <h2><i class="bi bi-inboxes"></i> Antrean dokumen &amp; laporan</h2>
+        </header>
+        <ul class="bar-list">
+            <li><span class="bar-label">Dokumen menunggu review</span><span class="bar-count">{{ snapshot.ep.evidence_review }}</span></li>
+            <li><span class="bar-label">Laporan mutu — draf / diverifikasi</span><span class="bar-count">{{ snapshot.laporan.pending }}</span></li>
+            <li><span class="bar-label">Laporan mutu — terbit</span><span class="bar-count">{{ snapshot.laporan.published }}</span></li>
+        </ul>
+        {% if not snapshot.ep.evidence_total and not snapshot.laporan.total %}
+        <p class="kontrol-empty-inline"><i class="bi bi-inbox"></i> Belum ada dokumen bukti maupun laporan mutu.</p>
+        {% endif %}
+    </section>
+</div>
+
+{% include "akreditasi/kontrol/_ai_panel.html" %}
+
+<section class="kontrol-modlinks">
+    <a href="{% url 'akreditasi:dokumen_hub' %}"><i class="bi bi-folder2"></i> Dokumen akreditasi</a>
+    <a href="{% url 'akreditasi:rekap' %}"><i class="bi bi-table"></i> Rekap kepatuhan</a>
+    <a href="{% url 'akreditasi:laporan_mutu_daftar' %}"><i class="bi bi-file-earmark-text"></i> Laporan mutu</a>
+    <a href="{% url 'akreditasi:indikator_dashboard' %}"><i class="bi bi-speedometer2"></i> Indikator mutu</a>
+</section>
+{% endblock %}

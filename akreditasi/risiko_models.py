@@ -7,6 +7,8 @@ from django.db import models
 from django.db.models import Q
 from django.contrib.auth.models import User
 from django.core.validators import MinValueValidator, MaxValueValidator
+from django.core.exceptions import ValidationError
+from django.db.models import Count, Sum
 from .models import UnitKerja, StandardItem
 
 
@@ -225,10 +227,20 @@ class RisikoUnit(models.Model):
         else:
             target, sumber = None, 'tidak_ada'
 
+        # Capaian: nilai manual yang diketik di form evaluasi selalu menang;
+        # bila kosong dan indikator sudah tertaut, jatuh ke agregat bulanan
+        # (CatatanIndikator) sehingga halaman evaluasi tidak pernah "kosong"
+        # selama unit sudah mengisi Input Capaian.
         capaian = float(self.capaian_nilai) if self.capaian_nilai is not None else None
+        capaian_sumber = 'manual' if capaian is not None else None
+        if capaian is None and ind is not None:
+            capaian = ind.agregat_capaian(self.tahun)['capaian']
+            if capaian is not None:
+                capaian_sumber = 'catatan'
         if capaian is None or target is None:
             return {'target': target, 'arah': arah, 'satuan': satuan,
                     'sumber': sumber, 'capaian': capaian,
+                    'capaian_sumber': capaian_sumber,
                     'tercapai': None, 'gap': None, 'gap_abs': None}
 
         tercapai = capaian <= target if arah == 'MAX' else capaian >= target
@@ -236,15 +248,17 @@ class RisikoUnit(models.Model):
         # negatif = seberapa jauh di luar target. Simetris untuk kedua arah.
         gap = (target - capaian) if arah == 'MAX' else (capaian - target)
         return {'target': target, 'arah': arah, 'satuan': satuan,
-                'sumber': sumber, 'capaian': capaian, 'tercapai': tercapai,
+                'sumber': sumber, 'capaian': capaian,
+                'capaian_sumber': capaian_sumber, 'tercapai': tercapai,
                 'gap': round(gap, 2), 'gap_abs': round(abs(gap), 2)}
 
     @property
     def capaian_persen_display(self):
-        """Format tampilan persen capaian indikator."""
-        if self.capaian_nilai is not None:
-            return f"{self.capaian_nilai:.1f}%"
-        return "—"
+        """Format tampilan persen capaian indikator (manual, lalu agregat bulanan)."""
+        val = self.capaian_evaluasi['capaian']
+        if val is None:
+            return "—"
+        return f"{val:.1f}%"
 
     @property
     def capaian_status_label(self):
@@ -253,6 +267,16 @@ class RisikoUnit(models.Model):
         if ev['tercapai'] is None:
             return None
         return 'Tercapai' if ev['tercapai'] else 'Belum Tercapai'
+
+    @property
+    def linked_indikator(self):
+        """Master IndikatorMutu yang ditautkan ke risiko ini (atau None).
+
+        Tipis di atas FK indikator_mutu_terkait: template bisa guard + URL-build
+        dalam satu ekspresi ({% if r.linked_indikator %}...pk...). Jika plan
+        access-matrix (4.07) nanti ganti sumber linking, cukup properti ini.
+        """
+        return self.indikator_mutu_terkait
 
     @property
     def rca_fishbone_items(self):
@@ -463,10 +487,37 @@ class TindakLanjutRisiko(models.Model):
     bukti_upload   = models.FileField('Bukti Upload', upload_to='risiko/bukti/', null=True, blank=True)
     catatan        = models.TextField('Catatan', blank=True)
 
+    # Spec pelaksanaan: tiap aksi mitigasi membawa bukti dokumen dan tautan ke
+    # standar akreditasi (pokja) beserta EP yang dilayaninya. SET_NULL bukan
+    # CASCADE — menghapus standar/EP tidak boleh menghapus riwayat tindakan RS;
+    # tautan jadi usang dan template menampilkan '—', aksinya tetap ada.
+    standar_terkait = models.ForeignKey(
+        'akreditasi.Category', on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='tindak_lanjut_set', verbose_name='Standar Akreditasi Terkait')
+    ep_terkait      = models.ForeignKey(
+        'akreditasi.StandardItem', on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='tindak_lanjut_set', verbose_name='EP Terkait')
+
     class Meta:
         verbose_name        = 'Tindak Lanjut Risiko'
         verbose_name_plural = 'Tindak Lanjut Risiko'
         ordering            = ['risiko', 'urutan']
+
+    def clean(self):
+        """Konsistensi tautan + aturan bukti dokumen.
+
+        View selalu menurunkan standar dari EP yang dipilih; keduanya terisi
+        tapi berbeda kategori berarti halaman usang (stale) dan ditolak di
+        sini, bukan 500 di server.
+        """
+        super().clean()
+        if self.ep_terkait_id and self.standar_terkait_id:
+            if self.ep_terkait.category_id != self.standar_terkait_id:
+                raise ValidationError({
+                    'ep_terkait': 'EP harus berasal dari standar yang dipilih.'})
+        if self.status_aksi == 'SELESAI' and not self.bukti_upload:
+            raise ValidationError({
+                'bukti_upload': 'Pelaksanaan berstatus Selesai wajib punya bukti dokumen.'})
 
     def __str__(self):
         return f"{self.risiko} — Aksi #{self.urutan}: {self.aksi[:60]}"
@@ -481,6 +532,7 @@ class InsidenKeselamatan(models.Model):
         ('KNC',           'KNC — Kejadian Nyaris Cedera'),
         ('KTD',           'KTD — Kejadian Tidak Diharapkan'),
         ('KTC',           'KTC — Kejadian Tidak Cedera'),
+        ('KPC',           'KPC — Kejadian Pasien Cedera'),
         ('SENTINEL',      'Kejadian Sentinel'),
         ('KEJADIAN_LAIN', 'Kejadian Lain'),
     ]
@@ -548,6 +600,14 @@ class IndikatorMutu(models.Model):
         ('MAX', 'Maksimal — Capaian ≤ Target (lower is better)'),
     ]
 
+    EP_SUMBER_CHOICES = [
+        ('',       'Belum ditautkan'),
+        ('MANUAL', 'Dipilih manual'),
+        ('AI',     'Rekomendasi AI'),
+        ('RULE',   'Auto (unit terkait)'),
+        ('LEXICAL', 'Auto (kecocokan kata)'),
+    ]
+
     DIMENSI_CHOICES = [
         ('EFEKTIF',           'Efektif'),
         ('EFISIEN',           'Efisien'),
@@ -567,7 +627,42 @@ class IndikatorMutu(models.Model):
     denominator    = models.CharField('Denominator', max_length=300)
     target_nilai   = models.DecimalField('Target Nilai', max_digits=5, decimal_places=2)
     satuan         = models.CharField('Satuan', max_length=20, default='%')
+    # Tipe pengukuran: 'persen' → (N/D) × 100, validasi 0–100.
+    # 'rate_absolut' → (N/D) × faktor_pengali, tanpa batas atas (per mil,
+    # rerata, jumlah kasus). Lihat CatatanIndikator.nilai_capaian.
+    TIPE_PENGUKURAN_CHOICES = [
+        ('persen', 'Persentase (%)'),
+        ('rate_absolut', 'Angka absolut / rate (per mil, rerata, jumlah kasus)'),
+    ]
+    FAKTOR_PENGALI_CHOICES = [
+        (1, '× 1  (rerata / jumlah kasus)'),
+        (100, '× 100  (persentase)'),
+        (1000, '× 1000  (per mil ‰)'),
+        (100000, '× 100.000  (per 100.000)'),
+    ]
+    tipe_pengukuran = models.CharField(
+        'Tipe Pengukuran', max_length=15, choices=TIPE_PENGUKURAN_CHOICES,
+        default='persen',
+        help_text='persen → (N/D) × 100, validasi 0–100. rate_absolut → '
+                  '(N/D) × faktor_pengali, tanpa batas atas.'
+    )
+    faktor_pengali = models.IntegerField(
+        'Faktor Pengali', default=100, choices=FAKTOR_PENGALI_CHOICES,
+        help_text='Pengali pada rumus capaian. Autoritatif untuk aritmetika; '
+                  'kolom satuan hanya label tampilan dan tidak mengubah perhitungan.'
+    )
     ep_terkait     = models.ForeignKey(StandardItem, on_delete=models.SET_NULL, null=True, blank=True, related_name='indikator_mutu', verbose_name='EP Terkait')
+    ep_sumber      = models.CharField(
+        'Sumber Link EP', max_length=10, choices=EP_SUMBER_CHOICES,
+        default='MANUAL', blank=True,
+        help_text=('Bagaimana ep_terkait terisi. Nilai kosong berarti belum '
+                   'ditautkan dan baris tetap terbuka untuk auto-sync; '
+                   'MANUAL tidak pernah ditimpa.')
+    )
+    ep_skor        = models.DecimalField(
+        'Skor Kecocokan EP', max_digits=5, decimal_places=4,
+        null=True, blank=True,
+    )
     rencana_aksi   = models.TextField('Rencana Aksi (Preset)', blank=True, default='')
     pj             = models.CharField('Penanggung Jawab', max_length=200, blank=True, default='')
     aktif          = models.BooleanField('Aktif', default=True)
@@ -604,6 +699,42 @@ class IndikatorMutu(models.Model):
         }
         return mapping.get(self.jenis, self.jenis)
 
+    def agregat_capaian(self, tahun):
+        """Agregat capaian satu tahun dari CatatanIndikator.
+
+        Rasio Σnumerator / Σdenominator × faktor — bukan rerata persen bulanan,
+        karena rerata menyetarakan bobot bulan ber-denominator kecil dengan
+        bulan ber-denominator besar. Rumus identik dengan
+        CatatanIndikator.nilai_capaian (lihat baris tipe_pengukuran/faktor_pengali).
+        `capaian` None bila belum ada bulan dengan denominator > 0.
+        """
+        cache = getattr(self, '_agregat_cache', None)
+        if cache is None:
+            cache = self._agregat_cache = {}
+        if tahun in cache:
+            return cache[tahun]
+
+        agg = self.catatan.filter(tahun=tahun, nilai_denominator__gt=0).aggregate(
+            num=Sum('nilai_numerator'),
+            den=Sum('nilai_denominator'),
+            bulan_terisi=Count('id'),
+        )
+        num, den, bulan = agg['num'], agg['den'], agg['bulan_terisi'] or 0
+        capaian = None
+        if den is not None and den > 0:
+            if self.tipe_pengukuran == 'persen':
+                faktor = Decimal('100')
+            else:
+                faktor = Decimal(str(self.faktor_pengali or 100))
+            capaian = round(float((num / den) * faktor), 2)
+
+        hasil = {
+            'tahun': tahun, 'num': num, 'den': den,
+            'bulan_terisi': bulan, 'capaian': capaian,
+        }
+        cache[tahun] = hasil
+        return hasil
+
 
 # ---------------------------------------------------------------------------
 # 5. CatatanIndikator — pencatatan hasil IMP per periode
@@ -634,9 +765,23 @@ class CatatanIndikator(models.Model):
 
     @property
     def nilai_capaian(self):
-        if self.nilai_denominator and self.nilai_denominator > 0:
-            return (self.nilai_numerator / self.nilai_denominator) * Decimal('100')
-        return Decimal('0')
+        if not self.nilai_denominator or self.nilai_denominator <= 0:
+            return Decimal('0')
+        ind = self.indikator
+        if getattr(ind, 'tipe_pengukuran', 'persen') == 'persen':
+            # persen selalu dari literal 100 — faktor_pengali kolom tidak
+            # pernah mengubah aritmetika persentase.
+            faktor = Decimal('100')
+        else:
+            faktor = Decimal(str(getattr(ind, 'faktor_pengali', 100) or 100))
+        num = self.nilai_numerator
+        den = self.nilai_denominator
+        try:
+            return (num / den) * faktor
+        except TypeError:
+            # nilai disimpan sebagai literal float/int (bukan Decimal) —
+            # lewat Decimal(str(...)) agar hasil tetap presisi.
+            return (Decimal(str(num)) / Decimal(str(den))) * faktor
 
 
     @property
@@ -660,31 +805,33 @@ class CatatanIndikator(models.Model):
             arah = getattr(self.indikator, 'arah_target', 'MIN')
             arah_label = '≥' if arah == 'MIN' else '≤'
             # Idempotent: only create ONE draft per indicator per unit
-            RisikoUnit.objects.get_or_create(
+            if not RisikoUnit.objects.filter(
                 unit=self.indikator.unit,
                 indikator_mutu_terkait=self.indikator,
-                defaults={
-                    'tahun': self.tahun,
-                    'periode': 'TRIWULAN_1',
-                    'kategori_risiko': 'OPERASIONAL',
-                    'jenis_risiko': 'Risiko Kegagalan Mutu & Layanan',
-                    'masalah': (
+            ).exists():
+                RisikoUnit.objects.create(
+                    unit=self.indikator.unit,
+                    indikator_mutu_terkait=self.indikator,
+                    tahun=self.tahun,
+                    periode='TRIWULAN_1',
+                    kategori_risiko='OPERASIONAL',
+                    jenis_risiko='Risiko Kegagalan Mutu & Layanan',
+                    masalah=(
                         f"Capaian {self.indikator.nama_indikator} di bawah target "
                         f"({capaian:.1f} {satuan} vs target {arah_label} {target} {satuan})"
                     ),
-                    'deskripsi_risiko': (
+                    deskripsi_risiko=(
                         f"Indikator [{self.indikator.kode_indikator}] "
                         f"{self.indikator.nama_indikator} tidak mencapai target Renstra. "
                         f"Capaian: {capaian:.1f} {satuan} | Target: {arah_label} {target} {satuan}."
                     ),
-                    'dampak': 3,
-                    'probabilitas': 3,
-                    'strategi_mitigasi': 'KURANGI',
-                    'rencana_aksi': self.indikator.rencana_aksi or 'Lakukan analisis akar masalah (Fishbone/5-Why) dan susun PDCA RTL.',
-                    'pj_mitigasi': self.indikator.pj or 'Ka. Unit',
-                    'status': 'IDENTIFIKASI',
-                },
-            )
+                    dampak=3,
+                    probabilitas=3,
+                    strategi_mitigasi='KURANGI',
+                    rencana_aksi=self.indikator.rencana_aksi or 'Lakukan analisis akar masalah (Fishbone/5-Why) dan susun PDCA RTL.',
+                    pj_mitigasi=self.indikator.pj or 'Ka. Unit',
+                    status='IDENTIFIKASI',
+                )
         elif self.tercapai and self.indikator.ep_terkait_id:
             # Auto-tag: update QualityRecord for the linked EP when indicator achieved
             from akreditasi.models import QualityRecord  # lazy — prevents circular import
@@ -805,3 +952,268 @@ class RenstraFokusItem(models.Model):
 
     def __str__(self):
         return f'{self.roadmap.tahun} #{self.nomor}: {self.nama_fokus}'
+
+
+# ---------------------------------------------------------------------------
+# 7. Laporan Mutu — dokumen formal bulanan / semester / tahunan
+# ---------------------------------------------------------------------------
+
+class LaporanMutu(models.Model):
+    """Header satu dokumen Laporan Capaian Indikator Mutu.
+
+    Angka di dalamnya dibekukan saat pembuatan (lihat LaporanMutuBaris) agar
+    dokumen yang sudah diverifikasi/disetujui tidak berubah sendiri ketika
+    data bulan dikoreksi. Regenerasi hanya terjadi pada status DRAF.
+    """
+    JENIS_CHOICES = [
+        ('BULANAN',  'Laporan Capaian Indikator Mutu Bulanan'),
+        ('SEMESTER', 'Laporan Capaian Indikator Mutu Semester'),
+        ('TAHUNAN',  'Laporan Capaian Indikator Mutu Tahunan'),
+    ]
+    SCOPE_CHOICES = [
+        ('UNIT', 'Unit Kerja'),
+        ('RS',   'Seluruh Rumah Sakit'),
+    ]
+    STATUS_CHOICES = [
+        ('DRAF',          'Draf'),
+        ('DIVERIFIKASI',  'Diverifikasi Kepala Unit'),
+        ('DISETUJUI',     'Disetujui Komite Mutu'),
+        ('TERBIT',        'Diterbitkan Direksi'),
+    ]
+
+    jenis              = models.CharField('Jenis Laporan', max_length=10, choices=JENIS_CHOICES)
+    tahun              = models.PositiveIntegerField('Tahun Laporan', default=2026)
+    bulan              = models.PositiveSmallIntegerField('Bulan', null=True, blank=True,
+                         validators=[MinValueValidator(1), MaxValueValidator(12)],
+                         help_text='Hanya untuk laporan bulanan')
+    semester           = models.PositiveSmallIntegerField('Semester', null=True, blank=True,
+                         validators=[MinValueValidator(1), MaxValueValidator(2)],
+                         help_text='Hanya untuk laporan semester (1 = Jan–Jun, 2 = Jul–Des)')
+    scope              = models.CharField('Cakupan', max_length=5, choices=SCOPE_CHOICES, default='UNIT')
+    unit               = models.ForeignKey(UnitKerja, on_delete=models.SET_NULL, null=True, blank=True,
+                         related_name='laporan_mutu',
+                         help_text='Kosong bila cakupan seluruh RS')
+    nomor              = models.CharField('Nomor Dokumen', max_length=60, blank=True, default='')
+    status             = models.CharField(max_length=15, choices=STATUS_CHOICES, default='DRAF')
+    pembuat            = models.ForeignKey(User, on_delete=models.SET_NULL, null=True,
+                         related_name='laporan_mutu_dibuat', verbose_name='Dibuat Oleh')
+    dibuat_pada        = models.DateTimeField(auto_now_add=True)
+    diverifikasi_oleh  = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True,
+                         related_name='laporan_mutu_diverifikasi', verbose_name='Diverifikasi Oleh')
+    diverifikasi_pada  = models.DateTimeField(null=True, blank=True)
+    disetujui_oleh     = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True,
+                         related_name='laporan_mutu_disetujui', verbose_name='Disetujui Oleh')
+    disetujui_pada     = models.DateTimeField(null=True, blank=True)
+    terbit_pada        = models.DateTimeField(null=True, blank=True)
+    catatan_verifikasi = models.TextField('Catatan Verifikasi', blank=True, default='')
+
+    class Meta:
+        verbose_name        = 'Laporan Mutu'
+        verbose_name_plural = 'Laporan Mutu'
+        ordering            = ['-tahun', '-bulan', '-semester', '-id']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['jenis', 'tahun', 'semester', 'bulan', 'scope', 'unit'],
+                name='uniq_laporan_mutu_periode',
+                # Cakupan RS memakai unit=NULL; tanpa ini dua laporan RS untuk
+                # periode yang sama dianggap berbeda (semantik standar NULL).
+                nulls_distinct=False,
+            ),
+        ]
+
+    def __str__(self):
+        return f'{self.get_jenis_display()} — {self.periode_label} ({self.get_scope_display()})'
+
+    @property
+    def periode_label(self):
+        """Label periode untuk judul dokumen, mis. 'Januari 2026' / 'Semester I 2026'."""
+        if self.jenis == 'BULANAN':
+            nama_bulan = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli',
+                          'Agustus', 'September', 'Oktober', 'November', 'Desember']
+            return f'{nama_bulan[self.bulan - 1]} {self.tahun}'
+        if self.jenis == 'SEMESTER':
+            return f'Semester {"I" if self.semester == 1 else "II"} {self.tahun}'
+        return f'Tahun {self.tahun}'
+
+    @property
+    def batas_waktu(self):
+        from .mutu_laporan import batas_waktu_laporan
+        return batas_waktu_laporan(self.jenis, self.tahun, self.bulan, self.semester)
+
+    @property
+    def terlambat(self):
+        from .mutu_laporan import terlambat_laporan
+        return terlambat_laporan(self.jenis, self.tahun, self.bulan, self.semester)
+
+    @property
+    def sisa_hari(self):
+        """Sisa hari sampai batas pelaporan; negatif = sudah lewat."""
+        from .mutu_laporan import sisa_hari_laporan
+        return sisa_hari_laporan(self.jenis, self.tahun, self.bulan, self.semester)
+
+    @property
+    def telat_hari(self):
+        """Jumlah hari keterlambatan, 0 bila belum lewat batas."""
+        return max(0, -self.sisa_hari)
+
+    @property
+    def boleh_ubah(self):
+        """Hanya draf yang boleh diubah; laporan terverifikasi dibekukan."""
+        return self.status == 'DRAF'
+
+    def _nama_user(self, user):
+        if user is None:
+            return ''
+        return (user.get_full_name() or user.username)
+
+    @property
+    def pembuat_nama(self):
+        """Nama pembuat untuk tabel daftar/cetak (tidak pernah None)."""
+        return self._nama_user(self.pembuat)
+
+    @property
+    def diverifikasi_oleh_nama(self):
+        return self._nama_user(self.diverifikasi_oleh)
+
+    @property
+    def diverifikasi_jabatan(self):
+        if self.diverifikasi_oleh is None:
+            return ''
+        prof = getattr(self.diverifikasi_oleh, 'profile', None)
+        return (prof.jabatan if prof and prof.jabatan else '')
+
+    @property
+    def disetujui_oleh_nama(self):
+        return self._nama_user(self.disetujui_oleh)
+
+    @property
+    def scope_label(self):
+        """Nama cakupan yang terbaca di daftar: nama unit, atau seluruh RS."""
+        return 'Seluruh Rumah Sakit' if self.scope == 'RS' else (
+            self.unit.name if self.unit_id else 'Unit Kerja')
+
+    @property
+    def status_badge(self):
+        """Kelas Bootstrap badge status, dipakai daftar & detail laporan."""
+        return {
+            'DRAF': 'bg-secondary',
+            'DIVERIFIKASI': 'bg-info text-dark',
+            'DISETUJUI': 'bg-primary',
+            'TERBIT': 'bg-success',
+        }.get(self.status, 'bg-secondary')
+
+    def save(self, *args, **kwargs):
+        """Satu laporan per periode per cakupan, di semua backend.
+
+        UniqueConstraint(nulls_distinct=False) tidak dibuat di SQLite
+        (models.W047) sehingga pengujian jalan dengan aturan yang sama dengan
+        Postgres produksi: validasi dilakukan di sini, constraint database
+        tetap dipertahankan sebagai lapis kedua.
+        """
+        dupes = LaporanMutu.objects.filter(
+            jenis=self.jenis, tahun=self.tahun, semester=self.semester,
+            bulan=self.bulan, scope=self.scope, unit=self.unit,
+        )
+        if self.pk:
+            dupes = dupes.exclude(pk=self.pk)
+        if dupes.exists():
+            raise ValidationError({
+                'jenis': (
+                    f'{self.get_jenis_display()} untuk {self.periode_label} '
+                    f'({self.get_scope_display()}) sudah ada.'
+                ),
+            })
+        super().save(*args, **kwargs)
+
+
+class LaporanMutuBaris(models.Model):
+    """Satu baris = satu indikator, dengan angka yang dibekukan saat laporan dibuat.
+
+    Kolom snapshot (kode..status_tercapai) adalah salinan apa adanya dari master
+    indikator dan catatan bulanan. Indikator di-SET_NULL agar dokumen lama tetap
+    terbaca walaupun indikator master dihapus.
+    """
+    VERIFIKASI_CHOICES = [
+        ('BELUM',  'Belum Diverifikasi'),
+        ('SETUJU', 'Sesuai'),
+        ('REVISI', 'Perlu Revisi'),
+    ]
+
+    laporan           = models.ForeignKey(LaporanMutu, on_delete=models.CASCADE, related_name='baris')
+    indikator         = models.ForeignKey(IndikatorMutu, on_delete=models.SET_NULL, null=True, blank=True,
+                         related_name='laporan_baris')
+    # ── snapshot master ──
+    urutan            = models.PositiveSmallIntegerField('Urutan', default=0)
+    kode              = models.CharField('Kode Indikator', max_length=50)
+    nama              = models.CharField('Nama Indikator', max_length=300)
+    jenis             = models.CharField('Jenis Indikator', max_length=10)
+    unit_nama         = models.CharField('Unit Kerja', max_length=150, blank=True, default='')
+    # Deskripsi rumus dari master — bukan angka. Angka periode ada di
+    # nilai_numerator / nilai_denominator di bawah.
+    numerator         = models.CharField('Numerator', max_length=300, blank=True, default='')
+    denominator       = models.CharField('Denominator', max_length=300, blank=True, default='')
+    satuan            = models.CharField('Satuan', max_length=20, blank=True, default='%')
+    arah              = models.CharField('Arah Target', max_length=3, default='MIN')
+    target            = models.DecimalField('Target Nilai', max_digits=8, decimal_places=2, default=Decimal('0'))
+    # ── snapshot angka periode ──
+    nilai_numerator   = models.DecimalField('N Periode', max_digits=12, decimal_places=2,
+                         null=True, blank=True)
+    nilai_denominator = models.DecimalField('D Periode', max_digits=12, decimal_places=2,
+                         null=True, blank=True)
+    nilai_capaian     = models.DecimalField('Capaian', max_digits=10, decimal_places=2, null=True, blank=True)
+    status_tercapai   = models.BooleanField('Tercapai', null=True, blank=True)
+    bulan_terisi      = models.PositiveSmallIntegerField('Bulan Terisi', default=0)
+    # ── analisis & tindak lanjut (diisi saat laporan berstatus draf) ──
+    analisis          = models.TextField('Analisis PDSA', blank=True, default='')
+    tindak_lanjut     = models.TextField('Tindak Lanjut', blank=True, default='')
+    # ── verifikasi per baris (L4 — Kepala Unit) ──
+    status_verifikasi = models.CharField(max_length=10, choices=VERIFIKASI_CHOICES, default='BELUM')
+    verifikator       = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True,
+                         related_name='laporan_baris_diverifikasi')
+    verifikasi_pada   = models.DateTimeField(null=True, blank=True)
+    catatan_verifikasi = models.CharField('Catatan Verifikasi', max_length=300, blank=True, default='')
+
+    class Meta:
+        verbose_name        = 'Baris Laporan Mutu'
+        verbose_name_plural = 'Baris Laporan Mutu'
+        ordering            = ['urutan', 'kode']
+        unique_together     = [('laporan', 'kode')]
+
+    def __str__(self):
+        return f'{self.laporan_id} — [{self.kode}] {self.nama[:60]}'
+
+
+class LaporanMutuSeksi(models.Model):
+    """Bagian naratif laporan (ringkasan eksekutif, kendala, BAB I–VI, kesimpulan).
+
+    Kunci dipakai agar template bisa memilih bagian yang relevan per jenis laporan
+    tanpa menambah kolom per BAB.
+    """
+    KUNCI_CHOICES = [
+        ('RINGKASAN_EKSEKUTIF', 'Ringkasan Eksekutif'),
+        ('KENDALA',             'Kendala dan Hambatan'),
+        ('REKOMENDASI',         'Rekomendasi dan Upaya Perbaikan'),
+        ('BAB_I',               'BAB I — Bagian Umum'),
+        ('BAB_II',              'BAB II — Analisa dan Evaluasi Capaian Kinerja Pelayanan Rumah Sakit'),
+        ('BAB_III',             'BAB III — Analisa dan Evaluasi Program Kerja'),
+        ('BAB_IV',              'BAB IV — Analisa dan Evaluasi Komponen Biaya'),
+        ('BAB_V',               'BAB V — Rekap Kejadian Ikp, Klaim, dan Risiko'),
+        ('BAB_VI',              'BAB VI — Kesimpulan dan Usulan'),
+        ('KESIMPULAN',          'Kesimpulan dan Usulan Tindak Lanjut'),
+        ('PENUTUP',             'Penutup'),
+    ]
+
+    laporan = models.ForeignKey(LaporanMutu, on_delete=models.CASCADE, related_name='seksi')
+    kunci   = models.CharField('Kode Bagian', max_length=40, choices=KUNCI_CHOICES)
+    judul   = models.CharField('Judul', max_length=120, blank=True, default='')
+    isi     = models.TextField('Isi', blank=True, default='')
+
+    class Meta:
+        verbose_name        = 'Seksi Laporan Mutu'
+        verbose_name_plural = 'Seksi Laporan Mutu'
+        ordering            = ['kunci']
+        unique_together     = [('laporan', 'kunci')]
+
+    def __str__(self):
+        return f'{self.laporan_id} — {self.kunci}'
+

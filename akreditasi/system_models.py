@@ -70,7 +70,9 @@ class SystemConfig(models.Model):
     ai_enable_pdca = models.BooleanField('AI: Modul Matriks PDCA', default=True)
     ai_enable_insiden = models.BooleanField('AI: Modul Laporan Insiden', default=True)
     ai_enable_rdwos = models.BooleanField('AI: Modul Dokumen Bukti RDWOS', default=True)
+    ai_enable_ep_sync = models.BooleanField('AI: Sinkronisasi EP Indikator Mutu', default=True)
     ai_enable_kps = models.BooleanField('AI: Modul KPS / Kredensial Nakes', default=True)
+    ai_enable_laporan = models.BooleanField('AI: Modul Laporan Mutu', default=True)
     ai_temperature = models.FloatField('Kreativitas AI (temperature 0.0–1.0)', default=0.3)
     ai_max_tokens = models.PositiveSmallIntegerField('Maksimal Token Output AI', default=2500)
 

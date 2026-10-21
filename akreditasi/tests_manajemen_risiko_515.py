@@ -10,10 +10,12 @@ from django.urls import reverse
 from django.contrib.auth.models import User
 from akreditasi.models import UnitKerja
 from akreditasi.risiko_models import RisikoUnit
+from akreditasi.tests_utils import reset_rate_limit
 
 
 class Standar515KategoriDanFieldsTest(TestCase):
     def setUp(self):
+        reset_rate_limit()
         self.user = User.objects.create_user(username='risk.officer', password='password123')
         self.unit = UnitKerja.objects.create(name='Instalasi Farmasi Test', code='FARM-TEST-515', level=2)
         self.client = Client()

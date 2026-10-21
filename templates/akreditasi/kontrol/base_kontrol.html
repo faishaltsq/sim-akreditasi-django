@@ -1,0 +1,124 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}ARIMA — Hospital Integrated Control{% endblock %}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'css/kontrol.css' %}">
+</head>
+<body class="kontrol-body">
+
+<div class="kontrol-backdrop" aria-hidden="true">
+    <svg viewBox="0 0 1440 640" preserveAspectRatio="xMidYMax slice" focusable="false">
+        <defs>
+            <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="#0b1220"/>
+                <stop offset="55%" stop-color="#0f2137"/>
+                <stop offset="100%" stop-color="#08111d"/>
+            </linearGradient>
+            <linearGradient id="glow" x1="0" y1="0" x2="1" y2="0">
+                <stop offset="0%" stop-color="#0ea5e9" stop-opacity="0.35"/>
+                <stop offset="50%" stop-color="#22d3ee" stop-opacity="0.18"/>
+                <stop offset="100%" stop-color="#0ea5e9" stop-opacity="0"/>
+            </linearGradient>
+        </defs>
+        <rect width="1440" height="640" fill="url(#sky)"/>
+        <g fill="#0d1b2c" stroke="#1e3a56" stroke-width="1.2">
+            <rect x="80" y="300" width="150" height="340"/>
+            <rect x="250" y="250" width="120" height="390"/>
+            <rect x="1080" y="290" width="150" height="350"/>
+            <rect x="1250" y="340" width="120" height="300"/>
+        </g>
+        <g fill="#122a42" stroke="#27506f" stroke-width="1.6">
+            <rect x="410" y="180" width="620" height="460" rx="10"/>
+            <rect x="560" y="110" width="320" height="90" rx="8"/>
+            <rect x="660" y="60" width="120" height="60" rx="6"/>
+        </g>
+        <g fill="#0ea5e9" opacity="0.75">
+            <rect x="600" y="78" width="34" height="10" rx="2"/>
+            <rect x="612" y="66" width="10" height="34" rx="2"/>
+        </g>
+        <g fill="#16385b" opacity="0.95">
+            <rect x="450" y="230" width="120" height="70" rx="4"/>
+            <rect x="600" y="230" width="120" height="70" rx="4"/>
+            <rect x="750" y="230" width="120" height="70" rx="4"/>
+            <rect x="900" y="230" width="90" height="70" rx="4"/>
+            <rect x="450" y="330" width="120" height="70" rx="4"/>
+            <rect x="600" y="330" width="120" height="70" rx="4"/>
+            <rect x="750" y="330" width="120" height="70" rx="4"/>
+            <rect x="900" y="330" width="90" height="70" rx="4"/>
+            <rect x="450" y="430" width="120" height="70" rx="4"/>
+            <rect x="600" y="430" width="120" height="70" rx="4"/>
+            <rect x="750" y="430" width="120" height="70" rx="4"/>
+            <rect x="900" y="430" width="90" height="70" rx="4"/>
+        </g>
+        <g fill="#22d3ee" opacity="0.28">
+            <rect x="470" y="250" width="26" height="16" rx="2"/>
+            <rect x="622" y="250" width="26" height="16" rx="2"/>
+            <rect x="772" y="250" width="26" height="16" rx="2"/>
+            <rect x="470" y="350" width="26" height="16" rx="2"/>
+            <rect x="772" y="350" width="26" height="16" rx="2"/>
+            <rect x="622" y="450" width="26" height="16" rx="2"/>
+            <rect x="920" y="450" width="26" height="16" rx="2"/>
+        </g>
+        <ellipse cx="720" cy="640" rx="820" ry="120" fill="url(#glow)"/>
+    </svg>
+</div>
+
+<header class="kontrol-topbar">
+    <a class="kontrol-brand" href="{% url 'akreditasi:kontrol_hub' %}">
+        <span class="brand-mark"><i class="bi bi-buildings"></i></span>
+        <span class="brand-text">
+            <strong>ARIMA</strong>
+            <small>Hospital Integrated Control</small>
+        </span>
+    </a>
+    <div class="kontrol-topbar-actions">
+        <a class="kontrol-ghost" href="{% url 'akreditasi:dashboard' %}" title="Buka aplikasi lengkap">
+            <i class="bi bi-grid-1x2"></i><span class="d-none d-sm-inline">Aplikasi</span>
+        </a>
+        {% if user.is_authenticated %}
+        <span class="kontrol-user" title="{{ user.profile.get_role_display|default:user.username }}">
+            <i class="bi bi-person-circle"></i>
+            <span class="d-none d-sm-inline">{{ user.profile.full_name|default:user.username }}</span>
+        </span>
+        <form method="post" action="{% url 'accounts:logout' %}" class="m-0">
+            {% csrf_token %}
+            <button type="submit" class="kontrol-ghost" title="Keluar">
+                <i class="bi bi-box-arrow-right"></i>
+            </button>
+        </form>
+        {% endif %}
+    </div>
+</header>
+
+<main class="kontrol-main">
+    {% if messages %}
+    <div class="kontrol-messages">
+        {% for message in messages %}
+        <div class="kontrol-alert kontrol-alert-{{ message.tags|default:'info' }}">
+            <i class="bi bi-info-circle"></i> {{ message }}
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+    {% block content %}{% endblock %}
+</main>
+
+<footer class="kontrol-footer">
+    <span>ARIMA · Executive Dashboard for Quality, Risk &amp; EHR Integration</span>
+    <span class="kontrol-footer-meta">
+        {% if snapshot.unit %}Unit: {{ snapshot.unit.name }} · {% endif %}Data {{ snapshot.year|default:'' }}
+    </span>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" defer></script>
+{% block extra_js %}{% endblock %}
+</body>
+</html>

@@ -9,7 +9,10 @@ KEAMANAN:
 """
 import re
 import json
+import time
 import logging
+from decimal import Decimal
+
 import requests
 from typing import Optional
 
@@ -25,6 +28,7 @@ from .ai_prompts import (
     PROMPT_ANALISIS_MASALAH_RISIKO,
     PROMPT_FMEA_SUGGESTION,
     PROMPT_RCA_SUGGESTION,
+    PROMPT_EP_MATCH,
 )
 
 logger = logging.getLogger(__name__)
@@ -69,7 +73,7 @@ def sanitize_hospital_prompt(text: str) -> str:
 
 def _call_deepseek(prompt: str, system_prompt: str = SYSTEM_PROMPT_RS,
                    model: str = None, temperature: float = None,
-                   max_tokens: int = None) -> dict:
+                   max_tokens: int = None, timeout: int = None) -> dict:
     """
     Panggil DeepSeek API dari backend. API Key TIDAK pernah bocor ke frontend.
 
@@ -106,16 +110,18 @@ def _call_deepseek(prompt: str, system_prompt: str = SYSTEM_PROMPT_RS,
         'response_format': {'type': 'json_object'},
     }
 
+    _timeout = timeout or DEFAULT_TIMEOUT
+
     try:
-        resp = requests.post(DEEPSEEK_API_URL, headers=headers, json=payload, timeout=DEFAULT_TIMEOUT)
+        resp = requests.post(DEEPSEEK_API_URL, headers=headers, json=payload, timeout=_timeout)
         resp.raise_for_status()
         content = resp.json()['choices'][0]['message']['content']
         parsed = json.loads(content)
         return {'success': True, 'data': parsed, 'error': None}
 
     except requests.exceptions.Timeout:
-        logger.warning('DeepSeek API timeout setelah %ds', DEFAULT_TIMEOUT)
-        return {'success': False, 'error': f'Koneksi ke AI timeout ({DEFAULT_TIMEOUT}s). Coba lagi sebentar.'}
+        logger.warning('DeepSeek API timeout setelah %ds', _timeout)
+        return {'success': False, 'error': f'Koneksi ke AI timeout ({_timeout}s). Coba lagi sebentar.'}
 
     except requests.exceptions.HTTPError as e:
         body = {}
@@ -568,6 +574,119 @@ def generate_rca_suggestion(user, unit_name: str, jenis_risiko: str,
 
 # ── UTILITY: Cek Koneksi API ─────────────────────────────────────────────
 
+# ── SINKRONISASI INDIKATOR MUTU <-> EP (STARKES) ────────────────────────────
+#
+# Tier C: katalog EP dikirim UTUH dalam satu panggilan (terukur 1053 baris,
+# ~116 KB, ~33-46k token — masih di bawah konteks deepseek-chat 64k). Penyaring
+# lexical sengaja TIDAK dipakai sebagai gerbang: presisi@1-nya hanya 10% pada
+# 72 link manual, dan 17 dari 36 kasus yang meleset tidak berbagi satu kata pun
+# dengan teks EP yang benar, sehingga gerbang katas akan mematikan jawaban yang
+# sebenarnya mampu ditemukan model.
+
+def generate_ep_rekomendasi(user, ind, petunjuk_unit: str = '') -> dict:
+    """Rekomendasi EP untuk sebuah indikator mutu via DeepSeek.
+
+    Mengembalikan ``{'success': bool, 'data': {...}, 'error': str|None,
+    'ai_terpakai': bool}``. Saat AI mati/gagal, hasil lexical Tier B tetap
+    dikembalikan agar pemanggil tidak pernah pecah.
+    """
+    from .system_models import SystemConfig
+    from . import ep_sync
+    # Durasi ikut tercatat: regresi 60s batas Vercel terlihat di AuditLog tanpa
+    # perlu mereproduksi secara manual.
+    _mulai = time.monotonic()
+
+    def _lexical(reason: str, ai_terpakai: bool = False) -> dict:
+        kandidat = ep_sync.lexical_top(ind, n=5)
+        # Tier B ikut tercatat: tanpa ini kegagalan AI (timeout, kunci mati,
+        # kehabisan durasi) tidak meninggalkan jejak dan tidak pernah diperbaiki.
+        _log_ai_call(user, 'EP_SYNC',
+                     f'{time.monotonic() - _mulai:.1f}s | '
+                     f'{getattr(ind, "kode_indikator", "-")} -> LEXICAL, {reason[:60]}',
+                     ai_terpakai)
+        return {
+            'success': True,
+            'ai_terpakai': ai_terpakai,
+            'error': None if ai_terpakai else reason,
+            'data': {
+                'sumber': 'LEXICAL',
+                'rekomendasi': [{
+                    'ep_code': k['code'], 'confidence': float(k['skor']),
+                    'alasan': 'Kecocokan kata dengan teks EP.', 'dari_unit': k['dari_unit'],
+                } for k in kandidat],
+            },
+        }
+
+    config = SystemConfig.get_solo()
+    if not getattr(config, 'ai_enable_ep_sync', True):
+        return _lexical('Fitur AI sinkronisasi EP dimatikan; memakai kecocokan kata.')
+    if not config.ai_enabled:
+        return _lexical('AI belum diaktifkan; memakai kecocokan kata.')
+
+    lines, codes, n_ep = ep_sync.build_ep_catalog()
+    prompt = PROMPT_EP_MATCH.format(
+        kode=sanitize_hospital_prompt(getattr(ind, 'kode_indikator', '') or '-'),
+        nama=sanitize_hospital_prompt(getattr(ind, 'nama_indikator', '') or '-'),
+        numerator=sanitize_hospital_prompt(getattr(ind, 'numerator', '') or '-'),
+        denominator=sanitize_hospital_prompt(getattr(ind, 'denominator', '') or '-'),
+        jenis=getattr(ind, 'jenis', '') or '-',
+        dimensi=getattr(ind, 'get_dimensi_mutu_display', lambda: '-')() if hasattr(ind, 'get_dimensi_mutu_display') else '-',
+        unit=sanitize_hospital_prompt(getattr(getattr(ind, 'unit', None), 'name', '') or '-'),
+        petunjuk_unit=petunjuk_unit or '(tidak ada pemetaan pokja untuk unit ini)',
+        n_ep=n_ep,
+        daftar_ep='\n'.join(lines),
+    )
+
+    # Output kecil (maks 5 entri) tapi input ~35k token: default 30s terlalu
+    # ketat untuk prompt sebesar ini — tetapi 120s juga salah. `vercel.json`
+    # membatasi fungsi ini 60 detik; HTTP client yang menunggu lebih lama dari
+    # itu mendapat 504 HTML dari Lambda sebelum proses sempat mencapai fallback
+    # Tier B, sehingga operator menerima "Unexpected token <". Batasi client di
+    # bawah batas fungsi: 45s menyisakan ruang untuk fallback dan render.
+    result = _call_deepseek(prompt, max_tokens=1200, timeout=45)
+    if not result.get('success'):
+        return _lexical(result.get('error') or 'Panggilan AI gagal; memakai kecocokan kata.')
+
+    raw = result.get('data') or {}
+    items = raw.get('rekomendasi')
+    if not isinstance(items, list):
+        return _lexical('Balasan AI tidak berisi daftar rekomendasi.')
+
+    cleaned = []
+    ditolak = 0
+    for it in items[:5]:
+        if not isinstance(it, dict):
+            ditolak += 1
+            continue
+        code = str(it.get('ep_code') or '').strip()
+        if code not in codes:          # anti-halusinasi: kode harus ada di katalog
+            ditolak += 1
+            continue
+        try:
+            conf = float(it.get('confidence', 0))
+        except (TypeError, ValueError):
+            conf = 0.0
+        conf = min(max(conf, 0.0), 1.0)
+        alasan = str(it.get('alasan') or '').strip()[:300]
+        cleaned.append({'ep_code': code, 'confidence': conf, 'alasan': alasan})
+
+    if not cleaned:
+        return _lexical(f'AI tidak mengembalikan kode EP yang valid ({ditolak} ditolak).')
+
+    cleaned.sort(key=lambda x: -x['confidence'])
+    _log_ai_call(user, 'EP_SYNC',
+                 f'{time.monotonic() - _mulai:.1f}s | '
+                 f'{getattr(ind, "kode_indikator", "-")} -> {len(cleaned)}/{n_ep} EP, '
+                 f'{ditolak} ditolak', True)
+    return {
+        'success': True,
+        'ai_terpakai': True,
+        'error': None,
+        'ditolak': ditolak,
+        'data': {'sumber': 'AI', 'rekomendasi': cleaned},
+    }
+
+
 def test_deepseek_connection() -> dict:
     """Tes koneksi ke DeepSeek API — digunakan di Pusat Kontrol Admin."""
     from .system_models import SystemConfig
@@ -599,3 +718,214 @@ def test_deepseek_connection() -> dict:
         return {'success': False, 'error': 'Timeout — server DeepSeek tidak merespons dalam 15 detik.'}
     except Exception as e:
         return {'success': False, 'error': str(e)[:150]}
+
+
+# ── 9. NARASI LAPORAN CAPAIAN INDIKATOR MUTU ─────────────────────────────
+
+def _konteks_narasi_laporan(laporan, batas_tidak=12, batas_tercapai=8):
+    """Ringkas isi laporan menjadi konteks teks untuk prompt narasi.
+
+    Seluruh angka diambil dari snapshot baris laporan (bukan dari master
+    indikator) supaya narasi yang dihasilkan konsisten dengan tabel yang
+    tercetak di dokumen — termasuk saat laporan periode lama dibuka kembali.
+    """
+    from .mutu_laporan import rekap_ikp, rentang_bulan, JENIS_LABEL
+
+    baris = list(laporan.baris.all())
+    tercapai = [b for b in baris if b.status_tercapai is True]
+    tidak = [b for b in baris if b.status_tercapai is False]
+    tanpa = [b for b in baris if b.status_tercapai is None]
+
+    def _angka(b):
+        target = f'{b.target.normalize():f}{b.satuan}'
+        if b.nilai_capaian is None:
+            return f'- [{b.kode}] {b.nama} (target {target}; belum ada data terukur)'
+        capaian = f'{b.nilai_capaian.normalize():f}{b.satuan}'
+        return (f'- [{b.kode}] {b.nama} — capaian {capaian} '
+                f'terhadap target {target}')
+
+    per_jenis = []
+    for kode, judul in JENIS_LABEL:
+        grup = [b for b in baris if b.jenis == kode]
+        if not grup:
+            continue
+        capai = sum(1 for b in grup if b.status_tercapai is True)
+        per_jenis.append(f'{judul}: {capai}/{len(grup)} mencapai target')
+
+    statistik = [
+        f'{len(baris)} indikator termonitor',
+        f'{len(tercapai)} mencapai target',
+        f'{len(tidak)} tidak mencapai target',
+        f'{len(tanpa)} belum memiliki data terukur',
+    ]
+    if per_jenis:
+        statistik.append('rincian per jenis — ' + '; '.join(per_jenis))
+
+    # Indikator bermasalah diurutkan dari selisih target terbesar agar yang
+    # paling penting muncul lebih dulu dan tidak terpotong batas daftar.
+    def _selisih(b):
+        if b.nilai_capaian is None:
+            return Decimal('0')
+        return abs(Decimal(b.target) - Decimal(b.nilai_capaian))
+
+    tidak_urut = sorted(tidak, key=_selisih, reverse=True)
+    daftar_tidak = '\n'.join(_angka(b) for b in tidak_urut[:batas_tidak]) or \
+        '(tidak ada indikator yang tidak mencapai target)'
+    if len(tidak) > batas_tidak:
+        daftar_tidak += f'\n- ... dan {len(tidak) - batas_tidak} indikator lain'
+
+    daftar_tercapai = '\n'.join(_angka(b) for b in tercapai[:batas_tercapai]) or \
+        '(belum ada indikator yang mencapai target)'
+    if len(tercapai) > batas_tercapai:
+        daftar_tercapai += f'\n- ... dan {len(tercapai) - batas_tercapai} indikator lain'
+
+    try:
+        ikp = rekap_ikp(
+            laporan.tahun, *rentang_bulan(laporan.jenis, laporan.bulan,
+                                          laporan.semester),
+            unit=laporan.unit if laporan.scope == 'UNIT' else None)
+        rincian = ', '.join(f"{b['kode']} {b['jumlah']}" for b in ikp['baris'])
+        ikp_teks = f"total {ikp['total']} kejadian ({rincian})"
+        if ikp.get('jenis_lain'):
+            ikp_teks += f", {ikp['jenis_lain']} kejadian jenis lain"
+    except Exception as e:                     # data IKP tidak boleh memblokir narasi
+        logger.warning('Rekap IKP untuk narasi gagal: %s', e)
+        ikp_teks = '(rekap IKP tidak dapat dihitung)'
+
+    return {
+        'statistik': '; '.join(statistik),
+        'tidak_tercapai': daftar_tidak,
+        'tercapai': daftar_tercapai,
+        'ikp': ikp_teks,
+    }
+
+
+def generate_narasi_laporan(user, laporan, kunci: str, instruksi: str = '',
+                            isi_sekarang: str = '') -> dict:
+    """Susun narasi satu bagian laporan mutu (BAB / ringkasan / kendala).
+
+    Mengembalikan ``{'success', 'data': {'narasi', 'kunci'}, 'error'}``.
+    Hasil AI hanya usulan: pemanggil menaruhnya di kotak teks agar penyusun
+    meninjau sebelum menyimpan ke ``LaporanMutuSeksi``.
+    """
+    from .system_models import SystemConfig
+    from .ai_prompts import PROMPT_NARASI_LAPORAN, PANDUAN_NARASI_BAB
+    from .mutu_laporan import SEKSI_JUDUL, SEKSI_PER_JENIS
+
+    config = SystemConfig.get_solo()
+    if not config.ai_enabled:
+        return {'success': False, 'error': 'Fitur AI belum diaktifkan. Hubungi Super Admin.'}
+    if not getattr(config, 'ai_enable_laporan', True):
+        return {'success': False,
+                'error': 'Fitur AI untuk modul Laporan Mutu belum diaktifkan.'}
+
+    kunci = (kunci or '').strip().upper()
+    if kunci not in SEKSI_PER_JENIS.get(laporan.jenis, []):
+        return {'success': False,
+                'error': f'Bagian "{kunci or "-"}" tidak dipakai pada laporan '
+                         f'{laporan.get_jenis_display()}.'}
+
+    judul = SEKSI_JUDUL.get(kunci, kunci)
+    konteks = _konteks_narasi_laporan(laporan)
+    unit = laporan.unit.name if laporan.unit_id else 'Seluruh Rumah Sakit'
+
+    prompt = PROMPT_NARASI_LAPORAN.format(
+        unit=sanitize_hospital_prompt(unit),
+        periode=sanitize_hospital_prompt(laporan.periode_label),
+        jenis=laporan.get_jenis_display(),
+        judul_bab=judul,
+        panduan=PANDUAN_NARASI_BAB.get(kunci, 'Ikuti sistematika laporan mutu rumah sakit.'),
+        statistik=konteks['statistik'],
+        tidak_tercapai=konteks['tidak_tercapai'],
+        tercapai=konteks['tercapai'],
+        ikp=konteks['ikp'],
+        instruksi=sanitize_hospital_prompt(instruksi) or '(tidak ada arahan tambahan)',
+        isi_sekarang=sanitize_hospital_prompt(isi_sekarang)[:4000] or '(belum diisi)',
+    )
+
+    # 45s: batas fungsi Vercel 60s — menyisakan ruang untuk render halaman.
+    result = _call_deepseek(prompt, max_tokens=2000, timeout=45)
+    _log_ai_call(user, 'LAPORAN_MUTU',
+                 f'{laporan.pk} | {laporan.periode_label} | {kunci}',
+                 result['success'])
+    if not result.get('success'):
+        return result
+
+    narasi = (result.get('data') or {}).get('narasi')
+    if not isinstance(narasi, str) or not narasi.strip():
+        return {'success': False,
+                'error': 'AI tidak mengembalikan narasi yang bisa dipakai. Coba lagi.'}
+
+    return {'success': True, 'error': None,
+            'data': {'kunci': kunci, 'judul': judul, 'narasi': narasi.strip()}}
+
+
+# ── 9. RINGKASAN EKSEKUTIF DASBOR KONTROL ────────────────────────────────
+
+KONTROL_PORTAL_NAMES = {
+    'risiko': 'Integrated Risk & Patient Safety Control',
+    'emr': 'Smart EMR & Clinical Quality STARKES',
+    'dokumen': 'Electronic Accreditation Document & Automation Hub',
+}
+
+
+def _kontrol_data_block(snapshot):
+    """Ratakan snapshot jadi teks angka. AI tidak diberi akses hitung."""
+    risk = snapshot['risk']
+    incident = snapshot['incident']
+    ind = snapshot['indicator']
+    laporan = snapshot['laporan']
+    emr = snapshot['emr']
+    ppa = snapshot['ppa']
+    ep = snapshot['ep']
+
+    def n(value, suffix=''):
+        return 'belum ada data' if value is None else f'{value}{suffix}'
+
+    grades = ', '.join(f'{k}: {v}' for k, v in sorted(incident['by_grade'].items())) or 'belum ada data'
+    lines = [
+        f"- Risiko terdaftar: {n(risk['total'])} "
+        f"(sangat tinggi {risk['by_level']['SANGAT_TINGGI']}, tinggi {risk['by_level']['TINGGI']}, "
+        f"sedang {risk['by_level']['SEDANG']}, rendah {risk['by_level']['RENDAH']}, "
+        f"sangat rendah {risk['by_level']['SANGAT_RENDAH']})",
+        f"- RTL lewat tenggat: {risk['overdue_rtl']}",
+        f"- Insiden 12 bulan: {incident['total_12m']} (per gradasi — {grades}); "
+        f"masih terbuka: {incident['open']}; RCA selesai: {incident['rca_done']}",
+        f"- Indikator mutu: {n(ind['total'], ' indikator')}; catatan terisi "
+        f"{ind['catatan_total']}; tercapai {n(ind['on_target'])}; di bawah target {n(ind['below_target'])}; "
+        f"rata-rata capaian {n(ind['avg_pct'], '%')}",
+        f"- Laporan mutu: menunggu verifikasi/pengesahan {laporan['pending']}; terbit {laporan['published']}",
+        f"- EMR: kunjungan aktif {emr['active_total']} "
+        f"(IGD {emr['active_by_jenis'].get('IGD', 0)}, rawat jalan {emr['active_by_jenis'].get('RAJAL', 0)}, "
+        f"rawat inap {emr['active_by_jenis'].get('RANAP', 0)}); tanpa CPPT {n(emr['cppt_gap'])}; "
+        f"tanpa asesmen risiko {n(emr['assessment_gap'])}",
+        f"- Okupansi bed RS-wide: {n(emr['bed_occupancy_pct'], '%')} dari {n(emr['bed_total'])} bed aktif",
+        f"- Kredensial PPA: {n(ppa['total'], ' kredensial')}; patuh {n(ppa['compliant'])} ({n(ppa['pct'], '%')})",
+        f"- Kepatuhan EP RS-wide: {n(ep['filled'])} dari {n(ep['total'])} item berskor "
+        f"({n(ep['pct'], '%')}); dokumen bukti {ep['evidence_total']}, menunggu review {ep['evidence_review']}",
+        f"- Kepatuhan EP unit ini saja: {ep['unit_filled']} item berskor",
+    ]
+    return '\n'.join(lines)
+
+
+def generate_kontrol_ringkasan(user, snapshot, portal='risiko'):
+    """Ringkasan naratif satu unit untuk satu portal dasbor kontrol."""
+    from datetime import date
+
+    from .ai_prompts import PROMPT_KONTROL_RINGKASAN
+
+    unit_name = snapshot['unit']['name'] if snapshot.get('unit') else 'RS (semua unit)'
+    scope_note = (
+        'angka unit ini sudah memakai lingkup unit + turunannya; okupansi bed '
+        'dan cakupan EP tetap RS-wide'
+    )
+    prompt = PROMPT_KONTROL_RINGKASAN.format(
+        unit_name=sanitize_hospital_prompt(unit_name),
+        portal_name=KONTROL_PORTAL_NAMES.get(portal, portal),
+        tanggal=date.today().strftime('%d %B %Y'),
+        scope_note=scope_note,
+        data_block=_kontrol_data_block(snapshot),
+    )
+    result = _call_deepseek(prompt, max_tokens=1200, timeout=45)
+    _log_ai_call(user, 'KONTROL', f"{unit_name} | {portal}", result['success'])
+    return result

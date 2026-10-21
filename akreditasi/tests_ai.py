@@ -13,6 +13,7 @@ from django.urls import reverse
 from akreditasi.ai_service import sanitize_hospital_prompt
 from akreditasi.system_models import SystemConfig
 from akreditasi.models import AuditLog
+from akreditasi.tests_utils import reset_rate_limit
 
 User = get_user_model()
 
@@ -53,6 +54,7 @@ class EndpointAIIntegrationTest(TestCase):
     """Pengujian integrasi endpoint API AI, proteksi auth, dan mock LLM."""
 
     def setUp(self):
+        reset_rate_limit()
         self.client = Client()
         self.admin = User.objects.create_superuser('admin_ai', 'admin@rs.id', 'password123')
         self.user_biasa = User.objects.create_user('user_biasa', 'user@rs.id', 'password123')

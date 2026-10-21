@@ -1,0 +1,584 @@
+{% extends "base.html" %}
+
+{% block title %}{{ laporan.periode_label }} — Laporan Mutu{% endblock %}
+{% block page_title %}Laporan Capaian Indikator Mutu{% endblock %}
+{% block page_subtitle %}{{ laporan.periode_label }} · {{ laporan.get_jenis_display }} · {{ laporan.scope_label }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Tabel laporan: lebar kolom mengikuti isi sel (table-layout: auto).
+       Kolom angka/status dipaksa nowrap sehingga lebarnya persis selebar
+       isinya, sementara kolom teks panjang dibatasi max-width lalu
+       membungkus — tidak ada sel terpotong dan tidak ada ruang terbuang. */
+    .tbl-laporan {
+        font-size: .74rem;
+        table-layout: auto;
+        width: 100%;
+        margin-bottom: 0;
+    }
+    .tbl-laporan thead th {
+        position: sticky; top: 0; z-index: 1;
+        background: #f8f9fa;
+        white-space: normal;
+        vertical-align: middle;
+        line-height: 1.15;
+        /* Judul seperti "CAPAIAN"/"STATUS" tidak boleh pecah per karakter
+           ("CAPAI/N"). normal = hanya patah di spasi, dan table-layout auto
+           otomatis melebarkan kolomnya sesuai judul. */
+        word-break: normal;
+        overflow-wrap: normal;
+        hyphens: none;
+    }
+    .tbl-laporan td, .tbl-laporan th {
+        word-break: break-word;
+        overflow-wrap: anywhere;
+    }
+    /* style.css memakai padding .75rem/.9rem per sel; pada tabel 11 kolom itu
+       memakan ~28px per sel sehingga angka seperti "MIN 100,00" terpotong. */
+    .tbl-laporan td, .tbl-laporan th { padding: .32rem .38rem; }
+    .tbl-laporan td { vertical-align: middle; }
+    /* Kolom yang isinya pendek dan tidak boleh pecah baris. */
+    .tbl-laporan td:nth-child(2) { white-space: nowrap; }
+    .tbl-laporan td:nth-child(3) { max-width: 430px; }
+    .tbl-laporan td:nth-child(4) { max-width: 220px; }
+    .tbl-laporan td:nth-child(10) { max-width: 200px; }
+    .tbl-laporan .badge { white-space: nowrap; text-align: center; }
+    .angka { font-variant-numeric: tabular-nums; text-align: right; white-space: nowrap; }
+    .analisis-box textarea { font-size: .74rem; }
+    .monev-chip {
+        font-size: .62rem;
+        border-radius: 4px;
+        padding: 1px 5px;
+        display: inline-block;
+        white-space: nowrap;
+    }
+    .monev-pratinjau {
+        font-size: .68rem;
+        line-height: 1.35;
+        white-space: pre-line;
+        max-height: 5.4em;
+        overflow: hidden;
+        border-left: 2px solid #0F766E;
+        padding-left: 6px;
+        margin-top: 2px;
+    }
+    .tbl-rekap, .tbl-tren { table-layout: auto; width: 100%; }
+    .tbl-rekap td, .tbl-rekap th,
+    .tbl-tren td, .tbl-tren th { word-break: break-word; overflow-wrap: anywhere; }
+    .tbl-rekap td:first-child, .tbl-tren td:nth-child(3) { max-width: 320px; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-3">
+
+    <!-- Alur verifikasi L4 → L3 → L2 -->
+    {% if boleh_verifikasi or boleh_setujui or boleh_ubah %}
+    <div class="card mb-3">
+        <div class="card-body py-2 d-flex flex-wrap gap-2 align-items-center small">
+            {% if boleh_verifikasi %}
+            <form method="post" action="{% url 'akreditasi:laporan_mutu_verifikasi' laporan.pk %}" class="m-0 d-flex gap-2 align-items-center">
+                {% csrf_token %}
+                <input type="text" name="catatan" class="form-control form-control-sm" style="width:220px;" placeholder="Catatan verifikasi (opsional)">
+                <button type="submit" class="btn btn-warning btn-sm py-0">
+                    <i class="bi bi-check2-square me-1"></i>Verifikasi (Kepala Unit)
+                </button>
+            </form>
+            {% endif %}
+
+            {% if boleh_setujui %}
+            <form method="post" action="{% url 'akreditasi:laporan_mutu_setujui' laporan.pk %}" class="m-0">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-primary btn-sm py-0">
+                    <i class="bi bi-award me-1"></i>
+                    {% if laporan.status == 'DIVERIFIKASI' %}Setujui (Komite Mutu){% else %}Terbitkan (Direksi){% endif %}
+                </button>
+            </form>
+            {% endif %}
+
+            {% if boleh_ubah %}
+            <form method="post" action="{% url 'akreditasi:laporan_mutu_regenerasi' laporan.pk %}" class="m-0 ms-auto">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-outline-secondary btn-sm py-0">
+                    <i class="bi bi-arrow-clockwise me-1"></i>Bangun Ulang Snapshot
+                </button>
+            </form>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+
+    {% if messages %}
+    <div class="mb-2">
+        {% for m in messages %}
+        <div class="alert {% if m.tags == 'success' %}alert-success{% elif m.tags == 'warning' %}alert-warning{% else %}alert-secondary{% endif %} py-2 small mb-1">
+            {{ m }}
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- Kepala laporan -->
+    <div class="card mb-3">
+        <div class="card-body py-2 d-flex flex-wrap gap-3 align-items-center small">
+            <div>
+                <span class="badge {{ laporan.status_badge }}">{{ laporan.get_status_display }}</span>
+                {% if laporan.nomor %}<span class="text-muted ms-2">No. {{ laporan.nomor }}</span>{% endif %}
+            </div>
+            <div class="text-muted">
+                Batas waktu: <strong>{{ laporan.batas_waktu|date:'d F Y' }}</strong>
+                {% if laporan.terlambat %}<span class="badge bg-danger-subtle text-danger ms-1">lewat batas</span>{% endif %}
+            </div>
+            <div class="text-muted">Dibuat: {{ laporan.dibuat_pada|date:'d F Y' }} · {{ laporan.pembuat_nama|default:"—" }}</div>
+            <div class="ms-auto d-flex gap-2">
+                <a href="{% url 'akreditasi:laporan_mutu_cetak' laporan.pk %}" target="_blank" class="btn btn-outline-secondary btn-sm py-0">
+                    <i class="bi bi-printer"></i> Cetak
+                </a>
+                <a href="{% url 'akreditasi:laporan_mutu_pdf' laporan.pk %}" target="_blank" class="btn btn-outline-secondary btn-sm py-0">
+                    <i class="bi bi-file-earmark-pdf"></i> PDF
+                </a>
+                <a href="{% url 'akreditasi:laporan_mutu_daftar' %}" class="btn btn-outline-primary btn-sm py-0">Daftar</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Ringkasan angka -->
+    <div class="row g-2 mb-3">
+        <div class="col-auto"><div class="border rounded px-3 py-2 text-center small">
+            <div class="fs-6 fw-bold">{{ jumlah_baris }}</div><div class="text-muted">Indikator</div></div></div>
+        <div class="col-auto"><div class="border rounded px-3 py-2 text-center small bg-success-subtle">
+            <div class="fs-6 fw-bold text-success">{{ jumlah_tercapai }}</div><div class="text-muted">Tercapai</div></div></div>
+        <div class="col-auto"><div class="border rounded px-3 py-2 text-center small bg-danger-subtle">
+            <div class="fs-6 fw-bold text-danger">{{ jumlah_tidak_tercapai }}</div><div class="text-muted">Tidak Tercapai</div></div></div>
+        <div class="col-auto"><div class="border rounded px-3 py-2 text-center small">
+            <div class="fs-6 fw-bold">{{ jumlah_tanpa_data }}</div><div class="text-muted">Tanpa Data</div></div></div>
+    </div>
+
+    {% if tanpa_pj or tanpa_ep %}
+    <div class="alert alert-warning py-2 small mb-3">
+        <i class="bi bi-exclamation-triangle me-1"></i>
+        Data master belum lengkap —
+        {% if tanpa_pj %}<strong>{{ tanpa_pj }}</strong> indikator tanpa Penanggung Jawab;{% endif %}
+        {% if tanpa_ep %}<strong>{{ tanpa_ep }}</strong> indikator tanpa Elemen Prosedur terkait.{% endif %}
+        Laporan tetap dapat dibuat, kolom terkait tampil sebagai "—".
+    </div>
+    {% endif %}
+
+    {% if jumlah_baris == 0 %}
+    <div class="text-center py-5 border rounded">
+        <i class="bi bi-inbox" style="font-size:2rem; opacity:.35;"></i>
+        <p class="text-muted small mt-2 mb-0">Belum ada data capaian untuk periode ini.</p>
+    </div>
+    {% endif %}
+
+    <!-- Tabel per tier indikator -->
+    {% for kode, judul, rows in baris_per_jenis %}
+    {% if rows %}
+    <div class="card mb-3">
+        <div class="card-header py-1 small fw-semibold" style="background:#f1f3f5;">{{ judul }} ({{ rows|length }})</div>
+        <div class="table-responsive" style="max-height:70vh;">
+            <table class="table table-bordered table-sm tbl-laporan">
+                <thead>
+                    <tr class="table-light">
+                        <th>No</th>
+                        <th>Kode</th>
+                        <th>Indikator</th>
+                        <th>Unit</th>
+                        <th class="text-end">N</th>
+                        <th class="text-end">D</th>
+                        <th class="text-end">Capaian</th>
+                        <th class="text-end">Target</th>
+                        <th>Status</th>
+                        <th>PJ</th>
+                        <th>Verifikasi</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for b in rows %}
+                    <tr>
+                        <td class="text-center">{{ forloop.counter }}</td>
+                        <td>{{ b.kode }}</td>
+                        <td>{{ b.nama }}</td>
+                        <td>{{ b.unit_nama|default:"—" }}</td>
+                        <td class="angka" title="Numerator: {{ b.numerator }}">{{ b.nilai_numerator|default_if_none:"—" }}</td>
+                        <td class="angka" title="Denominator: {{ b.denominator }}">{{ b.nilai_denominator|default_if_none:"—" }}</td>
+                        <td class="angka fw-semibold">
+                            {% if b.nilai_capaian is not None %}{{ b.nilai_capaian }} {{ b.satuan }}{% else %}—{% endif %}
+                        </td>
+                        <td class="angka">{{ b.arah }} {{ b.target }}</td>
+                        <td class="text-center">
+                            {% if b.status_tercapai is True %}
+                            <span class="badge bg-success-subtle text-success">✓</span>
+                            {% elif b.status_tercapai is False %}
+                            <span class="badge bg-danger-subtle text-danger">✗</span>
+                            {% else %}
+                            <span class="badge bg-light text-muted border">—</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ b.indikator.pj|default:"—" }}</td>
+                        <td>
+                            <span class="badge {% if b.status_verifikasi == 'SETUJU' %}bg-success-subtle text-success{% elif b.status_verifikasi == 'REVISI' %}bg-danger-subtle text-danger{% else %}bg-light text-muted border{% endif %}">
+                                {{ b.get_status_verifikasi_display }}
+                            </span>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+    {% endfor %}
+
+    <!-- Analisis PDSA — satu formulir untuk semua baris -->
+    {% if jumlah_baris %}
+    <div class="card mb-3 analisis-box">
+        <div class="card-header py-1 small fw-semibold d-flex flex-wrap align-items-center gap-2" style="background:#f1f3f5;">
+            <span>Analisis PDSA &amp; Tindak Lanjut</span>
+            {% if monev.ada %}
+            <span class="monev-chip bg-success-subtle text-success border border-success-subtle">
+                {{ monev.jumlah_kode }} indikator punya data MONEV
+            </span>
+            {% endif %}
+            {% if boleh_ubah %}<span class="text-muted fw-normal">— dapat diubah selama laporan berstatus draf</span>{% endif %}
+            {% if boleh_ubah and monev.ada %}
+            <form method="post" action="{% url 'akreditasi:laporan_mutu_tarik_monev' laporan.pk %}" class="m-0 ms-auto d-flex align-items-center gap-2">
+                {% csrf_token %}
+                <label class="form-check-label small text-muted d-flex align-items-center gap-1 mb-0" title="Ganti analisis yang sudah ada dengan data MONEV">
+                    <input class="form-check-input mt-0" type="checkbox" name="timpa" value="1">
+                    timpa
+                </label>
+                <button type="submit" class="btn btn-success btn-sm py-0">
+                    <i class="bi bi-arrow-down-square me-1"></i>Tarik dari MONEV
+                </button>
+            </form>
+            {% endif %}
+        </div>
+        <div class="card-body">
+            {% if not boleh_ubah %}
+            <p class="text-muted small mb-2">
+                Laporan sudah <strong>{{ laporan.get_status_display }}</strong> — analisis hanya dapat
+                diubah melalui proses revisi.
+            </p>
+            {% for kode, judul, rows in baris_per_jenis %}
+                {% for b in rows %}
+                {% if b.analisis or b.tindak_lanjut %}
+                <div class="border-bottom pb-2 mb-2">
+                    <div class="small fw-semibold mb-1">
+                        [{{ b.kode }}] {{ b.nama }}
+                        {% if b.status_tercapai is False %}<span class="badge bg-danger-subtle text-danger ms-1">tidak tercapai</span>{% endif %}
+                    </div>
+                    <div class="row g-2">
+                        <div class="col-md-6">
+                            <div class="text-muted" style="font-size:.68rem;">Analisis PDSA</div>
+                            <div class="small">{{ b.analisis|linebreaksbr|default:"—" }}</div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="text-muted" style="font-size:.68rem;">Tindak Lanjut</div>
+                            <div class="small">{{ b.tindak_lanjut|linebreaksbr|default:"—" }}</div>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+                {% endfor %}
+            {% endfor %}
+            {% else %}
+            <form method="post" action="{% url 'akreditasi:laporan_mutu_simpan_analisis' laporan.pk %}">
+                {% csrf_token %}
+                {% for kode, judul, rows in baris_per_jenis %}
+                    {% for b in rows %}
+                    <div class="border-bottom pb-3 mb-3">
+                        <div class="small fw-semibold mb-1 d-flex flex-wrap align-items-center gap-1">
+                            <span>[{{ b.kode }}] {{ b.nama }}</span>
+                            {% if b.status_tercapai is False %}<span class="badge bg-danger-subtle text-danger">tidak tercapai</span>{% endif %}
+                            {% if b.monev %}
+                            <span class="monev-chip bg-success-subtle text-success border border-success-subtle" title="Sumber: Monitoring &amp; Evaluasi — {{ b.monev.periode }}">
+                                <i class="bi bi-activity me-1"></i>MONEV · {{ b.monev.periode }}
+                            </span>
+                            {% endif %}
+                        </div>
+                        <div class="row g-2">
+                            <div class="col-md-6">
+                                <label class="form-label small text-muted">Analisis PDSA</label>
+                                <textarea name="analisis_{{ b.pk }}" rows="3" class="form-control form-control-sm">{{ b.analisis }}</textarea>
+                                {% if b.monev.ada_analisis and not b.analisis %}
+                                <div class="monev-pratinjau text-secondary" title="{{ b.monev.pratinjau_analisis }}">{{ b.monev.pratinjau_analisis }}</div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label small text-muted">Tindak Lanjut</label>
+                                <textarea name="tindak_lanjut_{{ b.pk }}" rows="3" class="form-control form-control-sm">{{ b.tindak_lanjut }}</textarea>
+                                {% if b.monev.ada_tindak_lanjut and not b.tindak_lanjut %}
+                                <div class="monev-pratinjau text-secondary" title="{{ b.monev.pratinjau_tindak_lanjut }}">{{ b.monev.pratinjau_tindak_lanjut }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% endfor %}
+                <button type="submit" class="btn btn-primary btn-sm py-0">
+                    <i class="bi bi-save me-1"></i>Simpan Semua Analisis
+                </button>
+            </form>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Rekap IKP (BAB V) -->
+    <div class="card mb-3">
+        <div class="card-header py-1 small fw-semibold" style="background:#f1f3f5;">
+            Rekap Kejadian IKP — {{ ikp.tahun }}
+        </div>
+        <div class="card-body py-2">
+            <table class="table table-sm align-middle mb-0 small tbl-rekap">
+                <thead>
+                    <tr>
+                        <th>Jenis Insiden</th>
+                        <th class="text-end">Jumlah</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for b in ikp.baris %}
+                    <tr>
+                        <td>{{ b.label }}</td>
+                        <td class="text-end angka">{{ b.jumlah }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+                <tfoot>
+                    <tr class="fw-semibold">
+                        <td>Total</td>
+                        <td class="text-end angka">{{ ikp.total }}</td>
+                    </tr>
+                </tfoot>
+            </table>
+            {% if ikp.jenis_lain %}
+            <div class="text-muted small mt-1">
+                {{ ikp.jenis_lain }} kejadian berkategori lain tidak termasuk lima jenis di atas.
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Benchmarking terhadap capaian rumah sakit -->
+    {% if benchmark %}
+    <div class="card mb-3">
+        <div class="card-header py-1 small fw-semibold" style="background:#f1f3f5;">
+            Benchmarking — Capaian Unit vs Seluruh Rumah Sakit
+        </div>
+        <div class="card-body py-2">
+            <table class="table table-sm align-middle mb-0 small tbl-rekap">
+                <thead>
+                    <tr>
+                        <th>Kode</th>
+                        <th>Indikator</th>
+                        <th class="text-end">Capaian Laporan</th>
+                        <th class="text-end">Capaian RS</th>
+                        <th class="text-end">Selisih</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for kode, judul, rows in baris_per_jenis %}
+                        {% for b in rows %}
+                        <tr>
+                            <td class="text-muted">{{ b.kode }}</td>
+                            <td>{{ b.nama }}</td>
+                            <td class="text-end angka">{% if b.nilai_capaian is None %}—{% else %}{{ b.nilai_capaian|floatformat:2 }}{% endif %}</td>
+                            <td class="text-end angka">{% if b.bench_capaian_rs is None %}—{% else %}{{ b.bench_capaian_rs|floatformat:2 }}{% endif %}</td>
+                            <td class="text-end angka {% if b.bench_selisih is not None and b.bench_selisih < 0 %}text-danger{% endif %}">
+                                {% if b.bench_selisih is None %}—{% else %}{{ b.bench_selisih|floatformat:2 }}{% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Tren bulanan (semester/tahunan) — tabel, bukan hanya grafik -->
+    {% if tren %}
+    <div class="card mb-3">
+        <div class="card-header py-1 small fw-semibold" style="background:#f1f3f5;">
+            Tren Capaian Bulanan ({{ tren.bulan_header|length }} bulan)
+        </div>
+        <div class="card-body py-2">
+            <div class="table-responsive">
+                <table class="table table-sm table-bordered align-middle mb-0 small tbl-tren">
+                    <thead class="table-light">
+                        <tr>
+                            <th style="width:150px;">Kode</th>
+                            <th style="width:auto; min-width:260px;">Indikator</th>
+                            {% for h in tren.bulan_header %}<th class="text-end" style="width:62px;">{{ h }}</th>{% endfor %}
+                            <th class="text-end" style="width:84px;">Terendah</th>
+                            <th class="text-end" style="width:84px;">Tertinggi</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for t in tren.baris %}
+                        <tr>
+                            <td class="text-muted">{{ t.kode }}</td>
+                            <td>{{ t.nama }}</td>
+                            {% for v in t.nilai_bulan %}
+                            <td class="text-end angka">{% if v is None %}—{% else %}{{ v|floatformat:1 }}{% endif %}</td>
+                            {% endfor %}
+                            <td class="text-end angka">{% if t.terendah is None %}—{% else %}{{ t.terendah|floatformat:1 }}{% endif %}</td>
+                            <td class="text-end angka">{% if t.tertinggi is None %}—{% else %}{{ t.tertinggi|floatformat:1 }}{% endif %}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            <div class="text-muted small mt-1">
+                Angka per bulan; capaian periode pada tabel di atas memakai ΣN/ΣD, bukan rerata kolom ini.
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Bagian naratif (BAB / ringkasan / kendala) -->
+    {% if seksi_list %}
+    <div class="card mb-3">
+        <div class="card-header py-1 small fw-semibold" style="background:#f1f3f5;">
+            Bagian Naratif Laporan
+            {% if boleh_ubah %}<span class="text-muted fw-normal">— dapat diubah selama laporan berstatus draf</span>{% endif %}
+        </div>
+        <div class="card-body">
+            {% if not boleh_ubah %}
+                {% for s in seksi_list %}
+                <div class="mb-3">
+                    <div class="small fw-semibold mb-1">{{ s.judul }}</div>
+                    <div class="small">{{ s.isi|linebreaksbr }}</div>
+                </div>
+                {% endfor %}
+            {% else %}
+            {% if ai_narasi_aktif %}
+            <div class="alert alert-light border py-2 px-3 mb-3 small">
+                <div class="d-flex align-items-center gap-2 mb-1">
+                    <i class="bi bi-stars text-warning"></i>
+                    <span class="fw-semibold">Bantuan AI penulisan narasi</span>
+                    <span class="text-muted">— AI menyusun draf dari angka capaian laporan ini; periksa dan sunting sebelum disimpan.</span>
+                </div>
+                <input type="text" id="ai-instruksi-narasi" class="form-control form-control-sm"
+                       placeholder="Arahan tambahan (opsional) — mis. tekankan kepatuhan kebersihan tangan di ruang rawat inap">
+            </div>
+            {% endif %}
+            <form method="post" action="{% url 'akreditasi:laporan_mutu_simpan_seksi' laporan.pk %}" id="form-seksi-naratif">
+                {% csrf_token %}
+                {% for s in seksi_list %}
+                <div class="mb-3" data-seksi="{{ s.kunci }}">
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <label class="form-label small fw-semibold mb-0">{{ s.judul }}</label>
+                        {% if ai_narasi_aktif %}
+                        <button type="button" class="btn btn-outline-secondary btn-sm py-0 btn-ai-narasi"
+                                data-kunci="{{ s.kunci }}" data-judul="{{ s.judul }}">
+                            <i class="bi bi-stars me-1"></i><span class="lbl">Bantu AI</span>
+                        </button>
+                        {% endif %}
+                    </div>
+                    <textarea name="seksi_{{ s.kunci }}" id="seksi-{{ s.kunci }}" rows="4"
+                              class="form-control form-control-sm">{{ s.isi }}</textarea>
+                    <div class="ai-preview mt-2 d-none" id="ai-preview-{{ s.kunci }}">
+                        <div class="border rounded p-2 bg-light">
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <span class="small fw-semibold text-warning-emphasis">
+                                    <i class="bi bi-stars me-1"></i>Usulan AI — belum disimpan
+                                </span>
+                                <div class="d-flex gap-1">
+                                    <button type="button" class="btn btn-primary btn-sm py-0 btn-ai-pakai"
+                                            data-kunci="{{ s.kunci }}">Ganti isi dengan usulan</button>
+                                    <button type="button" class="btn btn-outline-secondary btn-sm py-0 btn-ai-tutup"
+                                            data-kunci="{{ s.kunci }}">Tutup</button>
+                                </div>
+                            </div>
+                            <div class="small ai-preview-text" style="white-space:pre-wrap;"></div>
+                        </div>
+                    </div>
+                    <div class="small text-danger mt-1 d-none ai-error" id="ai-error-{{ s.kunci }}"></div>
+                </div>
+                {% endfor %}
+                <button type="submit" class="btn btn-outline-primary btn-sm py-0">
+                    <i class="bi bi-save me-1"></i>Simpan Bagian Naratif
+                </button>
+            </form>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{{ block.super }}
+<script>
+(function () {
+    const laporanId = {{ laporan.pk }};
+    const csrfInput = document.querySelector('#form-seksi-naratif [name=csrfmiddlewaretoken]');
+    if (!csrfInput) return;                       // laporan terkunci: tanpa form
+    const token = csrfInput.value;
+    const url = "{% url 'akreditasi:api_ai_narasi_laporan' %}";
+    const instruksi = document.getElementById('ai-instruksi-narasi');
+    const usulan = {};
+
+    document.querySelectorAll('.btn-ai-narasi').forEach(function (btn) {
+        btn.addEventListener('click', async function () {
+            const kunci = btn.dataset.kunci;
+            const ta = document.getElementById('seksi-' + kunci);
+            const preview = document.getElementById('ai-preview-' + kunci);
+            const err = document.getElementById('ai-error-' + kunci);
+            const lbl = btn.querySelector('.lbl');
+            const teksAsli = lbl.textContent;
+            btn.disabled = true;
+            lbl.textContent = 'Menyusun...';
+            err.classList.add('d-none');
+            try {
+                const resp = await fetch(url, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json', 'X-CSRFToken': token},
+                    body: JSON.stringify({
+                        laporan_id: laporanId,
+                        kunci: kunci,
+                        instruksi: instruksi ? instruksi.value : '',
+                        isi_sekarang: ta.value
+                    })
+                });
+                const j = await resp.json();
+                if (j.success && j.data) {
+                    usulan[kunci] = j.data.narasi;
+                    preview.querySelector('.ai-preview-text').textContent = j.data.narasi;
+                    preview.classList.remove('d-none');
+                } else {
+                    err.textContent = j.error || 'AI gagal menyusun narasi.';
+                    err.classList.remove('d-none');
+                }
+            } catch (e) {
+                err.textContent = 'Gagal menghubungi AI: ' + e.message;
+                err.classList.remove('d-none');
+            } finally {
+                btn.disabled = false;
+                lbl.textContent = teksAsli;
+            }
+        });
+    });
+
+    document.querySelectorAll('.btn-ai-pakai').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            const kunci = btn.dataset.kunci;
+            const ta = document.getElementById('seksi-' + kunci);
+            if (!ta || !usulan[kunci]) return;
+            ta.value = usulan[kunci];
+            document.getElementById('ai-preview-' + kunci).classList.add('d-none');
+            ta.focus();
+        });
+    });
+
+    document.querySelectorAll('.btn-ai-tutup').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            document.getElementById('ai-preview-' + btn.dataset.kunci).classList.add('d-none');
+        });
+    });
+})();
+</script>
+{% endblock %}

@@ -1,0 +1,16 @@
+{% if unit_options %}
+<form method="get" class="kontrol-unit-switch" action="{{ request.path }}">
+    <label for="unitSelect"><i class="bi bi-diagram-3"></i> Unit Contoh</label>
+    <select id="unitSelect" name="unit" class="form-select form-select-sm"
+            onchange="this.form.submit()" {% if is_unit_scoped %}disabled{% endif %}>
+        {% for opt in unit_options %}
+        <option value="{{ opt.pk }}" {% if unit and unit.pk == opt.pk %}selected{% endif %}>
+            {{ opt.code }} — {{ opt.name }}
+        </option>
+        {% endfor %}
+    </select>
+    {% if is_unit_scoped %}
+    <span class="kontrol-note"><i class="bi bi-lock"></i> Cakupan akun dikunci ke unit ini</span>
+    {% endif %}
+</form>
+{% endif %}

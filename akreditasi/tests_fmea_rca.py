@@ -19,6 +19,7 @@ from django.urls import reverse
 
 from akreditasi.models import UnitKerja
 from akreditasi.risiko_models import RisikoUnit, IndikatorMutu
+from akreditasi.tests_utils import reset_rate_limit
 
 
 class FmeaRcaModelTest(TestCase):
@@ -277,6 +278,7 @@ class FmeaRcaAiEndpointTest(TestCase):
         cls.user = User.objects.create_user('tester_ai', password='x')
 
     def setUp(self):
+        reset_rate_limit()
         self.client = Client()
         self.client.force_login(self.user)
 

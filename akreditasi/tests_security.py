@@ -41,16 +41,25 @@ class SecurityHeadersTest(TestCase):
         # Standard nosniff
         self.assertEqual(response.get('X-Content-Type-Options'), 'nosniff')
 
-    def test_api_302_converted_to_401_json(self):
-        # Simulasi @login_required redirecting an unauthenticated API call
+    def test_login_redirect_dipertahankan(self):
+        """Endpoint /ai/ dan /api/ tetap mengikuti @login_required biasa.
+
+        Middleware ini pernah mengubah redirect ke login menjadi JSON 401,
+        tapi itu memutus alur login browser dan membunuh ?next= yang dipakai
+        django.contrib.auth untuk kembali ke halaman asal. ai-assist.js sudah
+        menangani resp.redirected, jadi perubahannya tidak perlu.
+        """
         from django.shortcuts import redirect
         mw = SecurityHeadersMiddleware(lambda req: redirect('/accounts/login/?next=/ai/test/'))
         req = self.factory.get('/ai/test/')
         res = mw(req)
 
-        self.assertEqual(res.status_code, 401)
-        self.assertEqual(res['Content-Type'], 'application/json')
-        self.assertIn('Sesi login telah berakhir', res.content.decode('utf-8'))
+        self.assertEqual(res.status_code, 302)
+        self.assertIn('/accounts/login/', res['Location'])
+        self.assertIn('next=/ai/test/', res['Location'])
+        # header tetap dipasang walau responsnya redirect
+        self.assertIn('Content-Security-Policy', res)
+        self.assertEqual(res['X-Content-Type-Options'], 'nosniff')
 
 
 class RateLimiterTest(TestCase):

@@ -161,10 +161,10 @@
                     <a href="{% url 'akreditasi:matriks_pdca' %}" class="btn btn-sm fw-bold px-3" style="background:rgba(79,91,213,0.24); border:1px solid rgba(139,124,246,0.5); color:#DCDCFB; font-family: var(--font-mono); font-size:0.72rem;">
                         <i class="bi bi-table me-1"></i>Matriks PDCA
                     </a>
-                    <a href="{% url 'akreditasi:risiko_input' %}" class="btn btn-outline-light btn-sm fw-semibold px-3" style="border-color:rgba(255,255,255,0.15); color:rgba(255,255,255,0.7); font-size:0.72rem;">
+                    <a href="{% url 'akreditasi:risiko_input' %}" class="btn btn-outline-light btn-sm fw-semibold px-3" style="font-size:0.72rem;">
                         <i class="bi bi-shield-plus me-1"></i>Input Risiko
                     </a>
-                    <a href="{% url 'akreditasi:insiden_lapor' %}" class="btn btn-outline-light btn-sm fw-semibold px-3" style="border-color:rgba(255,255,255,0.15); color:rgba(255,255,255,0.7); font-size:0.72rem;">
+                    <a href="{% url 'akreditasi:insiden_lapor' %}" class="btn btn-outline-light btn-sm fw-semibold px-3" style="font-size:0.72rem;">
                         <i class="bi bi-exclamation-triangle me-1"></i>Lapor Insiden
                     </a>
                 </div>
@@ -510,6 +510,23 @@
                     </a>
                 </div>
             </form>
+
+            {% if not mutu_indikator_choices %}
+            <!-- Spesifikasi 19.10: unit tanpa indikator dalam lingkupnya harus
+                 diberi tahu, bukan dibiarkan melihat grafik rata-rata kosong tanpa
+                 penjelasan. Lingkup sudah mencakup rantai induk, jadi unit ini
+                 memang tidak punya indikator sama sekali. -->
+            <div class="alert alert-info d-flex align-items-start gap-2 py-2 px-3 mb-3" role="alert">
+                <i class="bi bi-info-circle mt-1"></i>
+                <div>
+                    <strong class="small">Unit Ini Belum Memiliki Indikator</strong>
+                    <div class="text-muted" style="font-size:.78rem;">
+                        Unit ini belum memiliki indikator mutu, termasuk dari unit induknya.
+                        Silakan hubungi Pokja Mutu RS untuk pengisian indikator.
+                    </div>
+                </div>
+            </div>
+            {% endif %}
 
             <!-- TAB CONTENT -->
             <div class="tab-content" id="pills-mutu-tabContent">

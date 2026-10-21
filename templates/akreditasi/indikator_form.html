@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load l10n %}
 
 {% block title %}{% if is_edit %}Edit Indikator Mutu [{{ ind.kode_indikator }}]{% else %}Tambah Indikator Mutu Baru{% endif %} — ARIMA{% endblock %}
 {% block page_title %}{% if is_edit %}Edit Indikator Mutu{% else %}Tambah Indikator Mutu Baru{% endif %}{% endblock %}
@@ -233,13 +234,72 @@
                                 <label for="ep_terkait" class="form-label small fw-bold">Elemen Penilaian (EP) Terkait</label>
                                 <select class="form-select form-select-sm" id="ep_terkait" name="ep_terkait">
                                     <option value="">— Tidak Di-link ke EP Spesifik —</option>
-                                    {% for ep in ep_list %}
-                                    <option value="{{ ep.id }}" {% if ind and ind.ep_terkait_id == ep.id %}selected{% endif %}>
-                                        [{{ ep.category.code }}] {{ ep.code }} — {{ ep.sub_standard|truncatechars:35 }}
-                                    </option>
+                                    {% regroup ep_list by category as pokja_list %}
+                                    {% for grp in pokja_list %}
+                                    <optgroup label="[{{ grp.grouper.code }}] {{ grp.grouper.name }}">
+                                        {% for ep in grp.list %}
+                                        <option value="{{ ep.id }}" data-code="{{ ep.code }}"
+                                                {% if ind and ind.ep_terkait_id == ep.id %}selected{% endif %}>
+                                            {{ ep.code }} — {{ ep.sub_standard|truncatechars:35 }}
+                                        </option>
+                                        {% endfor %}
+                                    </optgroup>
                                     {% endfor %}
                                 </select>
+                                <div class="form-text text-muted" style="font-size:0.7rem;">
+                                  Pilih EP manual, atau gunakan kartu "Sinkronisasi EP" di bawah.
+                                </div>
                             </div>
+                        </div>
+
+                        {# Kartu Sinkronisasi EP: saran kata (instan) + rekomendasi AI #}
+                        <div class="border rounded-3 p-3 mb-4" style="background:#f8f9fa;">
+                            <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
+                                <div>
+                                    <span class="form-section-title d-block mb-0">Sinkronisasi EP</span>
+                                    <small class="text-muted" style="font-size:0.72rem;">
+                                        Saran kata dihitung otomatis; rekomendasi AI membaca seluruh katalog EP.
+                                        {# Status AI ditampilkan SEBELUM operator menekan tombol. #}
+                                        {% if ai_status %}
+                                        <span id="ep-ai-status"
+                                              class="badge ms-1 {% if ai_status.aktif %}bg-success-subtle text-success border border-success-subtle{% else %}bg-warning-subtle text-warning border border-warning-subtle{% endif %}"
+                                              title="{{ ai_status.keterangan }}"
+                                              style="font-size:0.62rem; vertical-align:middle;">{{ ai_status.keterangan }}</span>
+                                        {% endif %}
+                                    </small>
+                                </div>
+                                <div class="d-flex gap-2">
+                                    <button type="button" id="btn-ep-lepas"
+                                            class="btn btn-sm btn-outline-danger px-2{% if not ind or not ind.ep_terkait_id %} d-none{% endif %}">
+                                        <i class="bi bi-x-circle me-1"></i> Lepas &amp; cari ulang
+                                    </button>
+                                    <button type="button" id="btn-ep-sync" class="btn btn-sm btn-primary px-3">
+                                        <i class="bi bi-stars me-1"></i> Cocokkan dengan AI
+                                    </button>
+                                </div>
+                            </div>
+
+                            {# State yang dibaca guard AI: link di DATABASE, bukan isi form. #}
+                            <div id="ep-link-chip"
+                                 class="alert {% if ind and ind.ep_terkait_id %}alert-secondary{% else %}d-none{% endif %} py-1 px-2 mb-2"
+                                 style="font-size:0.72rem;">
+                                Tertaut saat ini: <code id="ep-link-code">{% if ind and ind.ep_terkait_id %}{{ ind.ep_terkait.code }}{% endif %}</code>
+                                <span class="text-muted">(sumber: <span id="ep-link-sumber">{% if ind %}{{ ind.ep_sumber|default:'-' }}{% endif %}</span>)</span>
+                                — inilah yang dibaca tombol AI, bukan isi kolom EP.
+                            </div>
+
+                            {% if ind and ind.ep_sumber and ind.ep_sumber != 'MANUAL' %}
+                            <div class="alert alert-info py-1 px-2 mb-2" style="font-size:0.72rem;">
+                                EP ini sudah ditautkan otomatis (sumber: <strong>{{ ind.ep_sumber }}</strong>
+                                {% if ind.ep_skor %}, skor {{ ind.ep_skor }}{% endif %}).
+                            </div>
+                            {% endif %}
+
+                            <div id="ep-sync-notice" class="alert alert-warning py-1 px-2 mb-2 d-none" style="font-size:0.72rem;"></div>
+                            <div id="ep-sync-status" class="text-muted mb-1 d-none" style="font-size:0.72rem;">
+                                <span class="spinner-border spinner-border-sm me-1"></span>Menganalisis katalog EP…
+                            </div>
+                            <div id="ep-sync-result"></div>
                         </div>
 
                         {# SECTION 3: Rencana Tindak Lanjut & Penanggung Jawab #}
@@ -277,6 +337,7 @@
                         {# Actions #}
                         <div class="d-flex justify-content-between align-items-center pt-3 border-top">
                             <a href="{% if is_edit %}{% url 'akreditasi:indikator_detail' ind.pk %}{% else %}{% url 'akreditasi:indikator_dashboard' %}{% endif %}"
+                               id="btn-batal"
                                class="btn btn-sm btn-outline-secondary px-3">
                                 <i class="bi bi-arrow-left me-1"></i> Batal
                             </a>
@@ -409,6 +470,264 @@ document.addEventListener('DOMContentLoaded', function() {
         feedback.className = 'small mt-2 alert alert-success py-1';
         feedback.textContent = 'Formula telah diterapkan ke formulir. Silakan tinjau kembali sebelum menyimpan.';
     });
+});
+</script>
+
+{# ── Kartu Sinkronisasi EP: saran kata (instan) + rekomendasi AI ────────── #}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    var btn = document.getElementById('btn-ep-sync');
+    if (!btn) return;
+
+    var sel = document.getElementById('ep_terkait');
+    var status = document.getElementById('ep-sync-status');
+    var notice = document.getElementById('ep-sync-notice');
+    var result = document.getElementById('ep-sync-result');
+    var form = btn.closest('form');
+    var csrf = form ? form.querySelector('[name=csrfmiddlewaretoken]') : null;
+
+    // Chip + tombol yang menampilkan state di DATABASE (bukan isi form).
+    var chipWrap = document.getElementById('ep-link-chip');
+    var chipCode = document.getElementById('ep-link-code');
+    var chipSumber = document.getElementById('ep-link-sumber');
+    var btnLepas = document.getElementById('btn-ep-lepas');
+    {% if ind %}
+    var indId = '{{ ind.pk|unlocalize }}';
+    {% else %}
+    var indId = '';            // mode buat baru: belum ada indikator untuk dicocokkan
+    {% endif %}
+
+    // Kode EP -> id option, supaya balasan AI (hanya kode) bisa menggerakkan dropdown.
+    var codeToId = {};
+    Array.prototype.forEach.call(sel.querySelectorAll('option[data-code]'), function (o) {
+        codeToId[o.getAttribute('data-code')] = o.value;
+    });
+
+    function esc(s) {
+        return String(s == null ? '' : s)
+            .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;');
+    }
+    function pct(v) { return Math.round((Number(v) || 0) * 100) + '%'; }
+
+    // D4: perubahan EP yang belum disimpan harus terlihat sebelum halaman
+    // ditinggalkan — tanpa ini hasil AI hilang diam-diam (penyebab utama
+    // "hasilnya tidak masuk").
+    var epKotor = false;
+    sel.addEventListener('change', function () { epKotor = true; });
+    window.addEventListener('beforeunload', function (e) {
+        if (!epKotor) return;
+        e.preventDefault();
+        e.returnValue = '';
+        return '';
+    });
+    var btnBatal = document.getElementById('btn-batal');
+    if (btnBatal) {
+        btnBatal.addEventListener('click', function (e) {
+            if (epKotor && !window.confirm('Perubahan EP belum disimpan. Tinggalkan halaman?')) {
+                e.preventDefault();
+            }
+        });
+    }
+
+    if (!indId) {
+        btn.disabled = true;
+        notice.className = 'alert alert-secondary py-1 px-2 mb-2';
+        notice.innerHTML = 'Sinkronisasi EP aktif setelah indikator disimpan. '
+            + 'Buat indikator dulu, lalu buka <em>Edit Indikator</em> untuk mencocokkan ke EP.';
+        notice.classList.remove('d-none');
+        return;
+    }
+
+    function baris(id, code, ket, meta) {
+        var aksi = id
+            ? '<button type="button" class="btn btn-sm btn-outline-success ep-pick" '
+              + 'data-id="' + esc(id) + '" style="font-size:0.68rem;">Pakai</button>'
+            : '<span class="text-danger" style="font-size:0.66rem;">tidak ada di daftar</span>';
+        return '<div class="d-flex justify-content-between align-items-start gap-2 border-bottom py-1">'
+            + '<div style="font-size:0.74rem;min-width:0;">'
+            + '<span class="fw-bold">' + esc(code) + '</span> '
+            + '<span class="text-muted">' + esc(ket || '') + '</span>'
+            + (meta ? '<div class="text-muted" style="font-size:0.68rem;">' + meta + '</div>' : '')
+            + '</div>' + aksi + '</div>';
+    }
+
+    function render(data, judul, sub) {
+        var html = '<div class="small fw-bold mb-1">' + esc(judul) + '</div>';
+        if (sub) {
+            html += '<div class="text-muted mb-1" style="font-size:0.68rem;">' + sub + '</div>';
+        }
+        var sudah = {};
+        (data.rekomendasi || []).forEach(function (r) {
+            var id = codeToId[r.ep_code] || (r.id ? String(r.id) : '');
+            if (id) sudah[id] = 1;
+            var meta = '';
+            if (r.confidence != null && data.sumber === 'AI') {
+                meta = 'confidence ' + pct(r.confidence);
+            } else if (r.dari_unit) {
+                meta = 'ada di pemetaan unit ini';
+            }
+            html += baris(id, r.ep_code, data.sumber === 'AI' ? (r.alasan || '') : (r.ket || ''), meta);
+        });
+
+        var lain = (data.kandidat || []).filter(function (c) { return !sudah[c.id]; });
+        if (lain.length && data.rekomendasi && data.rekomendasi.length) {
+            html += '<div class="small fw-bold mt-2 mb-1">Saran kata lain</div>';
+            lain.forEach(function (c) {
+                html += baris(c.id, c.code, c.deskripsi,
+                    c.dari_unit ? 'ada di pemetaan unit ini' : 'skor ' + c.skor);
+            });
+        }
+        result.innerHTML = html;
+    }
+
+    function setBusy(busy) {
+        btn.disabled = busy;
+        status.classList.toggle('d-none', !busy);
+    }
+
+    btn.addEventListener('click', function () {
+        notice.classList.add('d-none');
+        setBusy(true);
+        fetch('{% url "akreditasi:api_ai_ep_rekomendasi" %}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrf ? csrf.value : ''
+            },
+            body: JSON.stringify({ indikator_id: parseInt(indId, 10) })
+        })
+        .then(function (r) { return r.json().then(function (b) { return { ok: r.ok, body: b }; }); })
+        .then(function (o) {
+            var b = o.body || {};
+            if (!o.ok || b.success === false) {
+                throw new Error(b.error || 'Permintaan gagal.');
+            }
+            if (b.notice) {
+                // Tier B tidak boleh terbaca sebagai analisis AI: labelnya
+                // abu-abu dan bertahan setelah daftar dirender.
+                notice.className = 'alert alert-' + (b.ai_terpakai ? 'warning' : 'secondary')
+                    + ' py-1 px-2 mb-2';
+                notice.textContent = (b.ai_terpakai ? ''
+                    : 'Hasil di bawah adalah kecocokan kata, BUKAN analisis AI. ')
+                    + b.notice;
+                notice.classList.remove('d-none');
+            }
+            if (!(b.rekomendasi || []).length && !(b.kandidat || []).length) {
+                result.innerHTML = '<div class="text-muted" style="font-size:0.72rem;">'
+                    + 'Tidak ada kandidat. Pilih EP manual dari daftar.</div>';
+                return;
+            }
+            render(b, b.sumber === 'AI' ? 'Rekomendasi AI' : 'Kecocokan kata',
+                   b.sumber === 'AI' ? '' : 'AI sedang tidak aktif — hasil ini murni kecocokan kata, bukan analisis AI.');
+        })
+        .catch(function (e) {
+            result.innerHTML = '';
+            notice.className = 'alert alert-danger py-1 px-2 mb-2';
+            notice.textContent = e.message || 'Terjadi kesalahan.';
+            notice.classList.remove('d-none');
+        })
+        .then(function () { setBusy(false); });
+    });
+
+    function kirim(url, body) {
+        return fetch(url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrf ? csrf.value : ''
+            },
+            body: JSON.stringify(body)
+        }).then(function (r) {
+            return r.json().then(function (b) { return { ok: r.ok, body: b }; });
+        });
+    }
+
+    function setState(ep) {
+        // Satu sumber kebenaran untuk chip: apa yang benar-benar ada di database.
+        if (!chipWrap) return;
+        if (ep && ep.code) {
+            chipWrap.classList.remove('d-none');
+            chipWrap.className = 'alert alert-secondary py-1 px-2 mb-2';
+            if (chipCode) chipCode.textContent = ep.code;
+            if (chipSumber) chipSumber.textContent = ep.sumber || '-';
+            if (btnLepas) btnLepas.classList.remove('d-none');
+        } else {
+            chipWrap.className = 'd-none';
+            if (chipCode) chipCode.textContent = '';
+            if (chipSumber) chipSumber.textContent = '-';
+            if (btnLepas) btnLepas.classList.add('d-none');
+        }
+    }
+
+    function tampilkanNotice(teks, jenis, tombol) {
+        notice.className = 'alert alert-' + (jenis || 'danger') + ' py-1 px-2 mb-2';
+        notice.innerHTML = esc(teks);
+        if (tombol) {
+            var b = document.createElement('button');
+            b.type = 'button';
+            b.className = 'btn btn-sm btn-outline-danger ms-2 py-0 px-2';
+            b.style.fontSize = '0.68rem';
+            b.textContent = tombol.label;
+            b.addEventListener('click', tombol.aksi);
+            notice.appendChild(b);
+        }
+        notice.classList.remove('d-none');
+    }
+
+    // "Pakai" menyimpan SEKARANG. Sebelumnya ia hanya menggerakkan dropdown,
+    // jadi link baru hilang bila operator tidak menekan Simpan Perubahan.
+    result.addEventListener('click', function (e) {
+        var t = e.target.closest('.ep-pick');
+        if (!t) return;
+        var id = t.getAttribute('data-id');
+        if (!id) return;
+        t.disabled = true;
+        kirim('{% url "akreditasi:api_ai_ep_terapkan" %}',
+              { indikator_id: parseInt(indId, 10), ep_id: parseInt(id, 10) })
+            .then(function (o) {
+                var b = o.body || {};
+                if (!o.ok || b.success === false) {
+                    throw new Error(b.error || 'Gagal menyimpan EP.');
+                }
+                sel.value = id;
+                epKotor = false;         // sudah tersimpan, tak ada yang perlu dibuang
+                setState(b.ep_terkait);
+                t.textContent = 'Tersimpan ✓';
+                t.classList.remove('btn-outline-success');
+                t.classList.add('btn-success');
+                tampilkanNotice(b.pesan || 'EP tersimpan.', 'success');
+            })
+            .catch(function (err) {
+                t.disabled = false;
+                tampilkanNotice(err.message || 'Gagal menyimpan EP.', 'danger');
+            });
+    });
+
+    if (btnLepas) {
+        btnLepas.addEventListener('click', function () {
+            if (!window.confirm('Lepas tautan EP ini? Baris akan terbuka untuk auto-sync.')) return;
+            btnLepas.disabled = true;
+            kirim('{% url "akreditasi:api_ai_ep_lepas" %}', { indikator_id: parseInt(indId, 10) })
+                .then(function (o) {
+                    var b = o.body || {};
+                    if (!o.ok || b.success === false) {
+                        throw new Error(b.error || 'Gagal melepas EP.');
+                    }
+                    sel.value = '';
+                    epKotor = false;
+                    setState(null);
+                    result.innerHTML = '';
+                    tampilkanNotice(b.pesan || 'EP dilepas.', 'success');
+                    // Langsung cari ulang: inilah alasan operator menekan tombol ini.
+                    btn.click();
+                })
+                .catch(function (err) {
+                    tampilkanNotice(err.message || 'Gagal melepas EP.', 'danger');
+                })
+                .then(function () { btnLepas.disabled = false; });
+        });
+    }
 });
 </script>
 {% endblock %}

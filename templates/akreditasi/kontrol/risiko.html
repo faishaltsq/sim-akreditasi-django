@@ -1,0 +1,125 @@
+{% extends "akreditasi/kontrol/base_kontrol.html" %}
+{% block title %}Risk &amp; Patient Safety Control — ARIMA{% endblock %}
+
+{% block content %}
+<section class="kontrol-subhead">
+    <div class="subhead-left">
+        <a class="kontrol-back" href="{% url 'akreditasi:kontrol_hub' %}?unit={{ snapshot.unit.id }}">
+            <i class="bi bi-arrow-left"></i> Control
+        </a>
+        <span class="kontrol-eyebrow"><i class="bi bi-shield-fail"></i> Sub-dasbor 1</span>
+        <h1 class="kontrol-title-sm">Integrated Risk &amp; Patient Safety Control</h1>
+        <p class="kontrol-lede-sm">Risiko, insiden, RTL, dan indikator mutu satu unit — dibaca sekali lihat.</p>
+    </div>
+    {% include "akreditasi/kontrol/_unit_switch.html" %}
+</section>
+
+<section class="kontrol-kpis">
+    <div class="kpi kpi-critical">
+        <span class="kpi-label">Risiko tinggi + sangat tinggi</span>
+        <strong class="kpi-value">{{ snapshot.risk.high_count }}</strong>
+        <span class="kpi-foot">dari {{ snapshot.risk.total|default:"—" }} risiko terdaftar</span>
+    </div>
+    <div class="kpi">
+        <span class="kpi-label">RTL lewat tenggat</span>
+        <strong class="kpi-value">{{ snapshot.risk.overdue_rtl }}</strong>
+        <span class="kpi-foot">aksi belum selesai &amp; tanggal terlewati</span>
+    </div>
+    <div class="kpi">
+        <span class="kpi-label">Insiden 12 bulan</span>
+        <strong class="kpi-value">{{ snapshot.incident.total_12m }}</strong>
+        <span class="kpi-foot">{{ snapshot.incident.open }} masih terbuka · {{ snapshot.incident.rca_done }} RCA selesai</span>
+    </div>
+    <div class="kpi">
+        <span class="kpi-label">Indikator di bawah target</span>
+        <strong class="kpi-value">{{ snapshot.indicator.below_target|default:"—" }}</strong>
+        <span class="kpi-foot">
+            {% if snapshot.indicator.avg_pct is not None %}rata-rata capaian {{ snapshot.indicator.avg_pct }}%{% else %}belum ada catatan capaian{% endif %}
+        </span>
+    </div>
+</section>
+
+<div class="kontrol-grid-2">
+    <section class="kontrol-panel">
+        <header class="panel-head">
+            <h2><i class="bi bi-grid-3x3-gap"></i> Matriks risiko 5×5</h2>
+            <span class="panel-hint">dampak × probabilitas</span>
+        </header>
+        <div class="matrix-wrap">
+            <div class="matrix">
+                <div class="matrix-axis-y">Dampak</div>
+                {% for row in snapshot.risk.matrix %}
+                <div class="matrix-row">
+                    <span class="matrix-tick">{{ row.0.dampak }}</span>
+                    {% for cell in row %}
+                    <span class="matrix-cell level-{{ cell.level|lower }}{% if cell.count %} has-data{% endif %}"
+                          title="Dampak {{ cell.dampak }} × Probabilitas {{ cell.probabilitas }} = {{ cell.level|lower }}">
+                        {{ cell.count|default_if_none:"" }}
+                    </span>
+                    {% endfor %}
+                </div>
+                {% endfor %}
+                <div class="matrix-row matrix-row-x">
+                    <span class="matrix-tick"></span>
+                    <span class="matrix-tick">1</span>
+                    <span class="matrix-tick">2</span>
+                    <span class="matrix-tick">3</span>
+                    <span class="matrix-tick">4</span>
+                    <span class="matrix-tick">5</span>
+                </div>
+                <div class="matrix-axis-x">Probabilitas</div>
+            </div>
+        </div>
+    </section>
+
+    <section class="kontrol-panel">
+        <header class="panel-head">
+            <h2><i class="bi bi-activity"></i> Insiden per gradasi</h2>
+            <span class="panel-hint">12 bulan terakhir</span>
+        </header>
+        {% if snapshot.incident.by_grade %}
+        <ul class="bar-list">
+            {% for grade, count in snapshot.incident.by_grade.items %}
+            <li>
+                <span class="bar-label">{{ grade }}</span>
+                <span class="bar-count">{{ count }}</span>
+            </li>
+            {% endfor %}
+        </ul>
+        {% else %}
+        <p class="kontrol-empty-inline">
+            <i class="bi bi-inbox"></i> Belum ada insiden dilaporkan dalam 12 bulan.
+        </p>
+        {% endif %}
+
+        <header class="panel-head panel-head-tight">
+            <h2><i class="bi bi-diagram-2"></i> Proxy budaya safety</h2>
+        </header>
+        <div class="proxy-row">
+            <div class="proxy">
+                <span class="proxy-label">Ketuntasan RTL</span>
+                <strong>{% if snapshot.safety_proxy.rtl_completion is not None %}{{ snapshot.safety_proxy.rtl_completion }}%{% else %}—{% endif %}</strong>
+            </div>
+            <div class="proxy">
+                <span class="proxy-label">Laju pelaporan insiden</span>
+                <strong>{% if snapshot.safety_proxy.reporting_rate is not None %}{{ snapshot.safety_proxy.reporting_rate }}{% else %}—{% endif %}</strong>
+                <span class="proxy-unit">per 100 risiko</span>
+            </div>
+        </div>
+        <p class="kontrol-note">
+            Dua angka terpisah, bukan skor budaya safety — sistem belum punya survei budaya.
+        </p>
+    </section>
+</section>
+
+{% include "akreditasi/kontrol/_ai_panel.html" %}
+
+<section class="kontrol-modlinks">
+    <a href="{% url 'akreditasi:risiko_daftar' %}"><i class="bi bi-list-check"></i> Daftar risiko</a>
+    <a href="{% url 'akreditasi:risiko_monev' %}"><i class="bi bi-clipboard-data"></i> Monitoring &amp; evaluasi</a>
+    <a href="{% url 'akreditasi:risiko_fmea_rca' %}"><i class="bi bi-diagram-3"></i> FMEA / RCA</a>
+    <a href="{% url 'akreditasi:insiden_daftar' %}"><i class="bi bi-exclamation-triangle"></i> Insiden keselamatan</a>
+    <a href="{% url 'akreditasi:indikator_dashboard' %}"><i class="bi bi-speedometer2"></i> Indikator mutu</a>
+    <a href="{% url 'akreditasi:laporan_mutu_daftar' %}"><i class="bi bi-file-earmark-text"></i> Laporan mutu</a>
+</section>
+{% endblock %}

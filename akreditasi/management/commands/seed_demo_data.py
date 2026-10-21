@@ -150,12 +150,18 @@ class Command(BaseCommand):
         catatan_created = 0
         for ind in indikators:
             target = float(ind.target_nilai)
+            # Aritmetika demo harus mengikuti bentuk pengukuran indikator,
+            # bukan asumsi persen. Lihat CatatanIndikator.nilai_capaian.
+            faktor = 100 if ind.tipe_pengukuran == 'persen' else ind.faktor_pengali
             for bulan in range(1, 13):
                 # Simulasi: capaian fluktuatif ±15% dari target
                 base = target * random.uniform(0.80, 1.10)
                 denominator = random.randint(50, 200)
-                numerator = round(base * denominator / 100, 2)
-                numerator = max(0, min(numerator, denominator))
+                numerator = round(base * denominator / faktor, 2)
+                if ind.tipe_pengukuran == 'persen':
+                    numerator = max(0, min(numerator, denominator))
+                else:
+                    numerator = max(0, numerator)
 
                 obj, created = CatatanIndikator.objects.update_or_create(
                     indikator=ind, bulan=bulan, tahun=2026,
