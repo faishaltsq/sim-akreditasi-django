@@ -62,7 +62,7 @@
             <button type="button" class="btn-close text-reset" data-bs-dismiss="offcanvas"></button>
         </div>
         <div class="offcanvas-body p-0">
-            {% include "includes/sidebar.html" %}
+            {% with sidebar_uid="mobile" %}{% include "includes/sidebar.html" %}{% endwith %}
         </div>
     </div>
 
@@ -85,7 +85,7 @@
                 <i class="bi bi-chevron-left"></i>
             </button>
         </div>
-        {% include "includes/sidebar.html" %}
+        {% with sidebar_uid="desktop" %}{% include "includes/sidebar.html" %}{% endwith %}
     </aside>
 
     <!-- MAIN CONTENT -->

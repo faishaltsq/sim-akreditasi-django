@@ -1,9 +1,13 @@
 document.addEventListener('DOMContentLoaded', function() {
-    const searchInput = document.getElementById('sidebarPokjaSearch');
-    if (searchInput) {
+    // Sidebar di-include dua kali (offcanvas mobile + rail desktop), jadi id
+    // diberi sufiks per instance. Pasang handler di semua salinan.
+    const searchInputs = document.querySelectorAll('[id^="sidebarPokjaSearch"]');
+    searchInputs.forEach(function (searchInput) {
         searchInput.addEventListener('input', function() {
             const query = this.value.toLowerCase().trim();
-            const kelompokContainers = document.querySelectorAll('.sidebar-kelompok');
+            // Batasi pencarian ke sidebar tempat input ini berada.
+            const root = this.closest('.sidebar-nav') || document;
+            const kelompokContainers = root.querySelectorAll('.sidebar-kelompok');
             
             kelompokContainers.forEach(container => {
                 const pokjaLinks = container.querySelectorAll('.nav-pokja');
@@ -30,7 +34,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             });
         });
-    }
+    });
 });
 
 function getCookie(name) {
