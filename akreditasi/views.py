@@ -141,10 +141,20 @@ def _get_mutu_renstra_charts_context(request, profile, db_roadmaps, renstra_year
     except (ValueError, TypeError):
         mutu_indikator_id = 0
 
-    # Lingkup unit: satu sumber kebenaran (akses_indikator.indikator_aktif_scoped).
-    # Jalur lama Q(jenis='NASIONAL') membocorkan seluruh INM ke unit-scoped user.
+    # Lingkup = GABUNGAN dua sumber (lihat indikator_dashboard): batas
+    # unit/subtree dari indikator_aktif_scoped() ditambah INM yang dipetakan
+    # ke unit/role. INM nasional ber-unit NULL dikecualikan oleh sumber pertama,
+    # jadi irisan keduanya justru menghapus INM yang sah.
     from .akses_indikator import indikator_aktif_scoped
-    ind_qs = indikator_aktif_scoped(profile)
+    from .indikator_views import inm_qs_for_user
+    from .risiko_models import InmUnitMapping
+    _scoped = indikator_aktif_scoped(profile)
+    if profile and profile.is_unit_scoped and InmUnitMapping.objects.exists():
+        _mapped = inm_qs_for_user(profile, IndikatorMutu.objects.filter(aktif=True))
+        ind_qs = (IndikatorMutu.objects.filter(aktif=True)
+                  .filter(Q(pk__in=_scoped.values('pk')) | Q(pk__in=_mapped.values('pk'))))
+    else:
+        ind_qs = _scoped
     if mutu_unit and not (profile and profile.is_unit_scoped):
         ind_qs = ind_qs.filter(unit_id=mutu_unit)
 

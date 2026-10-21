@@ -231,12 +231,28 @@ def indikator_dashboard(request):
         tahun_int = 2026
     tahun = str(tahun_int)
 
-    # Satu sumber kebenaran lingkup: akses_indikator.indikator_aktif_scoped().
-    # Dulu halaman ini memakai Q(jenis='NASIONAL') yang membocorkan seluruh INM
-    # ke setiap unit-scoped user.
+    # Lingkup = GABUNGAN dua sumber, bukan irisan:
+    #   1. indikator_aktif_scoped() — indikator milik unit/subtree-nya.
+    #   2. inm_qs_for_user()        — INM yang dipetakan ke unit/role-nya.
+    # INM nasional ber-unit NULL sengaja dikecualikan oleh (1), jadi mengiris
+    # keduanya akan menghapus justru INM yang dipetakan (regresi DashboardTest).
+    # Memakai Q(jenis='NASIONAL') sendirian juga salah: seluruh INM bocor.
     from .akses_indikator import indikator_aktif_scoped
     profile = getattr(request.user, 'profile', None)
-    qs = indikator_aktif_scoped(profile).select_related('unit', 'ep_terkait')
+    _scoped = indikator_aktif_scoped(profile)
+    if profile is None or not getattr(profile, 'is_unit_scoped', False):
+        qs = _scoped
+    elif InmUnitMapping.objects.exists():
+        # Peta distribusi sudah diisi: INM yang dipetakan ikut terlihat walau
+        # unit-nya NULL (INM nasional). Selama tabel masih kosong, guard
+        # roll-out inm_qs_for_user mengembalikan semuanya — memakainya di sini
+        # akan membocorkan seluruh INM ke setiap unit.
+        _mapped = inm_qs_for_user(profile, IndikatorMutu.objects.filter(aktif=True))
+        qs = (IndikatorMutu.objects.filter(aktif=True)
+              .filter(Q(pk__in=_scoped.values('pk')) | Q(pk__in=_mapped.values('pk'))))
+    else:
+        qs = _scoped
+    qs = qs.select_related('unit', 'ep_terkait')
 
     # Normalize canonical 3-tier filter → DB codes (support both old and new)
     JENIS_CANONICAL_MAP = {
