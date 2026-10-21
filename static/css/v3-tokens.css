@@ -341,9 +341,15 @@ small, .small { font-size: var(--fs-micro); }
     /* Collapsed sidebar — icons only, tooltips from [data-tooltip] */
     .sb-collapsed { --sidebar-width: var(--sidebar-width-collapsed); }
     .sb-collapsed .sidebar-desktop { overflow: visible; }
-    .sb-collapsed .sidebar-brand { justify-content: center; padding: 0.75rem 0.5rem; }
-    .sb-collapsed .sidebar-brand-text,
-    .sb-collapsed .sidebar-collapse-btn { display: none; }
+    .sb-collapsed .sidebar-brand { justify-content: center; padding: 0.75rem 0.5rem; flex-wrap: wrap; }
+    /* Teks brand disembunyikan, TETAPI tombol collapse tetap tampil — tanpa itu
+       rail yang sudah diciutkan tidak punya jalan kembali ke mode penuh. */
+    .sb-collapsed .sidebar-brand-text { display: none; }
+    .sb-collapsed .sidebar-collapse-btn {
+        display: inline-flex;
+        margin: 0.25rem auto 0;
+        position: static;
+    }
     .sb-collapsed .sidebar-nav .nav-section {
         font-size: 0; letter-spacing: 0; text-align: center;
         padding: 0.55rem 0 0.15rem;
