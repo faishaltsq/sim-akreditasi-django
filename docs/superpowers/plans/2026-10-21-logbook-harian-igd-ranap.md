@@ -43,7 +43,7 @@
 - Consumes: `UnitKerja` (`akreditasi.models`), `Ruangan`, `Bed`, `KunjunganPasien`, `Pasien` (`pasien.models`)
 - Produces: `LogbookHarian`, `LogbookPasien`, `LogbookChecklist`, `LogbookBukti`, `LogbookKejadian`, `parse_jam(s)` helper, `JENIS_LOGBOOK`, `STATUS.choices`, `CHECKLIST_IGD`, `CHECKLIST_RANAP` (?)
 
-- [ ] **Step 1: Tulis test model gagal**
+- [x] **Step 1: Tulis test model gagal**
 
 ```python
 # akreditasi/tests_logbook_models.py
@@ -88,8 +88,8 @@ class LogbookHarianModelTest(TestCase):
     def dst...
 ```
 
-- [ ] **Step 2: Jalankan — harus ImportError** (`manage.py test akreditasi.tests_logbook_models` → *ModuleNotFoundError*).
-- [ ] **Step 3: Implementasi `logbook_models.py`**
+- [x] **Step 2: Jalankan — harus ImportError** (`manage.py test akreditasi.tests_logbook_models` → *ModuleNotFoundError*).
+- [x] **Step 3: Implementasi `logbook_models.py`**
 
 ```python
 """
@@ -139,8 +139,8 @@ class LogbookHarian(models.Model):
             name='logbook_harian_unik', fields=['unit', 'tanggal', 'shift'])]
 ```
 
-- [ ] **Step 4: Jalankan test — hijau.**
-- [ ] **Step 5: Commit** `git add akreditasi/logbook_models.py akreditasi/migrations/0048* akreditasi/tests_logbook_models.py && git commit -m "feat(logbook): model serial harian per shift"`
+- [x] **Step 4: Jalankan test — hijau.**
+- [x] **Step 5: Commit** `git add akreditasi/logbook_models.py akreditasi/migrations/0048* akreditasi/tests_logbook_models.py && git commit -m "feat(logbook): model serial harian per shift"`
 
 ---
 
@@ -153,8 +153,8 @@ class LogbookHarian(models.Model):
 **Interfaces:**
 - Produces: `shift_window(tanggal, shift)` → `(awal_dt, akhir_dt)` timezone-aware Jakarta; `kunjungan_shift(jenis, unit, tanggal, shift)`; `parse_jam(x)` → `time or None` (None kalau kosong/tidak valid); `bor_pct(shift, unit)`.
 
-- [ ] **Step 1: Test merah** — shift MALAM lintas tanggal awal/akhir; RT parse; BOR point-in-time.
-- [ ] **Step 2-4: test gagal → implement → test pass.** Cos: cuidados dengan `timezone.make_aware` dan `timezone.localtime`; BOR: filter kunjungan aktif dan estime untuk rasio bed.
+- [x] **Step 1: Test merah** — shift MALAM lintas tanggal awal/akhir; RT parse; BOR point-in-time.
+- [x] **Step 2-4: test gagal → implement → test pass.** Cos: cuidados dengan `timezone.make_aware` dan `timezone.localtime`; BOR: filter kunjungan aktif dan estime untuk rasio bed.
 
 ```python
 def shift_window(tanggal, shift):
@@ -169,7 +169,7 @@ def shift_window(tanggal, shift):
     return awal_dt, akhir_dt
 ```
 
-- [ ] **Step 5: Commit.**
+- [x] **Step 5: Commit.**
 
 ---
 
@@ -179,8 +179,8 @@ def shift_window(tanggal, shift):
 - Modify: `akreditasi/logbook_models.py` — method `LogbookHarian.tarik_pasien()`
 - Test: `akreditasi/tests_logbook_models.py` (append)
 
-- [ ] **Step 1: Test merah** — kunjungan yang masuk/tanda jam di jendela masuk `LogbookPasien`, yang keluar tidak. Pasien **tanpa bed** tetap masuk baris dengan `bed=NULL` (Review Focus item 1). CPPT/`general_consent_doc` terCatat.
-- [ ] **Step 2: Implement:**
+- [x] **Step 1: Test merah** — kunjungan yang masuk/tanda jam di jendela masuk `LogbookPasien`, yang keluar tidak. Pasien **tanpa bed** tetap masuk baris dengan `bed=NULL` (Review Focus item 1). CPPT/`general_consent_doc` terCatat.
+- [x] **Step 2: Implement:**
 
 ```python
 def tarik_pasien(self):
@@ -202,8 +202,8 @@ def tarik_pasien(self):
     return ditarik
 ```
 
-- [ ] **Step 3: Jalankan test.**
-- [ ] **Step 4: Commit.**
+- [x] **Step 3: Jalankan test.**
+- [x] **Step 4: Commit.**
 
 ---
 
@@ -213,9 +213,9 @@ def tarik_pasien(self):
 - Modify: `akreditasi/logbook_models.py` — método `ensure_checklist()`
 - Test: `akreditasi/tests_logbook_models.py` (append)
 
-- [ ] **Step 1: Test merah** — `CHECKLIST_IGD` punya 8 kunci unik (3 HPK + 2 KE + 3 SKP), `CHECKLIST_RANAP` juga 9 kunci. `ensure_checklist()` membuat 1 row per item, idempoten.
-- [ ] **Step 2: Implementasi** dengan konstanta `CHECKLIST_IGD = [('HPK1', 'A. HPK', 1, 'Edukasi Hak & Kewajiban Pasien...', 'TERLAKSANA'), ...]` (`kunci, seksi, no_urut, parameter, default_status`). Setiap row `LogbookChecklist` nullable `segel_no`, `cara_keterangan`.
-- [ ] **Step 3: Commit.**
+- [x] **Step 1: Test merah** — `CHECKLIST_IGD` punya 8 kunci unik (3 HPK + 2 KE + 3 SKP), `CHECKLIST_RANAP` juga 9 kunci. `ensure_checklist()` membuat 1 row per item, idempoten.
+- [x] **Step 2: Implementasi** dengan konstanta `CHECKLIST_IGD = [('HPK1', 'A. HPK', 1, 'Edukasi Hak & Kewajiban Pasien...', 'TERLAKSANA'), ...]` (`kunci, seksi, no_urut, parameter, default_status`). Setiap row `LogbookChecklist` nullable `segel_no`, `cara_keterangan`.
+- [x] **Step 3: Commit.**
 
 ---
 
@@ -232,8 +232,8 @@ def tarik_pasien(self):
 - Consumes: semua model Task 1-4; `AuditLog` (`mutu_laporan._catat` pola)
 - Produces: view `logbook_daftar`, `logbook_detail`, `logbook_serah_terima`, `logbook_setujui`
 
-- [ ] **Step 1: Test merah** — view menampilkan seksi I-IV; logbook unit lain 403; IGD/Nakes atas unit lain tidak boleh menyetujui.
-- [ ] **Step 2: Implement**
+- [x] **Step 1: Test merah** — view menampilkan seksi I-IV; logbook unit lain 403; IGD/Nakes atas unit lain tidak boleh menyetujui.
+- [x] **Step 2: Implement**
 
 ```python
 def _boleh_buat_logbook(user, unit):
@@ -250,8 +250,8 @@ def _boleh_buat_logbook(user, unit):
 ```
 
 Sekarang view `logbook_detail` tarif pasien otomatis saat pertama diakses (jika status DRAF) + render semua seksi.
-- [ ] **Step 3: Template** —火车站镜像 structure terbarukan.
-- [ ] **Step 4: Commit.**
+- [x] **Step 3: Template** —火车站镜像 structure terbarukan.
+- [x] **Step 4: Commit.**
 
 ---
 
@@ -261,9 +261,9 @@ Sekarang view `logbook_detail` tarif pasien otomatis saat pertama diakses (jika 
 - Modify: `akreditasi/logbook.py`
 - Test: `akreditasi/tests_logbook_views.py` (append)
 
-- [ ] **Step 1: Test merah** — `logbook_serah_terima` DRAF→DIISI mengubah status & menugesha AuditLog; `logbook_setujui` STAF_NAKES 403, KEPALA_UNIT unit bukan-akar → 403 disiplinary per Task 6 spec; asesor 403.
-- [ ] **Step 2: Implement views untuk aksi.**
-- [ ] **Step 3: Commit.**
+- [x] **Step 1: Test merah** — `logbook_serah_terima` DRAF→DIISI mengubah status & menugesha AuditLog; `logbook_setujui` STAF_NAKES 403, KEPALA_UNIT unit bukan-akar → 403 disiplinary per Task 6 spec; asesor 403.
+- [x] **Step 2: Implement views untuk aksi.**
+- [x] **Step 3: Commit.**
 
 ---
 
@@ -273,9 +273,9 @@ Sekarang view `logbook_detail` tarif pasien otomatis saat pertama diakses (jika 
 - Modify: `akreditasi/logbook.py` — `konteks_rekap(logbook)`
 - Test: `akreditasi/tests_logbook_views.py`
 
-- [ ] **Step 1: Test** — 1 pasien merah (kunjungan MERAH), 1 kunjungan (trige), jumlah ranap/rujuk/pulang/DOA dari `status` dan `disposisi_tindak_lanjut`; BOR persif.
-- [ ] **Step 2: Implementasi** `konteks_rekap` dan rendering di template seksi I.
-- [ ] **Step 3: Commit.**
+- [x] **Step 1: Test** — 1 pasien merah (kunjungan MERAH), 1 kunjungan (trige), jumlah ranap/rujuk/pulang/DOA dari `status` dan `disposisi_tindak_lanjut`; BOR persif.
+- [x] **Step 2: Implementasi** `konteks_rekap` dan rendering di template seksi I.
+- [x] **Step 3: Commit.**
 
 ---
 
@@ -286,9 +286,9 @@ Sekarang view `logbook_detail` tarif pasien otomatis saat pertama diakses (jika 
 - Modify: `akreditasi/urls.py` — `logbook/<int:pk>/pdf/`
 - Test: `akreditasi/tests_logbook_views.py`
 
-- [ ] **Step 1: Test** — mengikuti pola `test_pdf` pada `tests_mutu_laporan.py` jika sudah ada, else 200 + header `Content-Type: application/pdf` (atau verifikasi via pypdf bila tersedia). Barang semua tabel (IGD dengan triage terisi, RANAP dengan bed kosong).
-- [ ] **Step 2: Implement.**
-- [ ] **Step 3: Commit.**
+- [x] **Step 1: Test** — mengikuti pola `test_pdf` pada `tests_mutu_laporan.py` jika sudah ada, else 200 + header `Content-Type: application/pdf` (atau verifikasi via pypdf bila tersedia). Barang semua tabel (IGD dengan triage terisi, RANAP dengan bed kosong).
+- [x] **Step 2: Implement.**
+- [x] **Step 3: Commit.**
 
 ---
 
@@ -300,12 +300,28 @@ Sekarang view `logbook_detail` tarif pasien otomatis saat pertama diakses (jika 
 - Create: `templates/akreditasi/logbook_daftar.html` (final)
 - Modify: `static/css/kontrol.css` (atau `static/css/logbook.css`) untuk tabel
 
-- [ ] **Step 1: View daftar** (filter unit + tanggal + status) + template; sidebar; styling.
-- [ ] **Step 2: Test smoke** — akses cepat URL list → 200, count `LogbookHarian` sama.
-- [ ] **Step 3: Commit + push.**
+- [x] **Step 1: View daftar** (filter unit + tanggal + status) + template; sidebar; styling.
+- [x] **Step 2: Test smoke** — akses cepat URL list → 200, count `LogbookHarian` sama.
+- [x] **Step 3: Commit + push.**
 
 ---
 
 ### Task 10: Bantuan AI narasi logbook (Opsional — hanya jika requested)
 
 > **Skip unless user asks.** Bila diminta, tambahkan `PANDUAN_LOGBOOK_NARASI_BAB` di ai_prompts.py + per-`K ON DETAIL` endpoint punya `ai_views.py` tidak teretapi; **pastikan konten AI tidak disembunyikan data medis pasien rahasia**, hanya tambahkan ringkasan dedupless dan checklist yang sudah diisi.
+
+---
+
+## Status Eksekusi (2026-10-21)
+
+Task 1–9 **selesai** dan terverifikasi:
+
+- `akreditasi/logbook_models.py` — 5 model + helper shift/LOS/response time (29 test).
+- `akreditasi/logbook.py` — daftar, buat, detail, simpan pasien/checklist/narasi,
+  kejadian→IKP, unggah bukti, serah terima, pengesahan, PDF landscape (28 test).
+- Template: `logbook_daftar.html`, `logbook_form.html`, `logbook_detail.html` + entry sidebar.
+- Migrasi `0048_logbookharian_logbookchecklist_logbookbukti_and_more` diterapkan ke DB dev.
+- Smoke DB dev (rollback): 5 seksi render, serah terima → DIISI, pengesahan → DISETUJUI,
+  kejadian menulis `InsidenKeselamatan`, PDF `application/pdf`.
+
+Task 10 (AI narasi logbook) **dilewati** — opsional, menunggu permintaan eksplisit.
