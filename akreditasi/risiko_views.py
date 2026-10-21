@@ -15,6 +15,8 @@ from decimal import Decimal
 
 from .risiko_models import RisikoUnit, TindakLanjutRisiko, InsidenKeselamatan, IndikatorMutu, CatatanIndikator
 from .models import UnitKerja, AuditLog
+# Peran pengelola dipakai template evaluasi (tombol Input Capaian/Edit Indikator).
+from .indikator_views import _is_manager
 
 
 # ── helpers ──────────────────────────────────────────────────────────────
@@ -809,7 +811,11 @@ def risiko_evaluasi(request, risiko_id):
                 except (ArithmeticError, ValueError, TypeError):
                     risiko.target_capaian_indikator = None
 
-            # ── Capaian Indikator Mutu ──
+            # ── Evaluasi Capaian ──
+            # Form G.1 tidak lagi merender input capaian/bukti (sumbernya
+            # CatatanIndikator lewat halaman Input Capaian), tetapi payload lama
+            # yang masih memuat field ini tetap diterima agar klien/browser
+            # dengan halaman ter-cache tidak kehilangan data.
             capaian_raw = request.POST.get('capaian_nilai', '').strip()
             if capaian_raw:
                 try:
@@ -818,7 +824,6 @@ def risiko_evaluasi(request, risiko_id):
                     pass
             if request.FILES.get('bukti_capaian'):
                 risiko.bukti_capaian = request.FILES['bukti_capaian']
-
             if 'jenis_dokumen_capaian' in request.POST:
                 risiko.jenis_dokumen_capaian = request.POST.get('jenis_dokumen_capaian', '').strip()
 
@@ -918,21 +923,28 @@ def risiko_evaluasi(request, risiko_id):
         if m:
             indikator_manual_hint = m.group(1).strip()
 
+    # G.1 hanya membaca: input inline capaian/bukti sudah dihapus, sumber
+    # datanya halaman Input Capaian (CatatanIndikator) lewat agregat tahunan.
+    agregat = None
+    if risiko.indikator_mutu_terkait_id:
+        agregat = risiko.indikator_mutu_terkait.agregat_capaian(risiko.tahun)
+
     ctx = {
         'risiko': risiko,
         'status_badges': STATUS_BADGES,
         'status_pelaksanaan_choices': RisikoUnit.STATUS_PELAKSANAAN_CHOICES,
         'status_rtl_choices': RisikoUnit.STATUS_RTL_CHOICES,
-        'jenis_dokumen_choices': RisikoUnit.JENIS_DOKUMEN_BUKTI_CHOICES,
         'tindak_lanjut_list': tindak_lanjut_list,
         'rencana_aksi_items': rencana_aksi_items,
         'target_nilai_display': target_nilai_display,
         'arah_nilai_display': arah_nilai_display,
         'satuan_nilai_display': satuan_nilai_display,
         'ev_capaian': _ev,
+        'agregat': agregat,
         'indikator_kandidat': indikator_kandidat,
         'indikator_kandidat_mode': indikator_kandidat_mode,
         'indikator_manual_hint': indikator_manual_hint,
+        'is_manager': _is_manager(request.user),
     }
     return render(request, 'akreditasi/risiko_evaluasi.html', ctx)
 

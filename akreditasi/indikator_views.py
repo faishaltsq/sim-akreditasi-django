@@ -231,7 +231,12 @@ def indikator_dashboard(request):
         tahun_int = 2026
     tahun = str(tahun_int)
 
-    qs = IndikatorMutu.objects.filter(aktif=True).select_related('unit', 'ep_terkait')
+    # Satu sumber kebenaran lingkup: akses_indikator.indikator_aktif_scoped().
+    # Dulu halaman ini memakai Q(jenis='NASIONAL') yang membocorkan seluruh INM
+    # ke setiap unit-scoped user.
+    from .akses_indikator import indikator_aktif_scoped
+    profile = getattr(request.user, 'profile', None)
+    qs = indikator_aktif_scoped(profile).select_related('unit', 'ep_terkait')
 
     # Normalize canonical 3-tier filter → DB codes (support both old and new)
     JENIS_CANONICAL_MAP = {
@@ -247,9 +252,8 @@ def indikator_dashboard(request):
     if unit_id:
         qs = qs.filter(unit_id=unit_id)
 
-    # Unit-scoped user: indikator milik unit/subtree + INM pada peta distribusi
-    profile = getattr(request.user, 'profile', None)
-    qs = inm_qs_for_user(profile, qs)
+    # Lingkup sudah diterapkan oleh indikator_aktif_scoped() di atas; jalur
+    # peta distribusi INM tidak dipakai lagi di sini agar tidak dobel filter.
 
     # Katalog INM hanya memuat INM kanonik. Baris realisasi per-unit
     # (BAB-*-INM-*) tetap dipakai untuk capaian unit, tapi tidak lagi muncul

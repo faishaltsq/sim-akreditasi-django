@@ -140,11 +140,11 @@ def _get_mutu_renstra_charts_context(request, profile, db_roadmaps, renstra_year
     except (ValueError, TypeError):
         mutu_indikator_id = 0
 
-    ind_qs = IndikatorMutu.objects.filter(aktif=True)
-    from .indikator_views import inm_qs_for_user
-    if profile and profile.is_unit_scoped and profile.unit_kerja:
-        ind_qs = inm_qs_for_user(profile, ind_qs)
-    elif mutu_unit:
+    # Lingkup unit: satu sumber kebenaran (akses_indikator.indikator_aktif_scoped).
+    # Jalur lama Q(jenis='NASIONAL') membocorkan seluruh INM ke unit-scoped user.
+    from .akses_indikator import indikator_aktif_scoped
+    ind_qs = indikator_aktif_scoped(profile)
+    if mutu_unit and not (profile and profile.is_unit_scoped):
         ind_qs = ind_qs.filter(unit_id=mutu_unit)
 
     if mutu_jenis:
