@@ -20,7 +20,7 @@
         max-width: 100% !important;
     }
     .card {
-        border: 1px solid #cbd5e1 !important;
+        border: 1px solid var(--border-strong) !important;
         box-shadow: none !important;
         break-inside: avoid;
         margin-bottom: 1.5rem !important;
@@ -29,18 +29,18 @@
         font-size: 9.5pt !important;
     }
     .badge {
-        border: 1px solid #94a3b8 !important;
+        border: 1px solid var(--border-strong) !important;
         color: #000 !important;
         background: transparent !important;
     }
 }
 
 .report-header-banner {
-    background: #0F766E;
+    background: var(--primary-deep);
     color: #fff;
     border-radius: 12px;
     padding: 1.5rem 2rem;
-    box-shadow: 0 4px 15px rgba(13, 148, 136, 0.15);
+    box-shadow: 0 4px 15px rgba(79,91,213,0.15);
 }
 
 .section-title {
@@ -48,8 +48,8 @@
     font-weight: 700;
     letter-spacing: 0.03em;
     text-transform: uppercase;
-    color: #0f172a;
-    border-bottom: 2px solid #0d9488;
+    color: var(--text-primary);
+    border-bottom: 2px solid var(--primary);
     padding-bottom: 6px;
     margin-bottom: 1rem;
     display: flex;
@@ -60,16 +60,16 @@
 .sub-section-title {
     font-size: 0.85rem;
     font-weight: 700;
-    color: #0f766e;
+    color: var(--primary-deep);
     margin-top: 1rem;
     margin-bottom: 0.5rem;
 }
 
 .card-category-klinis { border-left: 4px solid #ef4444 !important; }
-.card-category-operasional { border-left: 4px solid #3b82f6 !important; }
-.card-category-ppi { border-left: 4px solid #14b8a6 !important; }
-.card-category-hukum { border-left: 4px solid #f59e0b !important; }
-.card-category-default { border-left: 4px solid #64748b !important; }
+.card-category-operasional { border-left: 4px solid var(--primary) !important; }
+.card-category-ppi { border-left: 4px solid var(--primary) !important; }
+.card-category-hukum { border-left: 4px solid var(--warning) !important; }
+.card-category-default { border-left: 4px solid var(--text-secondary) !important; }
 </style>
 {% endblock %}
 
@@ -92,7 +92,7 @@
                 </p>
             </div>
             <div class="no-print d-flex gap-2">
-                <button onclick="window.print()" class="btn btn-light btn-sm fw-semibold shadow-sm d-flex align-items-center gap-1.5" style="color:#0f766e;">
+                <button onclick="window.print()" class="btn btn-light btn-sm fw-semibold shadow-sm d-flex align-items-center gap-1.5" style="color:var(--primary-deep);">
                     <i class="bi bi-printer-fill"></i> Cetak / Ekspor PDF
                 </button>
                 <a href="{% url 'akreditasi:risiko_input' %}" class="btn btn-outline-light btn-sm fw-semibold shadow-sm">
@@ -103,7 +103,7 @@
     </div>
 
     {# ── FILTER BAR (NO-PRINT) ───────────────────────────────────────── #}
-    <div class="card border-0 shadow-sm mb-4 no-print" style="background:#f8fafc;">
+    <div class="card border-0 shadow-sm mb-4 no-print" style="background:var(--body-bg);">
         <div class="card-body p-3">
             <form method="get" class="row g-2 align-items-end">
                 <div class="col-md-5">
@@ -147,7 +147,7 @@
             <i class="bi bi-folder2-open display-4 text-muted"></i>
             <h6 class="fw-bold mt-3 text-secondary">Belum ada data risiko untuk unit dan periode ini</h6>
             <p class="text-muted small">Silakan pilih unit kerja lain atau lakukan input identifikasi risiko baru.</p>
-            <a href="{% url 'akreditasi:risiko_input' %}" class="btn btn-sm text-white" style="background:#0d9488;">
+            <a href="{% url 'akreditasi:risiko_input' %}" class="btn btn-sm text-white" style="background:var(--primary);">
                 <i class="bi bi-plus-circle me-1"></i> Input Risiko Sekarang
             </a>
         </div>
@@ -225,7 +225,7 @@
             </h5>
 
             {# Scoring Legend #}
-            <div class="p-3 rounded-3 mb-3 border" style="background:#f0fdfa; border-color:#99f6e4 !important; font-size:0.78rem;">
+            <div class="p-3 rounded-3 mb-3 border" style="background:var(--primary-tint); border-color:#B9C0F2 !important; font-size:0.78rem;">
                 <div class="fw-bold text-teal mb-1">Standar Skoring Matriks Risiko 5×5:</div>
                 <div class="row g-2">
                     <div class="col-md-6">
@@ -237,7 +237,7 @@
                         &bull; <strong>Kategori Level:</strong>
                         <span class="badge bg-success" style="font-size:0.65rem;">1–5 Rendah</span>
                         <span class="badge bg-warning text-dark" style="font-size:0.65rem;">6–11 Sedang</span>
-                        <span class="badge" style="background:#ea580c; font-size:0.65rem;">12–15 Tinggi</span>
+                        <span class="badge" style="background:#C2410C; font-size:0.65rem;">12–15 Tinggi</span>
                         <span class="badge bg-danger" style="font-size:0.65rem;">16–25 Ekstrem</span>
                     </div>
                 </div>
@@ -289,7 +289,7 @@
                                     {{ r.skor_label_val }}
                                 </span>
                             </td>
-                            <td class="text-center fw-bold" style="color:#0f766e;">
+                            <td class="text-center fw-bold" style="color:var(--primary-deep);">
                                 Prioritas {{ rank_num }}
                             </td>
                         </tr>
@@ -518,7 +518,7 @@
                 </div>
                 <div class="table-responsive mb-2">
                     <table class="table table-sm table-bordered align-middle mb-0" style="font-size:0.72rem;">
-                        <thead style="background:#f8fafc;">
+                        <thead style="background:var(--body-bg);">
                             <tr>
                                 <th style="width:110px;">Metode</th>
                                 <th>Unit</th>
@@ -531,7 +531,7 @@
                         <tbody>
                             {% for r in fmea_list %}
                             <tr>
-                                <td><span class="badge" style="background:#f59e0b; color:#fff; font-size:0.62rem;">FMEA</span></td>
+                                <td><span class="badge" style="background:var(--warning); color:#fff; font-size:0.62rem;">FMEA</span></td>
                                 <td>{{ r.unit.name|truncatechars:26 }}</td>
                                 <td>{{ r.jenis_risiko|truncatechars:70 }}</td>
                                 <td class="text-center font-monospace fw-bold">{{ r.rpn_calc|default:"—" }}</td>
@@ -553,7 +553,7 @@
                     </table>
                 </div>
                 {% if fmea_list %}
-                <div class="p-2 rounded mb-2" style="background:#fffbeb; border-left:3px solid #f59e0b; font-size:0.72rem;">
+                <div class="p-2 rounded mb-2" style="background:#fffbeb; border-left:3px solid var(--warning); font-size:0.72rem;">
                     <strong style="color:#78350f;"><i class="bi bi-diagram-3-fill me-1"></i>Kajian FMEA Proaktif ({{ fmea_list|length }}):</strong>
                     <span class="text-muted">Analisis mode kegagalan pada proses berisiko tinggi untuk mencegah insiden sebelum terjadi (STARKES PMKP 8).</span>
                 </div>

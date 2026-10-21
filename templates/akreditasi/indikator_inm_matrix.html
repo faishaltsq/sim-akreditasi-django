@@ -6,7 +6,7 @@
 
 {% block content %}
 <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
-  <span class="badge text-white" style="background:#12544F;">{{ rows|length }} INM kanonik</span>
+  <span class="badge text-white" style="background:var(--primary-strong);">{{ rows|length }} INM kanonik</span>
   <span class="badge bg-light text-muted border">{{ total_mapping }} baris pemetaan</span>
   {% if unmapped %}<span class="badge bg-warning-subtle text-warning-emphasis border">{{ unmapped|length }} INM belum dipetakan</span>{% endif %}
   <a href="{% url 'akreditasi:indikator_dashboard' %}" class="btn btn-sm btn-outline-secondary ms-auto">Kembali ke Dashboard</a>
@@ -28,7 +28,7 @@
 <div class="table-responsive">
   <table class="table table-sm align-middle" style="font-size:.8rem;">
     <thead>
-      <tr style="background:#f1f5f9;">
+      <tr style="background:var(--surface-hover);">
         <th style="min-width:220px;">Indikator (INM)</th>
         <th style="min-width:90px;">Target</th>
         <th>Unit / Cakupan Role</th>
@@ -39,8 +39,8 @@
       {% for ind, maps in rows %}
       <tr>
         <td>
-          <span class="badge text-white" style="background:#12544F;">{{ ind.kode_indikator }}</span>
-          <div class="fw-semibold mt-1" style="color:#0f172a;">{{ ind.nama_indikator|truncatechars:90 }}</div>
+          <span class="badge text-white" style="background:var(--primary-strong);">{{ ind.kode_indikator }}</span>
+          <div class="fw-semibold mt-1" style="color:var(--text-primary);">{{ ind.nama_indikator|truncatechars:90 }}</div>
         </td>
         <td class="text-nowrap">
           {{ ind.target_nilai|floatformat:1 }} {{ ind.satuan }}

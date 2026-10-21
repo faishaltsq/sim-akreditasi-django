@@ -7,18 +7,18 @@
 
 {% block extra_css %}
 <style>
-    .level-badge-1 { background: #0f766e; color: #fff; font-weight: 700; }
-    .level-badge-2 { background: #0d9488; color: #fff; font-weight: 700; }
-    .level-badge-3 { background: #14b8a6; color: #fff; font-weight: 700; }
+    .level-badge-1 { background: var(--primary-deep); color: #fff; font-weight: 700; }
+    .level-badge-2 { background: var(--primary); color: #fff; font-weight: 700; }
+    .level-badge-3 { background: var(--primary); color: #fff; font-weight: 700; }
 
     .btn-add-sub {
         font-size: 0.72rem;
         font-weight: 600;
         padding: 2px 8px;
         border-radius: 6px;
-        color: #0f766e;
-        background: #f0fdfa;
-        border: 1px solid #99f6e4;
+        color: var(--primary-deep);
+        background: var(--primary-tint);
+        border: 1px solid #B9C0F2;
         text-decoration: none;
         display: inline-flex;
         align-items: center;
@@ -26,15 +26,15 @@
         transition: all 0.15s;
     }
     .btn-add-sub:hover {
-        background: #0d9488;
+        background: var(--primary);
         color: #ffffff;
-        border-color: #0d9488;
+        border-color: var(--primary);
     }
     
     .nav-tabs-custom .nav-link {
         font-size: 0.88rem;
         font-weight: 600;
-        color: #64748b;
+        color: var(--text-secondary);
         border: none;
         border-bottom: 2px solid transparent;
         padding: 10px 18px;
@@ -60,31 +60,31 @@
             </div>
         </div>
         <div class="col-md-2 col-6">
-            <div class="card shadow-sm border p-3" style="border-left: 4px solid #0f766e !important;">
+            <div class="card shadow-sm border p-3" style="border-left: 4px solid var(--primary-deep) !important;">
                 <div class="text-muted small" style="font-size:0.75rem;">L1 — Puncak</div>
                 <div class="h4 mb-0 fw-bold font-mono text-dark">{{ count_l1 }} <span class="small fw-normal text-muted" style="font-size:0.75rem;">Unit</span></div>
             </div>
         </div>
         <div class="col-md-2 col-6">
-            <div class="card shadow-sm border p-3" style="border-left: 4px solid #0d9488 !important;">
+            <div class="card shadow-sm border p-3" style="border-left: 4px solid var(--primary) !important;">
                 <div class="text-muted small" style="font-size:0.75rem;">L2 — Direktorat</div>
                 <div class="h4 mb-0 fw-bold font-mono text-dark">{{ count_l2 }} <span class="small fw-normal text-muted" style="font-size:0.75rem;">Unit</span></div>
             </div>
         </div>
         <div class="col-md-2 col-6">
-            <div class="card shadow-sm border p-3" style="border-left: 4px solid #14b8a6 !important;">
+            <div class="card shadow-sm border p-3" style="border-left: 4px solid var(--primary) !important;">
                 <div class="text-muted small" style="font-size:0.75rem;">L3 — Instalasi</div>
                 <div class="h4 mb-0 fw-bold font-mono text-dark">{{ count_l3 }} <span class="small fw-normal text-muted" style="font-size:0.75rem;">Unit</span></div>
             </div>
         </div>
         <div class="col-md-2 col-6">
-            <div class="card shadow-sm border p-3" style="border-left: 4px solid #5eead4 !important;">
+            <div class="card shadow-sm border p-3" style="border-left: 4px solid #8B93E8 !important;">
                 <div class="text-muted small" style="font-size:0.75rem;">L4 — Sub-Instalasi</div>
                 <div class="h4 mb-0 fw-bold font-mono text-dark">{{ count_l4 }} <span class="small fw-normal text-muted" style="font-size:0.75rem;">Unit</span></div>
             </div>
         </div>
         <div class="col-md-2 col-6">
-            <div class="card shadow-sm border p-3" style="border-left: 4px solid #a7f3d0 !important;">
+            <div class="card shadow-sm border p-3" style="border-left: 4px solid #BFE8CC !important;">
                 <div class="text-muted small" style="font-size:0.75rem;">L5 — Depo / Tim</div>
                 <div class="h4 mb-0 fw-bold font-mono text-dark">{{ count_l5 }} <span class="small fw-normal text-muted" style="font-size:0.75rem;">Unit</span></div>
             </div>
@@ -92,7 +92,7 @@
     </div>
 
     <!-- PANDUAN PENJELASAN TINGKAT HIERARKI -->
-    <div class="alert alert-light border py-2.5 px-3 mb-3 d-flex flex-wrap align-items-center justify-content-between gap-2" style="background:#f8fafc; font-size:0.8rem;">
+    <div class="alert alert-light border py-2.5 px-3 mb-3 d-flex flex-wrap align-items-center justify-content-between gap-2" style="background:var(--body-bg); font-size:0.8rem;">
         <div class="d-flex align-items-center gap-2">
             <i class="bi bi-info-circle-fill text-teal fs-5"></i>
             <div>
@@ -316,27 +316,27 @@
                                     <i class="bi bi-diagram-3-fill me-1"></i> Panduan Hierarki &amp; Level Unit
                                 </div>
                                 <div class="card-body p-3" style="font-size:0.78rem; line-height:1.6;">
-                                    <div class="p-2 mb-2 border rounded" style="background:#f8fafc; border-left: 4px solid #0f766e !important;">
+                                    <div class="p-2 mb-2 border rounded" style="background:var(--body-bg); border-left: 4px solid var(--primary-deep) !important;">
                                         <strong>Level 1 — Puncak:</strong><br>
                                         Direktur Utama, Dewan Pengawas, Pemilik.<br>
                                         <span class="text-muted small">&rarr; Induk Unit dikosongkan.</span>
                                     </div>
-                                    <div class="p-2 mb-2 border rounded" style="background:#f8fafc; border-left: 4px solid #0d9488 !important;">
+                                    <div class="p-2 mb-2 border rounded" style="background:var(--body-bg); border-left: 4px solid var(--primary) !important;">
                                         <strong>Level 2 — Direktorat / Bidang / Komite RS:</strong><br>
                                         Direktorat Medik, Keuangan, Umum, Komite Medik, SPI.<br>
                                         <span class="text-muted small">&rarr; Pilih Induk Level 1 (misal DIRUT/Pimpinan) atau pilih langsung Level 2.</span>
                                     </div>
-                                    <div class="p-2 mb-2 border rounded" style="background:#f8fafc; border-left: 4px solid #14b8a6 !important;">
+                                    <div class="p-2 mb-2 border rounded" style="background:var(--body-bg); border-left: 4px solid var(--primary) !important;">
                                         <strong>Level 3 — Instalasi / Bagian / KSM:</strong><br>
                                         Instalasi Rawat Inap, Bedah, Farmasi, IGD, Radiologi.<br>
                                         <span class="text-muted small">&rarr; Pilih Induk Level 2 (Direktorat / Bidang).</span>
                                     </div>
-                                    <div class="p-2 mb-2 border rounded" style="background:#f8fafc; border-left: 4px solid #5eead4 !important;">
+                                    <div class="p-2 mb-2 border rounded" style="background:var(--body-bg); border-left: 4px solid #8B93E8 !important;">
                                         <strong>Level 4 — Sub-Instalasi / Poliklinik / Ruang:</strong><br>
                                         Poli Penyakit Dalam, Ruang ICU, Kamar Operasi 1.<br>
                                         <span class="text-muted small">&rarr; Pilih Induk Level 3 (Instalasi).</span>
                                     </div>
-                                    <div class="p-2 border rounded" style="background:#f8fafc; border-left: 4px solid #a7f3d0 !important;">
+                                    <div class="p-2 border rounded" style="background:var(--body-bg); border-left: 4px solid #BFE8CC !important;">
                                         <strong>Level 5 — Depo / Tim / Satelit:</strong><br>
                                         Depo Farmasi IGD, Pos Jaga, Tim Code Blue.<br>
                                         <span class="text-muted small">&rarr; Pilih Induk Level 4.</span>

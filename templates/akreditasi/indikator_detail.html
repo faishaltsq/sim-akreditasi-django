@@ -76,7 +76,7 @@
           {% endif %}
         </div>
         <div class="card-body">
-          <canvas id="chartCapaian" height="280"></canvas>
+          <canvas id="chartCapaian" role="img" aria-label="Grafik capaian indikator mutu" height="280"></canvas>
         </div>
       </div>
     </div>
@@ -159,7 +159,7 @@
         c.save();
         c.textAlign = 'center';
         c.textBaseline = 'middle';
-        c.fillStyle = '#94a3b8';
+        c.fillStyle = '#61708A';
         c.font = 'bold 14px "Plus Jakarta Sans", sans-serif';
         c.fillText('Belum ada data capaian untuk tahun ini', width / 2, height / 2 - 12);
         c.font = '12px "Plus Jakarta Sans", sans-serif';
@@ -177,19 +177,19 @@
         {
           label: 'Capaian (%)',
           data: data,
-          borderColor: '#0d6efd',
+          borderColor: '#4F5BD5',
           backgroundColor: 'rgba(13, 110, 253, 0.08)',
           fill: true,
           tension: 0.3,
           pointRadius: 5,
           pointHoverRadius: 7,
-          pointBackgroundColor: data.map(v => v !== null && v >= target ? '#198754' : '#dc3545'),
+          pointBackgroundColor: data.map(v => v !== null && v >= target ? '#198754' : '#DC2626'),
           spanGaps: false,
         },
         {
           label: 'Target (' + target + '%)',
           data: Array(12).fill(target),
-          borderColor: '#dc3545',
+          borderColor: '#DC2626',
           borderDash: [6, 3],
           borderWidth: 2,
           pointRadius: 0,

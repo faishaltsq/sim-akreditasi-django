@@ -8,22 +8,22 @@
 {% block extra_css %}
 <style>
   .renstra-banner {
-    background: #0F172A;
+    background: var(--text-primary);
     border-radius: 1rem;
     color: #ffffff;
     position: relative;
     overflow: hidden;
   }
   .fokus-card {
-    background: #1E293B;
-    border: 1px solid #334155;
+    background: var(--brand-navy);
+    border: 1px solid var(--text-primary);
     border-radius: var(--radius);
     padding: 1rem 1.15rem;
     transition: background 0.15s ease, border-color 0.15s ease;
   }
   .fokus-card:hover {
     background: #27364B;
-    border-color: #475569;
+    border-color: var(--text-secondary);
   }
   .year-pill-btn {
     border-radius: 50rem;
@@ -39,11 +39,11 @@
     letter-spacing: 0.05em;
     text-transform: uppercase;
     font-weight: 700;
-    background-color: #f8fafc;
-    border-bottom: 2px solid #e2e8f0;
+    background-color: var(--body-bg);
+    border-bottom: 2px solid var(--border);
   }
   .indicator-row:hover {
-    background-color: #f8fafc;
+    background-color: var(--body-bg);
   }
   .badge-target {
     font-family: 'JetBrains Mono', monospace;
@@ -119,7 +119,7 @@
       </div>
 
       <div class="col-12 col-md-4 text-md-end">
-        <span class="badge bg-emerald text-white px-3 py-2 fw-semibold" style="background:#059669; font-size:0.8rem;">
+        <span class="badge bg-emerald text-white px-3 py-2 fw-semibold" style="background:var(--success); font-size:0.8rem;">
           <i class="bi bi-shield-check me-1"></i>3 Fokus IMP-RS Tahunan Terpasang
         </span>
       </div>
@@ -203,18 +203,18 @@
         </div>
         <div class="card-body py-2 px-3">
           <div style="position: relative; height: 260px; width: 100%;">
-                <canvas id="chartTrenCapaian"></canvas>
+                <canvas id="chartTrenCapaian" role="img" aria-label="Grafik tren capaian indikator mutu"></canvas>
               </div>
               {% if indikator_terpilih %}
           <!-- Panel teks panjang: rincian lengkap indikator terpilih -->
-          <div class="mt-2 p-2 border rounded-2 small" style="background:#f8fafc;">
+          <div class="mt-2 p-2 border rounded-2 small" style="background:var(--body-bg);">
             <div class="d-flex flex-wrap align-items-center gap-2 mb-1">
-              <span class="badge text-white" style="background:#12544F;">{{ indikator_terpilih.kode_indikator }}</span>
-              <span class="fw-semibold" style="color:#0f172a;">{{ indikator_terpilih.nama_indikator }}</span>
+              <span class="badge text-white" style="background:var(--primary-strong);">{{ indikator_terpilih.kode_indikator }}</span>
+              <span class="fw-semibold" style="color:var(--text-primary);">{{ indikator_terpilih.nama_indikator }}</span>
               <span class="badge bg-light text-muted border">{{ indikator_terpilih.get_dimensi_mutu_display }}</span>
               <span class="badge bg-light text-muted border">{{ indikator_terpilih.get_jenis_display }}</span>
             </div>
-            <div class="row g-1" style="font-size:.72rem; color:#475569;">
+            <div class="row g-1" style="font-size:.72rem; color:var(--text-secondary);">
               <div class="col-12 col-md-6"><strong>Rumus:</strong> {{ indikator_terpilih.numerator|default:'-' }} ÷ {{ indikator_terpilih.denominator|default:'-' }} × 100</div>
               <div class="col-12 col-md-6"><strong>Target:</strong> {{ indikator_terpilih.target_nilai }} {{ indikator_terpilih.satuan }}
                 (arah {% if indikator_terpilih.arah_target == 'MAX' %}MAX — makin kecil makin baik{% else %}MIN — makin besar makin baik{% endif %})</div>
@@ -241,7 +241,7 @@
           <span class="fw-bold text-dark" style="font-size:.84rem;">Volume Pengukuran per Bulan</span>
         </div>
         <div class="card-body py-2 px-3">
-          <canvas id="chartJenisBulan" height="190"></canvas>
+          <canvas id="chartJenisBulan" role="img" aria-label="Grafik volume pengukuran per bulan" height="190"></canvas>
         </div>
       </div>
     </div>
@@ -556,7 +556,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 chart.getDatasetMeta(di).data.forEach((el, i) => {
                     const v = ds.data[i];
                     if (v === null || v === undefined) return;
-                    c.fillStyle = '#334155';
+                    c.fillStyle = '#18233D';
                     c.font = '600 10px Inter, sans-serif';
                     c.textAlign = 'center';
                     c.fillText(v.toFixed(1) + (indSatuan || '%'), el.x, el.y - 4);
@@ -666,20 +666,20 @@ document.addEventListener('DOMContentLoaded', function() {
                     {
                         label: 'Rata-rata Capaian Mutu (%)',
                         data: capaian,
-                        borderColor: '#0d9488',
-                        backgroundColor: 'rgba(13, 148, 136, 0.08)',
+                        borderColor: '#4F5BD5',
+                        backgroundColor: 'rgba(79,91,213,0.08)',
                         borderWidth: 2.5,
                         tension: 0.3,
                         fill: true,
                         pointRadius: 4,
                         pointHoverRadius: 6,
-                        pointBackgroundColor: '#0d9488',
+                        pointBackgroundColor: '#4F5BD5',
                         spanGaps: true,
                     },
                     ...(unitLabel && unitCapaian.some(v => v !== null && v !== undefined) ? [{
                         label: `Realisasi Unit — ${unitLabel} (%)`,
                         data: unitCapaian,
-                        borderColor: '#f59e0b',
+                        borderColor: '#B45309',
                         backgroundColor: 'rgba(245, 158, 11, 0.08)',
                         borderWidth: 2,
                         borderDash: [4, 3],
@@ -687,7 +687,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         fill: false,
                         pointRadius: 3,
                         pointHoverRadius: 5,
-                        pointBackgroundColor: '#f59e0b',
+                        pointBackgroundColor: '#B45309',
                         spanGaps: true,
                     }] : []),
                     {
@@ -959,7 +959,7 @@ document.addEventListener('DOMContentLoaded', function() {
         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
       <div class="modal-body">
-        <canvas id="trendChartCanvas" height="280"></canvas>
+        <canvas id="trendChartCanvas" role="img" aria-label="Grafik tren indikator" height="280"></canvas>
       </div>
     </div>
   </div>
@@ -985,7 +985,7 @@ document.addEventListener('DOMContentLoaded', function() {
           <i class="bi bi-info-circle text-primary me-1"></i>
           Klik pada bar warna <strong class="text-danger">merah</strong> (capaian di bawah target) untuk langsung membuat atau membuka tindak lanjut <strong>PDCA / Risk Register</strong> unit tersebut.
         </div>
-        <canvas id="komparasiChartCanvas" height="320"></canvas>
+        <canvas id="komparasiChartCanvas" role="img" aria-label="Grafik komparasi capaian antar unit kerja" height="320"></canvas>
       </div>
     </div>
   </div>

@@ -13,8 +13,8 @@
         table.info td { padding: 5px 8px; vertical-align: top; }
         table.info .label { width: 180px; font-weight: bold; }
         table.info .sep { width: 10px; text-align: center; }
-        .box-highlight { border: 2px solid #0284c7; padding: 12px; margin: 15px 0; background: #f0f9ff; border-radius: 4px; }
-        .box-highlight h4 { margin: 0 0 6px; color: #0369a1; }
+        .box-highlight { border: 2px solid #4F5BD5; padding: 12px; margin: 15px 0; background: #f0f9ff; border-radius: 4px; }
+        .box-highlight h4 { margin: 0 0 6px; color: #414CB8; }
         .ttd-row { display: flex; justify-content: flex-end; margin-top: 50px; }
         .ttd-row div { text-align: center; width: 220px; }
         .ttd-row .line { margin-top: 60px; border-top: 1px solid #000; padding-top: 4px; }
@@ -50,14 +50,14 @@
     <div class="box-highlight">
         <h4>Rencana Kontrol Berikutnya</h4>
         <table class="info" style="margin:0;">
-            <tr><td class="label" style="width:140px;">Tanggal Kontrol</td><td class="sep">:</td><td><strong style="font-size:12pt; color:#0369a1;">{{ discharge.jadwal_kontrol|date:"d F Y"|default:"Belum ditentukan" }}</strong></td></tr>
+            <tr><td class="label" style="width:140px;">Tanggal Kontrol</td><td class="sep">:</td><td><strong style="font-size:12pt; color:#414CB8;">{{ discharge.jadwal_kontrol|date:"d F Y"|default:"Belum ditentukan" }}</strong></td></tr>
             <tr><td class="label">Poliklinik Tujuan</td><td class="sep">:</td><td>{{ k.poliklinik|default:"Poli Spesialis" }}</td></tr>
             <tr><td class="label">Dokter (DPJP)</td><td class="sep">:</td><td>dr. {{ k.dpjp|default:"Spesialis Terkait" }}</td></tr>
             <tr><td class="label">Terapi Lanjutan</td><td class="sep">:</td><td>{{ discharge.skdp_terapi|default:discharge.obat_pulang|default:"Melanjutkan terapi tertera pada resep obat pulang." }}</td></tr>
         </table>
     </div>
 
-    <div style="font-size:8.5pt; color:#444; margin-top:15px; border-left:3px solid #0284c7; padding-left:10px;">
+    <div style="font-size:8.5pt; color:#444; margin-top:15px; border-left:3px solid #4F5BD5; padding-left:10px;">
         Surat ini berlaku untuk 1 (satu) kali kunjungan ulang ke Poliklinik sesuai tanggal tertera. Harap dibawa bersamaan dengan kartu identitas / BPJS pada saat hari H kontrol.
     </div>
 

@@ -1,0 +1,86 @@
+{% extends 'base.html' %}
+
+{% block title %}Pencarian — ARIMA{% endblock %}
+{% block breadcrumb %}<li class="current" aria-current="page">Pencarian</li>{% endblock %}
+{% block page_title %}Pencarian Terpadu{% endblock %}
+{% block page_subtitle %}Cari Elemen Penilaian, Dokumen Bukti, Risiko PDCA, Unit Kerja, dan Temuan/Insiden dalam satu tempat{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-0">
+
+    <!-- FORM PENCARIAN -->
+    <div class="card mb-4">
+        <div class="card-body py-3">
+            <form method="get" action="{% url 'akreditasi:pencarian' %}" role="search">
+                <label for="q" class="form-label fw-bold" style="font-size:0.8rem;">Kata kunci</label>
+                <div class="input-group">
+                    <span class="input-group-text bg-white border-end-0"><i class="bi bi-search"></i></span>
+                    <input type="search" class="form-control border-start-0" id="q" name="q" value="{{ q }}"
+                           placeholder="misal: KPS 5, TKRS 1 EP 3, asesmen, jatuh, IGD..."
+                           minlength="{{ min_query_len }}" autofocus
+                           aria-describedby="qHelp">
+                    <button type="submit" class="btn btn-primary px-4">
+                        <i class="bi bi-search me-1"></i>Cari
+                    </button>
+                </div>
+                <small id="qHelp" class="form-text text-muted">
+                    Minimal {{ min_query_len }} karakter. Masing-masing sumber menampilkan maksimal {{ max_per_group }} hasil.
+                    {% if is_unit_scoped %}Lingkup pencarian Anda dibatasi pada unit sendiri, unit bawahan, dan unit induk.{% endif %}
+                </small>
+            </form>
+        </div>
+    </div>
+
+    {% if q and not groups %}
+        <div class="alert d-flex align-items-center gap-2" role="status"
+             style="background:var(--brand-violet-bg); border:1px solid var(--brand-violet); color:var(--primary-deep);">
+            <i class="bi bi-info-circle-fill fs-6" aria-hidden="true"></i>
+            <div>Tidak ada hasil untuk <strong>{{ q }}</strong>. Coba kata kunci lain, misalnya kode EP atau nama unit.</div>
+        </div>
+    {% elif not q %}
+        <div class="text-center text-muted py-5">
+            <i class="bi bi-search fs-1 d-block mb-2" aria-hidden="true"></i>
+            <p class="mb-0">Masukkan kata kunci untuk mulai mencari di seluruh modul ARIMA.</p>
+        </div>
+    {% endif %}
+
+    {% if groups %}
+        <div class="d-flex align-items-center justify-content-between mb-3">
+            <span class="fw-bold" style="font-family:var(--font-display); font-size:1.05rem;">
+                <i class="bi bi-collection me-1" aria-hidden="true"></i>{{ total_results }} hasil untuk “{{ q }}”
+            </span>
+        </div>
+
+        {% for group in groups %}
+        <section class="card mb-4" aria-labelledby="grp-{{ forloop.counter }}">
+            <div class="card-header bg-white py-2 d-flex align-items-center justify-content-between">
+                <span id="grp-{{ forloop.counter }}" class="fw-bold" style="font-size:0.86rem;">
+                    <i class="bi bi-folder2-open me-2" aria-hidden="true"></i>{{ group.label }}
+                </span>
+                <span class="badge font-mono" style="background:var(--primary-tint); color:var(--primary-deep); font-size:0.68rem;">
+                    {{ group.jumlah }} item
+                </span>
+            </div>
+            <div class="list-group list-group-flush">
+                {% for item in group.items %}
+                <a href="{{ item.url }}" class="list-group-item list-group-item-action py-2.5 d-flex align-items-start gap-3">
+                    <span class="d-flex align-items-center justify-content-center flex-shrink-0 mt-1"
+                          style="width:34px; height:34px; border-radius:var(--radius-sm); background:var(--primary-tint); color:var(--primary-deep);">
+                        <i class="bi {{ item.ikon }}" aria-hidden="true"></i>
+                    </span>
+                    <span class="d-block w-100">
+                        <span class="d-flex flex-wrap align-items-center gap-2">
+                            <span class="fw-bold" style="font-size:0.85rem;">{{ item.judul }}</span>
+                            {% if item.meta %}<span class="text-muted" style="font-size:0.7rem;">{{ item.meta }}</span>{% endif %}
+                        </span>
+                        {% if item.sub %}<span class="d-block text-muted" style="font-size:0.74rem;">{{ item.sub }}</span>{% endif %}
+                    </span>
+                    <i class="bi bi-arrow-right flex-shrink-0 mt-1 text-muted" aria-hidden="true"></i>
+                </a>
+                {% endfor %}
+            </div>
+        </section>
+        {% endfor %}
+    {% endif %}
+</div>
+{% endblock %}

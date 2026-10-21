@@ -3,6 +3,7 @@ from . import views
 from . import risiko_views
 from . import ai_views
 from . import indikator_views
+from . import search_views
 
 app_name = 'akreditasi'
 
@@ -10,6 +11,9 @@ urlpatterns = [
     # Dashboard Utama
     path('', views.dashboard, name='dashboard'),
     path('dashboard/', views.dashboard, name='dashboard_alias'),
+
+    # Pencarian terpadu lintas modul (V3)
+    path('pencarian/', search_views.pencarian, name='pencarian'),
 
     # Matriks PDCA (Halaman Inti per Pokja)
     path('matriks/', views.matriks_pdca, name='matriks_pdca'),

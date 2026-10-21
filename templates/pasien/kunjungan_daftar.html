@@ -10,7 +10,7 @@
     <!-- BREADCRUMB -->
     <nav aria-label="breadcrumb" class="mb-3">
         <ol class="breadcrumb mb-0" style="font-size:.8rem;">
-            <li class="breadcrumb-item"><a href="{% url 'pasien:dashboard' %}" class="text-decoration-none" style="color:#0d9488;">Dashboard</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'pasien:dashboard' %}" class="text-decoration-none" style="color:var(--primary);">Dashboard</a></li>
             <li class="breadcrumb-item active">Kunjungan Pasien</li>
         </ol>
     </nav>
@@ -18,7 +18,7 @@
     <!-- HEADER + FILTER -->
     <div class="card border-0 shadow-sm mb-4">
         <div class="card-body py-3 d-flex flex-wrap gap-2 align-items-center justify-content-between">
-            <h6 class="fw-bold mb-0" style="font-size:.95rem;"><i class="bi bi-clipboard2-pulse-fill me-2" style="color:#0d9488;"></i>Daftar Kunjungan</h6>
+            <h6 class="fw-bold mb-0" style="font-size:.95rem;"><i class="bi bi-clipboard2-pulse-fill me-2" style="color:var(--primary);"></i>Daftar Kunjungan</h6>
             <div class="d-flex gap-2 align-items-center flex-wrap">
                 <form method="get" class="d-flex gap-2 align-items-center">
                     <select name="status" class="form-select form-select-sm" style="font-size:.8rem; min-width:130px;" onchange="this.form.submit()">
@@ -37,7 +37,7 @@
                     <a href="{% url 'pasien:kunjungan_daftar' %}" class="btn btn-sm btn-outline-secondary" style="font-size:.8rem;">Reset</a>
                     {% endif %}
                 </form>
-                <a href="{% url 'pasien:kunjungan_baru' %}" class="btn btn-sm fw-semibold px-3" style="background:#0d9488;color:#fff;">
+                <a href="{% url 'pasien:kunjungan_baru' %}" class="btn btn-sm fw-semibold px-3" style="background:var(--primary);color:#fff;">
                     <i class="bi bi-plus-circle me-1"></i>Kunjungan Baru
                 </a>
             </div>
@@ -64,7 +64,7 @@
                     <tbody>
                         {% for k in kunjungan_list %}
                         <tr style="cursor:pointer;" onclick="location.href='{% url 'pasien:kunjungan_detail' pk=k.pk %}'">
-                            <td class="font-monospace fw-semibold" style="color:#0d9488;">{{ k.no_kunjungan }}</td>
+                            <td class="font-monospace fw-semibold" style="color:var(--primary);">{{ k.no_kunjungan }}</td>
                             <td>
                                 <div class="fw-semibold">{{ k.pasien.nama_lengkap }}</div>
                                 <div class="text-muted font-monospace" style="font-size:.72rem;">{{ k.pasien.no_rm }}</div>
@@ -105,7 +105,7 @@
                         {% empty %}
                         <tr>
                             <td colspan="8" class="text-center py-5 text-muted">
-                                <i class="bi bi-clipboard-x fs-1 d-block mb-2" style="color:#64748b;"></i>
+                                <i class="bi bi-clipboard-x fs-1 d-block mb-2" style="color:var(--text-secondary);"></i>
                                 Tidak ada kunjungan ditemukan.
                             </td>
                         </tr>

@@ -8,21 +8,21 @@
 {% block extra_css %}
 <style>
     .matriks-table th {
-        background-color: #f8fafc;
-        color: #334155;
+        background-color: var(--body-bg);
+        color: var(--text-primary);
         font-size: 0.72rem;
         font-weight: 700;
         text-transform: uppercase;
         letter-spacing: 0.05em;
         vertical-align: middle;
         padding: 0.75rem 0.6rem;
-        border-bottom: 2px solid #e2e8f0;
+        border-bottom: 2px solid var(--border);
     }
     .matriks-table td {
         font-size: 0.78rem;
         vertical-align: top;
         padding: 0.65rem 0.6rem;
-        border-bottom: 1px solid #f1f5f9;
+        border-bottom: 1px solid var(--surface-hover);
     }
     .col-ep-code { width: 9%; }
     .col-ep-desc { width: 21%; }
@@ -34,22 +34,22 @@
         cursor: pointer;
         padding: 0.5rem;
         border-radius: var(--radius);
-        background: #f8fafc;
-        border: 1px dashed #cbd5e1;
+        background: var(--body-bg);
+        border: 1px dashed var(--border-strong);
         transition: all 0.15s ease-in-out;
         display: flex;
         flex-direction: column;
         justify-content: space-between;
     }
     .pdca-cell-content:hover {
-        background: #f0fdfa;
+        background: var(--primary-tint);
         border-color: var(--primary);
         box-shadow: var(--shadow-xs);
     }
     .cell-text {
         font-size: 0.74rem;
         line-height: 1.4;
-        color: #334155;
+        color: var(--text-primary);
         white-space: pre-wrap;
         word-break: break-word;
     }
@@ -59,7 +59,7 @@
         align-items: center;
         margin-top: 0.45rem;
         padding-top: 0.35rem;
-        border-top: 1px dotted #e2e8f0;
+        border-top: 1px dotted var(--border);
     }
     .score-select {
         font-family: 'JetBrains Mono', monospace;
@@ -70,15 +70,15 @@
         min-width: 105px;
         transition: background-color 0.2s;
     }
-    .score-10 { background-color: #ecfdf5 !important; color: #047857 !important; border: 1px solid #a7f3d0 !important; }
+    .score-10 { background-color: #ECFDF5 !important; color: var(--success) !important; border: 1px solid #BFE8CC !important; }
     .score-5  { background-color: #fffbeb !important; color: #b45309 !important; border: 1px solid #fde68a !important; }
-    .score-0  { background-color: #fff1f2 !important; color: #be123c !important; border: 1px solid #fecdd3 !important; }
+    .score-0  { background-color: #fff1f2 !important; color: #be123c !important; border: 1px solid #FCA5A5 !important; }
 
-    .badge-rdwos-r { background-color: #eff6ff !important; color: #1d4ed8 !important; border: 1px solid #bfdbfe; font-weight: 700; }
-    .badge-rdwos-d { background-color: #ecfdf5 !important; color: #047857 !important; border: 1px solid #a7f3d0; font-weight: 700; }
+    .badge-rdwos-r { background-color: var(--primary-tint) !important; color: var(--primary-strong) !important; border: 1px solid #bfdbfe; font-weight: 700; }
+    .badge-rdwos-d { background-color: #ECFDF5 !important; color: var(--success) !important; border: 1px solid #BFE8CC; font-weight: 700; }
     .badge-rdwos-w { background-color: #fffbeb !important; color: #b45309 !important; border: 1px solid #fde68a; font-weight: 700; }
     .badge-rdwos-o { background-color: #faf5ff !important; color: #6b21a8 !important; border: 1px solid #e9d5ff; font-weight: 700; }
-    .badge-rdwos-s { background-color: #fff1f2 !important; color: #be123c !important; border: 1px solid #fecdd3; font-weight: 700; }
+    .badge-rdwos-s { background-color: #fff1f2 !important; color: #be123c !important; border: 1px solid #FCA5A5; font-weight: 700; }
 </style>
 {% endblock %}
 
@@ -304,7 +304,7 @@
                                 {% if item.record.pic or item.record.est_cost %}
                                 <div class="d-flex flex-column gap-1 mt-1">
                                     {% if item.record.pic %}
-                                    <span class="badge" style="font-size:0.6rem; background:#e6f9f7; color:#0d9488; border:1px solid #0d9488; text-align:left; font-weight:500; white-space:normal;">
+                                    <span class="badge" style="font-size:0.6rem; background:#e6f9f7; color:var(--primary); border:1px solid var(--primary); text-align:left; font-weight:500; white-space:normal;">
                                         <i class="bi bi-person-fill me-1"></i>{{ item.record.pic }}
                                     </span>
                                     {% endif %}

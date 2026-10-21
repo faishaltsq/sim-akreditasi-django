@@ -20,45 +20,45 @@
         border-color: var(--primary);
     }
 
-    .level-badge-1 { background: #0f766e; color: #fff; font-weight: 700; }
-    .level-badge-2 { background: #0d9488; color: #fff; font-weight: 700; }
-    .level-badge-3 { background: #14b8a6; color: #fff; font-weight: 700; }
-    .level-badge-4 { background: #5eead4; color: #134e4a; font-weight: 700; }
-    .level-badge-5 { background: #ccfbf1; color: #134e4a; font-weight: 700; }
+    .level-badge-1 { background: var(--primary-deep); color: #fff; font-weight: 700; }
+    .level-badge-2 { background: var(--primary); color: #fff; font-weight: 700; }
+    .level-badge-3 { background: var(--primary); color: #fff; font-weight: 700; }
+    .level-badge-4 { background: #8B93E8; color: #14213D; font-weight: 700; }
+    .level-badge-5 { background: var(--primary-light); color: #14213D; font-weight: 700; }
 
     /* TREE STYLES */
     .tree-l1 {
-        background: #f8fafc;
-        border: 1px solid #cbd5e1;
-        border-left: 5px solid #0f766e;
+        background: var(--body-bg);
+        border: 1px solid var(--border-strong);
+        border-left: 5px solid var(--primary-deep);
         border-radius: 10px;
         padding: 0.85rem 1rem;
         margin-bottom: 0.65rem;
     }
     .tree-l2-wrapper {
-        border-left: 2px dashed #99f6e4;
+        border-left: 2px dashed #B9C0F2;
         margin-left: 1.5rem;
         padding-left: 1.25rem;
         margin-bottom: 0.75rem;
     }
     .tree-l2 {
         background: #ffffff;
-        border: 1px solid #e2e8f0;
-        border-left: 4px solid #0d9488;
+        border: 1px solid var(--border);
+        border-left: 4px solid var(--primary);
         border-radius: 8px;
         padding: 0.7rem 0.9rem;
         margin-bottom: 0.5rem;
     }
     .tree-l3-wrapper {
-        border-left: 2px dashed #ccfbf1;
+        border-left: 2px dashed var(--primary-light);
         margin-left: 1.5rem;
         padding-left: 1.25rem;
         margin-bottom: 0.65rem;
     }
     .tree-l3 {
         background: #fbfdfe;
-        border: 1px solid #f1f5f9;
-        border-left: 3px solid #14b8a6;
+        border: 1px solid var(--surface-hover);
+        border-left: 3px solid var(--primary);
         border-radius: 6px;
         padding: 0.55rem 0.85rem;
         margin-bottom: 0.35rem;
@@ -69,9 +69,9 @@
         font-weight: 600;
         padding: 3px 9px;
         border-radius: 6px;
-        color: #0f766e;
-        background: #f0fdfa;
-        border: 1px solid #99f6e4;
+        color: var(--primary-deep);
+        background: var(--primary-tint);
+        border: 1px solid #B9C0F2;
         cursor: pointer;
         display: inline-flex;
         align-items: center;
@@ -79,15 +79,15 @@
         transition: all 0.15s;
     }
     .btn-add-sub:hover {
-        background: #0d9488;
+        background: var(--primary);
         color: #ffffff;
-        border-color: #0d9488;
+        border-color: var(--primary);
     }
 
     .nav-pills-custom .nav-link {
         font-size: 0.85rem;
         font-weight: 600;
-        color: #64748b;
+        color: var(--text-secondary);
         border-radius: 8px;
         padding: 8px 16px;
         transition: all 0.15s;
@@ -95,7 +95,7 @@
     .nav-pills-custom .nav-link.active {
         background-color: var(--primary);
         color: #ffffff;
-        box-shadow: 0 2px 6px rgba(13, 148, 136, 0.25);
+        box-shadow: 0 2px 6px rgba(79,91,213,0.25);
     }
 </style>
 {% endblock %}
@@ -107,7 +107,7 @@
     <div class="row g-3 mb-3">
         <div class="col-md-3 col-6">
             <div class="stat-box d-flex align-items-center gap-3" onclick="switchNavTab('tab-all')">
-                <div class="rounded-circle d-flex align-items-center justify-content-center" style="width:46px; height:46px; background:#f0fdfa; color:#0d9488; font-size:1.25rem;">
+                <div class="rounded-circle d-flex align-items-center justify-content-center" style="width:46px; height:46px; background:var(--primary-tint); color:var(--primary); font-size:1.25rem;">
                     <i class="bi bi-diagram-3-fill"></i>
                 </div>
                 <div>
@@ -117,8 +117,8 @@
             </div>
         </div>
         <div class="col-md-3 col-6">
-            <div class="stat-box d-flex align-items-center gap-3" style="border-left: 4px solid #0f766e;" onclick="switchNavTab('tab-l1')">
-                <div class="rounded-circle d-flex align-items-center justify-content-center" style="width:46px; height:46px; background:#f1f5f9; color:#0f766e; font-size:1.1rem;">
+            <div class="stat-box d-flex align-items-center gap-3" style="border-left: 4px solid var(--primary-deep);" onclick="switchNavTab('tab-l1')">
+                <div class="rounded-circle d-flex align-items-center justify-content-center" style="width:46px; height:46px; background:var(--surface-hover); color:var(--primary-deep); font-size:1.1rem;">
                     <span class="fw-bold font-mono" style="font-size:0.85rem;">L1</span>
                 </div>
                 <div>
@@ -128,8 +128,8 @@
             </div>
         </div>
         <div class="col-md-3 col-6">
-            <div class="stat-box d-flex align-items-center gap-3" style="border-left: 4px solid #0d9488;" onclick="switchNavTab('tab-l2')">
-                <div class="rounded-circle d-flex align-items-center justify-content-center" style="width:46px; height:46px; background:#ccfbf1; color:#0d9488; font-size:1.1rem;">
+            <div class="stat-box d-flex align-items-center gap-3" style="border-left: 4px solid var(--primary);" onclick="switchNavTab('tab-l2')">
+                <div class="rounded-circle d-flex align-items-center justify-content-center" style="width:46px; height:46px; background:var(--primary-light); color:var(--primary); font-size:1.1rem;">
                     <span class="fw-bold font-mono" style="font-size:0.85rem;">L2</span>
                 </div>
                 <div>
@@ -139,8 +139,8 @@
             </div>
         </div>
         <div class="col-md-3 col-6">
-            <div class="stat-box d-flex align-items-center gap-3" style="border-left: 4px solid #14b8a6;" onclick="switchNavTab('tab-l3')">
-                <div class="rounded-circle d-flex align-items-center justify-content-center" style="width:46px; height:46px; background:#f0fdfa; color:#14b8a6; font-size:1.1rem;">
+            <div class="stat-box d-flex align-items-center gap-3" style="border-left: 4px solid var(--primary);" onclick="switchNavTab('tab-l3')">
+                <div class="rounded-circle d-flex align-items-center justify-content-center" style="width:46px; height:46px; background:var(--primary-tint); color:var(--primary); font-size:1.1rem;">
                     <span class="fw-bold font-mono" style="font-size:0.85rem;">L3</span>
                 </div>
                 <div>
@@ -152,7 +152,7 @@
     </div>
 
     <!-- PANDUAN RINGKAS TATA CARA PENAMBAHAN SUB-UNIT -->
-    <div class="card shadow-sm border-0 mb-3" style="background: #F8FAFC; border-left: 4px solid var(--primary) !important;">
+    <div class="card shadow-sm border-0 mb-3" style="background: var(--body-bg); border-left: 4px solid var(--primary) !important;">
         <div class="card-body p-3 d-flex flex-wrap align-items-center justify-content-between gap-3">
             <div class="d-flex align-items-start gap-2.5">
                 <i class="bi bi-lightbulb-fill text-teal fs-4 mt-0.5"></i>
@@ -294,7 +294,7 @@
                                                     </div>
                                                     <!-- LEVEL 4 di bawah L3 -->
                                                     {% for l4 in l3.children.all %}
-                                                    <div class="ps-4 border-start border-2 ms-3 mb-1 searchable-item" style="border-color:#e2e8f0 !important;" data-text="{{ l4.code|lower }} {{ l4.name|lower }}">
+                                                    <div class="ps-4 border-start border-2 ms-3 mb-1 searchable-item" style="border-color:var(--border) !important;" data-text="{{ l4.code|lower }} {{ l4.name|lower }}">
                                                         <div class="d-flex justify-content-between align-items-center gap-2 py-1">
                                                             <div class="d-flex align-items-center gap-2">
                                                                 <span class="badge level-badge-4 font-mono" style="font-size:0.58rem;">L4</span>
@@ -312,7 +312,7 @@
                                                         </div>
                                                         <!-- LEVEL 5 di bawah L4 -->
                                                         {% for l5 in l4.children.all %}
-                                                        <div class="ps-3 border-start border-2 ms-2 mb-1" style="border-color:#f1f5f9 !important;">
+                                                        <div class="ps-3 border-start border-2 ms-2 mb-1" style="border-color:var(--surface-hover) !important;">
                                                             <div class="d-flex justify-content-between align-items-center gap-2 py-1">
                                                                 <div class="d-flex align-items-center gap-2">
                                                                     <span class="badge level-badge-5 font-mono" style="font-size:0.55rem;">L5</span>
@@ -332,7 +332,7 @@
                                                     </div>
                                                     {% endfor %}
                                                 {% empty %}
-                                                    <div class="text-muted py-1 ps-2 mb-1 fst-italic" style="font-size:0.72rem; color:#64748b !important;">
+                                                    <div class="text-muted py-1 ps-2 mb-1 fst-italic" style="font-size:0.72rem; color:var(--text-secondary) !important;">
                                                         <i class="bi bi-dash"></i> Belum ada sub-unit level 3.
                                                     </div>
                                                 {% endfor %}
@@ -340,7 +340,7 @@
 
                                         </div>
                                     {% empty %}
-                                        <div class="text-muted py-1 ps-2 mb-1 fst-italic" style="font-size:0.75rem; color:#64748b !important;">
+                                        <div class="text-muted py-1 ps-2 mb-1 fst-italic" style="font-size:0.75rem; color:var(--text-secondary) !important;">
                                             <i class="bi bi-dash"></i> Belum ada bagian level 2. Klik tombol <code>+ Tambah Sub-Unit (L2)</code> untuk menambahkan.
                                         </div>
                                     {% endfor %}
@@ -499,7 +499,7 @@
 <div class="modal fade" id="modalAddUnit" tabindex="-1" aria-labelledby="modalAddUnitTitle" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content border-0 shadow-lg">
-            <div class="modal-header" style="background: #0F766E; color:#ffffff;">
+            <div class="modal-header" style="background: var(--primary-deep); color:#ffffff;">
                 <div class="d-flex align-items-center gap-2">
                     <i class="bi bi-building-add fs-5"></i>
                     <div>

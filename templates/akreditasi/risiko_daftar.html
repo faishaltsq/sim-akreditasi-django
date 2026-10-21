@@ -6,8 +6,8 @@
 
 {% block extra_css %}
 <style>
-    .badge-teal   { background:#0d9488; color:#fff; }
-    .badge-purple { background:#7c3aed; color:#fff; }
+    .badge-teal   { background:var(--primary); color:#fff; }
+    .badge-purple { background:var(--accent); color:#fff; }
 
     /* ── Risk Heatmap ─────────────────────────────────────── */
     .heatmap-wrap { display:grid; grid-template-columns: 36px repeat(5,1fr); gap:3px; }
@@ -19,13 +19,13 @@
         border:2px solid transparent;
     }
     .hm-cell:hover { transform:scale(1.08); box-shadow:0 4px 16px rgba(0,0,0,.22); z-index:5; }
-    .hm-cell.selected { border-color:#1e293b !important; box-shadow:0 0 0 3px #1e293b55; }
+    .hm-cell.selected { border-color:var(--brand-navy) !important; box-shadow:0 0 0 3px #1e293b55; }
     .hm-cell .hm-skor { font-size:.82rem; font-weight:800; line-height:1; }
     .hm-cell .hm-count { font-size:.6rem; background:rgba(0,0,0,.30); border-radius:8px; padding:1px 5px; margin-top:2px; }
     .hm-axis-label { display:flex; align-items:center; justify-content:center;
-        font-size:.65rem; font-weight:600; color:#64748b; }
+        font-size:.65rem; font-weight:600; color:var(--text-secondary); }
     .hm-axis-title { writing-mode:vertical-rl; transform:rotate(180deg); font-size:.65rem;
-        color:#64748b; letter-spacing:1px; text-transform:uppercase; text-align:center; }
+        color:var(--text-secondary); letter-spacing:1px; text-transform:uppercase; text-align:center; }
     .legend-dot { width:12px; height:12px; border-radius:3px; display:inline-block; flex-shrink:0; }
 </style>
 {% endblock %}
@@ -35,7 +35,7 @@
 
     {# ── Header + Action ─────────────────────────────── #}
     <div class="d-flex flex-wrap justify-content-between align-items-center mb-3">
-        <h5 class="fw-bold mb-0" style="color:#0f172a;"><i class="bi bi-shield-exclamation me-1" style="color:#0d9488;"></i>Daftar Risiko Unit</h5>
+        <h5 class="fw-bold mb-0" style="color:var(--text-primary);"><i class="bi bi-shield-exclamation me-1" style="color:var(--primary);"></i>Daftar Risiko Unit</h5>
         <div class="d-flex flex-wrap gap-2">
             <a href="{% url 'akreditasi:risiko_perencanaan' %}" class="btn btn-sm btn-outline-secondary" title="Format cetak dokumen perencanaan (input risiko) STARKES">
                 <i class="bi bi-file-earmark-ruled me-1"></i>Dokumen Perencanaan (Plan)
@@ -43,7 +43,7 @@
             <a href="{% url 'akreditasi:risiko_laporan_lengkap' %}" class="btn btn-sm btn-success shadow-sm" title="Laporan Lengkap PDCA (Plan + Do + Monev + RTL)">
                 <i class="bi bi-journal-check me-1"></i>Laporan Lengkap PDCA
             </a>
-            <a href="{% url 'akreditasi:risiko_input' %}" class="btn btn-sm text-white" style="background:#0d9488;"><i class="bi bi-plus-lg me-1"></i>Tambah Risiko</a>
+            <a href="{% url 'akreditasi:risiko_input' %}" class="btn btn-sm text-white" style="background:var(--primary);"><i class="bi bi-plus-lg me-1"></i>Tambah Risiko</a>
             <a href="{% url 'akreditasi:insiden_lapor' %}" class="btn btn-sm btn-outline-danger"><i class="bi bi-exclamation-triangle me-1"></i>Lapor Insiden</a>
         </div>
     </div>
@@ -98,28 +98,28 @@
                                 <span class="text-muted ms-auto">Tindakan segera, eskalasi Direksi</span>
                             </div>
                             <div class="d-flex align-items-center gap-2">
-                                <span class="legend-dot" style="background:#ea580c;"></span>
+                                <span class="legend-dot" style="background:#C2410C;"></span>
                                 <span class="fw-bold" style="color:#c2410c;">Tinggi (15–19)</span>
                                 <span class="text-muted ms-auto">Perlu mitigasi aktif bulanan</span>
                             </div>
                             <div class="d-flex align-items-center gap-2">
-                                <span class="legend-dot" style="background:#ca8a04;"></span>
+                                <span class="legend-dot" style="background:var(--warning);"></span>
                                 <span class="fw-bold" style="color:#a16207;">Sedang (10–14)</span>
                                 <span class="text-muted ms-auto">Monitoring berkala triwulan</span>
                             </div>
                             <div class="d-flex align-items-center gap-2">
-                                <span class="legend-dot" style="background:#16a34a;"></span>
+                                <span class="legend-dot" style="background:var(--success);"></span>
                                 <span class="fw-bold text-success">Rendah (5–9)</span>
                                 <span class="text-muted ms-auto">Pengendalian standar unit</span>
                             </div>
                             <div class="d-flex align-items-center gap-2">
-                                <span class="legend-dot" style="background:#64748b;"></span>
+                                <span class="legend-dot" style="background:var(--text-secondary);"></span>
                                 <span class="fw-bold text-secondary">Sangat Rendah (1–4)</span>
                                 <span class="text-muted ms-auto">Diterima / toleransi risiko</span>
                             </div>
                         </div>
 
-                        <div id="filterNotice" class="alert py-2 mb-0 d-none" style="background:#fff; border:1px solid #cbd5e1; font-size:.75rem;">
+                        <div id="filterNotice" class="alert py-2 mb-0 d-none" style="background:#fff; border:1px solid var(--border-strong); font-size:.75rem;">
                             <span id="filterNoticeText"></span>
                             <button type="button" class="btn btn-link btn-sm p-0 ms-2 text-danger text-decoration-none" onclick="resetHeatmapFilter()">
                                 <i class="bi bi-x-circle"></i> Reset Filter
@@ -172,7 +172,7 @@
                     </select>
                 </div>
                 <div class="col-md-3 d-flex gap-2">
-                    <button type="submit" class="btn btn-sm text-white" style="background:#0d9488;"><i class="bi bi-funnel me-1"></i>Filter</button>
+                    <button type="submit" class="btn btn-sm text-white" style="background:var(--primary);"><i class="bi bi-funnel me-1"></i>Filter</button>
                     <a href="{% url 'akreditasi:risiko_daftar' %}" class="btn btn-sm btn-outline-secondary">Reset</a>
                 </div>
             </form>
@@ -183,18 +183,18 @@
     <div class="card border-0 shadow-sm">
         <div class="table-responsive">
             <table class="table table-hover mb-0" style="font-size:.8rem;">
-                <thead style="background:#f1f5f9;">
+                <thead style="background:var(--surface-hover);">
                     <tr>
-                        <th style="color:#0f172a;">#</th>
-                        <th style="color:#0f172a;">Unit</th>
-                        <th style="color:#0f172a;">Jenis Risiko</th>
-                        <th style="color:#0f172a;">Kategori</th>
-                        <th class="text-center" style="color:#0f172a;">D</th>
-                        <th class="text-center" style="color:#0f172a;">P</th>
-                        <th class="text-center" style="color:#0f172a;">Skor</th>
-                        <th class="text-center" style="color:#0f172a;">Level</th>
-                        <th class="text-center" style="color:#0f172a;">Status</th>
-                        <th style="color:#0f172a;">Aksi</th>
+                        <th style="color:var(--text-primary);">#</th>
+                        <th style="color:var(--text-primary);">Unit</th>
+                        <th style="color:var(--text-primary);">Jenis Risiko</th>
+                        <th style="color:var(--text-primary);">Kategori</th>
+                        <th class="text-center" style="color:var(--text-primary);">D</th>
+                        <th class="text-center" style="color:var(--text-primary);">P</th>
+                        <th class="text-center" style="color:var(--text-primary);">Skor</th>
+                        <th class="text-center" style="color:var(--text-primary);">Level</th>
+                        <th class="text-center" style="color:var(--text-primary);">Status</th>
+                        <th style="color:var(--text-primary);">Aksi</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -204,14 +204,14 @@
                         <td>{{ r.unit.name }}</td>
                         <td>
                             {% if r.jenis_risiko_list|length > 1 %}
-                                <a href="{% url 'akreditasi:risiko_detail' risiko_id=r.pk %}" class="fw-semibold text-decoration-none d-block mb-1" style="color:#0d9488;">
+                                <a href="{% url 'akreditasi:risiko_detail' risiko_id=r.pk %}" class="fw-semibold text-decoration-none d-block mb-1" style="color:var(--primary);">
                                     {{ r.jenis_risiko_list.0 }}
                                 </a>
                                 <div class="d-flex flex-wrap gap-1">
                                     <span class="badge bg-light text-secondary border font-monospace" style="font-size:.65rem;">+{{ r.jenis_risiko_list|length|add:"-1" }} jenis risiko lain</span>
                                 </div>
                             {% else %}
-                                <a href="{% url 'akreditasi:risiko_detail' risiko_id=r.pk %}" class="fw-semibold text-decoration-none" style="color:#0d9488;">{{ r.jenis_risiko|truncatewords:8 }}</a>
+                                <a href="{% url 'akreditasi:risiko_detail' risiko_id=r.pk %}" class="fw-semibold text-decoration-none" style="color:var(--primary);">{{ r.jenis_risiko|truncatewords:8 }}</a>
                             {% endif %}
                             {% if r.masalah %}
                             <div class="mt-1 text-muted d-flex align-items-start gap-1" style="font-size:.7rem; line-height:1.3;">
@@ -261,10 +261,10 @@ let selectedCell = null;  // {d, p} or null
 
 function cellColor(skor) {
     if (skor >= 20) return '#dc2626';
-    if (skor >= 15) return '#ea580c';
-    if (skor >= 10) return '#ca8a04';
-    if (skor >= 5)  return '#16a34a';
-    return '#64748b';
+    if (skor >= 15) return '#C2410C';
+    if (skor >= 10) return '#B45309';
+    if (skor >= 5)  return '#15803D';
+    return '#5A6880';
 }
 function cellLabel(skor) {
     if (skor >= 20) return 'Sangat Tinggi';

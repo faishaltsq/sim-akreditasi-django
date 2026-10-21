@@ -12,13 +12,13 @@
     .kpi-label { font-size: .72rem; text-transform: uppercase; letter-spacing: .05em; opacity: .85; }
     .rpn-badge { font-family: ui-monospace, monospace; font-weight: 700; }
     .metode-tabs .nav-link { font-size: .82rem; font-weight: 600; border-radius: 8px 8px 0 0; }
-    .metode-tabs .nav-link.active { background: #0d9488; color: #fff; }
+    .metode-tabs .nav-link.active { background: var(--primary); color: #fff; }
     .risk-row-card {
-        border-left: 4px solid #e2e8f0;
+        border-left: 4px solid var(--border);
         transition: box-shadow .15s;
     }
     .risk-row-card:hover { box-shadow: 0 3px 12px rgba(15,23,42,.09); }
-    .risk-row-card.fmea { border-left-color: #f59e0b; }
+    .risk-row-card.fmea { border-left-color: var(--warning); }
     .risk-row-card.rca  { border-left-color: #dc2626; }
     .mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
     @media (max-width: 768px) {
@@ -37,7 +37,7 @@
     {# ── Header ────────────────────────────────────────────────────────── #}
     <div class="d-flex flex-wrap justify-content-between align-items-start mb-3 gap-2">
         <div>
-            <h5 class="fw-bold mb-1" style="color:#0f172a;">
+            <h5 class="fw-bold mb-1" style="color:var(--text-primary);">
                 <i class="bi bi-diagram-3-fill text-warning me-2"></i>Pusat Evaluasi Mendalam FMEA &amp; RCA
             </h5>
             <p class="text-muted mb-0" style="font-size:.8rem;">
@@ -46,7 +46,7 @@
             </p>
         </div>
         <div class="d-flex gap-2 no-print">
-            <a href="{% url 'akreditasi:risiko_input' %}" class="btn btn-sm text-white" style="background:#0d9488;">
+            <a href="{% url 'akreditasi:risiko_input' %}" class="btn btn-sm text-white" style="background:var(--primary);">
                 <i class="bi bi-plus-circle me-1"></i>Input Risiko Baru
             </a>
             <button onclick="window.print()" class="btn btn-sm btn-outline-secondary">
@@ -72,14 +72,14 @@
             </div>
         </div>
         <div class="col-6 col-md-3">
-            <div class="kpi-card" style="background:#F0FDFA; color:#134e4a;">
+            <div class="kpi-card" style="background:var(--primary-tint); color:#14213D;">
                 <div class="kpi-label"><i class="bi bi-speedometer2 me-1"></i>RPN Rata-rata</div>
                 <div class="kpi-value">{{ kpi.rpn_avg }}</div>
                 <small style="font-size:.7rem;">RPN tertinggi: <strong>{{ kpi.rpn_max }}</strong></small>
             </div>
         </div>
         <div class="col-6 col-md-3">
-            <div class="kpi-card" style="background:#EFF6FF; color:#1e3a8a;">
+            <div class="kpi-card" style="background:var(--primary-tint); color:#232C66;">
                 <div class="kpi-label"><i class="bi bi-list-check me-1"></i>Total Terdaftar</div>
                 <div class="kpi-value">{{ kpi.total_fmea|add:kpi.total_rca }}</div>
                 <small style="font-size:.7rem;">risiko dengan evaluasi mendalam</small>
@@ -121,7 +121,7 @@
                     </select>
                 </div>
                 <div class="col-6 col-md-4 d-flex gap-2">
-                    <button type="submit" class="btn btn-sm text-white" style="background:#0d9488;">
+                    <button type="submit" class="btn btn-sm text-white" style="background:var(--primary);">
                         <i class="bi bi-funnel me-1"></i>Terapkan
                     </button>
                     <a href="{% url 'akreditasi:risiko_fmea_rca' %}" class="btn btn-sm btn-outline-secondary">
@@ -198,7 +198,7 @@
                             <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-2">
                                 <div class="flex-grow-1" style="min-width:0;">
                                     <div class="d-flex flex-wrap align-items-center gap-2 mb-1">
-                                        <span class="badge" style="background:#f59e0b; color:#fff; font-size:.62rem;">
+                                        <span class="badge" style="background:var(--warning); color:#fff; font-size:.62rem;">
                                             <i class="bi bi-diagram-3-fill me-1"></i>FMEA PROAKTIF
                                         </span>
                                         {% if r.rpn_calc %}
@@ -206,7 +206,7 @@
                                         {% endif %}
                                         <span class="badge bg-secondary" style="font-size:.62rem;">{{ r.get_status_display }}</span>
                                     </div>
-                                    <div class="fw-semibold" style="font-size:.85rem; color:#0f172a;">
+                                    <div class="fw-semibold" style="font-size:.85rem; color:var(--text-primary);">
                                         {{ r.jenis_risiko|truncatechars:120 }}
                                     </div>
                                     <div class="text-muted mt-1" style="font-size:.72rem;">
@@ -218,7 +218,7 @@
                                     <a href="{% url 'akreditasi:risiko_detail' risiko_id=r.pk %}" class="btn btn-sm btn-outline-secondary py-0 px-2" style="font-size:.68rem;">
                                         <i class="bi bi-eye"></i>
                                     </a>
-                                    <a href="{% url 'akreditasi:risiko_evaluasi' risiko_id=r.pk %}" class="btn btn-sm py-0 px-2 text-white" style="font-size:.68rem; background:#0d9488;">
+                                    <a href="{% url 'akreditasi:risiko_evaluasi' risiko_id=r.pk %}" class="btn btn-sm py-0 px-2 text-white" style="font-size:.68rem; background:var(--primary);">
                                         <i class="bi bi-pencil-square"></i>
                                     </a>
                                 </div>
@@ -248,7 +248,7 @@
                                 <summary class="text-muted" style="cursor:pointer; font-size:.72rem;">
                                     <i class="bi bi-list-check me-1"></i>Rencana Mitigasi
                                 </summary>
-                                <div class="mt-1 p-2 rounded" style="background:#f8fafc; white-space:pre-wrap;">{{ r.rencana_aksi }}</div>
+                                <div class="mt-1 p-2 rounded" style="background:var(--body-bg); white-space:pre-wrap;">{{ r.rencana_aksi }}</div>
                             </details>
                             {% endif %}
 
@@ -269,12 +269,12 @@
             {% else %}
             <div class="card border-0 shadow-sm">
                 <div class="card-body text-center py-5">
-                    <i class="bi bi-diagram-3" style="font-size:2.5rem; color:#64748b;"></i>
+                    <i class="bi bi-diagram-3" style="font-size:2.5rem; color:var(--text-secondary);"></i>
                     <p class="text-muted mt-2 mb-1" style="font-size:.85rem;">Belum ada kajian FMEA terdaftar.</p>
                     <p class="text-muted mb-3" style="font-size:.75rem;">
                         Pilih metode <strong>FMEA Proaktif</strong> saat menginput risiko baru untuk menganalisis mode kegagalan proses berisiko tinggi.
                     </p>
-                    <a href="{% url 'akreditasi:risiko_input' %}" class="btn btn-sm text-white" style="background:#0d9488;">
+                    <a href="{% url 'akreditasi:risiko_input' %}" class="btn btn-sm text-white" style="background:var(--primary);">
                         <i class="bi bi-plus-circle me-1"></i>Input Risiko dengan FMEA
                     </a>
                 </div>
@@ -304,7 +304,7 @@
                                         </span>
                                         {% endif %}
                                     </div>
-                                    <div class="fw-semibold" style="font-size:.85rem; color:#0f172a;">
+                                    <div class="fw-semibold" style="font-size:.85rem; color:var(--text-primary);">
                                         {{ r.jenis_risiko|truncatechars:120 }}
                                     </div>
                                     <div class="text-muted mt-1" style="font-size:.72rem;">
@@ -316,7 +316,7 @@
                                     <a href="{% url 'akreditasi:risiko_detail' risiko_id=r.pk %}" class="btn btn-sm btn-outline-secondary py-0 px-2" style="font-size:.68rem;">
                                         <i class="bi bi-eye"></i>
                                     </a>
-                                    <a href="{% url 'akreditasi:risiko_evaluasi' risiko_id=r.pk %}" class="btn btn-sm py-0 px-2 text-white" style="font-size:.68rem; background:#0d9488;">
+                                    <a href="{% url 'akreditasi:risiko_evaluasi' risiko_id=r.pk %}" class="btn btn-sm py-0 px-2 text-white" style="font-size:.68rem; background:var(--primary);">
                                         <i class="bi bi-pencil-square"></i>
                                     </a>
                                 </div>
@@ -341,7 +341,7 @@
                                 {% endif %}
                                 {% if r.tindakan_korektif_rca %}
                                 <div class="col-md-6">
-                                    <div class="p-2 rounded h-100" style="background:#f0fdf4; border-left:3px solid #16a34a; font-size:.74rem;">
+                                    <div class="p-2 rounded h-100" style="background:#f0fdf4; border-left:3px solid var(--success); font-size:.74rem;">
                                         <strong class="d-block mb-1" style="color:#14532d; font-size:.7rem;">
                                             <i class="bi bi-check2-square me-1"></i>TINDAKAN KOREKTIF &amp; SOLUSI PERMANEN:
                                         </strong>
@@ -374,12 +374,12 @@
             {% else %}
             <div class="card border-0 shadow-sm">
                 <div class="card-body text-center py-5">
-                    <i class="bi bi-search" style="font-size:2.5rem; color:#64748b;"></i>
+                    <i class="bi bi-search" style="font-size:2.5rem; color:var(--text-secondary);"></i>
                     <p class="text-muted mt-2 mb-1" style="font-size:.85rem;">Belum ada investigasi RCA terdaftar.</p>
                     <p class="text-muted mb-3" style="font-size:.75rem;">
                         Pilih metode <strong>RCA Reaktif</strong> saat menginput risiko untuk menganalisis akar masalah pasca kejadian sentinel / KTD berat.
                     </p>
-                    <a href="{% url 'akreditasi:risiko_input' %}" class="btn btn-sm text-white" style="background:#0d9488;">
+                    <a href="{% url 'akreditasi:risiko_input' %}" class="btn btn-sm text-white" style="background:var(--primary);">
                         <i class="bi bi-plus-circle me-1"></i>Input Risiko dengan RCA
                     </a>
                 </div>
@@ -392,12 +392,12 @@
     {# ── Panduan Alur ──────────────────────────────────────────────────── #}
     <div class="card border-0 shadow-sm mt-4">
         <div class="card-body py-3">
-            <h6 class="fw-bold mb-3" style="font-size:.8rem; color:#0f172a;">
+            <h6 class="fw-bold mb-3" style="font-size:.8rem; color:var(--text-primary);">
                 <i class="bi bi-signpost-split me-1"></i>Panduan Pemilihan Metode Evaluasi
             </h6>
             <div class="row g-3">
                 <div class="col-md-6">
-                    <div class="p-3 rounded h-100" style="background:#fffbeb; border-left:4px solid #f59e0b;">
+                    <div class="p-3 rounded h-100" style="background:#fffbeb; border-left:4px solid var(--warning);">
                         <div class="fw-bold mb-1" style="font-size:.8rem; color:#78350f;">
                             <i class="bi bi-diagram-3-fill me-1"></i>FMEA — Proaktif
                         </div>
@@ -423,7 +423,7 @@
                     </div>
                 </div>
             </div>
-            <div class="mt-3 p-2 rounded text-muted" style="background:#f8fafc; font-size:.72rem;">
+            <div class="mt-3 p-2 rounded text-muted" style="background:var(--body-bg); font-size:.72rem;">
                 <i class="bi bi-lightbulb me-1"></i>
                 Risiko dengan skor <strong>tinggi/sangat tinggi</strong> yang tidak menunjukkan penurunan dalam 1 bulan pasca-rencana aksi
                 direkomendasikan untuk dieskalasi ke <strong>FMEA</strong> (jika belum terjadi insiden) atau <strong>RCA</strong> (jika sudah terjadi insiden).
