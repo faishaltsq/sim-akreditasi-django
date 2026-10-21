@@ -220,7 +220,8 @@
                 (arah {% if indikator_terpilih.arah_target == 'MAX' %}MAX — makin kecil makin baik{% else %}MIN — makin besar makin baik{% endif %})</div>
               {% if indikator_terpilih.pj %}<div class="col-12 col-md-6"><strong>Penanggung Jawab:</strong> {{ indikator_terpilih.pj }}</div>{% endif %}
               {% if indikator_terpilih.unit %}<div class="col-12 col-md-6"><strong>Unit:</strong> {{ indikator_terpilih.unit.name }}</div>{% endif %}
-              {% if indikator_terpilih.ep_terkait %}<div class="col-12 col-md-6"><strong>EP Terkait:</strong> [{{ indikator_terpilih.ep_terkait.code }}] {{ indikator_terpilih.ep_terkait.description|truncatechars:90 }}</div>{% endif %}
+              {% if indikator_terpilih.ep_terkait %}<div class="col-12 col-md-6"><strong>EP Terkait:</strong> [{{ indikator_terpilih.ep_terkait.code }}] {{ indikator_terpilih.ep_terkait.description|truncatechars:90 }}
+                <span class="text-muted">— {{ ep_bukti_total_req }} kebutuhan bukti, {{ ep_bukti_terunggah }} terunggah</span></div>{% endif %}
               {% if indikator_terpilih.rencana_aksi %}
               <div class="col-12"><strong>Rencana Aksi:</strong>
                 <div class="mt-1 p-2 bg-white border rounded-2" style="white-space:pre-wrap;">{{ indikator_terpilih.rencana_aksi }}</div>

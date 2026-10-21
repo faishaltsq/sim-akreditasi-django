@@ -330,7 +330,11 @@ def api_ai_ep_rekomendasi(request):
 
     res = generate_ep_rekomendasi(user=request.user, ind=ind, petunjuk_unit=petunjuk)
 
-    notice = None if res.get('success') else 'Gagal memproses rekomendasi AI.'
+    # Saat AI mati/gagal, `error` berisi ALASAN mengapa hasil ini hanya
+    # kecocokan kata (mis. 'timeout'). Alasan itu yang harus sampai ke
+    # operator — pesan generik membuat Tier B terbaca seperti hasil AI.
+    notice = None if res.get('success') and res.get('ai_terpakai') else (
+        res.get('error') or 'Gagal memproses rekomendasi AI.')
     return JsonResponse({
         'success': bool(res.get('success')),
         'kandidat': cepat,

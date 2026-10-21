@@ -120,11 +120,24 @@ def _log(user, aksi, obj, detail=''):
 
 
 def _is_manager(user):
-    """SUPER_ADMIN, ADMIN_RS, KOORDINATOR, KEPALA_UNIT."""
+    """SUPER_ADMIN, ADMIN_RS, KOORDINATOR_POKJA, KEPALA_UNIT."""
     if user.is_superuser:
         return True
     p = getattr(user, 'profile', None)
-    return p and p.role in ('SUPER_ADMIN', 'ADMIN_RS', 'KOORDINATOR', 'KEPALA_UNIT')
+    return p and p.role in ('SUPER_ADMIN', 'ADMIN_RS', 'KOORDINATOR_POKJA', 'KEPALA_UNIT')
+
+
+def _ai_status_kartu():
+    """Status AI untuk kartu Sinkronisasi EP di form indikator.
+
+    Dipakai template supaya operator tahu AI aktif/nonaktif SEBELUM menekan
+    tombol — kalau tidak, hasil Tier B (kecocokan kata) terbaca sebagai AI.
+    """
+    try:
+        from .ai_views import _ai_status
+        return _ai_status()
+    except Exception:            # konfigurasi rusak tidak boleh merontokkan form
+        return None
 
 
 # ── Resolusi cakupan unit untuk peta distribusi INM ──────────────────────────
@@ -429,6 +442,12 @@ def indikator_dashboard(request):
 
     ind_data, ind_colors, ind_meta = [], [], []
     ind_target, ind_arah = 0.0, 'MIN'
+    _ep_bukti_total_req = 0
+    _ep_bukti_terunggah = 0
+    if selected_indikator and selected_indikator.ep_terkait_id:
+        _reqs = selected_indikator.ep_terkait.evidence_reqs.prefetch_related('files')
+        _ep_bukti_total_req = _reqs.count()
+        _ep_bukti_terunggah = sum(1 for r in _reqs if list(r.files.all()))
     if selected_indikator:
         ind_target = round(float(selected_indikator.target_nilai), 1)
         ind_arah = getattr(selected_indikator, 'arah_target', 'MIN')
@@ -484,6 +503,10 @@ def indikator_dashboard(request):
         'filter_indikator': indikator_id,
         'indikator_terpilih': selected_indikator,
         'has_indikator': bool(selected_indikator),
+        # Ringkasan dokumen bukti EP untuk indikator terpilih: berapa kebutuhan
+        # pembuktian dan berapa yang sudah punya berkas.
+        'ep_bukti_total_req': _ep_bukti_total_req,
+        'ep_bukti_terunggah': _ep_bukti_terunggah,
         'chart_indikator_data_json': _json.dumps(ind_data),
         'chart_indikator_colors_json': _json.dumps(ind_colors),
         'chart_indikator_target_json': _json.dumps(ind_target),
@@ -519,6 +542,26 @@ def indikator_detail(request, indikator_id):
         if 1 <= c.bulan <= 12:
             chart_data_raw[c.bulan - 1] = float(c.nilai_capaian)
 
+    # Panel "Dokumen Bukti dari Standar Akreditasi": daftar kebutuhan bukti (EvidenceReq)
+    # milik EP yang tertaut, beserta berkas yang sudah diunggah. Tanpa ini template
+    # selalu jatuh ke cabang "EP tidak memiliki daftar kebutuhan bukti".
+    evidence = []
+    evidence_terpenuhi = 0
+    evidence_total_file = 0
+    if ind.ep_terkait_id:
+        reqs = (ind.ep_terkait.evidence_reqs
+                .prefetch_related('files')
+                .order_by('category_type', 'id'))
+        for req in reqs:
+            files = list(req.files.all())
+            evidence_total_file += len(files)
+            if files:
+                evidence_terpenuhi += 1
+            evidence.append({'req': req, 'files': files})
+    evidence_total_req = len(evidence)
+    evidence_pct = (round(evidence_terpenuhi * 100 / evidence_total_req)
+                    if evidence_total_req else 0)
+
     ctx = {
         'ind': ind,
         'catatan': catatan,
@@ -527,6 +570,11 @@ def indikator_detail(request, indikator_id):
         'chart_data': _json.dumps(chart_data_raw),
         'target_line': float(ind.target_nilai),
         'is_manager': _is_manager(request.user),
+        'evidence': evidence,
+        'evidence_total_req': evidence_total_req,
+        'evidence_terpenuhi': evidence_terpenuhi,
+        'evidence_total_file': evidence_total_file,
+        'evidence_pct': evidence_pct,
     }
     return render(request, 'akreditasi/indikator_detail.html', ctx)
 
@@ -658,7 +706,9 @@ def indikator_tambah(request):
                 messages.error(request, f'Gagal membuat indikator: {e}')
 
     units = UnitKerja.objects.filter(is_active=True).order_by('name')
-    ep_list = StandardItem.objects.select_related('category').order_by('category__code', 'code')[:200]
+    # Tanpa cap: katalog STARKES punya >500 EP, dan EP yang terpotong tidak akan
+    # pernah bisa dipilih manual dari form.
+    ep_list = StandardItem.objects.select_related('category').order_by('category__code', 'code')
     from .risiko_models import RenstraRoadmap as _RR
     renstra_list = _RR.objects.filter(aktif=True).order_by('tahun')
     ctx = {
@@ -670,6 +720,8 @@ def indikator_tambah(request):
         'jenis_choices': IndikatorMutu.JENIS_CHOICES,
         'dimensi_choices': IndikatorMutu.DIMENSI_CHOICES,
         'arah_choices': IndikatorMutu.ARAH_CHOICES,
+        # Kartu Sinkronisasi EP menampilkan status AI sebelum tombol ditekan.
+        'ai_status': _ai_status_kartu(),
     }
     return render(request, 'akreditasi/indikator_form.html', ctx)
 
@@ -714,7 +766,18 @@ def indikator_edit(request, indikator_id):
             ind.denominator = den
             ind.target_nilai = target_val
             ind.satuan = satuan
-            ind.ep_terkait_id = int(ep_id) if ep_id else None
+            # Provenance EP: mengganti EP lewat form = keputusan manusia.
+            # Tanpa reset, skor AI lama menempel di link manual dan guard
+            # auto-sync berikutnya salah membaca asal tautan.
+            ep_baru = int(ep_id) if ep_id else None
+            if ep_baru != ind.ep_terkait_id:
+                if ep_baru:
+                    ind.ep_sumber = 'MANUAL'
+                    ind.ep_skor = None
+                else:
+                    ind.ep_sumber = ''
+                    ind.ep_skor = None
+            ind.ep_terkait_id = ep_baru
             ind.rencana_aksi = rencana
             ind.pj = pj
             ind.arah_target = arah_target
@@ -729,7 +792,9 @@ def indikator_edit(request, indikator_id):
                 messages.error(request, f'Gagal menyimpan perubahan: {e}')
 
     units = UnitKerja.objects.filter(is_active=True).order_by('name')
-    ep_list = StandardItem.objects.select_related('category').order_by('category__code', 'code')[:200]
+    # Tanpa cap: katalog STARKES punya >500 EP, dan EP yang terpotong tidak akan
+    # pernah bisa dipilih manual dari form.
+    ep_list = StandardItem.objects.select_related('category').order_by('category__code', 'code')
     from .risiko_models import RenstraRoadmap as _RR2
     renstra_list = _RR2.objects.filter(aktif=True).order_by('tahun')
     ctx = {
@@ -741,6 +806,8 @@ def indikator_edit(request, indikator_id):
         'jenis_choices': IndikatorMutu.JENIS_CHOICES,
         'dimensi_choices': IndikatorMutu.DIMENSI_CHOICES,
         'arah_choices': IndikatorMutu.ARAH_CHOICES,
+        # Kartu Sinkronisasi EP menampilkan status AI sebelum tombol ditekan.
+        'ai_status': _ai_status_kartu(),
     }
     return render(request, 'akreditasi/indikator_form.html', ctx)
 
