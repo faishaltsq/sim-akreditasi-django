@@ -330,13 +330,14 @@ def api_ai_ep_rekomendasi(request):
 
     res = generate_ep_rekomendasi(user=request.user, ind=ind, petunjuk_unit=petunjuk)
 
+    notice = None if res.get('success') else 'Gagal memproses rekomendasi AI.'
     return JsonResponse({
         'success': bool(res.get('success')),
         'kandidat': cepat,
         'rekomendasi': (res.get('data') or {}).get('rekomendasi') or [],
         'sumber': (res.get('data') or {}).get('sumber'),
         'ai_terpakai': bool(res.get('ai_terpakai')),
-        'notice': res.get('error'),
+        'notice': notice,
         'ai_status': _ai_status(),
         'ep_terkait': (
             {'id': ind.ep_terkait_id, 'code': ind.ep_terkait.code,
@@ -654,4 +655,6 @@ def api_ai_narasi_laporan(request):
         instruksi=(data.get('instruksi') or '').strip()[:800],
         isi_sekarang=(data.get('isi_sekarang') or '').strip()[:4000],
     )
+    if not res.get('success'):
+        res = {**res, 'error': 'Gagal menyusun narasi laporan.'}
     return JsonResponse(res, status=200 if res['success'] else 400)
