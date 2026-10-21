@@ -383,3 +383,10 @@ from .risiko_models import (  # noqa: E402, F401
     CatatanIndikator,
 )
 from .system_models import SystemConfig  # noqa: E402, F401
+from .logbook_models import (  # noqa: E402, F401
+    LogbookHarian,
+    LogbookPasien,
+    LogbookChecklist,
+    LogbookBukti,
+    LogbookKejadian,
+)
