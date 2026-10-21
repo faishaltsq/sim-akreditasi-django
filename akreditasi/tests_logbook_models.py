@@ -11,6 +11,7 @@ from akreditasi.logbook_models import (
     LogbookKejadian, LogbookPasien, dependency_kode, kunjungan_shift,
     los_menit, parse_jam, response_time_menit, shift_window,
 )
+from accounts.models import UserProfile
 from akreditasi.models import UnitKerja
 from pasien.models import Bed, KunjunganPasien, Pasien, Ruangan
 
@@ -24,9 +25,7 @@ def buat_unit(kode, nama, tipe='RUANGAN', parent=None):
 
 def buat_user(username, role, unit):
     u = User.objects.create_user(username=username, password='x')
-    u.profile.role = role
-    u.profile.unit_kerja = unit
-    u.profile.save()
+    UserProfile.objects.update_or_create(user=u, defaults={'role': role, 'unit_kerja': unit})
     return u
 
 
