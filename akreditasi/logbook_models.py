@@ -209,6 +209,13 @@ def kunjungan_shift(jenis, tanggal, shift, ruangan=None):
     return qs
 
 
+def _jam_lokal(dt):
+    """Waktu lokal tanpa mikrodetik untuk kolom ``TimeField``."""
+    if dt is None:
+        return None
+    return timezone.localtime(dt).time().replace(microsecond=0)
+
+
 # ---------------------------------------------------------------------------
 # 3. LogbookHarian
 # ---------------------------------------------------------------------------
@@ -295,10 +302,8 @@ class LogbookHarian(models.Model):
                     'no_bed': bed.kode_bed if bed else '',
                     'triage': k.triage,
                     'diagnosa': k.diagnosa_masuk,
-                    'jam_masuk': timezone.localtime(k.tanggal_masuk).time()
-                                 if k.tanggal_masuk else None,
-                    'jam_keluar': timezone.localtime(k.tanggal_keluar).time()
-                                  if k.tanggal_keluar else None,
+                    'jam_masuk': _jam_lokal(k.tanggal_masuk),
+                    'jam_keluar': _jam_lokal(k.tanggal_keluar),
                     'disposisi': k.disposisi_tindak_lanjut,
                     'dependency': dependency_kode(k.fungsional_adl),
                 })

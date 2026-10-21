@@ -1,0 +1,482 @@
+{% extends "base.html" %}
+
+{% block title %}Logbook {{ logbook.get_jenis_display }} {{ logbook.tanggal|date:"d/m/Y" }} — ARIMA{% endblock %}
+{% block page_title %}Logbook {{ logbook.get_jenis_display }} · {{ logbook.get_shift_display }}{% endblock %}
+{% block page_subtitle %}{{ logbook.unit.name }}{% if logbook.ruangan %} · {{ logbook.ruangan.nama }}{% endif %} · {{ logbook.tanggal|date:"l, d F Y" }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .lb-seksi { border: 1px solid var(--bs-border-color); border-radius: .6rem; margin-bottom: 1rem; }
+    .lb-seksi > h6 { padding: .6rem .85rem; margin: 0; background: var(--bs-tertiary-bg);
+                     border-bottom: 1px solid var(--bs-border-color); border-radius: .6rem .6rem 0 0;
+                     font-weight: 700; font-size: .8rem; letter-spacing: .02em; text-transform: uppercase; }
+    .lb-seksi > .isi { padding: .85rem; }
+    .tbl-lb { font-size: .78rem; margin-bottom: 0; }
+    .tbl-lb th { white-space: nowrap; font-weight: 600; }
+    .tbl-lb td { vertical-align: middle; }
+    .tbl-lb td.nama { min-width: 180px; }
+    .tbl-lb input[type="text"], .tbl-lb select { font-size: .74rem; padding: .15rem .35rem; }
+    .angka { font-variant-numeric: tabular-nums; }
+    .kpi { border: 1px solid var(--bs-border-color); border-radius: .5rem; padding: .55rem .7rem; }
+    .kpi .label { font-size: .64rem; text-transform: uppercase; letter-spacing: .04em; color: var(--bs-secondary-color); }
+    .kpi .nilai { font-size: 1.15rem; font-weight: 700; line-height: 1.1; }
+    .cek-terlaksana { color: var(--bs-success); }
+    .cek-tidak { color: var(--bs-danger); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-3">
+
+    <div class="d-flex flex-wrap gap-2 justify-content-between align-items-center mb-3">
+        <div class="d-flex gap-2 align-items-center">
+            <a href="{% url 'akreditasi:logbook_daftar' %}" class="btn btn-sm btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i>
+            </a>
+            {% if logbook.status == 'DISETUJUI' %}
+            <span class="badge bg-success-subtle text-success-emphasis">{{ logbook.get_status_display }}</span>
+            {% elif logbook.status == 'DIISI' %}
+            <span class="badge bg-warning-subtle text-warning-emphasis">{{ logbook.get_status_display }}</span>
+            {% else %}
+            <span class="badge bg-secondary-subtle text-secondary-emphasis">{{ logbook.get_status_display }}</span>
+            {% endif %}
+            <span class="text-muted small">
+                {{ periode_awal|date:"d/m H:i" }} – {{ periode_akhir|date:"d/m H:i" }}
+            </span>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="{% url 'akreditasi:logbook_pdf' logbook.pk %}" target="_blank" rel="noopener"
+               class="btn btn-sm btn-outline-danger">
+                <i class="bi bi-filetype-pdf me-1"></i> Cetak PDF
+            </a>
+        </div>
+    </div>
+
+    {% if logbook.terkunci %}
+    <div class="alert alert-success py-2 small mb-3">
+        <i class="bi bi-lock me-1"></i>
+        Logbook shift ini sudah disetujui
+        {% if logbook.disetujui_oleh %} oleh {{ logbook.disetujui_oleh.get_full_name|default:logbook.disetujui_oleh.username }}{% endif %}
+        {% if logbook.disetujui_pada %} pada {{ logbook.disetujui_pada|date:"d/m/Y H:i" }}{% endif %}.
+        Isian dikunci; angka tetap dapat dibaca dan dicetak.
+    </div>
+    {% endif %}
+
+    {# ── I. Rekap shift ─────────────────────────────────────────────── #}
+    <div class="lb-seksi">
+        <h6><i class="bi bi-activity me-1"></i> I. Rekap Shift <span class="text-muted fw-normal">— dihitung dari EMR</span></h6>
+        <div class="isi">
+            <div class="row g-2 mb-3">
+                <div class="col-6 col-md-2"><div class="kpi"><div class="label">Pasien</div><div class="nilai angka">{{ rekap.jumlah_pasien }}</div></div></div>
+                <div class="col-6 col-md-2"><div class="kpi"><div class="label">Triage M/K/H/T</div>
+                    <div class="nilai angka">{{ rekap.triage.MERAH|default:0 }}/{{ rekap.triage.KUNING|default:0 }}/{{ rekap.triage.HIJAU|default:0 }}/{{ rekap.triage.HITAM|default:0 }}</div></div></div>
+                <div class="col-6 col-md-2"><div class="kpi"><div class="label">RT rata-rata</div>
+                    <div class="nilai angka">{% if rekap.rt_rata2 is None %}—{% else %}{{ rekap.rt_rata2 }}<small class="fw-normal"> mnt</small>{% endif %}</div></div></div>
+                <div class="col-6 col-md-2"><div class="kpi"><div class="label">RT &gt; 5 mnt</div><div class="nilai angka">{{ rekap.rt_terlambat }}</div></div></div>
+                <div class="col-6 col-md-2"><div class="kpi"><div class="label">LOS rata-rata</div>
+                    <div class="nilai angka">{% if rekap.los_rata2_jam is None %}—{% else %}{{ rekap.los_rata2_jam }}<small class="fw-normal"> jam</small>{% endif %}</div></div></div>
+                <div class="col-6 col-md-2"><div class="kpi"><div class="label">BOR shift</div>
+                    <div class="nilai angka">{% if rekap.bor_persen is None %}—{% else %}{{ rekap.bor_persen }}<small class="fw-normal">%</small>{% endif %}</div></div></div>
+            </div>
+
+            {% if not baris %}
+            <p class="text-muted small mb-0">Belum ada kunjungan pasien pada periode shift ini.</p>
+            {% else %}
+            <form method="post" action="{% url 'akreditasi:logbook_simpan_pasien' logbook.pk %}">
+                {% csrf_token %}
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover tbl-lb">
+                        <thead class="table-light">
+                            <tr>
+                                <th>No</th><th>No. RM</th><th>Nama</th><th>JK</th><th>Umur</th>
+                                <th>Bed</th><th>Triage</th><th>Masuk</th><th>Keluar</th>
+                                <th>Diagnosa</th><th>RT</th><th>LOS</th><th>ADL</th>
+                                <th>Disposisi</th><th>Tindakan</th><th>Catatan</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for b in baris %}
+                            <tr>
+                                <td>{{ forloop.counter }}</td>
+                                <td class="text-nowrap">{{ b.no_rm|default:"—" }}</td>
+                                <td class="nama">{{ b.nama_pasien }}</td>
+                                <td>{{ b.jenis_kelamin|default:"—" }}</td>
+                                <td class="angka">{{ b.umur|default_if_none:"—" }}</td>
+                                <td class="text-nowrap">{{ b.no_bed|default:"—" }}</td>
+                                <td class="text-nowrap">{{ b.triage|default:"—" }}</td>
+                                <td class="text-nowrap angka">{{ b.jam_masuk|time:"H:i"|default:"—" }}</td>
+                                <td class="text-nowrap angka">
+                                    {% if boleh_isi %}
+                                    <input type="text" name="baris_{{ b.pk }}_jam_keluar" value="{{ b.jam_keluar|time:'H:i' }}"
+                                           class="form-control form-control-sm angka" placeholder="HH:MM" style="width:5.2rem;">
+                                    {% else %}{{ b.jam_keluar|time:"H:i"|default:"—" }}{% endif %}
+                                </td>
+                                <td>{{ b.diagnosa|default:"—"|truncatechars:60 }}</td>
+                                <td class="angka text-nowrap">{{ b.rt_menit|default_if_none:"—" }}</td>
+                                <td class="angka text-nowrap">{{ b.los_menit|default_if_none:"—" }}</td>
+                                <td>
+                                    {% if boleh_isi %}
+                                    <select name="baris_{{ b.pk }}_dependency" class="form-select form-select-sm" style="width:4.5rem;">
+                                        <option value="M" {% if b.dependency == 'M' %}selected{% endif %}>Mandiri</option>
+                                        <option value="P" {% if b.dependency == 'P' %}selected{% endif %}>Parsial</option>
+                                        <option value="T" {% if b.dependency == 'T' %}selected{% endif %}>Total</option>
+                                        <option value="?" {% if b.dependency == '?' %}selected{% endif %}>—</option>
+                                    </select>
+                                    {% else %}{{ b.get_dependency_display }}{% endif %}
+                                </td>
+                                <td>
+                                    {% if boleh_isi %}
+                                    <select name="baris_{{ b.pk }}_disposisi" class="form-select form-select-sm" style="width:8rem;">
+                                        <option value="" {% if not b.disposisi %}selected{% endif %}>—</option>
+                                        {% for kode, label in disposisi_pilihan %}
+                                        <option value="{{ kode }}" {% if b.disposisi == kode %}selected{% endif %}>{{ label }}</option>
+                                        {% endfor %}
+                                    </select>
+                                    {% else %}{{ b.disposisi|default:"—" }}{% endif %}
+                                </td>
+                                <td>
+                                    {% if boleh_isi %}
+                                    <input type="text" name="baris_{{ b.pk }}_tindakan" value="{{ b.tindakan }}"
+                                           class="form-control form-control-sm" placeholder="Tindakan / intervensi">
+                                    {% else %}{{ b.tindakan|default:"—" }}{% endif %}
+                                </td>
+                                <td>
+                                    {% if boleh_isi %}
+                                    <input type="text" name="baris_{{ b.pk }}_catatan" value="{{ b.catatan }}"
+                                           class="form-control form-control-sm" placeholder="Catatan">
+                                    {% else %}{{ b.catatan|default:"—" }}{% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% if boleh_isi %}
+                <div class="text-end mt-2">
+                    <button class="btn btn-sm btn-primary"><i class="bi bi-save me-1"></i> Simpan Isian Pasien</button>
+                </div>
+                {% endif %}
+            </form>
+            {% endif %}
+        </div>
+    </div>
+
+    {# ── II. Personel & catatan shift ───────────────────────────────── #}
+    <div class="lb-seksi">
+        <h6><i class="bi bi-people me-1"></i> II. Personel Jaga &amp; Catatan Shift</h6>
+        <div class="isi">
+            <form method="post" action="{% url 'akreditasi:logbook_simpan_narasi' logbook.pk %}">
+                {% csrf_token %}
+                <div class="row g-2">
+                    <div class="col-12 col-md-4">
+                        <label class="form-label small mb-1">Penanggung Jawab Shift</label>
+                        <input type="text" name="pj_shift_nama" value="{{ logbook.pj_shift_nama }}"
+                               class="form-control form-control-sm" {% if not boleh_isi %}readonly{% endif %}>
+                    </div>
+                    <div class="col-6 col-md-2">
+                        <label class="form-label small mb-1">Jumlah Perawat</label>
+                        <input type="number" min="0" name="jumlah_perawat" value="{{ logbook.jumlah_perawat|default_if_none:'' }}"
+                               class="form-control form-control-sm" {% if not boleh_isi %}readonly{% endif %}>
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <label class="form-label small mb-1">Rasio Perawat : Pasien</label>
+                        <input type="text" name="rasio_perawat_pasien" value="{{ logbook.rasio_perawat_pasien }}"
+                               class="form-control form-control-sm" placeholder="1 : 4" {% if not boleh_isi %}readonly{% endif %}>
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <label class="form-label small mb-1">Pasien Menunggu Kamar</label>
+                        <input type="number" min="0" name="pasien_menunggu_kamar" value="{{ logbook.pasien_menunggu_kamar }}"
+                               class="form-control form-control-sm" {% if not boleh_isi %}readonly{% endif %}>
+                    </div>
+                    <div class="col-12 col-md-6">
+                        <label class="form-label small mb-1">Pasien Kritis (nama / no. bed)</label>
+                        <input type="text" name="pasien_kritis_nama" value="{{ logbook.pasien_kritis_nama }}"
+                               class="form-control form-control-sm" {% if not boleh_isi %}readonly{% endif %}>
+                    </div>
+                    <div class="col-12 col-md-6">
+                        <label class="form-label small mb-1">Penunjang Masih Pending</label>
+                        <textarea name="penunjang_pending" rows="2" class="form-control form-control-sm"
+                                  {% if not boleh_isi %}readonly{% endif %}>{{ logbook.penunjang_pending }}</textarea>
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label small mb-1">Catatan Shift</label>
+                        <textarea name="catatan_shift" rows="3" class="form-control form-control-sm"
+                                  {% if not boleh_isi %}readonly{% endif %}>{{ logbook.catatan_shift }}</textarea>
+                    </div>
+                </div>
+                {% if boleh_isi %}
+                <div class="text-end mt-2">
+                    <button class="btn btn-sm btn-primary"><i class="bi bi-save me-1"></i> Simpan Catatan Shift</button>
+                </div>
+                {% endif %}
+            </form>
+        </div>
+    </div>
+
+    {# ── III. Checklist akreditasi ──────────────────────────────────── #}
+    <div class="lb-seksi">
+        <h6><i class="bi bi-check2-square me-1"></i> III. Checklist Akreditasi</h6>
+        <div class="isi">
+            {% if not checklist_seksi %}
+            <p class="text-muted small mb-0">Checklist belum terbentuk untuk logbook ini.</p>
+            {% else %}
+            <form method="post" action="{% url 'akreditasi:logbook_simpan_checklist' logbook.pk %}">
+                {% csrf_token %}
+                {% for kode, label, butir_list in checklist_seksi %}
+                <div class="mb-3">
+                    <p class="small fw-semibold mb-2">{{ label }}</p>
+                    <div class="table-responsive">
+                        <table class="table table-sm tbl-lb">
+                            <thead class="table-light">
+                                <tr><th style="width:40%;">Butir</th><th style="width:12%;">Status</th>
+                                    <th style="width:36%;">Keterangan</th><th>No. Segel</th></tr>
+                            </thead>
+                            <tbody>
+                                {% for c in butir_list %}
+                                <tr>
+                                    <td>{{ c.parameter }}</td>
+                                    <td>
+                                        {% if boleh_isi %}
+                                        <select name="cek_{{ c.kunci }}" class="form-select form-select-sm">
+                                            {% for kode_status, label_status in c.STATUS_CHOICES %}
+                                            <option value="{{ kode_status }}" {% if c.status == kode_status %}selected{% endif %}>{{ label_status }}</option>
+                                            {% endfor %}
+                                        </select>
+                                        {% else %}
+                                        <span class="{% if c.status == 'TERLAKSANA' %}cek-terlaksana{% elif c.status == 'TIDAK' %}cek-tidak{% endif %}">
+                                            {{ c.get_status_display }}
+                                        </span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if boleh_isi %}
+                                        <input type="text" name="ket_{{ c.kunci }}" value="{{ c.keterangan }}"
+                                               class="form-control form-control-sm">
+                                        {% else %}{{ c.keterangan|default:"—" }}{% endif %}
+                                    </td>
+                                    <td>
+                                        {% if c.butuh_nomor_segel %}
+                                            {% if boleh_isi %}
+                                            <input type="text" name="segel_{{ c.kunci }}" value="{{ c.nomor_segel }}"
+                                                   class="form-control form-control-sm" placeholder="No. segel">
+                                            {% else %}{{ c.nomor_segel|default:"—" }}{% endif %}
+                                        {% else %}<span class="text-muted">—</span>{% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                {% endfor %}
+                {% if boleh_isi %}
+                <div class="text-end">
+                    <button class="btn btn-sm btn-primary"><i class="bi bi-save me-1"></i> Simpan Checklist</button>
+                </div>
+                {% endif %}
+            </form>
+            {% endif %}
+
+            <hr class="my-3">
+            <p class="small fw-semibold mb-2">Bukti Pendukung</p>
+            {% if bukti %}
+            <ul class="list-unstyled small mb-2">
+                {% for f in bukti %}
+                <li class="mb-1">
+                    <i class="bi bi-paperclip me-1"></i>
+                    <a href="{{ f.berkas.url }}" target="_blank" rel="noopener">{{ f.judul }}</a>
+                    <span class="text-muted">· {{ f.ukuran }} · {{ f.created_at|date:"d/m H:i" }}</span>
+                </li>
+                {% endfor %}
+            </ul>
+            {% else %}
+            <p class="text-muted small mb-2">Belum ada berkas bukti.</p>
+            {% endif %}
+            {% if boleh_isi %}
+            <form method="post" action="{% url 'akreditasi:logbook_unggah_bukti' logbook.pk %}" enctype="multipart/form-data"
+                  class="row g-2 align-items-end">
+                {% csrf_token %}
+                <div class="col-12 col-md-4">
+                    <label class="form-label small mb-1">Judul</label>
+                    <input type="text" name="judul" class="form-control form-control-sm" placeholder="Misal: foto kotak emergency trolley">
+                </div>
+                <div class="col-12 col-md-5">
+                    <label class="form-label small mb-1">Berkas</label>
+                    <input type="file" name="berkas" class="form-control form-control-sm" required>
+                </div>
+                <div class="col-12 col-md-3">
+                    <button class="btn btn-sm btn-outline-primary w-100"><i class="bi bi-upload me-1"></i> Unggah</button>
+                </div>
+            </form>
+            {% endif %}
+        </div>
+    </div>
+
+    {# ── IV. Kejadian keselamatan ───────────────────────────────────── #}
+    <div class="lb-seksi">
+        <h6><i class="bi bi-exclamation-triangle me-1"></i> IV. Kejadian Keselamatan Shift</h6>
+        <div class="isi">
+            {% if kejadian %}
+            <div class="table-responsive mb-3">
+                <table class="table table-sm tbl-lb">
+                    <thead class="table-light">
+                        <tr><th>Jam</th><th>Jenis</th><th>Keparahan</th><th>Lokasi</th>
+                            <th>Deskripsi</th><th>Tindakan Segera</th><th>IKP</th></tr>
+                    </thead>
+                    <tbody>
+                        {% for k in kejadian %}
+                        <tr>
+                            <td class="text-nowrap angka">{{ k.waktu_kejadian|time:"H:i"|default:"—" }}</td>
+                            <td class="text-nowrap">{{ k.get_jenis_insiden_display }}</td>
+                            <td class="text-nowrap">{{ k.get_tingkat_keparahan_display }}</td>
+                            <td>{{ k.lokasi_kejadian }}</td>
+                            <td>{{ k.deskripsi_kejadian|truncatechars:90 }}</td>
+                            <td>{{ k.tindakan_segera|default:"—"|truncatechars:60 }}</td>
+                            <td class="text-nowrap">
+                                {% if k.insiden %}<span class="badge bg-info-subtle text-info-emphasis">terhubung</span>
+                                {% else %}<span class="text-muted small">—</span>{% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <p class="text-muted small">Tidak ada kejadian keselamatan pada shift ini.</p>
+            {% endif %}
+
+            {% if boleh_isi %}
+            <form method="post" action="{% url 'akreditasi:logbook_simpan_kejadian' logbook.pk %}" class="row g-2">
+                {% csrf_token %}
+                <div class="col-6 col-md-3">
+                    <label class="form-label small mb-1">Jenis Insiden</label>
+                    <select name="jenis_insiden" class="form-select form-select-sm" required>
+                        {% for kode, label in jenis_insiden %}<option value="{{ kode }}">{{ label }}</option>{% endfor %}
+                    </select>
+                </div>
+                <div class="col-6 col-md-3">
+                    <label class="form-label small mb-1">Tingkat Keparahan</label>
+                    <select name="tingkat_keparahan" class="form-select form-select-sm" required>
+                        {% for kode, label in keparahan %}<option value="{{ kode }}">{{ label }}</option>{% endfor %}
+                    </select>
+                </div>
+                <div class="col-6 col-md-2">
+                    <label class="form-label small mb-1">Jam Kejadian</label>
+                    <input type="text" name="waktu_kejadian" class="form-control form-control-sm" placeholder="HH:MM">
+                </div>
+                <div class="col-6 col-md-4">
+                    <label class="form-label small mb-1">Lokasi</label>
+                    <input type="text" name="lokasi_kejadian" class="form-control form-control-sm" required>
+                </div>
+                <div class="col-12 col-md-6">
+                    <label class="form-label small mb-1">Deskripsi Kejadian</label>
+                    <textarea name="deskripsi_kejadian" rows="2" class="form-control form-control-sm" required></textarea>
+                </div>
+                <div class="col-12 col-md-6">
+                    <label class="form-label small mb-1">Tindakan Segera</label>
+                    <textarea name="tindakan_segera" rows="2" class="form-control form-control-sm"></textarea>
+                </div>
+                <div class="col-12 d-flex justify-content-between align-items-center">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" name="pasien_terpapar" id="pasienTerpapar">
+                        <label class="form-check-label small" for="pasienTerpapar">Pasien terpapar</label>
+                    </div>
+                    <button class="btn btn-sm btn-outline-danger">
+                        <i class="bi bi-plus-circle me-1"></i> Catat &amp; Teruskan ke IKP
+                    </button>
+                </div>
+            </form>
+            {% endif %}
+        </div>
+    </div>
+
+    {# ── V. Serah terima SBAR ───────────────────────────────────────── #}
+    <div class="lb-seksi">
+        <h6><i class="bi bi-arrow-left-right me-1"></i> V. Serah Terima (SBAR)</h6>
+        <div class="isi">
+            <form method="post" action="{% url 'akreditasi:logbook_simpan_narasi' logbook.pk %}">
+                {% csrf_token %}
+                <div class="row g-2">
+                    <div class="col-12 col-md-6">
+                        <label class="form-label small mb-1">S — Situation</label>
+                        <textarea name="sbar_situation" rows="2" class="form-control form-control-sm" {% if not boleh_isi %}readonly{% endif %}>{{ logbook.sbar_situation }}</textarea>
+                    </div>
+                    <div class="col-12 col-md-6">
+                        <label class="form-label small mb-1">B — Background</label>
+                        <textarea name="sbar_background" rows="2" class="form-control form-control-sm" {% if not boleh_isi %}readonly{% endif %}>{{ logbook.sbar_background }}</textarea>
+                    </div>
+                    <div class="col-12 col-md-6">
+                        <label class="form-label small mb-1">A — Assessment</label>
+                        <textarea name="sbar_assessment" rows="2" class="form-control form-control-sm" {% if not boleh_isi %}readonly{% endif %}>{{ logbook.sbar_assessment }}</textarea>
+                    </div>
+                    <div class="col-12 col-md-6">
+                        <label class="form-label small mb-1">R — Recommendation</label>
+                        <textarea name="sbar_recommendation" rows="2" class="form-control form-control-sm" {% if not boleh_isi %}readonly{% endif %}>{{ logbook.sbar_recommendation }}</textarea>
+                    </div>
+                </div>
+                {% if boleh_isi %}
+                <div class="text-end mt-2">
+                    <button class="btn btn-sm btn-primary"><i class="bi bi-save me-1"></i> Simpan SBAR</button>
+                </div>
+                {% endif %}
+            </form>
+
+            <hr class="my-3">
+
+            <div class="row g-3">
+                <div class="col-12 col-md-6">
+                    <p class="small fw-semibold mb-2">Serah Terima Shift</p>
+                    {% if logbook.status == 'DRAF' and boleh_isi %}
+                    <form method="post" action="{% url 'akreditasi:logbook_serah_terima' logbook.pk %}" class="row g-2">
+                        {% csrf_token %}
+                        <div class="col-12">
+                            <label class="form-label small mb-1">Nama Perawat Penanggung Jawab</label>
+                            <input type="text" name="ttd_perawat" value="{{ logbook.ttd_perawat }}"
+                                   class="form-control form-control-sm" required>
+                        </div>
+                        <div class="col-12">
+                            <button class="btn btn-sm btn-warning">
+                                <i class="bi bi-send-check me-1"></i> Serahkan ke Kepala Unit
+                            </button>
+                        </div>
+                    </form>
+                    {% else %}
+                    <p class="small mb-1">Perawat: <strong>{{ logbook.ttd_perawat|default:"—" }}</strong></p>
+                    {% if logbook.diserahterimakan_pada %}
+                    <p class="small text-muted mb-2">Diserahterimakan {{ logbook.diserahterimakan_pada|date:"d/m/Y H:i" }}
+                        {% if logbook.diserahterimakan_oleh %}oleh {{ logbook.diserahterimakan_oleh.get_full_name|default:logbook.diserahterimakan_oleh.username }}{% endif %}
+                    </p>
+                    {% endif %}
+                    {% endif %}
+                </div>
+
+                <div class="col-12 col-md-6">
+                    <p class="small fw-semibold mb-2">Pengesahan Kepala Unit</p>
+                    {% if boleh_setujui %}
+                    <form method="post" action="{% url 'akreditasi:logbook_setujui' logbook.pk %}" class="row g-2">
+                        {% csrf_token %}
+                        <div class="col-12">
+                            <label class="form-label small mb-1">Nama Kepala Ruangan / Katim</label>
+                            <input type="text" name="ttd_kepala_ruang" value="{{ logbook.ttd_kepala_ruang }}"
+                                   class="form-control form-control-sm" required>
+                        </div>
+                        <div class="col-12">
+                            <button class="btn btn-sm btn-success">
+                                <i class="bi bi-patch-check me-1"></i> Setujui &amp; Kunci Logbook
+                            </button>
+                        </div>
+                    </form>
+                    {% elif logbook.status == 'DISETUJUI' %}
+                    <p class="small mb-1">Kepala ruangan: <strong>{{ logbook.ttd_kepala_ruang|default:"—" }}</strong></p>
+                    <p class="small text-muted mb-0">Disetujui {{ logbook.disetujui_pada|date:"d/m/Y H:i" }}
+                        {% if logbook.disetujui_oleh %}oleh {{ logbook.disetujui_oleh.get_full_name|default:logbook.disetujui_oleh.username }}{% endif %}
+                    </p>
+                    {% else %}
+                    <p class="small text-muted mb-0">Menunggu serah terima shift sebelum dapat disahkan.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

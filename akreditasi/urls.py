@@ -1,4 +1,5 @@
 from django.urls import path
+from . import logbook as logbook_views
 from . import views
 from . import risiko_views
 from . import ai_views
@@ -127,6 +128,19 @@ urlpatterns = [
 
     # Panduan / Dokumentasi Interaktif
     path('panduan/', views.panduan_dokumentasi, name='panduan'),
+
+    # ── Logbook Harian IGD & Rawat Inap (per shift, angka ditarik dari EMR) ──
+    path('logbook/', logbook_views.logbook_daftar, name='logbook_daftar'),
+    path('logbook/buat/', logbook_views.logbook_buat, name='logbook_buat'),
+    path('logbook/<int:pk>/', logbook_views.logbook_detail, name='logbook_detail'),
+    path('logbook/<int:pk>/simpan-pasien/', logbook_views.logbook_simpan_pasien, name='logbook_simpan_pasien'),
+    path('logbook/<int:pk>/simpan-checklist/', logbook_views.logbook_simpan_checklist, name='logbook_simpan_checklist'),
+    path('logbook/<int:pk>/simpan-narasi/', logbook_views.logbook_simpan_narasi, name='logbook_simpan_narasi'),
+    path('logbook/<int:pk>/kejadian/', logbook_views.logbook_simpan_kejadian, name='logbook_simpan_kejadian'),
+    path('logbook/<int:pk>/bukti/', logbook_views.logbook_unggah_bukti, name='logbook_unggah_bukti'),
+    path('logbook/<int:pk>/serah-terima/', logbook_views.logbook_serah_terima, name='logbook_serah_terima'),
+    path('logbook/<int:pk>/setujui/', logbook_views.logbook_setujui, name='logbook_setujui'),
+    path('logbook/<int:pk>/pdf/', logbook_views.logbook_pdf, name='logbook_pdf'),
 
     # ── Endpoint AI Asisten Cerdas DeepSeek (backend-only, tidak ada API Key di response) ──
     path('ai/mitigasi-risiko/', ai_views.api_ai_mitigasi_risiko, name='ai_mitigasi_risiko'),

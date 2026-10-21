@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+
+{% block title %}Buat Logbook Shift — ARIMA{% endblock %}
+{% block page_title %}Buat Logbook Shift{% endblock %}
+{% block page_subtitle %}Satu logbook per unit · tanggal · shift — angka ditarik otomatis dari EMR{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-3">
+    <div class="row justify-content-center">
+        <div class="col-12 col-lg-7">
+            <form method="post" class="card border-0 shadow-sm">
+                {% csrf_token %}
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-12 col-md-6">
+                            <label class="form-label small mb-1">Jenis Logbook</label>
+                            <select name="jenis" class="form-select form-select-sm" required>
+                                {% for kode, label in jenis_pilihan %}
+                                <option value="{{ kode }}">{{ label }}</option>
+                                {% endfor %}
+                            </select>
+                            <div class="form-text">IGD memakai triage &amp; response time; rawat inap memakai sensus &amp; BOR.</div>
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <label class="form-label small mb-1">Shift</label>
+                            <select name="shift" class="form-select form-select-sm" required>
+                                {% for kode, label in shift_pilihan %}
+                                <option value="{{ kode }}" {% if kode == 'PAGI' %}selected{% endif %}>{{ label }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <label class="form-label small mb-1">Tanggal Shift</label>
+                            <input type="date" name="tanggal" class="form-control form-control-sm"
+                                   value="{{ hari_ini|date:'Y-m-d' }}" max="{{ hari_ini|date:'Y-m-d' }}" required>
+                            <div class="form-text">Shift malam 21.00–07.00 dihitung menurut tanggal mulai.</div>
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <label class="form-label small mb-1">Unit Kerja</label>
+                            <select name="unit" class="form-select form-select-sm" required>
+                                {% for u in unit_pilihan %}
+                                <option value="{{ u.pk }}">{{ u.name }}</option>
+                                {% empty %}
+                                <option value="">— tidak ada unit dalam lingkup Anda —</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label small mb-1">Ruangan <span class="text-muted">(opsional, untuk logbook per bangsal)</span></label>
+                            <select name="ruangan" class="form-select form-select-sm">
+                                <option value="">— tingkat unit (semua ruangan) —</option>
+                                {% for r in ruangan_pilihan %}
+                                <option value="{{ r.pk }}">{{ r }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-footer bg-transparent d-flex justify-content-between">
+                    <a href="{% url 'akreditasi:logbook_daftar' %}" class="btn btn-sm btn-outline-secondary">Batal</a>
+                    <button class="btn btn-sm btn-primary"><i class="bi bi-journal-plus me-1"></i> Buat Logbook</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

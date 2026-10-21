@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+
+{% block title %}Logbook Harian IGD &amp; Rawat Inap — ARIMA{% endblock %}
+{% block page_title %}Logbook Harian IGD &amp; Rawat Inap{% endblock %}
+{% block page_subtitle %}Rekap shift dihitung dari EMR · checklist akreditasi · serah terima SBAR{% endblock %}
+
+{% block extra_css %}
+<style>
+    .tbl-logbook { table-layout: auto; width: 100%; font-size: .82rem; }
+    .tbl-logbook th, .tbl-logbook td { vertical-align: middle; }
+    .tbl-logbook thead th { white-space: nowrap; }
+    .tbl-logbook td.nama { max-width: 340px; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-3">
+
+    <div class="d-flex flex-wrap gap-2 align-items-end justify-content-between mb-3">
+        <form method="get" class="d-flex flex-wrap gap-2 align-items-end">
+            <div>
+                <label class="form-label small mb-1">Jenis</label>
+                <select name="jenis" class="form-select form-select-sm">
+                    <option value="">Semua jenis</option>
+                    {% for kode, label in jenis_pilihan %}
+                    <option value="{{ kode }}" {% if filter_jenis == kode %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
+                <label class="form-label small mb-1">Status</label>
+                <select name="status" class="form-select form-select-sm">
+                    <option value="">Semua status</option>
+                    {% for kode, label in status_pilihan %}
+                    <option value="{{ kode }}" {% if filter_status == kode %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
+                <label class="form-label small mb-1">Tanggal</label>
+                <input type="date" name="tanggal" value="{{ filter_tanggal }}" class="form-control form-control-sm">
+            </div>
+            <button class="btn btn-sm btn-outline-secondary" type="submit">
+                <i class="bi bi-funnel me-1"></i> Saring
+            </button>
+            {% if filter_jenis or filter_status or filter_tanggal %}
+            <a href="{% url 'akreditasi:logbook_daftar' %}" class="btn btn-sm btn-link">Reset</a>
+            {% endif %}
+        </form>
+
+        {% if boleh_buat %}
+        <a href="{% url 'akreditasi:logbook_buat' %}" class="btn btn-primary btn-sm">
+            <i class="bi bi-journal-plus me-1"></i> Buat Logbook Shift
+        </a>
+        {% endif %}
+    </div>
+
+    {% if not daftar %}
+    <div class="text-center py-5">
+        <i class="bi bi-journal-text" style="font-size:2.2rem; opacity:.35;"></i>
+        <p class="text-muted mt-2 mb-1">Belum ada logbook yang dapat Anda akses pada saringan ini.</p>
+        <p class="text-muted small mb-0">Logbook dibuat per unit, per tanggal, per shift — datanya ditarik dari kunjungan pasien.</p>
+    </div>
+    {% else %}
+    <div class="table-responsive">
+        <table class="table table-sm table-hover tbl-logbook">
+            <thead class="table-light">
+                <tr>
+                    <th>Tanggal</th>
+                    <th>Shift</th>
+                    <th>Jenis</th>
+                    <th>Unit / Ruangan</th>
+                    <th>Pasien</th>
+                    <th>Status</th>
+                    <th>Disetujui</th>
+                    <th class="text-end">Aksi</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for lb in daftar %}
+                <tr>
+                    <td class="text-nowrap">{{ lb.tanggal|date:"d/m/Y" }}</td>
+                    <td class="text-nowrap">{{ lb.get_shift_display }}</td>
+                    <td class="text-nowrap">{{ lb.get_jenis_display }}</td>
+                    <td class="nama">{{ lb.unit.name }}{% if lb.ruangan %} · {{ lb.ruangan.nama }}{% endif %}</td>
+                    <td>{{ lb.pasien.count }}</td>
+                    <td>
+                        {% if lb.status == 'DISETUJUI' %}
+                        <span class="badge bg-success-subtle text-success-emphasis">{{ lb.get_status_display }}</span>
+                        {% elif lb.status == 'DIISI' %}
+                        <span class="badge bg-warning-subtle text-warning-emphasis">{{ lb.get_status_display }}</span>
+                        {% else %}
+                        <span class="badge bg-secondary-subtle text-secondary-emphasis">{{ lb.get_status_display }}</span>
+                        {% endif %}
+                    </td>
+                    <td class="text-nowrap small text-muted">
+                        {% if lb.disetujui_oleh %}{{ lb.disetujui_oleh.get_full_name|default:lb.disetujui_oleh.username }}
+                        <br>{{ lb.disetujui_pada|date:"d/m/Y H:i" }}{% else %}—{% endif %}
+                    </td>
+                    <td class="text-end text-nowrap">
+                        <a href="{% url 'akreditasi:logbook_detail' lb.pk %}" class="btn btn-sm btn-outline-primary">Buka</a>
+                        <a href="{% url 'akreditasi:logbook_pdf' lb.pk %}" class="btn btn-sm btn-outline-secondary" target="_blank" rel="noopener">PDF</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    <p class="text-muted small mb-0">{{ jumlah }} logbook ditampilkan.</p>
+    {% endif %}
+</div>
+{% endblock %}
