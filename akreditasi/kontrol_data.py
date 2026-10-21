@@ -207,8 +207,12 @@ def _emr_block(unit_ids):
     }
     total_active = sum(by_jenis.values())
     if not total_active:
+        # Bentuk dict harus sama dengan cabang normal: pemanggil (mis.
+        # _kontrol_data_block) membaca key yang sama, dan KeyError di sini
+        # menjatuhkan seluruh endpoint ringkasan AI.
         return {'active_by_jenis': by_jenis, 'active_total': 0, 'cppt_gap': None,
                 'assessment_gap': None, 'bed_occupancy_pct': None,
+                'bed_scope': 'hospital', 'bed_total': None,
                 'cppt_total': None, 'assessment_total': None}
 
     annotated = visits.annotate(
