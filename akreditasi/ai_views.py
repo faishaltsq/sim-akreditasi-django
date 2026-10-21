@@ -656,5 +656,6 @@ def api_ai_narasi_laporan(request):
         isi_sekarang=(data.get('isi_sekarang') or '').strip()[:4000],
     )
     if not res.get('success'):
-        res = {**res, 'error': 'Gagal menyusun narasi laporan.'}
-    return JsonResponse(res, status=200 if res['success'] else 400)
+        return JsonResponse({'success': False, 'error': 'Gagal menyusun narasi laporan.'},
+                            status=400)
+    return JsonResponse(res, status=200)
