@@ -6,7 +6,7 @@
 
 {% block extra_css %}
 <style>
-    .badge-pita-biru   { background:#dbeafe; color:#1e40af; border:1px solid #93c5fd; }
+    .badge-pita-biru   { background:var(--primary-light); color:#2E3886; border:1px solid #B9C0F2; }
     .badge-pita-hijau  { background:#dcfce7; color:#15803d; border:1px solid #86efac; }
     .badge-pita-kuning { background:#fef9c3; color:#854d0e; border:1px solid #fde047; }
     .badge-pita-merah  { background:#fee2e2; color:#991b1b; border:1px solid #fca5a5; font-weight:700; }
@@ -65,28 +65,28 @@
             </div>
         </div>
         <div class="col-6 col-md-4 col-xl-2">
-            <div class="card stat-card border-0 shadow-sm p-3 h-100" style="background:#fffbeb; border-left:4px solid #f59e0b !important;">
+            <div class="card stat-card border-0 shadow-sm p-3 h-100" style="background:#fffbeb; border-left:4px solid var(--warning) !important;">
                 <div class="text-warning small fw-bold">KTD</div>
                 <div class="fs-3 fw-bold text-warning mt-1">{{ stats.ktd }}</div>
                 <div class="text-muted" style="font-size:0.72rem;">Kejadian Tdk Diharapkan</div>
             </div>
         </div>
         <div class="col-6 col-md-4 col-xl-2">
-            <div class="card stat-card border-0 shadow-sm p-3 h-100" style="background:#f0fdf4; border-left:4px solid #10b981 !important;">
+            <div class="card stat-card border-0 shadow-sm p-3 h-100" style="background:#f0fdf4; border-left:4px solid var(--success) !important;">
                 <div class="text-success small fw-bold">KNC</div>
                 <div class="fs-3 fw-bold text-success mt-1">{{ stats.knc }}</div>
                 <div class="text-muted" style="font-size:0.72rem;">Nyaris Cedera</div>
             </div>
         </div>
         <div class="col-6 col-md-4 col-xl-2">
-            <div class="card stat-card border-0 shadow-sm p-3 h-100" style="background:#faf5ff; border-left:4px solid #8b5cf6 !important;">
-                <div class="text-purple small fw-bold" style="color:#7c3aed;">PERLU INVESTIGASI</div>
-                <div class="fs-3 fw-bold mt-1" style="color:#7c3aed;">{{ stats.perlu_investigasi }}</div>
+            <div class="card stat-card border-0 shadow-sm p-3 h-100" style="background:#faf5ff; border-left:4px solid #8B7CF6 !important;">
+                <div class="text-purple small fw-bold" style="color:var(--accent);">PERLU INVESTIGASI</div>
+                <div class="fs-3 fw-bold mt-1" style="color:var(--accent);">{{ stats.perlu_investigasi }}</div>
                 <div class="text-muted" style="font-size:0.72rem;">Belum selesai</div>
             </div>
         </div>
         <div class="col-6 col-md-4 col-xl-2">
-            <div class="card stat-card border-0 shadow-sm p-3 h-100" style="background:#f8fafc; border-left:4px solid #64748b !important;">
+            <div class="card stat-card border-0 shadow-sm p-3 h-100" style="background:var(--body-bg); border-left:4px solid var(--text-secondary) !important;">
                 <div class="text-secondary small fw-bold">SELESAI</div>
                 <div class="fs-3 fw-bold text-secondary mt-1">{{ stats.selesai }}</div>
                 <div class="text-muted" style="font-size:0.72rem;">Investigasi tuntas</div>
@@ -210,7 +210,7 @@
                             <span class="badge bg-success px-2 py-1"><i class="bi bi-check2-circle me-1"></i>Selesai</span>
                             {% endif %}
                             {% if ins.rca_dilakukan %}
-                            <div class="mt-1" style="font-size:0.7rem; color:#7c3aed;"><i class="bi bi-diagram-3-fill"></i> RCA Aktif</div>
+                            <div class="mt-1" style="font-size:0.7rem; color:var(--accent);"><i class="bi bi-diagram-3-fill"></i> RCA Aktif</div>
                             {% endif %}
                         </td>
                         <td class="text-center">

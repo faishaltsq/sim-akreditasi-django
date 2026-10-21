@@ -10,20 +10,20 @@
         display: inline-flex; align-items: center; gap: .35rem;
         padding: .4rem .85rem; border-radius: 2rem;
         font-size: .78rem; font-weight: 600; text-decoration: none;
-        border: 1px solid #e2e8f0; color: #475569; background: #fff;
+        border: 1px solid var(--border); color: var(--text-secondary); background: #fff;
         white-space: nowrap; transition: all .15s;
     }
-    .poli-pill:hover { background: #f1f5f9; color: #1e293b; border-color: #cbd5e1; }
-    .poli-pill.active { background: #2563eb; color: #fff; border-color: #2563eb; }
+    .poli-pill:hover { background: var(--surface-hover); color: var(--brand-navy); border-color: var(--border-strong); }
+    .poli-pill.active { background: var(--primary-deep); color: #fff; border-color: var(--primary-deep); }
     .poli-pill .badge { font-size: .65rem; }
     .poli-scroll { overflow-x: auto; white-space: nowrap; -ms-overflow-style: none; scrollbar-width: none; }
     .poli-scroll::-webkit-scrollbar { display: none; }
 
     /* Queue Status Badges */
     .q-menunggu { background: #fef3c7; color: #92400e; border: 1px solid #fcd34d; padding: .25rem .55rem; border-radius: .35rem; font-size: .72rem; font-weight: 600; }
-    .q-dipanggil { background: #dbeafe; color: #1e40af; border: 1px solid #93c5fd; padding: .25rem .55rem; border-radius: .35rem; font-size: .72rem; font-weight: 600; animation: pulse-q 1.5s infinite; }
-    .q-dilayani { background: #d1fae5; color: #065f46; border: 1px solid #6ee7b7; padding: .25rem .55rem; border-radius: .35rem; font-size: .72rem; font-weight: 600; }
-    .q-selesai { background: #f3f4f6; color: #6b7280; border: 1px solid #d1d5db; padding: .25rem .55rem; border-radius: .35rem; font-size: .72rem; font-weight: 600; text-decoration: line-through; }
+    .q-dipanggil { background: var(--primary-light); color: #2E3886; border: 1px solid #B9C0F2; padding: .25rem .55rem; border-radius: .35rem; font-size: .72rem; font-weight: 600; animation: pulse-q 1.5s infinite; }
+    .q-dilayani { background: var(--success-light); color: var(--success-deep); border: 1px solid #93D8AC; padding: .25rem .55rem; border-radius: .35rem; font-size: .72rem; font-weight: 600; }
+    .q-selesai { background: var(--surface-hover); color: #6b7280; border: 1px solid var(--border-strong); padding: .25rem .55rem; border-radius: .35rem; font-size: .72rem; font-weight: 600; text-decoration: line-through; }
     @keyframes pulse-q { 0%,100%{opacity:1;} 50%{opacity:.5;} }
 </style>
 {% endblock %}
@@ -34,7 +34,7 @@
     <!-- HERO BANNER -->
     <div class="card border-0 shadow-sm mb-4 overflow-hidden" style="border-radius: 1rem;">
         <div class="card-body p-0">
-            <div class="d-flex align-items-center" style="background: #1E3A8A; min-height: 105px;">
+            <div class="d-flex align-items-center" style="background: #232C66; min-height: 105px;">
                 <div class="d-flex align-items-center justify-content-center flex-shrink-0 px-4 px-md-5" style="min-height:105px;">
                     <i class="bi bi-hospital-fill text-white" style="font-size: 2.8rem; opacity: .9;"></i>
                 </div>
@@ -187,7 +187,7 @@
                                                 </a>
                                             </li>
                                             <li>
-                                                <a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#modalConsentR{{ k.pk }}" style="color:#0F766E;">
+                                                <a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#modalConsentR{{ k.pk }}" style="color:var(--primary);">
                                                     <i class="bi bi-file-earmark-check me-1"></i> General Consent Ranap
                                                 </a>
                                             </li>
@@ -512,8 +512,8 @@
                                 <div class="modal-content">
                                     <form method="POST" action="{% url 'pasien:general_consent_simpan' k.pk %}">
                                         {% csrf_token %}
-                                        <div class="modal-header" style="background:#ccfbf1;">
-                                            <h6 class="modal-title fw-bold" style="color:#0F766E;"><i class="bi bi-file-earmark-check me-1"></i> Formulir General Consent Rawat Inap — {{ k.pasien.nama_lengkap }}</h6>
+                                        <div class="modal-header" style="background:var(--primary-light);">
+                                            <h6 class="modal-title fw-bold" style="color:var(--primary);"><i class="bi bi-file-earmark-check me-1"></i> Formulir General Consent Rawat Inap — {{ k.pasien.nama_lengkap }}</h6>
                                             <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                                         </div>
                                         <div class="modal-body">
@@ -555,7 +555,7 @@
                                                 </div>
                                             </div>
                                             <hr class="my-2">
-                                            <div class="small fw-bold mb-2" style="color:#0F766E;"><i class="bi bi-shield-check me-1"></i> Persetujuan (STARKES HPK 1.1)</div>
+                                            <div class="small fw-bold mb-2" style="color:var(--primary);"><i class="bi bi-shield-check me-1"></i> Persetujuan (STARKES HPK 1.1)</div>
                                             <div class="form-check mb-1"><input class="form-check-input" type="checkbox" name="setuju_perawatan_umum" value="1" checked id="conRPerawatan{{ k.pk }}"><label class="form-check-label small" for="conRPerawatan{{ k.pk }}">Setuju Perawatan & Tindakan Medis Umum</label></div>
                                             <div class="form-check mb-1"><input class="form-check-input" type="checkbox" name="setuju_pelepasan_informasi" value="1" checked id="conRInfo{{ k.pk }}"><label class="form-check-label small" for="conRInfo{{ k.pk }}">Setuju Pelepasan Informasi Medis & Privasi</label></div>
                                             <div class="form-check mb-1"><input class="form-check-input" type="checkbox" name="setuju_tata_tertib" value="1" checked id="conRTatib{{ k.pk }}"><label class="form-check-label small" for="conRTatib{{ k.pk }}">Setuju Tata Tertib Rawat Inap & Jam Besuk</label></div>
@@ -568,7 +568,7 @@
                                         <div class="modal-footer">
                                             <a href="{% url 'pasien:cetak_general_consent' k.pk %}" class="btn btn-outline-secondary btn-sm me-auto" target="_blank"><i class="bi bi-printer me-1"></i> Cetak A4</a>
                                             <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Batal</button>
-                                            <button type="submit" class="btn btn-sm px-3 fw-semibold" style="background:#0F766E; color:#fff; border:none;"><i class="bi bi-check-circle me-1"></i> Simpan Consent</button>
+                                            <button type="submit" class="btn btn-sm px-3 fw-semibold" style="background:var(--primary); color:#fff; border:none;"><i class="bi bi-check-circle me-1"></i> Simpan Consent</button>
                                         </div>
                                     </form>
                                 </div>

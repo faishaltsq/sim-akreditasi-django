@@ -12,7 +12,7 @@
     }
     body { background: #fff; color: #000; font-family: 'Segoe UI', Arial, sans-serif; font-size: 8.5pt; }
     .header-box { border-bottom: 3px double #000; padding-bottom: 6px; margin-bottom: 8px; }
-    .section-title { font-weight: bold; text-transform: uppercase; font-size: 8pt; background: #e9ecef; padding: 2px 6px; margin-top: 6px; margin-bottom: 4px; border-left: 3px solid #dc3545; }
+    .section-title { font-weight: bold; text-transform: uppercase; font-size: 8pt; background: #e9ecef; padding: 2px 6px; margin-top: 6px; margin-bottom: 4px; border-left: 3px solid var(--danger); }
     .table-sm th, .table-sm td { padding: 2px 4px; font-size: 8pt; vertical-align: middle; }
     .table-sm th { background: #f8f9fa; }
     .ck { display: inline-block; width: 11px; height: 11px; border: 1px solid #000; margin-right: 3px; vertical-align: middle; text-align: center; font-size: 8pt; line-height: 11px; }
@@ -36,7 +36,7 @@
     <small>JL. SEHAT UTAMA NO. 123 | TELP: (0286) 123456</small>
   </div>
   <div class="text-end border p-2 rounded">
-    <div class="fw-bold" style="font-size: 10pt; color: #dc3545;">FORMULIR PERMINTAAN<br>PEMERIKSAAN LABORATORIUM</div>
+    <div class="fw-bold" style="font-size: 10pt; color: var(--danger);">FORMULIR PERMINTAAN<br>PEMERIKSAAN LABORATORIUM</div>
     <small class="text-muted">Order ID: {% if order %}{{ order.pk }}{% else %}NEW{% endif %}</small>
   </div>
 </div>

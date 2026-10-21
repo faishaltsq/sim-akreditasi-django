@@ -40,9 +40,9 @@
             {% endif %}
             {% if alert_stats.lt_60 %}
             <div class="col-6 col-md-3">
-                <div class="card border-info border-2 shadow-sm" style="border-color:#f59e0b!important;">
+                <div class="card border-info border-2 shadow-sm" style="border-color:var(--warning)!important;">
                     <div class="card-body py-2 px-3 d-flex align-items-center gap-2">
-                        <i class="bi bi-clock-history fs-4" style="color:#f59e0b;"></i>
+                        <i class="bi bi-clock-history fs-4" style="color:var(--warning);"></i>
                         <div>
                             <div class="fw-bold fs-5" style="color:#d97706;">{{ alert_stats.lt_60|length }}</div>
                             <div class="text-muted" style="font-size:.72rem;">Habis dalam <strong>≤ 60 hari</strong></div>
@@ -155,7 +155,7 @@
                                     <td><span class="badge bg-light text-dark border" style="font-size:.65rem;">{{ c.get_doc_type_display }}</span></td>
                                     <td>{{ c.title|truncatechars:40 }}</td>
                                     <td class="font-monospace fw-semibold" style="color:#d97706;">{{ c.valid_until|date:"d M Y" }}</td>
-                                    <td><span class="badge" style="background:#f59e0b; color:#fff;">{{ c.valid_until|timeuntil }}</span></td>
+                                    <td><span class="badge" style="background:var(--warning); color:#fff;">{{ c.valid_until|timeuntil }}</span></td>
                                 </tr>
                                 {% endfor %}
                             </tbody>
@@ -228,7 +228,7 @@
             <div class="card border-0 shadow-sm mb-3" style="border-radius: 10px;">
                 <div class="card-header bg-white d-flex justify-content-between align-items-center py-3 px-4">
                     <div class="d-flex align-items-center gap-3">
-                        <div style="width:42px; height:42px; border-radius:50%; background:#eff6ff; color:#3b82f6; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:1.1rem;">
+                        <div style="width:42px; height:42px; border-radius:50%; background:var(--primary-tint); color:var(--primary); display:flex; align-items:center; justify-content:center; font-weight:700; font-size:1.1rem;">
                             {{ nakes.full_name|default:nakes.user.username|first|upper }}
                         </div>
                         <div>

@@ -12,11 +12,11 @@
         .main-content { margin-left: 0 !important; }
         body { background: #fff !important; font-size: 10pt; }
         .content-area { padding: 0 !important; }
-        .table th { background: #f1f5f9 !important; color: #0f172a !important; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+        .table th { background: var(--surface-hover) !important; color: var(--text-primary) !important; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
         .card { break-inside: avoid; border: 1px solid #ddd !important; box-shadow: none !important; }
         .metric-ribbon { grid-template-columns: repeat(3, 1fr) !important; gap: 0.5rem !important; }
         .table-card { box-shadow: none !important; }
-        .pokja-group-header { background: #F1F5F9 !important; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+        .pokja-group-header { background: var(--surface-hover) !important; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
     }
 </style>
 {% endblock %}
@@ -139,7 +139,7 @@
                 {% regroup items by category as grouped_items %}
                 {% for group in grouped_items %}
                 <tr class="pokja-group-header">
-                    <td colspan="8" class="fw-bold py-2 px-3" style="background: #F1F5F9; font-size: 0.78rem; border-bottom: 2px solid var(--primary);">
+                    <td colspan="8" class="fw-bold py-2 px-3" style="background: var(--surface-hover); font-size: 0.78rem; border-bottom: 2px solid var(--primary);">
                         <span class="font-mono text-primary me-2">{{ group.grouper.code }}</span>
                         {{ group.grouper.name }}
                     </td>

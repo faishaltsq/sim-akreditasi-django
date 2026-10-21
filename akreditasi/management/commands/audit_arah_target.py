@@ -1,6 +1,10 @@
 from django.core.management.base import BaseCommand
 
+import re
+
 from akreditasi.risiko_models import IndikatorMutu
+
+_RE_NOL = re.compile(r'\(\s*0\s*%\s*\)')
 
 # ponytail: dua sinyal independen untuk arah indikator, bukan satu daftar kata.
 #  1) TANDA EKSPRESI — dibaca dari teks target yang sudah tertulis di nama
@@ -35,7 +39,9 @@ def arah_dari_tanda(nama):
     if '>' in nama:
         return 'MIN'
     # Target eksplisit nol: "Angka Kejadian ... (0%)" = wajib ditekan ke nol.
-    if '0%)' in nama:
+    # Harus persis nol — '0%)' juga cocok pada '(100%)' dan membalik arah
+    # puluhan indikator kepatuhan.
+    if _RE_NOL.search(nama):
         return 'MAX'
     return None
 

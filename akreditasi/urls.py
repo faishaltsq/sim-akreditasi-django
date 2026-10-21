@@ -1,25 +1,19 @@
 from django.urls import path
-from . import logbook as logbook_views
 from . import views
 from . import risiko_views
 from . import ai_views
 from . import indikator_views
-from . import mutu_laporan
-from . import kontrol_views
+from . import search_views
 
 app_name = 'akreditasi'
 
 urlpatterns = [
-    # Dasbor Eksekutif — Hospital Integrated Control (tanpa sidebar)
-    path('control/', kontrol_views.kontrol_hub, name='kontrol_hub'),
-    path('control/risiko/', kontrol_views.kontrol_risiko, name='kontrol_risiko'),
-    path('control/emr/', kontrol_views.kontrol_emr, name='kontrol_emr'),
-    path('control/dokumen/', kontrol_views.kontrol_dokumen, name='kontrol_dokumen'),
-    path('control/ringkasan-ai/', kontrol_views.kontrol_ringkasan_ai, name='kontrol_ringkasan_ai'),
-
     # Dashboard Utama
     path('', views.dashboard, name='dashboard'),
     path('dashboard/', views.dashboard, name='dashboard_alias'),
+
+    # Pencarian terpadu lintas modul (V3)
+    path('pencarian/', search_views.pencarian, name='pencarian'),
 
     # Matriks PDCA (Halaman Inti per Pokja)
     path('matriks/', views.matriks_pdca, name='matriks_pdca'),
@@ -107,40 +101,15 @@ urlpatterns = [
     # Modul Indikator Mutu — INM + IMP-RS (Renstra 2026–2030)
     path('indikator-mutu/', indikator_views.indikator_dashboard, name='indikator_dashboard'),
     path('indikator-mutu/baru/', indikator_views.indikator_tambah, name='indikator_tambah'),
+    path('indikator-mutu/matriks-inm/', indikator_views.indikator_inm_matrix, name='indikator_inm_matrix'),
     path('indikator-mutu/<int:indikator_id>/', indikator_views.indikator_detail, name='indikator_detail'),
     path('indikator-mutu/<int:indikator_id>/edit/', indikator_views.indikator_edit, name='indikator_edit'),
     path('indikator-mutu/<int:indikator_id>/capaian/', indikator_views.indikator_input_capaian, name='indikator_input_capaian'),
     path('indikator-mutu/api/tren/<int:indikator_id>/', indikator_views.api_indikator_tren, name='api_indikator_tren'),
     path('indikator-mutu/api/komparasi-unit/', indikator_views.api_indikator_komparasi_unit, name='api_indikator_komparasi_unit'),
 
-    # Modul Laporan Capaian Indikator Mutu (bulanan / semester / tahunan)
-    path('laporan-mutu/', mutu_laporan.laporan_mutu_daftar, name='laporan_mutu_daftar'),
-    path('laporan-mutu/baru/', mutu_laporan.laporan_mutu_create, name='laporan_mutu_create'),
-    path('laporan-mutu/<int:pk>/', mutu_laporan.laporan_mutu_detail, name='laporan_mutu_detail'),
-    path('laporan-mutu/<int:pk>/analisis/', mutu_laporan.laporan_mutu_simpan_analisis, name='laporan_mutu_simpan_analisis'),
-    path('laporan-mutu/<int:pk>/tarik-monev/', mutu_laporan.laporan_mutu_tarik_monev, name='laporan_mutu_tarik_monev'),
-    path('laporan-mutu/<int:pk>/seksi/', mutu_laporan.laporan_mutu_simpan_seksi, name='laporan_mutu_simpan_seksi'),
-    path('laporan-mutu/<int:pk>/verifikasi/', mutu_laporan.laporan_mutu_verifikasi, name='laporan_mutu_verifikasi'),
-    path('laporan-mutu/<int:pk>/setujui/', mutu_laporan.laporan_mutu_setujui, name='laporan_mutu_setujui'),
-    path('laporan-mutu/<int:pk>/regenerasi/', mutu_laporan.laporan_mutu_regenerasi, name='laporan_mutu_regenerasi'),
-    path('laporan-mutu/<int:pk>/cetak/', mutu_laporan.laporan_mutu_cetak, name='laporan_mutu_cetak'),
-    path('laporan-mutu/<int:pk>/pdf/', mutu_laporan.laporan_mutu_pdf, name='laporan_mutu_pdf'),
-
     # Panduan / Dokumentasi Interaktif
     path('panduan/', views.panduan_dokumentasi, name='panduan'),
-
-    # ── Logbook Harian IGD & Rawat Inap (per shift, angka ditarik dari EMR) ──
-    path('logbook/', logbook_views.logbook_daftar, name='logbook_daftar'),
-    path('logbook/buat/', logbook_views.logbook_buat, name='logbook_buat'),
-    path('logbook/<int:pk>/', logbook_views.logbook_detail, name='logbook_detail'),
-    path('logbook/<int:pk>/simpan-pasien/', logbook_views.logbook_simpan_pasien, name='logbook_simpan_pasien'),
-    path('logbook/<int:pk>/simpan-checklist/', logbook_views.logbook_simpan_checklist, name='logbook_simpan_checklist'),
-    path('logbook/<int:pk>/simpan-narasi/', logbook_views.logbook_simpan_narasi, name='logbook_simpan_narasi'),
-    path('logbook/<int:pk>/kejadian/', logbook_views.logbook_simpan_kejadian, name='logbook_simpan_kejadian'),
-    path('logbook/<int:pk>/bukti/', logbook_views.logbook_unggah_bukti, name='logbook_unggah_bukti'),
-    path('logbook/<int:pk>/serah-terima/', logbook_views.logbook_serah_terima, name='logbook_serah_terima'),
-    path('logbook/<int:pk>/setujui/', logbook_views.logbook_setujui, name='logbook_setujui'),
-    path('logbook/<int:pk>/pdf/', logbook_views.logbook_pdf, name='logbook_pdf'),
 
     # ── Endpoint AI Asisten Cerdas DeepSeek (backend-only, tidak ada API Key di response) ──
     path('ai/mitigasi-risiko/', ai_views.api_ai_mitigasi_risiko, name='ai_mitigasi_risiko'),
@@ -151,10 +120,6 @@ urlpatterns = [
     path('ai/evaluasi-risiko/', ai_views.api_ai_evaluasi_risiko, name='ai_evaluasi_risiko'),
     path('ai/rdwos-analisis/', ai_views.api_ai_rdwos_analisis, name='ai_rdwos_analisis'),
     path('ai/rumus-indikator/', ai_views.api_ai_rumus_indikator, name='api_ai_rumus_indikator'),
-    path('ai/ep-rekomendasi/', ai_views.api_ai_ep_rekomendasi, name='api_ai_ep_rekomendasi'),
-    path('ai/ep-terapkan/', ai_views.api_ai_ep_terapkan, name='api_ai_ep_terapkan'),
-    path('ai/ep-lepas/', ai_views.api_ai_ep_lepas, name='api_ai_ep_lepas'),
     path('ai/analisis-masalah-risiko/', ai_views.api_ai_analisis_masalah_risiko, name='api_ai_analisis_masalah_risiko'),
     path('ai/test-connection/', ai_views.api_ai_test_connection, name='ai_test_connection'),
-    path('ai/narasi-laporan/', ai_views.api_ai_narasi_laporan, name='api_ai_narasi_laporan'),
 ]
