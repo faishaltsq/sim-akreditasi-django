@@ -29,6 +29,16 @@ ALLOWED_HOSTS += [
     'sim-akreditasi-web-production.up.railway.app',
     'testserver',
 ]
+# Preview deployment Vercel memakai hostname acak per build. Tambahkan host
+# deployment yang sedang berjalan dari env (satu host spesifik, tetap bukan
+# wildcard) supaya preview tidak kena DisallowedHost 400.
+for _host_var in ('VERCEL_URL', 'VERCEL_BRANCH_URL',
+                  'VERCEL_PROJECT_PRODUCTION_URL'):
+    _host = (os.environ.get(_host_var) or '').strip()
+    if _host:
+        _host = _host.replace('https://', '').replace('http://', '').strip('/')
+        if _host and _host not in ALLOWED_HOSTS:
+            ALLOWED_HOSTS.append(_host)
 
 CSRF_TRUSTED_ORIGINS = [
     o.strip()
@@ -39,6 +49,13 @@ CSRF_TRUSTED_ORIGINS += [
     'https://sim-akreditasi-django.vercel.app',
     'https://sim-akreditasi-web-production.up.railway.app',
 ]
+for _host_var in ('VERCEL_URL', 'VERCEL_BRANCH_URL',
+                  'VERCEL_PROJECT_PRODUCTION_URL'):
+    _host = (os.environ.get(_host_var) or '').strip()
+    if _host:
+        _origin = 'https://' + _host.replace('https://', '').replace('http://', '').strip('/')
+        if _origin not in CSRF_TRUSTED_ORIGINS:
+            CSRF_TRUSTED_ORIGINS.append(_origin)
 
 CSRF_FAILURE_VIEW = 'akreditasi.views.custom_csrf_failure'
 
