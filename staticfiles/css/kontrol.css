@@ -831,6 +831,194 @@ body.kontrol-body {
     background: rgba(14, 165, 233, 0.12);
 }
 
+/* ── layanan unit ───────────────────────────────────────── */
+
+.kontrol-layanan {
+    margin: 24px 0 8px;
+    padding: 20px;
+    border: 1px solid var(--k-line);
+    border-radius: var(--k-radius);
+    background: var(--k-panel);
+}
+
+.layanan-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-bottom: 14px;
+}
+
+.layanan-head h2 {
+    font-size: 0.98rem;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    margin: 0;
+    color: #eaf3fc;
+}
+
+.layanan-head .kontrol-eyebrow { margin-bottom: 6px; }
+
+.layanan-date {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.68rem;
+    letter-spacing: 0.06em;
+    color: var(--k-dim);
+    padding-top: 4px;
+}
+
+.layanan-entry {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 13px 15px;
+    border-radius: 11px;
+    border: 1px solid var(--k-line);
+    background: rgba(255, 255, 255, 0.035);
+    color: var(--k-text);
+    text-decoration: none;
+    transition: 160ms ease;
+}
+
+.layanan-entry + .layanan-entry { margin-top: 8px; }
+
+.layanan-entry:hover {
+    border-color: var(--k-line-strong);
+    background: rgba(14, 165, 233, 0.12);
+}
+
+.layanan-entry-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    border-radius: 9px;
+    background: rgba(34, 211, 238, 0.12);
+    color: var(--k-cyan);
+    flex-shrink: 0;
+}
+
+.layanan-entry-text {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    flex: 1;
+    min-width: 0;
+}
+
+.layanan-entry-text strong { font-size: 0.84rem; font-weight: 600; }
+
+.layanan-entry-text small {
+    font-size: 0.7rem;
+    color: var(--k-dim);
+    font-family: 'JetBrains Mono', monospace;
+}
+
+.layanan-entry-count {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--k-cyan);
+    white-space: nowrap;
+}
+
+.layanan-entry-go { color: var(--k-dim); font-size: 0.8rem; }
+
+.layanan-empty,
+.layanan-note {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    font-size: 0.78rem;
+    color: var(--k-muted);
+    line-height: 1.6;
+    margin: 0;
+}
+
+.layanan-note { margin-top: 10px; color: var(--k-watch); }
+
+@media (max-width: 640px) {
+    .layanan-entry-count { display: none; }
+    .layanan-date { font-size: 0.62rem; }
+}
+
+.kontrol-layanan-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin: 4px 0 18px;
+}
+
+.layanan-nav { display: flex; gap: 8px; flex-wrap: wrap; }
+
+.layanan-nav .disabled {
+    opacity: 0.45;
+    pointer-events: none;
+}
+
+.layanan-filter .form-select {
+    background: var(--k-panel-solid);
+    border-color: var(--k-line);
+    color: var(--k-text);
+    font-size: 0.78rem;
+    min-width: 150px;
+}
+
+.layanan-table { color: var(--k-text); font-size: 0.78rem; }
+
+.layanan-table thead th {
+    font-size: 0.66rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--k-dim);
+    font-weight: 600;
+    border-bottom: 1px solid var(--k-line);
+    white-space: nowrap;
+}
+
+.layanan-table tbody td { border-color: rgba(120, 168, 214, 0.1); }
+
+.layanan-table .mono {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.74rem;
+    color: var(--k-muted);
+    white-space: nowrap;
+}
+
+.layanan-nama { font-weight: 600; }
+
+.layanan-sub {
+    font-size: 0.68rem;
+    color: var(--k-dim);
+    font-family: 'JetBrains Mono', monospace;
+}
+
+.layanan-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-size: 0.66rem;
+    font-weight: 600;
+    border: 1px solid var(--k-line-strong);
+    color: var(--k-muted);
+}
+
+.layanan-badge-daftar,
+.layanan-badge-triage { color: var(--k-watch); border-color: rgba(251, 191, 36, 0.4); }
+
+.layanan-badge-asesmen,
+.layanan-badge-ranap { color: var(--k-cyan); border-color: rgba(34, 211, 238, 0.4); }
+
+.layanan-badge-pulang { color: var(--k-good); border-color: rgba(52, 211, 153, 0.4); }
+
+.layanan-badge-rujuk,
+.layanan-badge-meninggal,
+.layanan-badge-batal { color: var(--k-critical); border-color: rgba(248, 113, 113, 0.4); }
+
 /* ── misc ───────────────────────────────────────────────── */
 
 .kontrol-note {
