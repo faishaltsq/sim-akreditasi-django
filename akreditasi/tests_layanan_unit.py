@@ -399,3 +399,48 @@ class LayananBlockTemplateTest(TestCase):
         body = self.client.get(reverse('akreditasi:kontrol_emr')).content.decode()
         self.assertIn('tidak memiliki layanan pendaftaran pasien', body)
         self.assertNotIn('0 pasien', body)
+
+
+class IndicatorBlockRegressionTest(TestCase):
+    """``tercapai`` adalah @property, bukan kolom — jangan pernah difilter di SQL.
+
+    Bug ini lolos dari test lama karena ``_indicator_block`` keluar lebih awal
+    saat belum ada ``CatatanIndikator``; di database nyata yang sudah punya
+    catatan, setiap halaman kontrol melempar FieldError dan 500.
+    """
+
+    def setUp(self):
+        from akreditasi.risiko_models import CatatanIndikator, IndikatorMutu
+
+        self.unit = _unit('POLI-JANTUNG', 'Poliklinik Jantung & Pembuluh Darah', 4)
+        self.indikator = IndikatorMutu.objects.create(
+            unit=self.unit, kode_indikator='INM-REG-1',
+            nama_indikator='Kepatuhan Kebersihan Tangan',
+            target_nilai=85, arah_target='MIN', aktif=True)
+        CatatanIndikator.objects.create(
+            indikator=self.indikator, bulan=1, tahun=timezone.localdate().year,
+            nilai_numerator=90, nilai_denominator=100)
+        CatatanIndikator.objects.create(
+            indikator=self.indikator, bulan=2, tahun=timezone.localdate().year,
+            nilai_numerator=70, nilai_denominator=100)
+
+    def test_block_counts_on_target_without_field_error(self):
+        from akreditasi.kontrol_data import _indicator_block
+        blk = _indicator_block({self.unit.pk}, timezone.localdate().year)
+        self.assertEqual(blk['catatan_total'], 2)
+        self.assertEqual(blk['on_target'], 1)
+        self.assertEqual(blk['below_target'], 1)
+
+    def test_dashboard_renders_with_indicator_rows(self):
+        from django.contrib.auth import get_user_model
+        from accounts.models import UserProfile
+        from django.core.cache import cache
+        from django.urls import reverse
+
+        cache.clear()
+        user = get_user_model().objects.create_user('kep.ind', 'ki@rs.id', 'p')
+        UserProfile.objects.create(user=user, role='KEPALA_UNIT', unit_kerja=self.unit)
+        self.client.force_login(user)
+        res = self.client.get(reverse('akreditasi:kontrol_emr'))
+        self.assertEqual(res.status_code, 200)
+        cache.clear()

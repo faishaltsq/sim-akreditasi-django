@@ -154,7 +154,12 @@ def _indicator_block(unit_ids, year, profile=None):
         return {'total': ind_qs.count() or None, 'on_target': None,
                 'below_target': None, 'avg_pct': None, 'catatan_total': 0}
 
-    on_target = cat.filter(tercapai=True).count()
+    # ``CatatanIndikator.tercapai`` adalah @property (capaian vs target dengan
+    # polaritas arah_target), bukan kolom — memfilternya di SQL melempar
+    # FieldError dan membuat SETIAP halaman kontrol 500 begitu ada satu baris
+    # catatan. Dihitung di Python; jumlahnya dibatasi 12 baris per indikator
+    # per tahun, dan select_related menjaga ini tetap satu query.
+    on_target = sum(1 for r in cat.select_related('indikator') if r.tercapai)
     avg_raw = (
         cat.filter(nilai_denominator__gt=0)
         .annotate(pct=ExpressionWrapper(
