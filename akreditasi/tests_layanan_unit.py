@@ -334,3 +334,68 @@ class LayananPageQueryBudgetTest(TestCase):
         self.assertLessEqual(len(ctx.captured_queries), self.BUDGET,
                              f'{len(ctx.captured_queries)} query, anggaran {self.BUDGET}')
         cache.clear()
+
+
+class LayananBlockTemplateTest(TestCase):
+    def setUp(self):
+        from django.contrib.auth import get_user_model
+        from accounts.models import UserProfile
+        from django.core.cache import cache
+
+        cache.clear()
+        self.unit = _unit('POLI-JANTUNG', 'Poliklinik Jantung & Pembuluh Darah', 4)
+        self.pasien = _pasien('RM-TPL')
+        KunjunganPasien.objects.create(
+            pasien=self.pasien, no_kunjungan='K-TPL-1', jenis_kunjungan='RAJAL',
+            poliklinik='Poli Jantung & Pembuluh Darah',
+            tanggal_masuk=timezone.now(), status='DAFTAR')
+        user = get_user_model().objects.create_user('kep.tpl', 'kt@rs.id', 'p')
+        UserProfile.objects.create(user=user, role='KEPALA_UNIT', unit_kerja=self.unit)
+        self.client.force_login(user)
+
+    def tearDown(self):
+        from django.core.cache import cache
+        cache.clear()
+
+    def test_block_renders_heading_and_date(self):
+        from django.urls import reverse
+
+        res = self.client.get(reverse('akreditasi:kontrol_emr'))
+        body = res.content.decode()
+        self.assertIn('LAYANAN UNIT', body.upper())
+        self.assertIn('Poliklinik Jantung &amp; Pembuluh Darah', body)
+        self.assertIn('Daftar layanan pasien hari ini', body)
+        self.assertIn(timezone.localdate().strftime('%Y'), body)
+
+    def test_generic_strip_is_gone(self):
+        from django.urls import reverse
+
+        body = self.client.get(reverse('akreditasi:kontrol_emr')).content.decode()
+        self.assertNotIn('kontrol-modlinks', body)
+        for label in ('Daftar kunjungan', 'Rawat jalan', 'Rekap KPS'):
+            with self.subTest(label=label):
+                self.assertNotIn(label, body)
+
+    def test_block_present_on_risk_and_document_dashboards(self):
+        from django.urls import reverse
+
+        for name in ('kontrol_risiko', 'kontrol_dokumen'):
+            with self.subTest(name=name):
+                body = self.client.get(reverse('akreditasi:' + name)).content.decode()
+                self.assertIn('LAYANAN UNIT', body.upper())
+
+    def test_unmapped_unit_explains_itself(self):
+        from django.contrib.auth import get_user_model
+        from accounts.models import UserProfile
+        from django.core.cache import cache
+        from django.urls import reverse
+
+        komite = _unit('KOMITE-MUTU', 'Komite Mutu PMKP & Keselamatan Pasien', 2)
+        user = get_user_model().objects.create_user('komite.tpl', 'km@rs.id', 'p')
+        UserProfile.objects.create(user=user, role='KEPALA_UNIT', unit_kerja=komite)
+        self.client.force_login(user)
+        cache.clear()
+
+        body = self.client.get(reverse('akreditasi:kontrol_emr')).content.decode()
+        self.assertIn('tidak memiliki layanan pendaftaran pasien', body)
+        self.assertNotIn('0 pasien', body)

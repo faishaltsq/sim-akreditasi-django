@@ -76,11 +76,5 @@
 
 {% include "akreditasi/kontrol/_ai_panel.html" %}
 
-<section class="kontrol-modlinks">
-    <a href="{% url 'pasien:kunjungan_daftar' %}"><i class="bi bi-clipboard2-pulse"></i> Daftar kunjungan</a>
-    <a href="{% url 'pasien:igd_dashboard' %}"><i class="bi bi-hospital"></i> IGD</a>
-    <a href="{% url 'pasien:rajal_dashboard' %}"><i class="bi bi-door-open"></i> Rawat jalan</a>
-    <a href="{% url 'pasien:bed_management' %}"><i class="bi bi-layout-three-columns"></i> Bed management</a>
-    <a href="{% url 'akreditasi:rekap_kps' %}"><i class="bi bi-person-badge"></i> Rekap KPS</a>
-</section>
+{% include "akreditasi/kontrol/_layanan_unit.html" %}
 {% endblock %}

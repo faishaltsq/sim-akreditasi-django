@@ -1,0 +1,48 @@
+{% if snapshot.layanan %}
+<section class="kontrol-layanan">
+    <header class="layanan-head">
+        <div>
+            <span class="kontrol-eyebrow"><i class="bi bi-diagram-2"></i> Layanan Unit</span>
+            <h2>{{ snapshot.unit.name }}</h2>
+        </div>
+        <span class="layanan-date">{{ snapshot.layanan.tanggal|date:"l, j F Y" }}</span>
+    </header>
+
+    {% if not snapshot.layanan.mapped %}
+    <p class="layanan-empty">
+        <i class="bi bi-info-circle"></i>
+        Unit ini tidak memiliki layanan pendaftaran pasien langsung, sehingga tidak ada daftar kunjungan harian.
+    </p>
+    {% else %}
+    <a class="layanan-entry" href="{% url 'akreditasi:kontrol_layanan' %}?unit={{ snapshot.unit.id }}&tanggal={{ snapshot.layanan.tanggal|date:'Y-m-d' }}">
+        <span class="layanan-entry-icon"><i class="bi bi-clipboard2-pulse"></i></span>
+        <span class="layanan-entry-text">
+            <strong>Daftar layanan pasien hari ini</strong>
+            <small>{{ snapshot.layanan.tanggal|date:"j F Y" }}</small>
+        </span>
+        <span class="layanan-entry-count">
+            {% if snapshot.layanan.total %}{{ snapshot.layanan.total }} pasien{% else %}Belum ada pasien{% endif %}
+        </span>
+        <i class="bi bi-arrow-right layanan-entry-go"></i>
+    </a>
+
+    {% if snapshot.layanan.owns_beds %}
+    <a class="layanan-entry layanan-entry-sub" href="{% url 'pasien:bed_management' %}">
+        <span class="layanan-entry-icon"><i class="bi bi-grid-3x3-gap"></i></span>
+        <span class="layanan-entry-text">
+            <strong>Bed &amp; okupansi</strong>
+            <small>Ketersediaan tempat tidur unit ini</small>
+        </span>
+        <i class="bi bi-arrow-right layanan-entry-go"></i>
+    </a>
+    {% endif %}
+
+    {% if snapshot.layanan.truncated %}
+    <p class="layanan-note">
+        <i class="bi bi-exclamation-triangle"></i>
+        Daftar dipotong pada {{ snapshot.layanan.total }} baris pertama hari ini.
+    </p>
+    {% endif %}
+    {% endif %}
+</section>
+{% endif %}
