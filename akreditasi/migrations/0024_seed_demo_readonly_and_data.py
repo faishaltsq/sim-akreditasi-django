@@ -1,17 +1,12 @@
+"""Seed data demo — dipindah ke 0041.
+
+Alasan sama dengan ``0023``: seed ini memanggil management command yang memakai
+model hidup, sementara kolom yang dibutuhkannya baru ada setelah ``0027``.
+Seed-nya kini dijalankan ``0041_seed_indikator_mutu_renstra`` setelah skema
+lengkap.
+"""
+
 from django.db import migrations
-
-
-import sys
-
-def run_seed_demo(apps, schema_editor):
-    if 'test' in sys.argv:
-        return
-    from django.core.management import call_command
-    call_command('seed_demo_data')
-
-
-def reverse_seed_demo(apps, schema_editor):
-    pass
 
 
 class Migration(migrations.Migration):
@@ -20,6 +15,4 @@ class Migration(migrations.Migration):
         ('akreditasi', '0023_seed_indikator_mutu_renstra'),
     ]
 
-    operations = [
-        migrations.RunPython(run_seed_demo, reverse_seed_demo),
-    ]
+    operations = []
