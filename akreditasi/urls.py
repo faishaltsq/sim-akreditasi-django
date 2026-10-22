@@ -15,6 +15,7 @@ urlpatterns = [
     path('control/risiko/', kontrol_views.kontrol_risiko, name='kontrol_risiko'),
     path('control/emr/', kontrol_views.kontrol_emr, name='kontrol_emr'),
     path('control/dokumen/', kontrol_views.kontrol_dokumen, name='kontrol_dokumen'),
+    path('control/layanan/', kontrol_views.kontrol_layanan, name='kontrol_layanan'),
     path('control/ringkasan-ai/', kontrol_views.kontrol_ringkasan_ai, name='kontrol_ringkasan_ai'),
 
     # Dashboard Utama

@@ -1,0 +1,107 @@
+{% extends "akreditasi/kontrol/base_kontrol.html" %}
+{% block title %}Layanan Unit — {{ unit.name }}{% endblock %}
+
+{% block content %}
+<section class="kontrol-subhead">
+    <div class="subhead-left">
+        <a class="kontrol-back" href="{% url 'akreditasi:kontrol_emr' %}?unit={{ unit.id }}">
+            <i class="bi bi-arrow-left"></i> Control
+        </a>
+        <span class="kontrol-eyebrow"><i class="bi bi-clipboard2-pulse"></i> Layanan Unit</span>
+        <h1 class="kontrol-title-sm">{{ unit.name }}</h1>
+        <p class="kontrol-lede-sm">
+            Daftar layanan pasien hari ini —
+            <strong>{{ tanggal|date:"l, j F Y" }}</strong>.
+        </p>
+    </div>
+    {% include "akreditasi/kontrol/_unit_switch.html" %}
+</section>
+
+<section class="kontrol-layanan-toolbar">
+    <div class="layanan-nav">
+        <a class="kontrol-ghost" href="?unit={{ unit.id }}&tanggal={{ prev_date|date:'Y-m-d' }}">
+            <i class="bi bi-chevron-left"></i> Hari sebelumnya
+        </a>
+        <a class="kontrol-ghost {% if is_today %}disabled{% endif %}"
+           href="?unit={{ unit.id }}">
+            <i class="bi bi-calendar-event"></i> Hari ini
+        </a>
+        <a class="kontrol-ghost" href="?unit={{ unit.id }}&tanggal={{ next_date|date:'Y-m-d' }}">
+            Hari berikutnya <i class="bi bi-chevron-right"></i>
+        </a>
+    </div>
+    <form method="get" class="layanan-filter">
+        <input type="hidden" name="unit" value="{{ unit.id }}">
+        <input type="hidden" name="tanggal" value="{{ tanggal|date:'Y-m-d' }}">
+        <select name="status" class="form-select form-select-sm" onchange="this.form.submit()">
+            <option value="">Semua status</option>
+            {% for val, label in status_pilihan %}
+            <option value="{{ val }}" {% if filter_status == val %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+        </select>
+    </form>
+</section>
+
+{% if not layanan.mapped %}
+<section class="kontrol-empty">
+    <i class="bi bi-inbox"></i>
+    <h3>Unit ini tidak memiliki layanan pendaftaran pasien</h3>
+    <p>Tidak ada poliklinik maupun ruangan rawat yang dipetakan ke {{ unit.name }}.</p>
+</section>
+{% elif not items %}
+<section class="kontrol-empty">
+    <i class="bi bi-inbox"></i>
+    <h3>Belum ada pasien pada {{ tanggal|date:"j F Y" }}</h3>
+    <p>Daftar ini membaca kunjungan yang terdaftar pada tanggal tersebut.</p>
+</section>
+{% else %}
+<section class="kontrol-panel">
+    <header class="panel-head">
+        <h2><i class="bi bi-people"></i> {{ items|length }} pasien</h2>
+        <span class="panel-hint">{{ tanggal|date:"d/m/Y" }}</span>
+    </header>
+    <div class="table-responsive">
+        <table class="table table-sm layanan-table align-middle mb-0">
+            <thead>
+                <tr>
+                    <th>Jam</th>
+                    <th>No. Kunjungan</th>
+                    <th>Pasien</th>
+                    <th>Jenis</th>
+                    <th>Poli / Ruangan</th>
+                    <th>DPJP</th>
+                    <th>Status</th>
+                    <th>Penjamin</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for i in items %}
+                <tr>
+                    <td class="mono">{{ i.jam }}</td>
+                    <td class="mono">{{ i.no_kunjungan }}</td>
+                    <td>
+                        <div class="layanan-nama">{{ i.nama }}</div>
+                        <div class="layanan-sub">{{ i.no_rm }} · {{ i.umur }} th · {{ i.jk }}</div>
+                    </td>
+                    <td>{{ i.jenis }}</td>
+                    <td>
+                        <div>{{ i.poli }}</div>
+                        {% if i.ruangan %}<div class="layanan-sub">{{ i.ruangan }}</div>{% endif %}
+                    </td>
+                    <td>{{ i.dpjp|default:"—" }}</td>
+                    <td><span class="layanan-badge layanan-badge-{{ i.status|lower }}">{{ i.status_label }}</span></td>
+                    <td>{{ i.penjamin }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% if layanan.truncated %}
+    <p class="layanan-note">
+        <i class="bi bi-exclamation-triangle"></i>
+        Daftar dipotong pada {{ layanan.total }} baris pertama.
+    </p>
+    {% endif %}
+</section>
+{% endif %}
+{% endblock %}

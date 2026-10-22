@@ -186,6 +186,70 @@ def kontrol_dokumen(request):
     return _portal(request, 'akreditasi/kontrol/dokumen.html', 'dokumen')
 
 
+def _parse_tanggal(raw):
+    """'YYYY-MM-DD' → date; apa pun yang tidak valid → hari ini (lokal)."""
+    from datetime import date
+    from django.utils import timezone
+
+    if raw:
+        try:
+            return date.fromisoformat(raw)
+        except (TypeError, ValueError):
+            pass
+    return timezone.localdate()
+
+
+@login_required
+def kontrol_layanan(request):
+    """Daftar layanan pasien satu unit pada satu tanggal.
+
+    Tanggal bisa digeser lewat ``?tanggal=``; nilai tidak valid jatuh ke hari
+    ini, bukan 500. Unit selalu lewat ``_resolve_unit`` supaya akun unit-scoped
+    tidak bisa membaca unit lain dengan mengubah query string.
+    """
+    from datetime import timedelta
+    from django.utils import timezone
+    from .kontrol_data import _layanan_block
+
+    profile = _profile(request)
+    unit = _resolve_unit(request, profile)
+    if unit is None:
+        messages.warning(request, 'Belum ada unit kerja aktif untuk ditampilkan.')
+        return redirect('akreditasi:kontrol_hub')
+
+    tanggal = _parse_tanggal(request.GET.get('tanggal'))
+    snapshot = snapshot_cached(unit, profile)
+    # Snapshot sudah memuat blok untuk hari ini; tanggal lain dihitung ad hoc
+    # supaya cache harian tidak perlu dipecah per tanggal.
+    if tanggal != timezone.localdate():
+        snapshot = dict(snapshot)
+        snapshot['layanan'] = _layanan_block(unit, on_date=tanggal)
+
+    layanan = snapshot['layanan']
+    status_filter = request.GET.get('status', '')
+    items = layanan['items']
+    if status_filter:
+        items = [i for i in items if i['status'] == status_filter]
+
+    ctx = _common_context(request, unit, profile)
+    ctx.update({
+        'snapshot': snapshot,
+        'layanan': layanan,
+        'items': items,
+        'tanggal': tanggal,
+        'prev_date': tanggal - timedelta(days=1),
+        'next_date': tanggal + timedelta(days=1),
+        'is_today': tanggal == timezone.localdate(),
+        'filter_status': status_filter,
+        'status_pilihan': [
+            ('DAFTAR', 'Terdaftar'), ('TRIAGE', 'Triage'), ('ASESMEN', 'Asesmen'),
+            ('RANAP', 'Rawat Inap'), ('PULANG', 'Pulang'), ('RUJUK', 'Dirujuk'),
+        ],
+        'active_portal': 'emr',
+    })
+    return render(request, 'akreditasi/kontrol/layanan.html', ctx)
+
+
 AI_CACHE_SECONDS = 600
 
 

@@ -240,3 +240,97 @@ class SnapshotLayananTest(TestCase):
         blk = _layanan_block(self.unit, on_date=kemarin)
         self.assertEqual(blk['total'], 1)
         self.assertEqual(blk['items'][0]['no_kunjungan'], 'K-KEMARIN')
+
+
+class LayananPageTest(TestCase):
+    def setUp(self):
+        from django.contrib.auth import get_user_model
+        from accounts.models import UserProfile
+        from django.core.cache import cache
+
+        cache.clear()
+        self.unit = _unit('POLI-JANTUNG', 'Poliklinik Jantung & Pembuluh Darah', 4)
+        self.other = _unit('POLI-PD', 'Poliklinik Penyakit Dalam', 3)
+        self.pasien = _pasien('RM-PAGE')
+        KunjunganPasien.objects.create(
+            pasien=self.pasien, no_kunjungan='K-PAGE-1', jenis_kunjungan='RAJAL',
+            poliklinik='Poli Jantung & Pembuluh Darah', dpjp='dr. Faisal, Sp.JP',
+            tanggal_masuk=timezone.now(), status='DAFTAR')
+        KunjunganPasien.objects.create(
+            pasien=self.pasien, no_kunjungan='K-PAGE-2', jenis_kunjungan='RAJAL',
+            poliklinik='Poli Penyakit Dalam',
+            tanggal_masuk=timezone.now(), status='DAFTAR')
+
+        user = get_user_model().objects.create_user('kep.page', 'kp@rs.id', 'p')
+        UserProfile.objects.create(user=user, role='KEPALA_UNIT', unit_kerja=self.unit)
+        self.client.force_login(user)
+
+    def tearDown(self):
+        from django.core.cache import cache
+        cache.clear()
+
+    def test_lists_only_own_unit(self):
+        from django.urls import reverse
+
+        res = self.client.get(reverse('akreditasi:kontrol_layanan'))
+        self.assertEqual(res.status_code, 200)
+        body = res.content.decode()
+        self.assertIn('K-PAGE-1', body)
+        self.assertNotIn('K-PAGE-2', body)
+
+    def test_unit_scoped_user_cannot_switch_unit(self):
+        from django.urls import reverse
+
+        res = self.client.get(
+            reverse('akreditasi:kontrol_layanan'), {'unit': self.other.pk})
+        self.assertEqual(res.status_code, 200)
+        self.assertEqual(res.context['unit'].pk, self.unit.pk)
+
+    def test_anonymous_redirected(self):
+        from django.urls import reverse
+
+        self.client.logout()
+        res = self.client.get(reverse('akreditasi:kontrol_layanan'))
+        self.assertEqual(res.status_code, 302)
+
+    def test_invalid_date_falls_back_to_today(self):
+        from django.urls import reverse
+
+        res = self.client.get(
+            reverse('akreditasi:kontrol_layanan'), {'tanggal': 'bukan-tanggal'})
+        self.assertEqual(res.status_code, 200)
+        self.assertEqual(res.context['tanggal'], timezone.localdate())
+
+    def test_no_sidebar_shell(self):
+        from django.urls import reverse
+
+        body = self.client.get(reverse('akreditasi:kontrol_layanan')).content.decode()
+        self.assertNotIn('sidebar-desktop', body)
+        self.assertNotIn('id="mobileSidebar"', body)
+        self.assertIn('static/css/kontrol.', body)
+
+
+class LayananPageQueryBudgetTest(TestCase):
+    BUDGET = 12
+
+    def test_warm_request_within_budget(self):
+        from django.contrib.auth import get_user_model
+        from accounts.models import UserProfile
+        from django.core.cache import cache
+        from django.db import connection
+        from django.test.utils import CaptureQueriesContext
+        from django.urls import reverse
+
+        cache.clear()
+        unit = _unit('POLI-JANTUNG', 'Poliklinik Jantung & Pembuluh Darah', 4)
+        user = get_user_model().objects.create_user('kep.q', 'kq@rs.id', 'p')
+        UserProfile.objects.create(user=user, role='KEPALA_UNIT', unit_kerja=unit)
+        self.client.force_login(user)
+        url = reverse('akreditasi:kontrol_layanan')
+        self.client.get(url)
+        with CaptureQueriesContext(connection) as ctx:
+            res = self.client.get(url)
+        self.assertEqual(res.status_code, 200)
+        self.assertLessEqual(len(ctx.captured_queries), self.BUDGET,
+                             f'{len(ctx.captured_queries)} query, anggaran {self.BUDGET}')
+        cache.clear()
