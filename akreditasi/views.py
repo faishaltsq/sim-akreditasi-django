@@ -7,19 +7,26 @@ from django.contrib import messages
 from django.http import JsonResponse, HttpResponse
 from django.db import transaction
 from django.views.decorators.http import require_POST
+from django.core.paginator import Paginator
 from django.db.models import Count, Q, Sum, F, Avg
 from openpyxl import Workbook
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 
 from .models import (
     Category, StandardItem, QualityRecord,
-    EvidenceReq, EvidenceFile, UnitKerja, Framework, AuditLog, RumahSakitProfile
+    EvidenceReq, EvidenceFile, UnitKerja, Framework, AuditLog, RumahSakitProfile,
+    active_framework,
 )
 from .forms import StandardItemForm, QualityRecordForm, UnitKerjaForm, EvidenceFileUploadForm
 from .supabase_storage import upload_to_supabase_storage
 from .file_security import validate_uploaded_file, sanitize_filename
+from .instrumen_2024 import sort_standards
 
 logger = logging.getLogger(__name__)
+
+# STARKES 2024 installs 800 EP. Rendering all of them in one response makes
+# the page heavy and unusable, so the EP list is paginated.
+EP_PAGE_SIZE = 50
 
 
 def custom_csrf_failure(request, reason=""):
@@ -573,7 +580,12 @@ def dashboard(request):
 # ==============================================================================
 @login_required
 def matriks_pdca(request):
-    categories = Category.objects.all().order_by('order')
+    # Hanya kategori milik instrumen aktif. Tanpa filter ini, kategori 2022
+    # yang masih tersisa tampil berdampingan dengan 2024 dan metrik pokja
+    # menghitung dua edisi sekaligus.
+    active_fw = active_framework()
+    categories = (Category.objects.filter(framework=active_fw)
+                  if active_fw else Category.objects.none()).order_by('order')
     if not categories.exists():
         return render(request, 'akreditasi/empty.html')
 
@@ -581,18 +593,18 @@ def matriks_pdca(request):
     is_unit_scoped = False
     unit_standar_map = {}
     user_unit = None
-    try:
-        profile = request.user.profile
-        if profile.is_unit_scoped and profile.unit_kerja:
-            is_unit_scoped = True
-            user_unit = profile.unit_kerja
-            unit_standar_map = user_unit.standar_terkait or {}
-            if unit_standar_map:
-                allowed_codes = list(unit_standar_map.keys())
-                categories = categories.filter(code__in=allowed_codes)
-    except Exception:
-        logger.exception("Unit-scoping error: akses fallback ke global view untuk user %s", request.user.username)
-        return render(request, 'akreditasi/403.html', status=403)
+    # ``profile`` hanya ada untuk user yang punya UserProfile. Superuser atau
+    # akun yang baru dibuat (mis. lewat shell/import) tidak punya, dan dulu
+    # AttributeError di sini tertangkap ``except Exception`` lalu berubah jadi
+    # 403 — halaman matriks jadi tidak bisa dibuka sama sekali oleh admin.
+    profile = getattr(request.user, 'profile', None)
+    if profile is not None and profile.is_unit_scoped and profile.unit_kerja:
+        is_unit_scoped = True
+        user_unit = profile.unit_kerja
+        unit_standar_map = user_unit.standar_terkait or {}
+        if unit_standar_map:
+            allowed_codes = list(unit_standar_map.keys())
+            categories = categories.filter(code__in=allowed_codes)
 
     selected_cat_id = request.GET.get('cat')
     selected_sub = request.GET.get('sub', 'ALL')
@@ -603,12 +615,13 @@ def matriks_pdca(request):
     else:
         active_category = categories.first()
 
-    # Ambil list sub-standar unik di Pokja ini untuk filter
-    sub_standards = (
+    # Ambil list sub-standar unik di Pokja ini untuk filter.
+    # Diurutkan natural: "PKPO 3" harus muncul sebelum "PKPO 3.1", dan
+    # "PPI 2" sebelum "PPI 10" — .order_by() lexikografis men Reversed.
+    sub_standards = sort_standards(
         StandardItem.objects.filter(category=active_category)
         .values_list('sub_standard', flat=True)
         .distinct()
-        .order_by('sub_standard')
     )
 
     # Jika unit-scoped, filter sub_standards hanya yang ada di standar_terkait
@@ -911,7 +924,9 @@ def unlink_doc(request, file_id):
 # ==============================================================================
 @login_required
 def ep_list(request):
-    categories = Category.objects.all().order_by('order')
+    active_fw = active_framework()
+    categories = (Category.objects.filter(framework=active_fw)
+                  if active_fw else Category.objects.none()).order_by('order')
     units = UnitKerja.objects.all().order_by('code')
 
     selected_cat = request.GET.get('cat', 'ALL')
@@ -920,6 +935,10 @@ def ep_list(request):
     search_q = request.GET.get('q', '').strip()
 
     items_qs = StandardItem.objects.select_related('category', 'record__unit').prefetch_related('evidence_reqs__files').order_by('category__order', 'order', 'code')
+    if active_fw:
+        items_qs = items_qs.filter(category__framework=active_fw)
+    else:
+        items_qs = items_qs.none()
 
     if selected_cat != 'ALL':
         items_qs = items_qs.filter(category_id=selected_cat)
@@ -934,11 +953,33 @@ def ep_list(request):
             Q(sub_title__icontains=search_q)
         )
 
-    # Sub-standard list for filtering
-    sub_list = StandardItem.objects.values_list('sub_standard', flat=True).distinct().order_by('sub_standard')
+    # Sub-standard list for filtering. When a chapter is selected, only that
+    # chapter's standards are offered — otherwise the dropdown carries all 227
+    # standards of the instrument while the table shows one chapter, and
+    # picking a standard from another chapter yields an empty page.
+    sub_qs = StandardItem.objects.all()
+    if active_fw:
+        sub_qs = sub_qs.filter(category__framework=active_fw)
+    else:
+        sub_qs = sub_qs.none()
+    if selected_cat != 'ALL':
+        sub_qs = sub_qs.filter(category_id=selected_cat)
+    # ``order_by()`` wajib sebelum ``distinct()``: StandardItem.Meta.ordering
+    # menambahkan kolom urutan ke SELECT, sehingga SELECT DISTINCT tidak pernah
+    # menyusut dan dropdown berisi satu entri per EP (800), bukan per standar.
+    sub_list = sub_qs.order_by().values_list('sub_standard', flat=True).distinct()
+
+    # STARKES 2024 has 227 standards; a <select> that long is unusable, so the
+    # standards are rendered as a scrollable quick-jump strip instead.
+    sub_list = sort_standards(sub_list)
+
+    # 800 EP in one table is a multi-megabyte response. Paginate.
+    paginator = Paginator(items_qs, EP_PAGE_SIZE)
+    page = paginator.get_page(request.GET.get('page', 1))
 
     return render(request, 'akreditasi/ep_list.html', {
-        'items': items_qs,
+        'items': page.object_list,
+        'page': page,
         'categories': categories,
         'units': units,
         'sub_list': sub_list,
@@ -946,6 +987,7 @@ def ep_list(request):
         'selected_sub': selected_sub,
         'selected_unit': selected_unit,
         'search_q': search_q,
+        'total_matched': paginator.count,
     })
 
 

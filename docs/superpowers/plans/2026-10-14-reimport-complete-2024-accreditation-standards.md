@@ -6,7 +6,32 @@
 
 **Architecture:** Build a resilient, idempotent PDF extraction and parsing pipeline in `akreditasi/management/commands/import_instrumen_2024.py`. Map and reconcile legacy nomenclature (e.g., ARK → AKP, legacy PROGNAS/IPKP → PPK/PROGNAS 2024), create/update canonical `Category`, `StandardItem`, and `EvidenceReq` records, and preserve or backfill existing `QualityRecord` self-assessments safely.
 
-**Tech Stack:** Python, Django 5.x ORM, `pypdf`, regex parsing engine, PostgreSQL (Supabase) / SQLite.
+**Tech Stack:** Python, Django 6.x ORM, `pdfplumber` (geometry extraction, fixture regeneration only), PostgreSQL (Supabase) / SQLite.
+
+**Status (2026-10-22):** Tasks 1–4 are implemented and verified. The parser
+lives in `akreditasi/instrumen_2024.py` (not `akreditasi/services/`, to match
+the existing layout), the golden fixture is
+`fixtures/standar_akreditasi_2024.json`, and the tests are
+`akreditasi/tests_instrumen_2024.py`. See
+`docs/adr/0001-parse-starkes-2024-from-table-geometry.md` for the design
+decision and `docs/adr/0001-baseline-starkes-2024.md` for the measured
+baseline.
+
+**Task 5 is complete (2026-10-22).** The legacy-reconciliation layer lives in
+`akreditasi/reconcile_2024.py`, the scoped uniqueness migration is
+`0040_standarditem_scoped_code_unique.py`, and the acceptance suite is
+`akreditasi/tests_ui_800_ep.py` (32 tests). Design rationale:
+`docs/adr/0002-reconcile-legacy-2022-into-2024.md`.
+
+**Verified counts:** 16 chapters, 227 standards, 800 EP — versus the legacy
+fixture's 194 standards / 783 EP with `PROGNAS` missing entirely.
+
+**Measured reconciliation** (test DB seeded with the full 2022 baseline):
+247 legacy EP retargeted in place, 52 unmatched-and-empty EP dropped,
+553 EP created from the fixture, 299/299 `QualityRecord` preserved,
+0 code-rename clashes, final total exactly 800.
+
+**Test status:** 312/312 project tests pass (`python manage.py test`).
 
 **Spec:** Kemenkes Decree No. HK.02.02/D/47104/2024 (`instrumen standar survey akreditasi  rs 2024.pdf`), based on KMK HK.01.07/MENKES/1596/2024.
 

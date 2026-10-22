@@ -1,4 +1,4 @@
-from .models import Category, Framework, RumahSakitProfile
+from .models import Category, Framework, RumahSakitProfile, active_framework
 from .system_models import SystemConfig
 from django.core.cache import cache
 
@@ -15,39 +15,39 @@ _SIDEBAR_CACHE_TTL = 300  # 5 menit
 
 
 def sidebar_context(request):
-    # Cache framework + categories global (tidak bergantung user) selama 5 menit
-    framework = cache.get('sidebar_framework')
-    categories = cache.get('sidebar_categories')
-    categories_by_kelompok = cache.get('sidebar_categories_by_kelompok')
+    # Jangan cache instance model. Instance ``Category`` yang di-pickle membawa
+    # prefetch ``items`` dan atribut ``_pre_*`` hasil hitung request sebelumnya;
+    # begitu PK dipakai ulang (mis. setelah rollback atau reseed), cache
+    # menyajikan pokja milik framework lain beserta angka EP yang salah.
+    # Yang di-cache hanya penanda framework aktif; kategori selalu dibaca ulang
+    # (satu query) supaya angkanya tidak pernah basi.
+    framework = active_framework()
+    fw_key = framework.pk if framework else 'none'
+    if cache.get('sidebar_fw_key') != fw_key:
+        cache.set('sidebar_fw_key', fw_key, _SIDEBAR_CACHE_TTL)
 
-    if framework is None or categories is None:
-        framework = Framework.objects.first()
-        categories = []
-        categories_by_kelompok = {}
+    categories = []
+    categories_by_kelompok = {}
 
-        if framework:
-            categories = list(framework.categories.prefetch_related(
-                'items__record'
-            ).order_by('order'))
+    if framework:
+        categories = list(framework.categories.prefetch_related(
+            'items__record'
+        ).order_by('order'))
 
-            for code, meta in KELOMPOK_META.items():
-                k_cats = [c for c in categories if c.kelompok == code]
-                if k_cats:
-                    categories_by_kelompok[code] = {
-                        'label': meta['label'],
-                        'icon': meta['icon'],
-                        'color': meta['color'],
-                        'categories': k_cats,
-                        'count': len(k_cats),
-                    }
+        for code, meta in KELOMPOK_META.items():
+            k_cats = [c for c in categories if c.kelompok == code]
+            if k_cats:
+                categories_by_kelompok[code] = {
+                    'label': meta['label'],
+                    'icon': meta['icon'],
+                    'color': meta['color'],
+                    'categories': k_cats,
+                    'count': len(k_cats),
+                }
 
-        cache.set('sidebar_framework', framework, _SIDEBAR_CACHE_TTL)
-        cache.set('sidebar_categories', categories, _SIDEBAR_CACHE_TTL)
-        cache.set('sidebar_categories_by_kelompok', categories_by_kelompok, _SIDEBAR_CACHE_TTL)
-
-    # Precompute stat per pokja (2 query total). Tanpa ini, property model
-    # (total_score/max_possible_score) menembak 2 query per kategori di setiap
-    # render sidebar = 32 query di semua halaman.
+    # Precompute stat per pokja (3 query total). Tanpa ini, property model
+    # (total_score/max_possible_score/ep_selesai) menembak 2-3 query per
+    # kategori di setiap render sidebar = 48 query di semua halaman.
     if categories:
         from django.db.models import Count, Sum
         from .models import QualityRecord, StandardItem
@@ -64,9 +64,18 @@ def sidebar_context(request):
             .filter(category_id__in=cat_ids)
             .values('category').annotate(n=Count('id'))
         }
+        # EP yang sudah dinilai: record dengan skor > 0 (skor 0 = belum terpenuhi)
+        done = {
+            row['standard_item__category']: row['n']
+            for row in QualityRecord.objects
+            .filter(standard_item__category_id__in=cat_ids, score__gt=0)
+            .values('standard_item__category').annotate(n=Count('id'))
+        }
         for c in categories:
             c._pre_total = sums.get(c.id, 0)
             c._pre_max = counts.get(c.id, 0) * 10
+            c._pre_ep_total = counts.get(c.id, 0)
+            c._pre_ep_selesai = done.get(c.id, 0)
 
     rs_profile = cache.get('sidebar_rs_profile')
     if rs_profile is None:

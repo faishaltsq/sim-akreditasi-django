@@ -17,6 +17,18 @@ class Framework(models.Model):
         return f"{self.name} ({self.cycle_type})"
 
 
+def active_framework():
+    """Instrumen yang sedang dipakai UI: framework terbaru yang terpasang.
+
+    Siklus akreditasi berjalan maju, jadi edisi terakhir yang diimpor adalah
+    edisi yang berlaku. Fungsi ini dipakai sidebar, matriks PDCA, dan daftar EP
+    supaya data edisi lama tidak pernah tercampur dengan edisi aktif — dulu
+    pemanggil memakai ``Framework.objects.first()``, yang justru mengunci ke
+    edisi paling tua.
+    """
+    return Framework.objects.order_by('-id').first()
+
+
 TIPE_UNIT_CHOICES = [
     ('PIMPINAN', 'Pimpinan / Pemilik / Dewas'),
     ('DIREKTORAT', 'Direktorat / Bidang'),
@@ -131,6 +143,39 @@ class Category(models.Model):
         return self._max_possible_score_cache
 
     @property
+    def ep_total(self):
+        """Jumlah Elemen Penilaian (EP) milik pokja ini.
+
+        Dibagi 10 dari ``max_possible_score`` supaya tidak menambah query:
+        keduanya berasal dari hitungan EP yang sama.
+        """
+        if '_pre_ep_total' in self.__dict__:
+            return self._pre_ep_total
+        return self.max_possible_score // 10
+
+    @property
+    def ep_selesai(self):
+        """Jumlah EP yang sudah dinilai (QualityRecord dengan skor > 0)."""
+        if '_pre_ep_selesai' in self.__dict__:
+            return self._pre_ep_selesai
+        if '_ep_selesai_cache' not in self.__dict__:
+            self._ep_selesai_cache = self.items.filter(
+                record__score__gt=0).count()
+        return self._ep_selesai_cache
+
+    @property
+    def ep_coverage_pct(self):
+        """Persentase EP terpasang dibanding target STARKES 2024.
+
+        ``target_ep_count`` diisi oleh ``import_instrumen_2024`` dari fixture
+        PDF, jadi 100% berarti seluruh EP bab ini sudah ada di sistem.
+        """
+        target = self.target_ep_count
+        if not target:
+            return 0
+        return round((self.ep_total / target) * 100)
+
+    @property
     def percentage(self):
         max_score = self.max_possible_score
         if max_score == 0:
@@ -155,7 +200,7 @@ class StandardItem(models.Model):
     category = models.ForeignKey(Category, on_delete=models.CASCADE, related_name='items')
     sub_standard = models.CharField('Sub-Standar', max_length=50)  # misal: TKRS 1
     sub_title = models.CharField('Judul Sub-Standar', max_length=250)  # misal: Representasi Pemilik
-    code = models.CharField('Kode Elemen Penilaian (EP)', max_length=50, unique=True)  # misal: TKRS 1 EP 1
+    code = models.CharField('Kode Elemen Penilaian (EP)', max_length=50)  # misal: TKRS 1 EP a
     description = models.TextField('Bunyi Standar / Elemen Penilaian')
     order = models.PositiveIntegerField('Urutan', default=0)
 
@@ -163,6 +208,15 @@ class StandardItem(models.Model):
         verbose_name = 'Elemen Penilaian (EP)'
         verbose_name_plural = 'Elemen Penilaian (EP)'
         ordering = ['category__order', 'order', 'code']
+        constraints = [
+            # Kode EP hanya unik di dalam pokjanya. Dua edisi instrumen boleh
+            # memakai kode yang sama (``TKRS 1 EP a`` ada di 2022 maupun 2024);
+            # yang tidak boleh adalah satu pokja memuat kode ganda. Uniqueness
+            # global membuat edisi baru tidak bisa berdampingan dengan edisi
+            # lama, sehingga migrasi selalu menuntut penghapusan data dulu.
+            models.UniqueConstraint(fields=['category', 'code'],
+                                    name='uniq_standarditem_category_code'),
+        ]
 
     def __str__(self):
         return f"{self.code}: {self.description[:60]}"

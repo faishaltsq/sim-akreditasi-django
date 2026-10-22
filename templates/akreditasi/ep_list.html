@@ -61,11 +61,36 @@
         </div>
     </div>
 
+    <!-- QUICK-JUMP STANDAR: 227 standar STARKES 2024 tidak muat di dropdown -->
+    {% if sub_list %}
+    <div class="card shadow-sm border-0 mb-3 bg-white">
+        <div class="card-body p-2">
+            <div class="d-flex align-items-center gap-2 mb-1">
+                <span class="small text-muted fw-semibold text-uppercase" style="font-size:0.66rem; letter-spacing:0.4px;">
+                    <i class="bi bi-signpost-split me-1"></i>Lompat ke Standar
+                </span>
+                {% if selected_sub != 'ALL' %}
+                <a href="{% url 'akreditasi:ep_list' %}?cat={{ selected_cat }}" class="btn btn-xs btn-outline-secondary py-0" style="font-size:0.65rem;">
+                    <i class="bi bi-x"></i> Reset standar
+                </a>
+                {% endif %}
+            </div>
+            <div class="d-flex flex-wrap gap-1" style="max-height: 88px; overflow-y: auto;">
+                {% for sub in sub_list %}
+                <a href="{% url 'akreditasi:ep_list' %}?cat={{ selected_cat }}&sub={{ sub|urlencode }}"
+                   class="btn btn-sm py-0 px-2 font-mono {% if sub == selected_sub %}btn-primary{% else %}btn-outline-secondary{% endif %}"
+                   style="font-size:0.68rem; line-height:1.5;">{{ sub }}</a>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
     <!-- EP LIST TABLE -->
     <div class="card shadow-sm border-0 mb-4">
         <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
             <span class="fw-bold text-dark"><i class="bi bi-list-task text-primary me-2"></i>Daftar Elemen Penilaian</span>
-            <span class="badge bg-light text-dark font-mono">{{ items|length }} EP Ditampilkan</span>
+            <span class="badge bg-light text-dark font-mono">{{ total_matched }} EP Ditampilkan</span>
         </div>
         <div class="table-responsive">
             <table class="table table-hover align-middle mb-0" style="font-size: 0.8rem;">
@@ -158,6 +183,35 @@
                 </tbody>
             </table>
         </div>
+
+        {# Pagination: 800 EP / 50 per halaman = 16 halaman #}
+        {% if page.paginator.num_pages > 1 %}
+        <div class="card-footer bg-white border-top py-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <span class="text-muted small">
+                Menampilkan {{ page.start_index }}–{{ page.end_index }} dari
+                <strong class="text-dark">{{ page.paginator.count }}</strong> EP
+                &middot; Halaman {{ page.number }} / {{ page.paginator.num_pages }}
+            </span>
+            <ul class="pagination pagination-sm mb-0">
+                {% if page.has_previous %}
+                <li class="page-item">
+                    <a class="page-link" href="{% querystring page=1 %}">&laquo;</a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link" href="{% querystring page=page.previous_page_number %}">Sebelumnya</a>
+                </li>
+                {% endif %}
+                {% if page.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="{% querystring page=page.next_page_number %}">Berikutnya</a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link" href="{% querystring page=page.paginator.num_pages %}">&raquo;</a>
+                </li>
+                {% endif %}
+            </ul>
+        </div>
+        {% endif %}
     </div>
 
 </div>
