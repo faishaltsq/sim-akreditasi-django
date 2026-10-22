@@ -161,3 +161,82 @@ class RuanganMappingTest(TestCase):
                     f'Ruangan {ruang.kode} belum dipetakan ke unit kerja — '
                     f'tambahkan ke RUANGAN_UNIT_CODE di akreditasi/layanan_unit.py')
                 self.assertIn(RUANGAN_UNIT_CODE[ruang.kode], known)
+
+
+class SnapshotLayananTest(TestCase):
+    def setUp(self):
+        self.unit = _unit('POLI-JANTUNG', 'Poliklinik Jantung & Pembuluh Darah', 4)
+        self.pasien = _pasien('RM-SNAP')
+
+    def test_layanan_lists_only_this_unit(self):
+        from akreditasi.kontrol_data import build_unit_snapshot
+
+        KunjunganPasien.objects.create(
+            pasien=self.pasien, no_kunjungan='K-MINE', jenis_kunjungan='RAJAL',
+            poliklinik='Poli Jantung & Pembuluh Darah',
+            tanggal_masuk=timezone.now(), status='DAFTAR')
+        KunjunganPasien.objects.create(
+            pasien=self.pasien, no_kunjungan='K-OTHER', jenis_kunjungan='RAJAL',
+            poliklinik='Poli Penyakit Dalam',
+            tanggal_masuk=timezone.now(), status='DAFTAR')
+
+        snap = build_unit_snapshot(self.unit)
+        self.assertEqual(snap['layanan']['total'], 1)
+        self.assertEqual(
+            [i['no_kunjungan'] for i in snap['layanan']['items']], ['K-MINE'])
+        self.assertTrue(snap['layanan']['mapped'])
+
+    def test_emr_block_matches_unit_that_has_staff(self):
+        """Defect 2: kehadiran staf tidak boleh mengosongkan blok EMR."""
+        from accounts.models import UserProfile
+        from django.contrib.auth import get_user_model
+        from akreditasi.kontrol_data import build_unit_snapshot
+
+        KunjunganPasien.objects.create(
+            pasien=self.pasien, no_kunjungan='K-AKTIF', jenis_kunjungan='RAJAL',
+            poliklinik='Poli Jantung & Pembuluh Darah',
+            tanggal_masuk=timezone.now(), status='ASESMEN')
+
+        before = build_unit_snapshot(self.unit)['emr']['active_total']
+        self.assertEqual(before, 1)
+
+        user = get_user_model().objects.create_user('kep.snap', 'ks@rs.id', 'p')
+        UserProfile.objects.create(user=user, role='KEPALA_UNIT', unit_kerja=self.unit)
+
+        after = build_unit_snapshot(self.unit)['emr']['active_total']
+        self.assertEqual(after, 1, 'blok EMR kosong setelah staf ditugaskan')
+
+    def test_unit_without_service_is_unmapped_not_zero(self):
+        from akreditasi.kontrol_data import build_unit_snapshot
+        komite = _unit('KOMITE-MUTU', 'Komite Mutu PMKP & Keselamatan Pasien', 2)
+        snap = build_unit_snapshot(komite)
+        self.assertFalse(snap['layanan']['mapped'])
+        self.assertEqual(snap['layanan']['items'], [])
+
+    def test_today_means_admitted_today(self):
+        """Kunjungan ranap lama tidak boleh muncul sebagai layanan hari ini."""
+        from datetime import timedelta
+        from akreditasi.kontrol_data import build_unit_snapshot
+
+        KunjunganPasien.objects.create(
+            pasien=self.pasien, no_kunjungan='K-LAMA', jenis_kunjungan='RAJAL',
+            poliklinik='Poli Jantung & Pembuluh Darah',
+            tanggal_masuk=timezone.now() - timedelta(days=3), status='RANAP')
+
+        snap = build_unit_snapshot(self.unit)
+        self.assertEqual(snap['layanan']['total'], 0)
+        self.assertTrue(snap['layanan']['mapped'])
+
+    def test_previous_day_is_reachable(self):
+        from datetime import timedelta
+        from akreditasi.kontrol_data import _layanan_block
+
+        KunjunganPasien.objects.create(
+            pasien=self.pasien, no_kunjungan='K-KEMARIN', jenis_kunjungan='RAJAL',
+            poliklinik='Poli Jantung & Pembuluh Darah',
+            tanggal_masuk=timezone.now() - timedelta(days=1), status='PULANG')
+
+        kemarin = timezone.localdate() - timedelta(days=1)
+        blk = _layanan_block(self.unit, on_date=kemarin)
+        self.assertEqual(blk['total'], 1)
+        self.assertEqual(blk['items'][0]['no_kunjungan'], 'K-KEMARIN')

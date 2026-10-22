@@ -35,7 +35,7 @@ ACTIVE_VISIT_STATUSES = ('DAFTAR', 'TRIAGE', 'ASESMEN', 'RANAP')
 OPEN_INCIDENT_STATUSES = ('DILAPORKAN', 'VERIFIKASI', 'INVESTIGASI')
 
 SNAPSHOT_CACHE_SECONDS = 60
-SNAPSHOT_CACHE_VERSION = 'v1'
+SNAPSHOT_CACHE_VERSION = 'v2'
 
 
 def risk_level_for(score, cfg):
@@ -182,19 +182,24 @@ def _laporan_block(unit_ids):
     }
 
 
-def _emr_block(unit_ids):
-    from accounts.models import UserProfile
-    from pasien.models import AsesmenRisikoKlinis, Bed, CPPT, KunjunganPasien
+def _emr_block(unit):
+    """Kunjungan aktif unit ini, diresolusi lewat peta layanan.
 
-    visits = KunjunganPasien.objects.filter(status__in=ACTIVE_VISIT_STATUSES)
-    if unit_ids:
-        names = list(
-            UserProfile.objects.filter(unit_kerja_id__in=unit_ids)
-            .values_list('unit_kerja__name', flat=True).distinct()
-        )
-        names = [n for n in names if n]
-        if names:
-            visits = visits.filter(Q(poliklinik__in=names) | Q(bed__ruangan__nama__in=names))
+    Versi sebelumnya mencocokkan ``poliklinik__in=UserProfile.unit_kerja__name``.
+    Itu tidak pernah cocok: ``poliklinik`` menyimpan label ``POLIKLINIK_CHOICES``
+    ('Poli Jantung & Pembuluh Darah'), sedangkan ``UnitKerja.name`` adalah
+    'Poliklinik Jantung & Pembuluh Darah'. Akibatnya blok EMR kosong justru
+    untuk unit yang punya staf.
+    """
+    from pasien.models import AsesmenRisikoKlinis, Bed, CPPT, KunjunganPasien
+    from .layanan_unit import resolve_visit_ids
+
+    active = KunjunganPasien.objects.filter(status__in=ACTIVE_VISIT_STATUSES)
+    matching = resolve_visit_ids(active, unit)
+    visits = (
+        KunjunganPasien.objects.filter(pk__in=matching)
+        if matching else KunjunganPasien.objects.none()
+    )
 
     by_jenis = {
         row['jenis_kunjungan']: row['n']
@@ -285,6 +290,73 @@ def _ep_block(unit_ids):
     }
 
 
+LAYANAN_LIMIT = 1000
+LAYANAN_JENIS_LABEL = {'IGD': 'IGD', 'RAJAL': 'Rawat Jalan', 'RANAP': 'Rawat Inap'}
+
+
+def _layanan_block(unit, on_date=None):
+    """Pasien yang terdaftar di unit ini pada satu tanggal lokal.
+
+    "Hari ini" = ``tanggal_masuk`` jatuh pada tanggal tersebut, bukan "masih
+    terbuka" — kalau memakai status, sensus ranap sebulan akan tampil sebagai
+    pasien hari ini.
+
+    ``mapped=False`` dipakai template untuk membedakan "unit ini tidak punya
+    layanan pendaftaran" dari "hari ini belum ada pasien".
+    """
+    from django.utils import timezone
+    from pasien.models import KunjunganPasien
+    from .layanan_unit import (
+        alias_index, resolve_code, service_codes, unit_codes, unit_owns_beds,
+    )
+
+    on_date = on_date or timezone.localdate()
+    codes = unit_codes(unit)
+    index = alias_index()
+    serves = bool(codes & service_codes())
+    owns_beds = unit_owns_beds(unit, codes)
+
+    rows = list(
+        KunjunganPasien.objects
+        .filter(tanggal_masuk__date=on_date)
+        .select_related('pasien', 'bed__ruangan')
+        .order_by('tanggal_masuk')[:LAYANAN_LIMIT]
+    )
+
+    items, by_status = [], {}
+    for k in rows:
+        ruangan_nama = k.bed.ruangan.nama if k.bed else None
+        if resolve_code(k.poliklinik, ruangan_nama, index) not in codes:
+            continue
+        by_status[k.status] = by_status.get(k.status, 0) + 1
+        items.append({
+            'pk': k.pk,
+            'no_kunjungan': k.no_kunjungan,
+            'nama': k.pasien.nama_lengkap,
+            'no_rm': k.pasien.no_rm,
+            'umur': k.pasien.umur,
+            'jk': k.pasien.get_jenis_kelamin_display(),
+            'jenis': LAYANAN_JENIS_LABEL.get(k.jenis_kunjungan, k.jenis_kunjungan),
+            'poli': k.poliklinik or '—',
+            'ruangan': k.bed.ruangan.nama if k.bed else '',
+            'dpjp': k.dpjp or '',
+            'status': k.status,
+            'status_label': k.get_status_display(),
+            'jam': timezone.localtime(k.tanggal_masuk).strftime('%H:%M'),
+            'penjamin': k.get_penjamin_display(),
+        })
+
+    return {
+        'tanggal': on_date,
+        'total': len(items),
+        'by_status': by_status,
+        'items': items,
+        'mapped': serves,
+        'truncated': len(rows) >= LAYANAN_LIMIT,
+        'owns_beds': owns_beds,
+    }
+
+
 def build_unit_snapshot(unit, profile=None, year=None):
     """Bangun snapshot lengkap satu unit. Tidak di-cache di sini."""
     year = year or date.today().year
@@ -301,7 +373,8 @@ def build_unit_snapshot(unit, profile=None, year=None):
         'incident': _incident_block(unit_ids),
         'indicator': _indicator_block(unit_ids, year, profile),
         'laporan': _laporan_block(unit_ids),
-        'emr': _emr_block(unit_ids),
+        'emr': _emr_block(unit),
+        'layanan': _layanan_block(unit),
         'ppa': _ppa_block(unit_ids),
         'ep': _ep_block(unit_ids),
     }
