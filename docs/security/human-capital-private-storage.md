@@ -40,6 +40,22 @@ existing staff must be linked before the release is announced.
 2. Keep the default object policy: no anonymous `SELECT`. Only the service key may read/write.
 3. Do not enable a public bucket policy, CDN public path, or signed-URL caching at the edge.
 
+## 2a. Verified state (2026-10-23)
+
+| Check | Result |
+|---|---|
+| Bucket `human-capital-private` created | `public=False`, `file_size_limit=10485760`, MIME limited to PDF/PNG/JPEG |
+| Service-role key accepted | JWT `role=service_role`, project ref matches `SUPABASE_URL` |
+| Upload | object stored under `personnel/<employee-uuid>/<opaque-uuid>.pdf` |
+| Checksum verification | SHA-256/size/MIME re-read from the provider matched |
+| Signed download | HTTP 200, bytes identical to upload |
+| Anonymous denial | public path returns 4xx for the same key |
+| Probe cleanup | all test objects deleted; bucket left empty |
+
+Note: Supabase returns the signed path as `/object/sign/...` (no `/storage/v1`
+prefix). `create_signed_download` now normalises that form; joining the bare path
+to the origin produced a 404 before the fix.
+
 ## 3. Verify anonymous denial
 
 ```bash

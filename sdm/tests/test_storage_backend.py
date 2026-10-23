@@ -138,6 +138,18 @@ class PrivateStorageTests(unittest.TestCase):
             self.assertEqual(session.calls[0][2]["json"]["expiresIn"], 60)
             self.assertFalse(session.calls[0][2]["allow_redirects"])
 
+    def test_signed_url_without_storage_prefix_is_normalized(self):
+        """Supabase returns "/object/sign/..." — the servable path needs /storage/v1."""
+        key = f"personnel/{uuid.uuid4()}/{uuid.uuid4()}.pdf"
+        payload = {"signedURL": f"/object/sign/private-hr/{key}?token=x"}
+
+        url = self.storage(FakeSession(FakeResponse(200, payload))).create_signed_download(key)
+
+        self.assertEqual(
+            url,
+            f"https://project.supabase.co/storage/v1/object/sign/private-hr/{key}?token=x",
+        )
+
     def test_signed_url_rejects_bad_ttl_keys_and_response(self):
         key = f"health/{uuid.uuid4()}/{uuid.uuid4()}.pdf"
         for ttl in (0, -1, 301, True, 60.0, '60'):

@@ -105,7 +105,17 @@ class SupabasePrivateStorage:
             signed = payload.get("signedURL", payload.get("signedUrl")) if isinstance(payload, dict) else None
             if not isinstance(signed, str) or not signed:
                 raise ValueError
-            result = urljoin(self.base_url + "/", signed)
+            # Supabase returns a project-relative path ("/object/sign/...").
+            # The servable URL is under the /storage/v1 prefix; urljoin() would
+            # discard the prefix because the returned path is absolute.
+            if signed.startswith("/storage/v1/"):
+                result = self.base_url + signed
+            elif signed.startswith("/object/"):
+                result = self.base_url + "/storage/v1" + signed
+            elif signed.startswith("http://") or signed.startswith("https://"):
+                result = signed
+            else:
+                result = self.base_url + "/storage/v1/" + signed.lstrip("/")
             parsed, origin = urlsplit(result), urlsplit(self.base_url)
             decoded_path = unquote(parsed.path)
             expected = f"/storage/v1/object/sign/{self.bucket}/{storage_key}"
