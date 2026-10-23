@@ -525,9 +525,10 @@ def dashboard(request):
 def _dashboard_cache_key(user, unit, profesi, status):
     """Cache key scoped by identity, permissions, unit, profession and status."""
     capabilities = sorted(
-        HcGrant.objects.filter(user=user, is_active=True).values_list(
-            'capability', 'unit_kerja_id'
-        )
+        (capability, unit_id if unit_id is not None else -1)
+        for capability, unit_id in HcGrant.objects.filter(
+            user=user, is_active=True
+        ).values_list('capability', 'unit_kerja_id')
     )
     version = cache.get('hc-dashboard-version', 0)
     digest = hashlib.sha256(

@@ -1,6 +1,9 @@
 """Create Human Capital employee identities from existing accounts (exact match only)."""
+from decimal import Decimal
+
 from django.core.management.base import BaseCommand
 from django.db import transaction
+from django.utils import timezone
 
 from accounts.models import UserProfile
 from sdm.models import Pegawai
@@ -64,9 +67,10 @@ class Command(BaseCommand):
             )
             return
 
+        placements = 0
         with transaction.atomic():
             for profile, number in pending:
-                Pegawai.objects.create(
+                employee = Pegawai.objects.create(
                     akun_id=profile.user_id,
                     nama_lengkap=(
                         (profile.full_name or '').strip()
@@ -80,9 +84,24 @@ class Command(BaseCommand):
                 )
                 created += 1
 
+                # The account already names one unit; record it as the opening
+                # placement so unit scoping and FTE aggregation have history.
+                if profile.unit_kerja_id:
+                    from sdm.models import PenempatanPegawai
+                    from sdm.services.penempatan import save_assignment
+
+                    save_assignment(PenempatanPegawai(
+                        pegawai=employee,
+                        unit_kerja_id=profile.unit_kerja_id,
+                        tanggal_mulai=timezone.localdate(),
+                        alokasi_fte=Decimal('1.00'),
+                    ))
+                    placements += 1
+
         self.stdout.write(
             'APPLIED '
             f'created={created} '
             f'already_linked={skipped} '
-            f'duplicate_numbers_blanked={duplicates}'
+            f'duplicate_numbers_blanked={duplicates} '
+            f'placements={placements}'
         )

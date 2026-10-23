@@ -362,3 +362,27 @@ class NavigationResilienceTests(TestCase):
 
         self.assertFalse(any(context.values()))
         self.assertIn('nav_pegawai', context)
+
+
+class HospitalScopeCacheKeyTests(TestCase):
+    """A hospital-scope grant has unit_kerja=None; the cache key must still sort."""
+
+    def test_dashboard_renders_with_hospital_scope_grant(self):
+        from django.core.cache import cache
+
+        cache.clear()
+        unit = UnitKerja.objects.create(name='Unit Cache HS', code='HC-CHS')
+        user = get_user_model().objects.create_user(username='hospital-scope')
+        UserProfile.objects.create(user=user, role='ADMIN_RS', unit_kerja=None)
+        config = RolePermissionConfig.get_config_for_role('ADMIN_RS')
+        config.can_view_hc = True
+        config.save(update_fields=['can_view_hc', 'updated_at'])
+        HcGrant.objects.create(
+            user=user, capability='can_view_hc', unit_kerja=None
+        )
+        self.client.force_login(user)
+
+        response = self.client.get('/human-capital/')
+
+        self.assertEqual(response.status_code, 200)
+        cache.clear()

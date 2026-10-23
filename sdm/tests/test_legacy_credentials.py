@@ -1,4 +1,5 @@
 import hashlib
+from decimal import Decimal
 import json
 import uuid
 from datetime import date
@@ -642,3 +643,39 @@ class LegacyUploadWithoutEmployeeTests(TestCase):
             NakesCredential.objects.filter(document_number='NOEMP-1').exists()
         )
         self.assertEqual(Pegawai.objects.filter(akun=self.user).count(), 0)
+
+
+class BackfillPlacementTests(TestCase):
+    """A backfilled employee must get an opening placement from the account unit."""
+
+    def setUp(self):
+        self.unit = UnitKerja.objects.create(name='Unit Backfill Plc', code='HC-BFP')
+        self.user = get_user_model().objects.create_user(username='bf-place')
+        UserProfile.objects.create(
+            user=self.user, role='STAF_NAKES', unit_kerja=self.unit,
+            full_name='Pegawai Berpenempatan', profesi='PERAWAT',
+        )
+
+    def test_apply_creates_placement_from_profile_unit(self):
+        call_command('backfill_hc_employees', '--apply', stdout=StringIO())
+
+        employee = Pegawai.objects.get(akun=self.user)
+        placement = employee.penempatan.get()
+        self.assertEqual(placement.unit_kerja, self.unit)
+        self.assertEqual(placement.alokasi_fte, Decimal('1.00'))
+        self.assertTrue(placement.is_current)
+
+    def test_apply_skips_placement_when_profile_has_no_unit(self):
+        UserProfile.objects.filter(user=self.user).update(unit_kerja=None)
+
+        call_command('backfill_hc_employees', '--apply', stdout=StringIO())
+
+        employee = Pegawai.objects.get(akun=self.user)
+        self.assertFalse(employee.penempatan.exists())
+
+    def test_repeat_apply_does_not_duplicate_placements(self):
+        call_command('backfill_hc_employees', '--apply', stdout=StringIO())
+        call_command('backfill_hc_employees', '--apply', stdout=StringIO())
+
+        employee = Pegawai.objects.get(akun=self.user)
+        self.assertEqual(employee.penempatan.count(), 1)
