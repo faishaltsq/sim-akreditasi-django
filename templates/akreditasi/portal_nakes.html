@@ -393,8 +393,12 @@
                                             </td>
                                             <td class="text-end">
                                                 <div class="btn-group btn-group-sm">
-                                                    {% if cred.get_download_url != '#' %}
-                                                        <a href="{{ cred.get_download_url }}" target="_blank" class="btn btn-outline-primary" title="Lihat / Unduh Dokumen">
+                                                    {% if cred.hc_document_link %}
+                                                        <a href="{% url 'akreditasi:download_kredensial' cred.id %}" class="btn btn-outline-primary" title="Lihat / Unduh Dokumen">
+                                                            <i class="bi bi-download"></i>
+                                                        </a>
+                                                    {% elif cred.get_download_url != '#' %}
+                                                        <a href="{{ cred.get_download_url }}" target="_blank" rel="noopener noreferrer" class="btn btn-outline-primary" title="Lihat / Unduh Dokumen">
                                                             <i class="bi bi-download"></i>
                                                         </a>
                                                     {% endif %}

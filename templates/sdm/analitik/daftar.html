@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+{% block page_title %}Analitik SDM{% endblock %}
+{% block page_subtitle %}Kepatuhan, snapshot, talent, dan skenario{% endblock %}
+{% block content %}
+<div class="container-fluid p-0">
+    <h1 class="page-title h5 mb-3">Analitik SDM</h1>
+    {% include "sdm/_navigasi.html" %}
+
+    <form method="get" class="card border shadow-sm mb-3">
+        <div class="card-body row g-2 align-items-end">
+            <div class="col-12 col-md-4">
+                <label class="form-label small fw-semibold" for="an-unit">Unit</label>
+                <select id="an-unit" name="unit" class="form-select form-select-sm">
+                    {% for option in unit_options %}
+                    <option value="{{ option.pk }}" {% if selected_unit.pk == option.pk %}selected{% endif %}>{{ option.code }} — {{ option.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-12 col-md-4 d-flex gap-2">
+                <button class="btn btn-primary btn-sm" type="submit">Tampilkan</button>
+                <a class="btn btn-outline-secondary btn-sm" href="{% url 'sdm:analitik_export' %}{% if selected_unit %}?unit={{ selected_unit.pk }}{% endif %}">Ekspor Excel</a>
+                <a class="btn btn-outline-secondary btn-sm" href="{% url 'sdm:analitik_export_pdf' %}{% if selected_unit %}?unit={{ selected_unit.pk }}{% endif %}">Ekspor PDF</a>
+            </div>
+        </div>
+    </form>
+
+    <div class="card border shadow-sm mb-3">
+        <div class="card-header bg-white"><h2 class="h6 mb-0">Audit Kepatuhan Dokumen</h2></div>
+        {% if audit and audit.rows %}
+        <div class="table-responsive">
+            <table class="table table-sm align-middle mb-0">
+                <caption class="visually-hidden">Kepatuhan dokumen per pegawai</caption>
+                <thead><tr><th scope="col">Pegawai</th><th scope="col">Profesi</th><th scope="col">Terpenuhi</th><th scope="col">Kelengkapan</th><th scope="col">Terunggah</th></tr></thead>
+                <tbody>
+                    {% for row in audit.rows %}
+                    <tr>
+                        <td>{{ row.nama }}</td>
+                        <td class="small">{{ row.profesi|default:"—" }}</td>
+                        <td>{{ row.satisfied }} / {{ row.applicable }}</td>
+                        <td>{{ row.completeness_pct }}%</td>
+                        <td>{{ row.upload_pct }}%</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="card-body"><p class="text-muted mb-0">Belum dapat dihitung: belum ada aturan dokumen aktif atau data pegawai pada unit ini.</p></div>
+        {% endif %}
+    </div>
+
+    {% if audit and audit.unmapped_requirements %}
+    <div class="alert alert-warning py-2 small" role="alert">
+        Persyaratan belum dipetakan ke katalog EP (bukan bukti kepatuhan):
+        {{ audit.unmapped_requirements|join:", " }}
+    </div>
+    {% endif %}
+
+    <div class="row g-3">
+        <div class="col-12 col-lg-6">
+            <div class="card border shadow-sm h-100">
+                <div class="card-header bg-white"><h2 class="h6 mb-0">Snapshot Analitik</h2></div>
+                <ul class="list-group list-group-flush">
+                    {% for snapshot in snapshots %}
+                    <li class="list-group-item small">
+                        {{ snapshot.get_metrik_display }} · {{ snapshot.periode_selesai|date:"d M Y" }}
+                        · {% if snapshot.is_available %}{{ snapshot.value }}{% else %}{{ snapshot.unavailable_reason }}{% endif %}
+                    </li>
+                    {% empty %}<li class="list-group-item small text-muted">Belum ada snapshot.</li>{% endfor %}
+                </ul>
+            </div>
+        </div>
+        <div class="col-12 col-lg-6">
+            <div class="card border shadow-sm h-100">
+                <div class="card-header bg-white"><h2 class="h6 mb-0">Talent &amp; Skenario</h2></div>
+                <ul class="list-group list-group-flush">
+                    {% for talent in talents %}
+                    <li class="list-group-item small">{{ talent.employee.nama_lengkap }} · {{ talent.box|default:"Belum terklasifikasi" }}</li>
+                    {% endfor %}
+                    {% for scenario in scenarios %}
+                    <li class="list-group-item small">{{ scenario.get_jenis_display }} · {{ scenario.status }} · {{ scenario.rekomendasi|truncatechars:60 }}</li>
+                    {% endfor %}
+                    {% if not talents and not scenarios %}<li class="list-group-item small text-muted">Belum ada data talent atau skenario.</li>{% endif %}
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

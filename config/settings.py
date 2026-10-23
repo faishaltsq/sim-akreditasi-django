@@ -87,6 +87,7 @@ INSTALLED_APPS = [
     'accounts',
     'akreditasi',
     'pasien',
+    'sdm.apps.SdmConfig',
 ]
 
 MIDDLEWARE = [
@@ -114,6 +115,7 @@ TEMPLATES = [
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
                 'akreditasi.context_processors.sidebar_context',
+                'sdm.context_processors.hc_navigation',
             ],
         },
     },
@@ -195,6 +197,12 @@ STORAGES = {
         ),
     },
 }
+
+# Arima Human Capital private bucket. The service key is read directly from
+# HC_PRIVATE_STORAGE_SERVICE_KEY by sdm.storage and is never exposed in settings.
+HC_PRIVATE_STORAGE_BUCKET = os.environ.get(
+    'HC_PRIVATE_STORAGE_BUCKET', 'human-capital-private'
+)
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'

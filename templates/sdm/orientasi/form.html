@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block page_title %}{{ title }}{% endblock %}
+{% block page_subtitle %}Program dan penugasan orientasi{% endblock %}
+{% block content %}
+<div class="container-fluid p-0">
+    <a class="small text-decoration-none" href="{% url 'sdm:orientasi_list' %}"><i class="bi bi-arrow-left me-1"></i>Kembali</a>
+    <h1 class="page-title h4 mt-2 mb-3">{{ title }}</h1>
+
+    <div class="row g-3">
+        <div class="col-12 col-lg-6">
+            <h2 class="h6">Program Baru</h2>
+            <form method="post">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="program">
+                {% with form=program_form %}{% include "sdm/_form_card.html" %}{% endwith %}
+                <button type="submit" class="btn btn-primary btn-sm mt-3">Buat Program</button>
+            </form>
+        </div>
+        <div class="col-12 col-lg-6">
+            <h2 class="h6">Mulai Orientasi</h2>
+            <form method="post">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="assign">
+                {% with form=start_form %}{% include "sdm/_form_card.html" %}{% endwith %}
+                <button type="submit" class="btn btn-primary btn-sm mt-3">Mulai</button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

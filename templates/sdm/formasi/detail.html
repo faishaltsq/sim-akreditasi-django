@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+
+{% block page_title %}Detail Rencana Formasi{% endblock %}
+{% block page_subtitle %}{{ plan.unit_kerja.code }} · {{ plan.profesi }}{% endblock %}
+{% block extra_css %}{% include "sdm/_responsive.html" %}{% endblock %}
+
+{% block content %}
+<div class="container-fluid p-0">
+    <div class="page-header-box mb-3">
+        <div>
+            <a class="small text-decoration-none" href="{% url 'sdm:formasi_list' %}"><i class="bi bi-arrow-left me-1"></i>Kembali ke daftar</a>
+            <h1 class="page-title h4 mt-2 mb-1">{{ plan.unit_kerja.name }} — {{ plan.profesi }}</h1>
+            <p class="page-subtitle text-muted mb-0">{{ plan.periode_mulai|date:"d M Y" }} – {{ plan.periode_selesai|date:"d M Y" }} · <span class="badge {% if plan.status == 'APPROVED' %}text-bg-success{% elif plan.status == 'REVIEW' %}text-bg-warning{% else %}text-bg-light text-dark{% endif %}">{{ plan.get_status_display }}</span></p>
+        </div>
+        <div class="d-flex gap-2">
+            {% if plan.status == 'DRAFT' and can_edit %}
+            <form method="post" action="{% url 'sdm:formasi_submit' plan.pk %}">{% csrf_token %}<button class="btn btn-outline-primary btn-sm" type="submit">Ajukan Tinjauan</button></form>
+            {% elif plan.status == 'REVIEW' %}
+            <form method="post" action="{% url 'sdm:formasi_approve' plan.pk %}">{% csrf_token %}<button class="btn btn-success btn-sm" type="submit">Setujui</button></form>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="row g-3">
+        <div class="col-12 col-lg-7">
+            <div class="card border shadow-sm h-100">
+                <div class="card-header bg-white"><h2 class="h6 mb-0">Aktivitas Beban Kerja</h2></div>
+                <div class="table-responsive">
+                    <table class="table table-sm align-middle mb-0">
+                        <caption class="visually-hidden">Aktivitas, volume, dan standar menit</caption>
+                        <thead><tr><th scope="col">Aktivitas</th><th scope="col">Volume</th><th scope="col">Menit</th><th scope="col">Kategori</th></tr></thead>
+                        <tbody>
+                            {% for activity in activities %}
+                            <tr><td>{{ activity.nama }}</td><td>{{ activity.volume }}</td><td>{{ activity.standard_minutes }}</td><td class="small text-muted">{{ activity.service_category|default:"—" }}</td></tr>
+                            {% empty %}<tr><td colspan="4" class="text-center text-muted py-4">Belum ada aktivitas.</td></tr>{% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% if can_edit %}
+                <div class="card-footer bg-white">
+                    <form method="post" action="{% url 'sdm:formasi_add_activity' plan.pk %}" class="row g-2 align-items-end">
+                        {% csrf_token %}
+                        {% for field in activity_form %}
+                        <div class="col-12 col-md-4">
+                            <label class="form-label small fw-semibold" for="{{ field.id_for_label }}">{{ field.label }}</label>
+                            {{ field }}
+                        </div>
+                        {% endfor %}
+                        <div class="col-12"><button type="submit" class="btn btn-outline-primary btn-sm">Tambah Aktivitas</button></div>
+                    </form>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="col-12 col-lg-5">
+            <div class="card border shadow-sm h-100">
+                <div class="card-header bg-white"><h2 class="h6 mb-0">Hasil Perhitungan</h2></div>
+                <div class="card-body">
+                    {% if calculation and calculation.error %}
+                    <p class="text-muted mb-0">{{ calculation.error }}</p>
+                    {% elif calculation %}
+                    <dl class="row mb-0 small">
+                        <dt class="col-7">Metode</dt><dd class="col-5 text-end">{{ plan.get_metode_display }}</dd>
+                        <dt class="col-7">Versi kalkulasi</dt><dd class="col-5 text-end">{{ calculation.calculation_version }}</dd>
+                        <dt class="col-7">Kebutuhan FTE</dt><dd class="col-5 text-end">{{ calculation.required_fte }}</dd>
+                        <dt class="col-7">Kebutuhan kepala</dt><dd class="col-5 text-end">{{ calculation.required_headcount }}</dd>
+                        <dt class="col-7">FTE aktual</dt><dd class="col-5 text-end">{{ calculation.actual_fte }}</dd>
+                        <dt class="col-7">Selisih FTE</dt><dd class="col-5 text-end">{{ calculation.gap_fte }}</dd>
+                        <dt class="col-7">Kecukupan</dt>
+                        <dd class="col-5 text-end">{% if calculation.sufficiency_pct is not None %}{{ calculation.sufficiency_pct }}%{% else %}Belum dapat dihitung{% endif %}</dd>
+                    </dl>
+                    {% else %}
+                    <p class="text-muted mb-0">Perhitungan tampil setelah rencana diajukan untuk tinjauan.</p>
+                    {% endif %}
+                </div>
+                {% if plan.status == 'APPROVED' and plan.result %}
+                <div class="card-footer bg-white small text-muted">
+                    Disetujui {{ plan.approved_at|date:"d M Y H:i" }} · digest {{ plan.result.inputs_digest|slice:":12" }}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

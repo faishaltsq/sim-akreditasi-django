@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% block page_title %}K3 &amp; Kesehatan Kerja{% endblock %}
+{% block page_subtitle %}Insiden dan risiko staf (akses terbatas){% endblock %}
+{% block content %}
+<div class="container-fluid p-0">
+    <h1 class="page-title h5 mb-3">K3 &amp; Kesehatan Kerja</h1>
+    {% include "sdm/_navigasi.html" %}
+    <p class="small text-muted">Halaman ini memerlukan izin kesehatan kerja eksplisit. Detail klinis tidak ditampilkan pada ringkasan.</p>
+    <div class="card border shadow-sm mb-3">
+        <div class="card-header bg-white"><h2 class="h6 mb-0">Laporkan Insiden K3</h2></div>
+        <div class="card-body">
+            <form method="post" action="{% url 'sdm:k3_report' %}" class="row g-2">
+                {% csrf_token %}
+                <div class="col-12 col-md-3">
+                    <label class="form-label small fw-semibold" for="k3-unit">Unit</label>
+                    <select id="k3-unit" name="unit" class="form-select form-select-sm" required>
+                        {% for unit in unit_options %}<option value="{{ unit.pk }}">{{ unit.code }}</option>{% endfor %}
+                    </select>
+                </div>
+                <div class="col-12 col-md-3">
+                    <label class="form-label small fw-semibold" for="k3-employee">Pegawai</label>
+                    <select id="k3-employee" name="employee" class="form-select form-select-sm" required>
+                        {% for employee in employee_options %}<option value="{{ employee.pk }}">{{ employee.nama_lengkap }}</option>{% endfor %}
+                    </select>
+                </div>
+                <div class="col-12 col-md-2">
+                    <label class="form-label small fw-semibold" for="k3-kategori">Kategori</label>
+                    <select id="k3-kategori" name="kategori" class="form-select form-select-sm">
+                        <option value="TERTUSUK_JARUM">Tertusuk jarum</option>
+                        <option value="MUSKULOSKELETAL">Muskuloskeletal</option>
+                        <option value="PAPARAN">Paparan</option>
+                        <option value="KEKERASAN">Kekerasan</option>
+                        <option value="LAINNYA">Lainnya</option>
+                    </select>
+                </div>
+                <div class="col-12 col-md-4">
+                    <label class="form-label small fw-semibold" for="k3-desc">Deskripsi (tanpa identitas pasien)</label>
+                    <input id="k3-desc" name="deskripsi" class="form-control form-control-sm" maxlength="2000" required>
+                </div>
+                <div class="col-12"><button class="btn btn-primary btn-sm" type="submit">Laporkan</button></div>
+            </form>
+        </div>
+    </div>
+
+    <div class="card border shadow-sm">
+        <div class="card-header bg-white"><h2 class="h6 mb-0">Insiden Staf</h2></div>
+        <div class="table-responsive">
+            <table class="table table-sm align-middle mb-0">
+                <caption class="visually-hidden">Daftar insiden K3 staf</caption>
+                <thead><tr><th scope="col">Tanggal</th><th scope="col">Kategori</th><th scope="col">Unit</th><th scope="col">Status</th><th scope="col">Tindak Lanjut</th></tr></thead>
+                <tbody>
+                    {% for incident in incidents %}
+                    <tr>
+                        <td class="small">{{ incident.tanggal|date:"d M Y" }}</td>
+                        <td class="small">{{ incident.get_kategori_display }}</td>
+                        <td class="small">{{ incident.unit_kerja.code }}</td>
+                        <td><span class="badge text-bg-light text-dark">{{ incident.get_status_display }}</span></td>
+                        <td>{{ incident.followups.all|length }}</td>
+                    </tr>
+                    {% empty %}<tr><td colspan="5" class="text-center text-muted py-4">Belum ada insiden.</td></tr>{% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <div class="card border shadow-sm mt-3">
+        <div class="card-header bg-white"><h2 class="h6 mb-0">Risiko K3 per Unit</h2></div>
+        <ul class="list-group list-group-flush">
+            {% for risk in risks %}
+            <li class="list-group-item small">{{ risk.unit_kerja.code }} · {{ risk.get_kategori_display }} · {{ risk.uraian|truncatechars:80 }}</li>
+            {% empty %}<li class="list-group-item small text-muted">Belum ada risiko K3 terdaftar.</li>{% endfor %}
+        </ul>
+    </div>
+</div>
+{% endblock %}

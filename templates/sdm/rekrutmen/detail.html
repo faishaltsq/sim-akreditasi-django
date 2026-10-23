@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block page_title %}{{ vacancy.judul }}{% endblock %}
+{% block page_subtitle %}Pipeline seleksi{% endblock %}
+{% block content %}
+<div class="container-fluid p-0">
+    <a class="small text-decoration-none" href="{% url 'sdm:rekrutmen_list' %}"><i class="bi bi-arrow-left me-1"></i>Kembali</a>
+    <h1 class="page-title h4 mt-2 mb-3">{{ vacancy.judul }} — {{ vacancy.profesi }}</h1>
+    <div class="card border shadow-sm">
+        <div class="table-responsive">
+            <table class="table table-sm align-middle mb-0">
+                <caption class="visually-hidden">Lamaran dan tahap seleksi</caption>
+                <thead><tr><th scope="col">Pelamar</th><th scope="col">Tahap</th><th scope="col">Riwayat</th><th scope="col">Pindahkan</th></tr></thead>
+                <tbody>
+                    {% for application in applications %}
+                    <tr>
+                        <td>{{ application.nama_pelamar }}</td>
+                        <td><span class="badge text-bg-light text-dark">{{ application.get_status_display }}</span></td>
+                        <td class="small text-muted">{{ application.history.count }} perubahan</td>
+                        <td>
+                            <form method="post" action="{% url 'sdm:rekrutmen_move' application.pk %}" class="d-flex gap-1">
+                                {% csrf_token %}
+                                <label class="visually-hidden" for="stage-{{ application.pk }}">Tahap berikutnya</label>
+                                <select id="stage-{{ application.pk }}" name="status" class="form-select form-select-sm" style="width:auto;">
+                                    {% for value, label in stage_choices %}<option value="{{ value }}">{{ label }}</option>{% endfor %}
+                                </select>
+                                <button class="btn btn-outline-primary btn-sm" type="submit">Simpan</button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% empty %}<tr><td colspan="4" class="text-center text-muted py-4">Belum ada lamaran.</td></tr>{% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="card border shadow-sm mt-3">
+        <div class="card-header bg-white"><h2 class="h6 mb-0">Tambah Lamaran</h2></div>
+        <div class="card-body">
+            <form method="post" action="{% url 'sdm:rekrutmen_add_application' vacancy.pk %}" class="row g-2 align-items-end">
+                {% csrf_token %}
+                <div class="col-12 col-md-4">
+                    <label class="form-label small fw-semibold" for="app-name">Nama Pelamar</label>
+                    <input id="app-name" name="nama_pelamar" class="form-control form-control-sm" maxlength="200" required>
+                </div>
+                <div class="col-12 col-md-4">
+                    <label class="form-label small fw-semibold" for="app-contact">Kontak</label>
+                    <input id="app-contact" name="kontak" class="form-control form-control-sm" maxlength="200">
+                </div>
+                <div class="col-12 col-md-4"><button class="btn btn-primary btn-sm" type="submit">Tambah</button></div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

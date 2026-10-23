@@ -1,0 +1,115 @@
+{% extends "base.html" %}
+
+{% block page_title %}Data Pegawai{% endblock %}
+{% block page_subtitle %}Direktori pegawai dalam lingkup akses Anda{% endblock %}
+{% block extra_css %}{% include "sdm/_responsive.html" %}{% endblock %}
+
+{% block content %}
+<div class="container-fluid p-0">
+    <div class="page-header-box mb-3">
+        <div>
+            <h1 class="page-title h5 mb-1"><i class="bi bi-people-fill text-primary me-2"></i>Data Pegawai</h1>
+            <p class="page-subtitle text-muted mb-0">Cari dan kelola identitas kepegawaian sesuai lingkup unit.</p>
+        </div>
+        {% if can_create %}
+        <a class="btn btn-primary btn-sm" href="{% url 'sdm:pegawai_create' %}">
+            <i class="bi bi-person-plus me-1"></i>Tambah Pegawai
+        </a>
+        {% endif %}
+    </div>
+
+    <form method="get" class="card border shadow-sm mb-3" role="search" aria-label="Filter pegawai">
+        <div class="card-body row g-2 align-items-end">
+            <div class="col-12 col-md-4">
+                <label class="form-label small fw-semibold" for="filter-q">Cari pegawai</label>
+                <input id="filter-q" class="form-control form-control-sm" name="q" value="{{ search_q }}" maxlength="100" placeholder="Nama, nomor, profesi, jabatan">
+            </div>
+            <div class="col-6 col-md-2">
+                <label class="form-label small fw-semibold" for="filter-unit">Unit</label>
+                <select id="filter-unit" class="form-select form-select-sm" name="unit">
+                    <option value="">Semua unit</option>
+                    {% for unit in units %}
+                    <option value="{{ unit.pk }}" {% if selected_unit == unit.pk|stringformat:"s" %}selected{% endif %}>{{ unit.code }} — {{ unit.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-6 col-md-2">
+                <label class="form-label small fw-semibold" for="filter-status">Status</label>
+                <select id="filter-status" class="form-select form-select-sm" name="status">
+                    <option value="">Semua status</option>
+                    {% for value, label in status_choices %}
+                    <option value="{{ value }}" {% if selected_status == value %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-6 col-md-2">
+                <label class="form-label small fw-semibold" for="filter-kategori">Kategori</label>
+                <select id="filter-kategori" class="form-select form-select-sm" name="kategori">
+                    <option value="">Semua kategori</option>
+                    {% for value, label in category_choices %}
+                    <option value="{{ value }}" {% if selected_category == value %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-6 col-md-2">
+                <label class="form-label small fw-semibold" for="filter-profesi">Profesi</label>
+                <input id="filter-profesi" class="form-control form-control-sm" name="profesi" value="{{ profession_filter }}" maxlength="120">
+            </div>
+            <div class="col-12 d-flex justify-content-end gap-2">
+                <a class="btn btn-outline-secondary btn-sm" href="{% url 'sdm:pegawai_list' %}">Reset</a>
+                <button class="btn btn-outline-primary btn-sm" type="submit"><i class="bi bi-search me-1"></i>Terapkan</button>
+            </div>
+        </div>
+    </form>
+
+    <div class="table-card">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <caption class="visually-hidden">Daftar pegawai yang dapat Anda akses</caption>
+                <thead>
+                    <tr>
+                        <th scope="col">Pegawai</th>
+                        <th scope="col">Nomor</th>
+                        <th scope="col">Profesi / Jabatan</th>
+                        <th scope="col">Penempatan Aktif</th>
+                        <th scope="col">Kategori</th>
+                        <th scope="col">Status</th>
+                        <th scope="col" aria-label="Aksi"></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for employee in page_obj %}
+                    <tr>
+                        <td><a class="fw-semibold text-decoration-none" href="{% url 'sdm:pegawai_detail' employee.pk %}">{{ employee.nama_lengkap }}</a></td>
+                        <td class="font-monospace small">{{ employee.nomor_pegawai|default:"—" }}</td>
+                        <td>{{ employee.profesi|default:"—" }}{% if employee.jabatan %}<small class="d-block text-muted">{{ employee.jabatan }}</small>{% endif %}</td>
+                        <td>
+                            {% for placement in employee.active_placements %}
+                            <span class="badge bg-light text-dark border">{{ placement.unit_kerja.code }} · {{ placement.alokasi_fte }} FTE</span>
+                            {% empty %}<span class="text-muted">—</span>{% endfor %}
+                        </td>
+                        <td>{{ employee.get_kategori_display }}</td>
+                        <td>{% if employee.status == 'AKTIF' %}<span class="badge text-bg-success">Aktif</span>{% else %}<span class="badge text-bg-secondary">Nonaktif</span>{% endif %}</td>
+                        <td><a class="btn btn-outline-primary btn-sm" href="{% url 'sdm:pegawai_detail' employee.pk %}" aria-label="Lihat {{ employee.nama_lengkap }}">Detail</a></td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="7" class="text-center py-5 text-muted"><i class="bi bi-person-exclamation fs-3 d-block mb-2"></i>Tidak ada pegawai yang cocok dengan filter ini.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mt-3">
+        <small class="text-muted">{{ page_obj.paginator.count }} pegawai · halaman {{ page_obj.number }} dari {{ page_obj.paginator.num_pages }}</small>
+        {% if page_obj.has_other_pages %}
+        <nav aria-label="Navigasi halaman pegawai">
+            <ul class="pagination pagination-sm mb-0">
+                {% if page_obj.has_previous %}<li class="page-item"><a class="page-link" href="?{% if pagination_query %}{{ pagination_query }}&amp;{% endif %}page={{ page_obj.previous_page_number }}">Sebelumnya</a></li>{% else %}<li class="page-item disabled"><span class="page-link">Sebelumnya</span></li>{% endif %}
+                {% if page_obj.has_next %}<li class="page-item"><a class="page-link" href="?{% if pagination_query %}{{ pagination_query }}&amp;{% endif %}page={{ page_obj.next_page_number }}">Berikutnya</a></li>{% else %}<li class="page-item disabled"><span class="page-link">Berikutnya</span></li>{% endif %}
+            </ul>
+        </nav>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

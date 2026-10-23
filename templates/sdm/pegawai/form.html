@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+
+{% block page_title %}Data Pegawai{% endblock %}
+{% block page_subtitle %}Perubahan dicatat dalam riwayat kepegawaian{% endblock %}
+{% block extra_css %}{% include "sdm/_responsive.html" %}{% endblock %}
+
+{% block content %}
+<div class="container-fluid p-0">
+    <div class="page-header-box mb-3">
+        <div>
+            <h1 class="page-title h5 mb-1"><i class="bi bi-person-vcard-fill text-primary me-2"></i>{{ title }}</h1>
+            <p class="page-subtitle text-muted mb-0">Akses dan penempatan dibatasi pada unit yang diberikan kepada akun Anda.</p>
+        </div>
+        {% if employee %}<a class="btn btn-outline-secondary btn-sm" href="{% url 'sdm:pegawai_detail' employee.pk %}">Kembali</a>{% else %}<a class="btn btn-outline-secondary btn-sm" href="{% url 'sdm:pegawai_list' %}">Kembali</a>{% endif %}
+    </div>
+
+    <form method="post" class="card border shadow-sm">
+        {% csrf_token %}
+        <div class="card-body">
+            {% if form.non_field_errors %}<div class="alert alert-danger" role="alert">{{ form.non_field_errors }}</div>{% endif %}
+            <div class="row g-3">
+                {% for field in form %}
+                <div class="col-12 col-md-6">
+                    <label class="form-label small fw-semibold" for="{{ field.id_for_label }}">{{ field.label }}</label>
+                    {{ field }}
+                    {% if field.help_text %}<div class="form-text">{{ field.help_text }}</div>{% endif %}
+                    {% for error in field.errors %}<div class="text-danger small" role="alert">{{ error }}</div>{% endfor %}
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        <div class="card-footer bg-light d-flex justify-content-end gap-2">
+            {% if employee %}<a class="btn btn-outline-secondary btn-sm" href="{% url 'sdm:pegawai_detail' employee.pk %}">Batal</a>{% else %}<a class="btn btn-outline-secondary btn-sm" href="{% url 'sdm:pegawai_list' %}">Batal</a>{% endif %}
+            <button class="btn btn-primary btn-sm" type="submit"><i class="bi bi-save me-1"></i>Simpan</button>
+        </div>
+    </form>
+</div>
+{% endblock %}

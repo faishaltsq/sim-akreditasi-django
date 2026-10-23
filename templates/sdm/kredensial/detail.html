@@ -1,0 +1,122 @@
+{% extends "base.html" %}
+{% block page_title %}Pengajuan Kredensial{% endblock %}
+{% block page_subtitle %}{{ credential_request.employee.nama_lengkap }}{% endblock %}
+{% block content %}
+<div class="container-fluid p-0">
+    <a class="small text-decoration-none" href="{% url 'sdm:kredensial_list' %}"><i class="bi bi-arrow-left me-1"></i>Kembali</a>
+    <h1 class="page-title h4 mt-2 mb-1">{{ credential_request.employee.nama_lengkap }}</h1>
+    <p class="text-muted small mb-3">{{ credential_request.unit_kerja.code }} · {{ credential_request.get_status_display }}</p>
+
+    <div class="row g-3">
+        <div class="col-12 col-lg-6">
+            <div class="card border shadow-sm h-100">
+                <div class="card-header bg-white"><h2 class="h6 mb-0">Rincian Kewenangan</h2></div>
+                <ul class="list-group list-group-flush">
+                    {% for item in privileges %}<li class="list-group-item small">{{ item.kewenangan }}</li>
+                    {% empty %}<li class="list-group-item small text-muted">Belum ada rincian kewenangan.</li>{% endfor %}
+                </ul>
+            </div>
+        </div>
+        <div class="col-12 col-lg-6">
+            <div class="card border shadow-sm h-100">
+                <div class="card-header bg-white"><h2 class="h6 mb-0">Verifikasi Sumber Utama (PSV)</h2></div>
+                <ul class="list-group list-group-flush">
+                    {% for psv in psv_records %}
+                    <li class="list-group-item small">{{ psv.issuer }} · {{ psv.reference }} · {{ psv.get_outcome_display }}</li>
+                    {% empty %}<li class="list-group-item small text-muted">Belum ada PSV tercatat.</li>{% endfor %}
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-3 mt-1">
+        <div class="col-12 col-lg-6">
+            <div class="card border shadow-sm h-100">
+                <div class="card-header bg-white"><h2 class="h6 mb-0">Tambah Rincian Kewenangan</h2></div>
+                <div class="card-body">
+                    <form method="post" action="{% url 'sdm:kredensial_add_privilege' credential_request.pk %}" class="row g-2 align-items-end">
+                        {% csrf_token %}
+                        <div class="col-12">
+                            <label class="form-label small fw-semibold" for="priv-name">Kewenangan</label>
+                            <input id="priv-name" name="kewenangan" class="form-control form-control-sm" maxlength="200" required>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label small fw-semibold" for="priv-note">Catatan</label>
+                            <input id="priv-note" name="catatan" class="form-control form-control-sm">
+                        </div>
+                        <div class="col-12"><button class="btn btn-outline-primary btn-sm" type="submit">Tambah</button></div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        <div class="col-12 col-lg-6">
+            <div class="card border shadow-sm h-100">
+                <div class="card-header bg-white"><h2 class="h6 mb-0">Catat PSV</h2></div>
+                <div class="card-body">
+                    <form method="post" action="{% url 'sdm:kredensial_psv' credential_request.pk %}" class="row g-2">
+                        {% csrf_token %}
+                        <div class="col-12 col-md-6">
+                            <label class="form-label small fw-semibold" for="psv-issuer">Penerbit</label>
+                            <input id="psv-issuer" name="issuer" class="form-control form-control-sm" maxlength="200" required>
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <label class="form-label small fw-semibold" for="psv-ref">Referensi</label>
+                            <input id="psv-ref" name="reference" class="form-control form-control-sm" maxlength="200" required>
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <label class="form-label small fw-semibold" for="psv-method">Metode</label>
+                            <input id="psv-method" name="method" class="form-control form-control-sm" maxlength="120" required>
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <label class="form-label small fw-semibold" for="psv-outcome">Hasil</label>
+                            <select id="psv-outcome" name="outcome" class="form-select form-select-sm">
+                                <option value="VALID">Sah</option>
+                                <option value="TIDAK_VALID">Tidak Sah</option>
+                                <option value="PERLU_KONFIRMASI">Perlu Konfirmasi</option>
+                            </select>
+                        </div>
+                        <div class="col-12"><button class="btn btn-outline-primary btn-sm" type="submit">Simpan PSV</button></div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card border shadow-sm mt-3">
+        <div class="card-header bg-white"><h2 class="h6 mb-0">Keputusan Komite</h2></div>
+        <div class="card-body">
+            {% if credential_request.decided_at %}
+            <p class="mb-0 small">Diputuskan {{ credential_request.decided_at|date:"d M Y H:i" }} · {{ credential_request.get_status_display }}</p>
+            {% else %}
+            <form method="post" action="{% url 'sdm:kredensial_decide' credential_request.pk %}" class="row g-2 align-items-end">
+                {% csrf_token %}
+                <div class="col-12 col-md-4">
+                    <label class="form-label small fw-semibold" for="outcome">Keputusan</label>
+                    <select id="outcome" name="outcome" class="form-select form-select-sm">
+                        <option value="DISETUJUI">Disetujui</option>
+                        <option value="DITOLAK">Ditolak</option>
+                    </select>
+                </div>
+                <div class="col-12 col-md-6">
+                    <label class="form-label small fw-semibold" for="notes">Catatan</label>
+                    <input id="notes" name="notes" class="form-control form-control-sm" maxlength="2000">
+                </div>
+                <div class="col-12 col-md-2"><button class="btn btn-primary btn-sm w-100" type="submit">Simpan</button></div>
+            </form>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="card border shadow-sm mt-3">
+        <div class="card-header bg-white"><h2 class="h6 mb-0">SPK Terbit</h2></div>
+        <ul class="list-group list-group-flush">
+            {% for spk in spk_list %}
+            <li class="list-group-item small d-flex justify-content-between align-items-center">
+                <span>{{ spk.nomor_spk }} · v{{ spk.versi }} · {{ spk.berlaku_mulai|date:"d M Y" }}{% if not spk.is_active %} (dicabut){% endif %}</span>
+                <a class="btn btn-outline-secondary btn-sm" href="{% url 'sdm:kredensial_cetak_spk' spk.pk %}">Cetak</a>
+            </li>
+            {% empty %}<li class="list-group-item small text-muted">Belum ada SPK.</li>{% endfor %}
+        </ul>
+    </div>
+</div>
+{% endblock %}

@@ -67,8 +67,28 @@ PERMISSION_DEFAULTS = {
     },
 }
 
+HC_PERMISSION_LABELS = [
+    ('can_view_hc', 'Lihat Human Capital'),
+    ('can_manage_hc_employees', 'Kelola Pegawai'),
+    ('can_manage_hc_documents', 'Kelola Dokumen Kepegawaian'),
+    ('can_plan_hc_workforce', 'Kelola Perencanaan Ketenagaan'),
+    ('can_manage_hc_recruitment', 'Kelola Rekrutmen'),
+    ('can_review_hc_credentials', 'Tinjau Kredensial'),
+    ('can_manage_hc_orientation', 'Kelola Orientasi'),
+    ('can_manage_hc_appraisals', 'Kelola Penilaian Kinerja'),
+    ('can_manage_hc_training', 'Kelola Diklat'),
+    ('can_view_hc_analytics', 'Lihat Analitik SDM'),
+    ('can_manage_hc_talent', 'Kelola Talent'),
+    ('can_export_hc', 'Ekspor Data SDM'),
+]
+for _role_defaults in PERMISSION_DEFAULTS.values():
+    _role_defaults.update({permission: False for permission, _ in HC_PERMISSION_LABELS})
+
 # Izin yang tidak boleh diblokir survey freeze (tetap bisa akses) — hanya SUPER_ADMIN override
-FREEZE_PROTECTED_PERMS = {'can_view_pdca', 'can_view_rdwos', 'can_view_risiko', 'can_view_scoring', 'can_view_audit_log'}
+FREEZE_PROTECTED_PERMS = {
+    'can_view_pdca', 'can_view_rdwos', 'can_view_risiko', 'can_view_scoring',
+    'can_view_audit_log', 'can_view_hc', 'can_view_hc_analytics',
+}
 # Izin khusus admin yang tidak boleh di-revoke dari SUPER_ADMIN
 LOCKOUT_SAFE_PERMS = {'can_access_control_center', 'can_manage_users', 'can_manage_system_settings'}
 
@@ -414,7 +434,7 @@ class NakesCredential(models.Model):
 
 
 class RolePermissionConfig(models.Model):
-    """Konfigurasi 18 izin modular per peran — dapat diubah Admin via Pusat Kontrol."""
+    """Konfigurasi izin modular per peran — dapat diubah Admin via Pusat Kontrol."""
     role = models.CharField('Peran Pengguna', max_length=30, unique=True, choices=UserProfile.ROLE_CHOICES)
 
     # Modul PDCA & Scoring
@@ -446,6 +466,20 @@ class RolePermissionConfig(models.Model):
     # Modul Pusat Kontrol Admin
     can_access_control_center = models.BooleanField('Akses Menu Pusat Kontrol Admin', default=False)
     can_manage_system_settings = models.BooleanField('Ubah Konfigurasi Sistem (Ambang Batas, Tema, Freeze)', default=False)
+
+    # Human Capital; role permission is necessary but still requires an explicit scoped grant.
+    can_view_hc = models.BooleanField('Lihat Human Capital', default=False)
+    can_manage_hc_employees = models.BooleanField('Kelola Pegawai Human Capital', default=False)
+    can_manage_hc_documents = models.BooleanField('Kelola Dokumen Kepegawaian', default=False)
+    can_plan_hc_workforce = models.BooleanField('Kelola Perencanaan Ketenagaan', default=False)
+    can_manage_hc_recruitment = models.BooleanField('Kelola Rekrutmen Human Capital', default=False)
+    can_review_hc_credentials = models.BooleanField('Tinjau Kredensial Human Capital', default=False)
+    can_manage_hc_orientation = models.BooleanField('Kelola Orientasi Human Capital', default=False)
+    can_manage_hc_appraisals = models.BooleanField('Kelola Penilaian Kinerja Human Capital', default=False)
+    can_manage_hc_training = models.BooleanField('Kelola Diklat Human Capital', default=False)
+    can_view_hc_analytics = models.BooleanField('Lihat Analitik SDM', default=False)
+    can_manage_hc_talent = models.BooleanField('Kelola Talent Human Capital', default=False)
+    can_export_hc = models.BooleanField('Ekspor Data Human Capital', default=False)
 
     updated_at = models.DateTimeField(auto_now=True)
 

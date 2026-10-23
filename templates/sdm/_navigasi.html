@@ -1,0 +1,15 @@
+<nav class="mb-3" aria-label="Navigasi Human Capital">
+    <div class="d-flex flex-wrap gap-2">
+        <a class="btn btn-sm btn-outline-secondary" href="{% url 'sdm:dashboard' %}">Dasbor</a>
+        {% if perms %}{% endif %}
+        {% if nav_pegawai %}<a class="btn btn-sm btn-outline-secondary" href="{% url 'sdm:pegawai_list' %}">Direktori</a>{% endif %}
+        {% if nav_formasi %}<a class="btn btn-sm btn-outline-secondary" href="{% url 'sdm:formasi_list' %}">Formasi</a>{% endif %}
+        {% if nav_rekrutmen %}<a class="btn btn-sm btn-outline-secondary" href="{% url 'sdm:rekrutmen_list' %}">Rekrutmen</a>{% endif %}
+        {% if nav_kredensial %}<a class="btn btn-sm btn-outline-secondary" href="{% url 'sdm:kredensial_list' %}">Kredensial</a>{% endif %}
+        {% if nav_orientasi %}<a class="btn btn-sm btn-outline-secondary" href="{% url 'sdm:orientasi_list' %}">Orientasi</a>{% endif %}
+        {% if nav_kinerja %}<a class="btn btn-sm btn-outline-secondary" href="{% url 'sdm:kinerja_list' %}">Kinerja</a>{% endif %}
+        {% if nav_diklat %}<a class="btn btn-sm btn-outline-secondary" href="{% url 'sdm:diklat_list' %}">Diklat</a>{% endif %}
+        {% if nav_k3 %}<a class="btn btn-sm btn-outline-secondary" href="{% url 'sdm:k3_list' %}">K3</a>{% endif %}
+        {% if nav_analitik %}<a class="btn btn-sm btn-outline-secondary" href="{% url 'sdm:analitik_dashboard' %}">Analitik</a>{% endif %}
+    </div>
+</nav>

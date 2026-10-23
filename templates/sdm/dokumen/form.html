@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+
+{% block page_title %}Unggah Dokumen{% endblock %}
+{% block page_subtitle %}Dokumen privat untuk {{ employee.nama_lengkap }}{% endblock %}
+{% block extra_css %}{% include "sdm/_responsive.html" %}{% endblock %}
+
+{% block content %}
+<div class="container-fluid p-0">
+    <div class="page-header-box mb-3">
+        <div>
+            <a class="small text-decoration-none" href="{% url 'sdm:pegawai_detail' employee.pk %}"><i class="bi bi-arrow-left me-1"></i>Kembali ke profil</a>
+            <h1 class="page-title h4 mt-2 mb-1">{{ title }}</h1>
+            <p class="page-subtitle text-muted mb-0">Berkas disimpan di penyimpanan privat; tidak ada URL publik yang dibuat.</p>
+        </div>
+    </div>
+
+    <form method="post" enctype="multipart/form-data" class="card border shadow-sm">
+        {% csrf_token %}
+        <div class="card-body">
+            {% if form.non_field_errors %}
+            <div class="alert alert-danger py-2 small" role="alert">{{ form.non_field_errors }}</div>
+            {% endif %}
+            <div class="row g-3">
+                {% for field in form %}
+                <div class="col-12 col-md-6">
+                    <label class="form-label small fw-semibold" for="{{ field.id_for_label }}">{{ field.label }}{% if field.field.required %} <span class="text-danger" aria-hidden="true">*</span>{% endif %}</label>
+                    {{ field }}
+                    {% if field.help_text %}<div class="form-text small">{{ field.help_text }}</div>{% endif %}
+                    {% for error in field.errors %}<div class="invalid-feedback d-block small">{{ error }}</div>{% endfor %}
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        <div class="card-footer bg-white d-flex gap-2">
+            <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-upload me-1"></i>Unggah Dokumen</button>
+            <a class="btn btn-outline-secondary btn-sm" href="{% url 'sdm:pegawai_detail' employee.pk %}">Batal</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

@@ -208,7 +208,7 @@
           <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3">
             <div>
               <h5 class="fw-bold text-dark mb-1">Matriks Hak Akses Peran Dinamis (Permission Matrix)</h5>
-              <p class="text-muted small mb-0">Atur izin operasional tiap peran. Perubahan berlaku seketika pada sesi seluruh pengguna.</p>
+              <p class="text-muted small mb-0">Atur izin operasional tiap peran. Untuk Human Capital, setiap izin peran tetap memerlukan pemberian hak akses dan lingkup unit secara eksplisit.</p>
             </div>
             <div class="d-flex gap-2">
               <form method="post" action="{% url 'accounts:reset_role_permissions' %}" onsubmit="return confirm('Kembalikan seluruh matriks izin ke standar bawaan KARS?');">
@@ -272,6 +272,18 @@
                                    {% if field_name == 'can_view_audit_log' and rc.config.can_view_audit_log %}checked{% endif %}
                                    {% if field_name == 'can_access_control_center' and rc.config.can_access_control_center %}checked{% endif %}
                                    {% if field_name == 'can_manage_system_settings' and rc.config.can_manage_system_settings %}checked{% endif %}
+                                   {% if field_name == 'can_view_hc' and rc.config.can_view_hc %}checked{% endif %}
+                                   {% if field_name == 'can_manage_hc_employees' and rc.config.can_manage_hc_employees %}checked{% endif %}
+                                   {% if field_name == 'can_manage_hc_documents' and rc.config.can_manage_hc_documents %}checked{% endif %}
+                                   {% if field_name == 'can_plan_hc_workforce' and rc.config.can_plan_hc_workforce %}checked{% endif %}
+                                   {% if field_name == 'can_manage_hc_recruitment' and rc.config.can_manage_hc_recruitment %}checked{% endif %}
+                                   {% if field_name == 'can_review_hc_credentials' and rc.config.can_review_hc_credentials %}checked{% endif %}
+                                   {% if field_name == 'can_manage_hc_orientation' and rc.config.can_manage_hc_orientation %}checked{% endif %}
+                                   {% if field_name == 'can_manage_hc_appraisals' and rc.config.can_manage_hc_appraisals %}checked{% endif %}
+                                   {% if field_name == 'can_manage_hc_training' and rc.config.can_manage_hc_training %}checked{% endif %}
+                                   {% if field_name == 'can_view_hc_analytics' and rc.config.can_view_hc_analytics %}checked{% endif %}
+                                   {% if field_name == 'can_manage_hc_talent' and rc.config.can_manage_hc_talent %}checked{% endif %}
+                                   {% if field_name == 'can_export_hc' and rc.config.can_export_hc %}checked{% endif %}
                                  {% endif %}
                                {% endif %}>
                       </div>

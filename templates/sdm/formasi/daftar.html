@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+
+{% block page_title %}Rencana Formasi{% endblock %}
+{% block page_subtitle %}Kebutuhan, aktual, dan selisih FTE per unit dan profesi{% endblock %}
+{% block extra_css %}{% include "sdm/_responsive.html" %}{% endblock %}
+
+{% block content %}
+<div class="container-fluid p-0">
+    <div class="page-header-box mb-3">
+        <div>
+            <h1 class="page-title h5 mb-1"><i class="bi bi-diagram-3 text-primary me-2"></i>Rencana Formasi</h1>
+            <p class="page-subtitle text-muted mb-0">Perhitungan FTE berbasis aktivitas dengan versi dan persetujuan.</p>
+        </div>
+        {% if can_create %}<a class="btn btn-primary btn-sm" href="{% url 'sdm:formasi_create' %}"><i class="bi bi-plus-lg me-1"></i>Rencana Baru</a>{% endif %}
+    </div>
+
+    <div class="card border shadow-sm">
+        <div class="table-responsive">
+            <table class="table table-sm align-middle mb-0">
+                <caption class="visually-hidden">Daftar rencana formasi</caption>
+                <thead><tr><th scope="col">Unit</th><th scope="col">Profesi</th><th scope="col">Periode</th><th scope="col">Status</th><th scope="col">Kebutuhan FTE</th><th scope="col">Selisih</th></tr></thead>
+                <tbody>
+                    {% for plan in plans %}
+                    <tr>
+                        <td>{{ plan.unit_kerja.code }} — {{ plan.unit_kerja.name }}</td>
+                        <td>{{ plan.profesi }}</td>
+                        <td class="small">{{ plan.periode_mulai|date:"d M Y" }} – {{ plan.periode_selesai|date:"d M Y" }}</td>
+                        <td><span class="badge {% if plan.status == 'APPROVED' %}text-bg-success{% elif plan.status == 'REVIEW' %}text-bg-warning{% elif plan.status == 'SUPERSEDED' %}text-bg-secondary{% else %}text-bg-light text-dark{% endif %}">{{ plan.get_status_display }}</span></td>
+                        <td>{% if plan.status == 'APPROVED' and plan.result %}{{ plan.result.required_fte }}{% else %}<span class="text-muted">Belum dapat dihitung</span>{% endif %}</td>
+                        <td>{% if plan.status == 'APPROVED' and plan.result %}{{ plan.result.gap_fte }}{% else %}—{% endif %}</td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="6" class="text-center text-muted py-4">Belum ada rencana formasi.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

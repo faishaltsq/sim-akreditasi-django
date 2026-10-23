@@ -125,7 +125,16 @@ Portal ini menyediakan tempat bagi setiap tenaga kesehatan (Dokter, Perawat, Bid
 1. Login dengan akun Nakes (misal: `perawat.igd`). Sistem otomatis mengarahkan ke **/portal-nakes/**.
 2. Di portal, klik **Upload Berkas** untuk setiap jenis dokumen (STR, SIP, Ijazah, Sertifikat, dll.).
 3. Pilih jenis berkas, unggah file (PDF/JPG/PNG), dan isi nomor serta tanggal berlaku.
-4. Berkas akan tersimpan di Supabase Cloud Storage dan tercatat di rekap kelengkapan unit kerja.
+4. Berkas baru disimpan memakai kunci objek privat dan unduhan berizin berdurasi singkat. Sistem tidak membuat fallback lokal atau URL publik.
+5. Unggah ulang menjadi versi `PENDING`; versi terdahulu diarsipkan sebagai `SUPERSEDED`, bukan dihapus.
+
+### Operasi Aman Penyimpanan Privat:
+- Konfigurasikan `SUPABASE_URL`, `HC_PRIVATE_STORAGE_SERVICE_KEY`, dan `HC_PRIVATE_STORAGE_BUCKET` sebagai secret deployment; hanya nama bucket nonrahasia dicatat di settings. Bucket wajib privat; jangan menaruh service key di browser, dokumentasi, log, atau output perintah.
+- `python manage.py reconcile_hc_credentials` adalah dry-run/read-only default dan hanya menampilkan hitungan agregat.
+- Gunakan `python manage.py reconcile_hc_credentials --inventory --verify-anonymous-denial` untuk rekonsiliasi inventaris/checksum, laporan objek hilang/tidak cocok pada hitungan `missing_or_mismatched`, serta pemeriksaan bahwa akses anonim ditolak. Output tetap agregat tanpa nama, ID pegawai, kunci objek, checksum, URL bertanda tangan, atau secret.
+- `--apply --mapping-artifact <reviewed.json>` hanya untuk artefak yang sudah ditinjau dan objek privat yang sudah diverifikasi. Jangan jalankan pada produksi tanpa persetujuan cutover terpisah.
+- Latihan wajib memakai salinan database yang dipulihkan dan disanitasi, bucket privat nonproduksi, akun uji tanpa PII, lalu meninjau `missing_or_mismatched=0` dan `anonymous_exposed_or_error=0` sebelum eskalasi.
+- Objek sumber legacy yang belum direkonsiliasi tetap memakai perilaku akses lama yang sudah berizin. Perbaikan kebijakan bucket sumber dan cutover produksi adalah gerbang eksternal terpisah.
 
 ### Rekap Kelengkapan Staf per Unit:
 - Admin/Koordinator dapat membuka menu **Rekap KPS** (`/rekap-kps/`) untuk melihat status kelengkapan berkas seluruh nakes per unit kerja.

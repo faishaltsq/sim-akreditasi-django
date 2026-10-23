@@ -55,6 +55,37 @@ class KontrolHubTest(KontrolBaseMixin, TestCase):
         ):
             self.assertIn(title, body)
 
+    def test_hub_menyembunyikan_kartu_human_capital_tanpa_izin(self):
+        res = self.client.get(reverse('akreditasi:kontrol_hub'))
+        body = res.content.decode()
+        self.assertNotIn(f'href="{reverse("sdm:dashboard")}', body)
+        self.assertNotIn('<h2>Arima Human Capital</h2>', body)
+
+    def test_hub_menampilkan_kartu_human_capital_bagi_pengguna_berizin(self):
+        from accounts.models import RolePermissionConfig
+        from sdm.models import HcGrant
+
+        config = RolePermissionConfig.get_config_for_role('ADMIN_RS')
+        config.can_view_hc = True
+        config.save(update_fields=['can_view_hc', 'updated_at'])
+        HcGrant.objects.create(
+            user=self.user, capability='can_view_hc', unit_kerja=self.unit
+        )
+
+        res = self.client.get(reverse('akreditasi:kontrol_hub'))
+        body = res.content.decode()
+
+        self.assertIn('<h2>Arima Human Capital</h2>', body)
+        self.assertIn(reverse('sdm:dashboard'), body)
+        for title in (
+            'Integrated Risk &amp; Patient Safety Control',
+            'Smart EMR &amp; Clinical Quality STARKES',
+            'Electronic Accreditation Document',
+        ):
+            self.assertIn(title, body)
+        self.assertNotIn('sidebar-desktop', body)
+        self.assertNotIn('id="mobileSidebar"', body)
+
     def test_hub_tanpa_unit_aktif_memberi_empty_state(self):
         UnitKerja.objects.all().update(is_active=False)
         cache.clear()

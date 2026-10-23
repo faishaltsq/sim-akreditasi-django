@@ -46,6 +46,15 @@ SUBDASHBOARDS = (
         'icon': 'bi-folder2-open',
         'accent': 'linear-gradient(135deg,#3f2d1a,#b45309)',
     },
+    {
+        'key': 'human_capital',
+        'url_name': 'sdm:dashboard',
+        'title': 'Arima Human Capital',
+        'subtitle': 'Perencanaan tenaga, kepegawaian, kredensial, diklat, dan kesehatan kerja',
+        'icon': 'bi-people-fill',
+        'accent': 'linear-gradient(135deg,#134e4a,#0d9488)',
+        'requires_hc': True,
+    },
 )
 
 
@@ -134,10 +143,14 @@ def kontrol_hub(request):
         }
 
         for item in SUBDASHBOARDS:
+            if item.get('requires_hc') and not _can_view_human_capital(request.user):
+                continue
             base = dict(item)
             card = metrics.get(item['key'], {})
             card.update(base)
             card['url'] = reverse(item['url_name'])
+            if item.get('requires_hc'):
+                card.update(_human_capital_card(request.user, unit))
             card.setdefault('band', 'watch')
             card.setdefault('band_label', '')
             card.setdefault('headline', '—')
@@ -150,6 +163,57 @@ def kontrol_hub(request):
         'snapshot': snapshot,
         'portal_cards': portal_cards,
     })
+
+
+def _can_view_human_capital(user):
+    from sdm.akses import visible_units
+
+    return visible_units(user, capability='can_view_hc').exists()
+
+
+def _human_capital_card(user, unit):
+    """Build the fourth card metric from real, permission-scoped HC data."""
+    from sdm.services.dashboard import build_hc_dashboard
+
+    try:
+        metrics = build_hc_dashboard(user, filters={'unit': unit})
+    except Exception:
+        return {
+            'headline': '—',
+            'headline_label': 'data belum tersedia',
+            'foot': 'Buka Arima Human Capital untuk detail lingkup Anda.',
+            'band': 'watch',
+            'band_label': 'Belum ada data',
+        }
+
+    if not metrics['has_employees']:
+        return {
+            'headline': '—',
+            'headline_label': 'pegawai dalam lingkup',
+            'foot': 'Belum ada data pegawai pada unit ini.',
+            'band': 'watch',
+            'band_label': 'Belum ada data',
+        }
+
+    compliance = metrics['compliance_pct']
+    foot_parts = [f"{metrics['pending_reviews']} dokumen menunggu tinjauan"]
+    if metrics['expired']:
+        foot_parts.append(f"{metrics['expired']} kedaluwarsa")
+    return {
+        'headline': metrics['active_employees'],
+        'headline_label': 'pegawai aktif',
+        'foot': ' · '.join(foot_parts),
+        'band': (
+            'critical' if metrics['expired']
+            else 'watch' if (compliance is not None and compliance < 100)
+            else 'good'
+        ),
+        'band_label': (
+            'Perlu tindakan' if metrics['expired']
+            else 'Belum lengkap' if (compliance is not None and compliance < 100)
+            else 'Terkendali'
+        ),
+    }
 
 
 def _briefing(request, unit, profile):

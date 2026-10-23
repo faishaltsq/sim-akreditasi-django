@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<title>SPK {{ assignment.nomor_spk }}</title>
+<style>
+    @page { size: A4; margin: 20mm; }
+    body { font-family: 'Times New Roman', serif; color: #111; font-size: 12pt; }
+    h1 { font-size: 14pt; text-align: center; margin-bottom: 4px; }
+    .meta { text-align: center; font-size: 10pt; color: #444; margin-bottom: 24px; }
+    dl { display: grid; grid-template-columns: 45mm 1fr; gap: 6px 12px; }
+    dt { font-weight: bold; }
+    .signature { margin-top: 40mm; text-align: right; }
+</style>
+</head>
+<body>
+<h1>SURAT PENUGASAN KLINIS</h1>
+<p class="meta">Nomor {{ assignment.nomor_spk }} · Versi {{ assignment.versi }}</p>
+<dl>
+    <dt>Nama</dt><dd>{{ assignment.employee.nama_lengkap }}</dd>
+    <dt>Unit</dt><dd>{{ assignment.unit_kerja.code }} — {{ assignment.unit_kerja.name }}</dd>
+    <dt>Berlaku Mulai</dt><dd>{{ assignment.berlaku_mulai|date:"d F Y" }}</dd>
+    <dt>Berlaku Sampai</dt><dd>{{ assignment.berlaku_sampai|date:"d F Y"|default:"Tidak ditentukan" }}</dd>
+    <dt>Diterbitkan</dt><dd>{{ assignment.issued_at|date:"d F Y H:i" }} WIB</dd>
+</dl>
+<div class="signature">
+    <p>Diterbitkan oleh</p>
+    <p style="margin-top: 22mm;">{{ assignment.issued_by.get_full_name|default:assignment.issued_by.username }}</p>
+</div>
+</body>
+</html>

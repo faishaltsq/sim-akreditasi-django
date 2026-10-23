@@ -267,8 +267,10 @@
                                         <td><span class="badge bg-light text-dark border">{{ cred.get_doc_type_display }}</span></td>
                                         <td>
                                             <strong>{{ cred.title }}</strong>
-                                            {% if cred.get_download_url != '#' %}
-                                                <a href="{{ cred.get_download_url }}" target="_blank" class="ms-1 text-primary"><i class="bi bi-box-arrow-up-right"></i></a>
+                                            {% if cred.hc_document_link %}
+                                                <a href="{% url 'akreditasi:download_kredensial' cred.id %}" class="ms-1 text-primary"><i class="bi bi-box-arrow-up-right"></i></a>
+                                            {% elif cred.get_download_url != '#' %}
+                                                <a href="{{ cred.get_download_url }}" target="_blank" rel="noopener noreferrer" class="ms-1 text-primary"><i class="bi bi-box-arrow-up-right"></i></a>
                                             {% endif %}
                                         </td>
                                         <td class="font-monospace text-secondary">{{ cred.document_number|default:"-" }}</td>

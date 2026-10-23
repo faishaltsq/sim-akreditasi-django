@@ -1,0 +1,179 @@
+{% extends "base.html" %}
+
+{% block title %}Arima Human Capital — ARIMA{% endblock %}
+{% block page_title %}Arima Human Capital{% endblock %}
+{% block page_subtitle %}Perencanaan tenaga, kepegawaian, kredensial, diklat, dan kesehatan kerja{% endblock %}
+{% block extra_css %}{% include "sdm/_responsive.html" %}{% endblock %}
+
+{% block content %}
+<div class="container-fluid p-0">
+    <section class="page-header-box mb-3">
+        <div>
+            <span class="badge text-bg-light text-dark border mb-2">Level 1 — Perencanaan &amp; Kepegawaian</span>
+            <h1 class="page-title h4 mb-1">Arima Human Capital</h1>
+            <p class="page-subtitle text-muted mb-0">
+                Data per {{ generated_at|date:"d M Y H:i" }} WIB
+                {% if selected_unit %} · unit terpilih{% endif %}
+            </p>
+        </div>
+    </section>
+
+    {% include "sdm/_navigasi.html" %}
+
+    <form method="get" class="card border shadow-sm mb-3" role="search" aria-label="Filter dasbor Human Capital">
+        <div class="card-body row g-2 align-items-end">
+            <div class="col-12 col-md-3">
+                <label class="form-label small fw-semibold" for="hc-unit">Unit</label>
+                <select id="hc-unit" name="unit" class="form-select form-select-sm">
+                    <option value="">Semua unit dalam lingkup</option>
+                    {% for option in unit_options %}
+                    <option value="{{ option.pk }}" {% if selected_unit == option.pk|stringformat:"s" %}selected{% endif %}>{{ option.code }} — {{ option.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-6 col-md-3">
+                <label class="form-label small fw-semibold" for="hc-profesi">Profesi</label>
+                <select id="hc-profesi" name="profesi" class="form-select form-select-sm">
+                    <option value="">Semua profesi</option>
+                    {% for profesi in profession_choices %}
+                    <option value="{{ profesi }}" {% if filters.profesi == profesi %}selected{% endif %}>{{ profesi }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-6 col-md-3">
+                <label class="form-label small fw-semibold" for="hc-status">Status</label>
+                <select id="hc-status" name="status" class="form-select form-select-sm">
+                    <option value="">Semua status</option>
+                    {% for value, label in status_choices %}
+                    <option value="{{ value }}" {% if filters.status == value %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-12 col-md-3 d-flex gap-2">
+                <button type="submit" class="btn btn-primary btn-sm">Terapkan</button>
+                <a class="btn btn-outline-secondary btn-sm" href="{% url 'sdm:dashboard' %}">Reset</a>
+            </div>
+        </div>
+    </form>
+
+    <div class="row g-3 mb-3">
+        <div class="col-6 col-lg-3">
+            <div class="card border shadow-sm h-100"><div class="card-body">
+                <p class="small text-muted mb-1">Pegawai aktif</p>
+                <p class="h4 mb-0"><a class="text-decoration-none" href="{% url 'sdm:pegawai_list' %}">{{ active_employees }}</a></p>
+                <p class="small text-muted mb-0">dari {{ total_employees }} pegawai dalam lingkup</p>
+            </div></div>
+        </div>
+        <div class="col-6 col-lg-3">
+            <div class="card border shadow-sm h-100"><div class="card-body">
+                <p class="small text-muted mb-1">Kepatuhan dokumen</p>
+                <p class="h4 mb-0">{% if compliance_pct is not None %}{{ compliance_pct }}%{% else %}<span class="fs-6 text-muted">Belum dapat dihitung</span>{% endif %}</p>
+                <p class="small text-muted mb-0">{{ compliance_scope_count }} pegawai dengan aturan aktif</p>
+            </div></div>
+        </div>
+        <div class="col-6 col-lg-3">
+            <div class="card border shadow-sm h-100"><div class="card-body">
+                <p class="small text-muted mb-1">Dokumen menunggu tinjauan</p>
+                <p class="h4 mb-0"><a class="text-decoration-none" href="{% url 'sdm:pegawai_list' %}">{{ pending_reviews }}</a></p>
+                <p class="small text-muted mb-0">versi PENDING dalam lingkup</p>
+            </div></div>
+        </div>
+        <div class="col-6 col-lg-3">
+            <div class="card border shadow-sm h-100"><div class="card-body">
+                <p class="small text-muted mb-1">Kedaluwarsa ≤ 30 hari</p>
+                <p class="h4 mb-0"><a class="text-decoration-none" href="{% url 'sdm:pegawai_list' %}">{{ expiring_30 }}</a></p>
+                <p class="small text-muted mb-0">{{ expired }} sudah kedaluwarsa</p>
+            </div></div>
+        </div>
+        <div class="col-6 col-lg-3">
+            <div class="card border shadow-sm h-100"><div class="card-body">
+                <p class="small text-muted mb-1">Cakupan diklat</p>
+                <p class="h4 mb-0">{% if training_coverage is not None %}{{ training_coverage }}%{% else %}<span class="fs-6 text-muted">Belum dapat dihitung</span>{% endif %}</p>
+                <p class="small text-muted mb-0">pegawai lulus pelatihan</p>
+            </div></div>
+        </div>
+        <div class="col-6 col-lg-3">
+            <div class="card border shadow-sm h-100"><div class="card-body">
+                <p class="small text-muted mb-1">Orientasi lewat tenggat</p>
+                <p class="h4 mb-0"><a class="text-decoration-none" href="{% url 'sdm:orientasi_list' %}">{{ overdue_orientation }}</a></p>
+                <p class="small text-muted mb-0">penugasan berjalan</p>
+            </div></div>
+        </div>
+    </div>
+
+    <div class="row g-3 mb-3">
+        {% for card in level_cards %}
+        <div class="col-12 col-md-6 col-xl-4">
+            <div class="card border shadow-sm h-100"><div class="card-body">
+                <span class="badge text-bg-light text-dark border mb-2">{{ card.level }}</span>
+                <h2 class="h6 mb-1">{{ card.title }}</h2>
+                <p class="small text-muted mb-2">{{ card.description }}</p>
+                <div class="d-flex flex-wrap gap-2">
+                    {% for link in card.links %}
+                        {% if link.allowed %}
+                        <a class="btn btn-outline-secondary btn-sm" href="{% url link.url_name %}">{{ link.label }}</a>
+                        {% endif %}
+                    {% endfor %}
+                </div>
+            </div></div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <div class="row g-3">
+        <div class="col-12 col-lg-7">
+            <div class="card border shadow-sm h-100">
+                <div class="card-header bg-white"><h2 class="h6 mb-0">Kebutuhan vs Aktual Ketenagaan</h2></div>
+                {% if has_staffing %}
+                <div class="table-responsive">
+                    <table class="table table-sm align-middle mb-0">
+                        <caption class="visually-hidden">Perbandingan kebutuhan dan aktual FTE per unit dan profesi</caption>
+                        <thead><tr><th scope="col">Unit</th><th scope="col">Profesi</th><th scope="col">Kebutuhan</th><th scope="col">Aktual</th><th scope="col">Selisih</th><th scope="col">Kecukupan</th></tr></thead>
+                        <tbody>
+                            {% for row in staffing %}
+                            <tr>
+                                <td class="small">{{ row.unit.code }}</td>
+                                <td class="small">{{ row.profesi }}</td>
+                                <td>{{ row.required_fte }}</td>
+                                <td>{{ row.actual_fte }}</td>
+                                <td class="{% if row.gap_fte > 0 %}text-danger{% endif %}">{{ row.gap_fte }}</td>
+                                <td>{% if row.sufficiency_pct is not None %}{{ row.sufficiency_pct }}%{% else %}Belum dapat dihitung{% endif %}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="card-body"><p class="text-muted mb-0">Belum ada data formasi yang disetujui untuk lingkup ini.</p></div>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="col-12 col-lg-5">
+            <div class="card border shadow-sm mb-3">
+                <div class="card-header bg-white"><h2 class="h6 mb-0">Pengingat Saya</h2></div>
+                <ul class="list-group list-group-flush">
+                    {% for reminder in reminders %}
+                    <li class="list-group-item small">
+                        <span class="badge {% if reminder.band == 'EXPIRED' %}text-bg-danger{% elif reminder.band == 'LT_30' %}text-bg-warning{% else %}text-bg-light text-dark{% endif %}">{{ reminder.get_band_display }}</span>
+                        {{ reminder.employee.nama_lengkap }}
+                        {% if reminder.due_date %}· {{ reminder.due_date|date:"d M Y" }}{% endif %}
+                    </li>
+                    {% empty %}<li class="list-group-item small text-muted">Belum ada pengingat.</li>{% endfor %}
+                </ul>
+            </div>
+
+            <div class="card border shadow-sm">
+                <div class="card-header bg-white"><h2 class="h6 mb-0">Menu</h2></div>
+                <div class="list-group list-group-flush">
+                    {% for item in nav_items %}
+                    <a class="list-group-item list-group-item-action small" href="{% url item.url_name %}">{{ item.label }}</a>
+                    {% empty %}<div class="list-group-item small text-muted">Belum ada menu yang dapat Anda akses.</div>{% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <p class="small text-muted mt-3 mb-0">Detail kesehatan kerja tidak ditampilkan pada dasbor umum.</p>
+</div>
+{% endblock %}

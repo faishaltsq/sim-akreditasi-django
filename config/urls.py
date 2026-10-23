@@ -10,6 +10,7 @@ urlpatterns = [
     path(ADMIN_URL, admin.site.urls),
     path('accounts/', include('accounts.urls')),
     path('pasien/', include('pasien.urls')),
+    path('human-capital/', include('sdm.urls')),
     path('', include('akreditasi.urls')),
 ]
 

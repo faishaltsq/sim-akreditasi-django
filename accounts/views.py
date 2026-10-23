@@ -200,7 +200,7 @@ def control_center_access(user):
 def admin_control_center(request):
     from akreditasi.models import UnitKerja
     from akreditasi.system_models import SystemConfig
-    from .models import RolePermissionConfig, PERMISSION_DEFAULTS
+    from .models import RolePermissionConfig, PERMISSION_DEFAULTS, HC_PERMISSION_LABELS
 
     sys_config = SystemConfig.get_solo()
     profile = request.user.profile
@@ -244,6 +244,7 @@ def admin_control_center(request):
         ('can_access_control_center', 'Pusat Kontrol'),
         ('can_manage_system_settings', 'Konfigurasi Sistem'),
     ]
+    perm_fields.extend(HC_PERMISSION_LABELS)
 
     # Ambil semua user dengan profile
     all_users = User.objects.select_related('profile__unit_kerja').prefetch_related('profile__pokja_access').order_by('profile__role', 'username')

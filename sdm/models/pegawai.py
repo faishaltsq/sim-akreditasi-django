@@ -1,0 +1,117 @@
+from decimal import Decimal
+import uuid
+
+from django.conf import settings
+from django.core.validators import MaxValueValidator, MinValueValidator
+from django.db import models
+from django.db.models import F, Q
+from django.utils import timezone
+
+
+class Pegawai(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    KATEGORI_CHOICES = [
+        ('PPA', 'Profesional Pemberi Asuhan'),
+        ('NON_PPA', 'Non-PPA'),
+    ]
+    STATUS_CHOICES = [
+        ('AKTIF', 'Aktif'),
+        ('NONAKTIF', 'Nonaktif'),
+    ]
+
+    akun = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='pegawai_hc',
+        verbose_name='Akun Pengguna',
+    )
+    nomor_pegawai = models.CharField(
+        'Nomor Pegawai', max_length=50, blank=True, default=''
+    )
+    nama_lengkap = models.CharField('Nama Lengkap', max_length=200)
+    kategori = models.CharField('Kategori Staf', max_length=10, choices=KATEGORI_CHOICES)
+    profesi = models.CharField('Profesi', max_length=120, blank=True)
+    jabatan = models.CharField('Jabatan', max_length=150, blank=True)
+    status = models.CharField(
+        'Status Kepegawaian', max_length=10, choices=STATUS_CHOICES, default='AKTIF'
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = 'Pegawai'
+        verbose_name_plural = 'Pegawai'
+        ordering = ['nama_lengkap', 'pk']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['nomor_pegawai'],
+                condition=~Q(nomor_pegawai=''),
+                name='sdm_pegawai_nomor_nonblank_uniq',
+            ),
+        ]
+
+    def __str__(self):
+        return self.nama_lengkap
+
+
+class PenempatanPegawai(models.Model):
+    pegawai = models.ForeignKey(
+        Pegawai,
+        on_delete=models.PROTECT,
+        related_name='penempatan',
+        verbose_name='Pegawai',
+    )
+    unit_kerja = models.ForeignKey(
+        'akreditasi.UnitKerja',
+        on_delete=models.PROTECT,
+        related_name='penempatan_pegawai',
+        verbose_name='Unit Kerja',
+    )
+    tanggal_mulai = models.DateField('Tanggal Mulai')
+    tanggal_selesai = models.DateField('Tanggal Selesai', null=True, blank=True)
+    alokasi_fte = models.DecimalField(
+        'Alokasi FTE',
+        max_digits=4,
+        decimal_places=2,
+        validators=[
+            MinValueValidator(Decimal('0.01')),
+            MaxValueValidator(Decimal('1.00')),
+        ],
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = 'Penempatan Pegawai'
+        verbose_name_plural = 'Penempatan Pegawai'
+        ordering = ['-tanggal_mulai', 'pk']
+        indexes = [
+            models.Index(
+                fields=['pegawai', 'tanggal_mulai', 'tanggal_selesai'],
+                name='sdm_penempatan_pegawai_tgl_idx',
+            ),
+            models.Index(
+                fields=['unit_kerja', 'tanggal_mulai', 'tanggal_selesai'],
+                name='sdm_penempatan_unit_tgl_idx',
+            ),
+        ]
+        constraints = [
+            models.CheckConstraint(
+                condition=Q(alokasi_fte__gte=Decimal('0.01'))
+                & Q(alokasi_fte__lte=Decimal('1.00')),
+                name='sdm_penempatan_fte_0_1',
+            ),
+            models.CheckConstraint(
+                condition=Q(tanggal_selesai__isnull=True)
+                | Q(tanggal_selesai__gte=F('tanggal_mulai')),
+                name='sdm_penempatan_tanggal_valid',
+            ),
+        ]
+
+    @property
+    def is_current(self):
+        today = timezone.localdate()
+        return self.tanggal_mulai <= today and (
+            self.tanggal_selesai is None or self.tanggal_selesai >= today
+        )

@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block page_title %}Diklat{% endblock %}
+{% block page_subtitle %}Kalender dan peserta pelatihan{% endblock %}
+{% block content %}
+<div class="container-fluid p-0">
+    <div class="page-header-box mb-3 d-flex justify-content-between align-items-center">
+        <h1 class="page-title h5 mb-0">Kalender Diklat</h1>
+        <a class="btn btn-primary btn-sm" href="{% url 'sdm:diklat_create' %}">Usulan Pelatihan</a>
+    </div>
+    {% include "sdm/_navigasi.html" %}
+    <div class="card border shadow-sm">
+        <div class="table-responsive">
+            <table class="table table-sm align-middle mb-0">
+                <caption class="visually-hidden">Daftar sesi diklat</caption>
+                <thead><tr><th scope="col">Program</th><th scope="col">Tanggal</th><th scope="col">JP</th><th scope="col">Peserta</th><th scope="col">Kapasitas</th></tr></thead>
+                <tbody>
+                    {% for session in sessions %}
+                    <tr>
+                        <td>{{ session.program.nama }}</td>
+                        <td class="small">{{ session.tanggal|date:"d M Y" }}</td>
+                        <td>{{ session.program.jp }}</td>
+                        <td>
+                            {{ session.participants.all|length }}
+                            <ul class="list-unstyled small mb-0 mt-1">
+                                {% for participant in session.participants.all %}
+                                <li class="d-flex justify-content-between align-items-center gap-2">
+                                    <span>{{ participant.employee.nama_lengkap }} · {{ participant.get_status_display }}</span>
+                                    {% if participant.status == 'LULUS' %}
+                                    <form method="post" action="{% url 'sdm:diklat_certificate' participant.pk %}">
+                                        {% csrf_token %}<button class="btn btn-outline-secondary btn-sm" type="submit">Sertifikat</button>
+                                    </form>
+                                    {% endif %}
+                                </li>
+                                {% endfor %}
+                            </ul>
+                        </td>
+                        <td>{{ session.kapasitas }}</td>
+                    </tr>
+                    {% empty %}<tr><td colspan="5" class="text-center text-muted py-4">Belum ada sesi diklat.</td></tr>{% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

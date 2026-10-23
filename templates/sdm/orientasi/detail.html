@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block page_title %}Detail Orientasi{% endblock %}
+{% block page_subtitle %}{{ assignment.employee.nama_lengkap }}{% endblock %}
+{% block content %}
+<div class="container-fluid p-0">
+    <a class="small text-decoration-none" href="{% url 'sdm:orientasi_list' %}"><i class="bi bi-arrow-left me-1"></i>Kembali</a>
+    <h1 class="page-title h4 mt-2 mb-1">{{ assignment.program.nama }}</h1>
+    <p class="text-muted small mb-3">
+        {{ assignment.employee.nama_lengkap }} · tenggat {{ assignment.tenggat|date:"d M Y" }}
+        · {% if progress is not None %}{{ progress }}% selesai{% else %}Belum dikonfigurasi{% endif %}
+    </p>
+    <div class="card border shadow-sm">
+        <div class="table-responsive">
+            <table class="table table-sm align-middle mb-0">
+                <caption class="visually-hidden">Aktivitas orientasi dan status</caption>
+                <thead><tr><th scope="col">Aktivitas</th><th scope="col">Wajib</th><th scope="col">Status</th><th scope="col">Penanda Tangan</th></tr></thead>
+                <tbody>
+                    {% for completion in completions %}
+                    <tr>
+                        <td>{{ completion.activity.nama }}</td>
+                        <td>{% if completion.activity.wajib %}Ya{% else %}Tidak{% endif %}</td>
+                        <td>{% if completion.selesai %}<span class="badge text-bg-success">Selesai</span>{% else %}<span class="badge text-bg-light text-dark">Belum</span>{% endif %}</td>
+                        <td class="small text-muted">
+                            {% if completion.selesai %}{{ completion.signer.username|default:"—" }}
+                            {% else %}
+                            <form method="post" action="{% url 'sdm:orientasi_complete' completion.pk %}" class="d-flex gap-1">
+                                {% csrf_token %}
+                                <input name="notes" class="form-control form-control-sm" placeholder="Catatan" aria-label="Catatan penyelesaian {{ completion.activity.nama }}">
+                                <button class="btn btn-outline-primary btn-sm" type="submit">Tandatangani</button>
+                            </form>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}<tr><td colspan="4" class="text-center text-muted py-4">Belum ada aktivitas.</td></tr>{% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

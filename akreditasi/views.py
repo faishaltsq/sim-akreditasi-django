@@ -2,7 +2,7 @@ import json
 import logging
 from django.shortcuts import render, redirect, get_object_or_404, reverse
 from django.contrib.auth.decorators import login_required, user_passes_test
-from django.core.exceptions import PermissionDenied
+from django.core.exceptions import PermissionDenied, ValidationError
 from django.contrib import messages
 from django.http import JsonResponse, HttpResponse
 from django.db import transaction
@@ -1734,7 +1734,17 @@ def portal_nakes(request):
 
     # Portofolio KPS nakes
     from accounts.models import NakesCredential
-    credentials = NakesCredential.objects.filter(user_profile=profile).order_by('doc_type', '-created_at')
+    credentials = NakesCredential.objects.filter(user_profile=profile).select_related(
+        'hc_document_link__version'
+    ).order_by('doc_type', '-created_at')
+    credentials = [
+        credential
+        for credential in credentials
+        if not (
+            getattr(credential, 'hc_document_link', None)
+            and credential.hc_document_link.version.status == 'SUPERSEDED'
+        )
+    ]
     # Auto-check expiry
     for cred in credentials:
         cred.auto_check_expiry()
@@ -1764,61 +1774,127 @@ def portal_nakes(request):
 @login_required
 @require_POST
 def upload_kredensial_nakes(request):
-    """Nakes upload dokumen STR/SIP/Sertifikat pelatihan."""
+    """Nakes upload dokumen KPS melalui penyimpanan privat kanonis."""
     from accounts.forms import NakesCredentialForm
+    from sdm.services.kredensial_lama import create_legacy_credential
+
     profile = request.user.profile
     form = NakesCredentialForm(request.POST, request.FILES)
-    if form.is_valid():
-        cred = form.save(commit=False)
-        cred.user_profile = profile
+    file_obj = request.FILES.get('file')
+    if not form.is_valid() or file_obj is None:
+        messages.error(request, 'Gagal mengunggah dokumen. Periksa form Anda.')
+        return redirect('akreditasi:portal_nakes')
 
-        file_obj = request.FILES.get('file')
-        if file_obj:
-            # K-3 file validation
-            is_valid, error_msg = validate_uploaded_file(file_obj)
-            if not is_valid:
-                messages.error(request, f"Gagal unggah: {error_msg}")
-                return redirect('akreditasi:portal_nakes')
+    is_valid, error_msg = validate_uploaded_file(file_obj)
+    if not is_valid:
+        messages.error(request, f'Gagal unggah: {error_msg}')
+        return redirect('akreditasi:portal_nakes')
+    if file_obj.size > 10 * 1024 * 1024:
+        messages.error(request, 'Gagal unggah: ukuran berkas melebihi 10 MB.')
+        return redirect('akreditasi:portal_nakes')
+    file_obj.seek(0)
+    cred = form.save(commit=False)
+    cred.user_profile = profile
+    try:
+        create_legacy_credential(cred, file_obj, uploaded_by=request.user)
+    except ValidationError as exc:
+        messages.error(
+            request,
+            '; '.join(exc.messages)
+            or 'Akun Anda belum tertaut ke identitas pegawai Human Capital.',
+        )
+        return redirect('akreditasi:portal_nakes')
+    except Exception:
+        messages.error(
+            request,
+            'Gagal mengunggah dokumen ke penyimpanan privat. Tidak ada salinan lokal dibuat.',
+        )
+        return redirect('akreditasi:portal_nakes')
 
-            safe_name = sanitize_filename(file_obj.name)
-            res = upload_to_supabase_storage(file_obj, f"kps/{profile.user.username}/{safe_name}")
-            if res.get('success') and res.get('url'):
-                cred.file_url = res['url']
-                cred.file = None
-            else:
-                cred.file = file_obj
+    AuditLog.objects.create(
+        user=request.user,
+        aksi='UPLOAD',
+        model_name='NakesCredential',
+        object_repr='Kredensial privat',
+        detail='Dokumen KPS diunggah ke penyimpanan privat',
+    )
+    messages.success(request, 'Dokumen berhasil diunggah dan menunggu verifikasi.')
+    return redirect('akreditasi:portal_nakes')
 
-        cred.save()
+
+@login_required
+def download_kredensial_nakes(request, cred_id):
+    """Berikan URL privat singkat untuk kredensial tertaut."""
+    from accounts.models import NakesCredential
+    from sdm.services.kredensial_lama import authorize_legacy_credential_download
+
+    cred = get_object_or_404(NakesCredential, id=cred_id)
+    profile = getattr(request.user, 'profile', None)
+    owns_credential = cred.user_profile.user_id == request.user.pk
+    reviewer_scope = (
+        profile
+        and profile.role in ('SUPER_ADMIN', 'ADMIN_RS', 'KEPALA_UNIT')
+        and (
+            profile.role != 'KEPALA_UNIT'
+            or profile.unit_kerja_id == cred.user_profile.unit_kerja_id
+        )
+    )
+    if not owns_credential and not reviewer_scope:
+        raise PermissionDenied('Kredensial tidak tersedia.')
+
+    signed_url = authorize_legacy_credential_download(cred, request.user)
+    if signed_url is None:
+        legacy_url = cred.get_download_url
+        if legacy_url == '#':
+            messages.error(request, 'Berkas kredensial tidak tersedia.')
+            return redirect('akreditasi:portal_nakes')
         AuditLog.objects.create(
             user=request.user,
-            aksi='UPLOAD',
+            aksi='VIEW',
             model_name='NakesCredential',
-            object_repr=f"{cred.get_doc_type_display()} - {cred.title}",
-            detail=f"Nakes mengunggah dokumen KPS: {cred.title}"
+            object_repr='Kredensial lama',
+            detail='Unduhan kredensial lama yang belum direkonsiliasi diberikan',
         )
-        messages.success(request, f"Dokumen '{cred.title}' berhasil diunggah dan menunggu verifikasi.")
-    else:
-        messages.error(request, "Gagal mengunggah dokumen. Periksa form Anda.")
-
-    return redirect('akreditasi:portal_nakes')
+        return redirect(legacy_url)
+    return redirect(signed_url)
 
 
 @login_required
 @require_POST
 def delete_kredensial_nakes(request, cred_id):
-    """Nakes hapus dokumen kredensial miliknya sendiri."""
+    """Arsipkan kredensial tertaut; pertahankan perilaku lama bila belum tertaut."""
     from accounts.models import NakesCredential
-    cred = get_object_or_404(NakesCredential, id=cred_id, user_profile=request.user.profile)
-    title = cred.title
-    cred.delete()
+    from sdm.services.kredensial_lama import archive_legacy_credential
+
+    cred = get_object_or_404(
+        NakesCredential, id=cred_id, user_profile=request.user.profile
+    )
+    linked = archive_legacy_credential(cred, actor=request.user)
+    preserved_approved = not linked and cred.status == 'VERIFIED'
+    if not linked and not preserved_approved:
+        cred.delete()
     AuditLog.objects.create(
         user=request.user,
         aksi='DELETE',
         model_name='NakesCredential',
-        object_repr=title,
-        detail="Nakes menghapus dokumen KPS"
+        object_repr='Kredensial privat',
+        detail=(
+            'Dokumen KPS kanonis diarsipkan'
+            if linked
+            else (
+                'Permintaan hapus kredensial lama terverifikasi ditolak'
+                if preserved_approved
+                else 'Dokumen KPS lama yang belum direkonsiliasi dihapus'
+            )
+        ),
     )
-    messages.success(request, f"Dokumen '{title}' berhasil dihapus.")
+    if preserved_approved:
+        messages.error(request, 'Dokumen terverifikasi tidak dapat dihapus.')
+    else:
+        messages.success(
+            request,
+            'Dokumen berhasil diarsipkan.' if linked else 'Dokumen berhasil dihapus.',
+        )
     return redirect('akreditasi:portal_nakes')
 
 
@@ -1906,17 +1982,35 @@ def verify_kredensial(request, cred_id):
             return JsonResponse({'success': False, 'error': 'Akses ditolak: nakes bukan dari unit Anda.'}, status=403)
     form = CredentialVerifyForm(request.POST, instance=cred)
     if form.is_valid():
-        form.save()
+        from sdm.services.kredensial_lama import review_legacy_credential
+        if form.cleaned_data['status'] == 'EXPIRED' and getattr(
+            cred, 'hc_document_link', None
+        ):
+            messages.error(request, 'Status kedaluwarsa ditentukan dari tanggal berlaku.')
+            return redirect('akreditasi:rekap_kps')
+
+        try:
+            linked = review_legacy_credential(
+                cred,
+                request.user,
+                status=form.cleaned_data['status'],
+                notes=form.cleaned_data['verification_notes'],
+            )
+        except (PermissionDenied, ValidationError):
+            messages.error(request, 'Gagal memperbarui status.')
+            return redirect('akreditasi:rekap_kps')
+        if linked is None:
+            form.save()
         AuditLog.objects.create(
             user=request.user,
             aksi='UPDATE',
             model_name='NakesCredential',
-            object_repr=f"{cred.get_doc_type_display()} - {cred.title}",
-            detail=f"Status diubah ke {cred.get_status_display()} oleh {request.user.username}"
+            object_repr='Kredensial privat',
+            detail=f'Status kredensial diubah ke {cred.status}',
         )
-        messages.success(request, f"Status dokumen '{cred.title}' berhasil diperbarui.")
+        messages.success(request, 'Status dokumen berhasil diperbarui.')
     else:
-        messages.error(request, "Gagal memperbarui status.")
+        messages.error(request, 'Gagal memperbarui status.')
     return redirect('akreditasi:rekap_kps')
 
 

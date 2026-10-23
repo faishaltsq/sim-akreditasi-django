@@ -1,0 +1,144 @@
+{% extends "base.html" %}
+
+{% block page_title %}Profil Pegawai{% endblock %}
+{% block page_subtitle %}Profil pegawai · ID {{ employee.pk }}{% endblock %}
+{% block extra_css %}{% include "sdm/_responsive.html" %}{% endblock %}
+
+{% block content %}
+<div class="container-fluid p-0">
+    <div class="page-header-box mb-3">
+        <div>
+            <a class="small text-decoration-none" href="{% url 'sdm:pegawai_list' %}"><i class="bi bi-arrow-left me-1"></i>Kembali ke direktori</a>
+            <h1 class="page-title h4 mt-2 mb-1">{{ employee.nama_lengkap }}</h1>
+            <p class="page-subtitle text-muted mb-0">{{ employee.get_kategori_display }} · {{ employee.profesi|default:"Profesi belum dicatat" }}</p>
+        </div>
+        {% if can_manage %}<a class="btn btn-outline-primary btn-sm" href="{% url 'sdm:pegawai_edit' employee.pk %}"><i class="bi bi-pencil-square me-1"></i>Edit Data</a>{% endif %}
+    </div>
+
+    <div class="card border shadow-sm">
+        <div class="card-header bg-white">
+            <ul class="nav nav-tabs card-header-tabs" id="employee-tabs" role="tablist">
+                <li class="nav-item" role="presentation"><button class="nav-link active" id="identity-tab" data-bs-toggle="tab" data-bs-target="#identity-pane" type="button" role="tab" aria-controls="identity-pane" aria-selected="true">Identitas &amp; Kepegawaian</button></li>
+                <li class="nav-item" role="presentation"><button class="nav-link" id="placement-tab" data-bs-toggle="tab" data-bs-target="#placement-pane" type="button" role="tab" aria-controls="placement-pane" aria-selected="false">Riwayat Penempatan</button></li>
+                <li class="nav-item" role="presentation"><button class="nav-link" id="documents-tab" data-bs-toggle="tab" data-bs-target="#documents-pane" type="button" role="tab" aria-controls="documents-pane" aria-selected="false">Dokumen Kepegawaian</button></li>
+                <li class="nav-item" role="presentation"><button class="nav-link" id="activity-tab" data-bs-toggle="tab" data-bs-target="#activity-pane" type="button" role="tab" aria-controls="activity-pane" aria-selected="false">Aktivitas</button></li>
+            </ul>
+        </div>
+        <div class="card-body tab-content">
+            <section class="tab-pane fade show active" id="identity-pane" role="tabpanel" aria-labelledby="identity-tab" tabindex="0">
+                <dl class="row mb-0">
+                    <dt class="col-sm-4">Nomor pegawai</dt><dd class="col-sm-8">{{ employee.nomor_pegawai|default:"Belum dicatat" }}</dd>
+                    <dt class="col-sm-4">Nama</dt><dd class="col-sm-8">{{ employee.nama_lengkap }}</dd>
+                    <dt class="col-sm-4">Kategori</dt><dd class="col-sm-8">{{ employee.get_kategori_display }}</dd>
+                    <dt class="col-sm-4">Profesi</dt><dd class="col-sm-8">{{ employee.profesi|default:"Belum dicatat" }}</dd>
+                    <dt class="col-sm-4">Jabatan</dt><dd class="col-sm-8">{{ employee.jabatan|default:"Belum dicatat" }}</dd>
+                    <dt class="col-sm-4">Status</dt><dd class="col-sm-8">{{ employee.get_status_display }}</dd>
+                </dl>
+            </section>
+            <section class="tab-pane fade" id="placement-pane" role="tabpanel" aria-labelledby="placement-tab" tabindex="0">
+                <div class="table-responsive">
+                    <table class="table table-sm align-middle">
+                        <caption class="visually-hidden">Riwayat unit dan alokasi FTE pegawai</caption>
+                        <thead><tr><th scope="col">Unit</th><th scope="col">Mulai</th><th scope="col">Selesai</th><th scope="col">Alokasi</th></tr></thead>
+                        <tbody>
+                            {% for placement in assignments %}<tr><td>{{ placement.unit_kerja.code }} — {{ placement.unit_kerja.name }}</td><td>{{ placement.tanggal_mulai|date:"d M Y" }}</td><td>{{ placement.tanggal_selesai|date:"d M Y"|default:"Berjalan" }}</td><td>{{ placement.alokasi_fte }} FTE</td></tr>
+                            {% empty %}<tr><td colspan="4" class="text-muted text-center py-4">Riwayat penempatan belum tersedia.</td></tr>{% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+            <section class="tab-pane fade" id="documents-pane" role="tabpanel" aria-labelledby="documents-tab" tabindex="0">
+                <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+                    <div>
+                        <h2 class="h6 mb-1">Kelengkapan Dokumen Wajib</h2>
+                        <p class="small text-muted mb-0">
+                            {% if compliance.has_data %}
+                            {{ compliance.satisfied|length }} dari {{ compliance.applicable|length }} persyaratan valid
+                            ({{ compliance.completeness_pct }}%) ·
+                            {{ compliance.upload_pct }}% sudah diunggah
+                            {% else %}
+                            Belum ada aturan dokumen aktif untuk pegawai ini.
+                            {% endif %}
+                        </p>
+                    </div>
+                    {% if can_manage_documents %}
+                    <a class="btn btn-outline-primary btn-sm" href="{% url 'sdm:dokumen_upload' employee.pk %}"><i class="bi bi-upload me-1"></i>Unggah Dokumen</a>
+                    {% endif %}
+                </div>
+
+                {% if compliance.has_data %}
+                <div class="table-responsive mb-4">
+                    <table class="table table-sm align-middle">
+                        <caption class="visually-hidden">Status setiap persyaratan dokumen wajib</caption>
+                        <thead><tr><th scope="col">Persyaratan</th><th scope="col">Status</th><th scope="col">Masa Berlaku</th><th scope="col">Tindakan</th></tr></thead>
+                        <tbody>
+                            {% for result in compliance.results %}
+                            <tr>
+                                <td>{{ result.rule.name }}<div class="small text-muted">{{ result.rule.get_document_type_display }}</div></td>
+                                <td>
+                                    <span class="badge {% if result.state == 'VALID' %}text-bg-success{% elif result.state == 'EXPIRING' %}text-bg-warning{% elif result.state == 'EXPIRED' or result.state == 'REJECTED' %}text-bg-danger{% elif result.state == 'NOT_APPLICABLE' %}text-bg-secondary{% else %}text-bg-light text-dark{% endif %}">{{ result.label }}</span>
+                                </td>
+                                <td class="small">
+                                    {% if result.version and result.version.valid_until %}{{ result.version.valid_until|date:"d M Y" }}
+                                    {% elif result.rule.validity_policy == 'LIFETIME' %}Seumur hidup
+                                    {% elif result.rule.validity_policy == 'NOT_APPLICABLE' %}Tidak berlaku
+                                    {% else %}Belum dicatat{% endif %}
+                                </td>
+                                <td>
+                                    {% if result.state == 'MISSING' or result.state == 'REJECTED' or result.state == 'EXPIRED' %}
+                                    <span class="small text-muted">Unggah dokumen baru</span>
+                                    {% elif result.version and can_manage_documents %}
+                                    <a class="small" href="{% url 'sdm:dokumen_download' result.version.pk %}">Unduh</a>
+                                    {% else %}<span class="small text-muted">—</span>{% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% endif %}
+
+                {% for document in documents %}
+                <article class="border rounded p-3 mb-2">
+                    <h2 class="h6 mb-1">{{ document.title }}</h2>
+                    <p class="small text-muted mb-2">{{ document.get_document_type_display }} · Ditambahkan {{ document.created_at|date:"d M Y" }}</p>
+                    <ul class="mb-0 small">
+                        {% for version in document.versions.all %}
+                        <li class="mb-1">
+                            Versi {{ version.version_number }} — {{ version.get_status_display }}
+                            {% if version.valid_until %}, berlaku sampai {{ version.valid_until|date:"d M Y" }}{% endif %}
+                            {% if version.status == 'PENDING' and can_manage_documents %}
+                            <form method="post" action="{% url 'sdm:dokumen_review' version.pk %}" class="d-inline-flex gap-1 align-items-center ms-2">
+                                {% csrf_token %}
+                                <label class="visually-hidden" for="review-status-{{ version.pk }}">Keputusan tinjauan versi {{ version.version_number }}</label>
+                                <select id="review-status-{{ version.pk }}" name="status" class="form-select form-select-sm" style="width:auto;">
+                                    <option value="VERIFIED">Terverifikasi</option>
+                                    <option value="REJECTED">Ditolak</option>
+                                </select>
+                                <input type="text" name="notes" class="form-control form-control-sm" placeholder="Catatan (opsional)" aria-label="Catatan tinjauan versi {{ version.version_number }}">
+                                <button type="submit" class="btn btn-outline-primary btn-sm">Simpan</button>
+                            </form>
+                            {% endif %}
+                        </li>
+                        {% empty %}<li>Belum ada versi berkas.</li>{% endfor %}
+                    </ul>
+                </article>
+                {% empty %}<p class="text-muted mb-0">Belum ada dokumen kepegawaian.</p>{% endfor %}
+                <p class="small text-muted mt-3 mb-0">Informasi kesehatan kerja tidak ditampilkan pada profil kepegawaian umum.</p>
+            </section>
+            <section class="tab-pane fade" id="activity-pane" role="tabpanel" aria-labelledby="activity-tab" tabindex="0">
+                <div class="table-responsive">
+                    <table class="table table-sm align-middle">
+                        <caption class="visually-hidden">Riwayat aktivitas kepegawaian</caption>
+                        <thead><tr><th scope="col">Waktu</th><th scope="col">Peristiwa</th><th scope="col">Pelaku</th><th scope="col">Status</th></tr></thead>
+                        <tbody>
+                            {% for event in events %}<tr><td>{{ event.created_at|date:"d M Y H:i" }}</td><td>{{ event.jenis_peristiwa }}</td><td>{{ event.actor.username|default:"Sistem" }}</td><td>{{ event.status_sesudah|default:"—" }}</td></tr>
+                            {% empty %}<tr><td colspan="4" class="text-muted text-center py-4">Belum ada aktivitas kepegawaian.</td></tr>{% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        </div>
+    </div>
+</div>
+{% endblock %}

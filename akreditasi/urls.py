@@ -66,6 +66,7 @@ urlpatterns = [
     # Portal Nakes & KPS (Opsi B)
     path('portal-nakes/', views.portal_nakes, name='portal_nakes'),
     path('portal-nakes/upload-kredensial/', views.upload_kredensial_nakes, name='upload_kredensial'),
+    path('portal-nakes/kredensial/<int:cred_id>/unduh/', views.download_kredensial_nakes, name='download_kredensial'),
     path('portal-nakes/hapus-kredensial/<int:cred_id>/', views.delete_kredensial_nakes, name='delete_kredensial'),
     path('rekap-kps/', views.rekap_kps_unit, name='rekap_kps'),
     path('rekap-kps/verifikasi/<int:cred_id>/', views.verify_kredensial, name='verify_kredensial'),
