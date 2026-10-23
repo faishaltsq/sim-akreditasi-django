@@ -15,13 +15,21 @@ _SIDEBAR_CACHE_TTL = 300  # 5 menit
 
 
 def sidebar_context(request):
-    # Cache framework + categories global (tidak bergantung user) selama 5 menit
-    framework = cache.get('sidebar_framework')
-    categories = cache.get('sidebar_categories')
-    categories_by_kelompok = cache.get('sidebar_categories_by_kelompok')
+    # Cache framework + categories global (tidak bergantung user) selama 5 menit.
+    # The catalogue id is cached too: resolving it costs a query, and the warm
+    # request budget assumes the sidebar performs no lookups at all.
+    version_key = cache.get('sidebar_framework_id')
+    if version_key is None:
+        active = Framework.active()
+        version_key = getattr(active, 'pk', 'none')
+        cache.set('sidebar_framework_id', version_key, _SIDEBAR_CACHE_TTL)
+
+    framework = cache.get(f'sidebar_framework:{version_key}')
+    categories = cache.get(f'sidebar_categories:{version_key}')
+    categories_by_kelompok = cache.get(f'sidebar_categories_by_kelompok:{version_key}')
 
     if framework is None or categories is None:
-        framework = Framework.objects.first()
+        framework = Framework.active() if version_key != 'none' else None
         categories = []
         categories_by_kelompok = {}
 
@@ -41,9 +49,12 @@ def sidebar_context(request):
                         'count': len(k_cats),
                     }
 
-        cache.set('sidebar_framework', framework, _SIDEBAR_CACHE_TTL)
-        cache.set('sidebar_categories', categories, _SIDEBAR_CACHE_TTL)
-        cache.set('sidebar_categories_by_kelompok', categories_by_kelompok, _SIDEBAR_CACHE_TTL)
+        cache.set(f'sidebar_framework:{version_key}', framework, _SIDEBAR_CACHE_TTL)
+        cache.set(f'sidebar_categories:{version_key}', categories, _SIDEBAR_CACHE_TTL)
+        cache.set(
+            f'sidebar_categories_by_kelompok:{version_key}',
+            categories_by_kelompok, _SIDEBAR_CACHE_TTL,
+        )
 
     # Precompute stat per pokja (2 query total). Tanpa ini, property model
     # (total_score/max_possible_score) menembak 2 query per kategori di setiap

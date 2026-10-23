@@ -320,14 +320,54 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         self.stdout.write(self.style.NOTICE("Memulai seeding 16 Bab Standar STARKES..."))
 
-        # Pastikan Framework ada
-        framework = Framework.objects.first()
-        if not framework:
-            framework = Framework.objects.create(
-                name='STARKES Edisi 2022 / Kemenkes RI (PDCA)',
-                version='2022',
-                cycle_type='PDCA',
-            )
+        # Pastikan Framework ada. A fresh database applies this seed from a data
+        # migration, before later columns exist; in that case skip rather than
+        # abort the whole migration chain.
+        # This seed also runs from a data migration, before later Framework
+        # columns exist. Read/write through raw SQL in that case so the
+        # catalogue is still created instead of silently skipped.
+        from django.db import connection
+
+        with connection.cursor() as cursor:
+            columns = {
+                column.name
+                for column in connection.introspection.get_table_description(
+                    cursor, Framework._meta.db_table
+                )
+            }
+            if 'is_active' not in columns:
+                cursor.execute(
+                    "SELECT id FROM akreditasi_framework "
+                    "WHERE name = %s ORDER BY id LIMIT 1",
+                    ['STARKES Edisi 2022 / Kemenkes RI (PDCA)'],
+                )
+                row = cursor.fetchone()
+                if row is None:
+                    cursor.execute(
+                        "INSERT INTO akreditasi_framework "
+                        "(name, cycle_type, version, created_at) "
+                        "VALUES (%s, %s, %s, CURRENT_TIMESTAMP)",
+                        ['STARKES Edisi 2022 / Kemenkes RI (PDCA)', 'PDCA', '2022'],
+                    )
+                    row = (cursor.lastrowid,)
+                # Read through raw SQL: the ORM selects every model column,
+                # including ones this migration has not created yet.
+                cursor.execute(
+                    "SELECT id, name, cycle_type, version "
+                    "FROM akreditasi_framework WHERE id = %s", [row[0]]
+                )
+                fw_row = cursor.fetchone()
+                framework = Framework(
+                    id=fw_row[0], name=fw_row[1],
+                    cycle_type=fw_row[2], version=fw_row[3],
+                )
+                framework.save = lambda *a, **k: None
+            else:
+                framework = Framework.active() or Framework.objects.create(
+                    name='STARKES Edisi 2022 / Kemenkes RI (PDCA)',
+                    version='2022',
+                    cycle_type='PDCA',
+                )
 
         # Fallback unit default
         default_fallback_unit = UnitKerja.objects.first()

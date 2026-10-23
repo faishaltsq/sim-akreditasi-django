@@ -7,14 +7,43 @@ class Framework(models.Model):
     name = models.CharField('Nama Standar', max_length=200)
     cycle_type = models.CharField('Siklus Kendali Mutu', max_length=20, default='PDCA')
     version = models.CharField('Versi / Edisi', max_length=50, default='2026')
+    is_active = models.BooleanField(
+        'Katalog Aktif', default=True,
+        help_text='Hanya satu katalog yang boleh aktif; katalog lama diarsipkan.',
+    )
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         verbose_name = 'Standar Akreditasi'
         verbose_name_plural = 'Standar Akreditasi'
+        ordering = ['-version', 'pk']
 
     def __str__(self):
         return f"{self.name} ({self.cycle_type})"
+
+    @classmethod
+    def active(cls):
+        """Return the catalogue in use, preferring an explicit active flag.
+
+        Historical data migrations call this while the table may predate the
+        `is_active` column, so a missing column must fall back instead of
+        aborting the migration.
+        """
+        from django.db import connection
+
+        columns = {
+            column.name
+            for column in connection.introspection.get_table_description(
+                connection.cursor(), cls._meta.db_table
+            )
+        }
+        if 'is_active' not in columns:
+            # A data migration can call this before the column exists; any ORM
+            # read would fail and poison the surrounding transaction.
+            return None
+
+        chosen = cls.objects.filter(is_active=True).order_by('-version', 'pk').first()
+        return chosen or cls.objects.order_by('-version', 'pk').first()
 
 
 TIPE_UNIT_CHOICES = [

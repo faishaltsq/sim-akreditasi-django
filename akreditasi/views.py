@@ -542,7 +542,7 @@ def dashboard(request):
         return render(request, 'akreditasi/dashboard.html', cached_ctx)
 
     rs_profile = RumahSakitProfile.get_default()
-    framework = Framework.objects.first()
+    framework = Framework.active()
     categories = Category.objects.all().order_by('order')
 
     all_items = StandardItem.objects.select_related('category', 'record__unit').prefetch_related('evidence_reqs__files')

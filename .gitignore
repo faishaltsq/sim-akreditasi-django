@@ -14,3 +14,10 @@ env/
 *.log
 
 .vercel
+
+# QA fleet shards (besar, berisi username)
+qa/shards/
+qa/reports/*.json
+
+# Local reports/artifacts
+var/

@@ -68,7 +68,7 @@ class Command(BaseCommand):
 
         # ── 1. Tambah StandardItem PPI sterilisasi ──
         cat_ppi = Category.objects.filter(code='PPI').first()
-        framework = Framework.objects.first()
+        framework = Framework.active()
         if not cat_ppi:
             self.stdout.write(self.style.ERROR('Category PPI tidak ditemukan!'))
             return
