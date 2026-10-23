@@ -339,3 +339,26 @@ class ReminderTargetTests(TestCase):
                 target_type='APPRAISAL', band='TASK_DUE'
             ).exists()
         )
+
+
+class NavigationResilienceTests(TestCase):
+    """The processor runs on every page; a missing sdm table must not 500 the site."""
+
+    def test_missing_table_degrades_to_no_menu(self):
+        from unittest.mock import patch
+
+        from django.db import DatabaseError
+
+        from sdm.context_processors import hc_navigation
+
+        user = get_user_model().objects.create_user(username='nav-resilient')
+        request = type('Req', (), {'user': user})()
+
+        with patch(
+            'sdm.context_processors.granted_capabilities',
+            side_effect=DatabaseError('no such table: sdm_hcgrant'),
+        ):
+            context = hc_navigation(request)
+
+        self.assertFalse(any(context.values()))
+        self.assertIn('nav_pegawai', context)

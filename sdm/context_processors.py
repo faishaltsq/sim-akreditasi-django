@@ -1,4 +1,5 @@
 """Permission-filtered Human Capital navigation flags (one query per request)."""
+from django.db import DatabaseError
 from django.db.models import Q
 from django.utils import timezone
 
@@ -42,7 +43,13 @@ def hc_navigation(request):
         return {}
 
     if not hasattr(request, '_hc_navigation_cache'):
-        capabilities = granted_capabilities(user)
+        try:
+            capabilities = granted_capabilities(user)
+        except DatabaseError:
+            # This processor runs on every page. During a deploy the new code can
+            # serve before migrations finish; a missing sdm table must degrade to
+            # "no Human Capital menu", never to a 500 on unrelated pages.
+            capabilities = set()
         request._hc_navigation_cache = {
             'nav_pegawai': 'can_view_hc' in capabilities,
             'nav_formasi': 'can_plan_hc_workforce' in capabilities,

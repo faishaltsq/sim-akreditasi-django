@@ -1,0 +1,11 @@
+# Daftar akun hasil seed_akun_per_unit
+# format: username<TAB>role<TAB>kode_unit
+
+
+# Kapabilitas Human Capital yang diizinkan per role:
+#   ADMIN_RS: can_export_hc, can_manage_hc_appraisals, can_manage_hc_documents, can_manage_hc_employees, can_manage_hc_orientation, can_manage_hc_recruitment, can_manage_hc_talent, can_manage_hc_training, can_plan_hc_workforce, can_review_hc_credentials, can_view_hc, can_view_hc_analytics
+#   ASESOR: -
+#   KEPALA_UNIT: -
+#   KOORDINATOR_POKJA: -
+#   STAF_NAKES: -
+#   SUPER_ADMIN: -
