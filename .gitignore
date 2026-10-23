@@ -7,6 +7,8 @@ db.sqlite3.*
 # staticfiles committed to repo for Vercel static serving
 # /staticfiles/
 .env
+.env.local
+.env.*.local
 .venv/
 env/
 *.log
