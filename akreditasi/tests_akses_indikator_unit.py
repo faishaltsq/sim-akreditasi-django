@@ -54,6 +54,18 @@ def _mk_ind(unit, jenis, kode):
     )
 
 
+def _fixture_codes(qs):
+    """Hanya indikator buatan test ini (kode berawalan T<n>-)."""
+    return set(
+        qs.filter(kode_indikator__startswith='T')
+        .values_list('kode_indikator', flat=True)
+    )
+
+
+def _fixture_count(qs):
+    return qs.filter(kode_indikator__startswith='T').count()
+
+
 def _user(username, unit, role='KEPALA_UNIT'):
     """Plain user with a unit attached — no scoping assertion."""
     user = User.objects.create_user(username, f'{username}@rs.id', 'pass123')
@@ -169,7 +181,7 @@ class IndikatorAktifScopedTest(TestCase):
         ind.aktif = False
         ind.save()
         user = _unit_scoped_user('kepala-irin', irin)
-        self.assertEqual(indikator_aktif_scoped(user.profile).count(), 0)
+        self.assertEqual(_fixture_count(indikator_aktif_scoped(user.profile)), 0)
 
     def test_null_unit_indicator_hidden_from_unit_scoped_user(self):
         """``IndikatorMutu.unit`` is null=True (risiko_models.py:579), so
@@ -199,7 +211,7 @@ class IndikatorAktifScopedTest(TestCase):
             with self.subTest(role=role):
                 self.assertIn(role, HOSPITAL_WIDE_ROLES)
                 user = _unit_scoped_user(uname, irin, role=role)
-                self.assertEqual(indikator_aktif_scoped(user.profile).count(), 2)
+                self.assertEqual(_fixture_count(indikator_aktif_scoped(user.profile)), 2)
 
     def test_kepala_unit_stays_scoped_despite_escape_hatch(self):
         """The audience of this spec must NOT be exempted."""
@@ -210,7 +222,7 @@ class IndikatorAktifScopedTest(TestCase):
 
         user = _unit_scoped_user('kepala-a', irin, role='KEPALA_UNIT')
         self.assertNotIn('KEPALA_UNIT', HOSPITAL_WIDE_ROLES)
-        self.assertEqual(indikator_aktif_scoped(user.profile).count(), 1)
+        self.assertEqual(_fixture_count(indikator_aktif_scoped(user.profile)), 1)
 
     def test_staf_nakes_stays_scoped(self):
         irin = _mk_unit('IRIN', 'Instalasi Rawat Inap', level=2)
@@ -219,7 +231,7 @@ class IndikatorAktifScopedTest(TestCase):
         _mk_ind(inter, 'IMRS', 'RS-B')
 
         user = _unit_scoped_user('staf-a', irin, role='STAF_NAKES')
-        self.assertEqual(indikator_aktif_scoped(user.profile).count(), 1)
+        self.assertEqual(_fixture_count(indikator_aktif_scoped(user.profile)), 1)
 
     def test_super_admin_role_sees_everything(self):
         """``_is_unit_scoped`` already returns False for SUPER_ADMIN, so
@@ -231,7 +243,7 @@ class IndikatorAktifScopedTest(TestCase):
 
         user = _user('admin1', irin, role='SUPER_ADMIN')
         self.assertFalse(user.profile.is_unit_scoped)
-        self.assertEqual(indikator_aktif_scoped(user.profile).count(), 2)
+        self.assertEqual(_fixture_count(indikator_aktif_scoped(user.profile)), 2)
 
     def test_superuser_sees_everything(self):
         irin = _mk_unit('IRIN', 'Instalasi Rawat Inap', level=2)
@@ -243,7 +255,7 @@ class IndikatorAktifScopedTest(TestCase):
         user.is_superuser = True
         user.save()
         self.assertFalse(user.profile.is_unit_scoped)
-        self.assertEqual(indikator_aktif_scoped(user.profile).count(), 2)
+        self.assertEqual(_fixture_count(indikator_aktif_scoped(user.profile)), 2)
 
     def test_unit_scoped_profile_without_unit_kerja_is_not_scoped(self):
         irin = _mk_unit('IRIN', 'Instalasi Rawat Inap', level=2)
@@ -255,12 +267,12 @@ class IndikatorAktifScopedTest(TestCase):
         user.profile.unit_kerja = None
         user.profile.save()
         self.assertFalse(user.profile.is_unit_scoped)
-        self.assertEqual(indikator_aktif_scoped(user.profile).count(), 2)
+        self.assertEqual(_fixture_count(indikator_aktif_scoped(user.profile)), 2)
 
     def test_none_profile_returns_base(self):
         irin = _mk_unit('IRIN', 'Instalasi Rawat Inap', level=2)
         _mk_ind(irin, 'IMRS', 'RS-A')
-        self.assertEqual(indikator_aktif_scoped(None).count(), 1)
+        self.assertEqual(_fixture_count(indikator_aktif_scoped(None)), 1)
 
 
 class DashboardScopeTest(TestCase):

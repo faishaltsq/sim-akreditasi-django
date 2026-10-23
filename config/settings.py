@@ -4,6 +4,33 @@ import dj_database_url
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+
+def _load_local_env(path):
+    """Load KEY=VALUE pairs from .env without overriding platform variables.
+
+    Production platforms inject environment variables directly; this only fills
+    gaps during local development. Secrets stay out of settings and out of git.
+    """
+    try:
+        lines = path.read_text(encoding='utf-8').splitlines()
+    except OSError:
+        return
+    for line in lines:
+        line = line.strip()
+        if not line or line.startswith('#') or '=' not in line:
+            continue
+        key, value = line.split('=', 1)
+        key = key.strip()
+        if not key or key in os.environ:
+            continue
+        value = value.strip()
+        if len(value) >= 2 and value[0] == value[-1] and value[0] in ('"', "'"):
+            value = value[1:-1]
+        os.environ[key] = value
+
+
+_load_local_env(BASE_DIR / '.env')
+
 # ── KEAMANAN: SECRET_KEY & DEBUG ─────────────────────────────────────────
 IS_PRODUCTION = bool(os.environ.get('RAILWAY_ENVIRONMENT') or os.environ.get('RENDER') or os.environ.get('VERCEL') or os.environ.get('DATABASE_URL'))
 
@@ -29,6 +56,16 @@ ALLOWED_HOSTS += [
     'sim-akreditasi-web-production.up.railway.app',
     'testserver',
 ]
+# Preview deployment Vercel memakai hostname acak per build. Tambahkan host
+# deployment yang sedang berjalan dari env (satu host spesifik, tetap bukan
+# wildcard) supaya preview tidak kena DisallowedHost 400.
+for _host_var in ('VERCEL_URL', 'VERCEL_BRANCH_URL',
+                  'VERCEL_PROJECT_PRODUCTION_URL'):
+    _host = (os.environ.get(_host_var) or '').strip()
+    if _host:
+        _host = _host.replace('https://', '').replace('http://', '').strip('/')
+        if _host and _host not in ALLOWED_HOSTS:
+            ALLOWED_HOSTS.append(_host)
 
 CSRF_TRUSTED_ORIGINS = [
     o.strip()
@@ -39,6 +76,13 @@ CSRF_TRUSTED_ORIGINS += [
     'https://sim-akreditasi-django.vercel.app',
     'https://sim-akreditasi-web-production.up.railway.app',
 ]
+for _host_var in ('VERCEL_URL', 'VERCEL_BRANCH_URL',
+                  'VERCEL_PROJECT_PRODUCTION_URL'):
+    _host = (os.environ.get(_host_var) or '').strip()
+    if _host:
+        _origin = 'https://' + _host.replace('https://', '').replace('http://', '').strip('/')
+        if _origin not in CSRF_TRUSTED_ORIGINS:
+            CSRF_TRUSTED_ORIGINS.append(_origin)
 
 CSRF_FAILURE_VIEW = 'akreditasi.views.custom_csrf_failure'
 

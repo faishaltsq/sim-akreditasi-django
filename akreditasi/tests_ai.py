@@ -69,13 +69,22 @@ class EndpointAIIntegrationTest(TestCase):
         self.config.save()
 
     def test_anon_user_redirected(self):
-        """User tidak terotentikasi tidak boleh mengakses endpoint AI."""
+        """User tidak terotentikasi tidak boleh mengakses endpoint AI.
+
+        Endpoint /ai/ memakai @login_required biasa, sehingga anonim mendapat
+        redirect ke login (302) yang membawa ?next= — bukan 401. Middleware
+        pernah mengubahnya jadi JSON 401, tetapi itu memutus alur login browser
+        dan membunuh ?next=; ai-assist.js sudah menangani resp.redirected.
+        Kontrak ini diuji juga di akreditasi.tests_security.
+        """
         resp = self.client.post(
             reverse('akreditasi:ai_mitigasi_risiko'),
             data=json.dumps({'jenis_risiko': 'Bahaya Kebakaran'}),
             content_type='application/json'
         )
         self.assertEqual(resp.status_code, 302)
+        self.assertIn('/accounts/login/', resp['Location'])
+        self.assertIn('next=', resp['Location'])
 
     def test_payload_invalid_returns_400(self):
         """Payload non-JSON atau kosong harus mengembalikan 400, bukan 500."""

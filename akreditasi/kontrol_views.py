@@ -341,7 +341,7 @@ def kontrol_ringkasan_ai(request):
 
     result = generate_kontrol_ringkasan(request.user, snapshot, portal)
     if not result['success']:
-        return JsonResponse({'ok': False, 'error': result['error']}, status=502)
+        return JsonResponse({'ok': False, 'error': 'Gagal membuat ringkasan AI.'}, status=502)
 
     data = result['data']
     if not isinstance(data, dict):

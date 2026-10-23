@@ -1,21 +1,21 @@
 """
 Fase 2 — Views Manajemen Risiko PDCA + Insiden Keselamatan
 """
+import re
 
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.http import JsonResponse, HttpResponse, Http404
-from django.db.models import Count, Q, Exists, OuterRef
+from django.db.models import Count, Q, Min, Exists, OuterRef
 from django.utils import timezone
 from django.core.paginator import Paginator
 from django.views.decorators.http import require_GET, require_POST
-from django.core.exceptions import ValidationError
 from decimal import Decimal
 
-from .ep_sync import bukti_ringkas
 from .risiko_models import RisikoUnit, TindakLanjutRisiko, InsidenKeselamatan, IndikatorMutu, CatatanIndikator
 from .models import UnitKerja, AuditLog, Category, StandardItem
+# Peran pengelola dipakai template evaluasi (tombol Input Capaian/Edit Indikator).
 from .indikator_views import _is_manager
 
 
@@ -238,8 +238,7 @@ def api_indikator_by_unit(request):
 @login_required
 def risiko_daftar(request):
     profile = getattr(request.user, 'profile', None)
-    qs = RisikoUnit.objects.select_related('unit', 'indikator_mutu_terkait', 'created_by') \
-        .prefetch_related('tindak_lanjut__ep_terkait__category').all()
+    qs = RisikoUnit.objects.select_related('unit', 'indikator_mutu_terkait', 'created_by').all()
 
     # Scope filtering untuk unit-scoped users
     if profile and profile.is_unit_scoped and profile.unit_kerja:
@@ -517,7 +516,10 @@ def risiko_input(request):
 @login_required
 def risiko_detail(request, risiko_id):
     risiko = get_object_or_404(RisikoUnit.objects.select_related('unit', 'indikator_mutu_terkait', 'created_by'), pk=risiko_id)
-    tindak_lanjut = risiko.tindak_lanjut.all()
+    # Ringkasan kebutuhan bukti EP per baris. Sekali per EP, bukan sekali per
+    # baris — beberapa aksi boleh menunjuk EP yang sama.
+    from .ep_sync import bukti_ringkas
+    tindak_lanjut = risiko.tindak_lanjut.select_related('standar_terkait', 'ep_terkait')
 
     # Tambah tindak lanjut inline
     if request.method == 'POST':
@@ -551,23 +553,8 @@ def risiko_detail(request, risiko_id):
             _log(request.user, 'CREATE', tl, f'Tindak lanjut #{tl.urutan}')
             messages.success(request, 'Tindak lanjut ditambahkan.')
             return redirect('akreditasi:risiko_detail', risiko_id=risiko.pk)
-        except ValidationError as e:
-            pesan = '; '.join(
-                f'{k}: {" ".join(v)}' if k != '__all__' else ' '.join(v)
-                for k, v in e.message_dict.items()) if hasattr(e, 'message_dict')                 else '; '.join(e.messages)
-            messages.error(request, f'Gagal menyimpan pelaksanaan — {pesan}')
         except Exception as e:
             messages.error(request, f'Gagal: {e}')
-
-    # Ringkasan kebutuhan bukti EP per baris. Sekali per EP, bukan sekali
-    # per baris -- beberapa aksi boleh menunjuk EP yang sama.
-    _ringkas_ep = {}
-    tindak_lanjut = list(
-        tindak_lanjut.select_related('standar_terkait', 'ep_terkait').order_by('urutan'))
-    for tl in tindak_lanjut:
-        if tl.ep_terkait_id and tl.ep_terkait_id not in _ringkas_ep:
-            _ringkas_ep[tl.ep_terkait_id] = bukti_ringkas(tl.ep_terkait)
-        tl.ep_ringkas = _ringkas_ep.get(tl.ep_terkait_id)
 
     # Build risk matrix 5×5 for this risiko's position
     matrix = {}
@@ -586,9 +573,17 @@ def risiko_detail(request, risiko_id):
         'matrix': matrix,
         'status_badges': STATUS_BADGES,
         'status_aksi_choices': TindakLanjutRisiko.STATUS_AKSI_CHOICES,
+        # Form tambah pelaksanaan: pilih standar lalu EP-nya (difilter di klien
+        # lewat data-standar pada tiap opsi).
         'standar_list': Category.objects.order_by('code'),
         'ep_list': StandardItem.objects.select_related('category').order_by('category__code', 'code'),
     }
+    # ep_ringkas per baris: ringkasan kebutuhan bukti EP (sekali per EP).
+    _ringkas_ep = {}
+    for _tl in tindak_lanjut:
+        if _tl.ep_terkait_id and _tl.ep_terkait_id not in _ringkas_ep:
+            _ringkas_ep[_tl.ep_terkait_id] = bukti_ringkas(_tl.ep_terkait)
+        _tl.ep_ringkas = _ringkas_ep.get(_tl.ep_terkait_id)
     return render(request, 'akreditasi/risiko_detail.html', ctx)
 
 
@@ -752,6 +747,64 @@ def risiko_hapus(request, risiko_id):
 
 # ── 4. Evaluasi Risiko ───────────────────────────────────────────────────
 
+def _indikator_rencana(risiko):
+    """Indikator mutu yang sudah direncanakan untuk unit risiko ini.
+
+    Sumber: RisikoUnit.indikator_mutu_terkait milik risiko lain di unit yang
+    sama + seluruh rantai leluhur unit. Dipakai untuk menyaring dropdown
+    penautan di G.1 agar hanya menampilkan indikator yang memang direncanakan
+    (bukan seluruh katalog unit + INM nasional).
+
+    Return (list_indikator, mode) dengan mode:
+      'RENCANA'  -> ada indikator hasil perencanaan
+      'FALLBACK' -> unit belum merencanakan apa pun; kembalikan set lama
+    """
+    ancestor_ids = []
+    cur = getattr(risiko, 'unit', None)
+    while cur is not None and cur.pk not in ancestor_ids:
+        ancestor_ids.append(cur.pk)
+        cur = cur.parent
+
+    planned_ids = list(
+        RisikoUnit.objects
+        .filter(unit_id__in=ancestor_ids, indikator_mutu_terkait__isnull=False)
+        .exclude(pk=risiko.pk)
+        .values_list('indikator_mutu_terkait_id', flat=True)
+        .distinct()
+    )
+
+    # rencana_target = target capaian yang dipilih di tahap Plan oleh risiko
+    # unit yang sama (Min = paling longgar bila dua risiko beda nilai).
+    # Risiko unit leluhur tidak dihitung -> None -> template/JS jatuh ke
+    # target_nilai master.
+    rencana_target = Min('risiko_terkait__target_capaian_indikator',
+                         filter=Q(risiko_terkait__unit_id=risiko.unit_id))
+
+    if planned_ids:
+        qs = (IndikatorMutu.objects
+              .filter(aktif=True, pk__in=planned_ids)
+              .select_related('unit')
+              .annotate(rencana_target=rencana_target)
+              .order_by('jenis', 'kode_indikator'))
+        return list(qs), 'RENCANA'
+
+    # ponytail: unit belum punya rencana sama sekali -> perilaku lama
+    # (unit + leluhur + INM global). Naikkan ke 'hanya rencana' begitu
+    # seluruh unit sudah mengisi section D.
+    qs = (IndikatorMutu.objects
+          .filter(aktif=True)
+          .filter(Q(unit_id__in=ancestor_ids) | Q(unit__isnull=True)
+                  | Q(jenis__in=('NASIONAL', 'INM')))
+          .select_related('unit')
+          .annotate(rencana_target=rencana_target)
+          .order_by('jenis', 'kode_indikator'))
+    out = list(qs)
+    if not out:
+        out = list(IndikatorMutu.objects.filter(aktif=True, jenis='NASIONAL')
+                   .order_by('kode_indikator'))
+    return out, 'FALLBACK'
+
+
 @login_required
 def risiko_evaluasi(request, risiko_id):
     risiko = get_object_or_404(RisikoUnit.objects.select_related('unit', 'indikator_mutu_terkait', 'created_by'), pk=risiko_id)
@@ -782,7 +835,11 @@ def risiko_evaluasi(request, risiko_id):
                 except (ArithmeticError, ValueError, TypeError):
                     risiko.target_capaian_indikator = None
 
-            # ── Capaian Indikator Mutu ──
+            # ── Evaluasi Capaian ──
+            # Form G.1 tidak lagi merender input capaian/bukti (sumbernya
+            # CatatanIndikator lewat halaman Input Capaian), tetapi payload lama
+            # yang masih memuat field ini tetap diterima agar klien/browser
+            # dengan halaman ter-cache tidak kehilangan data.
             capaian_raw = request.POST.get('capaian_nilai', '').strip()
             if capaian_raw:
                 try:
@@ -791,7 +848,6 @@ def risiko_evaluasi(request, risiko_id):
                     pass
             if request.FILES.get('bukti_capaian'):
                 risiko.bukti_capaian = request.FILES['bukti_capaian']
-
             if 'jenis_dokumen_capaian' in request.POST:
                 risiko.jenis_dokumen_capaian = request.POST.get('jenis_dokumen_capaian', '').strip()
 
@@ -812,10 +868,10 @@ def risiko_evaluasi(request, risiko_id):
                         collected_statuses.append(tl.status_aksi)
             elif risiko.rencana_aksi_list:
                 # Tautan diwarisi dari indikator terkait agar pelaksanaan hasil
-                # materialisasi tidak pernah yatim EP/standarnya; pilihan butir
-                # pada form G.2 menimpanya kalau operator mengisinya.
-                ep_warisan = risiko.indikator_mutu_terkait.ep_terkait \
-                    if risiko.indikator_mutu_terkait_id else None
+                # materialisasi tidak pernah yatim EP/standarnya; picker EP
+                # per-butir di form G.2 menimpanya bila operator mengisinya.
+                ep_warisan = (risiko.indikator_mutu_terkait.ep_terkait
+                              if risiko.indikator_mutu_terkait_id else None)
                 for item in risiko.rencana_aksi_list:
                     idx = item['urutan']
                     st_val = request.POST.get(f'step_status_{idx}')
@@ -828,8 +884,11 @@ def risiko_evaluasi(request, risiko_id):
                                 try:
                                     ep_pilihan = StandardItem.objects.get(pk=raw_ep)
                                 except (StandardItem.DoesNotExist, ValueError, TypeError):
-                                    raise ValidationError(
-                                        f'EP untuk butir {idx} tidak ditemukan.')
+                                    messages.error(
+                                        request,
+                                        f'EP untuk butir {idx} tidak ditemukan; '
+                                        'tidak ada butir yang disimpan.')
+                                    raise ValueError('EP butir tidak valid')
                             else:
                                 # kolom sengaja dikosongkan = tanpa tautan
                                 ep_pilihan = None
@@ -896,9 +955,24 @@ def risiko_evaluasi(request, risiko_id):
     # ponytail: nama konteks tanpa underscore awal — Django menolak
     # nama variabel template yang diawali underscore (TemplateSyntaxError).
 
-    # G.1 kini hanya membaca: input inline capaian/bukti sudah dihapus, sumber
+    # Kandidat indikator untuk penautan bila belum tertaut.
+    # Sumber: indikator yang SUDAH DIRENCANAKAN unit ini + leluhurnya.
+    # Fallback ke set lama (unit + leluhur + INM global) bila unit belum
+    # merencanakan apa pun, supaya dropdown tidak pernah kosong.
+    indikator_kandidat = []
+    indikator_kandidat_mode = ''
+    indikator_manual_hint = ''
+    if not risiko.indikator_mutu_terkait_id:
+        indikator_kandidat, indikator_kandidat_mode = _indikator_rencana(risiko)
+        # Indikator yang dulu diketik manual (marker di deskripsi_risiko)
+        # ditampilkan apa adanya sebagai petunjuk pilihan, tanpa pencocokan
+        # otomatis — nama bebas tidak bisa dipetakan ke master secara andal.
+        m = re.search(r'\[Indikator Mutu Manual:\s*(.+?)\]', risiko.deskripsi_risiko or '', re.S)
+        if m:
+            indikator_manual_hint = m.group(1).strip()
+
+    # G.1 hanya membaca: input inline capaian/bukti sudah dihapus, sumber
     # datanya halaman Input Capaian (CatatanIndikator) lewat agregat tahunan.
-    # Penautan indikator dilakukan di form perencanaan/edit risiko, bukan di sini.
     agregat = None
     if risiko.indikator_mutu_terkait_id:
         agregat = risiko.indikator_mutu_terkait.agregat_capaian(risiko.tahun)
@@ -920,6 +994,9 @@ def risiko_evaluasi(request, risiko_id):
         'satuan_nilai_display': satuan_nilai_display,
         'ev_capaian': _ev,
         'agregat': agregat,
+        'indikator_kandidat': indikator_kandidat,
+        'indikator_kandidat_mode': indikator_kandidat_mode,
+        'indikator_manual_hint': indikator_manual_hint,
         'is_manager': _is_manager(request.user),
     }
     return render(request, 'akreditasi/risiko_evaluasi.html', ctx)
@@ -1016,6 +1093,7 @@ def risiko_monitoring_evaluasi(request, unit_id=None):
         'query': query,
         'status_rtl_choices': RisikoUnit.STATUS_RTL_CHOICES,
         'status_pelaksanaan_choices': RisikoUnit.STATUS_PELAKSANAAN_CHOICES,
+        # Tombol aksi (Edit Indikator / Input Capaian / Detail) hanya untuk pengelola.
         'is_manager': _is_manager(request.user),
     }
     return render(request, 'akreditasi/risiko_monitoring_evaluasi.html', ctx)
@@ -1539,7 +1617,7 @@ def risiko_perencanaan_dokumen(request, risiko_id):
     Sesuai format resmi dokumen perencanaan RS Monsiskami ARIMA.
     """
     risiko = get_object_or_404(
-        RisikoUnit.objects.select_related('unit', 'indikator_mutu_terkait', 'indikator_mutu_terkait__ep_terkait', 'created_by').prefetch_related('tindak_lanjut'),
+        RisikoUnit.objects.select_related('unit', 'indikator_mutu_terkait', 'created_by').prefetch_related('tindak_lanjut'),
         pk=risiko_id
     )
     profile = getattr(request.user, 'profile', None)
@@ -1608,8 +1686,7 @@ def risiko_perencanaan_unit(request, unit_id=None):
         tahun_list = [2026]
 
     risiko_qs = RisikoUnit.objects.filter(unit=selected_unit).select_related(
-        'unit', 'indikator_mutu_terkait', 'indikator_mutu_terkait__ep_terkait',
-        'created_by'
+        'unit', 'indikator_mutu_terkait', 'created_by'
     ).prefetch_related('tindak_lanjut').order_by('-dampak', '-probabilitas', 'id')
 
     if tahun:
@@ -1864,7 +1941,7 @@ def risiko_pelaksanaan_export_csv(request):
     tahun = int(tahun_raw) if tahun_raw and tahun_raw.isdigit() else 2026
 
     risiko_qs = RisikoUnit.objects.filter(unit=target_unit, tahun=tahun).select_related(
-        'unit', 'indikator_mutu_terkait'
+        'unit', 'indikator_mutu_terkait', 'indikator_mutu_terkait__ep_terkait'
     ).prefetch_related('tindak_lanjut').order_by('-dampak', '-probabilitas', 'id')
 
     unit_slug = (target_unit.name if target_unit else 'Unit').replace(' ', '_')
@@ -1881,6 +1958,8 @@ def risiko_pelaksanaan_export_csv(request):
     writer.writerow([])
 
     writer.writerow(['TABEL PELAKSANAAN TINDAKAN RISIKO (SIKLUS DO)'])
+    # Kolom tambahan menempel di belakang: 11 kolom lama tidak bergeser supaya
+    # konsumen yang mem-parse posisional tetap aman.
     writer.writerow(['No', 'Jenis Risiko', 'Rencana Aksi Mitigasi', 'No. Aksi', 'Deskripsi Pelaksanaan', 'Status', 'Tgl Mulai', 'Tgl Selesai', 'Catatan', 'Bukti Dokumen', 'PJ Mitigasi',
                      'standar', 'kode_ep', 'judul_ep'])
 
@@ -1901,8 +1980,6 @@ def risiko_pelaksanaan_export_csv(request):
                     tl.catatan or '—',
                     'Ada' if tl.bukti_upload else 'Belum ada',
                     r.pj_mitigasi or 'Ka. Unit',
-                    # Kolom tambahan ditambah di belakang, tanpa menggeser yang
-                    # lama -- pihak lain bisa mem-parse file ini secara posisional.
                     tl.standar_terkait.code if tl.standar_terkait_id else '—',
                     tl.ep_terkait.code if tl.ep_terkait_id else '—',
                     tl.ep_terkait.description if tl.ep_terkait_id else '—',
@@ -1936,7 +2013,7 @@ def risiko_laporan_lengkap(request, risiko_id):
     4. Action (RTL): Rencana Tindak Lanjut, PIC, Target Waktu, Status RTL & Matriks Perubahan Risiko
     """
     risiko = get_object_or_404(
-        RisikoUnit.objects.select_related('unit', 'indikator_mutu_terkait', 'indikator_mutu_terkait__ep_terkait', 'created_by').prefetch_related('tindak_lanjut'),
+        RisikoUnit.objects.select_related('unit', 'indikator_mutu_terkait', 'created_by').prefetch_related('tindak_lanjut'),
         pk=risiko_id
     )
     profile = getattr(request.user, 'profile', None)
@@ -2017,8 +2094,7 @@ def risiko_laporan_lengkap_unit(request, unit_id=None):
         tahun_list = [2026]
 
     risiko_qs = RisikoUnit.objects.filter(unit=selected_unit).select_related(
-        'unit', 'indikator_mutu_terkait', 'indikator_mutu_terkait__ep_terkait',
-        'created_by'
+        'unit', 'indikator_mutu_terkait', 'created_by'
     ).prefetch_related('tindak_lanjut').order_by('-dampak', '-probabilitas', 'id')
 
     if tahun:

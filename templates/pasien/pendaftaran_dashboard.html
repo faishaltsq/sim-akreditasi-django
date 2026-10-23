@@ -8,36 +8,36 @@
 {% block extra_css %}
 <style>
     .kpi-card {
-        background: #fff; border: 1px solid #e2e8f0; border-radius: .75rem;
+        background: #fff; border: 1px solid var(--border); border-radius: .75rem;
         padding: 1.1rem 1.2rem; box-shadow: 0 1px 3px rgba(0,0,0,.04);
         height: 100%; position: relative; overflow: hidden;
     }
     .kpi-card::before {
         content: ''; position: absolute; top: 0; left: 0;
-        width: 4px; height: 100%; background: #0F766E;
+        width: 4px; height: 100%; background: var(--primary);
     }
     .kpi-card.border-red::before { background: #dc2626; }
-    .kpi-card.border-blue::before { background: #2563eb; }
-    .kpi-card.border-green::before { background: #16a34a; }
+    .kpi-card.border-blue::before { background: var(--primary-deep); }
+    .kpi-card.border-green::before { background: var(--success); }
     .kpi-card.border-purple::before { background: #9333ea; }
-    .kpi-label { font-size: .68rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: #64748b; }
-    .kpi-value { font-size: 1.85rem; font-weight: 800; font-family: 'JetBrains Mono', monospace; color: #0f172a; line-height: 1.1; margin: .3rem 0; }
-    .kpi-sub { font-size: .72rem; color: #64748b; }
-    .dest-card { border: 2px solid #e2e8f0; border-radius: .75rem; padding: 1rem; cursor: pointer; transition: all .2s; }
-    .dest-card:hover { border-color: #cbd5e1; background: #f8fafc; }
+    .kpi-label { font-size: .68rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--text-secondary); }
+    .kpi-value { font-size: 1.85rem; font-weight: 800; font-family: 'JetBrains Mono', monospace; color: var(--text-primary); line-height: 1.1; margin: .3rem 0; }
+    .kpi-sub { font-size: .72rem; color: var(--text-secondary); }
+    .dest-card { border: 2px solid var(--border); border-radius: .75rem; padding: 1rem; cursor: pointer; transition: all .2s; }
+    .dest-card:hover { border-color: var(--border-strong); background: var(--body-bg); }
     .dest-card.selected-igd { border-color: #dc2626; background: #fef2f2; }
-    .dest-card.selected-rajal { border-color: #2563eb; background: #eff6ff; }
-    .flag-ambulans { background:#fef3c7; border:1px solid #f59e0b; border-radius:4px; padding:2px 6px; font-size:.7rem; font-weight:700; color:#92400e; }
+    .dest-card.selected-rajal { border-color: var(--primary-deep); background: var(--primary-tint); }
+    .flag-ambulans { background:#fef3c7; border:1px solid var(--warning); border-radius:4px; padding:2px 6px; font-size:.7rem; font-weight:700; color:#92400e; }
     .flag-kritis { background:#fee2e2; border:1px solid #ef4444; border-radius:4px; padding:2px 6px; font-size:.7rem; font-weight:700; color:#991b1b; animation: blink 1s step-start infinite; }
     @keyframes blink { 50% { opacity: 0; } }
     .nik-check-feedback { font-size:.75rem; margin-top:3px; }
-    .bed-bar { height:8px; border-radius:4px; background:#e2e8f0; overflow:hidden; }
-    .bed-bar-fill { height:100%; border-radius:4px; background:#16a34a; transition:width .4s; }
-    .bed-bar-fill.warn { background:#f59e0b; }
+    .bed-bar { height:8px; border-radius:4px; background:var(--border); overflow:hidden; }
+    .bed-bar-fill { height:100%; border-radius:4px; background:var(--success); transition:width .4s; }
+    .bed-bar-fill.warn { background:var(--warning); }
     .bed-bar-fill.critical { background:#dc2626; }
-    .nav-tabs .nav-link { font-size: .85rem; font-weight: 600; color: #64748b; border: none; border-bottom: 2.5px solid transparent; padding: .65rem 1rem; }
-    .nav-tabs .nav-link.active { color: #0F766E; background: transparent; border-bottom-color: #0F766E; }
-    .nav-tabs .nav-link:hover { border-bottom-color: #cbd5e1; }
+    .nav-tabs .nav-link { font-size: .85rem; font-weight: 600; color: var(--text-secondary); border: none; border-bottom: 2.5px solid transparent; padding: .65rem 1rem; }
+    .nav-tabs .nav-link.active { color: var(--primary); background: transparent; border-bottom-color: var(--primary); }
+    .nav-tabs .nav-link:hover { border-bottom-color: var(--border-strong); }
 </style>
 {% endblock %}
 
@@ -47,7 +47,7 @@
     <!-- HERO BANNER -->
     <div class="card border-0 shadow-sm mb-4 overflow-hidden" style="border-radius: 1rem;">
         <div class="card-body p-0">
-            <div class="d-flex align-items-center" style="background: #0F172A; min-height: 100px;">
+            <div class="d-flex align-items-center" style="background: var(--text-primary); min-height: 100px;">
                 <div class="d-flex align-items-center justify-content-center flex-shrink-0 px-4 px-md-5" style="min-height:100px;">
                     <i class="bi bi-person-badge text-white" style="font-size: 2.5rem; opacity: .9;"></i>
                 </div>

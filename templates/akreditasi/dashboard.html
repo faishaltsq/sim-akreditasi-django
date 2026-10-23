@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 {% load akreditasi_tags l10n %}
 
+{% block breadcrumb %}<li class="current" aria-current="page">{% if unit_dashboard %}Dashboard Unit{% else %}Dashboard{% endif %}</li>{% endblock %}
 {% block page_title %}{% if unit_dashboard %}{{ unit.name|upper }}{% else %}ARIMA — RS MonsisKami{% endif %}{% endblock %}
 {% block page_subtitle %}{% if unit_dashboard %}Dashboard Unit — {{ unit.get_tipe_unit_display|default:"Unit Pelayanan" }} | {{ rs_profile.nama_rs|default:"RS MonsisKami Tipe B" }}{% else %}ARIMA — Aplikasi Terpadu Manajemen Risiko dan Tata Kelola Dokumen Akreditasi RS MonsisKami{% endif %}{% endblock %}
 
@@ -25,10 +26,10 @@
         top: 0; left: 0;
         width: 4px; height: 100%;
     }
-    .kpi-card.kpi-capaian::before { background: #10B981; }
-    .kpi-card.kpi-dokumen::before { background: #2A835F; }
-    .kpi-card.kpi-evaluasi::before { background: #F59E0B; }
-    .kpi-card.kpi-anggaran::before { background: #8B5CF6; }
+    .kpi-card.kpi-capaian::before { background: var(--success); }
+    .kpi-card.kpi-dokumen::before { background: var(--success); }
+    .kpi-card.kpi-evaluasi::before { background: var(--warning); }
+    .kpi-card.kpi-anggaran::before { background: #8B7CF6; }
 
     .kpi-label {
         font-size: 0.68rem;
@@ -43,7 +44,7 @@
     .kpi-value {
         font-size: 1.85rem;
         font-weight: 800;
-        font-family: 'JetBrains Mono', monospace;
+        font-family: var(--font-mono);
         color: var(--text-primary);
         line-height: 1.1;
         margin: 0.35rem 0;
@@ -67,8 +68,8 @@
         z-index: 1;
     }
     .renstra-year-active {
-        box-shadow: 0 0 0 2px #3b82f6, 0 0 18px 4px rgba(59, 130, 246, 0.3) !important;
-        border-color: #3b82f6 !important;
+        box-shadow: 0 0 0 2px var(--primary), 0 0 18px 4px rgba(79,91,213,0.3) !important;
+        border-color: var(--primary) !important;
     }
 </style>
 {% endblock %}
@@ -80,12 +81,12 @@
     <!-- ========================================================================= -->
     <!-- HERO BANNER KHUSUS UNIT KERJA (BRANDED UNIT LANDING)                     -->
     <!-- ========================================================================= -->
-    <div class="card border-0 shadow-sm mb-4" style="background: #115E59; border-radius: var(--radius-lg); color: #ffffff;">
+    <div class="card border-0 shadow-sm mb-4" style="background: var(--primary-strong); border-radius: var(--radius-lg); color: #ffffff;">
         <div class="card-body p-4 p-md-5">
             <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3">
                 <div>
                     <div class="d-flex align-items-center gap-2 mb-2">
-                        <span class="badge bg-white text-teal fw-bold px-3 py-1 font-monospace" style="color: #12544F !important; font-size: 0.75rem;">
+                        <span class="badge bg-white text-teal fw-bold px-3 py-1 font-monospace" style="color: var(--primary-strong) !important; font-size: 0.75rem;">
                             <i class="bi bi-diagram-3 me-1"></i>KODE: {{ unit.code }}
                         </span>
                         <span class="badge bg-white/20 text-white border border-white/30 px-2.5 py-1" style="font-size: 0.72rem;">
@@ -109,7 +110,7 @@
                 </div>
 
                 <div class="d-flex flex-wrap gap-2">
-                    <a href="{% url 'akreditasi:matriks_pdca' %}?unit={{ unit.id }}" class="btn btn-light fw-bold px-3 shadow-sm text-teal" style="color: #12544F;">
+                    <a href="{% url 'akreditasi:matriks_pdca' %}?unit={{ unit.id }}" class="btn btn-light fw-bold px-3 shadow-sm text-teal" style="color: var(--primary-strong);">
                         <i class="bi bi-table me-1"></i>Matriks PDCA Unit
                     </a>
                     <a href="{% url 'akreditasi:risiko_input' %}" class="btn btn-outline-light fw-semibold px-3">
@@ -128,36 +129,36 @@
     <!-- HERO BANNER GLOBAL: ARIMA — RS MonsisKami (SEMUA USER)                    -->
     <!-- ========================================================================= -->
     {% if not unit_dashboard %}
-    <div class="card border-0 mb-4 overflow-hidden" style="border-radius: var(--radius-lg); background: #0F172A; border: 1px solid #1E293B; box-shadow: var(--shadow-md);">
+    <div class="card border-0 mb-4 overflow-hidden" style="border-radius: var(--radius-lg); background: radial-gradient(120% 120% at 12% 0%, rgba(79,91,213,0.42) 0%, rgba(20,33,61,0) 55%), linear-gradient(140deg, var(--brand-navy) 0%, var(--brand-navy-deep) 100%); border: 1px solid var(--brand-navy); box-shadow: var(--shadow-md);">
         <!-- Decorative grid overlay -->
         <div class="card-body p-4 p-md-4 text-white position-relative">
             <div class="d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-3">
                 <div class="d-flex align-items-center gap-3">
-                    <div class="d-none d-sm-flex align-items-center justify-content-center rounded-3 flex-shrink-0" style="width: 54px; height: 54px; background: rgba(16,185,129,0.12); border: 1px solid rgba(16,185,129,0.3); box-shadow: 0 0 24px rgba(16,185,129,0.15);">
+                    <div class="d-none d-sm-flex align-items-center justify-content-center rounded-3 flex-shrink-0" style="width: 54px; height: 54px; background: rgba(139,124,246,0.16); border: 1px solid rgba(139,124,246,0.42); box-shadow: 0 0 24px rgba(139,124,246,0.22);">
                         <i class="bi bi-hospital text-white" style="font-size:1.5rem;"></i>
                     </div>
                     <div>
                         <div class="d-flex flex-wrap align-items-center gap-2 mb-1">
-                            <span style="font-family:'JetBrains Mono',monospace; font-size:0.62rem; font-weight:600; background:rgba(16,185,129,0.15); border:1px solid rgba(16,185,129,0.3); color:#34D399; padding:2px 8px; border-radius:4px; letter-spacing:0.05em;">
+                            <span style="font-family: var(--font-mono); font-size:0.62rem; font-weight:600; background:rgba(139,124,246,0.18); border:1px solid rgba(139,124,246,0.42); color:#C7C0FB; padding:2px 8px; border-radius:4px; letter-spacing:0.05em;">
                                 <span class="sidebar-status-dot me-1" style="vertical-align:middle; display:inline-block;"></span>SYSTEM: NOMINAL
                             </span>
-                            <span style="font-family:'JetBrains Mono',monospace; font-size:0.62rem; color:rgba(255,255,255,0.35); border:1px solid rgba(255,255,255,0.1); padding:2px 8px; border-radius:4px;">
+                            <span style="font-family: var(--font-mono); font-size:0.62rem; color:rgba(255,255,255,0.35); border:1px solid rgba(255,255,255,0.1); padding:2px 8px; border-radius:4px;">
                                 STARKES {{ rs_profile.akreditasi_tahun|default:"2026" }} &bull; KMK 1128
                             </span>
-                            <span style="font-family:'JetBrains Mono',monospace; font-size:0.62rem; color:rgba(255,255,255,0.3); padding:2px 8px;">
+                            <span style="font-family: var(--font-mono); font-size:0.62rem; color:rgba(255,255,255,0.3); padding:2px 8px;">
                                 TARGET: PARIPURNA
                             </span>
                         </div>
                         <h2 class="fw-bold text-white mb-1" style="font-size: 1.55rem; letter-spacing: -0.02em; line-height: 1.2;">
                             {{ rs_profile.nama_rs|default:"RS MonsisKami" }}
                         </h2>
-                        <p class="mb-0" style="font-size: 0.78rem; max-width: 600px; color: rgba(255,255,255,0.45); font-family:'JetBrains Mono',monospace; letter-spacing:0.01em;">
+                        <p class="mb-0" style="font-size: 0.78rem; max-width: 600px; color: rgba(255,255,255,0.45); font-family: var(--font-mono); letter-spacing:0.01em;">
                             ARIMA // Manajemen Risiko Klinis &amp; Tata Kelola Dokumen Akreditasi 16 Pokja
                         </p>
                     </div>
                 </div>
                 <div class="d-flex flex-wrap align-items-center gap-2">
-                    <a href="{% url 'akreditasi:matriks_pdca' %}" class="btn btn-sm fw-bold px-3" style="background:rgba(16,185,129,0.15); border:1px solid rgba(16,185,129,0.35); color:#34D399; font-family:'JetBrains Mono',monospace; font-size:0.72rem;">
+                    <a href="{% url 'akreditasi:matriks_pdca' %}" class="btn btn-sm fw-bold px-3" style="background:rgba(79,91,213,0.24); border:1px solid rgba(139,124,246,0.5); color:#DCDCFB; font-family: var(--font-mono); font-size:0.72rem;">
                         <i class="bi bi-table me-1"></i>Matriks PDCA
                     </a>
                     <a href="{% url 'akreditasi:risiko_input' %}" class="btn btn-outline-light btn-sm fw-semibold px-3" style="font-size:0.72rem;">
@@ -187,7 +188,7 @@
                     </div>
                 </div>
                 <div>
-                    <div class="progress" style="height: 6px; border-radius: 6px; background: #E2E8F0;">
+                    <div class="progress" style="height: 6px; border-radius: 6px; background: var(--border);">
                         <div class="progress-bar bg-success" role="progressbar" style="width: {{ capaian_rata_rata|unlocalize }}%;"></div>
                     </div>
                     <div class="d-flex justify-content-between kpi-sub mt-1.5">
@@ -215,7 +216,7 @@
                 <div>
                     {% if total_target_dokumen > 0 %}
                     {% widthratio total_uploaded_dokumen total_target_dokumen 100 as pct_doc %}
-                    <div class="progress" style="height: 8px; border-radius: 6px; background: #E2E8F0;">
+                    <div class="progress" style="height: 8px; border-radius: 6px; background: var(--border);">
                         <div class="progress-bar bg-primary" role="progressbar" style="width: {{ pct_doc|unlocalize }}%;" title="Dokumen Terunggah (Do): {{ pct_doc }}%"></div>
                     </div>
                     <div class="d-flex justify-content-between kpi-sub mt-2" style="font-size:0.75rem;">
@@ -263,9 +264,9 @@
                 <div>
                     <div class="kpi-label">
                         <span>Standar EP Terisi</span>
-                        <i class="bi bi-list-check text-purple fs-5" style="color:#8B5CF6;"></i>
+                        <i class="bi bi-list-check text-purple fs-5" style="color:#8B7CF6;"></i>
                     </div>
-                    <div class="kpi-value" style="color:#7C3AED; font-size:1.6rem;">
+                    <div class="kpi-value" style="color:var(--accent); font-size:1.6rem;">
                         {{ count_tercapai|add:count_proses }}<span class="fs-5 text-muted fw-normal">/{{ total_ep }}</span>
                     </div>
                 </div>
@@ -318,7 +319,7 @@
                     </div>
                 </div>
                 <div>
-                    <div class="progress" style="height: 6px; border-radius: 6px; background: #E2E8F0;">
+                    <div class="progress" style="height: 6px; border-radius: 6px; background: var(--border);">
                         <div class="progress-bar bg-warning" role="progressbar" style="width: {{ persen_evaluasi_pdca|unlocalize }}%;"></div>
                     </div>
                     <div class="d-flex justify-content-between kpi-sub mt-1.5">
@@ -335,9 +336,9 @@
                 <div>
                     <div class="kpi-label">
                         <span>Anggaran RKA Akreditasi</span>
-                        <i class="bi bi-coin text-purple fs-5" style="color:#8B5CF6;"></i>
+                        <i class="bi bi-coin text-purple fs-5" style="color:#8B7CF6;"></i>
                     </div>
-                    <div class="kpi-value" style="color:#7C3AED; font-size:1.45rem;">
+                    <div class="kpi-value" style="color:var(--accent); font-size:1.45rem;">
                         {{ total_anggaran|rupiah }}
                     </div>
                 </div>
@@ -363,7 +364,7 @@
         <div class="row g-0">
 
           <!-- VISI & MOTTO -->
-          <div class="col-12 col-lg-5 p-4" style="background: #0F172A;">
+          <div class="col-12 col-lg-5 p-4" style="background: var(--text-primary);">
             <span class="badge bg-white text-dark fw-bold font-monospace px-2.5 py-1 mb-3 d-inline-block" style="font-size:0.7rem;">
               <i class="bi bi-eye-fill me-1 text-primary"></i>VISI RS
             </span>
@@ -423,7 +424,7 @@
         <div class="card-header bg-white py-3 border-0 d-flex flex-wrap justify-content-between align-items-center gap-2">
             <div>
                 <div class="d-flex align-items-center gap-2">
-                    <span class="badge fw-bold font-monospace px-2.5 py-1" style="background:#ccfbf1; color:#0f766e; font-size:0.75rem;">
+                    <span class="badge fw-bold font-monospace px-2.5 py-1" style="background:var(--primary-light); color:var(--primary-deep); font-size:0.75rem;">
                         <i class="bi bi-graph-up-arrow me-1"></i>STARKES PMKP 12 &amp; RENSTRA
                     </span>
                     <h5 class="fw-bold mb-0 text-dark" style="font-size:1.05rem;">
@@ -554,7 +555,7 @@
                         </div>
                     </div>
                     <div style="position: relative; height: 260px; width: 100%;">
-                        <canvas id="chartMutuBulanan"></canvas>
+                        <canvas id="chartMutuBulanan" role="img" aria-label="Grafik capaian mutu bulanan: nilai tercapai dan di luar target"></canvas>
                         <div id="mutuEmpty" class="h-100 d-none flex-column align-items-center justify-content-center text-center px-3">
                             <i class="bi bi-bar-chart text-secondary" style="font-size:2rem;"></i>
                             {% if mutu_indikator_terpilih %}
@@ -594,7 +595,7 @@
                         </div>
                     </div>
                     <div style="position: relative; height: 260px; width: 100%;">
-                        <canvas id="chartRenstraTahunan"></canvas>
+                        <canvas id="chartRenstraTahunan" role="img" aria-label="Grafik target Rencana Strategis 2026-2030 dibanding realisasi aktual"></canvas>
                     </div>
                 </div>
 
@@ -618,7 +619,7 @@
                         </div>
                     </div>
                     <div style="position: relative; height: 260px; width: 100%;">
-                        <canvas id="chartTahunanMulti"></canvas>
+                        <canvas id="chartTahunanMulti" role="img" aria-label="Grafik capaian tahun berjalan dan empat tahun sebelumnya"></canvas>
                     </div>
                 </div>
 
@@ -690,7 +691,7 @@
                             <!-- Year Badge -->
                             <div class="d-flex align-items-center justify-content-between mb-2">
                                 <span class="d-inline-flex align-items-center justify-content-center rounded-2 px-2 py-1"
-                                      style="background: {{ yr.color }}; color: white; font-weight: 800; font-size: 1.1rem; font-family: 'JetBrains Mono', monospace;">
+                                      style="background: {{ yr.color }}; color: white; font-weight: 800; font-size: 1.1rem; font-family: var(--font-mono);">
                                     {{ yr.year }}
                                 </span>
                                 {% if yr.year == 2026 %}
@@ -705,7 +706,7 @@
                             <!-- Stats -->
                             {% if yr.has_data %}
                             <div class="d-flex align-items-center gap-2 mb-2">
-                                <span class="fw-bold" style="font-size: 1.4rem; color: {{ yr.color }}; font-family: 'JetBrains Mono', monospace;">
+                                <span class="fw-bold" style="font-size: 1.4rem; color: {{ yr.color }}; font-family: var(--font-mono);">
                                     {{ yr.avg_capaian }}%
                                 </span>
                                 <span class="text-muted" style="font-size: 0.68rem;">Rata-rata<br>Capaian</span>
@@ -744,21 +745,21 @@
                 </div>
                 <div class="card-body d-flex flex-column justify-content-center">
                     <div class="chart-container">
-                        <canvas id="kepatuhanChart"></canvas>
+                        <canvas id="kepatuhanChart" role="img" aria-label="Diagram status kepatuhan Elemen Penilaian"></canvas>
                     </div>
                     <!-- Legend Details -->
                     <div class="row text-center mt-3 g-2 pt-2 border-top">
                         <div class="col-4">
                             <span class="d-block text-success fw-bold font-mono fs-6">{{ count_tercapai }} EP</span>
                             <span class="d-inline-flex align-items-center gap-1 small text-muted" style="font-size:0.7rem;">
-                                <span style="width:8px;height:8px;background:#10B981;border-radius:50%;display:inline-block;"></span>
+                                <span style="width:8px;height:8px;background:var(--success);border-radius:50%;display:inline-block;"></span>
                                 Tercapai ({{ pct_tercapai }}%)
                             </span>
                         </div>
                         <div class="col-4">
                             <span class="d-block text-warning fw-bold font-mono fs-6">{{ count_proses }} EP</span>
                             <span class="d-inline-flex align-items-center gap-1 small text-muted" style="font-size:0.7rem;">
-                                <span style="width:8px;height:8px;background:#F59E0B;border-radius:50%;display:inline-block;"></span>
+                                <span style="width:8px;height:8px;background:var(--warning);border-radius:50%;display:inline-block;"></span>
                                 Proses ({{ pct_proses }}%)
                             </span>
                         </div>
@@ -854,19 +855,19 @@
             <div class="row g-3">
                 {% for root in root_units %}
                 <div class="col-12 col-md-6 col-xl-3">
-                    <div class="border rounded p-3 h-100" style="background:#f8fafc;">
+                    <div class="border rounded p-3 h-100" style="background:var(--body-bg);">
                         <div class="d-flex align-items-center gap-2 mb-2">
-                            <span class="d-inline-flex align-items-center justify-content-center rounded" style="width:32px; height:32px; background:#115E59; color:white; font-size:0.7rem; font-weight:700;">L1</span>
+                            <span class="d-inline-flex align-items-center justify-content-center rounded" style="width:32px; height:32px; background:var(--primary-strong); color:white; font-size:0.7rem; font-weight:700;">L1</span>
                             <div>
-                                <div class="fw-bold" style="font-size:0.8rem; color:#0f172a;">{{ root.name|truncatechars:40 }}</div>
+                                <div class="fw-bold" style="font-size:0.8rem; color:var(--text-primary);">{{ root.name|truncatechars:40 }}</div>
                                 <div class="text-muted" style="font-size:0.65rem;">{{ root.code }} — {{ root.pic_name|default:"-" }}</div>
                             </div>
                         </div>
                         {% for child in root.children.all %}
-                        <div class="ms-3 ps-2 border-start mb-1" style="border-color:#2A835F !important;">
+                        <div class="ms-3 ps-2 border-start mb-1" style="border-color:var(--primary-light) !important;">
                             <div class="d-flex align-items-center gap-1">
-                                <span class="badge font-mono" style="background:#ccfbf1; color:#12544F; font-size:0.55rem;">L2</span>
-                                <span class="fw-semibold" style="font-size:0.72rem; color:#334155;">{{ child.name|truncatechars:35 }}</span>
+                                <span class="badge font-mono" style="background:var(--primary-light); color:var(--primary-strong); font-size:0.55rem;">L2</span>
+                                <span class="fw-semibold" style="font-size:0.72rem; color:var(--text-primary);">{{ child.name|truncatechars:35 }}</span>
                             </div>
                             {% for sub in child.children.all %}
                             <div class="ms-3 d-flex align-items-center gap-1 py-0" style="font-size:0.65rem;">
@@ -917,7 +918,7 @@
                                 <span class="text-muted">Skor: <strong class="text-dark">{{ cat.total_score }}/{{ cat.max_possible_score }}</strong></span>
                                 <span class="fw-bold text-{{ cat.status_level.badge }}">{{ cat.percentage }}%</span>
                             </div>
-                            <div class="progress" style="height: 6px; border-radius: 6px; background: #f1f5f9;">
+                            <div class="progress" style="height: 6px; border-radius: 6px; background: var(--surface-hover);">
                                 <div class="progress-bar bg-{{ cat.status_level.badge }}" role="progressbar" style="width: {{ cat.percentage|unlocalize }}%;"></div>
                             </div>
                             <div class="mt-2.5 d-flex justify-content-between align-items-center">
@@ -1027,7 +1028,7 @@ document.addEventListener('DOMContentLoaded', function() {
             meta.data.forEach(function (bar, i) {
                 const v = data[i];
                 if (v === null || v === undefined) return;
-                ctx.fillStyle = '#334155';
+                ctx.fillStyle = '#18233D';
                 ctx.fillText(v.toFixed(1) + '%', bar.x, bar.y - 3);
             });
             ctx.restore();
@@ -1074,7 +1075,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 labels: ['Tercapai (Skor 10)', 'Dalam Proses (Skor 5)', 'Belum Ada Bukti (Skor 0)'],
                 datasets: [{
                     data: [{{ count_tercapai }}, {{ count_proses }}, {{ count_belum }}],
-                    backgroundColor: ['#10B981', '#F59E0B', '#EF4444'],
+                    backgroundColor: ['#15803D', '#B45309', '#EF4444'],
                     borderWidth: 2,
                     borderColor: '#FFFFFF',
                     hoverOffset: 4
@@ -1131,7 +1132,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         type: 'line',
                         label: `Batas Target (${targetVal}%)`,
                         data: targetLine,
-                        borderColor: '#dc3545',
+                        borderColor: '#DC2626',
                         borderWidth: 2,
                         borderDash: [6, 4],
                         pointRadius: 0,
@@ -1171,16 +1172,16 @@ document.addEventListener('DOMContentLoaded', function() {
                         labels: {
                             boxWidth: 14,
                             usePointStyle: true,
-                            font: { family: "'Plus Jakarta Sans', sans-serif", size: 11 }
+                            font: { family: "Inter, sans-serif", size: 11 }
                         }
                     },
                     tooltip: {
                         // ponytail: selalu di atas bar — tooltip tebal (rumus + 
                         // rincian PDCA) tidak boleh menutup label bulan di sumbu X.
                         position: 'top',
-                        backgroundColor: 'rgba(15, 23, 42, 0.96)',
-                        titleFont: { family: "'Plus Jakarta Sans', sans-serif", size: 12, weight: '700' },
-                        bodyFont: { family: "'JetBrains Mono', monospace", size: 11 },
+                        backgroundColor: 'rgba(20, 33, 61, 0.96)',
+                        titleFont: { family: "Inter, sans-serif", size: 12, weight: '700' },
+                        bodyFont: { family: "ui-monospace, Menlo, Consolas, monospace", size: 11 },
                         bodySpacing: 4,
                         padding: 12,
                         boxPadding: 4,
@@ -1226,7 +1227,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             stepSize: 20,
                             callback: v => v + '%'
                         },
-                        grid: { color: 'rgba(226, 232, 240, 0.7)' }
+                        grid: { color: 'rgba(230, 234, 242, 0.9)' }
                     },
                     x: {
                         grid: { display: false }
@@ -1255,7 +1256,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         type: 'line',
                         label: `Batas Target (${MUTU_TARGET}%)`,
                         data: thYears.map(() => MUTU_TARGET),
-                        borderColor: '#dc3545',
+                        borderColor: '#DC2626',
                         borderWidth: 2,
                         borderDash: [6, 4],
                         pointRadius: 0,
@@ -1282,7 +1283,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         labels: {
                             boxWidth: 14,
                             usePointStyle: true,
-                            font: { family: "'Plus Jakarta Sans', sans-serif", size: 11 }
+                            font: { family: "Inter, sans-serif", size: 11 }
                         }
                     },
                     tooltip: {
@@ -1301,7 +1302,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         beginAtZero: true,
                         max: 105,
                         ticks: { stepSize: 20, callback: v => v + '%' },
-                        grid: { color: 'rgba(226, 232, 240, 0.7)' }
+                        grid: { color: 'rgba(230, 234, 242, 0.9)' }
                     },
                     x: { grid: { display: false } }
                 }
@@ -1325,14 +1326,14 @@ document.addEventListener('DOMContentLoaded', function() {
                     {
                         label: 'Target Renstra (%)',
                         data: renstraTargets,
-                        backgroundColor: '#0284c7',
+                        backgroundColor: '#4F5BD5',
                         borderRadius: 5,
                         maxBarThickness: 34
                     },
                     {
                         label: 'Realisasi Aktual (%)',
                         data: renstraActuals,
-                        backgroundColor: '#10b981',
+                        backgroundColor: '#15803D',
                         borderRadius: 5,
                         maxBarThickness: 34
                     }
@@ -1347,7 +1348,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         labels: {
                             boxWidth: 14,
                             usePointStyle: true,
-                            font: { family: "'Plus Jakarta Sans', sans-serif", size: 11 }
+                            font: { family: "Inter, sans-serif", size: 11 }
                         }
                     },
                     tooltip: {
@@ -1369,7 +1370,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             stepSize: 20,
                             callback: v => v + '%'
                         },
-                        grid: { color: 'rgba(226, 232, 240, 0.7)' }
+                        grid: { color: 'rgba(230, 234, 242, 0.9)' }
                     },
                     x: {
                         grid: { display: false }

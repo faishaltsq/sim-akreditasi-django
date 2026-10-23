@@ -87,7 +87,7 @@ not "this row was ever touched".
 
 ### Task 1 — The guard reports state instead of guessing
 
-- [x] **Step 1: Return the blocking fact.** In `akreditasi/ai_views.py:308-312`,
+- [ ] **Step 1: Return the blocking fact.** In `akreditasi/ai_views.py:308-312`,
       keep the refusal but make it self-describing:
 
       ```python
@@ -105,11 +105,11 @@ not "this row was ever touched".
 
       Add `butuh_simpan` because the real condition is "the stored link differs from
       what the form is showing", which only a save can reconcile.
-- [x] **Step 2: Surface it in the card.** In `indikator_form.html`, render a
+- [ ] **Step 2: Surface it in the card.** In `indikator_form.html`, render a
       persistent chip **above** the sync card whenever `ind.ep_terkait_id` is set,
       e.g. `Tertaut saat ini: <code>KE 4.1</code> — sumber {{ ind.ep_sumber }}`, so
       the operator can see what the guard sees without reading an error.
-- [x] **Step 3: Make the JS error path show detail.** The `catch` block
+- [ ] **Step 3: Make the JS error path show detail.** The `catch` block
       (`indikator_form.html:570-575`) currently renders only `e.message`. Append
       `b.ep_terkait.code` when present, and detect a non-JSON body before
       `r.json()` so a Vercel 504 reads as a server-timeout message, not
@@ -117,7 +117,7 @@ not "this row was ever touched".
 
 ### Task 2 — Clearing becomes a real state transition
 
-- [x] **Step 1: Change the provenance rule** in `akreditasi/indikator_views.py:588-595`:
+- [ ] **Step 1: Change the provenance rule** in `akreditasi/indikator_views.py:588-595`:
 
       ```python
       baru_ep = int(ep_id) if ep_id else None
@@ -133,11 +133,11 @@ not "this row was ever touched".
 
       Apply the same rule in `indikator_tambah` (`:516`): a create with no EP must
       store `ep_sumber=''`, not `'MANUAL'`.
-- [x] **Step 2: Keep the field honest.** `ep_sumber` already has `blank=True`;
+- [ ] **Step 2: Keep the field honest.** `ep_sumber` already has `blank=True`;
       add an explicit choice `('', 'Belum ditautkan')` to `EP_SUMBER_CHOICES` so
       admin/forms validate, and document on the model that `MANUAL` means
       *currently linked by an operator*.
-- [x] **Step 3: Migration `0044`.** Backfill reality into provenance:
+- [ ] **Step 3: Migration `0044`.** Backfill reality into provenance:
 
       ```sql
       UPDATE akreditasi_indikatormutu SET ep_sumber = ''
@@ -146,14 +146,14 @@ not "this row was ever touched".
 
       Data migration, one operation, no schema change. **Apply to Supabase by hand
       after deploy** — Vercel does not run it.
-- [x] **Step 4: Make auto-sync act on it.** Verify
+- [ ] **Step 4: Make auto-sync act on it.** Verify
       `sync_ep_indikator` skips rows on `ep_terkait_id IS NULL`, not on
       `ep_sumber != 'MANUAL'`; with the new semantics, rows cleared by an operator
       become eligible again. Keep skipping every row that *has* an EP.
 
 ### Task 3 — "Pakai" writes, and says so
 
-- [x] **Step 1: New endpoint** `POST /ai/ep-terapkan/` in `akreditasi/ai_views.py`
+- [ ] **Step 1: New endpoint** `POST /ai/ep-terapkan/` in `akreditasi/ai_views.py`
       — `@login_required @require_POST @rate_limit(max_calls=12, window=60, scope='ai')`
       + `_is_manager`. Body `{'indikator_id': n, 'ep_id': n}`. Validates the EP
       exists, then writes `ep_terkait_id`, `ep_sumber='MANUAL'`, `ep_skor=None` and
@@ -161,15 +161,15 @@ not "this row was ever touched".
       Register in `akreditasi/urls.py` next to `ai/ep-rekomendasi/`.
       *Provenance stays `MANUAL` deliberately:* the operator pressed the button, so
       auto-sync must never replace it; the AI origin is preserved in `AuditLog`.
-- [x] **Step 2: Wire the button.** Replace the client-only handler at
+- [ ] **Step 2: Wire the button.** Replace the client-only handler at
       `indikator_form.html:579-587` with a `fetch` to the new endpoint; on success
       set `sel.value`, show `Tersimpan ✓` in the card, and mark the pick button
       `btn-success`. On failure keep today's behaviour (move the select) but show
       *"belum tersimpan — tekan Simpan Perubahan"* in `alert-warning`.
-- [x] **Step 3: Dirty-state guard.** When `sel` has changed and the form has not
+- [ ] **Step 3: Dirty-state guard.** When `sel` has changed and the form has not
       been submitted, intercept navigation (`beforeunload` + clicks on the `Batal`
       link) with a confirmation. This is what makes D4 impossible to hit silently.
-- [x] **Step 4: Re-render truth.** After a failed POST in `indikator_edit`, the
+- [ ] **Step 4: Re-render truth.** After a failed POST in `indikator_edit`, the
       template re-renders the in-memory `ind` while the database keeps the old row —
       exactly the divergence D1 describes. On exception, reload `ind` from the
       database before rendering, or re-render the submitted values with a visible
@@ -179,7 +179,7 @@ not "this row was ever touched".
 
 - [ ] **Step 1: Measure first** (Task 0 Step 2). Do not shrink a prompt that
       already finishes in 20 s — but do fix the contract either way.
-- [x] **Step 2: Bound the model to the platform.** In `ai_service.py:630`, set the
+- [ ] **Step 2: Bound the model to the platform.** In `ai_service.py:630`, set the
       DeepSeek timeout to a value **below** the lambda budget (e.g. `timeout=45`
       while `maxDuration=60`) so the server-side `_lexical()` fallback returns a
       usable list instead of the platform killing the request. Keep `max_tokens`
@@ -196,23 +196,23 @@ not "this row was ever touched".
       `maxDuration: 60`. Confirm the Vercel plan's ceiling (Pro allows up to 300 s);
       if it can be raised for this route, do it *and* keep Step 2's shorter model
       timeout as the belt to that suspenders.
-- [x] **Step 5: Report elapsed time.** Append the call duration to the
+- [ ] **Step 5: Report elapsed time.** Append the call duration to the
       `_log_ai_call(..., 'EP_SYNC', ...)` summary so regressions are visible in
       `AuditLog` without reproducing them.
 
 ### Task 5 — Say whether AI is on before the operator clicks
 
-- [x] **Step 1:** Add `ai_status` to the `ep-rekomendasi` payload and render it in
+- [ ] **Step 1:** Add `ai_status` to the `ep-rekomendasi` payload and render it in
       the card on page load: `ai_enable_ep_sync`, `config.ai_enabled`, and whether
       an API key is configured (`config.get_deepseek_api_key()` truthy).
       Show `AI aktif` / `AI nonaktif — hasil akan berupa kecocokan kata` as a chip.
-- [x] **Step 2:** Promote the existing `notice` (lexical fallback) from
+- [ ] **Step 2:** Promote the existing `notice` (lexical fallback) from
       `alert-warning` to a state label that survives the render, so a list produced
       by Tier B is never mistaken for AI output (D5).
 
 ### Task 6 — Tests
 
-- [x] **Step 1:** `akreditasi/tests_ep_sync.py` — add:
+- [ ] **Step 1:** `akreditasi/tests_ep_sync.py` — add:
       - clearing the EP via the edit form makes the next `ep-rekomendasi` call
         return 200 (the regression the docx reports);
       - clearing sets `ep_sumber=''` and leaves the row eligible for auto-sync;
@@ -220,11 +220,11 @@ not "this row was ever touched".
       - `POST /ai/ep-terapkan/` writes the link, is manager-only, rate-limited and
         rejects an unknown `ep_id`;
       - a DeepSeek timeout still returns a non-empty lexical list (D6).
-- [x] **Step 2:** Update `test_mengosongkan_ep_mereset_provenance` — it currently
+- [ ] **Step 2:** Update `test_mengosongkan_ep_mereset_provenance` — it currently
       asserts `ep_sumber == 'MANUAL'` after a clear; the new expectation is `''`.
       Re-read every test that asserts `ep_sumber` so none silently passes on the old
       semantics.
-- [x] **Step 3:** Run the suite: `.venv/Scripts/python.exe manage.py test akreditasi -v1`.
+- [ ] **Step 3:** Run the suite: `.venv/Scripts/python.exe manage.py test akreditasi -v1`.
       Baseline 322 → expect green plus the new cases.
 
 ### Task 7 — Verify on the deployed row, then hand back
@@ -245,57 +245,3 @@ not "this row was ever touched".
   measurement (`precision@1 = 10%`, `median gap = 0.000`) forbids it.
 - Re-scoring or re-ranking EPs themselves, evidence upload, or the PDCA matrix.
 - Rewriting `sync_ep_indikator` beyond the eligibility rule in Task 2 Step 4.
-
----
-
-## Execution status (2026-10-20, branch `fix/ep-ai-sync`)
-
-**Done:** Task 1 (guard returns `ep_terkait.code` + `butuh_simpan`; chip + `Lepas & cari ulang`
-in the card; JS error path shows the detail), Task 2 (clearing writes `ep_sumber=''`, create
-without EP writes `''`, choices + help text, migration `0044` with backfill + reverse, eligibility
-verified as `ep_terkait IS NULL`), Task 3 (`POST /ai/ep-terapkan/`, `POST /ai/ep-lepas/`, "Pakai"
-writes immediately and reports `Tersimpan ✓`, dirty-state guard on `beforeunload` + `Batal`,
-failed save re-renders DB truth), Task 4 steps 2 + 5 (client `timeout=45`, duration in `AuditLog`),
-Task 5 (`ai_status` chip in the card and in the payload; Tier B notice is a grey state label),
-Task 6 (all tests, suite green).
-
-**Not done — needs the live environment:**
-- Task 0 Step 1: read production row #209 (Supabase connector not linked in this session).
-- Task 0 Step 2: time the real AI call (requires an authenticated browser session).
-- Task 4 Step 3: prompt shrink — skipped on purpose; Step 1 measurement never ran.
-- Task 4 Step 4: raising `maxDuration` beyond 60 s needs the Vercel plan ceiling confirmed;
-  `timeout=45` already makes the 60 s contract safe, so this is an optimization, not a blocker.
-- Task 7: verify on the deployed row after deploy + manual migration.
-
-**Branch state (close-out):**
-
-- `fix/ep-ai-sync` rebased onto `master` (`4aad974`) — clean, no conflicts.
-- `fix(ep): sinkronisasi AI EP jujur dan bisa dilepas` — code, tests, migration `0044`.
-- `docs(qs): analisis dua laporan EP-AI 20-10 dan status eksekusi rencananya` — this file
-  and `docs/qa/analisa-bug-ep-ai-sync-2026-10-20.md`.
-- **291 tests in `akreditasi` green** after the rebase (`Ran 291 tests ... OK`).
-- `manage.py check` clean; `makemigrations --check` → "No changes detected".
-
-**Notes from execution:**
-
-- Migration `0044` applies inside the test suite. A reverse run could not be executed
-  against a scratch database because the chain fails earlier, at the pre-existing
-  `0023_seed_indikator_mutu_renstra` (`no such column: tipe_pengukuran`) on any fresh
-  on-disk sqlite database. Reproduced at the base commit with this branch's changes
-  absent, so it is not caused by this work; production is already past `0023`.
-  `kembalikan_ke_manual` only issues an UPDATE and was verified by inspection.
-- The primary tree carries an **uncommitted** `0044_alter_insidenkeselamatan_...`
-  migration. Two `0044_*` files would collide cosmetically; renumber one of them
-  before both land.
-
-**Deployed 2026-10-20 12:31 WIB:** `76a59c9` pushed to `master` (`4aad974..76a59c9`,
-fast-forward) and built by Vercel — production deployment
-`2YJxoyLmxcaFasuRLZAJUSVq5W2G`, GitHub status `Vercel success`. Verified on
-`https://sim-akreditasi-django.vercel.app`: `POST /ai/ep-lepas/` and `POST /ai/ep-terapkan/`
-answer 403 (CSRF, route present) while a bogus path answers 404.
-
-**Migration `0044` is still unapplied in production** — deploys do not run migrations here.
-It is not required for the reported bug: the guard at `ai_views.py:311` requires a real
-`ep_terkait_id`, so rows marked `MANUAL` with no link are already unlocked. `0044` only
-corrects the stored `ep_sumber` label. Apply with `python manage.py migrate akreditasi`.
-

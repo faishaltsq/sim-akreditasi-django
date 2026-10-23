@@ -4,7 +4,7 @@ from .models import (
     Framework, UnitKerja, Category, StandardItem,
     EvidenceReq, QualityRecord, EvidenceFile, AuditLog, RumahSakitProfile
 )
-from .risiko_models import RenstraRoadmap, RenstraFokusItem
+from .risiko_models import RenstraRoadmap, RenstraFokusItem, IndikatorMutu, InmUnitMapping
 
 
 @admin.register(Framework)
@@ -109,3 +109,33 @@ class RenstraFokusItemAdmin(admin.ModelAdmin):
     list_filter = ['roadmap__tahun']
     search_fields = ['nama_fokus', 'kode_ref', 'unit_kerja_label']
     raw_id_fields = ['indikator_mutu']
+
+
+class InmUnitMappingInline(admin.TabularInline):
+    model = InmUnitMapping
+    fk_name = 'indikator'
+    extra = 1
+    autocomplete_fields = ['unit']
+    fields = ['unit', 'role_scope', 'is_pj', 'boleh_input', 'berlaku_mulai']
+
+
+@admin.register(IndikatorMutu)
+class IndikatorMutuAdmin(admin.ModelAdmin):
+    list_display = ['kode_indikator', 'nama_indikator', 'jenis', 'unit', 'inm_induk',
+                    'target_nilai', 'satuan', 'arah_target', 'aktif']
+    list_filter = ['jenis', 'aktif', 'arah_target', 'unit']
+    search_fields = ['kode_indikator', 'nama_indikator']
+    raw_id_fields = ['unit', 'ep_terkait', 'sasaran_strategis', 'inm_induk']
+    inlines = [InmUnitMappingInline]
+
+
+@admin.register(InmUnitMapping)
+class InmUnitMappingAdmin(admin.ModelAdmin):
+    list_display = ['indikator', 'unit', 'role_scope', 'is_pj', 'boleh_input', 'berlaku_mulai']
+    list_filter = ['is_pj', 'boleh_input', 'role_scope', 'unit']
+    search_fields = ['indikator__kode_indikator', 'indikator__nama_indikator', 'unit__code', 'unit__name']
+    autocomplete_fields = ['indikator', 'unit']
+    list_select_related = ['indikator', 'unit']
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).select_related('indikator', 'unit')

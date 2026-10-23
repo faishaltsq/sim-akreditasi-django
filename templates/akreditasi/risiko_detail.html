@@ -9,11 +9,11 @@
 <style>
     .matrix-table { border-collapse:separate; border-spacing:3px; }
     .matrix-table td { width:46px; height:42px; text-align:center; vertical-align:middle; font-weight:700; font-size:.78rem; color:#fff; border-radius:4px; }
-    .matrix-table th { font-size:.7rem; text-align:center; vertical-align:middle; color:#64748b; padding:2px 6px; }
-    .matrix-highlight { outline:3px solid #0f172a; outline-offset:-1px; box-shadow:0 0 10px rgba(0,0,0,.5); position:relative; }
+    .matrix-table th { font-size:.7rem; text-align:center; vertical-align:middle; color:var(--text-secondary); padding:2px 6px; }
+    .matrix-highlight { outline:3px solid var(--text-primary); outline-offset:-1px; box-shadow:0 0 10px rgba(0,0,0,.5); position:relative; }
     .matrix-highlight::after { content:'★'; display:block; font-size:.55rem; line-height:1; }
-    .badge-teal { background:#0F766E; color:#fff; }
-    .badge-purple { background:#7c3aed; color:#fff; }
+    .badge-teal { background:var(--primary); color:#fff; }
+    .badge-purple { background:var(--accent); color:#fff; }
 
     /* ── Responsive Jenis Risiko Header ──────────────── */
     .risiko-header-card {
@@ -80,7 +80,7 @@
     <div class="d-flex flex-wrap justify-content-between align-items-center mb-3">
         <nav aria-label="breadcrumb">
             <ol class="breadcrumb mb-0" style="font-size:.8rem;">
-                <li class="breadcrumb-item"><a href="{% url 'akreditasi:risiko_daftar' %}" style="color:#0F766E;">Daftar Risiko</a></li>
+                <li class="breadcrumb-item"><a href="{% url 'akreditasi:risiko_daftar' %}" style="color:var(--primary);">Daftar Risiko</a></li>
                 <li class="breadcrumb-item active">{{ risiko.jenis_risiko|truncatewords:5 }}</li>
             </ol>
         </nav>
@@ -97,7 +97,7 @@
             <a href="{% url 'akreditasi:risiko_hapus' risiko.pk %}" class="btn btn-sm btn-outline-danger" title="Hapus risiko ini" onclick="return confirm('Yakin ingin menghapus risiko ini? Semua data tindak lanjut juga akan terhapus.');">
                 <i class="bi bi-trash3 me-1"></i>Hapus
             </a>
-            <a href="{% url 'akreditasi:risiko_evaluasi' risiko_id=risiko.pk %}" class="btn btn-sm text-white" style="background:#0F766E;"><i class="bi bi-pencil-square me-1"></i>Evaluasi Risiko</a>
+            <a href="{% url 'akreditasi:risiko_evaluasi' risiko_id=risiko.pk %}" class="btn btn-sm text-white" style="background:var(--primary);"><i class="bi bi-pencil-square me-1"></i>Evaluasi Risiko</a>
             <a href="{% url 'akreditasi:risiko_daftar' %}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-arrow-left me-1"></i>Kembali</a>
         </div>
     </div>
@@ -115,11 +115,11 @@
 
             {# Card Info Utama #}
             <div class="card border-0 shadow-sm mb-3">
-                <div class="card-header border-0 py-3 d-flex risiko-header-card justify-content-between" style="background:#0F766E; color:#fff;">
+                <div class="card-header border-0 py-3 d-flex risiko-header-card justify-content-between" style="background:var(--primary-deep); color:#fff;">
                     <div class="d-flex flex-column risiko-jenis-col">
                         <span class="text-white-50" style="font-size:.7rem; text-transform:uppercase; letter-spacing:0.05em;">Jenis Risiko:</span>
                         {% if risiko.jenis_risiko_list|length > 1 %}
-                        <div class="bg-white rounded-3 p-2 mt-1.5 shadow-sm" style="color:#0f766e;">
+                        <div class="bg-white rounded-3 p-2 mt-1.5 shadow-sm" style="color:var(--primary-deep);">
                             <ul class="mb-0 ps-3" style="font-size: clamp(0.72rem, 1.8vw, 0.82rem); line-height:1.5;">
                                 {% for j in risiko.jenis_risiko_list %}
                                 <li class="mb-1">{{ j }}</li>
@@ -136,7 +136,7 @@
                 </div>
                 <div class="card-body p-3">
                     {# Visual Lineage: Masalah ➔ Kategori ➔ Jenis Risiko #}
-                    <div class="p-2.5 mb-3 rounded-3 border" style="background:#f8fafc; border-color:#e2e8f0; font-size:.75rem;">
+                    <div class="p-2.5 mb-3 rounded-3 border" style="background:var(--body-bg); border-color:var(--border); font-size:.75rem;">
                         <span class="d-block text-muted fw-bold mb-1" style="font-size:.68rem; letter-spacing:0.04em;">ALUR LINEAGE MANAJEMEN RISIKO (STANDAR 5.15):</span>
                         <div class="d-flex flex-wrap align-items-center gap-2 lineage-flow">
                             <span class="badge bg-danger-subtle text-danger border border-danger-subtle p-1.5 px-2 lineage-badge">
@@ -160,9 +160,9 @@
                             <a href="{% url 'akreditasi:risiko_edit' risiko.pk %}#seksi-identifikasi" class="btn btn-xs btn-outline-primary d-flex align-items-center gap-1 py-0 px-2" style="font-size:.68rem;" title="Edit Identifikasi Risiko"><i class="bi bi-pencil"></i> Edit</a>
                         </div>
                         <div class="col-sm-4 text-muted">Unit Kerja</div>
-                        <div class="col-sm-8 fw-semibold" style="color:#0f172a;">{{ risiko.unit }}</div>
+                        <div class="col-sm-8 fw-semibold" style="color:var(--text-primary);">{{ risiko.unit }}</div>
                         <div class="col-sm-4 text-muted">Periode / Tahun</div>
-                        <div class="col-sm-8" style="color:#0f172a;">{{ risiko.get_periode_display }} ({{ risiko.tahun }})</div>
+                        <div class="col-sm-8" style="color:var(--text-primary);">{{ risiko.get_periode_display }} ({{ risiko.tahun }})</div>
                         <div class="col-sm-4 text-muted">Kategori Risiko</div>
                         <div class="col-sm-8">
                             <span class="badge {% if risiko.kategori_risiko == 'KLINIS' %}bg-danger-subtle text-danger border border-danger-subtle{% elif risiko.kategori_risiko == 'OPERASIONAL' %}bg-primary-subtle text-primary border border-primary-subtle{% elif risiko.kategori_risiko == 'FINANSIAL' %}bg-success-subtle text-success border border-success-subtle{% elif risiko.kategori_risiko == 'REPUTASI' %}bg-info-subtle text-info border border-info-subtle{% elif risiko.kategori_risiko == 'HUKUM_KEPATUHAN' %}bg-warning-subtle text-warning border border-warning-subtle{% elif risiko.kategori_risiko == 'FASILITAS_LINGKUNGAN' %}bg-secondary-subtle text-secondary border border-secondary-subtle{% else %}bg-light text-dark border{% endif %}" style="font-size:.72rem;">{{ risiko.get_kategori_risiko_display }}</span>
@@ -179,7 +179,7 @@
                     {% if risiko.data_pendukung %}
                     <div class="mb-3">
                         <label class="text-muted d-block mb-1" style="font-size:.75rem;"><i class="bi bi-file-earmark-bar-graph text-primary me-1"></i>Data / Bukti Pendukung (Baseline)</label>
-                        <p class="p-2 rounded border-start border-3 border-primary" style="background:#eff6ff; font-size:.82rem; color:#1e40af;">{{ risiko.data_pendukung|linebreaksbr }}</p>
+                        <p class="p-2 rounded border-start border-3 border-primary" style="background:var(--primary-tint); font-size:.82rem; color:#2E3886;">{{ risiko.data_pendukung|linebreaksbr }}</p>
                     </div>
                     {% endif %}
 
@@ -203,13 +203,13 @@
 
                     <div class="mb-3">
                         <label class="text-muted d-block mb-1" style="font-size:.75rem;">Deskripsi Risiko</label>
-                        <p class="p-2 rounded" style="background:#f8fafc; font-size:.82rem; color:#0f172a;">{{ risiko.deskripsi_risiko|linebreaksbr }}</p>
+                        <p class="p-2 rounded" style="background:var(--body-bg); font-size:.82rem; color:var(--text-primary);">{{ risiko.deskripsi_risiko|linebreaksbr }}</p>
                     </div>
 
                     {# ── B. Penilaian Risiko Awal & Existing Control ── #}
-                    <div class="mt-3 p-3 rounded" style="background:#f8fafc; border:1px solid #e2e8f0;">
+                    <div class="mt-3 p-3 rounded" style="background:var(--body-bg); border:1px solid var(--border);">
                         <div class="d-flex justify-content-between align-items-center mb-2">
-                            <h6 class="fw-bold mb-0" style="font-size:.8rem; color:#0f172a;">
+                            <h6 class="fw-bold mb-0" style="font-size:.8rem; color:var(--text-primary);">
                                 <i class="bi bi-speedometer2 text-warning me-1"></i>B. Penilaian Risiko Awal &amp; Existing Control
                             </h6>
                             <a href="{% url 'akreditasi:risiko_edit' risiko.pk %}#dampak" class="btn btn-xs btn-outline-primary d-flex align-items-center gap-1 py-0 px-2" style="font-size:.68rem;" title="Edit Penilaian Risiko Awal"><i class="bi bi-pencil"></i> Edit</a>
@@ -229,16 +229,16 @@
                             <label class="text-muted d-block mb-1" style="font-size:.72rem;">
                                 <i class="bi bi-shield-check text-success me-1"></i>Pengendalian yang Sudah Ada (Existing Control)
                             </label>
-                            <div class="p-2 rounded bg-white border" style="font-size:.78rem; color:#334155;">{{ risiko.pengendalian_ada|linebreaksbr }}</div>
+                            <div class="p-2 rounded bg-white border" style="font-size:.78rem; color:var(--text-primary);">{{ risiko.pengendalian_ada|linebreaksbr }}</div>
                         </div>
                         {% endif %}
                     </div>
 
                     {# ── C. Pilihan Metode Evaluasi / Hiliran (FMEA & RCA) ── #}
                     <div class="mt-3 p-3 rounded"
-                         style="{% if risiko.is_fmea %}background:#fffbeb; border-left:3px solid #f59e0b;{% elif risiko.is_rca %}background:#fef2f2; border-left:3px solid #dc2626;{% else %}background:#f8fafc; border-left:3px solid #64748b;{% endif %}">
+                         style="{% if risiko.is_fmea %}background:#fffbeb; border-left:3px solid var(--warning);{% elif risiko.is_rca %}background:#fef2f2; border-left:3px solid #dc2626;{% else %}background:var(--body-bg); border-left:3px solid var(--text-secondary);{% endif %}">
                         <div class="d-flex flex-wrap justify-content-between align-items-center mb-2 gap-2">
-                            <h6 class="fw-bold mb-0" style="font-size:.82rem; {% if risiko.is_fmea %}color:#78350f;{% elif risiko.is_rca %}color:#7f1d1d;{% else %}color:#334155;{% endif %}">
+                            <h6 class="fw-bold mb-0" style="font-size:.82rem; {% if risiko.is_fmea %}color:#78350f;{% elif risiko.is_rca %}color:#7f1d1d;{% else %}color:var(--text-primary);{% endif %}">
                                 {% if risiko.is_fmea %}
                                 <i class="bi bi-diagram-3-fill me-1"></i>C. Metode Evaluasi: FMEA Proaktif (STARKES PMKP 8)
                                 {% elif risiko.is_rca %}
@@ -294,7 +294,7 @@
                         {% if risiko.tindakan_korektif_rca %}
                         <div>
                             <label class="text-muted d-block mb-1" style="font-size:.72rem;"><i class="bi bi-check2-square me-1"></i>Rencana Tindakan Korektif &amp; Solusi</label>
-                            <div class="p-2 rounded" style="background:#f0fdf4; border-left:3px solid #16a34a; font-size:.78rem; white-space:pre-wrap; color:#14532d;">{{ risiko.tindakan_korektif_rca }}</div>
+                            <div class="p-2 rounded" style="background:#f0fdf4; border-left:3px solid var(--success); font-size:.78rem; white-space:pre-wrap; color:#14532d;">{{ risiko.tindakan_korektif_rca }}</div>
                         </div>
                         {% endif %}
                         {% else %}
@@ -304,9 +304,9 @@
 
                     {# ── D. Indikator Mutu Terkait ── #}
                     {% if risiko.indikator_mutu_terkait %}
-                    <div class="mt-3 p-3 rounded" style="background:#eff6ff; border-left:3px solid #3b82f6;">
+                    <div class="mt-3 p-3 rounded" style="background:var(--primary-tint); border-left:3px solid var(--primary);">
                         <div class="d-flex justify-content-between align-items-center mb-2">
-                            <h6 class="fw-bold mb-0" style="font-size:.8rem; color:#1e40af;">
+                            <h6 class="fw-bold mb-0" style="font-size:.8rem; color:#2E3886;">
                                 <i class="bi bi-graph-up-arrow me-1"></i>D. Indikator Mutu Terkait
                             </h6>
                             <a href="{% url 'akreditasi:risiko_edit' risiko.pk %}#indikator_mutu_select" class="btn btn-xs btn-outline-primary d-flex align-items-center gap-1 py-0 px-2" style="font-size:.68rem;" title="Edit Indikator Mutu"><i class="bi bi-pencil"></i> Edit</a>
@@ -314,7 +314,7 @@
                         <div class="row g-2" style="font-size:.8rem;">
                             <div class="col-sm-4 text-muted">Kode &amp; Indikator</div>
                             <div class="col-sm-8 fw-semibold">
-                                <a href="{% url 'akreditasi:indikator_detail' risiko.indikator_mutu_terkait.id %}" style="color:#2563eb;">
+                                <a href="{% url 'akreditasi:indikator_detail' risiko.indikator_mutu_terkait.id %}" style="color:var(--primary-deep);">
                                     [{{ risiko.indikator_mutu_terkait.kode_indikator }}] {{ risiko.indikator_mutu_terkait.nama_indikator }}
                                 </a>
                             </div>
@@ -327,9 +327,9 @@
                     {% endif %}
 
                     {# ── E. Rencana Aksi & Mitigasi ── #}
-                    <div class="mt-3 p-3 rounded" style="background:#f8fafc; border:1px solid #e2e8f0;">
+                    <div class="mt-3 p-3 rounded" style="background:var(--body-bg); border:1px solid var(--border);">
                         <div class="d-flex justify-content-between align-items-center mb-2">
-                            <h6 class="fw-bold mb-0" style="font-size:.8rem; color:#0f172a;">
+                            <h6 class="fw-bold mb-0" style="font-size:.8rem; color:var(--text-primary);">
                                 <i class="bi bi-shield-fill-check text-teal me-1"></i>E. Rencana Aksi &amp; Mitigasi
                             </h6>
                             <a href="{% url 'akreditasi:risiko_edit' risiko.pk %}#rencana_aksi" class="btn btn-xs btn-outline-primary d-flex align-items-center gap-1 py-0 px-2" style="font-size:.68rem;" title="Edit Rencana Aksi"><i class="bi bi-pencil"></i> Edit</a>
@@ -346,7 +346,7 @@
                         </div>
                         <div class="mt-2">
                             <label class="text-muted d-block mb-1" style="font-size:.72rem;">Rencana Aksi Terstruktur</label>
-                            <div class="p-2 rounded bg-white border" style="font-size:.78rem; color:#0f172a;">{{ risiko.rencana_aksi|linebreaksbr }}</div>
+                            <div class="p-2 rounded bg-white border" style="font-size:.78rem; color:var(--text-primary);">{{ risiko.rencana_aksi|linebreaksbr }}</div>
                         </div>
                     </div>
                 </div>
@@ -354,10 +354,10 @@
 
             {# ── G. Card Penilaian Risiko Sisa (Residu) ── #}
             {% if risiko.dampak_residual and risiko.probabilitas_residual %}
-            <div class="card border-0 shadow-sm mb-3" style="background:#f0fdfa; border-left:4px solid #0F766E !important;">
+            <div class="card border-0 shadow-sm mb-3" style="background:var(--primary-tint); border-left:4px solid var(--primary) !important;">
                 <div class="card-body p-3">
                     <div class="d-flex justify-content-between align-items-center mb-2">
-                        <h6 class="fw-bold mb-0" style="font-size:.82rem; color:#0f766e;"><i class="bi bi-shield-shaded me-1"></i>G. Penilaian Risiko Sisa (Residu)</h6>
+                        <h6 class="fw-bold mb-0" style="font-size:.82rem; color:var(--primary-deep);"><i class="bi bi-shield-shaded me-1"></i>G. Penilaian Risiko Sisa (Residu)</h6>
                         <a href="{% url 'akreditasi:risiko_evaluasi' risiko.pk %}" class="btn btn-outline-teal btn-sm py-0 px-2" style="font-size:.7rem;">
                             <i class="bi bi-pencil me-1"></i>Update Evaluasi
                         </a>
@@ -379,7 +379,7 @@
                         {% endif %}
                         <div class="col-{% if risiko.is_fmea %}3{% else %}3{% endif %}">
                             <small class="text-muted d-block">Skor Residu</small>
-                            <span class="fw-bold fs-6" style="color:#0F766E;">{{ risiko.skor_residual }}</span>
+                            <span class="fw-bold fs-6" style="color:var(--primary);">{{ risiko.skor_residual }}</span>
                             {% if risiko.is_fmea and risiko.rpn_residual %}
                             <small class="d-block text-muted" style="font-size:.65rem;">RPN Res: {{ risiko.rpn_residual }}</small>
                             {% endif %}
@@ -397,12 +397,12 @@
             {% if risiko.evaluasi_capaian or risiko.rca_ulang or risiko.rencana_tindak_lanjut %}
             <div class="card border-0 shadow-sm mb-3">
                 <div class="card-body p-3">
-                    <h6 class="fw-bold mb-2" style="font-size:.82rem; color:#1e40af;"><i class="bi bi-clipboard-check me-1"></i>H. Evaluasi Capaian &amp; Rencana Tindak Lanjut (RTL)</h6>
+                    <h6 class="fw-bold mb-2" style="font-size:.82rem; color:#2E3886;"><i class="bi bi-clipboard-check me-1"></i>H. Evaluasi Capaian &amp; Rencana Tindak Lanjut (RTL)</h6>
 
                     {% if risiko.evaluasi_capaian %}
                     <div class="mb-2">
                         <label class="text-muted d-block mb-1" style="font-size:.72rem;">Evaluasi Capaian Indikator Mutu &amp; Kinerja</label>
-                        <div class="p-2 rounded bg-white border" style="font-size:.78rem; color:#0f172a;">{{ risiko.evaluasi_capaian|linebreaksbr }}</div>
+                        <div class="p-2 rounded bg-white border" style="font-size:.78rem; color:var(--text-primary);">{{ risiko.evaluasi_capaian|linebreaksbr }}</div>
                     </div>
                     {% endif %}
 
@@ -416,7 +416,7 @@
                     {% if risiko.rencana_tindak_lanjut %}
                     <div class="mb-2">
                         <label class="text-muted d-block mb-1" style="font-size:.72rem;">Rencana Tindak Lanjut (RTL)</label>
-                        <div class="p-2 rounded bg-white border" style="font-size:.78rem; color:#0f172a;">{{ risiko.rencana_tindak_lanjut|linebreaksbr }}</div>
+                        <div class="p-2 rounded bg-white border" style="font-size:.78rem; color:var(--text-primary);">{{ risiko.rencana_tindak_lanjut|linebreaksbr }}</div>
                     </div>
                     {% endif %}
 
@@ -451,7 +451,7 @@
             {# Card Matrix 5×5 #}
             <div class="card border-0 shadow-sm mb-3">
                 <div class="card-body p-3">
-                    <h6 class="fw-bold mb-2 text-center" style="font-size:.82rem; color:#0f172a;">Matriks Posisi Risiko (5×5)</h6>
+                    <h6 class="fw-bold mb-2 text-center" style="font-size:.82rem; color:var(--text-primary);">Matriks Posisi Risiko (5×5)</h6>
                     <div class="d-flex justify-content-center">
                         <table class="matrix-table">
                             <thead>
@@ -467,7 +467,7 @@
                                     {% for p in "12345" %}
                                     {% with d_int=d|add:"0" p_int=p|add:"0" %}
                                     {% widthratio d_int 1 p_int as s %}
-                                    <td style="background:{% if s >= 20 %}#dc2626{% elif s >= 15 %}#ea580c{% elif s >= 10 %}#ca8a04{% elif s >= 5 %}#16a34a{% else %}#64748b{% endif %};"
+                                    <td style="background:{% if s >= 20 %}#dc2626{% elif s >= 15 %}#C2410C{% elif s >= 10 %}var(--warning){% elif s >= 5 %}var(--success){% else %}var(--text-secondary){% endif %};"
                                         class="{% if d_int == risiko.dampak and p_int == risiko.probabilitas %}matrix-highlight{% endif %}"
                                         title="Dampak {{ d }} × Prob {{ p }} = Skor {{ s }}">
                                         {{ s }}
@@ -479,7 +479,7 @@
                             </tbody>
                         </table>
                     </div>
-                    <div class="text-center mt-2" style="font-size:.68rem; color:#64748b;">
+                    <div class="text-center mt-2" style="font-size:.68rem; color:var(--text-secondary);">
                         <span class="d-inline-block me-2">★ = Posisi Risiko Saat Ini</span>
                     </div>
                 </div>
@@ -492,20 +492,20 @@
     {# ── F. Pelaksanaan Risiko (Do) ─────────────────────── #}
     <div class="card border-0 shadow-sm mt-3">
         <div class="card-header border-0 py-3 bg-white d-flex justify-content-between align-items-center">
-            <h6 class="mb-0 fw-bold" style="color:#0f172a;"><i class="bi bi-list-task me-2" style="color:#0F766E;"></i>F. Pelaksanaan Risiko (Do)</h6>
+            <h6 class="mb-0 fw-bold" style="color:var(--text-primary);"><i class="bi bi-list-task me-2" style="color:var(--primary);"></i>F. Pelaksanaan Risiko (Do)</h6>
             <div class="d-flex flex-wrap gap-2">
                 <a href="{% url 'akreditasi:risiko_pelaksanaan_dokumen' risiko.pk %}" class="btn btn-sm btn-outline-dark" target="_blank">
                     <i class="bi bi-printer me-1"></i>Cetak Pelaksanaan (Do)
                 </a>
-                <button class="btn btn-sm text-white" style="background:#0F766E;" data-bs-toggle="collapse" data-bs-target="#formTindakLanjut"><i class="bi bi-plus-lg me-1"></i>Tambah Pelaksanaan</button>
+                <button class="btn btn-sm text-white" style="background:var(--primary);" data-bs-toggle="collapse" data-bs-target="#formTindakLanjut"><i class="bi bi-plus-lg me-1"></i>Tambah Pelaksanaan</button>
             </div>
         </div>
         <div class="card-body p-3">
 
             {# Collapse Form Tambah Pelaksanaan Risiko Inline #}
             <div class="collapse mb-3" id="formTindakLanjut">
-                <div class="p-3 rounded border" style="background:#f8fafc;">
-                    <h6 class="fw-bold mb-2" style="font-size:.8rem; color:#0f172a;">Tambah Pelaksanaan Risiko</h6>
+                <div class="p-3 rounded border" style="background:var(--body-bg);">
+                    <h6 class="fw-bold mb-2" style="font-size:.8rem; color:var(--text-primary);">Tambah Pelaksanaan Risiko</h6>
                     <form method="post" enctype="multipart/form-data">
                         {% csrf_token %}
                         <div class="row g-2 mb-2">
@@ -520,24 +520,6 @@
                                     <option value="{{ val }}">{{ label }}</option>
                                     {% endfor %}
                                 </select>
-                            </div>
-                        </div>
-                        <div class="row g-2 mb-2">
-                            <div class="col-md-3">
-                                <label class="form-label" style="font-size:.75rem;">Tanggal Mulai</label>
-                                <input type="date" name="tanggal_mulai" class="form-control form-control-sm">
-                            </div>
-                            <div class="col-md-3">
-                                <label class="form-label" style="font-size:.75rem;">Tanggal Selesai</label>
-                                <input type="date" name="tanggal_selesai" class="form-control form-control-sm">
-                            </div>
-                            <div class="col-md-3">
-                                <label class="form-label" style="font-size:.75rem;">Bukti Dokumen <span class="text-muted fw-normal">(PDF, Gambar, Video)</span></label>
-                                <input type="file" name="bukti_upload" class="form-control form-control-sm" accept=".pdf,image/*,video/*">
-                            </div>
-                            <div class="col-md-3">
-                                <label class="form-label" style="font-size:.75rem;">Catatan</label>
-                                <input type="text" name="catatan" class="form-control form-control-sm" placeholder="Catatan tambahan…">
                             </div>
                         </div>
                         <div class="row g-2 mb-2">
@@ -561,9 +543,27 @@
                                 <small class="text-muted" style="font-size:.68rem;">Daftar EP menyusut mengikuti standar yang dipilih.</small>
                             </div>
                         </div>
+                        <div class="row g-2 mb-2">
+                            <div class="col-md-3">
+                                <label class="form-label" style="font-size:.75rem;">Tanggal Mulai</label>
+                                <input type="date" name="tanggal_mulai" class="form-control form-control-sm">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label" style="font-size:.75rem;">Tanggal Selesai</label>
+                                <input type="date" name="tanggal_selesai" class="form-control form-control-sm">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label" style="font-size:.75rem;">Bukti Dokumen <span class="text-muted fw-normal">(PDF, Gambar, Video)</span></label>
+                                <input type="file" name="bukti_upload" class="form-control form-control-sm" accept=".pdf,image/*,video/*">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label" style="font-size:.75rem;">Catatan</label>
+                                <input type="text" name="catatan" class="form-control form-control-sm" placeholder="Catatan tambahan…">
+                            </div>
+                        </div>
                         <div class="d-flex justify-content-end gap-2">
                             <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="collapse" data-bs-target="#formTindakLanjut">Batal</button>
-                            <button type="submit" class="btn btn-sm text-white" style="background:#0F766E;">Simpan Pelaksanaan</button>
+                            <button type="submit" class="btn btn-sm text-white" style="background:var(--primary);">Simpan Pelaksanaan</button>
                         </div>
                     </form>
                 </div>
@@ -572,16 +572,16 @@
             {# Tabel Pelaksanaan Risiko #}
             <div class="table-responsive">
                 <table class="table table-sm table-hover mb-0" style="font-size:.8rem;">
-                    <thead style="background:#f1f5f9;">
+                    <thead style="background:var(--surface-hover);">
                         <tr>
                             <th style="width:40px;">#</th>
                             <th>Pelaksanaan Risiko</th>
+                            <th>Standar</th>
+                            <th>EP</th>
                             <th>Status</th>
                             <th>Tgl Mulai</th>
                             <th>Tgl Selesai</th>
                             <th>Bukti Dokumen</th>
-                            <th>Standar</th>
-                            <th>EP</th>
                             <th>Catatan</th>
                         </tr>
                     </thead>
@@ -589,7 +589,23 @@
                         {% for tl in tindak_lanjut %}
                         <tr>
                             <td>{{ tl.urutan }}</td>
-                            <td class="fw-semibold">{{ tl.aksi }}</td>
+                            <td title="{{ tl.standar_terkait.name|default_if_none:'' }}">{{ tl.standar_terkait.code|default:"—" }}{% if tl.standar_terkait %} — {{ tl.standar_terkait.name }}{% endif %}</td>
+                            <td>{% if tl.ep_terkait %}<span class="font-monospace" style="font-size:.72rem;" title="{{ tl.ep_terkait.description }}">{{ tl.ep_terkait.code }}</span>{% else %}<span class="text-muted">—</span>{% endif %}</td>
+                            <td class="fw-semibold">{{ tl.aksi }}
+                                {% if tl.ep_terkait %}
+                                <div class="mt-1 pt-1 border-top" style="font-size:.68rem;">
+                                    {% if tl.ep_ringkas and tl.ep_ringkas.total %}
+                                    <span class="text-muted">{{ tl.ep_ringkas.terunggah }}/{{ tl.ep_ringkas.total }} kebutuhan punya berkas</span>
+                                    {% else %}
+                                    <span class="text-muted">tidak memiliki daftar kebutuhan bukti</span>
+                                    {% endif %}
+                                    <a href="{% url 'akreditasi:modal_bukti_data' tl.ep_terkait_id %}"
+                                       class="d-block text-decoration-none text-primary" style="font-size:.68rem;">
+                                        <i class="bi bi-folder2-open me-1"></i>Kelola Berkas EP {{ tl.ep_terkait.code }}
+                                    </a>
+                                </div>
+                                {% endif %}
+                            </td>
                             <td>
                                 {% if tl.status_aksi == 'SELESAI' %}
                                 <span class="badge bg-success">Selesai</span>
@@ -610,22 +626,7 @@
                                 {% else %}
                                 <span class="text-muted" style="font-size:.75rem;">—</span>
                                 {% endif %}
-                                {% if tl.ep_terkait %}
-                                <div class="mt-1 pt-1 border-top" style="font-size:.68rem;">
-                                    {% if tl.ep_ringkas and tl.ep_ringkas.total %}
-                                    <span class="text-muted">{{ tl.ep_ringkas.terunggah }}/{{ tl.ep_ringkas.total }} kebutuhan punya berkas</span>
-                                    {% else %}
-                                    <span class="text-muted">tidak memiliki daftar kebutuhan bukti</span>
-                                    {% endif %}
-                                    <a href="{% url 'akreditasi:modal_bukti_data' tl.ep_terkait_id %}"
-                                       class="d-block text-decoration-none text-primary" style="font-size:.68rem;">
-                                        <i class="bi bi-folder2-open me-1"></i>Kelola Berkas EP {{ tl.ep_terkait.code }}
-                                    </a>
-                                </div>
-                                {% endif %}
                             </td>
-                            <td title="{{ tl.standar_terkait.name|default_if_none:"" }}">{{ tl.standar_terkait.code|default:"—"}}{% if tl.standar_terkait %} — {{ tl.standar_terkait.name }}{% endif %}</td>
-                            <td>{% if tl.ep_terkait %}<span class="font-monospace" style="font-size:.72rem;" title="{{ tl.ep_terkait.description }}">{{ tl.ep_terkait.code }}</span>{% else %}<span class="text-muted">—</span>{% endif %}</td>
                             <td>{{ tl.catatan|default:"—" }}</td>
                         </tr>
                         {% empty %}
@@ -646,6 +647,8 @@
     </div>
 
 </div>
+{% endblock %}
+{% block extra_js %}
 <script>
 // Filter EP mengikuti standar yang dipilih + kaitkan required bukti ke status.
 // Halaman ini tanpa AJAX, jadi filtering murni klien: tiap opsi EP membawa
@@ -696,3 +699,4 @@
 })();
 </script>
 {% endblock %}
+

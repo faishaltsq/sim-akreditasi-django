@@ -45,9 +45,9 @@
             <div class="modal fade" id="aiAssistModal" tabindex="-1" aria-hidden="true">
                 <div class="modal-dialog modal-dialog-centered modal-lg">
                     <div class="modal-content shadow border-0" style="border-radius: 14px; overflow: hidden;">
-                        <div class="modal-header text-white" style="background: #0F766E;">
+                        <div class="modal-header text-white" style="background: #414CB8;">
                             <div class="d-flex align-items-center gap-2">
-                                <span class="badge bg-white text-teal px-2 py-1" style="color: #0f766e !important; font-weight: 700;">
+                                <span class="badge bg-white text-teal px-2 py-1" style="color: #414CB8 !important; font-weight: 700;">
                                     <i class="bi bi-stars me-1"></i>DeepSeek AI
                                 </span>
                                 <h6 class="modal-title fw-bold mb-0 text-white" id="aiModalTitle">Rekomendasi AI Asisten Cerdas</h6>
@@ -56,7 +56,7 @@
                         </div>
                         <div class="modal-body p-4" id="aiModalBody">
                             <div class="text-center py-5" id="aiModalLoading">
-                                <div class="spinner-border text-teal mb-3" style="width: 3rem; height: 3rem; color: #0d9488;" role="status"></div>
+                                <div class="spinner-border text-teal mb-3" style="width: 3rem; height: 3rem; color: #4F5BD5;" role="status"></div>
                                 <h6 class="fw-bold text-dark">DeepSeek sedang menganalisis standar akreditasi...</h6>
                                 <p class="text-muted small mb-0">Menyesuaikan regulasi KARS STARKES 2022 & keselamatan pasien.</p>
                             </div>
@@ -64,7 +64,7 @@
                         </div>
                         <div class="modal-footer bg-light" id="aiModalFooter">
                             <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal">Tutup</button>
-                            <button type="button" class="btn btn-sm btn-teal fw-bold" id="aiModalApplyBtn" style="background:#0d9488; color:white; display:none;">
+                            <button type="button" class="btn btn-sm btn-teal fw-bold" id="aiModalApplyBtn" style="background:#4F5BD5; color:white; display:none;">
                                 <i class="bi bi-check2-circle me-1"></i>Terapkan ke Formulir
                             </button>
                         </div>
@@ -164,10 +164,10 @@
                             <span class="badge bg-secondary">Estimasi: ${d.target_durasi_hari || 14} Hari</span>
                         </div>
                         <h6 class="fw-bold text-dark mb-2">Rencana Aksi Mitigasi Terstruktur:</h6>
-                        <pre style="white-space: pre-wrap; font-family: inherit; font-size: 0.88rem; background: #ffffff; padding: 12px; border-radius: 8px; border: 1px solid #e2e8f0;">${d.rencana_aksi}</pre>
+                        <pre style="white-space: pre-wrap; font-family: inherit; font-size: 0.88rem; background: #ffffff; padding: 12px; border-radius: 8px; border: 1px solid #E6EAF2;">${d.rencana_aksi}</pre>
                     </div>
                     ${d.catatan_kars ? `
-                    <div class="small text-muted p-2 rounded" style="background:#f8fafc; border-left: 3px solid #0d9488;">
+                    <div class="small text-muted p-2 rounded" style="background:#F6F8FC; border-left: 3px solid #4F5BD5;">
                         <strong><i class="bi bi-info-circle me-1"></i>Catatan Standar STARKES:</strong> ${d.catatan_kars}
                     </div>` : ''}
                 `;
@@ -179,7 +179,7 @@
                     if (targetTextarea) {
                         targetTextarea.value = d.rencana_aksi;
                         targetTextarea.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                        targetTextarea.style.border = '2px solid #0d9488';
+                        targetTextarea.style.border = '2px solid #4F5BD5';
                         setTimeout(() => targetTextarea.style.border = '', 2000);
                     }
                     if (d.pj_rekomendasi) {
@@ -253,14 +253,14 @@
                 const badgeColor = d.grading === 'MERAH' ? 'danger' : d.grading === 'KUNING' ? 'warning text-dark' : d.grading === 'HIJAU' ? 'success' : 'primary';
 
                 contentEl.innerHTML = `
-                    <div class="text-center p-3 mb-3 rounded" style="background:#f1f5f9;">
+                    <div class="text-center p-3 mb-3 rounded" style="background:#F0F3F9;">
                         <span class="badge bg-${badgeColor} fs-6 px-3 py-2 fw-bold">GRADING REKOMENDASI: ${d.grading}</span>
                         <p class="small text-muted mt-2 mb-0">${d.grading_alasan || ''}</p>
                     </div>
                     <div class="mb-3">
                         <span class="badge bg-dark mb-1">Tingkat Investigasi: ${d.tingkat_investigasi}</span>
                         <h6 class="fw-bold text-dark mt-2 mb-1">Rekomendasi Tindakan Korektif & Preventif:</h6>
-                        <pre style="white-space: pre-wrap; font-family: inherit; font-size: 0.88rem; background: #ffffff; padding: 12px; border-radius: 8px; border: 1px solid #e2e8f0;">${d.rekomendasi_tindakan}</pre>
+                        <pre style="white-space: pre-wrap; font-family: inherit; font-size: 0.88rem; background: #ffffff; padding: 12px; border-radius: 8px; border: 1px solid #E6EAF2;">${d.rekomendasi_tindakan}</pre>
                     </div>
                 `;
 

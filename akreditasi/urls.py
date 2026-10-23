@@ -6,6 +6,7 @@ from . import ai_views
 from . import indikator_views
 from . import mutu_laporan
 from . import kontrol_views
+from . import search_views
 
 app_name = 'akreditasi'
 
@@ -21,6 +22,9 @@ urlpatterns = [
     # Dashboard Utama
     path('', views.dashboard, name='dashboard'),
     path('dashboard/', views.dashboard, name='dashboard_alias'),
+
+    # Pencarian terpadu lintas modul (V3)
+    path('pencarian/', search_views.pencarian, name='pencarian'),
 
     # Matriks PDCA (Halaman Inti per Pokja)
     path('matriks/', views.matriks_pdca, name='matriks_pdca'),
@@ -108,6 +112,7 @@ urlpatterns = [
 
     # Modul Indikator Mutu — INM + IMP-RS (Renstra 2026–2030)
     path('indikator-mutu/', indikator_views.indikator_dashboard, name='indikator_dashboard'),
+    path('indikator-mutu/matriks-inm/', indikator_views.indikator_inm_matrix, name='indikator_inm_matrix'),
     path('indikator-mutu/baru/', indikator_views.indikator_tambah, name='indikator_tambah'),
     path('indikator-mutu/<int:indikator_id>/', indikator_views.indikator_detail, name='indikator_detail'),
     path('indikator-mutu/<int:indikator_id>/edit/', indikator_views.indikator_edit, name='indikator_edit'),

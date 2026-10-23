@@ -10,16 +10,16 @@
     /* Styling Tampilan Layar */
     .planning-sheet {
         background: #ffffff;
-        border: 1px solid #cbd5e1;
+        border: 1px solid var(--border-strong);
         border-radius: 8px;
         box-shadow: 0 4px 20px rgba(15, 23, 42, 0.08);
         padding: 36px 44px;
         margin-bottom: 30px;
-        color: #1e293b;
+        color: var(--brand-navy);
         font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
     }
     .kop-header {
-        border-bottom: 3px double #0f172a;
+        border-bottom: 3px double var(--text-primary);
         padding-bottom: 14px;
         margin-bottom: 24px;
     }
@@ -27,13 +27,13 @@
         font-size: 1.35rem;
         font-weight: 800;
         letter-spacing: 0.04em;
-        color: #0f172a;
+        color: var(--text-primary);
         margin: 0;
         text-transform: uppercase;
     }
     .kop-address {
         font-size: 0.85rem;
-        color: #475569;
+        color: var(--text-secondary);
         margin-top: 4px;
         margin-bottom: 0;
     }
@@ -42,9 +42,9 @@
         font-weight: 700;
         text-transform: uppercase;
         letter-spacing: 0.05em;
-        color: #0f766e;
-        background: #f0fdfa;
-        border: 1px solid #99f6e4;
+        color: var(--primary-deep);
+        background: var(--primary-tint);
+        border: 1px solid #B9C0F2;
         display: inline-block;
         padding: 6px 18px;
         border-radius: 6px;
@@ -52,16 +52,16 @@
     .section-title-formal {
         font-size: 0.92rem;
         font-weight: 700;
-        color: #0f172a;
+        color: var(--text-primary);
         text-transform: uppercase;
         letter-spacing: 0.03em;
         margin-bottom: 8px;
-        border-left: 4px solid #0F766E;
+        border-left: 4px solid var(--primary);
         padding-left: 10px;
     }
     .callout-box {
-        background: #f8fafc;
-        border: 1px solid #e2e8f0;
+        background: var(--body-bg);
+        border: 1px solid var(--border);
         border-radius: 6px;
         padding: 12px 16px;
         font-size: 0.88rem;
@@ -76,22 +76,22 @@
         word-wrap: break-word;
     }
     .table-formal th, .table-formal td {
-        border: 1px solid #94a3b8;
+        border: 1px solid var(--border-strong);
         padding: 7px 9px;
         vertical-align: top;
         word-break: break-word;
         overflow-wrap: break-word;
     }
     .table-formal th {
-        background-color: #f1f5f9;
-        color: #0f172a;
+        background-color: var(--surface-hover);
+        color: var(--text-primary);
         font-weight: 700;
         text-align: center;
         vertical-align: middle;
     }
     .grade-badge-ekstrem { background-color: #ef4444; color: #ffffff; }
     .grade-badge-tinggi { background-color: #f97316; color: #ffffff; }
-    .grade-badge-sedang { background-color: #eab308; color: #0f172a; }
+    .grade-badge-sedang { background-color: #eab308; color: var(--text-primary); }
     .grade-badge-rendah { background-color: #22c55e; color: #ffffff; }
     .signature-area {
         margin-top: 36px;
@@ -137,7 +137,7 @@
             color: #000000 !important;
         }
         .table-formal th {
-            background-color: #f1f5f9 !important;
+            background-color: var(--surface-hover) !important;
             -webkit-print-color-adjust: exact;
             print-color-adjust: exact;
         }
@@ -519,10 +519,10 @@
                             <th style="width: 18%;">Masalah resiko</th>
                             <th style="width: 16%;">Indikator mutu</th>
                             <th style="width: 17%;">Rencana Aksi</th>
+                            <th style="width: 7%;">EP (Pelaksanaan)</th>
                             <th style="width: 9%;">waktu</th>
                             <th style="width: 7%;">Biaya</th>
                             <th style="width: 9%;">PJ</th>
-                            <th style="width: 7%;">EP (Pelaksanaan)</th>
                             <th class="no-print text-center" style="width: 10%;">Aksi</th>
                         </tr>
                     </thead>
@@ -551,6 +551,7 @@
                                 </div>
                                 {% endif %}
                             </td>
+                            <td class="text-center">{% if risiko.indikator_mutu_terkait.ep_terkait %}<span class="font-monospace" style="font-size:.7rem;" title="{{ risiko.indikator_mutu_terkait.ep_terkait.description }}">{{ risiko.indikator_mutu_terkait.ep_terkait.code }}</span>{% else %}<span class="text-muted">&mdash;</span>{% endif %}</td>
                             <td class="text-center">
                                 {% if risiko.target_selesai %}
                                     {{ risiko.target_selesai|date:"d/m/Y" }}
@@ -568,7 +569,6 @@
                             <td class="text-center fw-semibold">
                                 {{ risiko.pj_mitigasi|default:"Ka. Unit Kerja" }}
                             </td>
-                            <td class="text-center">{% if risiko.indikator_mutu_terkait.ep_terkait %}<span class="font-monospace" style="font-size:.7rem;" title="{{ risiko.indikator_mutu_terkait.ep_terkait.description }}">{{ risiko.indikator_mutu_terkait.ep_terkait.code }}</span>{% else %}<span class="text-muted">&mdash;</span>{% endif %}</td>
                             <td class="no-print text-center">
                                 <div class="d-inline-flex gap-1">
                                     <a href="{% url 'akreditasi:risiko_edit' risiko.pk %}" class="btn btn-sm btn-outline-primary py-0 px-2" title="Edit"><i class="bi bi-pencil-square"></i></a>
@@ -593,10 +593,10 @@
                                 </div>
                                 {% endif %}
                             </td>
+                            <td class="text-center">{% if row.ep %}<span class="font-monospace" style="font-size:.7rem;" title="{{ row.ep.description }}">{{ row.ep.code }}</span>{% else %}<span class="text-muted">&mdash;</span>{% endif %}</td>
                             <td class="text-center">{{ row.waktu }}</td>
                             <td class="text-center">{{ row.biaya }}</td>
                             <td class="text-center fw-semibold">{{ row.pj }}</td>
-                            <td class="text-center">{% if row.ep %}<span class="font-monospace" style="font-size:.7rem;" title="{{ row.ep.description }}">{{ row.ep.code }}</span>{% else %}<span class="text-muted">&mdash;</span>{% endif %}</td>
                             <td class="no-print text-center">
                                 <div class="d-inline-flex gap-1">
                                     <a href="{% url 'akreditasi:risiko_edit' row.risiko_id %}" class="btn btn-sm btn-outline-primary py-0 px-2" title="Edit"><i class="bi bi-pencil-square"></i></a>
@@ -612,10 +612,9 @@
                         {% endif %}
                     </tbody>
                     <tfoot>
-                        <tr class="fw-bold" style="background-color: #f8fafc;">
+                        <tr class="fw-bold" style="background-color: var(--body-bg);">
                             <td colspan="5" class="text-end text-uppercase pe-3">Total Estimasi Biaya Mitigasi:</td>
-                            <td class="text-center text-dark" style="background-color: #f1f5f9;">{{ total_biaya_format }}</td>
-                            <td class="text-center"></td>
+                            <td class="text-center text-dark" style="background-color: var(--surface-hover);">{{ total_biaya_format }}</td>
                             <td class="text-center"></td>
                             <td class="no-print"></td>
                         </tr>

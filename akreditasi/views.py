@@ -1,12 +1,12 @@
 import json
 import logging
 from django.shortcuts import render, redirect, get_object_or_404, reverse
+from django.utils.http import url_has_allowed_host_and_scheme
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.contrib import messages
 from django.http import JsonResponse, HttpResponse
 from django.db import transaction
-from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.http import require_POST
 from django.db.models import Count, Q, Sum, F, Avg, Exists, OuterRef
 from openpyxl import Workbook
@@ -141,17 +141,21 @@ def _get_mutu_renstra_charts_context(request, profile, db_roadmaps, renstra_year
     except (ValueError, TypeError):
         mutu_indikator_id = 0
 
-    # Spesifikasi 19.10: lingkup unit menentukan IMRS/IMU/INM yang relevan.
-    # Berjalan naik ke leluhur, dan tanpa pengecualian Q(jenis='NASIONAL')
-    # yang dulu menyerahkan seluruh INM aktif ke setiap unit. INM tetap
-    # terfilter per unit karena setiap barisnya membawa unit pengumpulnya.
+    # Lingkup = GABUNGAN dua sumber (lihat indikator_dashboard): batas
+    # unit/subtree dari indikator_aktif_scoped() ditambah INM yang dipetakan
+    # ke unit/role. INM nasional ber-unit NULL dikecualikan oleh sumber pertama,
+    # jadi irisan keduanya justru menghapus INM yang sah.
     from .akses_indikator import indikator_aktif_scoped
-    ind_qs = indikator_aktif_scoped(profile)
-
-    # Pengguna non unit-scoped memilih unit lewat dropdown: lingkupnya unit
-    # itu persis, bukan seluruh pohonnya, agar perbandingan tetap bisa
-    # diarahkan ke satu unit.
-    if mutu_unit and not (profile and profile.is_unit_scoped and profile.unit_kerja):
+    from .indikator_views import inm_qs_for_user
+    from .risiko_models import InmUnitMapping
+    _scoped = indikator_aktif_scoped(profile)
+    if profile and profile.is_unit_scoped and InmUnitMapping.objects.exists():
+        _mapped = inm_qs_for_user(profile, IndikatorMutu.objects.filter(aktif=True))
+        ind_qs = (IndikatorMutu.objects.filter(aktif=True)
+                  .filter(Q(pk__in=_scoped.values('pk')) | Q(pk__in=_mapped.values('pk'))))
+    else:
+        ind_qs = _scoped
+    if mutu_unit and not (profile and profile.is_unit_scoped):
         ind_qs = ind_qs.filter(unit_id=mutu_unit)
 
     if mutu_jenis:
@@ -374,12 +378,9 @@ def api_mutu_indikator(request):
         tahun = 2026
 
     qs = IndikatorMutu.objects.filter(aktif=True)
+    from .indikator_views import inm_qs_for_user
     if profile and profile.is_unit_scoped and profile.unit_kerja:
-        u = profile.unit_kerja
-        unit_ids = list(UnitKerja.objects.filter(
-            Q(pk=u.pk) | Q(parent=u) | Q(parent__parent=u)
-        ).values_list('pk', flat=True))
-        qs = qs.filter(Q(unit_id__in=unit_ids) | Q(jenis='NASIONAL'))
+        qs = inm_qs_for_user(profile, qs)
     if jenis:
         _JENIS_MAP = {'INM': ['INM', 'NASIONAL'], 'IMRS': ['IMRS', 'IMP_RS'], 'IMU': ['IMU', 'IMP_UNIT']}
         qs = qs.filter(jenis__in=_JENIS_MAP.get(jenis, [jenis]))
@@ -1136,12 +1137,11 @@ def ep_detail(request, item_id):
 
 
 def _safe_next_target(request, fallback):
-    """
-    Tujuan kembali setelah unggah (?next= / ?next=). Hanya path lokal yang
-    diterima agar parameter ini tidak membuka celah open redirect.
-    """
+    """Tujuan kembali setelah unggah (?next=). Hanya path lokal yang diterima
+    agar parameter ini tidak membuka celah open redirect."""
     next_url = request.POST.get('next') or request.GET.get('next') or ''
-    if next_url and url_has_allowed_host_and_scheme(next_url, allowed_hosts={request.get_host()}):
+    if next_url and url_has_allowed_host_and_scheme(
+            next_url, allowed_hosts={request.get_host()}):
         return next_url
     return fallback
 
@@ -1158,7 +1158,7 @@ def upload_bukti(request, req_id):
     ep_detail_url = reverse('akreditasi:ep_detail', args=[ep.pk])
 
     # GET: halaman unggah per kebutuhan bukti. View ini dulu hanya menerima POST,
-    # sehingga link "unggah" di /indikator-mutu/<id>/ membalas 405 Method Not Allowed.
+    # sehingga link "unggah" di /indikator-mutu/<id>/ membalas 405.
     if request.method != 'POST':
         return render(request, 'akreditasi/upload_bukti.html', {
             'req': evidence_req,

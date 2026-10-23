@@ -8,9 +8,7 @@ from django.contrib import messages
 from django.db.models import Avg, Count, Q, Sum, Exists, OuterRef
 from django.http import JsonResponse
 
-from .akses_indikator import indikator_aktif_scoped
-from .ep_sync import bukti_ringkas
-from .risiko_models import IndikatorMutu, CatatanIndikator
+from .risiko_models import IndikatorMutu, CatatanIndikator, InmUnitMapping
 from .models import UnitKerja, AuditLog, StandardItem
 
 # ── DEFINISI RESMI RENSTRA 5 TAHUN (2026–2030) RS MONSISKAMI ─────────────
@@ -121,36 +119,102 @@ def _log(user, aksi, obj, detail=''):
     )
 
 
-def _ep_ai_status() -> dict:
-    """Status AI untuk kartu Sinkronisasi EP, ditampilkan saat halaman dibuka.
-
-    Operasional: operator perlu tahu AI mati SEBELUM menekan tombol, bukan dari
-    hasil Tier B yang terbaca seperti analisis. Kegagalan konfigurasi ditelan —
-    render form tidak boleh rusak hanya karena kartu AI tak bisa membaca
-    konfigurasi.
-    """
-    from .ai_views import _ai_status
-    try:
-        return _ai_status()
-    except Exception:
-        return {
-            'aktif': False,
-            'flag_ep_sync': False,
-            'ai_enabled': False,
-            'api_key_terkonfigurasi': False,
-            'keterangan': 'AI tidak terkonfigurasi — hasil akan berupa kecocokan kata',
-        }
-
-
 def _is_manager(user):
-    """SUPER_ADMIN, ADMIN_RS, KOORDINATOR, KEPALA_UNIT."""
+    """SUPER_ADMIN, ADMIN_RS, KOORDINATOR_POKJA, KEPALA_UNIT."""
     if user.is_superuser:
         return True
     p = getattr(user, 'profile', None)
-    # Nilai role yang ada di UserProfile.ROLE_CHOICES adalah 'KOORDINATOR_POKJA'
-    # ('KOORDINATOR' tidak pernah ada; disimpan agar baris legacy tetap cocok).
-    return p and p.role in ('SUPER_ADMIN', 'ADMIN_RS', 'KOORDINATOR',
-                            'KOORDINATOR_POKJA', 'KEPALA_UNIT')
+    return p and p.role in ('SUPER_ADMIN', 'ADMIN_RS', 'KOORDINATOR_POKJA', 'KEPALA_UNIT')
+
+
+def _ai_status_kartu():
+    """Status AI untuk kartu Sinkronisasi EP di form indikator.
+
+    Dipakai template supaya operator tahu AI aktif/nonaktif SEBELUM menekan
+    tombol — kalau tidak, hasil Tier B (kecocokan kata) terbaca sebagai AI.
+    """
+    try:
+        from .ai_views import _ai_status
+        return _ai_status()
+    except Exception:            # konfigurasi rusak tidak boleh merontokkan form
+        return None
+
+
+# ── Resolusi cakupan unit untuk peta distribusi INM ──────────────────────────
+
+INM_JENIS = ('INM', 'NASIONAL')
+
+
+def unit_subtree_ids(unit):
+    """Semua id unit: dirinya sendiri + seluruh turunan (kedalaman berapa pun).
+
+    Ditelusuri lewat UnitKerja.parent. Pohon unit RS tidak seragam — ada
+    'Instalasi Rawat Inap' yang muncul sebagai IRIN (lvl 2) sekaligus RANAP
+    (lvl 3, induknya BID-YAN), dan unit lvl 4–5 tidak terjangkau query
+    kedalaman-2 yang lama.
+    """
+    ids = {unit.pk}
+    frontier = [unit.pk]
+    while frontier:
+        children = list(
+            UnitKerja.objects.filter(parent_id__in=frontier).values_list('pk', flat=True)
+        )
+        new = [c for c in children if c not in ids]
+        ids.update(new)
+        frontier = new
+    return ids
+
+
+def unit_ancestor_ids(unit):
+    """Id unit itu sendiri + seluruh leluhurnya sampai akar."""
+    ids = []
+    node = unit
+    seen = set()
+    while node is not None and node.pk not in seen:
+        seen.add(node.pk)
+        ids.append(node.pk)
+        node = node.parent
+    return ids
+
+
+def _mapping_scope_q(profile):
+    """Q untuk InmUnitMapping yang berlaku bagi user ini.
+
+    Pemetaan dipasang pada unit induk (mis. 'IRIN' = seluruh rawat inap), jadi
+    yang dicocokkan adalah leluhur unit user — bukan turunannya. Unit anak
+    otomatis mewarisi peta induknya; unit induk tidak ikut memiliki peta anak.
+    """
+    q = Q(unit_id__in=unit_ancestor_ids(profile.unit_kerja))
+    role = getattr(profile, 'role', '') or ''
+    if role:
+        q |= Q(role_scope=role)
+    return q
+
+
+def inm_qs_for_user(profile, qs=None):
+    """Indikator yang boleh dilihat user ini.
+
+    Urutan keputusan:
+    1. Tidak ada profile / tidak unit-scoped → tidak dibatasi.
+    2. Tabel peta distribusi masih KOSONG → tidak dibatasi. Ini guard roll-out:
+       saat ini produksi belum punya satu baris pun; kalau kosong dianggap
+       "tidak ada yang boleh lihat", seluruh menu INM hilang begitu deploy.
+    3. Selain itu → indikator milik unit/subtree-nya, ditambah INM yang
+       dipetakan ke unit atau role-nya. INM yang tidak dipetakan tidak tampil.
+    """
+    qs = qs if qs is not None else IndikatorMutu.objects.all()
+    if profile is None or not profile.is_unit_scoped or not profile.unit_kerja:
+        return qs
+
+    if not InmUnitMapping.objects.exists():
+        return qs
+
+    unit_ids = unit_subtree_ids(profile.unit_kerja)
+    mapped_ids = list(
+        InmUnitMapping.objects.filter(_mapping_scope_q(profile))
+        .values_list('indikator_id', flat=True)
+    )
+    return qs.filter(Q(unit_id__in=unit_ids) | Q(pk__in=mapped_ids))
 
 
 # ── 1. Dashboard Indikator Mutu ──────────────────────────────────────────
@@ -167,13 +231,28 @@ def indikator_dashboard(request):
         tahun_int = 2026
     tahun = str(tahun_int)
 
-    # Lingkup unit jadi dasar, lalu filter tier diaplikasikan di atasnya,
-    # supaya /indikator-mutu/ selalu menjawab sama dengan dashboard untuk
-    # user yang sama. Spesifikasi 19.10: tanpa Q(jenis='NASIONAL') yang
-    # bocor, dan berjalan naik ke leluhur (indikator induk instalasi
-    # tetap terlihat).
+    # Lingkup = GABUNGAN dua sumber, bukan irisan:
+    #   1. indikator_aktif_scoped() — indikator milik unit/subtree-nya.
+    #   2. inm_qs_for_user()        — INM yang dipetakan ke unit/role-nya.
+    # INM nasional ber-unit NULL sengaja dikecualikan oleh (1), jadi mengiris
+    # keduanya akan menghapus justru INM yang dipetakan (regresi DashboardTest).
+    # Memakai Q(jenis='NASIONAL') sendirian juga salah: seluruh INM bocor.
+    from .akses_indikator import indikator_aktif_scoped
     profile = getattr(request.user, 'profile', None)
-    qs = indikator_aktif_scoped(profile).select_related('unit', 'ep_terkait')
+    _scoped = indikator_aktif_scoped(profile)
+    if profile is None or not getattr(profile, 'is_unit_scoped', False):
+        qs = _scoped
+    elif InmUnitMapping.objects.exists():
+        # Peta distribusi sudah diisi: INM yang dipetakan ikut terlihat walau
+        # unit-nya NULL (INM nasional). Selama tabel masih kosong, guard
+        # roll-out inm_qs_for_user mengembalikan semuanya — memakainya di sini
+        # akan membocorkan seluruh INM ke setiap unit.
+        _mapped = inm_qs_for_user(profile, IndikatorMutu.objects.filter(aktif=True))
+        qs = (IndikatorMutu.objects.filter(aktif=True)
+              .filter(Q(pk__in=_scoped.values('pk')) | Q(pk__in=_mapped.values('pk'))))
+    else:
+        qs = _scoped
+    qs = qs.select_related('unit', 'ep_terkait')
 
     # Normalize canonical 3-tier filter → DB codes (support both old and new)
     JENIS_CANONICAL_MAP = {
@@ -186,11 +265,16 @@ def indikator_dashboard(request):
     if jenis:
         db_codes = JENIS_CANONICAL_MAP.get(jenis, [jenis])
         qs = qs.filter(jenis__in=db_codes)
-    # Pemilih unit eksplisit menyilang dengan lingkup, bukan menggantinya:
-    # unit-scoped user yang memilih unit lain mendapat daftar kosong, bukan
-    # akses ke indikator unit tersebut.
     if unit_id:
         qs = qs.filter(unit_id=unit_id)
+
+    # Lingkup sudah diterapkan oleh indikator_aktif_scoped() di atas; jalur
+    # peta distribusi INM tidak dipakai lagi di sini agar tidak dobel filter.
+
+    # Katalog INM hanya memuat INM kanonik. Baris realisasi per-unit
+    # (BAB-*-INM-*) tetap dipakai untuk capaian unit, tapi tidak lagi muncul
+    # sebagai entri sendiri — dulu "Kepatuhan Kebersihan Tangan" tampil 8x.
+    qs = qs.exclude(jenis__in=INM_JENIS, inm_induk__isnull=False)
 
     # Ambil catatan capaian terakhir untuk tahun ini per indikator
     # (prefetch sekali — dulu 1 query per indikator di loop)
@@ -234,12 +318,53 @@ def indikator_dashboard(request):
         ind.is_renstra_focus = ind.kode_indikator in fokus_kode_set
 
         indikators_with_stats.append(ind)
-        if ind.jenis == 'NASIONAL':
+        if ind.jenis in INM_JENIS and ind.inm_induk_id is None:
             inm_list.append(ind)
         elif ind.is_renstra_focus:
             fokus_renstra_list.append(ind)
         else:
             imp_rs_other_list.append(ind)
+
+    # Realisasi per-unit: bila unit user punya baris sendiri untuk INM tersebut,
+    # yang ditampilkan adalah angka unit itu — bukan agregat RS.
+    _unit_ids = (
+        unit_subtree_ids(profile.unit_kerja)
+        if (profile and profile.is_unit_scoped and profile.unit_kerja) else set()
+    )
+    for ind in inm_list:
+        ind.unit_row = None
+    if _unit_ids and inm_list:
+        _rows = (
+            IndikatorMutu.objects.filter(
+                inm_induk_id__in=[i.pk for i in inm_list],
+                unit_id__in=_unit_ids,
+                aktif=True,
+            )
+            .select_related('unit')
+            .prefetch_related(Prefetch(
+                'catatan',
+                queryset=CatatanIndikator.objects.filter(tahun=tahun_int).order_by('-bulan'),
+                to_attr='ct',
+            ))
+            .order_by('unit_id')
+        )
+        _by_inm = {}
+        for _r in _rows:
+            _by_inm[_r.inm_induk_id] = _r
+        for ind in inm_list:
+            row = _by_inm.get(ind.pk)
+            if not row:
+                continue
+            ind.unit_row = row
+            last = row.ct[0] if row.ct else None
+            _was = ind.is_tercapai
+            ind.last_catatan = last
+            ind.is_tercapai = bool(last and last.tercapai)
+            if ind.is_tercapai != _was:
+                _label = ind.get_jenis_display()
+                _inc, _dec = ('tercapai', 'belum') if ind.is_tercapai else ('belum', 'tercapai')
+                summary[_label][_inc] += 1
+                summary[_label][_dec] -= 1
 
     units = UnitKerja.objects.filter(level__lte=3).order_by('order', 'name')
 
@@ -270,6 +395,29 @@ def indikator_dashboard(request):
     chart_labels = _json.dumps(BULAN_LABELS)
     chart_capaian = _json.dumps([monthly_avg.get(m, {}).get('pct', None) for m in range(1, 13)])
     chart_jumlah  = _json.dumps([monthly_avg.get(m, {}).get('count', 0) for m in range(1, 13)])
+
+    # Seri kedua: realisasi unit user sendiri, agar angka unit tidak tenggelam
+    # di rata-rata rumah sakit. Kosong untuk user non-unit-scoped.
+    chart_unit_label = ''
+    chart_unit_capaian = '[]'
+    if _unit_ids and ind_ids:
+        unit_row_ids = list(
+            IndikatorMutu.objects
+            .filter(inm_induk_id__in=ind_ids, unit_id__in=_unit_ids, aktif=True)
+            .values_list('pk', flat=True)
+        )
+        if unit_row_ids:
+            unit_monthly = {}
+            rows = (CatatanIndikator.objects
+                    .filter(indikator_id__in=unit_row_ids, tahun=tahun_int)
+                    .values('bulan')
+                    .annotate(num=Sum('nilai_numerator'), den=Sum('nilai_denominator')))
+            for r in rows:
+                unit_monthly[r['bulan']] = (
+                    float(round((r['num'] / r['den']) * 100, 1)) if r['den'] else 0.0
+                )
+            chart_unit_label = profile.unit_kerja.name
+            chart_unit_capaian = _json.dumps([unit_monthly.get(m) for m in range(1, 13)])
 
     # Per-jenis monthly breakdown for stacked bar
     jenis_map = {'NASIONAL': 'INM Nasional', 'IMP_RS': 'IMP-RS', 'IMP_UNIT': 'IMP Unit'}
@@ -314,6 +462,12 @@ def indikator_dashboard(request):
 
     ind_data, ind_colors, ind_meta = [], [], []
     ind_target, ind_arah = 0.0, 'MIN'
+    _ep_bukti_total_req = 0
+    _ep_bukti_terunggah = 0
+    if selected_indikator and selected_indikator.ep_terkait_id:
+        _reqs = selected_indikator.ep_terkait.evidence_reqs.prefetch_related('files')
+        _ep_bukti_total_req = _reqs.count()
+        _ep_bukti_terunggah = sum(1 for r in _reqs if list(r.files.all()))
     if selected_indikator:
         ind_target = round(float(selected_indikator.target_nilai), 1)
         ind_arah = getattr(selected_indikator, 'arah_target', 'MIN')
@@ -361,15 +515,18 @@ def indikator_dashboard(request):
         'is_manager': _is_manager(request.user),
         'chart_labels': chart_labels,
         'chart_capaian': chart_capaian,
+        'chart_unit_label': chart_unit_label,
+        'chart_unit_capaian': chart_unit_capaian,
         'chart_jumlah': chart_jumlah,
         'chart_jenis_json': chart_jenis_json,
         'indikator_choices': indikator_choices,
         'filter_indikator': indikator_id,
         'indikator_terpilih': selected_indikator,
         'has_indikator': bool(selected_indikator),
-        # Satu baris status bukti di bawah badge EP (Task 6, tanpa tabel kedua).
-        'bukti_ringkas': bukti_ringkas(
-            selected_indikator.ep_terkait if selected_indikator else None),
+        # Ringkasan dokumen bukti EP untuk indikator terpilih: berapa kebutuhan
+        # pembuktian dan berapa yang sudah punya berkas.
+        'ep_bukti_total_req': _ep_bukti_total_req,
+        'ep_bukti_terunggah': _ep_bukti_terunggah,
         'chart_indikator_data_json': _json.dumps(ind_data),
         'chart_indikator_colors_json': _json.dumps(ind_colors),
         'chart_indikator_target_json': _json.dumps(ind_target),
@@ -405,19 +562,25 @@ def indikator_detail(request, indikator_id):
         if 1 <= c.bulan <= 12:
             chart_data_raw[c.bulan - 1] = float(c.nilai_capaian)
 
-    # Dokumen bukti dari EP terkait (IndikatorMutu -> EP -> EvidenceReq -> EvidenceFile).
-    # Panel ini menutup segitiga sinkronisasi "indikator mutu - dokumen bukti -
-    # standar akreditasi" yang diminta di dokumen.
-    ringkas = bukti_ringkas(ind.ep_terkait if ind.ep_terkait_id else None)
+    # Panel "Dokumen Bukti dari Standar Akreditasi": daftar kebutuhan bukti (EvidenceReq)
+    # milik EP yang tertaut, beserta berkas yang sudah diunggah. Tanpa ini template
+    # selalu jatuh ke cabang "EP tidak memiliki daftar kebutuhan bukti".
     evidence = []
+    evidence_terpenuhi = 0
+    evidence_total_file = 0
     if ind.ep_terkait_id:
-        for r in ind.ep_terkait.evidence_reqs.prefetch_related('files').order_by('category_type', 'id'):
-            files = list(r.files.all())
-            evidence.append({'req': r, 'files': files, 'ada': bool(files)})
-    # Hitung dari satu sumber (bukti_ringkas) supaya panel dan badge tidak
-    # pernah menampilkan dua angka yang berbeda.
-    total_req = ringkas['total'] if ringkas else 0
-    terpenuhi = ringkas['terunggah'] if ringkas else 0
+        reqs = (ind.ep_terkait.evidence_reqs
+                .prefetch_related('files')
+                .order_by('category_type', 'id'))
+        for req in reqs:
+            files = list(req.files.all())
+            evidence_total_file += len(files)
+            if files:
+                evidence_terpenuhi += 1
+            evidence.append({'req': req, 'files': files})
+    evidence_total_req = len(evidence)
+    evidence_pct = (round(evidence_terpenuhi * 100 / evidence_total_req)
+                    if evidence_total_req else 0)
 
     ctx = {
         'ind': ind,
@@ -428,10 +591,10 @@ def indikator_detail(request, indikator_id):
         'target_line': float(ind.target_nilai),
         'is_manager': _is_manager(request.user),
         'evidence': evidence,
-        'evidence_total_req': total_req,
-        'evidence_terpenuhi': terpenuhi,
-        'evidence_total_file': sum(len(e['files']) for e in evidence),
-        'evidence_pct': round(100 * terpenuhi / total_req) if total_req else 0,
+        'evidence_total_req': evidence_total_req,
+        'evidence_terpenuhi': evidence_terpenuhi,
+        'evidence_total_file': evidence_total_file,
+        'evidence_pct': evidence_pct,
     }
     return render(request, 'akreditasi/indikator_detail.html', ctx)
 
@@ -445,6 +608,22 @@ def indikator_input_capaian(request, indikator_id):
         return redirect('akreditasi:indikator_dashboard')
 
     ind = get_object_or_404(IndikatorMutu.objects.select_related('unit'), pk=indikator_id)
+
+    profile = getattr(request.user, 'profile', None)
+    if not inm_qs_for_user(profile, IndikatorMutu.objects.filter(pk=ind.pk)).exists():
+        messages.error(request, 'Indikator ini bukan tanggung jawab unit Anda.')
+        return redirect('akreditasi:indikator_dashboard')
+
+    # INM kanonik: capaian diisi pada baris realisasi unit, bukan baris RS.
+    if (request.method == 'GET' and ind.inm_induk_id is None and ind.jenis in INM_JENIS
+            and profile and profile.is_unit_scoped and profile.unit_kerja):
+        own = (
+            IndikatorMutu.objects.filter(
+                inm_induk=ind, unit_id__in=unit_subtree_ids(profile.unit_kerja), aktif=True
+            ).order_by('unit_id').first()
+        )
+        if own and own.pk != ind.pk:
+            return redirect('akreditasi:indikator_input_capaian', indikator_id=own.pk)
 
     if request.method == 'POST':
         try:
@@ -533,11 +712,6 @@ def indikator_tambah(request):
                 target_nilai=target_val,
                 satuan=satuan,
                 ep_terkait_id=int(ep_id) if ep_id else None,
-                # Pilihan eksplisit operator: auto-sync tidak boleh menimpanya.
-                # Baris yang lahir tanpa EP bukan keputusan manual — tetap
-                # terbuka untuk auto-sync (lihat cabang '' pada saat dikosongkan).
-                ep_sumber='MANUAL' if ep_id else '',
-                ep_skor=None,
                 rencana_aksi=rencana,
                 pj=pj,
                 aktif=True,
@@ -552,6 +726,8 @@ def indikator_tambah(request):
                 messages.error(request, f'Gagal membuat indikator: {e}')
 
     units = UnitKerja.objects.filter(is_active=True).order_by('name')
+    # Tanpa cap: katalog STARKES punya >500 EP, dan EP yang terpotong tidak akan
+    # pernah bisa dipilih manual dari form.
     ep_list = StandardItem.objects.select_related('category').order_by('category__code', 'code')
     from .risiko_models import RenstraRoadmap as _RR
     renstra_list = _RR.objects.filter(aktif=True).order_by('tahun')
@@ -564,7 +740,8 @@ def indikator_tambah(request):
         'jenis_choices': IndikatorMutu.JENIS_CHOICES,
         'dimensi_choices': IndikatorMutu.DIMENSI_CHOICES,
         'arah_choices': IndikatorMutu.ARAH_CHOICES,
-        'ai_status': _ep_ai_status(),
+        # Kartu Sinkronisasi EP menampilkan status AI sebelum tombol ditekan.
+        'ai_status': _ai_status_kartu(),
     }
     return render(request, 'akreditasi/indikator_form.html', ctx)
 
@@ -609,19 +786,18 @@ def indikator_edit(request, indikator_id):
             ind.denominator = den
             ind.target_nilai = target_val
             ind.satuan = satuan
-            baru_ep = int(ep_id) if ep_id else None
-            if baru_ep is None:
-                # Mengosongkan bukan keputusan manual: baris harus tetap bisa
-                # diisi auto-sync, dan guard "link manual" tidak boleh mengunci
-                # operator pada kolom yang sudah kosong.
-                ind.ep_sumber = ''
-                ind.ep_skor = None
-            elif baru_ep != ind.ep_terkait_id:
-                # Operator memilih EP = keputusan manusia:
-                # sync_ep_indikator --ulang tidak boleh menimpanya nanti.
-                ind.ep_sumber = 'MANUAL'
-                ind.ep_skor = None
-            ind.ep_terkait_id = baru_ep
+            # Provenance EP: mengganti EP lewat form = keputusan manusia.
+            # Tanpa reset, skor AI lama menempel di link manual dan guard
+            # auto-sync berikutnya salah membaca asal tautan.
+            ep_baru = int(ep_id) if ep_id else None
+            if ep_baru != ind.ep_terkait_id:
+                if ep_baru:
+                    ind.ep_sumber = 'MANUAL'
+                    ind.ep_skor = None
+                else:
+                    ind.ep_sumber = ''
+                    ind.ep_skor = None
+            ind.ep_terkait_id = ep_baru
             ind.rencana_aksi = rencana
             ind.pj = pj
             ind.arah_target = arah_target
@@ -634,16 +810,10 @@ def indikator_edit(request, indikator_id):
         except Exception as e:
             if 'Kode indikator sudah ada' not in str(e):
                 messages.error(request, f'Gagal menyimpan perubahan: {e}')
-            # Render ulang harus memakai nilai TERSIMPAN, bukan nilai dalam
-            # memori yang gagal disimpan. Tanpa ini layar menampilkan kolom EP
-            # kosong padahal database masih tertaut — divergensi yang membuat
-            # guard AI menolak kolom yang terlihat sudah kosong.
-            try:
-                ind.refresh_from_db()
-            except Exception:
-                pass
 
     units = UnitKerja.objects.filter(is_active=True).order_by('name')
+    # Tanpa cap: katalog STARKES punya >500 EP, dan EP yang terpotong tidak akan
+    # pernah bisa dipilih manual dari form.
     ep_list = StandardItem.objects.select_related('category').order_by('category__code', 'code')
     from .risiko_models import RenstraRoadmap as _RR2
     renstra_list = _RR2.objects.filter(aktif=True).order_by('tahun')
@@ -656,7 +826,8 @@ def indikator_edit(request, indikator_id):
         'jenis_choices': IndikatorMutu.JENIS_CHOICES,
         'dimensi_choices': IndikatorMutu.DIMENSI_CHOICES,
         'arah_choices': IndikatorMutu.ARAH_CHOICES,
-        'ai_status': _ep_ai_status(),
+        # Kartu Sinkronisasi EP menampilkan status AI sebelum tombol ditekan.
+        'ai_status': _ai_status_kartu(),
     }
     return render(request, 'akreditasi/indikator_form.html', ctx)
 
@@ -666,7 +837,8 @@ def indikator_edit(request, indikator_id):
 @login_required
 def api_indikator_tren(request, indikator_id):
     """Monthly trend data for a single indicator — 12 months of a given year."""
-    ind = get_object_or_404(IndikatorMutu, pk=indikator_id)
+    profile = getattr(request.user, 'profile', None)
+    ind = get_object_or_404(inm_qs_for_user(profile, IndikatorMutu.objects.all()), pk=indikator_id)
     tahun = int(request.GET.get('tahun', 2026))
     catatan = CatatanIndikator.objects.filter(
         indikator=ind, tahun=tahun
@@ -706,8 +878,9 @@ def api_indikator_komparasi_unit(request):
         if v == canonical:
             db_codes.append(k)
 
-    indicators = IndikatorMutu.objects.filter(
-        jenis__in=db_codes, aktif=True
+    profile = getattr(request.user, 'profile', None)
+    indicators = inm_qs_for_user(
+        profile, IndikatorMutu.objects.filter(jenis__in=db_codes, aktif=True)
     ).select_related('unit')
 
     results = []
@@ -735,3 +908,88 @@ def api_indikator_komparasi_unit(request):
         })
     return JsonResponse({'jenis': canonical, 'bulan': bulan, 'tahun': tahun, 'items': results})
 
+
+
+# ── Matriks distribusi INM ↔ unit (khusus manager) ───────────────────────────
+
+@login_required
+def indikator_inm_matrix(request):
+    """Peta distribusi INM: unit mana melihat/menginput INM mana.
+
+    Hanya manager (SUPER_ADMIN/ADMIN_RS/KOORDINATOR/KEPALA_UNIT/SU) yang boleh
+    membuka dan mengubah pemetaan. Setiap perubahan dicatat ke AuditLog.
+    """
+    from django.core.exceptions import PermissionDenied
+
+    if not _is_manager(request.user):
+        raise PermissionDenied('Hanya manager yang boleh mengubah peta distribusi INM.')
+
+    if request.method == 'POST':
+        action = request.POST.get('action', '')
+        ind = get_object_or_404(IndikatorMutu, pk=request.POST.get('indikator') or 0)
+
+        if action == 'hapus':
+            mapping = InmUnitMapping.objects.filter(pk=request.POST.get('mapping') or 0).first()
+            if mapping:
+                _log(request.user, 'DELETE', mapping,
+                     f'Hapus pemetaan {ind.kode_indikator}')
+                mapping.delete()
+                messages.success(request, f'Pemetaan {ind.kode_indikator} dihapus.')
+            else:
+                messages.error(request, 'Pemetaan tidak ditemukan.')
+            return redirect('akreditasi:indikator_inm_matrix')
+
+        if action in ('tambah', 'pj', 'input'):
+            mapping = InmUnitMapping.objects.filter(
+                pk=request.POST.get('mapping') or 0
+            ).first()
+            unit = UnitKerja.objects.filter(pk=request.POST.get('unit') or 0).first()
+            role = request.POST.get('role_scope', '') or ''
+
+            if mapping is None:
+                if not unit and not role:
+                    messages.error(request, 'Pilih unit atau cakupan role.')
+                    return redirect('akreditasi:indikator_inm_matrix')
+                mapping, _created = InmUnitMapping.objects.get_or_create(
+                    indikator=ind, unit=unit, role_scope=role,
+                    defaults={'is_pj': request.POST.get('is_pj') == '1'},
+                )
+            else:
+                _created = False
+
+            if action == 'pj':
+                mapping.is_pj = not mapping.is_pj
+            elif action == 'input':
+                mapping.boleh_input = not mapping.boleh_input
+            mapping.save()
+            _log(request.user, 'CREATE' if _created else 'UPDATE', mapping,
+                 f'{action} pemetaan {ind.kode_indikator}')
+            messages.success(request, f'Pemetaan {ind.kode_indikator} diperbarui.')
+            return redirect('akreditasi:indikator_inm_matrix')
+
+        messages.error(request, 'Aksi tidak dikenali.')
+        return redirect('akreditasi:indikator_inm_matrix')
+
+    inms = list(
+        IndikatorMutu.objects
+        .filter(jenis__in=INM_JENIS, inm_induk__isnull=True, aktif=True)
+        .order_by('kode_indikator')
+    )
+    mappings = (InmUnitMapping.objects
+                .select_related('indikator', 'unit')
+                .order_by('indikator__kode_indikator', 'unit__order', 'unit__name'))
+    by_indicator = {}
+    for m in mappings:
+        by_indicator.setdefault(m.indikator_id, []).append(m)
+
+    rows = [(ind, by_indicator.get(ind.pk, [])) for ind in inms]
+    units = UnitKerja.objects.filter(level__lte=3, is_active=True).order_by('order', 'name')
+    unmapped = [ind for ind, maps in rows if not maps]
+
+    return render(request, 'akreditasi/indikator_inm_matrix.html', {
+        'rows': rows,
+        'units': units,
+        'role_choices': InmUnitMapping.ROLE_CHOICES,
+        'unmapped': unmapped,
+        'total_mapping': mappings.count(),
+    })

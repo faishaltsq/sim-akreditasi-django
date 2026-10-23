@@ -330,13 +330,18 @@ def api_ai_ep_rekomendasi(request):
 
     res = generate_ep_rekomendasi(user=request.user, ind=ind, petunjuk_unit=petunjuk)
 
+    # Saat AI mati/gagal, `error` berisi ALASAN mengapa hasil ini hanya
+    # kecocokan kata (mis. 'timeout'). Alasan itu yang harus sampai ke
+    # operator — pesan generik membuat Tier B terbaca seperti hasil AI.
+    notice = None if res.get('success') and res.get('ai_terpakai') else (
+        res.get('error') or 'Gagal memproses rekomendasi AI.')
     return JsonResponse({
         'success': bool(res.get('success')),
         'kandidat': cepat,
         'rekomendasi': (res.get('data') or {}).get('rekomendasi') or [],
         'sumber': (res.get('data') or {}).get('sumber'),
         'ai_terpakai': bool(res.get('ai_terpakai')),
-        'notice': res.get('error'),
+        'notice': notice,
         'ai_status': _ai_status(),
         'ep_terkait': (
             {'id': ind.ep_terkait_id, 'code': ind.ep_terkait.code,
@@ -615,6 +620,25 @@ def api_ai_test_connection(request):
 
 # ── 7. NARASI LAPORAN CAPAIAN INDIKATOR MUTU ─────────────────────────────
 
+# Pesan yang berasal dari alur kita sendiri (bukan teks mentah upstream) dan
+# aman ditampilkan ke pengguna. Selain ini diganti pesan generik supaya detail
+# internal (respons API, stack, kuota) tidak bocor ke klien.
+_PESAN_NARASI_AMAN = (
+    'belum diaktifkan',
+    'tidak dipakai pada laporan',
+    'tidak mengembalikan narasi',
+    'timeout',
+    'kuota',
+)
+
+
+def _pesan_aman_narasi(pesan):
+    teks = str(pesan or '').strip()
+    if teks and any(k in teks.lower() for k in _PESAN_NARASI_AMAN):
+        return teks
+    return 'Gagal menyusun narasi laporan.'
+
+
 @login_required
 @require_POST
 @rate_limit(max_calls=12, window=60, scope='ai')
@@ -654,4 +678,17 @@ def api_ai_narasi_laporan(request):
         instruksi=(data.get('instruksi') or '').strip()[:800],
         isi_sekarang=(data.get('isi_sekarang') or '').strip()[:4000],
     )
-    return JsonResponse(res, status=200 if res['success'] else 400)
+    if not res.get('success'):
+        return JsonResponse({'success': False,
+                             'error': _pesan_aman_narasi(res.get('error'))},
+                            status=400)
+    data_res = res.get('data') or {}
+    return JsonResponse({
+        'success': True,
+        'error': None,
+        'data': {
+            'kunci': str(data_res.get('kunci') or ''),
+            'judul': str(data_res.get('judul') or ''),
+            'narasi': str(data_res.get('narasi') or ''),
+        },
+    }, status=200)

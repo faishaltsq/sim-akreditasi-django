@@ -52,8 +52,8 @@
     {% for bab in sidebar_unit_standar %}
     <div class="sidebar-bab mb-1">
         <a class="nav-link nav-pokja py-1 d-flex align-items-center justify-content-between"
-           data-bs-toggle="collapse" href="#bab-{{ bab.code }}" role="button"
-           aria-expanded="false" aria-controls="bab-{{ bab.code }}"
+           data-bs-toggle="collapse" href="#bab-{{ bab.code }}-{{ sidebar_uid }}" role="button"
+           aria-expanded="false" aria-controls="bab-{{ bab.code }}-{{ sidebar_uid }}"
            style="cursor:pointer;">
             <span class="d-flex align-items-center gap-1">
                 <i class="bi bi-journal-bookmark-fill" style="font-size:0.8rem;"></i>
@@ -61,13 +61,13 @@
             </span>
             <span class="badge bg-light text-dark border" style="font-size:0.6rem; padding:1px 5px;">{{ bab.standar|length }}</span>
         </a>
-        <div class="collapse show" id="bab-{{ bab.code }}">
-            <div class="py-1 ps-2" style="background:#f8fafc; border-radius:6px; margin:2px 0 6px 0;">
+        <div class="collapse show" id="bab-{{ bab.code }}-{{ sidebar_uid }}">
+            <div class="py-1 ps-2" style="background:var(--body-bg); border-radius:6px; margin:2px 0 6px 0;">
                 {% for std in bab.standar %}
                 <a href="{% url 'akreditasi:matriks_pdca' %}{% if bab.cat_id %}?cat={{ bab.cat_id }}&sub={{ std }}{% endif %}"
                    class="nav-link py-1 px-2 d-flex align-items-center gap-2"
-                   style="font-size:0.75rem; color:#334155; font-family:'JetBrains Mono',monospace; border-radius:4px; transition:background 0.15s;">
-                    <span style="display:inline-block; width:6px; height:6px; border-radius:50%; background:#0F766E; flex-shrink:0;"></span>
+                   style="font-size:0.75rem; color:var(--text-primary); font-family:'JetBrains Mono',monospace; border-radius:4px; transition:background 0.15s;">
+                    <span style="display:inline-block; width:6px; height:6px; border-radius:50%; background:var(--primary); flex-shrink:0;"></span>
                     <span>{{ std }}</span>
                 </a>
                 {% endfor %}
@@ -84,23 +84,23 @@
     <div class="px-3 py-1">
         <div class="input-group input-group-sm">
             <span class="input-group-text bg-white border-end-0 py-1 px-2 text-muted" style="font-size:0.7rem;"><i class="bi bi-search"></i></span>
-            <input type="text" id="sidebarPokjaSearch" class="form-control form-control-sm border-start-0 py-1 ps-0" placeholder="Cari Pokja (misal: KPS, PPI)..." style="font-size:0.72rem; box-shadow:none;">
+            <input type="text" id="sidebarPokjaSearch-{{ sidebar_uid }}" class="form-control form-control-sm border-start-0 py-1 ps-0" placeholder="Cari Pokja (misal: KPS, PPI)..." style="font-size:0.72rem; box-shadow:none;">
         </div>
     </div>
     {% for k_code, k_info in categories_by_kelompok.items %}
     <div class="sidebar-kelompok mb-1">
         <a class="nav-link nav-pokja py-1 d-flex align-items-center justify-content-between"
-           data-bs-toggle="collapse" href="#kelompok-{{ k_code }}" role="button"
+           data-bs-toggle="collapse" href="#kelompok-{{ k_code }}-{{ sidebar_uid }}" role="button"
            aria-expanded="{% if forloop.first %}true{% else %}false{% endif %}"
-           aria-controls="kelompok-{{ k_code }}"
-           style="cursor:pointer; background:#f8fafc; border-radius:6px; font-weight:600; font-size:0.75rem;">
+           aria-controls="kelompok-{{ k_code }}-{{ sidebar_uid }}"
+           style="cursor:pointer; background:var(--body-bg); border-radius:6px; font-weight:600; font-size:0.75rem;">
             <span class="d-flex align-items-center gap-1 text-truncate">
                 <i class="bi {{ k_info.icon }} text-{{ k_info.color }}" style="font-size:0.8rem;"></i>
                 <span class="text-truncate">{{ k_info.label }}</span>
             </span>
             <span class="badge bg-white text-dark border font-mono" style="font-size:0.6rem; padding:1px 5px;">{{ k_info.count }}</span>
         </a>
-        <div class="collapse {% if forloop.first %}show{% endif %}" id="kelompok-{{ k_code }}">
+        <div class="collapse {% if forloop.first %}show{% endif %}" id="kelompok-{{ k_code }}-{{ sidebar_uid }}">
             <div class="ps-1 pt-1">
                 {% for cat in k_info.categories %}
                 <a href="{% url 'akreditasi:matriks_pdca' %}?cat={{ cat.id }}"
@@ -112,7 +112,7 @@
                             <span class="nav-title" style="font-size:0.73rem; font-family:'JetBrains Mono',monospace;">{{ cat.code }}</span>
                             <span class="nav-pokja-pct {% if cat.percentage >= 80 %}text-success{% elif cat.percentage >= 50 %}text-warning{% else %}text-danger{% endif %}" style="font-size:0.65rem; font-weight:700;">{{ cat.percentage }}%</span>
                         </div>
-                        <div class="d-flex justify-content-between" style="font-size:0.6rem; color:#94a3b8; margin-bottom:2px;">
+                        <div class="d-flex justify-content-between" style="font-size:0.6rem; color:var(--text-muted); margin-bottom:2px;">
                             <span>{{ cat.ep_selesai|default:0 }}/{{ cat.ep_total|default:0 }} EP</span>
                         </div>
                         <div class="nav-pokja-bar" style="height:3px;">
@@ -363,7 +363,7 @@
 
     <!-- MANAJEMEN PASIEN (SIMRS) — disaring berdasarkan unit kerja & hak akses -->
     {% with allowed_mods=request.user.profile.get_allowed_patient_modules %}
-    <div class="nav-section mt-2" style="border-top:1px solid #e2e8f0; padding-top:10px; margin-top:8px;">
+    <div class="nav-section mt-2" style="border-top:1px solid var(--border); padding-top:10px; margin-top:8px;">
         <i class="bi bi-people-fill me-1" style="font-size:0.6rem;"></i> Manajemen Pasien
     </div>
     <a href="{% url 'pasien:dashboard' %}" class="nav-link {% if request.resolver_match.app_name == 'pasien' and request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
@@ -405,13 +405,13 @@
                 </span>
             </span>
             <span class="badge bg-light text-primary border" title="Lihat Pilihan Poliklinik"
-                  data-bs-toggle="collapse" data-bs-target="#submenuPoliRajal" role="button"
-                  style="font-size:0.65rem; cursor:pointer;" onclick="event.preventDefault(); bootstrap.Collapse.getOrCreateInstance(document.getElementById('submenuPoliRajal')).toggle();">
+                  data-bs-toggle="collapse" data-bs-target="#submenuPoliRajal-{{ sidebar_uid }}" role="button"
+                  style="font-size:0.65rem; cursor:pointer;" onclick="event.preventDefault(); bootstrap.Collapse.getOrCreateInstance(document.getElementById('submenuPoliRajal-{{ sidebar_uid }}')).toggle();">
                 <i class="bi bi-chevron-down"></i>
             </span>
         </a>
-        <div class="collapse {% if request.resolver_match.url_name == 'rajal_dashboard' and request.GET.poli %}show{% endif %}" id="submenuPoliRajal">
-            <div class="py-1 ps-3" style="background:#f8fafc; border-radius:6px; margin:2px 0 6px 0;">
+        <div class="collapse {% if request.resolver_match.url_name == 'rajal_dashboard' and request.GET.poli %}show{% endif %}" id="submenuPoliRajal-{{ sidebar_uid }}">
+            <div class="py-1 ps-3" style="background:var(--body-bg); border-radius:6px; margin:2px 0 6px 0;">
                 <a href="{% url 'pasien:rajal_dashboard' %}" class="nav-link py-1 px-2 d-flex align-items-center gap-2 {% if not request.GET.poli %}fw-bold text-primary{% endif %}" style="font-size:0.75rem;">
                     <i class="bi bi-grid-fill" style="font-size:0.7rem;"></i> Semua Poli
                 </a>
@@ -507,7 +507,7 @@
     {% endif %}
 
     <!-- PANDUAN PENGGUNA — tampil untuk semua role yang login -->
-    <div class="nav-section mt-2" style="border-top:1px solid #e2e8f0; padding-top:10px; margin-top:8px;">
+    <div class="nav-section mt-2" style="border-top:1px solid var(--border); padding-top:10px; margin-top:8px;">
         <i class="bi bi-book-fill me-1" style="font-size:0.6rem;"></i> Bantuan
     </div>
     <a href="{% url 'akreditasi:panduan' %}" class="nav-link {% if request.resolver_match.url_name == 'panduan' %}active{% endif %}" target="_blank">
@@ -521,7 +521,7 @@
 
     <div class="sidebar-footer">
     <div class="d-flex align-items-center justify-content-between">
-        <small style="font-size:0.63rem; color:#64748b; font-weight:600;">RS MonsisKami Tipe B</small>
-        <span class="badge" style="background:#0F766E; font-size:0.58rem;">STARKES</span>
+        <small style="font-size:0.63rem; color:var(--text-secondary); font-weight:600;">RS MonsisKami Tipe B</small>
+        <span class="badge" style="background:var(--primary); font-size:0.58rem;">STARKES</span>
     </div>
 </div>

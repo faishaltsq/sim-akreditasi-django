@@ -18,7 +18,7 @@
             {# Breadcrumb #}
             <nav aria-label="breadcrumb" class="mb-3">
                 <ol class="breadcrumb" style="font-size:.8rem;">
-                    <li class="breadcrumb-item"><a href="{% url 'akreditasi:risiko_daftar' %}" style="color:#0F766E;">Manajemen Risiko</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'akreditasi:risiko_daftar' %}" style="color:var(--primary);">Manajemen Risiko</a></li>
                     <li class="breadcrumb-item active">Lapor Insiden</li>
                 </ol>
             </nav>
@@ -30,7 +30,7 @@
             {% endif %}
 
             {# Alert Anonim #}
-            <div class="alert py-2 mb-3 d-flex align-items-center gap-2" style="background:#f0fdfa; border:1px solid #99f6e4; font-size:.82rem; color:#0f172a;">
+            <div class="alert py-2 mb-3 d-flex align-items-center gap-2" style="background:var(--primary-tint); border:1px solid #B9C0F2; font-size:.82rem; color:var(--text-primary);">
                 <i class="bi bi-shield-check text-success fs-5"></i>
                 <span><strong>Laporan ini bersifat anonim.</strong> Data identitas Anda tidak disimpan dalam laporan ini. Tujuan: mencegah berulangnya insiden serupa.</span>
             </div>
@@ -44,7 +44,7 @@
                         {% csrf_token %}
 
                         {# ── A. Lokasi & Waktu ──────────────────────────── #}
-                        <h6 class="fw-bold mb-3 pb-1 border-bottom" style="color:#0f172a; font-size:.82rem;">A. Informasi Kejadian</h6>
+                        <h6 class="fw-bold mb-3 pb-1 border-bottom" style="color:var(--text-primary); font-size:.82rem;">A. Informasi Kejadian</h6>
                         <div class="row g-3 mb-3">
                             <div class="col-md-6">
                                 <label class="form-label" style="font-size:.8rem; font-weight:600;">Unit Terkait <small class="text-muted fw-normal">(opsional)</small></label>
@@ -68,7 +68,7 @@
                         </div>
 
                         {# ── B. Klasifikasi Insiden ─────────────────────── #}
-                        <h6 class="fw-bold mb-3 pb-1 border-bottom mt-2" style="color:#0f172a; font-size:.82rem;">B. Klasifikasi Insiden</h6>
+                        <h6 class="fw-bold mb-3 pb-1 border-bottom mt-2" style="color:var(--text-primary); font-size:.82rem;">B. Klasifikasi Insiden</h6>
                         <div class="row g-3 mb-3">
                             <div class="col-md-6">
                                 <label class="form-label" style="font-size:.8rem; font-weight:600;">Jenis Insiden <span class="text-danger">*</span></label>
@@ -78,7 +78,7 @@
                                     <option value="{{ val }}">{{ label }}</option>
                                     {% endfor %}
                                 </select>
-                                <div class="mt-2" style="font-size:.72rem; color:#64748b;">
+                                <div class="mt-2" style="font-size:.72rem; color:var(--text-secondary);">
                                     <strong>KNC</strong> = Nyaris Cedera &bull; <strong>KTD</strong> = Tidak Diharapkan &bull; <strong>KTC</strong> = Tidak Cedera
                                 </div>
                             </div>
@@ -94,7 +94,7 @@
                         </div>
 
                         {# ── C. Deskripsi ───────────────────────────────── #}
-                        <h6 class="fw-bold mb-3 pb-1 border-bottom mt-2" style="color:#0f172a; font-size:.82rem;">C. Uraian Kejadian</h6>
+                        <h6 class="fw-bold mb-3 pb-1 border-bottom mt-2" style="color:var(--text-primary); font-size:.82rem;">C. Uraian Kejadian</h6>
                         <div class="mb-3">
                             <div class="d-flex justify-content-between align-items-center">
                                 <label class="form-label" style="font-size:.8rem; font-weight:600;">Deskripsi Kejadian <span class="text-danger">*</span></label>

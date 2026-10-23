@@ -7,8 +7,11 @@ Operational gates for `sdm` private personnel/health documents. Code paths are a
 | Variable | Purpose | Notes |
 |---|---|---|
 | `SUPABASE_URL` | Project origin used by the private storage client | Must be `https://` (or loopback in development) |
-| `HC_PRIVATE_STORAGE_SERVICE_KEY` | Service-role key for private object operations | Never expose to templates, logs, or client bundles |
+| `HC_PRIVATE_STORAGE_SERVICE_KEY` | Service-role key for private object operations | Never expose to templates, logs, or client bundles. Must be a `service_role` key, not the publishable/anon key used for public evidence |
 | `HC_PRIVATE_STORAGE_BUCKET` | Private bucket name (default `human-capital-private`) | Must not be a public bucket |
+
+Local development loads `KEY=VALUE` pairs from `.env` automatically; platform-injected
+variables always take precedence, so no secret is committed or baked into settings.
 
 `SUPABASE_KEY` / `SUPABASE_BUCKET` (public evidence storage) are deliberately **not** reused. A missing private key fails closed with `PrivateStorageError`; there is no local-disk fallback.
 

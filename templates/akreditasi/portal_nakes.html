@@ -9,12 +9,12 @@
 <div class="container-fluid p-0">
 
     <!-- HERO HEADER UNIT INFO -->
-    <div class="card border-0 shadow-sm mb-4" style="background: #0F172A; color: white; border-radius: 12px;">
+    <div class="card border-0 shadow-sm mb-4" style="background: var(--text-primary); color: white; border-radius: 12px;">
         <div class="card-body p-4">
             <div class="row align-items-center">
                 <div class="col-md-7">
                     <div class="d-flex align-items-center gap-3">
-                        <div style="width: 58px; height: 58px; border-radius: 50%; background: rgba(59, 130, 246, 0.2); border: 2px solid #38bdf8; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; color: #38bdf8; font-weight: 700;">
+                        <div style="width: 58px; height: 58px; border-radius: 50%; background: rgba(79,91,213,0.2); border: 2px solid #8B7CF6; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; color: #8B7CF6; font-weight: 700;">
                             {{ profile.full_name|default:request.user.username|first|upper }}
                         </div>
                         <div>
@@ -34,13 +34,13 @@
                     {% if unit %}
                         <div class="d-inline-block text-start p-3" style="background: rgba(255,255,255,0.06); border-radius: 10px; border: 1px solid rgba(255,255,255,0.1); min-width: 220px;">
                             <div class="d-flex justify-content-between align-items-center mb-1">
-                                <span style="font-size: 0.75rem; color: #94a3b8; text-transform: uppercase;">Kepatuhan Akreditasi Unit</span>
-                                <span class="fw-bold" style="font-size: 1.25rem; color: {% if percentage >= 80 %}#4ade80{% elif percentage >= 60 %}#fbbf24{% else %}#f87171{% endif %};">{{ percentage }}%</span>
+                                <span style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase;">Kepatuhan Akreditasi Unit</span>
+                                <span class="fw-bold" style="font-size: 1.25rem; color: {% if percentage >= 80 %}#4ade80{% elif percentage >= 60 %}#D97706{% else %}#f87171{% endif %};">{{ percentage }}%</span>
                             </div>
                             <div class="progress" style="height: 6px; background-color: rgba(255,255,255,0.1);">
                                 <div class="progress-bar {% if percentage >= 80 %}bg-success{% elif percentage >= 60 %}bg-warning{% else %}bg-danger{% endif %}" role="progressbar" style="width: {{ percentage|unlocalize }}%"></div>
                             </div>
-                            <div class="d-flex justify-content-between mt-2" style="font-size: 0.7rem; color: #cbd5e1;">
+                            <div class="d-flex justify-content-between mt-2" style="font-size: 0.7rem; color: var(--border-strong);">
                                 <span>Skor: {{ total_score }}/{{ total_possible }}</span>
                                 <span>{{ unit_records|length }} Elemen Penilaian</span>
                             </div>
@@ -58,26 +58,26 @@
     <!-- METRICS MINI STRIP -->
     <div class="row g-3 mb-4">
         <div class="col-6 col-lg-3">
-            <div class="card border-0 shadow-sm p-3 h-100" style="border-left: 4px solid #10b981 !important; border-radius: 10px;">
+            <div class="card border-0 shadow-sm p-3 h-100" style="border-left: 4px solid var(--success) !important; border-radius: 10px;">
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
                         <small class="text-muted text-uppercase" style="font-size: 0.7rem;">EP Terpenuhi (10)</small>
                         <h3 class="fw-bold mb-0 text-success">{{ count_10 }}</h3>
                     </div>
-                    <div style="width: 38px; height: 38px; border-radius: 8px; background: #ecfdf5; display: flex; align-items: center; justify-content: center; color: #10b981;">
+                    <div style="width: 38px; height: 38px; border-radius: 8px; background: #ECFDF5; display: flex; align-items: center; justify-content: center; color: var(--success);">
                         <i class="bi bi-check-circle fs-5"></i>
                     </div>
                 </div>
             </div>
         </div>
         <div class="col-6 col-lg-3">
-            <div class="card border-0 shadow-sm p-3 h-100" style="border-left: 4px solid #f59e0b !important; border-radius: 10px;">
+            <div class="card border-0 shadow-sm p-3 h-100" style="border-left: 4px solid var(--warning) !important; border-radius: 10px;">
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
                         <small class="text-muted text-uppercase" style="font-size: 0.7rem;">EP Sebagian (5)</small>
                         <h3 class="fw-bold mb-0 text-warning">{{ count_5 }}</h3>
                     </div>
-                    <div style="width: 38px; height: 38px; border-radius: 8px; background: #fffbeb; display: flex; align-items: center; justify-content: center; color: #f59e0b;">
+                    <div style="width: 38px; height: 38px; border-radius: 8px; background: #fffbeb; display: flex; align-items: center; justify-content: center; color: var(--warning);">
                         <i class="bi bi-exclamation-circle fs-5"></i>
                     </div>
                 </div>
@@ -97,13 +97,13 @@
             </div>
         </div>
         <div class="col-6 col-lg-3">
-            <div class="card border-0 shadow-sm p-3 h-100" style="border-left: 4px solid #3b82f6 !important; border-radius: 10px;">
+            <div class="card border-0 shadow-sm p-3 h-100" style="border-left: 4px solid var(--primary) !important; border-radius: 10px;">
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
                         <small class="text-muted text-uppercase" style="font-size: 0.7rem;">Portofolio KPS Saya</small>
                         <h3 class="fw-bold mb-0 text-primary">{{ credentials.count }} Dokumen</h3>
                     </div>
-                    <div style="width: 38px; height: 38px; border-radius: 8px; background: #eff6ff; display: flex; align-items: center; justify-content: center; color: #3b82f6;">
+                    <div style="width: 38px; height: 38px; border-radius: 8px; background: var(--primary-tint); display: flex; align-items: center; justify-content: center; color: var(--primary);">
                         <i class="bi bi-file-earmark-person fs-5"></i>
                     </div>
                 </div>

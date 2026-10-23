@@ -7,17 +7,17 @@
 {% block extra_css %}
 <style>
     .skor-badge { display:inline-block; padding:6px 18px; border-radius:20px; font-weight:700; font-size:1rem; color:#fff; transition:background .2s; }
-    input[type=range] { accent-color:#0F766E; }
-    .slider-val { display:inline-block; min-width:28px; text-align:center; font-weight:700; color:#0F766E; }
+    input[type=range] { accent-color:var(--primary); }
+    .slider-val { display:inline-block; min-width:28px; text-align:center; font-weight:700; color:var(--primary); }
     
     /* Realtime Required Field Indicators */
     .field-req-empty {
-        border-bottom: 2.5px solid #e11d48 !important;
+        border-bottom: 2.5px solid var(--danger) !important;
         background-color: #fff1f2 !important;
         transition: border-color .2s, background-color .2s;
     }
     .field-req-filled {
-        border-bottom: 2px solid #0F766E !important;
+        border-bottom: 2px solid var(--primary) !important;
         background-color: #ffffff !important;
         transition: border-color .2s, background-color .2s;
     }
@@ -31,10 +31,10 @@
         transition: color .2s;
     }
     .req-note-empty {
-        color: #e11d48 !important;
+        color: var(--danger) !important;
     }
     .req-note-filled {
-        color: #0F766E !important;
+        color: var(--primary) !important;
     }
 </style>
 {% endblock %}
@@ -47,9 +47,9 @@
             {# Breadcrumb #}
             <nav aria-label="breadcrumb" class="mb-3">
                 <ol class="breadcrumb" style="font-size:.8rem;">
-                    <li class="breadcrumb-item"><a href="{% url 'akreditasi:risiko_daftar' %}" style="color:#0F766E;">Daftar Risiko</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'akreditasi:risiko_daftar' %}" style="color:var(--primary);">Daftar Risiko</a></li>
                     {% if is_edit %}
-                    <li class="breadcrumb-item"><a href="{% url 'akreditasi:risiko_detail' risiko.pk %}" style="color:#0F766E;">Detail #{{ risiko.pk }}</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'akreditasi:risiko_detail' risiko.pk %}" style="color:var(--primary);">Detail #{{ risiko.pk }}</a></li>
                     <li class="breadcrumb-item active">Edit Risiko</li>
                     {% else %}
                     <li class="breadcrumb-item active">Input Risiko Baru</li>
@@ -64,7 +64,7 @@
             {% endif %}
 
             <div class="card border-0 shadow-sm">
-                <div class="card-header border-0 py-3" style="background:#0F766E; color:#fff;">
+                <div class="card-header border-0 py-3" style="background:var(--primary-deep); color:#fff;">
                     <h6 class="mb-0 fw-bold">
                         {% if is_edit %}<i class="bi bi-pencil-square me-2"></i>Edit Risiko #{{ risiko.pk }} — {{ risiko.unit.name }}
                         {% else %}<i class="bi bi-shield-plus me-2"></i>Formulir Identifikasi Risiko Unit
@@ -76,7 +76,7 @@
                         {% csrf_token %}
 
                         {# ── Bagian 1: Identifikasi ─────────────────── #}
-                        <h6 class="fw-bold mb-3 pb-1 border-bottom" style="color:#0f172a; font-size:.82rem;">A. Identifikasi Risiko (Standar 5.15)</h6>
+                        <h6 class="fw-bold mb-3 pb-1 border-bottom" style="color:var(--text-primary); font-size:.82rem;">A. Identifikasi Risiko (Standar 5.15)</h6>
                         
                         {# 1. Header Identitas #}
                         <div class="row g-3 mb-3">
@@ -107,7 +107,7 @@
                         </div>
 
                         {# 2. Masalah & Data Pendukung (DI ATAS Kategori & Jenis Risiko) #}
-                        <div class="p-3 mb-3 rounded-3" style="background:#f8fafc; border:1px solid #e2e8f0;">
+                        <div class="p-3 mb-3 rounded-3" style="background:var(--body-bg); border:1px solid var(--border);">
                             <div class="d-flex justify-content-between align-items-center mb-2">
                                 <span class="fw-bold text-dark" style="font-size:.78rem;">
                                     <i class="bi bi-card-checklist text-teal me-1"></i>Latar Belakang: Masalah &amp; Bukti Pendukung
@@ -158,9 +158,9 @@
                         </div>
 
                         {# 3. Banner Konteks Masalah Terhubung (Live Linking ke Kategori & Jenis Risiko) #}
-                        <div id="live-masalah-link-banner" class="p-2.5 mb-3 rounded-3 border" style="background:#f0fdfa; border-color:#99f6e4 !important; font-size:.76rem;">
+                        <div id="live-masalah-link-banner" class="p-2.5 mb-3 rounded-3 border" style="background:var(--primary-tint); border-color:#B9C0F2 !important; font-size:.76rem;">
                             <div class="d-flex align-items-center justify-content-between mb-1">
-                                <span class="fw-bold d-flex align-items-center gap-1.5" style="color:#0f766e; font-size:.75rem;">
+                                <span class="fw-bold d-flex align-items-center gap-1.5" style="color:var(--primary-deep); font-size:.75rem;">
                                     <i class="bi bi-link-45deg fs-6"></i>
                                     <span>Konteks Masalah Terhubung</span>
                                     <span class="badge bg-teal text-white ms-1" style="font-size:.6rem; padding:2px 6px;">Pipeline STARKES</span>
@@ -177,8 +177,8 @@
                                     <strong class="d-block" style="font-size:.68rem; color:#be123c;"><i class="bi bi-exclamation-circle me-1"></i>MASALAH:</strong>
                                     <span id="live-masalah-val" class="d-block" style="font-size:.73rem; white-space:pre-wrap;"></span>
                                 </div>
-                                <div id="live-data-text-box" class="p-1.5 px-2 rounded border-start border-3 border-primary d-none" style="background:#eff6ff; color:#1e40af;">
-                                    <strong class="d-block" style="font-size:.68rem; color:#1d4ed8;"><i class="bi bi-file-earmark-bar-graph me-1"></i>BUKTI PENDUKUNG:</strong>
+                                <div id="live-data-text-box" class="p-1.5 px-2 rounded border-start border-3 border-primary d-none" style="background:var(--primary-tint); color:#2E3886;">
+                                    <strong class="d-block" style="font-size:.68rem; color:var(--primary-strong);"><i class="bi bi-file-earmark-bar-graph me-1"></i>BUKTI PENDUKUNG:</strong>
                                     <span id="live-data-val" class="d-block" style="font-size:.73rem; white-space:pre-wrap;"></span>
                                 </div>
                             </div>
@@ -199,8 +199,8 @@
 
                         {# Category Guide — contoh risiko per kategori (Standar 5.15) #}
                         <div id="kategori-guide" class="mb-3 d-none">
-                            <div class="p-2.5 rounded" style="background:#f0fdfa; border:1px dashed #99f6e4; font-size:.76rem;">
-                                <strong id="kategori-guide-title" class="d-block mb-1" style="color:#0f766e;"></strong>
+                            <div class="p-2.5 rounded" style="background:var(--primary-tint); border:1px dashed #B9C0F2; font-size:.76rem;">
+                                <strong id="kategori-guide-title" class="d-block mb-1" style="color:var(--primary-deep);"></strong>
                                 <span id="kategori-guide-desc" class="text-muted d-block mb-2" style="font-size:.72rem;"></span>
                                 <div id="kategori-guide-chips"></div>
                             </div>
@@ -214,7 +214,7 @@
                             </label>
 
                             {# Container Tag / Chip yang sudah dipilih #}
-                            <div id="jenis-risiko-tag-box" class="p-2 border rounded bg-white min-h-38 mb-2 d-flex flex-wrap gap-1 align-items-center" style="min-height: 42px; border-color:#cbd5e1 !important;">
+                            <div id="jenis-risiko-tag-box" class="p-2 border rounded bg-white min-h-38 mb-2 d-flex flex-wrap gap-1 align-items-center" style="min-height: 42px; border-color:var(--border-strong) !important;">
                                 <span id="jenis-risiko-placeholder" class="text-muted small ps-1" style="font-size:.75rem;">Belum ada jenis risiko dipilih. Pilih dari saran kategori di atas atau ketik di bawah.</span>
                             </div>
 
@@ -237,17 +237,17 @@
                         </div>
 
                         {# ── Bagian B: Penilaian Risiko Awal ───────────── #}
-                        <h6 class="fw-bold mb-3 pb-1 border-bottom" style="color:#0f172a; font-size:.82rem;">B. Penilaian Risiko Awal</h6>
+                        <h6 class="fw-bold mb-3 pb-1 border-bottom" style="color:var(--text-primary); font-size:.82rem;">B. Penilaian Risiko Awal</h6>
                         <div class="row g-4 mb-3">
                             <div class="col-md-6">
                                 <label for="dampak" class="form-label fw-semibold" style="font-size:.8rem;">Dampak (Severity) &nbsp;<span class="slider-val" id="dampak-val">3</span></label>
                                 <input type="range" name="dampak" id="dampak" class="form-range" min="1" max="5" step="1" value="3">
-                                <div class="d-flex justify-content-between" style="font-size:.65rem; color:#64748b;"><span>1 — Minimal</span><span>5 — Katastrofik</span></div>
+                                <div class="d-flex justify-content-between" style="font-size:.65rem; color:var(--text-secondary);"><span>1 — Minimal</span><span>5 — Katastrofik</span></div>
                             </div>
                             <div class="col-md-6">
                                 <label for="probabilitas" class="form-label fw-semibold" style="font-size:.8rem;">Peluang / Probabilitas (Occurrence) &nbsp;<span class="slider-val" id="prob-val">3</span></label>
                                 <input type="range" name="probabilitas" id="probabilitas" class="form-range" min="1" max="5" step="1" value="3">
-                                <div class="d-flex justify-content-between" style="font-size:.65rem; color:#64748b;"><span>1 — Sangat Jarang</span><span>5 — Hampir Pasti</span></div>
+                                <div class="d-flex justify-content-between" style="font-size:.65rem; color:var(--text-secondary);"><span>1 — Sangat Jarang</span><span>5 — Hampir Pasti</span></div>
                             </div>
                         </div>
 
@@ -262,10 +262,10 @@
                         </div>
 
                         {# Realtime Skor Inherent #}
-                        <div class="text-center mb-4 py-3" style="background:#f8fafc; border-radius:12px; border:1px solid #e2e8f0;">
-                            <div style="font-size:.78rem; color:#64748b; font-weight:600; margin-bottom:6px;">SKOR RISIKO AWAL / INHERENT (Dampak × Peluang)</div>
-                            <span class="skor-badge" id="skor-badge" style="background:#ca8a04;">9</span>
-                            <div id="skor-label" class="mt-2 fw-bold" style="font-size:.85rem; color:#ca8a04;">SEDANG</div>
+                        <div class="text-center mb-4 py-3" style="background:var(--body-bg); border-radius:12px; border:1px solid var(--border);">
+                            <div style="font-size:.78rem; color:var(--text-secondary); font-weight:600; margin-bottom:6px;">SKOR RISIKO AWAL / INHERENT (Dampak × Peluang)</div>
+                            <span class="skor-badge" id="skor-badge" style="background:var(--warning);">9</span>
+                            <div id="skor-label" class="mt-2 fw-bold" style="font-size:.85rem; color:var(--warning);">SEDANG</div>
                         </div>
 
                         {# ═══════════════════════════════════════════════════════════
@@ -273,7 +273,7 @@
                            STARKES PMKP 7 (RCA) & PMKP 8 (FMEA)
                            ═══════════════════════════════════════════════════════════ #}
                         <div class="border-top pt-3 mb-4">
-                            <h6 class="fw-bold mb-1 pb-1" style="color:#0f172a; font-size:.82rem;">
+                            <h6 class="fw-bold mb-1 pb-1" style="color:var(--text-primary); font-size:.82rem;">
                                 <i class="bi bi-diagram-3 text-warning me-1"></i>C. Pilihan Metode Evaluasi / Hiliran
                             </h6>
                             <p class="text-muted mb-3" style="font-size:.72rem; line-height:1.45;">
@@ -304,7 +304,7 @@
 
                             {# ── Panel FMEA ── #}
                             <div id="panel-metode-fmea" class="d-none">
-                                <div class="p-2 mb-2 rounded" style="background:#fffbeb; border-left:3px solid #f59e0b; font-size:.72rem;">
+                                <div class="p-2 mb-2 rounded" style="background:#fffbeb; border-left:3px solid var(--warning); font-size:.72rem;">
                                     <strong class="text-warning-emphasis"><i class="bi bi-shield-fill-check me-1"></i>Pendekatan Proaktif (FMEA)</strong> — Identifikasi mode kegagalan proses klinis sebelum insiden terjadi (STARKES PMKP 8).
                                 </div>
                                 <div class="row g-3 mb-3">
@@ -313,7 +313,7 @@
                                             Tingkat Kemudahan Deteksi (D: 1–5) &nbsp;<span class="badge bg-warning text-dark" id="deteksi-val">3</span>
                                         </label>
                                         <input type="range" name="deteksi_fmea" id="deteksi_fmea" class="form-range" min="1" max="5" step="1" value="3">
-                                        <div class="d-flex justify-content-between" style="font-size:.65rem; color:#64748b;">
+                                        <div class="d-flex justify-content-between" style="font-size:.65rem; color:var(--text-secondary);">
                                             <span>1 — Sangat Mudah Terdeteksi</span><span>5 — Hampir Mustahil Terdeteksi</span>
                                         </div>
                                     </div>
@@ -323,7 +323,7 @@
                                         </label>
                                         <div class="d-flex align-items-center gap-2">
                                             <input type="number" name="rpn_fmea" id="input_rpn_fmea" class="form-control form-control-sm" placeholder="Auto" min="1" max="125" style="max-width:110px;">
-                                            <span class="badge font-monospace p-2" id="rpn-live-badge" style="background:#ca8a04; font-size:.78rem;">RPN: 27 (MODERAT)</span>
+                                            <span class="badge font-monospace p-2" id="rpn-live-badge" style="background:var(--warning); font-size:.78rem;">RPN: 27 (MODERAT)</span>
                                         </div>
                                         <small class="text-muted" style="font-size:.65rem;">Otomatis dihitung dari Dampak &times; Probabilitas &times; Deteksi</small>
                                     </div>
@@ -355,7 +355,7 @@
                                     </div>
                                     <textarea name="failure_mode_fmea" id="input_failure_mode" class="form-control form-control-sm font-monospace"
                                               rows="9" spellcheck="false"
-                                              style="font-size:.82rem; line-height:1.65; border:1.5px solid #cbd5e1; border-radius:8px; padding:10px 12px; background-color:#fafafa;"
+                                              style="font-size:.82rem; line-height:1.65; border:1.5px solid var(--border-strong); border-radius:8px; padding:10px 12px; background-color:#fafafa;"
                                               placeholder="cth susunan rapi:&#10;1. MODE KEGAGALAN:&#10;   Side rails tidak terkunci dengan baik saat digunakan&#10;   a. Efek Potensial:&#10;      Pasien anak terjatuh, risiko cedera kepala&#10;   b. Akar Masalah / Penyebab:&#10;      Mekanisme kunci aus, checklist belum jalan&#10;   c. Barrier / Kontrol Pencegahan:&#10;      Inspeksi rutin bulanan, checklist bed serah terima"></textarea>
 
                                     {# ── Interactive Structured Cards Live Preview ── #}
@@ -404,7 +404,7 @@
                                     </div>
                                     <textarea name="akar_masalah_rca" id="input_akar_masalah" class="form-control form-control-sm font-monospace"
                                               rows="7" spellcheck="false"
-                                              style="font-size:.82rem; line-height:1.65; border:1.5px solid #cbd5e1; border-radius:8px; padding:10px 12px; background-color:#fafafa;"
+                                              style="font-size:.82rem; line-height:1.65; border:1.5px solid var(--border-strong); border-radius:8px; padding:10px 12px; background-color:#fafafa;"
                                               placeholder="1. Mengapa 1: ...&#10;2. Mengapa 2: ...&#10;3. Mengapa 3: ...&#10;4. Mengapa 4: ...&#10;5. Mengapa 5 (Akar Masalah Utama): ..."></textarea>
                                 </div>
                                 <div class="mb-3">
@@ -419,7 +419,7 @@
                                     </div>
                                     <textarea name="tindakan_korektif_rca" id="input_tindakan_korektif" class="form-control form-control-sm font-monospace"
                                               rows="5" spellcheck="false"
-                                              style="font-size:.82rem; line-height:1.65; border:1.5px solid #cbd5e1; border-radius:8px; padding:10px 12px; background-color:#fafafa;"
+                                              style="font-size:.82rem; line-height:1.65; border:1.5px solid var(--border-strong); border-radius:8px; padding:10px 12px; background-color:#fafafa;"
                                               placeholder="1. Tindakan Korektif 1: Revisi SOP serah terima pasien&#10;2. Tindakan Korektif 2: Pengadaan barcode scanner digital&#10;3. Tindakan Korektif 3: Refresh training keselamatan seluruh staf"></textarea>
                                 </div>
                             </div>
@@ -434,8 +434,8 @@
 
                         {# ── Bagian D: Indikator Mutu ── #}
                         <div class="border-top pt-3 mb-4">
-                            <h6 class="fw-bold mb-3 pb-1 border-bottom" style="color:#0f172a; font-size:.82rem;">D. Indikator Mutu</h6>
-                            <div class="mb-2" style="font-size:.7rem; color:#64748b;">
+                            <h6 class="fw-bold mb-3 pb-1 border-bottom" style="color:var(--text-primary); font-size:.82rem;">D. Indikator Mutu</h6>
+                            <div class="mb-2" style="font-size:.7rem; color:var(--text-secondary);">
                                 <span class="badge bg-light text-secondary border me-1">🟢 [INM] Nasional</span>
                                 <span class="badge bg-light text-secondary border me-1">🔵 [Indikator RS] IMP-RS</span>
                                 <span class="badge bg-light text-secondary border me-1">🔴 [Indikator Unit] Unit</span>
@@ -492,7 +492,7 @@
                             </div>
                             {# Preset Rencana Aksi per Indikator #}
                             <div id="preset-rencana-aksi-container" class="mb-3" style="display:none;">
-                                <label class="form-label" style="font-size:.78rem; font-weight:600; color:#0f766e;">
+                                <label class="form-label" style="font-size:.78rem; font-weight:600; color:var(--primary-deep);">
                                     <i class="bi bi-lightning-charge-fill me-1"></i>Pilih Rencana Aksi Cepat <span class="text-muted fw-normal">(klik untuk menambahkan)</span>
                                 </label>
                                 <div id="preset-chips" class="d-flex flex-wrap gap-2"></div>
@@ -501,12 +501,12 @@
 
                         {# ── Bagian E: Rencana Aksi & Mitigasi ──────── #}
                         <div class="border-top pt-3 mb-4">
-                            <h6 class="fw-bold mb-3 pb-1 border-bottom" style="color:#0f172a; font-size:.82rem;">E. Rencana Aksi &amp; Mitigasi</h6>
+                            <h6 class="fw-bold mb-3 pb-1 border-bottom" style="color:var(--text-primary); font-size:.82rem;">E. Rencana Aksi &amp; Mitigasi</h6>
                             <div class="row g-3 mb-3">
                                 <div class="col-md-6">
                                     <label class="form-label d-flex justify-content-between align-items-center" style="font-size:.8rem; font-weight:600;">
                                         <span>Strategi Mitigasi <span class="text-danger">*</span></span>
-                                        <span id="ai-strategi-badge" class="badge d-none" style="font-size:.68rem; background:#0F766E; color:#fff; border-radius:10px; padding:2px 7px;">✨ AI: —</span>
+                                        <span id="ai-strategi-badge" class="badge d-none" style="font-size:.68rem; background:var(--primary); color:#fff; border-radius:10px; padding:2px 7px;">✨ AI: —</span>
                                     </label>
                                     <select name="strategi_mitigasi" id="strategi_mitigasi_select" class="form-select form-select-sm" required>
                                         <option value="">— Pilih —</option>
@@ -537,7 +537,7 @@
                             <div class="mb-3">
                                 <div class="d-flex justify-content-between align-items-center">
                                     <label class="form-label" style="font-size:.8rem; font-weight:600;">Rencana Aksi <span class="text-danger">*</span></label>
-                                    <button type="button" class="btn btn-sm btn-outline-teal px-2 py-0" id="btn-ai-mitigasi" style="font-size:.72rem; border-color:#0F766E; color:#0F766E;">
+                                    <button type="button" class="btn btn-sm btn-outline-teal px-2 py-0" id="btn-ai-mitigasi" style="font-size:.72rem; border-color:var(--primary); color:var(--primary);">
                                         <i class="bi bi-stars me-1"></i>Bantu Susun dengan AI DeepSeek
                                     </button>
                                 </div>
@@ -550,13 +550,13 @@
                             <a href="{% if is_edit %}{% url 'akreditasi:risiko_detail' risiko.pk %}{% else %}{% url 'akreditasi:risiko_daftar' %}{% endif %}" class="btn btn-sm btn-outline-secondary px-3">
                                 <i class="bi bi-x-lg me-1"></i>Batal
                             </a>
-                            <button type="submit" class="btn btn-sm text-white px-4 fw-semibold shadow-sm" style="background:#0F766E;">
+                            <button type="submit" class="btn btn-sm text-white px-4 fw-semibold shadow-sm" style="background:var(--primary);">
                                 <i class="bi bi-save me-1"></i>{% if is_edit %}Simpan Perubahan Risiko{% else %}Simpan Risiko{% endif %}
                             </button>
                         </div>
 
                         {# ── Keterangan Alur: Lanjut ke Pelaksanaan (Do) ── #}
-                        <div class="mt-3 p-3 rounded-3 border" style="background:#f0fdfa; border-color:#99f6e4 !important;">
+                        <div class="mt-3 p-3 rounded-3 border" style="background:var(--primary-tint); border-color:#B9C0F2 !important;">
                             <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
                                 <div class="d-flex align-items-center gap-2">
                                     <span class="badge rounded-pill bg-teal text-white p-2" style="font-size:.78rem;">
@@ -624,7 +624,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const resLevelBadge   = document.getElementById('res-level-badge');
     const deltaRiskDisplay= document.getElementById('delta-risk-display');
 
-    const colors = { SANGAT_TINGGI:'#dc2626', TINGGI:'#ea580c', SEDANG:'#ca8a04', RENDAH:'#16a34a', SANGAT_RENDAH:'#64748b' };
+    const colors = { SANGAT_TINGGI:'#dc2626', TINGGI:'#C2410C', SEDANG:'#B45309', RENDAH:'#15803D', SANGAT_RENDAH:'#5A6880' };
     const labels = { SANGAT_TINGGI:'SANGAT TINGGI', TINGGI:'TINGGI', SEDANG:'SEDANG', RENDAH:'RENDAH', SANGAT_RENDAH:'SANGAT RENDAH' };
 
     function level(s) {
@@ -676,18 +676,18 @@ document.addEventListener('DOMContentLoaded', function() {
             const chip = document.createElement('button');
             chip.type = 'button';
             chip.className = 'btn btn-sm';
-            chip.style.cssText = 'font-size:.72rem; border:1px solid #0F766E; color:#0f766e; background:#f0fdfa; border-radius:20px; padding:3px 12px;';
+            chip.style.cssText = 'font-size:.72rem; border:1px solid #4F5BD5; color:#414CB8; background:#F0EDFF; border-radius:20px; padding:3px 12px;';
             chip.innerHTML = '<i class="bi bi-plus-circle me-1"></i>' + text;
             chip.addEventListener('click', function() {
                 if (!rencanaAksiTA) return;
                 const cur = rencanaAksiTA.value.trim();
                 rencanaAksiTA.value = cur ? cur + '\n• ' + text : '• ' + text;
                 // Visual feedback
-                chip.style.background = '#0F766E';
+                chip.style.background = '#4F5BD5';
                 chip.style.color = '#fff';
                 setTimeout(function() {
-                    chip.style.background = '#f0fdfa';
-                    chip.style.color = '#0f766e';
+                    chip.style.background = '#F0EDFF';
+                    chip.style.color = '#414CB8';
                 }, 800);
                 rencanaAksiTA.scrollIntoView({ behavior: 'smooth', block: 'center' });
             });
@@ -945,9 +945,9 @@ document.addEventListener('DOMContentLoaded', function() {
             const badge = document.createElement('span');
             badge.className = 'badge bg-teal-subtle text-teal-dark border border-teal d-inline-flex align-items-center gap-1 py-1 px-2.5';
             badge.style.fontSize = '.78rem';
-            badge.style.background = '#f0fdfa';
-            badge.style.color = '#0f766e';
-            badge.style.borderColor = '#5eead4 !important';
+            badge.style.background = '#F0EDFF';
+            badge.style.color = '#414CB8';
+            badge.style.borderColor = '#8B93E8 !important';
             badge.style.borderRadius = '16px';
             badge.style.fontWeight = '600';
 
@@ -1325,10 +1325,10 @@ document.addEventListener('DOMContentLoaded', function() {
             inputRpnFmea.value = rpn;
         }
         if (rpnLiveBadge) {
-            let rpnColor = '#16a34a';
+            let rpnColor = '#15803D';
             let rpnText = 'RENDAH';
             if (rpn >= 80) { rpnColor = '#dc2626'; rpnText = 'TINGGI'; }
-            else if (rpn >= 40) { rpnColor = '#ca8a04'; rpnText = 'MODERAT'; }
+            else if (rpn >= 40) { rpnColor = '#B45309'; rpnText = 'MODERAT'; }
             rpnLiveBadge.textContent = `RPN: ${rpn} (${rpnText})`;
             rpnLiveBadge.style.background = rpnColor;
         }
@@ -1503,8 +1503,8 @@ document.addEventListener('DOMContentLoaded', function() {
         if (badge) badge.innerHTML = `<i class="bi bi-list-ol me-1 text-primary"></i>${items.length} Mode Terdeteksi (FMEA)`;
 
         list.innerHTML = items.map(it => `
-            <div class="card border mb-1" style="border-radius:7px; border-color:#e2e8f0; overflow:hidden;">
-                <div class="card-header py-1 px-2.5 d-flex align-items-center gap-2 border-bottom" style="background:#f8fafc;">
+            <div class="card border mb-1" style="border-radius:7px; border-color:#E6EAF2; overflow:hidden;">
+                <div class="card-header py-1 px-2.5 d-flex align-items-center gap-2 border-bottom" style="background:#F6F8FC;">
                     <span class="badge bg-primary px-2 py-0.5 font-monospace" style="font-size:.68rem;">Mode #${it.index}</span>
                     <span class="fw-bold text-dark" style="font-size:.78rem;">${escapeHtml(it.mode || '—')}</span>
                 </div>
@@ -1515,7 +1515,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         <span class="text-dark">${escapeHtml(it.efek)}</span>
                     </div>` : ''}
                     ${it.penyebab ? `
-                    <div class="p-1.5 px-2 rounded" style="background:#fffbeb; border-left:3px solid #f59e0b; font-size:.74rem;">
+                    <div class="p-1.5 px-2 rounded" style="background:#fffbeb; border-left:3px solid #B45309; font-size:.74rem;">
                         <span class="fw-bold text-warning-emphasis me-1"><i class="bi bi-diagram-2 me-1"></i>b. Akar Masalah / Penyebab:</span>
                         <span class="text-dark">${escapeHtml(it.penyebab)}</span>
                     </div>` : ''}

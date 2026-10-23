@@ -154,12 +154,12 @@ def _indicator_block(unit_ids, year, profile=None):
         return {'total': ind_qs.count() or None, 'on_target': None,
                 'below_target': None, 'avg_pct': None, 'catatan_total': 0}
 
-    # ``CatatanIndikator.tercapai`` adalah @property (capaian vs target dengan
-    # polaritas arah_target), bukan kolom — memfilternya di SQL melempar
-    # FieldError dan membuat SETIAP halaman kontrol 500 begitu ada satu baris
-    # catatan. Dihitung di Python; jumlahnya dibatasi 12 baris per indikator
-    # per tahun, dan select_related menjaga ini tetap satu query.
-    on_target = sum(1 for r in cat.select_related('indikator') if r.tercapai)
+    # `tercapai` adalah @property pada model, bukan kolom DB: evaluasi di Python.
+    rows = cat.select_related('indikator').only(
+        'nilai_numerator', 'nilai_denominator',
+        'indikator__target_nilai', 'indikator__arah_target',
+    )
+    on_target = sum(1 for row in rows if row.tercapai)
     avg_raw = (
         cat.filter(nilai_denominator__gt=0)
         .annotate(pct=ExpressionWrapper(
@@ -212,8 +212,12 @@ def _emr_block(unit):
     }
     total_active = sum(by_jenis.values())
     if not total_active:
+        # Bentuk dict harus sama dengan cabang normal: pemanggil (mis.
+        # _kontrol_data_block) membaca key yang sama, dan KeyError di sini
+        # menjatuhkan seluruh endpoint ringkasan AI.
         return {'active_by_jenis': by_jenis, 'active_total': 0, 'cppt_gap': None,
                 'assessment_gap': None, 'bed_occupancy_pct': None,
+                'bed_scope': 'hospital', 'bed_total': None,
                 'cppt_total': None, 'assessment_total': None}
 
     annotated = visits.annotate(

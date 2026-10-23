@@ -9,16 +9,16 @@
 <style>
     .execution-sheet {
         background: #ffffff;
-        border: 1px solid #cbd5e1;
+        border: 1px solid var(--border-strong);
         border-radius: 8px;
         box-shadow: 0 4px 20px rgba(15, 23, 42, 0.08);
         padding: 36px 44px;
         margin-bottom: 30px;
-        color: #1e293b;
+        color: var(--brand-navy);
         font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
     }
     .kop-header {
-        border-bottom: 3px double #0f172a;
+        border-bottom: 3px double var(--text-primary);
         padding-bottom: 14px;
         margin-bottom: 24px;
     }
@@ -26,13 +26,13 @@
         font-size: 1.35rem;
         font-weight: 800;
         letter-spacing: 0.04em;
-        color: #0f172a;
+        color: var(--text-primary);
         margin: 0;
         text-transform: uppercase;
     }
     .kop-address {
         font-size: 0.85rem;
-        color: #475569;
+        color: var(--text-secondary);
         margin-top: 4px;
         margin-bottom: 0;
     }
@@ -41,9 +41,9 @@
         font-weight: 700;
         text-transform: uppercase;
         letter-spacing: 0.05em;
-        color: #0F766E;
-        background: #f0fdfa;
-        border: 1px solid #99f6e4;
+        color: var(--primary);
+        background: var(--primary-tint);
+        border: 1px solid #B9C0F2;
         display: inline-block;
         padding: 6px 18px;
         border-radius: 6px;
@@ -51,16 +51,16 @@
     .section-title-formal {
         font-size: 0.92rem;
         font-weight: 700;
-        color: #0f172a;
+        color: var(--text-primary);
         text-transform: uppercase;
         letter-spacing: 0.03em;
         margin-bottom: 8px;
-        border-left: 4px solid #0F766E;
+        border-left: 4px solid var(--primary);
         padding-left: 10px;
     }
     .callout-box {
-        background: #f8fafc;
-        border: 1px solid #e2e8f0;
+        background: var(--body-bg);
+        border: 1px solid var(--border);
         border-radius: 6px;
         padding: 12px 16px;
         font-size: 0.88rem;
@@ -75,15 +75,15 @@
         word-wrap: break-word;
     }
     .table-formal th, .table-formal td {
-        border: 1px solid #94a3b8;
+        border: 1px solid var(--border-strong);
         padding: 7px 9px;
         vertical-align: top;
         word-break: break-word;
         overflow-wrap: break-word;
     }
     .table-formal th {
-        background-color: #f1f5f9;
-        color: #0f172a;
+        background-color: var(--surface-hover);
+        color: var(--text-primary);
         font-weight: 700;
         text-align: center;
         vertical-align: middle;
@@ -131,7 +131,7 @@
             color: #000000 !important;
         }
         .table-formal th {
-            background-color: #f1f5f9 !important;
+            background-color: var(--surface-hover) !important;
         }
     }
 </style>
@@ -248,7 +248,7 @@
             <h6 class="section-title-formal">2. Ringkasan Realisasi Pelaksanaan (Do)</h6>
             <div class="row g-3">
                 <div class="col-md-3">
-                    <div class="p-3 rounded border text-center" style="background:#f8fafc;">
+                    <div class="p-3 rounded border text-center" style="background:var(--body-bg);">
                         <small class="text-muted d-block" style="font-size:0.75rem;">Total Tindakan Dicatat</small>
                         <span class="fs-4 fw-bold text-dark">{{ total_tl }}</span>
                     </div>
@@ -260,7 +260,7 @@
                     </div>
                 </div>
                 <div class="col-md-3">
-                    <div class="p-3 rounded border text-center" style="background:#eff6ff;">
+                    <div class="p-3 rounded border text-center" style="background:var(--primary-tint);">
                         <small class="text-muted d-block" style="font-size:0.75rem;">Persentase Realisasi</small>
                         <span class="fs-4 fw-bold text-primary">{{ pct_selesai }}%</span>
                     </div>
@@ -349,7 +349,7 @@
                     <tr>
                         <th style="width:4%;">No</th>
                         <th style="width:18%;">Masalah resiko</th>
-                        <th style="width:12%;">Indikator mutu</th>
+                        <th style="width:14%;">Indikator mutu</th>
                         <th style="width:16%;">Pelaksanaan (Do)</th>
                         <th style="width:7%;">Standar</th>
                         <th style="width:7%;">EP</th>
