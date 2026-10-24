@@ -4,16 +4,18 @@
 {% block content %}
 {% include 'akreditasi/kontrol/_portal_header.html' %}
 
+{% include "akreditasi/kontrol/_layanan_unit.html" %}
+
 <section class="kontrol-kpis">
     <div class="kpi">
         <span class="kpi-label">Kunjungan aktif</span>
         <strong class="kpi-value">{{ snapshot.emr.active_total }}</strong>
-        <span class="kpi-foot">status terdaftar s.d. rawat inap</span>
+        <span class="kpi-foot">status terdaftar sampai rawat inap pada unit aktif</span>
     </div>
     <div class="kpi {% if snapshot.emr.cppt_gap %}kpi-critical{% endif %}">
         <span class="kpi-label">Tanpa CPPT</span>
         <strong class="kpi-value">{{ snapshot.emr.cppt_gap|default:"—" }}</strong>
-        <span class="kpi-foot">{{ snapshot.emr.cppt_total|default:0 }} catatan CPPT tercatat</span>
+        <span class="kpi-foot">Catatan Perkembangan Pasien Terintegrasi: {{ snapshot.emr.cppt_total|default:0 }} catatan tercatat</span>
     </div>
     <div class="kpi {% if snapshot.emr.assessment_gap %}kpi-critical{% endif %}">
         <span class="kpi-label">Tanpa asesmen risiko klinis</span>
@@ -21,7 +23,7 @@
         <span class="kpi-foot">{{ snapshot.emr.assessment_total|default:0 }} asesmen tercatat</span>
     </div>
     <div class="kpi">
-        <span class="kpi-label">Okupansi bed <span class="kpi-scope">RS-wide</span></span>
+        <span class="kpi-label">Okupansi bed <span class="kpi-scope">Seluruh RS</span></span>
         <strong class="kpi-value">{% if snapshot.emr.bed_occupancy_pct is not None %}{{ snapshot.emr.bed_occupancy_pct }}%{% else %}—{% endif %}</strong>
         <span class="kpi-foot">{{ snapshot.emr.bed_total|default:0 }} bed aktif</span>
     </div>
@@ -49,6 +51,7 @@
             <h2><i class="bi bi-patch-check"></i> Kredensial PPA</h2>
             <span class="panel-hint">kredensial dinamis</span>
         </header>
+        <p class="kontrol-caption">PPA: Profesional Pemberi Asuhan. Ringkasan mengikuti kredensial yang tercatat pada unit aktif.</p>
         {% if snapshot.ppa.total %}
         <div class="gauge">
             <strong class="gauge-value">{{ snapshot.ppa.pct }}%</strong>
@@ -65,6 +68,4 @@
 </div>
 
 {% include "akreditasi/kontrol/_ai_panel.html" %}
-
-{% include "akreditasi/kontrol/_layanan_unit.html" %}
 {% endblock %}

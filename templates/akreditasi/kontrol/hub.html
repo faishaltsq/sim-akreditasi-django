@@ -6,9 +6,10 @@
     <span class="kontrol-eyebrow">Executive Dashboard for Quality, Risk &amp; EHR Integration</span>
     <h1 class="kontrol-title">ARIMA <span>Hospital Integrated Control</span></h1>
     <p class="kontrol-lede">
-        Satu pintu masuk untuk kendali rumah sakit. Pilih unit contoh, lalu masuk ke
-        sub-dasbor yang Anda butuhkan — setiap sub-dasbor berlanjut ke modul yang sudah ada.
+        Pilih unit aktif untuk melihat ringkasan risiko, layanan klinis, dan dokumen.
+        Buka sub-dasbor untuk melihat rincian dan mengakses modul operasional sesuai hak akses.
     </p>
+    <p class="kontrol-lede">EP: Elemen Penilaian akreditasi. RTL: Rencana Tindak Lanjut. Data bertanda RS mencakup seluruh rumah sakit.</p>
     {% include "akreditasi/kontrol/_unit_switch.html" %}
 </section>
 
@@ -62,7 +63,7 @@
     <i class="bi bi-info-circle"></i>
     Angka operasional dibaca dari tabel modul yang sudah ada; Arima Human Capital memakai
     data ketenagaan dan dokumen privat yang lingkupnya mengikuti izin Anda.
-    Okupansi bed dan cakupan EP bersifat RS-wide; sisanya mengikuti lingkup unit.
+    Okupansi bed dan cakupan EP bersifat seluruh rumah sakit; sisanya mengikuti lingkup unit.
 </p>
 {% endif %}
 {% endblock %}

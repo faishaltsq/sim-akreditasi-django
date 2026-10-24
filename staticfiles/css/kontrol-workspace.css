@@ -20,7 +20,7 @@ body.kontrol-workspace {
   --k-green: #0F766E; --k-amber: #A15C06; --k-red: #B42318;
   --k-shadow: 0 4px 16px rgb(20 33 61 / 5%);
   --k-radius: 16px; --k-radius-sm: 10px;
-  color: var(--k-text); font: 15px/1.55 'Inter', sans-serif;
+  color: var(--k-text); font: 16px/1.6 'Inter', sans-serif;
   background: linear-gradient(160deg, #F0EDFF 0, #F6F8FC 520px);
   min-height: 100vh;
 }
@@ -85,7 +85,7 @@ body.kontrol-workspace {
   -webkit-text-fill-color: currentColor; -webkit-background-clip: border-box;
 }
 .kontrol-workspace :is(.kontrol-hero, .kontrol-header, .kontrol-subhead) .kontrol-eyebrow {
-  color: #C7CDF5; letter-spacing: .06em; font-size: 11px; margin-bottom: 12px;
+  color: #C7CDF5; letter-spacing: .06em; font-size: 13px; margin-bottom: 12px;
 }
 .kontrol-workspace :is(.kontrol-hero, .kontrol-header, .kontrol-subhead)
   :is(.kontrol-lede, .kontrol-lede-sm, .kontrol-lead) {
@@ -130,7 +130,7 @@ body.kontrol-workspace {
   text-decoration: none; color: var(--k-text); background: #FFFFFF; font-weight: 600;
 }
 .kontrol-workspace .kontrol-module-link small {
-  font-size: 12px; line-height: 1.35; font-weight: 500; color: var(--k-muted);
+  font-size: 13px; line-height: 1.5; font-weight: 500; color: var(--k-muted);
 }
 .kontrol-workspace .kontrol-module-link i { color: #4F5BD5; font-size: 12px; }
 .kontrol-workspace .kontrol-module-link:hover { border-color: #AAB4E5; background: #F7F8FE; }
@@ -198,6 +198,55 @@ body.kontrol-workspace {
 .kontrol-workspace .gauge-track { background: #EDF0F6; }
 .kontrol-workspace .gauge-track span { background: #4F5BD5; }
 
+/* ── skala tipografi terbaca ────────────────────────────── */
+
+.kontrol-workspace .panel-head h2 { font-size: 18px; line-height: 1.4; }
+.kontrol-workspace .layanan-head h2 { font-size: 18px; line-height: 1.4; }
+.kontrol-workspace .kpi-label {
+  font-size: 14px; line-height: 1.5; font-weight: 600;
+  text-transform: none; letter-spacing: normal;
+}
+.kontrol-workspace .kpi-foot { font-size: 14px; line-height: 1.55; }
+.kontrol-workspace .kpi-scope { font-size: 13px; line-height: 1.5; letter-spacing: normal; }
+.kontrol-workspace .panel-hint {
+  font-size: 13px; line-height: 1.5; letter-spacing: normal; text-transform: none;
+}
+.kontrol-workspace .layanan-date { font-size: 13px; line-height: 1.5; letter-spacing: normal; }
+.kontrol-workspace .layanan-entry-text strong { font-size: 15px; line-height: 1.5; }
+.kontrol-workspace .layanan-entry-text small { font-size: 14px; line-height: 1.55; }
+.kontrol-workspace .kontrol-caption {
+  font-size: 14px; line-height: 1.55; color: var(--k-muted); margin: 12px 0 0;
+}
+.kontrol-workspace :is(.quick-label, .portal-sub, .portal-foot, .portal-metric span,
+  .bar-label, .bar-list-lg .bar-label, .proxy-label, .proxy-unit, .gauge-label,
+  .kontrol-note, .kontrol-disclaimer, .kontrol-empty-inline, .layanan-empty,
+  .layanan-note, .layanan-sub, .ai-limit) {
+  font-size: 14px; line-height: 1.55; letter-spacing: normal;
+}
+.kontrol-workspace :is(.kontrol-eyebrow, .portal-band, .kontrol-brand small,
+  .kontrol-footer, .kontrol-footer-meta, .matrix-tick, .matrix-axis-x, .matrix-axis-y) {
+  font-size: 13px; line-height: 1.5; letter-spacing: .02em;
+}
+
+.kontrol-workspace :is(.portal-cta, .kontrol-ghost, .kontrol-user,
+  .kontrol-unit-switch label, .kontrol-btn, .layanan-entry-count) {
+  font-size: 14px; line-height: 1.5;
+}
+.kontrol-workspace .layanan-entry {
+  min-height: 44px; padding: 16px; gap: 12px; align-items: center;
+}
+.kontrol-workspace .layanan-entry-text {
+  min-width: 0; flex: 1 1 auto; white-space: normal; overflow-wrap: anywhere;
+}
+.kontrol-workspace .layanan-scope-note { margin-bottom: 12px; }
+.kontrol-workspace .layanan-table { font-size: 14px; line-height: 1.55; }
+.kontrol-workspace .layanan-table thead th { font-size: 13px; letter-spacing: normal; }
+.kontrol-workspace .layanan-table .mono { font-size: 13px; }
+.kontrol-workspace [class*='layanan-badge-'] { font-size: 13px; line-height: 1.5; }
+.kontrol-workspace :is(.kontrol-title, .portal-card h2, .panel-head h2, .layanan-head h2) {
+  overflow-wrap: anywhere;
+}
+
 /* ── unit switch (kartu putih di atas masthead navy) ───── */
 
 .kontrol-workspace .kontrol-unit-switch {
@@ -237,6 +286,10 @@ body.kontrol-workspace {
 
 .kontrol-workspace .layanan-entry { background: #F7F8FC; }
 .kontrol-workspace .layanan-entry:hover { background: #F0EDFF; border-color: #AAB4E5; }
+.kontrol-workspace .layanan-entry-registration {
+  background: #F0EDFF; border-color: #CCD2EF;
+}
+.kontrol-workspace .layanan-entry-registration:hover { background: #E4E7FA; }
 .kontrol-workspace .layanan-entry-icon { background: #F0EDFF; color: #37429E; }
 .kontrol-workspace .layanan-entry-count { color: #37429E; }
 .kontrol-workspace .layanan-entry-go { color: var(--k-muted); }
@@ -300,6 +353,17 @@ body.kontrol-workspace {
   .kontrol-workspace .kontrol-module-link { flex-wrap: wrap; }
   .kontrol-workspace .kontrol-module-link i { margin-left: auto; }
   .kontrol-workspace .kontrol-unit-switch { width: 100%; }
+  .kontrol-workspace .layanan-entry {
+    display: grid; grid-template-columns: 36px minmax(0, 1fr) 18px;
+    grid-template-areas: 'icon text go' '. count .';
+  }
+  .kontrol-workspace .layanan-entry-icon { grid-area: icon; }
+  .kontrol-workspace .layanan-entry-text { grid-area: text; }
+  .kontrol-workspace .layanan-entry-count {
+    grid-area: count; justify-self: start; display: inline-block;
+  }
+  .kontrol-workspace .layanan-entry-go { grid-area: go; justify-self: end; }
+  .kontrol-workspace .layanan-head { align-items: flex-start; gap: 8px; flex-wrap: wrap; }
 }
 
 @media (prefers-reduced-motion: reduce) {

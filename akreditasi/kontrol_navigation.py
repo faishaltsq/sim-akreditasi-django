@@ -18,6 +18,26 @@ def _action(key, label, route, *, scope, **query):
     return {'key': key, 'label': label, 'href': href, 'scope': scope}
 
 
+def registration_action(*, active_portal, allowed_patient_modules=None):
+    """Pintu masuk pendaftaran pasien; hanya untuk portal EMR dan yang berhak.
+
+    Pendaftaran bersifat seluruh rumah sakit, jadi tautan ini sengaja tanpa
+    query string dan tidak menerima unit: tujuan lama tidak membaca filter
+    unit. Tidak ada query di sini.
+    """
+    if active_portal != 'emr' or 'pendaftaran' not in set(allowed_patient_modules or ()):
+        return None
+    action = _action(
+        'pendaftaran', 'Pendaftaran pasien', 'pasien:pendaftaran_dashboard',
+        scope='Seluruh rumah sakit',
+    )
+    action['description'] = (
+        'Buka pendaftaran pasien baru atau lama dan pengaturan tujuan layanan. '
+        'Cakupan seluruh rumah sakit sesuai hak akses.'
+    )
+    return action
+
+
 def module_actions(portal, *, unit, year, is_manager=False,
                    allowed_patient_modules=None, layanan=None):
     """Tautan modul operasional untuk satu portal; kosong bila tidak relevan."""

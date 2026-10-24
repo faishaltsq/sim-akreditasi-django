@@ -99,9 +99,43 @@ class ControlWorkspaceStyleTest(SimpleTestCase):
         self.assertEqual(css.count('.matrix-cell.level-'), 0)
 
     def test_module_link_scope_label_readable(self):
-        """P3: <small> menjelaskan cakupan; 10px terlalu kecil."""
+        """P3: <small> menjelaskan cakupan; minimum metadata ringkas 13px."""
         css = _css()
         decls = _declarations(
             css, '.kontrol-workspace .kontrol-module-link small')
-        self.assertIn('font-size:12px', decls.replace('font-size: 12px', 'font-size:12px'))
-        self.assertIn('line-height:1.35', decls.replace('line-height: 1.35', 'line-height:1.35'))
+        self.assertIn('font-size:13px', decls.replace('font-size: 13px', 'font-size:13px'))
+        self.assertIn('line-height:1.5', decls.replace('line-height: 1.5', 'line-height:1.5'))
+
+    def test_readable_body_and_panel_heading_scale(self):
+        css = _css()
+        body = _declarations(css, 'body.kontrol-workspace')
+        self.assertIn("font: 16px/1.6 'Inter'", body)
+        heading = _declarations(css, '.kontrol-workspace .panel-head h2')
+        self.assertIn('font-size: 18px', heading)
+        self.assertIn('line-height: 1.4', heading)
+
+    def test_readable_labels_and_service_text(self):
+        css = _css()
+        for selector, size in (
+            ('.kontrol-workspace .kpi-label', 14),
+            ('.kontrol-workspace .kpi-foot', 14),
+            ('.kontrol-workspace .kpi-scope', 13),
+            ('.kontrol-workspace .panel-hint', 13),
+            ('.kontrol-workspace .layanan-date', 13),
+            ('.kontrol-workspace .layanan-entry-text strong', 15),
+            ('.kontrol-workspace .layanan-entry-text small', 14),
+            ('.kontrol-workspace .kontrol-caption', 14),
+        ):
+            with self.subTest(selector=selector):
+                self.assertIn(f'font-size: {size}px', _declarations(css, selector))
+
+    def test_service_rows_support_long_mobile_copy(self):
+        css = _css()
+        mobile = _block(css, '@media (max-width: 767px)')
+        row = _declarations(mobile, '.kontrol-workspace .layanan-entry')
+        self.assertIn('display: grid', row)
+        self.assertIn('minmax(0, 1fr)', row)
+        self.assertIn("grid-template-areas: 'icon text go' '. count .'", row)
+        text = _declarations(css, '.kontrol-workspace .layanan-entry-text')
+        self.assertIn('min-width: 0', text)
+        self.assertIn('overflow-wrap: anywhere', text)

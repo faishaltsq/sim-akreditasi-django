@@ -8,6 +8,19 @@
         <span class="layanan-date">{{ snapshot.layanan.tanggal|date:"l, j F Y" }}</span>
     </header>
 
+    {% if registration_action %}
+    <a class="layanan-entry layanan-entry-registration"
+       data-service-action="pendaftaran"
+       href="{{ registration_action.href }}">
+        <span class="layanan-entry-icon"><i class="bi bi-person-plus" aria-hidden="true"></i></span>
+        <span class="layanan-entry-text">
+            <strong>{{ registration_action.label }}</strong>
+            <small>{{ registration_action.description }}</small>
+        </span>
+        <i class="bi bi-arrow-right layanan-entry-go" aria-hidden="true"></i>
+    </a>
+    {% endif %}
+
     {% if not snapshot.layanan.mapped %}
     <p class="layanan-empty">
         <i class="bi bi-info-circle"></i>
@@ -25,6 +38,8 @@
         </span>
         <i class="bi bi-arrow-right layanan-entry-go"></i>
     </a>
+
+    <p class="kontrol-caption layanan-scope-note">Daftar harian mengikuti unit aktif dan tanggal layanan. Pendaftaran pasien dibuka melalui modul terpisah sesuai hak akses.</p>
 
     {% if snapshot.layanan.owns_beds %}
     <a class="layanan-entry layanan-entry-sub" href="{% url 'pasien:bed_management' %}">

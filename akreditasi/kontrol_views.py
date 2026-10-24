@@ -18,7 +18,9 @@ from django.urls import reverse
 from django.views.decorators.http import require_POST
 
 from .kontrol_data import build_unit_snapshot, sample_units, snapshot_cached
-from .kontrol_navigation import module_actions, portal_navigation
+from .kontrol_navigation import (
+    module_actions, portal_navigation, registration_action,
+)
 from .models import UnitKerja
 from .security_utils import rate_limit
 
@@ -109,6 +111,9 @@ def _common_context(request, unit, profile, *, snapshot=None, active_portal='hub
         'is_unit_scoped': bool(profile and profile.is_unit_scoped),
         'can_view_hc': can_view_hc,
         'active_portal': active_portal,
+        'registration_action': registration_action(
+            active_portal=active_portal, allowed_patient_modules=allowed,
+        ),
         'portal_navigation': portal_navigation(
             SUBDASHBOARDS, unit=unit, active_portal=active_portal,
             can_view_hc=can_view_hc,

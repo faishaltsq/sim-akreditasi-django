@@ -6,14 +6,14 @@
 
 <section class="kontrol-kpis">
     <div class="kpi">
-        <span class="kpi-label">Cakupan EP <span class="kpi-scope">RS-wide</span></span>
+        <span class="kpi-label">Cakupan EP <span class="kpi-scope">Seluruh RS</span></span>
         <strong class="kpi-value">{% if snapshot.ep.pct is not None %}{{ snapshot.ep.pct }}%{% else %}—{% endif %}</strong>
-        <span class="kpi-foot">{{ snapshot.ep.filled|default:0 }} dari {{ snapshot.ep.total|default:0 }} item berskor</span>
+        <span class="kpi-foot">{{ snapshot.ep.filled|default:0 }} dari {{ snapshot.ep.total|default:0 }} Elemen Penilaian berskor</span>
     </div>
     <div class="kpi">
         <span class="kpi-label">Item berskor di unit ini</span>
         <strong class="kpi-value">{{ snapshot.ep.unit_filled }}</strong>
-        <span class="kpi-foot">QualityRecord dengan skor &gt; 0</span>
+        <span class="kpi-foot">Catatan mutu unit dengan skor di atas 0</span>
     </div>
     <div class="kpi">
         <span class="kpi-label">Dokumen bukti unit</span>
