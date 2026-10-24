@@ -628,7 +628,10 @@ def dashboard(request):
 # ==============================================================================
 @login_required
 def matriks_pdca(request):
-    categories = Category.objects.all().order_by('order')
+    framework = catalogue.select_catalogue_for_read(
+        request.user, framework_id=request.GET.get('framework') or None
+    )
+    categories = catalogue.scope_categories(framework).order_by('order')
     if not categories.exists():
         return render(request, 'akreditasi/empty.html')
 
@@ -654,13 +657,15 @@ def matriks_pdca(request):
     selected_unit_id = request.GET.get('unit', 'ALL')
 
     if selected_cat_id:
-        active_category = get_object_or_404(Category, id=selected_cat_id)
+        active_category = get_object_or_404(
+            catalogue.scope_categories(framework), id=selected_cat_id
+        )
     else:
         active_category = categories.first()
 
     # Ambil list sub-standar unik di Pokja ini untuk filter
     sub_standards = (
-        StandardItem.objects.filter(category=active_category)
+        catalogue.scope_items(framework).filter(category=active_category)
         .values_list('sub_standard', flat=True)
         .distinct()
         .order_by('sub_standard')
@@ -966,7 +971,10 @@ def unlink_doc(request, file_id):
 # ==============================================================================
 @login_required
 def ep_list(request):
-    categories = Category.objects.all().order_by('order')
+    framework = catalogue.select_catalogue_for_read(
+        request.user, framework_id=request.GET.get('framework') or None
+    )
+    categories = catalogue.scope_categories(framework).order_by('order')
     units = UnitKerja.objects.all().order_by('code')
 
     selected_cat = request.GET.get('cat', 'ALL')
@@ -974,7 +982,11 @@ def ep_list(request):
     selected_unit = request.GET.get('unit', 'ALL')
     search_q = request.GET.get('q', '').strip()
 
-    items_qs = StandardItem.objects.select_related('category', 'record__unit').prefetch_related('evidence_reqs__files').order_by('category__order', 'order', 'code')
+    items_qs = catalogue.scope_items(
+        framework,
+        StandardItem.objects.select_related('category', 'record__unit')
+        .prefetch_related('evidence_reqs__files'),
+    ).order_by('category__order', 'order', 'code')
 
     if selected_cat != 'ALL':
         items_qs = items_qs.filter(category_id=selected_cat)
@@ -989,8 +1001,10 @@ def ep_list(request):
             Q(sub_title__icontains=search_q)
         )
 
-    # Sub-standard list for filtering
-    sub_list = StandardItem.objects.values_list('sub_standard', flat=True).distinct().order_by('sub_standard')
+    # Sub-standard list for filtering (same edition only)
+    sub_list = catalogue.scope_items(framework).values_list(
+        'sub_standard', flat=True
+    ).distinct().order_by('sub_standard')
 
     return render(request, 'akreditasi/ep_list.html', {
         'items': items_qs,
@@ -1001,6 +1015,7 @@ def ep_list(request):
         'selected_sub': selected_sub,
         'selected_unit': selected_unit,
         'search_q': search_q,
+        'selected_framework': framework,
     })
 
 
@@ -1009,10 +1024,15 @@ def ep_list(request):
 # ==============================================================================
 @login_required
 def dokumen_hub(request):
+    framework = catalogue.select_catalogue_for_read(
+        request.user, framework_id=request.GET.get('framework') or None
+    )
     selected_type = request.GET.get('type', 'ALL')
     search_q = request.GET.get('q', '').strip()
 
-    files_qs = EvidenceFile.objects.select_related(
+    files_qs = EvidenceFile.objects.filter(
+        requirement__standard_item__category__framework=framework
+    ).select_related(
         'requirement__standard_item__category',
         'requirement__standard_item__record__unit'
     ).order_by('-uploaded_at')
@@ -1032,6 +1052,7 @@ def dokumen_hub(request):
         'selected_type': selected_type,
         'search_q': search_q,
         'total_files': files_qs.count(),
+        'selected_framework': framework,
     })
 
 
@@ -1447,8 +1468,15 @@ def rekap_view(request):
     if not _is_manager_role(request.user):
         from django.http import HttpResponseForbidden
         return HttpResponseForbidden("Akses ditolak. Halaman ini hanya untuk Admin, Kepala Unit, dan Koordinator Pokja.")
-    categories = Category.objects.all().order_by('order')
-    items = StandardItem.objects.select_related('category', 'record__unit').prefetch_related('evidence_reqs__files').order_by('category__order', 'order', 'code')
+    framework = catalogue.select_catalogue_for_read(
+        request.user, framework_id=request.GET.get('framework') or None
+    )
+    categories = catalogue.scope_categories(framework).order_by('order')
+    items = catalogue.scope_items(
+        framework,
+        StandardItem.objects.select_related('category', 'record__unit')
+        .prefetch_related('evidence_reqs__files'),
+    ).order_by('category__order', 'order', 'code')
 
     total_possible = items.count() * 10
     total_score = sum(i.record.score for i in items if hasattr(i, 'record') and i.record)
@@ -1463,6 +1491,7 @@ def rekap_view(request):
         'total_score': total_score,
         'overall_pct': overall_pct,
         'total_rka': total_rka,
+        'selected_framework': framework,
     })
 
 
@@ -1511,7 +1540,10 @@ def auto_scoring_pokja(request):
     if not _is_manager_role(request.user):
         from django.http import HttpResponseForbidden
         return HttpResponseForbidden("Akses ditolak. Fitur ini hanya untuk Admin, Kepala Unit, dan Koordinator Pokja.")
-    categories = Category.objects.all().order_by('order')
+    framework = catalogue.select_catalogue_for_read(
+        request.user, framework_id=request.GET.get('framework') or None
+    )
+    categories = catalogue.scope_categories(framework).order_by('order')
 
     def _nilai_akreditasi(pct):
         if pct >= 80: return ('Paripurna', '#16a34a', '★★★★★')

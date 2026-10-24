@@ -227,6 +227,74 @@ def resolve_catalogue(user, *, framework_id=None):
     return active
 
 
+def select_catalogue_for_read(user, *, framework_id=None):
+    """Resolve the framework used for READ screens (EP list, matrix, dashboard).
+
+    Unlike ``resolve_catalogue`` this never raises when no catalogue is marked
+    ACTIVE yet: it falls back to the newest readable framework so operational
+    screens keep working during a data-normalisation window. The fallback is
+    still *edition-scoped* — never a union of editions.
+
+    Explicit ``framework_id`` selects a readable archive (ACTIVE or ARCHIVED).
+    Staged candidates are rejected.
+    """
+    if framework_id is not None:
+        try:
+            fw = Framework.objects.get(pk=framework_id)
+        except (ValueError, ValidationError):
+            raise ValueError(f"ID katalog tidak valid: {framework_id!r}")
+        except Framework.DoesNotExist:
+            raise Framework.DoesNotExist(
+                f"Katalog dengan id {framework_id!r} tidak ditemukan."
+            )
+        if fw.lifecycle not in ('ACTIVE', 'ARCHIVED'):
+            raise PermissionDenied(
+                f"Katalog '{fw.name}' masih dalam tahap staging ({fw.lifecycle})."
+            )
+        return fw
+
+    active = Framework.active()
+    if active is not None:
+        return active
+
+    # Data-normalisation fallback: newest readable framework, still one edition.
+    fallback = (
+        Framework.objects
+        .exclude(lifecycle__in=('DRAFT', 'VALIDATED'))
+        .order_by('-edition', '-version', 'pk')
+        .first()
+    )
+    if fallback is not None:
+        logger.warning(
+            'No ACTIVE framework; read screens fall back to framework id=%s (%s, lifecycle=%s).',
+            fallback.pk, fallback.name, fallback.lifecycle,
+        )
+        return fallback
+
+    # Last resort: any framework at all (fresh/unseeded databases).
+    fallback = Framework.objects.order_by('-edition', '-version', 'pk').first()
+    if fallback is not None:
+        logger.warning('No lifecycle-normalised framework; using framework id=%s.', fallback.pk)
+        return fallback
+
+    raise PermissionDenied('Belum ada katalog akreditasi yang terpasang.')
+
+
+def scope_categories(framework):
+    """Return categories belonging strictly to one framework edition."""
+    if framework is None:
+        return Category.objects.none()
+    return Category.objects.filter(framework=framework)
+
+
+def scope_items(framework, queryset=None):
+    """Return standard items belonging strictly to one framework edition."""
+    queryset = queryset if queryset is not None else StandardItem.objects.all()
+    if framework is None:
+        return queryset.none()
+    return queryset.filter(category__framework=framework)
+
+
 def require_catalogue_write(user, *, item, operation):
     """Central gate before every catalogue mutation.
 

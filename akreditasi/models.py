@@ -61,6 +61,15 @@ class Framework(models.Model):
     def __str__(self):
         return f"{self.name} ({self.cycle_type})"
 
+    # Legacy/typo lifecycle values mapped onto the canonical vocabulary.
+    LEGACY_LIFECYCLE_ALIASES = {
+        'ARCHIVE': 'ARCHIVED',
+        'ARCHIVED_LEGACY': 'ARCHIVED',
+        'INACTIVE': 'ARCHIVED',
+        'PUBLISHED': 'ACTIVE',
+        'LIVE': 'ACTIVE',
+    }
+
     def clean(self):
         from django.core.exceptions import ValidationError
 
@@ -70,10 +79,16 @@ class Framework(models.Model):
             )
 
     def save(self, *args, **kwargs):
-        # Lifecycle enforcement belongs to the service layer
-        # (catalogue.require_catalogue_write / catalogue_services.activate_catalogue),
-        # not to model save: seeding and legacy creation must not be blocked by
-        # strict clean() on every Framework write.
+        # Normalise legacy lifecycle spellings (e.g. the historical 'ARCHIVE'
+        # typo) so Framework.active() and every edition-scoped read agree on a
+        # single canonical vocabulary. We deliberately do NOT force is_active
+        # here: that combination is repaired by the data migration and rejected
+        # by the service layer (require_catalogue_write), and forcing it in
+        # save() would break legitimate fixtures/tests that build transitional
+        # states.
+        canonical = self.LEGACY_LIFECYCLE_ALIASES.get(self.lifecycle, self.lifecycle)
+        if canonical != self.lifecycle:
+            self.lifecycle = canonical
         super().save(*args, **kwargs)
 
     @classmethod
