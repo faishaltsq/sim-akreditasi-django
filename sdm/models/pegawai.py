@@ -18,6 +18,12 @@ class Pegawai(models.Model):
         ('AKTIF', 'Aktif'),
         ('NONAKTIF', 'Nonaktif'),
     ]
+    DATA_ORIGIN_CHOICES = [
+        ('UNCLASSIFIED', 'Belum Diklasifikasi'),
+        ('DEMO', 'Data Demo / Seeder'),
+        ('VERIFIED_IMPORT', 'Impor Terverifikasi'),
+        ('MANUAL', 'Input Manual'),
+    ]
 
     akun = models.OneToOneField(
         settings.AUTH_USER_MODEL,
@@ -36,6 +42,11 @@ class Pegawai(models.Model):
     jabatan = models.CharField('Jabatan', max_length=150, blank=True)
     status = models.CharField(
         'Status Kepegawaian', max_length=10, choices=STATUS_CHOICES, default='AKTIF'
+    )
+    data_origin = models.CharField(
+        'Sumber Data', max_length=20, choices=DATA_ORIGIN_CHOICES,
+        default='UNCLASSIFIED', blank=False,
+        help_text='Provenensi baris data. UNCLASSIFIED untuk baris seeder yang belum diverifikasi.',
     )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -115,3 +126,37 @@ class PenempatanPegawai(models.Model):
         return self.tanggal_mulai <= today and (
             self.tanggal_selesai is None or self.tanggal_selesai >= today
         )
+
+
+class MasterProfesiPegawai(models.Model):
+    """Reviewed profession master grouping medical, nursing/midwifery,
+    other health and nonclinical staff."""
+    KELUARGA_CHOICES = [
+        ('MEDIS', 'Medis'),
+        ('KEPERAWATAN_KEBIDANAN', 'Keperawatan & Kebidanan'),
+        ('NAKES_LAIN', 'Tenaga Kesehatan Lainnya'),
+        ('NON_KLINIS', 'Non Klinis'),
+    ]
+    code = models.CharField('Kode Profesi', max_length=30, unique=True)
+    nama = models.CharField('Nama Profesi', max_length=120)
+    keluarga = models.CharField('Kelompok Profesi', max_length=30, choices=KELUARGA_CHOICES)
+    is_active = models.BooleanField('Aktif', default=True)
+    reviewed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='hc_professions_reviewed',
+        verbose_name='Ditinjau Oleh',
+    )
+    reviewed_at = models.DateTimeField('Waktu Tinjauan', null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = 'Master Profesi Pegawai'
+        verbose_name_plural = 'Master Profesi Pegawai'
+        ordering = ['keluarga', 'nama']
+
+    def __str__(self):
+        return f'{self.code} — {self.nama}'

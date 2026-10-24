@@ -1,5 +1,11 @@
 from .dokumen import DokumenForm, ReviewDokumenForm
 from .formasi import AktivitasBebanKerjaForm, RencanaFormasiForm
+from .k3 import (
+    ImunisasiPegawaiForm,
+    InsidenK3PegawaiForm,
+    PemeriksaanKesehatanKerjaForm,
+    TindakLanjutK3Form,
+)
 from .level2_5 import (
     KebutuhanPelatihanForm,
     LamaranForm,
@@ -27,4 +33,8 @@ __all__ = [
     'ReviewDokumenForm',
     'RincianKewenanganForm',
     'VerifikasiSumberForm',
+    'ImunisasiPegawaiForm',
+    'InsidenK3PegawaiForm',
+    'PemeriksaanKesehatanKerjaForm',
+    'TindakLanjutK3Form',
 ]

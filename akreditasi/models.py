@@ -7,9 +7,42 @@ class Framework(models.Model):
     name = models.CharField('Nama Standar', max_length=200)
     cycle_type = models.CharField('Siklus Kendali Mutu', max_length=20, default='PDCA')
     version = models.CharField('Versi / Edisi', max_length=50, default='2026')
+    edition = models.CharField('Edisi Standar', max_length=20, default='2022')
+    source_type = models.CharField(
+        'Jenis Sumber',
+        max_length=20,
+        choices=[
+            ('STANDARD_DECREE', 'Standar Keputusan'),
+            ('SURVEY_INSTRUMENT', 'Instrumen Survei'),
+            ('ARCHIVE', 'Arsip'),
+            ('DRAFT', 'Draft Katalog'),
+        ],
+        default='ARCHIVE',
+    )
+    lifecycle = models.CharField(
+        'Siklus Katalog',
+        max_length=20,
+        choices=[
+            ('DRAFT', 'Draft'),
+            ('VALIDATED', 'Divalidasi'),
+            ('ACTIVE', 'Aktif'),
+            ('ARCHIVED', 'Arsip'),
+        ],
+        default='ARCHIVED',
+    )
+    source_hash = models.CharField('SHA-256 Sumber', max_length=64, blank=True)
+    source_pages = models.PositiveIntegerField('Jumlah Halaman Sumber', default=0)
+    reviewed_at = models.DateTimeField('Ditinjau Pada', null=True, blank=True)
+    reviewed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='reviewed_frameworks',
+    )
     is_active = models.BooleanField(
         'Katalog Aktif', default=True,
-        help_text='Hanya satu katalog yang boleh aktif; katalog lama diarsipkan.',
+        help_text='Hanya satu katalog yang boleh aktif; katalog lama diarsipkan. Hanya lifecycle=ACTIVE yang boleh aktif.',
     )
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -17,17 +50,39 @@ class Framework(models.Model):
         verbose_name = 'Standar Akreditasi'
         verbose_name_plural = 'Standar Akreditasi'
         ordering = ['-version', 'pk']
+        constraints = [
+            models.UniqueConstraint(
+                condition=models.Q(lifecycle='ACTIVE'),
+                fields=['lifecycle'],
+                name='unique_active_framework_lifecycle',
+            ),
+        ]
 
     def __str__(self):
         return f"{self.name} ({self.cycle_type})"
 
+    def clean(self):
+        from django.core.exceptions import ValidationError
+
+        if self.is_active and self.lifecycle != 'ACTIVE':
+            raise ValidationError(
+                {'is_active': 'Hanya framework dengan lifecycle=ACTIVE yang boleh ditandai aktif.'}
+            )
+
+    def save(self, *args, **kwargs):
+        # Lifecycle enforcement belongs to the service layer
+        # (catalogue.require_catalogue_write / catalogue_services.activate_catalogue),
+        # not to model save: seeding and legacy creation must not be blocked by
+        # strict clean() on every Framework write.
+        super().save(*args, **kwargs)
+
     @classmethod
     def active(cls):
-        """Return the catalogue in use, preferring an explicit active flag.
+        """Return the catalogue in use, restricted to lifecycle='ACTIVE'.
 
         Historical data migrations call this while the table may predate the
-        `is_active` column, so a missing column must fall back instead of
-        aborting the migration.
+        `is_active` / `lifecycle` columns, so a missing column must fall back
+        instead of aborting the migration.
         """
         from django.db import connection
 
@@ -37,14 +92,11 @@ class Framework(models.Model):
                 connection.cursor(), cls._meta.db_table
             )
         }
-        if 'is_active' not in columns:
-            # A data migration can call this before the column exists; any ORM
-            # read would fail and poison the surrounding transaction.
+        if 'is_active' not in columns or 'lifecycle' not in columns:
             return None
 
-        chosen = cls.objects.filter(is_active=True).order_by('-version', 'pk').first()
-        return chosen or cls.objects.order_by('-version', 'pk').first()
-
+        chosen = cls.objects.filter(lifecycle='ACTIVE', is_active=True).order_by('-version', 'pk').first()
+        return chosen or cls.objects.filter(lifecycle='ACTIVE').order_by('-version', 'pk').first()
 
 TIPE_UNIT_CHOICES = [
     ('PIMPINAN', 'Pimpinan / Pemilik / Dewas'),
@@ -133,6 +185,7 @@ class Category(models.Model):
         verbose_name = 'Kelompok Kerja (Pokja)'
         verbose_name_plural = 'Kelompok Kerja (Pokja)'
         ordering = ['order', 'code']
+        unique_together = [('framework', 'code')]
 
     def __str__(self):
         return f"{self.code} - {self.name}"
@@ -184,7 +237,11 @@ class StandardItem(models.Model):
     category = models.ForeignKey(Category, on_delete=models.CASCADE, related_name='items')
     sub_standard = models.CharField('Sub-Standar', max_length=50)  # misal: TKRS 1
     sub_title = models.CharField('Judul Sub-Standar', max_length=250)  # misal: Representasi Pemilik
-    code = models.CharField('Kode Elemen Penilaian (EP)', max_length=50, unique=True)  # misal: TKRS 1 EP 1
+    code = models.CharField('Kode Elemen Penilaian (EP)', max_length=50)  # misal: TKRS 1 EP 1
+    source_ep_code = models.CharField('Kode EP Sumber Asli', max_length=50, blank=True)
+    description_full = models.TextField('Teks Lengkap Standar/EP', blank=True)
+    page_reference = models.CharField('Referensi Halaman', max_length=100, blank=True)
+    rdwos_instruction = models.TextField('Instruksi Bukti RDWOS', blank=True)
     description = models.TextField('Bunyi Standar / Elemen Penilaian')
     order = models.PositiveIntegerField('Urutan', default=0)
 
@@ -192,6 +249,7 @@ class StandardItem(models.Model):
         verbose_name = 'Elemen Penilaian (EP)'
         verbose_name_plural = 'Elemen Penilaian (EP)'
         ordering = ['category__order', 'order', 'code']
+        unique_together = [('category', 'code')]
 
     def __str__(self):
         return f"{self.code}: {self.description[:60]}"
@@ -233,6 +291,13 @@ class QualityRecord(models.Model):
         ('NON_BUDGET', 'Non-Biaya (Rp 0)'),
         ('DRAFT', 'Draft'),
     ]
+    ASSESSMENT_STATE_CHOICES = [
+        ('UNASSESSED', 'Belum Dinilai'),
+        ('ASSESSED', 'Dinilai'),
+        ('REVIEW_REQUIRED', 'Perlu Tinjauan Ulang'),
+    ]
+
+    assessment_state = models.CharField('Status Asesmen', max_length=20, choices=ASSESSMENT_STATE_CHOICES, default='UNASSESSED')
 
     standard_item = models.OneToOneField(StandardItem, on_delete=models.CASCADE, related_name='record')
     unit = models.ForeignKey(UnitKerja, on_delete=models.PROTECT, related_name='records')
@@ -419,3 +484,207 @@ from .logbook_models import (  # noqa: E402, F401
     LogbookBukti,
     LogbookKejadian,
 )
+
+class SumberKatalog(models.Model):
+    """Manifest sumber katalog standar (edisi/dekre/instrumen/arsip)."""
+    framework = models.ForeignKey(
+        'Framework', on_delete=models.CASCADE, related_name='sumber_katalog_entries'
+    )
+    source_path = models.CharField('Path Sumber', max_length=500)
+    sha256 = models.CharField('SHA-256 Berkas Sumber', max_length=64, blank=True)
+    document_type = models.CharField('Tipe Dokumen', max_length=50, blank=True)
+    decree_number = models.CharField('Nomor Keputusan', max_length=100, blank=True)
+    instrument_type = models.CharField('Jenis Instrumen', max_length=50, blank=True)
+    pages = models.PositiveIntegerField('Jumlah Halaman', default=0)
+    extracted_at = models.DateTimeField('Diekstrak Pada', null=True, blank=True)
+    reviewed = models.BooleanField('Direview', default=False)
+    reviewed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='sumber_katalog_reviews',
+    )
+    manifest_json = models.JSONField('Manifest JSON', default=dict, blank=True)
+
+    class Meta:
+        verbose_name = 'Sumber Katalog'
+        verbose_name_plural = 'Sumber Katalog'
+        ordering = ['-extracted_at', 'pk']
+
+    def __str__(self):
+        return f"{self.framework} - {self.document_type}"
+
+
+class PemetaanEdisi(models.Model):
+    """Keputusan pemetaan item antar edisi katalog standar."""
+    CLASSIFICATION_CHOICES = [
+        ('UNCHANGED', 'Tidak Berubah'),
+        ('CHANGED', 'Berubah'),
+        ('SPLIT', 'Dipisah'),
+        ('MERGED', 'Digabung'),
+        ('RETIRED', 'Dicabut'),
+        ('NEW', 'Baru'),
+        ('UNRESOLVED', 'Tidak Terpecahkan'),
+    ]
+    SCORE_POLICY_CHOICES = [
+        ('REASSESS', 'Dinilai Ulang'),
+        ('CARRY_ASSESSMENT', 'Bawa Asesmen'),
+    ]
+
+    source_framework = models.ForeignKey(
+        'Framework', on_delete=models.CASCADE, related_name='pemetaan_source'
+    )
+    source_item_id = models.PositiveIntegerField('ID Item Sumber')
+    source_code = models.CharField('Kode Sumber', max_length=50)
+    source_text_hash = models.CharField('Hash Teks Sumber', max_length=64, blank=True)
+
+    target_framework = models.ForeignKey(
+        'Framework', on_delete=models.CASCADE, related_name='pemetaan_target'
+    )
+    target_item_id = models.PositiveIntegerField('ID Item Target')
+    target_code = models.CharField('Kode Target', max_length=50)
+    target_text_hash = models.CharField('Hash Teks Target', max_length=64, blank=True)
+
+    classification = models.CharField(
+        'Klasifikasi Pemetaan', max_length=20, choices=CLASSIFICATION_CHOICES, default='UNRESOLVED'
+    )
+    evidence_rule_map = models.JSONField('Aturan Bukti', default=dict, blank=True)
+    score_policy = models.CharField(
+        'Kebijakan Skor', max_length=20, choices=SCORE_POLICY_CHOICES, default='CARRY_ASSESSMENT'
+    )
+    reason = models.TextField('Alasan Pemetaan', blank=True)
+    reviewer = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='pemetaan_reviews',
+    )
+    reviewed_at = models.DateTimeField('Ditinjau Pada', null=True, blank=True)
+    approved = models.BooleanField('Disetujui', default=False)
+
+    class Meta:
+        verbose_name = 'Pemetaan Edisi'
+        verbose_name_plural = 'Pemetaan Edisi'
+        ordering = ['-reviewed_at', 'pk']
+
+    def __str__(self):
+        return f"{self.source_code} -> {self.target_code} ({self.classification})"
+
+
+class TautanAsesmenLintasEdisi(models.Model):
+    """Tautan asesmen QualityRecord lintas edisi (sumber -> target)."""
+    source_record = models.ForeignKey(
+        'QualityRecord',
+        on_delete=models.CASCADE,
+        related_name='tautan_asesmen_source',
+        verbose_name='QualityRecord Sumber',
+    )
+    target_record = models.ForeignKey(
+        'QualityRecord',
+        on_delete=models.CASCADE,
+        related_name='tautan_asesmen_target',
+        verbose_name='QualityRecord Target',
+    )
+    mapping = models.ForeignKey(
+        PemetaanEdisi,
+        on_delete=models.CASCADE,
+        related_name='tautan_asesmen',
+        verbose_name='Pemetaan Edisi',
+    )
+    state = models.CharField('Status', max_length=20, choices=QualityRecord.ASSESSMENT_STATE_CHOICES, default='UNASSESSED')
+
+    class Meta:
+        verbose_name = 'Tautan Asesmen Lintas Edisi'
+        verbose_name_plural = 'Tautan Asesmen Lintas Edisi'
+        ordering = ['-pk']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['source_record', 'target_record', 'mapping'],
+                name='unique_asesmen_link_per_mapping',
+            ),
+        ]
+
+    def __str__(self):
+        return f"Asesmen {self.source_record} -> {self.target_record}"
+
+
+class TautanBuktiLintasEdisi(models.Model):
+    """Tautan bukti EvidenceFile lintas edisi (sumber -> target)."""
+    source_file = models.ForeignKey(
+        'EvidenceFile',
+        on_delete=models.CASCADE,
+        related_name='tautan_bukti_source',
+        verbose_name='Berkas Sumber',
+    )
+    target_file = models.ForeignKey(
+        'EvidenceFile',
+        on_delete=models.CASCADE,
+        related_name='tautan_bukti_target',
+        verbose_name='Berkas Target',
+    )
+    mapping = models.ForeignKey(
+        PemetaanEdisi,
+        on_delete=models.CASCADE,
+        related_name='tautan_bukti',
+        verbose_name='Pemetaan Edisi',
+    )
+    status = models.CharField('Status Tautan', max_length=30, default='LINKED')
+
+    class Meta:
+        verbose_name = 'Tautan Bukti Lintas Edisi'
+        verbose_name_plural = 'Tautan Bukti Lintas Edisi'
+        ordering = ['-pk']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['source_file', 'target_file', 'mapping'],
+                name='unique_bukti_link_per_mapping',
+            ),
+        ]
+
+    def __str__(self):
+        return f"Bukti {self.source_file} -> {self.target_file}"
+
+
+class AktivasiKatalog(models.Model):
+    """Catatan aktivasi katalog standar (framework yang diaktifkan)."""
+    STATUS_CHOICES = [
+        ('PLANNED', 'Direncanakan'),
+        ('ACTIVE', 'Aktif'),
+        ('ROLLED_BACK', 'Dikembalikan'),
+        ('FAILED', 'Gagal'),
+    ]
+
+    framework = models.ForeignKey(
+        'Framework', on_delete=models.CASCADE, related_name='aktivasi_entries', verbose_name='Framework Diaktifkan'
+    )
+    activated_at = models.DateTimeField('Diaktifkan Pada', auto_now_add=True)
+    actor = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='aktivasi_katalog',
+    )
+    previous_framework = models.ForeignKey(
+        'Framework',
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='aktivasi_as_previous',
+        verbose_name='Framework Sebelumnya',
+    )
+    source_hash = models.CharField('SHA-256 Sumber', max_length=64, blank=True)
+    plan_hash = models.CharField('SHA-256 Rencana', max_length=64, blank=True)
+    backup_reference = models.CharField('Referensi Cadangan', max_length=200, blank=True)
+    status = models.CharField('Status Aktivasi', max_length=20, choices=STATUS_CHOICES, default='PLANNED')
+    run_metadata = models.JSONField('Metadata Pelaksanaan', default=dict, blank=True)
+
+    class Meta:
+        verbose_name = 'Aktivasi Katalog'
+        verbose_name_plural = 'Aktivasi Katalog'
+        ordering = ['-activated_at', 'pk']
+
+    def __str__(self):
+        return f"Aktivasi {self.framework} ({self.status})"

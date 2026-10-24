@@ -70,11 +70,12 @@ class SupabasePrivateStorage:
             raise PrivateStorageError("Storage request failed")
         return response
 
-    def upload(self, file_obj, *, owner_id: str, sensitivity: str, filename: str = "", content_type: str = "") -> StoredPrivateObject:
+    def upload(self, file_obj, *, owner_id: str, sensitivity: str, filename: str = "", content_type: str = "", max_bytes: int | None = None) -> StoredPrivateObject:
+        limit = max_bytes if max_bytes is not None else self.max_bytes
         try:
             if sensitivity not in ("personnel", "health") or str(uuid.UUID(owner_id)) != owner_id:
                 raise PrivateStorageError("Invalid object scope")
-            data = file_obj.read(self.max_bytes + 1)
+            data = file_obj.read(limit + 1)
             if not isinstance(data, bytes) or not data or len(data) > self.max_bytes:
                 raise PrivateStorageError("Invalid file size or stream")
             mime = self._mime(filename, content_type, data)

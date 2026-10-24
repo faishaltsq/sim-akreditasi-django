@@ -1,5 +1,5 @@
 """Permission-scoped dashboard metrics for Arima Human Capital."""
-from django.db.models import Count
+from django.db.models import Count, Q
 from django.utils import timezone
 
 from sdm.akses import require_hc_capability, visible_employees, visible_units
@@ -13,6 +13,7 @@ from sdm.models import (
 )
 from sdm.models.pengingat import visible_reminders
 from sdm.services.kepatuhan import evaluate_employee_compliance, expiry_bands
+from sdm.services.metric_scope import metric_metadata, resolve_metric_population
 
 
 def _scoped_employees(user, *, unit=None, profesi='', status=''):
@@ -57,9 +58,11 @@ def build_hc_dashboard(user, *, filters=None):
         document__in=documents, status='PENDING'
     ).count()
 
+    # Training coverage: annual window (current calendar year) per source policy.
     training_coverage = None
+    year_start = today.replace(month=1, day=1)
     training_sessions = SesiDiklat.objects.filter(
-        tanggal__lte=today
+        tanggal__gte=year_start, tanggal__lte=today
     ).prefetch_related('participants')
     if scope_employee_ids and training_sessions.exists():
         eligible = len(scope_employee_ids)
@@ -79,15 +82,22 @@ def build_hc_dashboard(user, *, filters=None):
     if not scope_units.exists():
         overdue_orientation = 0
 
+    # Compliance scope uses all visible employees (honest denominator); unclassified
+    # exclusion applies to FTE/staffing production calculations separately.
+    population = resolve_metric_population(
+        user, unit=unit, as_of=today,
+        origin_policy={'exclude_unclassified': False},
+    )
     compliance_results = []
-    for employee in employees[:200]:
+    for employee in population:
         summary = evaluate_employee_compliance(employee, as_of=today)
         if summary.has_data:
             compliance_results.append(summary)
     complete = sum(1 for s in compliance_results if s.completeness_pct == 100.0)
+    applicable = len(compliance_results)
     compliance_pct = None
-    if compliance_results:
-        compliance_pct = round(complete / len(compliance_results) * 100, 1)
+    if applicable:
+        compliance_pct = round(complete / applicable * 100, 1)
 
     staffing = []
     if scope_units.exists():
@@ -114,6 +124,8 @@ def build_hc_dashboard(user, *, filters=None):
         'total_employees': employee_count,
         'has_employees': employee_count > 0,
         'compliance_pct': compliance_pct,
+        'compliance_requirements_applicable': applicable,
+        'compliance_employees_complete': complete,
         'compliance_scope_count': len(compliance_results),
         'pending_reviews': pending_reviews,
         'expiring': expiring_in_scope,

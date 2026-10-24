@@ -7,6 +7,21 @@ from django.utils import timezone
 
 
 class DokumenPegawai(models.Model):
+    DOCUMENT_KIND_CHOICES = [
+        ('KTP', 'KTP'),
+        ('FOTO', 'Foto'),
+        ('IJAZAH', 'Ijazah'),
+        ('TRANSKRIP', 'Transkrip Nilai'),
+        ('STR', 'STR'),
+        ('SIP', 'SIP'),
+        ('SIPA', 'SIPA'),
+        ('KONTRAK', 'Kontrak Kerja'),
+        ('SK_PENGANGKATAN', 'SK Pengangkatan'),
+        ('SPK_RKK', 'SPK RKK'),
+        ('URAIAN_TUGAS', 'Uraian Tugas'),
+        ('SERTIFIKAT', 'Sertifikat'),
+        ('OTHER', 'Lainnya'),
+    ]
     DOCUMENT_TYPE_CHOICES = [
         ('IDENTITY', 'Identitas'),
         ('CONTRACT', 'Kontrak Kepegawaian'),
@@ -29,6 +44,11 @@ class DokumenPegawai(models.Model):
     )
     document_type = models.CharField(
         'Jenis Dokumen', max_length=20, choices=DOCUMENT_TYPE_CHOICES
+    )
+    jenis_berkas = models.CharField(
+        'Jenis Berkas', max_length=20, choices=DOCUMENT_KIND_CHOICES,
+        default='OTHER', blank=False,
+        help_text='Identitas berkas yang diuji terhadap persyaratan spesifik, bukan sekadar kelompok sensitivitas.',
     )
     title = models.CharField('Judul Dokumen', max_length=250)
     sensitivity = models.CharField(
@@ -208,6 +228,12 @@ class AturanDokumen(models.Model):
 
     document_type = models.CharField(
         'Jenis Dokumen', max_length=20, choices=DokumenPegawai.DOCUMENT_TYPE_CHOICES
+    )
+    jenis_berkas_wajib = models.CharField(
+        'Jenis Berkas Wajib', max_length=20,
+        choices=DokumenPegawai.DOCUMENT_KIND_CHOICES,
+        default='OTHER', blank=False,
+        help_text='Persyaratan spesifik jenis berkas yang diijinkan untuk aturan ini.',
     )
     name = models.CharField('Nama Persyaratan', max_length=200)
     kategori = models.CharField(

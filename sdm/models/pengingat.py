@@ -47,6 +47,7 @@ class PengingatSDM(models.Model):
     channel = models.CharField(
         'Kanal', max_length=12, choices=CHANNEL_CHOICES, default='IN_APP'
     )
+    alasan = models.TextField('Alasan Peringatan', blank=True)
     idempotency_key = models.CharField('Kunci Idempotensi', max_length=120, unique=True)
     created_at = models.DateTimeField(auto_now_add=True)
     read_at = models.DateTimeField('Dibaca Pada', null=True, blank=True)

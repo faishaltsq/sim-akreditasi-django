@@ -61,6 +61,8 @@ def _cleanup_uploaded_object(storage, storage_key):
         logger.error('Private-object cleanup failed after document rollback.')
 
 
+INTAKE_MAX_BYTES = 5_242_880  # 5 MiB per intake attachment
+
 def store_private_document(
     file_obj,
     *,
@@ -71,6 +73,7 @@ def store_private_document(
     uploaded_by,
     issued_date=None,
     valid_until=None,
+    max_bytes=INTAKE_MAX_BYTES,
 ):
     if sensitivity not in dict(DokumenPegawai.SENSITIVITY_CHOICES):
         raise ValidationError({'sensitivity': 'Klasifikasi dokumen tidak valid.'})
@@ -94,6 +97,7 @@ def store_private_document(
         sensitivity=sensitivity,
         filename=filename,
         content_type=getattr(file_obj, 'content_type', ''),
+        max_bytes=max_bytes,
     )
 
     try:

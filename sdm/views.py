@@ -27,6 +27,10 @@ from sdm.forms import (
     ReviewDokumenForm,
     RincianKewenanganForm,
     VerifikasiSumberForm,
+    ImunisasiPegawaiForm,
+    InsidenK3PegawaiForm,
+    PemeriksaanKesehatanKerjaForm,
+    TindakLanjutK3Form,
 )
 from django.http import HttpResponse
 
@@ -47,8 +51,12 @@ from sdm.models import (
     PeristiwaSDM,
     ProgramOrientasi,
     RencanaFormasi,
+    ImunisasiPegawai,
+    InsidenK3Pegawai,
+    PemeriksaanKesehatanKerja,
     RisikoK3Pegawai,
     SesiDiklat,
+    TindakLanjutK3,
     SkenarioSDM,
     SnapshotAnalitikSDM,
     VersiDokumen,
@@ -66,12 +74,19 @@ from sdm.services.analitik import (
 )
 from sdm.services.dashboard import build_hc_dashboard
 from sdm.services.formasi import approve_plan, save_plan, submit_for_review
+from sdm.services.k3 import (
+    add_followup,
+    record_health_exam,
+    record_immunization,
+    report_incident,
+)
 from sdm.services.rekrutmen import (
     decide_credential,
     move_application,
     record_psv,
     start_orientation,
 )
+from sdm.services.publikasi_bukti import build_kps_pack, publish_kps_artifact
 from sdm.services.penempatan import save_assignment
 from sdm.storage import (
     authorize_document_download,
@@ -756,6 +771,96 @@ def k3_list(request):
 
 
 @login_required
+def k3_imunisasi_tambah(request):
+    require_hc_capability(request.user, 'hc_health_write')
+    form = ImunisasiPegawaiForm(request.POST or None)
+    if request.method == 'POST' and form.is_valid():
+        immunization = form.save(commit=False)
+        try:
+            record_immunization(
+                immunization.employee, actor=request.user,
+                jenis=immunization.jenis, dosis_ke=immunization.dosis_ke,
+                tanggal=immunization.tanggal,
+                berlaku_sampai=immunization.berlaku_sampai,
+                pemberi=immunization.pemberi,
+            )
+        except (PermissionDenied, ValidationError) as exc:
+            messages.error(request, '; '.join(exc.messages) if hasattr(exc, 'messages') else str(exc))
+        else:
+            messages.success(request, 'Imunisasi dicatat.')
+            return redirect('sdm:k3_list')
+    return render(request, 'sdm/k3/form.html', {'form': form, 'title': 'Tambah Imunisasi'})
+
+
+@login_required
+def k3_mcu_tambah(request):
+    require_hc_capability(request.user, 'hc_health_write')
+    form = PemeriksaanKesehatanKerjaForm(request.POST or None)
+    if request.method == 'POST' and form.is_valid():
+        exam = form.save(commit=False)
+        try:
+            record_health_exam(
+                exam.employee, actor=request.user, tanggal=exam.tanggal,
+                status_kebugaran=exam.status_kebugaran,
+                ringkasan_klinis=exam.ringkasan_klinis,
+                berlaku_sampai=exam.berlaku_sampai, pemeriksa=exam.pemeriksa,
+            )
+        except (PermissionDenied, ValidationError) as exc:
+            messages.error(request, '; '.join(exc.messages) if hasattr(exc, 'messages') else str(exc))
+        else:
+            messages.success(request, 'Pemeriksaan kesehatan kerja dicatat.')
+            return redirect('sdm:k3_list')
+    return render(request, 'sdm/k3/form.html', {'form': form, 'title': 'Tambah MCU'})
+
+
+@login_required
+def k3_insiden_tambah(request):
+    require_hc_capability(request.user, 'hc_health_write')
+    units = visible_units(request.user, capability='hc_health_write')
+    form = InsidenK3PegawaiForm(request.POST or None)
+    form.fields['employee'].queryset = visible_employees(request.user)
+    form.fields['unit_kerja'].queryset = units
+    if request.method == 'POST' and form.is_valid():
+        incident = form.save(commit=False)
+        try:
+            report_incident(
+                incident.employee, actor=request.user, unit_kerja=incident.unit_kerja,
+                kategori=incident.kategori, deskripsi=incident.deskripsi,
+                tanggal=incident.tanggal,
+            )
+        except (PermissionDenied, ValidationError) as exc:
+            messages.error(request, '; '.join(exc.messages) if hasattr(exc, 'messages') else str(exc))
+        else:
+            messages.success(request, 'Insiden K3 dicatat.')
+            return redirect('sdm:k3_list')
+    return render(request, 'sdm/k3/form.html', {'form': form, 'title': 'Lapor Insiden K3'})
+
+
+@login_required
+def k3_tindak_lanjut_tambah(request, incident_id):
+    require_hc_capability(request.user, 'hc_health_write')
+    incident = get_object_or_404(
+        InsidenK3Pegawai.objects.filter(
+            unit_kerja__in=visible_units(request.user, capability='hc_health_write')
+        ), pk=incident_id
+    )
+    form = TindakLanjutK3Form(request.POST or None)
+    if request.method == 'POST' and form.is_valid():
+        followup = form.save(commit=False)
+        try:
+            add_followup(
+                incident, actor=request.user, tindakan=followup.tindakan,
+                penanggung_jawab=followup.penanggung_jawab, tenggat=followup.tenggat,
+            )
+        except (PermissionDenied, ValidationError) as exc:
+            messages.error(request, '; '.join(exc.messages) if hasattr(exc, 'messages') else str(exc))
+        else:
+            messages.success(request, 'Tindak lanjut dicatat.')
+            return redirect('sdm:k3_list')
+    return render(request, 'sdm/k3/form.html', {'form': form, 'title': 'Tindak Lanjut Insiden'})
+
+
+@login_required
 def analitik_dashboard(request):
     require_hc_capability(request.user, 'can_view_hc_analytics')
     units = visible_units(request.user, capability='can_view_hc_analytics')
@@ -801,6 +906,70 @@ def analitik_export(request):
     )
     return response
 
+
+@login_required
+def kps_report(request):
+    """Sanitized KPS staff sample pack from reviewed active-edition mappings."""
+    require_hc_capability(request.user, 'can_export_hc')
+    units = visible_units(request.user, capability='can_export_hc')
+    unit = units.filter(pk=request.GET.get('unit')).first() if request.GET.get('unit', '').isdigit() else units.first()
+    if unit is None:
+        raise PermissionDenied('Tidak ada unit dalam lingkup ekspor.')
+    framework_id = request.GET.get('framework')
+    if not framework_id:
+        messages.error(request, 'Kerangka wajib dipilih.')
+        return redirect('sdm:analitik_dashboard')
+    try:
+        employee_ids = [int(x) for x in request.GET.getlist('employee') if x.isdigit()]
+    except ValueError:
+        employee_ids = []
+    artifact = build_kps_pack(
+        actor=request.user, employee_ids=employee_ids,
+        framework_id=int(framework_id),
+    )
+    messages.success(request, f'Paket KPS {artifact["employee_count"]} pegawai siap ditinjau.')
+    request.session['kps_pack_artifact'] = {
+        'generated_at': artifact['generated_at'],
+        'framework_id': artifact['framework_id'],
+        'framework_name': artifact['framework_name'],
+        'as_of': artifact['as_of'],
+        'actor_id': artifact['actor_id'],
+        'employee_count': artifact['employee_count'],
+        'workbook_hash': artifact['workbook_hash'],
+    }
+    return redirect('sdm:kps_pack_preview')
+
+
+@login_required
+def kps_pack_preview(request):
+    artifact = request.session.get('kps_pack_artifact')
+    if not artifact:
+        messages.error(request, 'Tidak ada paket KPS yang tersedia.')
+        return redirect('sdm:analitik_dashboard')
+    return render(request, 'sdm/kps/pack_preview.html', {'artifact': artifact})
+
+
+@login_required
+def kps_pack_publish(request):
+    if request.method != 'POST':
+        raise PermissionDenied('Publikasi hanya melalui POST.')
+    artifact = request.session.get('kps_pack_artifact')
+    if not artifact:
+        raise PermissionDenied('Paket tidak tersedia.')
+    requirement_id = (request.POST.get('requirement') or '').strip()
+    try:
+        publish_kps_artifact(
+            actor=request.user,
+            artifact={**artifact, 'workbook_bytes': b''},
+            requirement_id=requirement_id,
+        )
+    except (PermissionDenied, ValidationError) as exc:
+        message = getattr(exc, 'messages', None)
+        messages.error(request, '; '.join(message) if message else str(exc))
+        return redirect('sdm:kps_pack_preview')
+    messages.success(request, 'Paket KPS diterbitkan sebagai bukti untuk ditinjau.')
+    del request.session['kps_pack_artifact']
+    return redirect('sdm:analitik_dashboard')
 
 # ── Level 2–5 create actions ──────────────────────────────────────────────
 

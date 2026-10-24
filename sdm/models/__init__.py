@@ -55,7 +55,33 @@ from .orientasi import (
     PenyelesaianOrientasi,
     ProgramOrientasi,
 )
-from .pegawai import Pegawai, PenempatanPegawai
+from .pegawai import MasterProfesiPegawai, Pegawai, PenempatanPegawai
+from .undangan import UndanganAkunPegawai
+from .layanan_mandiri import LayananMandiri
+from .beban_kerja import BebanKerja
+from .clinical_access import (
+    ClinicalActionCode,
+    PrivilegeSnapshot,
+    TraineePlacement,
+)
+from .uraian_tugas import MasterUraianTugas, PenerimaanUraianTugas
+from .evaluasi_klinis import EvaluasiPraktikKlinis, KasusFPPE
+from .presensi import (
+    KoreksiPresensi,
+    LokasiPresensi,
+    PenugasanShift,
+    PeristiwaPresensi,
+    ShiftDinas,
+)
+from .intake import (
+    BatchImporPegawai,
+    DrafInputPegawai,
+    IzinProfesiPegawai,
+    ProfilPribadiPegawai,
+    RiwayatKepegawaian,
+    RiwayatPendidikanPegawai,
+    UrutanNomorPegawai,
+)
 from .rekrutmen import Lamaran, Lowongan, RiwayatSeleksi
 from .pengingat import PengingatSDM
 
@@ -76,8 +102,32 @@ __all__ = [
     'KeputusanKredensial',
     'Lamaran',
     'Lowongan',
+    'BebanKerja',
+    'BatchImporPegawai',
+    'ClinicalActionCode',
+    'MasterUraianTugas',
+    'PenerimaanUraianTugas',
+    'PrivilegeSnapshot',
+    'TraineePlacement',
+    'EvaluasiPraktikKlinis',
+    'KasusFPPE',
+    'KoreksiPresensi',
+    'LokasiPresensi',
+    'PenugasanShift',
+    'PeristiwaPresensi',
+    'ShiftDinas',
+    'DrafInputPegawai',
+    'IzinProfesiPegawai',
+    'MasterProfesiPegawai',
+    'UndanganAkunPegawai',
     'Pegawai',
+    'PenempatanPegawai',
     'PenilaianTalent',
+    'PeristiwaSDM',
+    'ProfilPribadiPegawai',
+    'RiwayatKepegawaian',
+    'RiwayatPendidikanPegawai',
+    'UrutanNomorPegawai',
     'PemeriksaanKesehatanKerja',
     'PesertaDiklat',
     'PenilaianKinerja',
@@ -90,7 +140,6 @@ __all__ = [
     'PemetaanStandarSDM',
     'PenempatanPegawai',
     'RencanaFormasi',
-    'PeristiwaSDM',
     'ProgramDiklat',
     'ProgramOrientasi',
     'SertifikatDiklat',
@@ -104,6 +153,8 @@ __all__ = [
     'SnapshotAnalitikSDM',
     'TautanKredensialLama',
     'TindakLanjutK3',
+    'LayananMandiri',
+    'UndanganAkunPegawai',
     'VerifikasiSumber',
     'VersiDokumen',
     'calculate_formasi',

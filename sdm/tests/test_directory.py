@@ -9,6 +9,7 @@ from django.utils import timezone
 from accounts.models import RolePermissionConfig, UserProfile
 from akreditasi.models import UnitKerja
 from sdm.models import (
+    DrafInputPegawai,
     DokumenPegawai,
     HcGrant,
     Pegawai,
@@ -108,20 +109,38 @@ class PegawaiDirectoryViewTests(TestCase):
     def test_create_employee_uses_scoped_unit_and_assignment_service(self):
         self.client.force_login(self.manager)
 
+        # Step 1: Identitas & Kontak
         response = self.client.post(reverse('sdm:pegawai_create'), {
-            'nomor_pegawai': 'NEW-HC-001',
-            'nama_lengkap': 'Pegawai Baru',
-            'kategori': 'NON_PPA',
-            'profesi': 'Administrasi',
-            'jabatan': 'Staf',
-            'status': 'AKTIF',
-            'unit_kerja': self.root.pk,
-            'tanggal_mulai': self.today.isoformat(),
-            'tanggal_selesai': '',
-            'alokasi_fte': '0.75',
+            'nama_depan': 'Pegawai Baru',
+            'nama_belakang': 'Wizard',
         })
-
         self.assertEqual(response.status_code, 302)
+
+        # Step 2: Kepegawaian & Penempatan
+        draft = DrafInputPegawai.objects.filter(owner=self.manager).order_by('-pk').first()
+        response = self.client.post(
+            reverse('sdm:pegawai_wizard_resume', kwargs={'step': 2, 'draft_id': draft.pk}),
+            {
+                'nomor_pegawai': 'NEW-HC-001',
+                'kategori': 'NON_PPA',
+                'profesi': 'Administrasi',
+                'jabatan': 'Staf',
+                'status': 'AKTIF',
+                'kategori_pegawai': 'TETAP',
+                'unit_kerja': self.root.pk,
+                'tanggal_mulai': self.today.isoformat(),
+                'tanggal_selesai': '',
+                'alokasi_fte': '0.75',
+            },
+        )
+        self.assertEqual(response.status_code, 302)
+
+        # Finalize
+        response = self.client.post(
+            reverse('sdm:pegawai_intake_finalize', kwargs={'draft_id': draft.pk})
+        )
+        self.assertEqual(response.status_code, 302)
+
         employee = Pegawai.objects.get(nomor_pegawai='NEW-HC-001')
         assignment = employee.penempatan.get()
         self.assertEqual(assignment.unit_kerja, self.root)

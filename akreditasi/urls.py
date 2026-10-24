@@ -7,6 +7,7 @@ from . import indikator_views
 from . import mutu_laporan
 from . import kontrol_views
 from . import search_views
+from . import catalogue_views as catalogue_views
 
 app_name = 'akreditasi'
 
@@ -164,4 +165,10 @@ urlpatterns = [
     path('ai/analisis-masalah-risiko/', ai_views.api_ai_analisis_masalah_risiko, name='api_ai_analisis_masalah_risiko'),
     path('ai/test-connection/', ai_views.api_ai_test_connection, name='ai_test_connection'),
     path('ai/narasi-laporan/', ai_views.api_ai_narasi_laporan, name='api_ai_narasi_laporan'),
+
+    # ── Katalog Standar (Track C UI) ──
+    path('katalog/', catalogue_views.katalog_daftar, name='katalog_daftar'),
+    path('katalog/pemetaan/', catalogue_views.katalog_pemetaan, name='katalog_pemetaan'),
+    path('katalog/validasi/', catalogue_views.katalog_validasi, name='katalog_validasi'),
+    path('katalog/pengumuman/', catalogue_views.katalog_pengumuman, name='katalog_pengumuman'),
 ]

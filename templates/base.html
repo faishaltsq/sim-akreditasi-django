@@ -11,17 +11,7 @@
     <link rel="preload" href="{% static 'fonts/manrope-latin.woff2' %}" as="font" type="font/woff2" crossorigin>
     <link rel="stylesheet" href="{% static 'css/style.css' %}">
     <link rel="stylesheet" href="{% static 'css/v3-tokens.css' %}">
-    <script>
-        /* Apply persisted sidebar state before first paint to avoid a flash. */
-        try {
-            if (window.localStorage.getItem('arima.v3.sidebar.collapsed') === '1') {
-                document.documentElement.classList.add('sb-collapsed');
-                document.addEventListener('DOMContentLoaded', function () {
-                    document.body.classList.add('sb-collapsed');
-                });
-            }
-        } catch (e) { /* storage unavailable — default expanded */ }
-    </script>
+
     {% block extra_css %}{% endblock %}
 </head>
 <body data-theme="{{ sys_config.theme_color|default:'teal' }}">
@@ -79,10 +69,7 @@
                 </div>
                 <small>Akreditasi &amp; Manajemen Risiko</small>
             </div>
-            <button type="button" class="sidebar-collapse-btn" id="sidebarCollapseBtn"
-                    aria-label="Ciutkan menu navigasi" aria-pressed="false" data-tooltip="Ciutkan menu">
-                <i class="bi bi-chevron-left"></i>
-            </button>
+
         </div>
         {% with sidebar_uid="desktop" %}{% include "includes/sidebar.html" %}{% endwith %}
     </aside>

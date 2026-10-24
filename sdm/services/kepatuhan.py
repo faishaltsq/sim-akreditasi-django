@@ -85,7 +85,10 @@ def _active_rules(ruleset=None):
         queryset = queryset.filter(pk__in=ids)
     latest = {}
     for rule in queryset.order_by('version'):
-        key = (rule.document_type, rule.name, rule.kategori, rule.profesi)
+        key = (
+            rule.document_type, rule.jenis_berkas_wajib,
+            rule.name, rule.kategori, rule.profesi,
+        )
         latest[key] = rule
     return list(latest.values())
 
@@ -94,6 +97,7 @@ def _latest_version(employee, rule):
     return VersiDokumen.objects.filter(
         document__employee=employee,
         document__document_type=rule.document_type,
+        document__jenis_berkas=rule.jenis_berkas_wajib,
         document__sensitivity='personnel',
     ).select_related('document').order_by('-version_number', '-pk').first()
 

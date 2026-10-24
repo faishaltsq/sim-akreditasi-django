@@ -1,3 +1,4 @@
+import uuid
 from datetime import timedelta
 from decimal import Decimal
 
@@ -278,3 +279,120 @@ class EmployeeDocumentViewTests(TestCase):
         self.assertEqual(response.status_code, 403)
         self.version.refresh_from_db()
         self.assertEqual(self.version.status, 'PENDING')
+
+    def test_verified_str_cannot_satisfy_sip_or_spk(self):
+        sip_rule = AturanDokumen.objects.create(
+            document_type='CREDENTIAL', jenis_berkas_wajib='SIP',
+            name='SIP', validity_policy='EXPIRY_REQUIRED', version=1,
+        )
+        spk_rule = AturanDokumen.objects.create(
+            document_type='CREDENTIAL', jenis_berkas_wajib='SPK_RKK',
+            name='SPK RKK', validity_policy='EXPIRY_REQUIRED', version=1,
+        )
+        document = DokumenPegawai.objects.create(
+            employee=self.employee,
+            document_type='CREDENTIAL', jenis_berkas='STR',
+            title='STR', sensitivity='personnel',
+        )
+        VersiDokumen.objects.create(
+            document=document, version_number=1,
+            original_filename='str.pdf',
+            storage_key=f'personnel/{self.employee.pk}/1-{uuid.uuid4().hex}.pdf',
+            sha256='e' * 64, size_bytes=10,
+            content_type='application/pdf', status='VERIFIED',
+            valid_until=self.today + timedelta(days=200),
+        )
+        summary = evaluate_employee_compliance(
+            self.employee, as_of=self.today,
+            ruleset=[sip_rule, spk_rule],
+        )
+        self.assertEqual(len(summary.applicable), 2)
+        self.assertTrue(all(r.state == 'MISSING' for r in summary.applicable))
+        self.assertEqual(summary.completeness_pct, 0.0)
+
+    def test_photo_cannot_satisfy_ktp(self):
+        ktp_rule = AturanDokumen.objects.create(
+            document_type='IDENTITY', jenis_berkas_wajib='KTP',
+            name='KTP', validity_policy='EXPIRY_REQUIRED', version=1,
+        )
+        document = DokumenPegawai.objects.create(
+            employee=self.employee, document_type='IDENTITY', jenis_berkas='FOTO',
+            title='Foto', sensitivity='personnel',
+        )
+        VersiDokumen.objects.create(
+            document=document, version_number=1,
+            original_filename='foto.jpg',
+            storage_key=f'personnel/{self.employee.pk}/1-{uuid.uuid4().hex}.jpg',
+            sha256='f' * 64, size_bytes=10,
+            content_type='image/jpeg', status='VERIFIED',
+            valid_until=self.today + timedelta(days=200),
+        )
+        summary = evaluate_employee_compliance(
+            self.employee, as_of=self.today, ruleset=[ktp_rule],
+        )
+        self.assertEqual(summary.results[0].state, 'MISSING')
+
+    def test_diploma_cannot_satisfy_transcript(self):
+        transcript_rule = AturanDokumen.objects.create(
+            document_type='EDUCATION', jenis_berkas_wajib='TRANSKRIP',
+            name='Transkrip', validity_policy='NOT_APPLICABLE', version=1,
+        )
+        document = DokumenPegawai.objects.create(
+            employee=self.employee, document_type='EDUCATION', jenis_berkas='IJAZAH',
+            title='Ijazah', sensitivity='personnel',
+        )
+        VersiDokumen.objects.create(
+            document=document, version_number=1,
+            original_filename='ijazah.pdf',
+            storage_key=f'personnel/{self.employee.pk}/1-{uuid.uuid4().hex}.pdf',
+            sha256='g' * 64, size_bytes=10,
+            content_type='application/pdf', status='VERIFIED',
+        )
+        summary = evaluate_employee_compliance(
+            self.employee, as_of=self.today, ruleset=[transcript_rule],
+        )
+        self.assertEqual(summary.results[0].state, 'MISSING')
+
+    def test_external_clinic_sip_does_not_satisfy_local_rs_sip(self):
+        local_sip_rule = AturanDokumen.objects.create(
+            document_type='CREDENTIAL', jenis_berkas_wajib='SIP',
+            name='SIP RS Lokal', validity_policy='EXPIRY_REQUIRED', version=1,
+        )
+        document = DokumenPegawai.objects.create(
+            employee=self.employee, document_type='CREDENTIAL', jenis_berkas='STR',
+            title='SIP Klinik Luar', sensitivity='personnel',
+        )
+        VersiDokumen.objects.create(
+            document=document, version_number=1,
+            original_filename='sip.pdf',
+            storage_key=f'personnel/{self.employee.pk}/1-{uuid.uuid4().hex}.pdf',
+            sha256='h' * 64, size_bytes=10,
+            content_type='application/pdf', status='VERIFIED',
+            valid_until=self.today + timedelta(days=200),
+        )
+        summary = evaluate_employee_compliance(
+            self.employee, as_of=self.today, ruleset=[local_sip_rule],
+        )
+        self.assertEqual(summary.results[0].state, 'MISSING')
+
+    def test_higher_version_on_another_document_does_not_win_arbitrarily(self):
+        str_rule = AturanDokumen.objects.create(
+            document_type='CREDENTIAL', jenis_berkas_wajib='STR',
+            name='STR Tinggi Versi', validity_policy='EXPIRY_REQUIRED', version=1,
+        )
+        document = DokumenPegawai.objects.create(
+            employee=self.employee, document_type='CREDENTIAL', jenis_berkas='STR',
+            title='STR', sensitivity='personnel',
+        )
+        VersiDokumen.objects.create(
+            document=document, version_number=1,
+            original_filename='str-v1.pdf',
+            storage_key=f'personnel/{self.employee.pk}/1-{uuid.uuid4().hex}.pdf',
+            sha256='i' * 64, size_bytes=10,
+            content_type='application/pdf', status='REJECTED',
+            valid_until=self.today + timedelta(days=200),
+        )
+        summary = evaluate_employee_compliance(
+            self.employee, as_of=self.today, ruleset=[str_rule],
+        )
+        self.assertEqual(summary.results[0].state, 'REJECTED')

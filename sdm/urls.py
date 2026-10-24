@@ -1,6 +1,8 @@
 from django.urls import path
 
 from sdm import views
+from sdm import intake_views
+from sdm import portal_views
 
 
 app_name = 'sdm'
@@ -8,7 +10,10 @@ app_name = 'sdm'
 urlpatterns = [
     path('', views.dashboard, name='dashboard'),
     path('pegawai/', views.pegawai_list, name='pegawai_list'),
-    path('pegawai/baru/', views.pegawai_create, name='pegawai_create'),
+    path('pegawai/baru/', intake_views.intake_wizard, name='pegawai_create'),
+    path('pegawai/input/baru/<int:step>/', intake_views.intake_wizard, name='pegawai_wizard_step'),
+    path('pegawai/input/baru/<int:step>/draf/<uuid:draft_id>/', intake_views.intake_wizard, name='pegawai_wizard_resume'),
+    path('pegawai/input/baru/<uuid:draft_id>/selesai/', intake_views.intake_finalize, name='pegawai_intake_finalize'),
     path('pegawai/<uuid:employee_id>/', views.pegawai_detail, name='pegawai_detail'),
     path(
         'pegawai/<uuid:employee_id>/edit/',
@@ -119,11 +124,33 @@ urlpatterns = [
     ),
     path('k3/', views.k3_list, name='k3_list'),
     path('k3/lapor/', views.k3_report, name='k3_report'),
+    path('k3/imunisasi/tambah/', views.k3_imunisasi_tambah, name='k3_imunisasi_tambah'),
+    path('k3/mcu/tambah/', views.k3_mcu_tambah, name='k3_mcu_tambah'),
+    path('k3/insiden/tambah/', views.k3_insiden_tambah, name='k3_insiden_tambah'),
+    path('k3/insiden/<uuid:incident_id>/tindak-lanjut/', views.k3_tindak_lanjut_tambah, name='k3_tindak_lanjut_tambah'),
+    path('saya/', portal_views.portal_index, name='portal_index'),
+    path('saya/ajukan/', portal_views.portal_request_create, name='portal_request_create'),
+    path('saya/ajukan/<uuid:request_id>/batal/', portal_views.portal_request_cancel, name='portal_request_cancel'),
     path('analitik/', views.analitik_dashboard, name='analitik_dashboard'),
     path('analitik/ekspor/', views.analitik_export, name='analitik_export'),
     path(
         'analitik/ekspor/pdf/',
         views.analitik_export_pdf,
         name='analitik_export_pdf',
+    ),
+    path(
+        'laporan/kps/paket/',
+        views.kps_report,
+        name='kps_report',
+    ),
+    path(
+        'laporan/kps/paket/preview/',
+        views.kps_pack_preview,
+        name='kps_pack_preview',
+    ),
+    path(
+        'laporan/kps/paket/publikasi/',
+        views.kps_pack_publish,
+        name='kps_pack_publish',
     ),
 ]
