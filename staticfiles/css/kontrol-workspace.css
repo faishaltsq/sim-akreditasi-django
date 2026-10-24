@@ -384,7 +384,7 @@ body.kontrol-workspace {
   .kontrol-workspace .layanan-head { align-items: flex-start; gap: 8px; flex-wrap: wrap; }
 }
 
-@media (min-width: 1200px) and (max-height: 900px) {
+@media (min-width: 1200px) {
   .kontrol-workspace .kontrol-main { padding-top: 8px; padding-bottom: 12px; }
   .kontrol-workspace .kontrol-topbar { padding: 8px 14px; min-height: 52px; }
   .kontrol-workspace .kontrol-brand { min-height: 44px; }
@@ -404,8 +404,9 @@ body.kontrol-workspace {
   .kontrol-workspace .kontrol-hero .kontrol-unit-switch {
     grid-area: switch; grid-column: 2; align-self: center;
   }
-  .kontrol-workspace .kontrol-title { font-size: 28px; }
-  .kontrol-workspace .kontrol-title-sm { font-size: 24px; }
+  .kontrol-workspace .kontrol-title { font-size: 24px; }
+  .kontrol-workspace .kontrol-title-sm { font-size: 22px; }
+  .kontrol-workspace .kontrol-hero > .kontrol-lede { font-size: 13.5px; line-height: 1.45; }
   .kontrol-workspace .kontrol-module-access { padding: 12px; margin-bottom: 10px; }
   .kontrol-workspace .kontrol-module-access-label { margin-bottom: 8px; }
   .kontrol-workspace .kontrol-portals {
