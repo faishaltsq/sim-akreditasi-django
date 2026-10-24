@@ -137,7 +137,7 @@ body[data-theme] {
    -------------------------------------------------------------------------- */
 :root {
     --sidebar-width: 248px;
-    --sidebar-width-collapsed: 72px;
+
     --topbar-h: 68px;
     --content-pad: 24px;
     --grid-gap: 20px;
@@ -250,10 +250,10 @@ small, .small { font-size: var(--fs-micro); }
     background: var(--sidebar-bg);
     border-bottom: 1px solid var(--sidebar-border);
     display: grid;
-    grid-template-columns: 30px minmax(0, 1fr) 28px;
+    grid-template-columns: 30px minmax(0, 1fr);
     grid-template-areas:
-        "icon title btn"
-        ".    sub   sub";
+        "icon title"
+        "sub sub";
     align-content: center;
     align-items: center;
     column-gap: 0.6rem;
@@ -307,27 +307,6 @@ small, .small { font-size: var(--fs-micro); }
 }
 .sidebar-brand-text .sidebar-status-dot { background: var(--success); flex: 0 0 auto; }
 
-/* Collapse control */
-.sidebar-collapse-btn {
-    grid-area: btn;
-    align-self: center;
-    justify-self: end;
-    margin: 0;
-    width: 28px;
-    height: 28px;
-    flex: 0 0 28px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: var(--radius-sm);
-    border: 1px solid var(--sidebar-border);
-    background: transparent;
-    color: var(--sidebar-text);
-    font-size: 0.85rem;
-    transition: background var(--dur) var(--ease), color var(--dur) var(--ease);
-}
-.sidebar-collapse-btn:hover { background: var(--sidebar-hover); color: #FFFFFF; }
-.sidebar-collapse-btn:focus-visible { outline: 2px solid var(--brand-violet); outline-offset: 2px; }
 
 .sidebar-nav .nav-section {
     color: var(--sidebar-section);
@@ -402,111 +381,7 @@ small, .small { font-size: var(--fs-micro); }
 .sidebar-nav .collapse .text-danger { color: #FCA5A5 !important; }
 .sidebar-nav .collapse .text-info { color: #A5D8FF !important; }
 
-@media (min-width: 768px) {
-    /* Rail rules live only at desktop width: below 768px the sidebar is
-       an offcanvas panel that must keep its full labels. */
-    /* Collapsed sidebar — icons only, tooltips from [data-tooltip] */
-    .sb-collapsed { --sidebar-width: var(--sidebar-width-collapsed); }
-    .sb-collapsed .sidebar-desktop { overflow: visible; }
-    .sb-collapsed .sidebar-brand {
-        grid-template-columns: 34px;
-        grid-template-areas: "icon" "btn";
-        justify-items: center;
-        row-gap: 0.35rem;
-        padding: 0.75rem 0.5rem;
-    }
-    /* Teks brand disembunyikan, TETAPI tombol collapse tetap tampil — tanpa itu
-       rail yang sudah diciutkan tidak punya jalan kembali ke mode penuh. */
-    .sb-collapsed .sidebar-brand-text { display: none; }
-    .sb-collapsed .sidebar-collapse-btn {
-        grid-area: btn;
-        display: inline-flex;
-        margin: 0;
-        position: static;
-    }
-    .sb-collapsed .sidebar-nav .nav-section {
-        font-size: 0; letter-spacing: 0; text-align: center;
-        padding: 0.55rem 0 0.15rem;
-    }
-    .sb-collapsed .sidebar-nav .nav-section i { font-size: 0.85rem; margin: 0 !important; }
-    .sb-collapsed .sidebar-nav .nav-text { display: none; }
-    .sb-collapsed .sidebar-nav .nav-link {
-        justify-content: center;
-        margin: 3px 12px;
-        padding: 9px 0;
-        border-left-width: 0;
-        box-shadow: none;
-    }
-    .sb-collapsed .sidebar-nav .nav-link.active { border-left-width: 3px; }
-    .sb-collapsed .sidebar-nav .sidebar-bab { display: none; }
-    .sb-collapsed .sidebar-desktop .nav-pokja-bar,
-    .sb-collapsed .sidebar-desktop .nav-pokja-pct { display: none; }
 
-    /* Bab codes, poli names and counters sit outside .nav-text — kill both the
-       stray text nodes and any leftover child so the rail stays icon-only. */
-    .sb-collapsed .sidebar-nav .nav-link { font-size: 0; }
-    .sb-collapsed .sidebar-nav .nav-link > *:not(.nav-icon) { display: none !important; }
-    .sb-collapsed .sidebar-nav .nav-link .bi { font-size: 1.05rem; }
-    .sb-collapsed .sidebar-nav .nav-link.nav-pokja { padding: 8px 0; margin: 3px 12px; }
-    /* Collapsed rail: nested groups keep only their leading icon — the label span
-       and the search box would otherwise spill past the 72px column. */
-    .sb-collapsed .sidebar-nav .collapse { display: none !important; }
-    .sb-collapsed .sidebar-nav .input-group { display: none !important; }
-    .sb-collapsed .sidebar-nav .nav-link > span:first-child,
-    .sb-collapsed .sidebar-nav .nav-link > .d-flex:first-child {
-        display: flex !important;
-        justify-content: center;
-        align-items: center;
-        gap: 0 !important;
-    }
-    .sb-collapsed .sidebar-nav .nav-link > span:first-child > span,
-    .sb-collapsed .sidebar-nav .nav-link > .d-flex:first-child > .nav-text { display: none !important; }
-    .sb-collapsed .sidebar-nav .nav-pokja { font-size: 0 !important; }
-    .sb-collapsed .sidebar-nav .nav-pokja .bi { font-size: 1rem !important; margin: 0 !important; }
-
-    /* Hover bubble for the collapsed rail — fed from data-tooltip by v3-shell.js */
-    .sb-collapsed .sidebar-desktop [data-tooltip] { position: relative; }
-    .sb-collapsed .sidebar-desktop [data-tooltip]:hover::after,
-    .sb-collapsed .sidebar-desktop [data-tooltip]:focus-visible::after {
-        content: attr(data-tooltip);
-        position: absolute;
-        left: calc(100% + 12px);
-        top: 50%;
-        transform: translateY(-50%);
-        background: var(--brand-navy);
-        color: #FFFFFF;
-        font-size: 11px;
-        font-weight: 600;
-        letter-spacing: 0.01em;
-        padding: 6px 10px;
-        border-radius: var(--radius-sm);
-        white-space: nowrap;
-        z-index: 1080;
-        box-shadow: var(--shadow-md);
-        pointer-events: none;
-    }
-
-}
-
-/* Expanded state: the toggle announces itself on hover/focus */
-.sidebar-collapse-btn[data-tooltip]:hover::after,
-.sidebar-collapse-btn[data-tooltip]:focus-visible::after {
-    content: attr(data-tooltip);
-    position: absolute;
-    right: calc(100% + 10px);
-    top: 50%;
-    transform: translateY(-50%);
-    background: var(--brand-navy);
-    color: #FFFFFF;
-    font-size: 11px;
-    font-weight: 600;
-    padding: 6px 10px;
-    border-radius: var(--radius-sm);
-    white-space: nowrap;
-    z-index: 1080;
-    box-shadow: var(--shadow-md);
-    pointer-events: none;
-}
 
 /* Topbar */
 .top-bar {

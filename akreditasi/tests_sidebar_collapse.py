@@ -1,34 +1,29 @@
-"""Tombol collapse sidebar harus tetap tampil saat sidebar dalam mode rail.
-
-Bug yang dikunci: `.sb-collapsed .sidebar-collapse-btn { display: none }`
-menyembunyikan satu-satunya kontrol untuk kembali ke mode penuh, sehingga
-sidebar yang sudah diciutkan tidak bisa diperluas lagi.
-"""
-import re
+"""Sidebar desktop selalu penuh, tanpa kontrol ciut/perluas."""
 
 from django.conf import settings
 from django.test import SimpleTestCase
 
 
-class SidebarCollapseButtonTest(SimpleTestCase):
-    def _css(self):
-        path = settings.BASE_DIR / 'static' / 'css' / 'v3-tokens.css'
-        return path.read_text(encoding='utf-8')
+class SidebarExpandedTest(SimpleTestCase):
+    def test_tombol_collapse_desktop_dihapus(self):
+        template = (settings.BASE_DIR / 'templates/base.html').read_text(encoding='utf-8')
+        self.assertNotIn('sidebarCollapseBtn', template)
+        self.assertNotIn('sidebar-collapse-btn', template)
 
-    def test_tombol_tidak_disembunyikan_saat_collapsed(self):
-        css = self._css()
-        # Cari blok aturan yang menyembunyikan tombol collapse saat .sb-collapsed.
-        pola = re.compile(
-            r'\.sb-collapsed[^{}]*\.sidebar-collapse-btn[^{}]*\{[^}]*display\s*:\s*none',
-            re.S)
-        self.assertIsNone(
-            pola.search(css),
-            'tombol collapse disembunyikan saat sidebar collapsed — '
-            'pengguna tidak bisa memperluas menu lagi')
+    def test_preferensi_lama_tidak_memulihkan_mode_ciut(self):
+        template = (settings.BASE_DIR / 'templates/base.html').read_text(encoding='utf-8')
+        script = (settings.BASE_DIR / 'static/js/v3-shell.js').read_text(encoding='utf-8')
+        self.assertNotIn('localStorage.getItem', template)
+        self.assertNotIn('localStorage.getItem', script)
+        self.assertNotIn('localStorage.setItem', script)
+        self.assertIn("localStorage.removeItem('arima.v3.sidebar.collapsed')", script)
 
-    def test_teks_brand_tetap_disembunyikan(self):
-        """Rail hanya ikon: teks brand memang harus hilang."""
-        css = self._css()
-        self.assertRegex(
-            css, r'\.sb-collapsed\s+\.sidebar-brand-text\s*\{\s*display\s*:\s*none',
-            'teks brand seharusnya disembunyikan pada mode rail')
+    def test_css_tidak_menyediakan_mode_rail(self):
+        css = (settings.BASE_DIR / 'static/css/v3-tokens.css').read_text(encoding='utf-8')
+        self.assertNotIn('.sb-collapsed', css)
+        self.assertNotIn('.sidebar-collapse-btn', css)
+
+    def test_menu_mobile_tetap_bisa_dibuka_dan_ditutup(self):
+        template = (settings.BASE_DIR / 'templates/base.html').read_text(encoding='utf-8')
+        self.assertIn('data-bs-target="#mobileSidebar"', template)
+        self.assertIn('data-bs-dismiss="offcanvas"', template)
