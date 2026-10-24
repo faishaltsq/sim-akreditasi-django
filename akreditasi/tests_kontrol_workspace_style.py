@@ -140,11 +140,11 @@ class ControlWorkspaceStyleTest(SimpleTestCase):
 
     def test_desktop_shows_all_portal_cards_in_one_row(self):
         css = _css()
-        dense = _block(css, '@media (min-width: 1200px)')
+        dense = _block(css, '@media (min-width: 1024px)')
         portals = _declarations(dense, '.kontrol-workspace .kontrol-portals')
         self.assertIn('grid-template-columns: repeat(4, minmax(0, 1fr))', portals)
         hero = _declarations(dense, '.kontrol-workspace .kontrol-hero')
-        self.assertIn('grid-template-columns: minmax(0, 1fr) 440px', hero)
+        self.assertIn('grid-template-columns: minmax(0, 1fr) 400px', hero)
         switch = _declarations(dense, '.kontrol-workspace .kontrol-hero .kontrol-unit-switch')
         self.assertIn('grid-column: 2', switch)
         nav = _declarations(dense, '.kontrol-workspace .kontrol-portal-nav a')

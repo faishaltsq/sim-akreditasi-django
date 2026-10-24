@@ -384,7 +384,7 @@ body.kontrol-workspace {
   .kontrol-workspace .layanan-head { align-items: flex-start; gap: 8px; flex-wrap: wrap; }
 }
 
-@media (min-width: 1200px) {
+@media (min-width: 1024px) {
   .kontrol-workspace .kontrol-main { padding-top: 8px; padding-bottom: 12px; }
   .kontrol-workspace .kontrol-topbar { padding: 8px 14px; min-height: 52px; }
   .kontrol-workspace .kontrol-brand { min-height: 44px; }
@@ -394,7 +394,7 @@ body.kontrol-workspace {
     padding: 14px 16px; margin-bottom: 10px; gap: 12px;
   }
   .kontrol-workspace .kontrol-hero {
-    display: grid; grid-template-columns: minmax(0, 1fr) 440px;
+    display: grid; grid-template-columns: minmax(0, 1fr) 400px;
     grid-template-areas: 'eyebrow switch' 'title switch' 'lede switch';
   }
   .kontrol-workspace .kontrol-hero > .kontrol-eyebrow { grid-area: eyebrow; margin: 0; }
@@ -412,13 +412,18 @@ body.kontrol-workspace {
   .kontrol-workspace .kontrol-portals {
     grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px;
   }
-  .kontrol-workspace .portal-card { padding: 12px; }
-  .kontrol-workspace .portal-card h2 { font-size: 16px; }
-  .kontrol-workspace :is(.portal-card p, .portal-sub, .portal-foot) {
-    font-size: 13px; line-height: 1.4;
-  }
+  .kontrol-workspace .portal-card { padding: 10px; gap: 6px; }
+  .kontrol-workspace .portal-card h2 { font-size: 15px; margin-top: 0; }
+  .kontrol-workspace .portal-icon { width: 30px; height: 30px; font-size: 14px; }
+  .kontrol-workspace .portal-band { font-size: 11px; padding: 2px 7px; }
+  .kontrol-workspace .portal-metric { margin-top: 2px; gap: 6px; }
   .kontrol-workspace .portal-metric strong,
-  .kontrol-workspace :is(.kpi-value, .quick-value, .gauge-value) { font-size: 24px; }
+  .kontrol-workspace :is(.kpi-value, .quick-value, .gauge-value) { font-size: 20px; }
+  .kontrol-workspace .portal-foot { min-height: 0; }
+  .kontrol-workspace .portal-cta { padding-top: 4px; }
+  .kontrol-workspace :is(.portal-card p, .portal-sub, .portal-foot) {
+    font-size: 12.5px; line-height: 1.35;
+  }
   .kontrol-workspace .quick-item,
   .kontrol-workspace .kpi { padding: 10px 12px; }
   .kontrol-workspace .kontrol-kpis { gap: 8px; margin-bottom: 10px; }
