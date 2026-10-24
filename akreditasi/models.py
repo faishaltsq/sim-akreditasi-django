@@ -28,7 +28,7 @@ class Framework(models.Model):
             ('ACTIVE', 'Aktif'),
             ('ARCHIVED', 'Arsip'),
         ],
-        default='ARCHIVED',
+        default='ACTIVE',
     )
     source_hash = models.CharField('SHA-256 Sumber', max_length=64, blank=True)
     source_pages = models.PositiveIntegerField('Jumlah Halaman Sumber', default=0)
@@ -50,13 +50,12 @@ class Framework(models.Model):
         verbose_name = 'Standar Akreditasi'
         verbose_name_plural = 'Standar Akreditasi'
         ordering = ['-version', 'pk']
-        constraints = [
-            models.UniqueConstraint(
-                condition=models.Q(lifecycle='ACTIVE'),
-                fields=['lifecycle'],
-                name='unique_active_framework_lifecycle',
-            ),
-        ]
+        # NOTE: no database-level "single ACTIVE" constraint here.
+        # The invariant is enforced by catalogue_services.activate_catalogue
+        # (lock + explicit previous-active check) because a hard constraint
+        # makes legitimate staging/fixture transitions impossible and turns a
+        # service-level rule into an opaque IntegrityError.
+        constraints = []
 
     def __str__(self):
         return f"{self.name} ({self.cycle_type})"

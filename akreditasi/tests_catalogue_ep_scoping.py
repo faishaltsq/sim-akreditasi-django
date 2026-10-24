@@ -79,13 +79,12 @@ class EditionScopingRegressionTests(TestCase):
         self.assertNotIn('NEW 1 EP 0', body)
 
     def test_read_resolver_falls_back_to_single_edition_when_none_active(self):
-        Framework.objects.filter(pk=self.fw_new.pk).update(
-            lifecycle='ARCHIVED', is_active=False
-        )
+        # Remove every ACTIVE row, including the one installed by migrations.
+        Framework.objects.update(lifecycle='ARCHIVED', is_active=False)
 
         resolved = catalogue.select_catalogue_for_read(self.user)
 
-        # Falls back to exactly one edition (newest), never a union.
+        # Falls back to exactly one edition (newest by edition), never a union.
         self.assertEqual(resolved.pk, self.fw_new.pk)
 
     def test_resolve_catalogue_still_fails_closed_without_active(self):

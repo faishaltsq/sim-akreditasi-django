@@ -47,6 +47,9 @@ class EditionIdentityTests(TestCase):
         self.assertEqual(resolve_catalogue(None), fw)
 
     def test_resolve_catalogue_fails_closed_no_fallback(self):
+        # Clear every ACTIVE row first: migrations install one ACTIVE catalogue,
+        # and this test asserts the *absence* of any active edition.
+        Framework.objects.update(lifecycle='ARCHIVED', is_active=False)
         Framework.objects.create(name='Arsip', version='2022', edition='2022',
                                  lifecycle='ARCHIVED', is_active=False)
         with self.assertRaises(Exception):
