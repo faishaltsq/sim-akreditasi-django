@@ -138,6 +138,24 @@ class ControlWorkspaceStyleTest(SimpleTestCase):
         mobile_summary = _declarations(mobile, '.kontrol-workspace .kontrol-emr-summary')
         self.assertIn('grid-template-columns: minmax(0, 1fr)', mobile_summary)
 
+    def test_short_desktop_shows_all_portal_cards_in_one_row(self):
+        css = _css()
+        dense = _block(css, '@media (min-width: 1200px) and (max-height: 900px)')
+        portals = _declarations(dense, '.kontrol-workspace .kontrol-portals')
+        self.assertIn('grid-template-columns: repeat(4, minmax(0, 1fr))', portals)
+        hero = _declarations(dense, '.kontrol-workspace .kontrol-hero')
+        self.assertIn('grid-template-columns: minmax(0, 1fr) 440px', hero)
+        switch = _declarations(dense, '.kontrol-workspace .kontrol-hero .kontrol-unit-switch')
+        self.assertIn('grid-column: 2', switch)
+        nav = _declarations(dense, '.kontrol-workspace .kontrol-portal-nav a')
+        self.assertIn('min-height: 44px', nav)
+        footer = _declarations(dense, '.kontrol-workspace .kontrol-footer')
+        self.assertIn('display: none', footer)
+        brand = _declarations(dense, '.kontrol-workspace .kontrol-brand')
+        self.assertIn('min-height: 44px', brand)
+        disclaimer = _declarations(dense, '.kontrol-workspace .kontrol-disclaimer')
+        self.assertIn('display: none', disclaimer)
+
     def test_readable_labels_and_service_text(self):
         css = _css()
         for selector, size in (

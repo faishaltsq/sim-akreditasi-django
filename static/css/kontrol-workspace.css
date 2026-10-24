@@ -384,6 +384,54 @@ body.kontrol-workspace {
   .kontrol-workspace .layanan-head { align-items: flex-start; gap: 8px; flex-wrap: wrap; }
 }
 
+@media (min-width: 1200px) and (max-height: 900px) {
+  .kontrol-workspace .kontrol-main { padding-top: 8px; padding-bottom: 12px; }
+  .kontrol-workspace .kontrol-topbar { padding: 8px 14px; min-height: 52px; }
+  .kontrol-workspace .kontrol-brand { min-height: 44px; }
+  .kontrol-workspace .kontrol-portal-nav { margin-bottom: 10px; padding-bottom: 6px; }
+  .kontrol-workspace .kontrol-portal-nav a { min-height: 44px; padding: 8px 14px; }
+  .kontrol-workspace :is(.kontrol-hero, .kontrol-header, .kontrol-subhead) {
+    padding: 14px 16px; margin-bottom: 10px; gap: 12px;
+  }
+  .kontrol-workspace .kontrol-hero {
+    display: grid; grid-template-columns: minmax(0, 1fr) 440px;
+    grid-template-areas: 'eyebrow switch' 'title switch' 'lede switch';
+  }
+  .kontrol-workspace .kontrol-hero > .kontrol-eyebrow { grid-area: eyebrow; margin: 0; }
+  .kontrol-workspace .kontrol-hero > .kontrol-title { grid-area: title; margin: 0; }
+  .kontrol-workspace .kontrol-hero > .kontrol-lede { grid-area: lede; margin: 0; }
+  .kontrol-workspace .kontrol-hero > .kontrol-lede + .kontrol-lede { display: none; }
+  .kontrol-workspace .kontrol-hero .kontrol-unit-switch {
+    grid-area: switch; grid-column: 2; align-self: center;
+  }
+  .kontrol-workspace .kontrol-title { font-size: 28px; }
+  .kontrol-workspace .kontrol-title-sm { font-size: 24px; }
+  .kontrol-workspace .kontrol-module-access { padding: 12px; margin-bottom: 10px; }
+  .kontrol-workspace .kontrol-module-access-label { margin-bottom: 8px; }
+  .kontrol-workspace .kontrol-portals {
+    grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px;
+  }
+  .kontrol-workspace .portal-card { padding: 12px; }
+  .kontrol-workspace .portal-card h2 { font-size: 16px; }
+  .kontrol-workspace :is(.portal-card p, .portal-sub, .portal-foot) {
+    font-size: 13px; line-height: 1.4;
+  }
+  .kontrol-workspace .portal-metric strong,
+  .kontrol-workspace :is(.kpi-value, .quick-value, .gauge-value) { font-size: 24px; }
+  .kontrol-workspace .quick-item,
+  .kontrol-workspace .kpi { padding: 10px 12px; }
+  .kontrol-workspace .kontrol-kpis { gap: 8px; margin-bottom: 10px; }
+  .kontrol-workspace .kontrol-grid-2 { gap: 10px; margin-bottom: 10px; }
+  .kontrol-workspace :is(.kontrol-panel, .kontrol-ai, .kontrol-layanan) { padding: 12px; }
+  .kontrol-workspace .panel-head { margin-bottom: 8px; }
+  .kontrol-workspace .panel-head-tight { margin-top: 12px; }
+  .kontrol-workspace .kontrol-emr-summary { gap: 10px; margin-bottom: 10px; }
+  .kontrol-workspace .kontrol-ai { margin-bottom: 0; }
+  .kontrol-workspace .kontrol-ai-head h3 { font-size: 15px; }
+  .kontrol-workspace .kontrol-disclaimer { display: none; }
+  .kontrol-workspace .kontrol-footer { display: none; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .kontrol-workspace *, .kontrol-workspace *::before, .kontrol-workspace *::after {
     animation: none; transition: none; scroll-behavior: auto;
