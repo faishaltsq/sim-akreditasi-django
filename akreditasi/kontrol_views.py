@@ -18,6 +18,7 @@ from django.urls import reverse
 from django.views.decorators.http import require_POST
 
 from .kontrol_data import build_unit_snapshot, sample_units, snapshot_cached
+from .kontrol_navigation import module_actions, portal_navigation
 from .models import UnitKerja
 from .security_utils import rate_limit
 
@@ -27,7 +28,7 @@ SUBDASHBOARDS = (
         'url_name': 'akreditasi:kontrol_risiko',
         'title': 'Integrated Risk & Patient Safety Control',
         'subtitle': 'Risiko, insiden, RTL, indikator mutu — dengan AI',
-        'icon': 'bi-shield-fail',
+        'icon': 'bi-shield-check',
         'accent': 'linear-gradient(135deg,#7f1d1d,#dc2626)',
     },
     {
@@ -80,18 +81,46 @@ def _resolve_unit(request, profile):
     return units[0] if units else None
 
 
-def _common_context(request, unit, profile):
+def _common_context(request, unit, profile, *, snapshot=None, active_portal='hub'):
+    """Konteks bersama; snapshot dioper, bukan dibangun ulang.
+
+    ``portal_navigation``/``module_actions`` hanya memakai unit yang sudah
+    di-resolve ``_resolve_unit``, dan izin modul pasien hanya dievaluasi di
+    portal EMR supaya request lain tidak menambah query.
+    """
+    from django.utils import timezone
+
+    from .views import _is_manager_role
+
     units = list(sample_units(12))
     if profile is not None and profile.is_unit_scoped and profile.unit_kerja:
         units = [profile.unit_kerja]
     elif unit and unit not in units:
         units = [unit] + units
+    can_view_hc = _can_view_human_capital(request.user)
+    allowed = (profile.get_allowed_patient_modules()
+               if profile and active_portal == 'emr' else set())
+    year = snapshot['year'] if snapshot else timezone.localdate().year
     return {
         'unit': unit,
         'unit_options': units,
         'profile': profile,
         'subdashboards': SUBDASHBOARDS,
         'is_unit_scoped': bool(profile and profile.is_unit_scoped),
+        'can_view_hc': can_view_hc,
+        'active_portal': active_portal,
+        'portal_navigation': portal_navigation(
+            SUBDASHBOARDS, unit=unit, active_portal=active_portal,
+            can_view_hc=can_view_hc,
+        ),
+        'module_actions': module_actions(
+            active_portal, unit=unit, year=year,
+            is_manager=_is_manager_role(request.user),
+            allowed_patient_modules=allowed,
+            layanan=snapshot.get('layanan', {}) if snapshot else {},
+        ),
+        'portal_meta': next((p for p in SUBDASHBOARDS
+                             if p['key'] == active_portal), None),
     }
 
 
@@ -100,6 +129,8 @@ def kontrol_hub(request):
     profile = _profile(request)
     unit = _resolve_unit(request, profile)
     snapshot = snapshot_cached(unit, profile) if unit else None
+    ctx = _common_context(request, unit, profile, snapshot=snapshot,
+                          active_portal='hub')
 
     portal_cards = []
     if snapshot:
@@ -143,7 +174,7 @@ def kontrol_hub(request):
         }
 
         for item in SUBDASHBOARDS:
-            if item.get('requires_hc') and not _can_view_human_capital(request.user):
+            if item.get('requires_hc') and not ctx['can_view_hc']:
                 continue
             base = dict(item)
             card = metrics.get(item['key'], {})
@@ -159,7 +190,7 @@ def kontrol_hub(request):
             portal_cards.append(card)
 
     return render(request, 'akreditasi/kontrol/hub.html', {
-        **_common_context(request, unit, profile),
+        **ctx,
         'snapshot': snapshot,
         'portal_cards': portal_cards,
     })
@@ -216,10 +247,11 @@ def _human_capital_card(user, unit):
     }
 
 
-def _briefing(request, unit, profile):
+def _briefing(request, unit, profile, portal_key):
     snapshot = snapshot_cached(unit, profile) if unit else None
     return {
-        **_common_context(request, unit, profile),
+        **_common_context(request, unit, profile, snapshot=snapshot,
+                          active_portal=portal_key),
         'snapshot': snapshot,
     }
 
@@ -230,9 +262,7 @@ def _portal(request, template, portal_key):
     if unit is None:
         messages.warning(request, 'Belum ada unit kerja aktif untuk ditampilkan.')
         return redirect('akreditasi:kontrol_hub')
-    ctx = _briefing(request, unit, profile)
-    ctx['active_portal'] = portal_key
-    return render(request, template, ctx)
+    return render(request, template, _briefing(request, unit, profile, portal_key))
 
 
 @login_required
@@ -295,7 +325,8 @@ def kontrol_layanan(request):
     if status_filter:
         items = [i for i in items if i['status'] == status_filter]
 
-    ctx = _common_context(request, unit, profile)
+    ctx = _common_context(request, unit, profile, snapshot=snapshot,
+                          active_portal='layanan')
     ctx.update({
         'snapshot': snapshot,
         'layanan': layanan,
@@ -309,7 +340,6 @@ def kontrol_layanan(request):
             ('DAFTAR', 'Terdaftar'), ('TRIAGE', 'Triage'), ('ASESMEN', 'Asesmen'),
             ('RANAP', 'Rawat Inap'), ('PULANG', 'Pulang'), ('RUJUK', 'Dirujuk'),
         ],
-        'active_portal': 'emr',
     })
     return render(request, 'akreditasi/kontrol/layanan.html', ctx)
 

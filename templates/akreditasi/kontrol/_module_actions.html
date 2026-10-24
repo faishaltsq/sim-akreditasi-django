@@ -1,0 +1,18 @@
+{% if unit %}
+<section class="kontrol-module-access" aria-label="Akses modul operasional">
+  <div class="kontrol-module-access-label">Akses modul</div>
+  {% if module_actions %}
+  <div class="kontrol-module-actions">
+    {% for action in module_actions %}
+    <a href="{{ action.href }}" class="kontrol-module-link{% if forloop.first %} is-primary{% endif %}"
+       {% if forloop.first %}data-module-primary{% endif %}>
+      <span>{{ action.label }}</span><small>{{ action.scope }}</small>
+      <i class="bi bi-arrow-up-right" aria-hidden="true"></i>
+    </a>
+    {% endfor %}
+  </div>
+  {% else %}
+  <p class="kontrol-note">Tidak ada pintasan operasional untuk akses dan unit ini.</p>
+  {% endif %}
+</section>
+{% endif %}

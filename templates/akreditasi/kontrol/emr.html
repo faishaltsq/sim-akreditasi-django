@@ -2,17 +2,7 @@
 {% block title %}Smart EMR &amp; Clinical Quality — ARIMA{% endblock %}
 
 {% block content %}
-<section class="kontrol-subhead">
-    <div class="subhead-left">
-        <a class="kontrol-back" href="{% url 'akreditasi:kontrol_hub' %}?unit={{ snapshot.unit.id }}">
-            <i class="bi bi-arrow-left"></i> Control
-        </a>
-        <span class="kontrol-eyebrow"><i class="bi bi-activity"></i> Sub-dasbor 2</span>
-        <h1 class="kontrol-title-sm">Smart EMR &amp; Clinical Quality STARKES</h1>
-        <p class="kontrol-lede-sm">Kunjungan aktif, kelengkapan dokumentasi klinis, dan kredensial PPA.</p>
-    </div>
-    {% include "akreditasi/kontrol/_unit_switch.html" %}
-</section>
+{% include 'akreditasi/kontrol/_portal_header.html' %}
 
 <section class="kontrol-kpis">
     <div class="kpi">

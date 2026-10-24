@@ -1,0 +1,7 @@
+<nav class="kontrol-portal-nav" aria-label="Navigasi Integrated Control">
+  {% for item in portal_navigation %}
+    <a href="{{ item.href }}"{% if item.active %} aria-current="page"{% endif %}>
+      {{ item.label }}
+    </a>
+  {% endfor %}
+</nav>

@@ -62,7 +62,6 @@ body.kontrol-body {
     gap: 16px;
     padding: 18px clamp(16px, 4vw, 56px);
     border-bottom: 1px solid var(--k-line);
-    backdrop-filter: blur(10px);
     background: rgba(7, 13, 23, 0.55);
     flex-wrap: wrap;
 }

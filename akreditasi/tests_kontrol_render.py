@@ -3,18 +3,28 @@ from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.urls import reverse
 from accounts.models import UserProfile
+from akreditasi.models import UnitKerja
 
 
 class KontrolRenderTest(TestCase):
     @classmethod
     def setUpTestData(cls):
-        U = get_user_model()
+        User = get_user_model()
+        unit = UnitKerja.objects.create(
+            code='KTRL-RENDER', name='Control render fixture',
+            level=2, is_active=True,
+        )
         cls.users = {}
         for role, _label in UserProfile.ROLE_CHOICES:
-            u = U.objects.filter(profile__role=role).first()
-            if u:
-                cls.users[role] = u
-        cls.superuser = U.objects.filter(is_superuser=True).first()
+            user = User.objects.create_user(username='control-render-' + role.lower())
+            UserProfile.objects.create(user=user, role=role, unit_kerja=unit)
+            cls.users[role] = user
+        cls.superuser = User.objects.create_superuser(
+            username='control-render-superuser', email='control-render@example.test',
+        )
+        UserProfile.objects.create(
+            user=cls.superuser, role='SUPER_ADMIN', unit_kerja=unit,
+        )
 
     def test_hub_render_untuk_semua_role(self):
         url = reverse('akreditasi:kontrol_hub')

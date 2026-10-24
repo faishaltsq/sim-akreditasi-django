@@ -41,8 +41,7 @@
 
 <section class="kontrol-portals">
     {% for portal in portal_cards %}
-    <a class="portal-card" href="{{ portal.url }}?unit={{ snapshot.unit.id }}"
-       style="--accent: {{ portal.accent }};">
+    <a class="portal-card" href="{{ portal.url }}{% if not portal.requires_hc %}?unit={{ unit.pk }}{% endif %}">
         <div class="portal-top">
             <span class="portal-icon"><i class="bi {{ portal.icon }}"></i></span>
             <span class="portal-band portal-band-{{ portal.band }}">{{ portal.band_label }}</span>

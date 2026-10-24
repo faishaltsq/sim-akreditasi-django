@@ -2,17 +2,7 @@
 {% block title %}Risk &amp; Patient Safety Control — ARIMA{% endblock %}
 
 {% block content %}
-<section class="kontrol-subhead">
-    <div class="subhead-left">
-        <a class="kontrol-back" href="{% url 'akreditasi:kontrol_hub' %}?unit={{ snapshot.unit.id }}">
-            <i class="bi bi-arrow-left"></i> Control
-        </a>
-        <span class="kontrol-eyebrow"><i class="bi bi-shield-fail"></i> Sub-dasbor 1</span>
-        <h1 class="kontrol-title-sm">Integrated Risk &amp; Patient Safety Control</h1>
-        <p class="kontrol-lede-sm">Risiko, insiden, RTL, dan indikator mutu satu unit — dibaca sekali lihat.</p>
-    </div>
-    {% include "akreditasi/kontrol/_unit_switch.html" %}
-</section>
+{% include 'akreditasi/kontrol/_portal_header.html' %}
 
 <section class="kontrol-kpis">
     <div class="kpi kpi-critical">
@@ -110,18 +100,9 @@
             Dua angka terpisah, bukan skor budaya safety — sistem belum punya survei budaya.
         </p>
     </section>
-</section>
+</div>
 
 {% include "akreditasi/kontrol/_ai_panel.html" %}
 
 {% include "akreditasi/kontrol/_layanan_unit.html" %}
-
-<section class="kontrol-modlinks">
-    <a href="{% url 'akreditasi:risiko_daftar' %}"><i class="bi bi-list-check"></i> Daftar risiko</a>
-    <a href="{% url 'akreditasi:risiko_monev' %}"><i class="bi bi-clipboard-data"></i> Monitoring &amp; evaluasi</a>
-    <a href="{% url 'akreditasi:risiko_fmea_rca' %}"><i class="bi bi-diagram-3"></i> FMEA / RCA</a>
-    <a href="{% url 'akreditasi:insiden_daftar' %}"><i class="bi bi-exclamation-triangle"></i> Insiden keselamatan</a>
-    <a href="{% url 'akreditasi:indikator_dashboard' %}"><i class="bi bi-speedometer2"></i> Indikator mutu</a>
-    <a href="{% url 'akreditasi:laporan_mutu_daftar' %}"><i class="bi bi-file-earmark-text"></i> Laporan mutu</a>
-</section>
 {% endblock %}

@@ -1,0 +1,323 @@
+/* ARIMA — Integrated Control workspace
+   Lapisan presentasi opsional di atas kontrol.css: masthead navy–indigo,
+   permukaan data putih. Dimuat setelah kontrol.css, tidak mengimpor token global. */
+
+@font-face {
+  font-family: 'Inter'; font-style: normal; font-weight: 100 900;
+  font-display: swap; src: url("../fonts/inter-latin.260c81a4759b.woff2") format('woff2');
+}
+@font-face {
+  font-family: 'Manrope'; font-style: normal; font-weight: 200 800;
+  font-display: swap; src: url("../fonts/manrope-latin.938c6e8019b6.woff2") format('woff2');
+}
+
+body.kontrol-workspace {
+  --k-bg: #F6F8FC; --k-panel: #FFFFFF; --k-panel-2: #F0F3F9;
+  --k-panel-solid: #FFFFFF; --k-line: #E2E7F0; --k-line-strong: #B8C2D5;
+  --k-border: #E2E7F0; --k-text: #17223B; --k-muted: #52617A;
+  --k-dim: #52617A; --k-good: #0F766E; --k-watch: #A15C06; --k-critical: #B42318;
+  --k-cyan: #4F5BD5; --k-blue: #4F5BD5; --k-violet: #37429E;
+  --k-green: #0F766E; --k-amber: #A15C06; --k-red: #B42318;
+  --k-shadow: 0 4px 16px rgb(20 33 61 / 5%);
+  --k-radius: 16px; --k-radius-sm: 10px;
+  color: var(--k-text); font: 15px/1.55 'Inter', sans-serif;
+  background: linear-gradient(160deg, #F0EDFF 0, #F6F8FC 520px);
+  min-height: 100vh;
+}
+
+.kontrol-workspace * { box-sizing: border-box; }
+.kontrol-workspace :is(h1, h2, h3) { font-family: 'Manrope', sans-serif; }
+
+/* Google Fonts dilepas: semua pemakaian mono lama jatuh ke Inter bertabular. */
+.kontrol-workspace :is(.kontrol-eyebrow, .panel-hint, .kpi-scope, .matrix-tick,
+  .matrix-axis-x, .matrix-axis-y, .matrix-cell, .quick-value, .kpi-value,
+  .portal-metric strong, .portal-band, .bar-count, .proxy strong, .gauge-value,
+  .layanan-date, .layanan-entry-text small, .layanan-entry-count,
+  .layanan-table .mono, .layanan-sub, .kontrol-footer-meta) {
+  font-family: 'Inter', sans-serif; font-variant-numeric: tabular-nums;
+}
+
+.kontrol-workspace .kontrol-main {
+  width: min(100%, 1264px); max-width: 1264px; margin: 0 auto; padding: 24px 32px 40px;
+}
+
+/* ── topbar ─────────────────────────────────────────────── */
+
+.kontrol-workspace .kontrol-topbar {
+  width: min(calc(100% - 64px), 1200px); margin: 24px auto 0;
+  background: #FFFFFF; border: 1px solid var(--k-border); border-radius: 16px;
+  color: var(--k-text); padding: 14px 20px; box-shadow: var(--k-shadow); gap: 16px;
+}
+.kontrol-workspace :is(.kontrol-brand strong, .kontrol-user) { color: var(--k-text); }
+.kontrol-workspace :is(.kontrol-brand small, .kontrol-note, .kontrol-disclaimer,
+  .kpi-label, .kpi-foot, .quick-label, .bar-label, .panel-hint,
+  .gauge-label, .proxy-label, .proxy-unit, .layanan-date, .layanan-sub,
+  .layanan-entry-text small, .portal-foot) { color: var(--k-muted); }
+.kontrol-workspace :is(.brand-mark, .portal-icon) {
+  background: #F0EDFF; color: #37429E; border: 1px solid #E4E7FA;
+  box-shadow: none; background-image: none;
+}
+.kontrol-workspace :is(.kontrol-ghost, .kontrol-user) {
+  background: #FFFFFF; border-color: var(--k-border); color: var(--k-text);
+  min-height: 44px;
+}
+.kontrol-workspace :is(.kontrol-ghost, .kontrol-user):hover {
+  background: #F0EDFF; border-color: #AAB4E5; color: #37429E;
+}
+
+/* ── masthead ───────────────────────────────────────────── */
+
+.kontrol-workspace :is(.kontrol-hero, .kontrol-header, .kontrol-subhead) {
+  background: linear-gradient(112deg, #14213D 0%, #27366B 55%, #37429E 100%);
+  border: 1px solid #27366B; border-radius: 16px; padding: 28px;
+  gap: 24px; margin: 0 0 24px; color: #FFFFFF; display: flex;
+  align-items: center; justify-content: space-between; flex-wrap: wrap;
+}
+.kontrol-workspace .kontrol-hero { display: block; }
+.kontrol-workspace .kontrol-header-main { min-width: 0; flex: 1 1 420px; }
+.kontrol-workspace .kontrol-title {
+  font-size: clamp(28px, 3vw, 40px); line-height: 1.18; letter-spacing: -.025em;
+  color: #FFFFFF; max-width: 840px;
+}
+.kontrol-workspace .kontrol-title-sm { font-size: clamp(26px, 2.6vw, 34px); color: #FFFFFF; }
+.kontrol-workspace .kontrol-title span {
+  display: inline; color: inherit; background: none;
+  -webkit-text-fill-color: currentColor; -webkit-background-clip: border-box;
+}
+.kontrol-workspace :is(.kontrol-hero, .kontrol-header, .kontrol-subhead) .kontrol-eyebrow {
+  color: #C7CDF5; letter-spacing: .06em; font-size: 11px; margin-bottom: 12px;
+}
+.kontrol-workspace :is(.kontrol-hero, .kontrol-header, .kontrol-subhead)
+  :is(.kontrol-lede, .kontrol-lede-sm, .kontrol-lead) {
+  color: #E2E7FA; font-size: 15px; line-height: 1.65;
+  max-width: 64ch; margin-bottom: 0;
+}
+.kontrol-workspace .kontrol-hero .kontrol-lede { margin: 0 0 24px; }
+.kontrol-workspace .kontrol-header .kontrol-lead { margin: 0; }
+.kontrol-workspace .kontrol-subhead .kontrol-back { color: #E2E7FA; }
+.kontrol-workspace .kontrol-subhead .kontrol-back:hover { color: #FFFFFF; }
+
+/* ── portal nav ─────────────────────────────────────────── */
+
+.kontrol-workspace .kontrol-portal-nav {
+  display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 24px;
+  border-bottom: 1px solid var(--k-border); padding-bottom: 12px;
+}
+.kontrol-workspace .kontrol-portal-nav a {
+  display: inline-flex; align-items: center; min-height: 44px; padding: 10px 16px;
+  color: var(--k-muted); text-decoration: none; border-radius: 10px;
+  font-weight: 600; border: 1px solid transparent;
+}
+.kontrol-workspace .kontrol-portal-nav a:hover { background: #F0EDFF; color: #37429E; }
+.kontrol-workspace .kontrol-portal-nav a[aria-current='page'] {
+  color: #37429E; background: #E4E7FA; border-color: #CCD2EF;
+}
+
+/* ── direct module access ───────────────────────────────── */
+
+.kontrol-workspace .kontrol-module-access {
+  background: #FFFFFF; border: 1px solid var(--k-border); padding: 20px;
+  border-radius: 16px; margin-bottom: 24px; box-shadow: var(--k-shadow);
+}
+.kontrol-workspace .kontrol-module-access-label {
+  font-size: 12px; font-weight: 700; color: var(--k-muted);
+  letter-spacing: .04em; margin-bottom: 12px;
+}
+.kontrol-workspace .kontrol-module-actions { display: flex; flex-wrap: wrap; gap: 10px; }
+.kontrol-workspace .kontrol-module-link {
+  display: inline-flex; align-items: center; gap: 10px; min-height: 44px;
+  border: 1px solid var(--k-border); border-radius: 10px; padding: 10px 14px;
+  text-decoration: none; color: var(--k-text); background: #FFFFFF; font-weight: 600;
+}
+.kontrol-workspace .kontrol-module-link small {
+  font-size: 12px; line-height: 1.35; font-weight: 500; color: var(--k-muted);
+}
+.kontrol-workspace .kontrol-module-link i { color: #4F5BD5; font-size: 12px; }
+.kontrol-workspace .kontrol-module-link:hover { border-color: #AAB4E5; background: #F7F8FE; }
+.kontrol-workspace .kontrol-module-link.is-primary {
+  background: #4F5BD5; border-color: #4F5BD5; color: #FFFFFF;
+}
+.kontrol-workspace .kontrol-module-link.is-primary small,
+.kontrol-workspace .kontrol-module-link.is-primary i { color: #FFFFFF; }
+.kontrol-workspace .kontrol-module-link.is-primary:hover { background: #37429E; }
+
+/* ── data surfaces ──────────────────────────────────────── */
+
+.kontrol-workspace :is(.portal-card, .kontrol-panel, .kpi, .kontrol-ai,
+  .kontrol-layanan, .quick-item, .proxy, .bar-list li, .layanan-entry,
+  .kontrol-empty, .kontrol-unit-switch) {
+  background: #FFFFFF; border-color: var(--k-border); color: var(--k-text);
+  box-shadow: none;
+}
+.kontrol-workspace :is(.portal-card, .kontrol-panel, .kontrol-ai, .kontrol-layanan) {
+  padding: 24px; border-radius: 16px; box-shadow: var(--k-shadow);
+}
+.kontrol-workspace .kontrol-portals {
+  display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px;
+}
+.kontrol-workspace .portal-card { min-width: 0; transform: none; }
+.kontrol-workspace .portal-card::before { content: none; }
+.kontrol-workspace .portal-card::after { content: none; }
+.kontrol-workspace .portal-card:hover {
+  border-color: #AAB4E5; box-shadow: var(--k-shadow); transform: none;
+}
+.kontrol-workspace .portal-card h2 {
+  color: var(--k-text); font-size: 21px; line-height: 1.4; letter-spacing: -.015em;
+}
+.kontrol-workspace :is(.portal-card p, .portal-sub) { color: var(--k-muted); }
+.kontrol-workspace .portal-metric span { color: var(--k-muted); }
+.kontrol-workspace .portal-cta { color: #37429E; }
+.kontrol-workspace .portal-band { background: #FFFFFF; }
+.kontrol-workspace .portal-band-good { color: var(--k-good); }
+.kontrol-workspace .portal-band-watch { color: var(--k-watch); }
+.kontrol-workspace .portal-band-critical { color: var(--k-critical); }
+
+.kontrol-workspace :is(.quick-value, .kpi-value, .portal-metric strong,
+  .panel-head h2, .proxy strong, .gauge-value, .kontrol-ai-head h3,
+  .layanan-head h2, .bar-count, .kontrol-empty h3) { color: var(--k-text); }
+.kontrol-workspace :is(.kpi-value, .quick-value, .portal-metric strong, .gauge-value) {
+  font-family: 'Manrope', sans-serif; font-variant-numeric: tabular-nums; font-size: 28px;
+}
+.kontrol-workspace .kpi { border-radius: 14px; padding: 20px; }
+.kontrol-workspace .kpi-critical { border-color: #F0C2BD; }
+.kontrol-workspace .kpi-critical .kpi-value { color: var(--k-critical); }
+.kontrol-workspace .kpi-watch { border-color: #EBD3AE; }
+.kontrol-workspace .kpi-watch .kpi-value { color: var(--k-watch); }
+.kontrol-workspace .kpi-scope { border-color: var(--k-line-strong); color: var(--k-muted); }
+.kontrol-workspace .panel-head h2 i { color: #4F5BD5; }
+
+.kontrol-workspace .kontrol-quickstrip { background: var(--k-border); border-radius: 14px; }
+.kontrol-workspace .quick-item { padding: 20px; }
+.kontrol-workspace .bar-list li { background: #F7F8FC; border-radius: 9px; }
+.kontrol-workspace .matrix-cell:not(.has-data) {
+  background: #EDF0F6; color: var(--k-muted);
+}
+/* Latar severity semi-transparan (kontrol.css) — putih hanya 1.745–3.655:1. */
+.kontrol-workspace .matrix-cell.has-data { color: #06121F; border-color: transparent; }
+.kontrol-workspace .proxy { background: #F7F8FC; }
+.kontrol-workspace .gauge-track { background: #EDF0F6; }
+.kontrol-workspace .gauge-track span { background: #4F5BD5; }
+
+/* ── unit switch (kartu putih di atas masthead navy) ───── */
+
+.kontrol-workspace .kontrol-unit-switch {
+  background: #FFFFFF; border: 1px solid var(--k-border); box-shadow: var(--k-shadow);
+  border-radius: 12px; max-width: 100%; flex: 0 1 auto;
+}
+.kontrol-workspace .kontrol-unit-switch label { color: var(--k-muted); }
+.kontrol-workspace .kontrol-unit-switch .kontrol-note { color: var(--k-muted); }
+.kontrol-workspace .kontrol-unit-switch .form-select {
+  color: var(--k-text); background-color: #FFFFFF; border: 1px solid #B8C2D5;
+  min-height: 44px; width: 100%; min-width: 0; font-size: 14px;
+}
+.kontrol-workspace .kontrol-unit-switch .form-select option { color: var(--k-text); background: #FFFFFF; }
+.kontrol-workspace .layanan-filter .form-select {
+  background-color: #FFFFFF; border-color: var(--k-border); color: var(--k-text);
+  min-height: 44px;
+}
+
+/* ── AI panel (sekunder) ────────────────────────────────── */
+
+.kontrol-workspace .kontrol-ai { background: #FBFBFE; border-color: var(--k-border); }
+.kontrol-workspace .kontrol-ai .kontrol-eyebrow { color: #52617A; }
+.kontrol-workspace .kontrol-ai-body { color: var(--k-text); border-top-color: var(--k-border); }
+.kontrol-workspace .kontrol-ai-body h4 { color: #37429E; }
+.kontrol-workspace .ai-limit { color: var(--k-muted); }
+.kontrol-workspace .ai-error { color: var(--k-critical); }
+.kontrol-workspace .kontrol-btn {
+  min-height: 44px; background: #FFFFFF; border-color: var(--k-line-strong);
+  color: var(--k-text); box-shadow: none;
+}
+.kontrol-workspace .kontrol-btn:hover { background: #F0EDFF; border-color: #AAB4E5; }
+.kontrol-workspace .kontrol-btn-ai {
+  color: #37429E; background: #F0EDFF; border-color: #CCD2EF;
+}
+
+/* ── layanan unit + tabel ───────────────────────────────── */
+
+.kontrol-workspace .layanan-entry { background: #F7F8FC; }
+.kontrol-workspace .layanan-entry:hover { background: #F0EDFF; border-color: #AAB4E5; }
+.kontrol-workspace .layanan-entry-icon { background: #F0EDFF; color: #37429E; }
+.kontrol-workspace .layanan-entry-count { color: #37429E; }
+.kontrol-workspace .layanan-entry-go { color: var(--k-muted); }
+.kontrol-workspace .layanan-note { color: var(--k-watch); }
+.kontrol-workspace .layanan-table { color: var(--k-text); }
+.kontrol-workspace .layanan-table thead th { color: var(--k-muted); border-bottom-color: var(--k-border); }
+.kontrol-workspace .layanan-table tbody td {
+  border-color: var(--k-border); overflow-wrap: break-word;
+}
+.kontrol-workspace .layanan-table tbody tr:hover { background: #F7F8FC; }
+.kontrol-workspace .layanan-badge-daftar,
+.kontrol-workspace .layanan-badge-triage { color: var(--k-watch); border-color: #EBD3AE; }
+.kontrol-workspace .layanan-badge-asesmen,
+.kontrol-workspace .layanan-badge-ranap { color: #37429E; border-color: #CCD2EF; }
+.kontrol-workspace .layanan-badge-pulang { color: var(--k-good); border-color: #B7DAD5; }
+.kontrol-workspace .layanan-badge-rujuk,
+.kontrol-workspace .layanan-badge-meninggal,
+.kontrol-workspace .layanan-badge-batal { color: var(--k-critical); border-color: #F0C2BD; }
+.kontrol-workspace .table-responsive { overflow-x: auto; }
+
+/* ── pesan & catatan ────────────────────────────────────── */
+
+.kontrol-workspace .kontrol-alert {
+  background: #F0F4FF; border-color: #CCD2EF; color: #17223B;
+}
+.kontrol-workspace .kontrol-alert-info { background: #F0F4FF; }
+.kontrol-workspace .kontrol-footer {
+  width: min(100%, 1264px); margin: 0 auto; padding: 20px 32px 32px;
+  border-top-color: var(--k-border); color: var(--k-muted); background: none;
+}
+.kontrol-workspace .kontrol-footer-meta { color: var(--k-muted); }
+
+/* ── interaksi & aksesibilitas ──────────────────────────── */
+
+.kontrol-workspace :is(a, button, select) {
+  transition: background-color 120ms ease, border-color 120ms ease, color 120ms ease;
+}
+.kontrol-workspace :focus-visible { outline: 3px solid #4F5BD5; outline-offset: 3px; }
+.kontrol-workspace .kontrol-skip-link {
+  position: absolute; top: 8px; left: 16px; transform: translateY(-200%);
+  background: #FFFFFF; color: #14213D; padding: 12px; z-index: 100;
+  border-radius: 8px; font-weight: 600; text-decoration: none;
+}
+.kontrol-workspace .kontrol-skip-link:focus { transform: translateY(0); }
+
+@media (max-width: 767px) {
+  .kontrol-workspace .kontrol-main { padding: 16px; }
+  .kontrol-workspace .kontrol-topbar { width: calc(100% - 32px); margin-top: 16px; }
+  .kontrol-workspace .kontrol-portals { grid-template-columns: minmax(0, 1fr); }
+  .kontrol-workspace :is(.kontrol-hero, .kontrol-header, .kontrol-subhead) {
+    flex-direction: column; align-items: stretch; padding: 20px;
+  }
+  /* Basis 420px di baris flex jadi tinggi kosong saat induk column. */
+  .kontrol-workspace .kontrol-header-main { flex: 0 0 auto; min-height: 0; }
+  .kontrol-workspace :is(.portal-card, .kontrol-panel, .kontrol-ai, .kontrol-layanan) {
+    padding: 20px;
+  }
+  .kontrol-workspace .kontrol-module-actions {
+    display: grid; grid-template-columns: minmax(0, 1fr);
+  }
+  .kontrol-workspace .kontrol-module-link { flex-wrap: wrap; }
+  .kontrol-workspace .kontrol-module-link i { margin-left: auto; }
+  .kontrol-workspace .kontrol-unit-switch { width: 100%; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .kontrol-workspace *, .kontrol-workspace *::before, .kontrol-workspace *::after {
+    animation: none; transition: none; scroll-behavior: auto;
+  }
+}
+
+@media print {
+  .kontrol-workspace { background: #FFFFFF; color: #17223B; }
+  .kontrol-workspace :is(.kontrol-topbar, .kontrol-portal-nav,
+    .kontrol-module-access, .kontrol-ai) { display: none; }
+  .kontrol-workspace :is(.kontrol-hero, .kontrol-header, .kontrol-subhead) {
+    background: #FFFFFF; border-color: #E2E7F0; color: #17223B;
+  }
+  .kontrol-workspace :is(.kontrol-title, .kontrol-title-sm,
+    .kontrol-hero .kontrol-lede, .kontrol-header .kontrol-lede,
+    .kontrol-subhead .kontrol-lede-sm,
+    .kontrol-hero .kontrol-eyebrow, .kontrol-header .kontrol-eyebrow,
+    .kontrol-subhead .kontrol-eyebrow) { color: #17223B; }
+}

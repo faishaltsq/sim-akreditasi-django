@@ -1,0 +1,107 @@
+"""Kontrak stylesheet workspace Integrated Control.
+
+Tes ini membaca berkas CSS langsung (tanpa DB, tanpa request) supaya brand,
+aksesibilitas, dan larangan blur/font eksternal tidak bisa hilang diam-diam.
+"""
+from pathlib import Path
+
+from django.conf import settings
+from django.test import SimpleTestCase
+
+
+def _static_root():
+    base = getattr(settings, 'BASE_DIR', None)
+    return Path(base) if base else Path(__file__).resolve().parent.parent
+
+
+def _css():
+    return (_static_root() / 'static/css/kontrol-workspace.css').read_text(
+        encoding='utf-8')
+
+
+def _block(css, opener):
+    """Isi blok kurawal pertama yang diawali `opener`, via pencocokan kurung."""
+    start = css.index(opener) + len(opener)
+    start = css.index('{', start) + 1
+    depth = 1
+    for idx in range(start, len(css)):
+        if css[idx] == '{':
+            depth += 1
+        elif css[idx] == '}':
+            depth -= 1
+            if depth == 0:
+                return css[start:idx]
+    raise AssertionError(f'blok tidak tertutup: {opener}')
+
+
+def _declarations(css, selector):
+    """Deklarasi untuk selector persis di dalam `css` (blok terluar)."""
+    import re
+    css = re.sub(r'/\*.*?\*/', '', css, flags=re.S)
+    found = []
+    for chunk in css.split('}'):
+        if '{' not in chunk:
+            continue
+        head, body = chunk.split('{', 1)
+        if head.strip() == selector:
+            found.append(body)
+    if not found:
+        raise AssertionError(f'selector tidak ditemukan: {selector}')
+    return ' '.join(' '.join(found).split())
+
+
+class ControlWorkspaceStyleTest(SimpleTestCase):
+    def test_brand_and_accessibility_contract(self):
+        css = (_static_root() / 'static/css/kontrol-workspace.css').read_text(
+            encoding='utf-8')
+        for required in ('#14213D', '#4F5BD5', '#37429E',
+                         ':focus-visible', 'prefers-reduced-motion',
+                         '@media print', 'inter-latin.woff2', 'manrope-latin.woff2'):
+            with self.subTest(required=required):
+                self.assertIn(required, css)
+        self.assertNotIn('backdrop-filter', css)
+        self.assertNotIn('!important', css)
+        self.assertNotIn('fonts.googleapis.com', css)
+
+    def test_legacy_shell_has_no_topbar_blur(self):
+        css = (_static_root() / 'static/css/kontrol.css').read_text(encoding='utf-8')
+        self.assertNotIn('backdrop-filter', css)
+
+    def test_mobile_header_main_resets_flex_basis(self):
+        """P1: induk jadi column, jadi basis 420px terbaca sebagai tinggi kosong."""
+        css = _css()
+        mobile = _block(css, '@media (max-width: 767px)')
+        decls = _declarations(
+            mobile, '.kontrol-workspace .kontrol-header-main')
+        self.assertIn('flex:0 0 auto', decls.replace('flex: 0 0 auto', 'flex:0 0 auto'))
+        self.assertIn('min-height:0', decls.replace('min-height: 0', 'min-height:0'))
+        self.assertNotIn('flex:1 1 420px', decls.replace('flex: 1 1 420px', 'flex:1 1 420px'))
+
+    def test_mobile_header_override_not_duplicated(self):
+        css = _css()
+        self.assertEqual(css.count('@media (max-width: 767px)'), 1)
+        self.assertEqual(
+            css.count('.kontrol-workspace .kontrol-header-main'), 2)
+
+    def test_desktop_header_main_keeps_basis(self):
+        css = _css()
+        desktop = css.split('@media (max-width: 767px)')[0]
+        decls = _declarations(desktop, '.kontrol-workspace .kontrol-header-main')
+        self.assertIn('flex:1 1 420px', decls.replace('flex: 1 1 420px', 'flex:1 1 420px'))
+
+    def test_populated_matrix_count_uses_dark_foreground(self):
+        """P4: latar severity lama semi-transparan; teks putih cuma 1.745–3.655:1."""
+        css = _css()
+        decls = _declarations(css, '.kontrol-workspace .matrix-cell.has-data')
+        self.assertIn('color:#06121f', decls.replace('color: #06121F', 'color:#06121f'))
+        self.assertNotIn('color:#ffffff', decls.replace('color: #FFFFFF', 'color:#ffffff'))
+        # Severity tetap milik kontrol.css; stylesheet ini tidak boleh mewarnai ulang.
+        self.assertEqual(css.count('.matrix-cell.level-'), 0)
+
+    def test_module_link_scope_label_readable(self):
+        """P3: <small> menjelaskan cakupan; 10px terlalu kecil."""
+        css = _css()
+        decls = _declarations(
+            css, '.kontrol-workspace .kontrol-module-link small')
+        self.assertIn('font-size:12px', decls.replace('font-size: 12px', 'font-size:12px'))
+        self.assertIn('line-height:1.35', decls.replace('line-height: 1.35', 'line-height:1.35'))

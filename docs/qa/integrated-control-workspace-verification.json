@@ -1,0 +1,72 @@
+{
+  "assets": [
+    {
+      "source": "css/kontrol.css",
+      "hashed": "css/kontrol.1710b56b40d2.css",
+      "sha256": "9f8ac915826ebbb29e3ad6716dbc896d567058a02e8dd1d7aa8b33ebebc84e8a",
+      "gzip_matches": true
+    },
+    {
+      "source": "css/kontrol-workspace.css",
+      "hashed": "css/kontrol-workspace.9eefe145ddc7.css",
+      "sha256": "05bd52a4a3a0d241c4a0d9b9660391909987e6975dcc9801989585765bfcbd28",
+      "gzip_matches": true
+    }
+  ],
+  "browser_renders": 45,
+  "cases": [
+    "dokumen",
+    "emr",
+    "emr-beds",
+    "emr-igd",
+    "emr-unmapped",
+    "hub",
+    "hub-hc",
+    "layanan",
+    "risiko"
+  ],
+  "widths": [
+    360,
+    390,
+    768,
+    1366,
+    1440
+  ],
+  "populated_matrix_contrast_checks": 125,
+  "minimum_matrix_contrast": 5.157172488372272,
+  "maximum_header_unused_space": 0,
+  "all_primary_actions_within_fold": true,
+  "operational_link_checks": 13,
+  "all_operational_links_status_200": true,
+  "browser_failures": 0,
+  "verification_scope": "isolated SQLite fixture views and component browser geometry, not production",
+  "focused_tests": {
+    "run": 92,
+    "result": "OK",
+    "settings": "config.control_test_settings",
+    "database": "SQLite :memory:"
+  },
+  "broad_regression": {
+    "run": 1018,
+    "failures": 5,
+    "failed_tests": [
+      "test_execution_creates_records_and_is_idempotent (akreditasi.tests_import_buku_risiko.ImportBukuRisikoCommandTest.test_execution_creates_records_and_is_idempotent)",
+      "test_unit_scoped_tetap_lihat_lingkungan_global_sesuai_sumbernya (akreditasi.tests_pencarian.PencarianLingkupUnit.test_unit_scoped_tetap_lihat_lingkungan_global_sesuai_sumbernya)",
+      "test_laporan_lengkap_unit_view (akreditasi.tests_perencanaan_risiko.PerencanaanRisikoTest.test_laporan_lengkap_unit_view)",
+      "test_kedua_sidebar_punya_id_berbeda (akreditasi.tests_sidebar_uid.SidebarUniqueIdTest.test_kedua_sidebar_punya_id_berbeda)",
+      "test_semua_halaman_get_render (akreditasi.tests_smoke_render.SmokeRenderTest.test_semua_halaman_get_render)"
+    ],
+    "result": "FAILED",
+    "log": "C:/Users/cubeb/AppData/Local/hermes/cache/scratch/control-elf/full-suite.log"
+  },
+  "review": {
+    "delta_spec": "PASS",
+    "quality": "APPROVED",
+    "critical": 0,
+    "important": 0,
+    "optional_minors": 7,
+    "review_log": "C:/Users/cubeb/AppData/Local/hermes/cache/scratch/control-elf/quality-review.log",
+    "review_process_exit": 1,
+    "review_process_note": "Iteration cap after complete review returned on stdout; parent saved report and verified gates."
+  }
+}

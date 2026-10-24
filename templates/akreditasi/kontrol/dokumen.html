@@ -2,17 +2,7 @@
 {% block title %}Accreditation Document Hub — ARIMA{% endblock %}
 
 {% block content %}
-<section class="kontrol-subhead">
-    <div class="subhead-left">
-        <a class="kontrol-back" href="{% url 'akreditasi:kontrol_hub' %}?unit={{ snapshot.unit.id }}">
-            <i class="bi bi-arrow-left"></i> Control
-        </a>
-        <span class="kontrol-eyebrow"><i class="bi bi-folder2-open"></i> Sub-dasbor 3</span>
-        <h1 class="kontrol-title-sm">Electronic Accreditation Document &amp; Automation Hub</h1>
-        <p class="kontrol-lede-sm">Kepatuhan elemen penilaian, dokumen bukti, dan antrean laporan mutu.</p>
-    </div>
-    {% include "akreditasi/kontrol/_unit_switch.html" %}
-</section>
+{% include 'akreditasi/kontrol/_portal_header.html' %}
 
 <section class="kontrol-kpis">
     <div class="kpi">
@@ -75,11 +65,4 @@
 {% include "akreditasi/kontrol/_ai_panel.html" %}
 
 {% include "akreditasi/kontrol/_layanan_unit.html" %}
-
-<section class="kontrol-modlinks">
-    <a href="{% url 'akreditasi:dokumen_hub' %}"><i class="bi bi-folder2"></i> Dokumen akreditasi</a>
-    <a href="{% url 'akreditasi:rekap' %}"><i class="bi bi-table"></i> Rekap kepatuhan</a>
-    <a href="{% url 'akreditasi:laporan_mutu_daftar' %}"><i class="bi bi-file-earmark-text"></i> Laporan mutu</a>
-    <a href="{% url 'akreditasi:indikator_dashboard' %}"><i class="bi bi-speedometer2"></i> Indikator mutu</a>
-</section>
 {% endblock %}
