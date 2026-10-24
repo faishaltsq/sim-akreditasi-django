@@ -94,7 +94,8 @@ class RegistrationEntryTest(TestCase):
         response = self.emr(unit)
         self.assertFalse(response.context['snapshot']['layanan']['mapped'])
         self.assertContains(response, 'data-service-action="pendaftaran"')
-        self.assertContains(response, 'tidak memiliki layanan pendaftaran pasien')
+        self.assertContains(response, 'belum memiliki pemetaan layanan klinis untuk daftar kunjungan harian')
+        self.assertNotContains(response, 'tidak memiliki layanan pendaftaran pasien')
 
     def test_non_entitled_users_get_neither_menu_nor_destination_access(self):
         for code in ('POLI-PD', 'LAB-BDRS', 'FARM', 'BANGSAL-DEWASA', 'DIREKSI'):

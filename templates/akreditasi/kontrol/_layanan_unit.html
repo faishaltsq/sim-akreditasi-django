@@ -24,7 +24,7 @@
     {% if not snapshot.layanan.mapped %}
     <p class="layanan-empty">
         <i class="bi bi-info-circle"></i>
-        Unit ini tidak memiliki layanan pendaftaran pasien langsung, sehingga tidak ada daftar kunjungan harian.
+        Unit ini belum memiliki pemetaan layanan klinis untuk daftar kunjungan harian. Pendaftaran pasien tetap tersedia melalui menu di atas sesuai hak akses.
     </p>
     {% else %}
     <a class="layanan-entry" href="{% url 'akreditasi:kontrol_layanan' %}?unit={{ snapshot.unit.id }}&tanggal={{ snapshot.layanan.tanggal|date:'Y-m-d' }}">

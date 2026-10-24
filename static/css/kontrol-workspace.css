@@ -38,13 +38,13 @@ body.kontrol-workspace {
 }
 
 .kontrol-workspace .kontrol-main {
-  width: min(100%, 1264px); max-width: 1264px; margin: 0 auto; padding: 24px 32px 40px;
+  width: min(100%, 1264px); max-width: 1264px; margin: 0 auto; padding: 12px 24px 24px;
 }
 
 /* ── topbar ─────────────────────────────────────────────── */
 
 .kontrol-workspace .kontrol-topbar {
-  width: min(calc(100% - 64px), 1200px); margin: 24px auto 0;
+  width: min(calc(100% - 64px), 1200px); margin: 16px auto 0;
   background: #FFFFFF; border: 1px solid var(--k-border); border-radius: 16px;
   color: var(--k-text); padding: 14px 20px; box-shadow: var(--k-shadow); gap: 16px;
 }
@@ -69,17 +69,17 @@ body.kontrol-workspace {
 
 .kontrol-workspace :is(.kontrol-hero, .kontrol-header, .kontrol-subhead) {
   background: linear-gradient(112deg, #14213D 0%, #27366B 55%, #37429E 100%);
-  border: 1px solid #27366B; border-radius: 16px; padding: 28px;
-  gap: 24px; margin: 0 0 24px; color: #FFFFFF; display: flex;
+  border: 1px solid #27366B; border-radius: 16px; padding: 20px;
+  gap: 16px; margin: 0 0 18px; color: #FFFFFF; display: flex;
   align-items: center; justify-content: space-between; flex-wrap: wrap;
 }
 .kontrol-workspace .kontrol-hero { display: block; }
 .kontrol-workspace .kontrol-header-main { min-width: 0; flex: 1 1 420px; }
 .kontrol-workspace .kontrol-title {
-  font-size: clamp(28px, 3vw, 40px); line-height: 1.18; letter-spacing: -.025em;
+  font-size: clamp(24px, 2.8vw, 36px); line-height: 1.15; letter-spacing: -.025em;
   color: #FFFFFF; max-width: 840px;
 }
-.kontrol-workspace .kontrol-title-sm { font-size: clamp(26px, 2.6vw, 34px); color: #FFFFFF; }
+.kontrol-workspace .kontrol-title-sm { font-size: clamp(22px, 2.4vw, 30px); color: #FFFFFF; }
 .kontrol-workspace .kontrol-title span {
   display: inline; color: inherit; background: none;
   -webkit-text-fill-color: currentColor; -webkit-background-clip: border-box;
@@ -92,7 +92,7 @@ body.kontrol-workspace {
   color: #E2E7FA; font-size: 15px; line-height: 1.65;
   max-width: 64ch; margin-bottom: 0;
 }
-.kontrol-workspace .kontrol-hero .kontrol-lede { margin: 0 0 24px; }
+.kontrol-workspace .kontrol-hero .kontrol-lede { margin: 0 0 16px; }
 .kontrol-workspace .kontrol-header .kontrol-lead { margin: 0; }
 .kontrol-workspace .kontrol-subhead .kontrol-back { color: #E2E7FA; }
 .kontrol-workspace .kontrol-subhead .kontrol-back:hover { color: #FFFFFF; }
@@ -100,7 +100,7 @@ body.kontrol-workspace {
 /* ── portal nav ─────────────────────────────────────────── */
 
 .kontrol-workspace .kontrol-portal-nav {
-  display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 24px;
+  display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 16px;
   border-bottom: 1px solid var(--k-border); padding-bottom: 12px;
 }
 .kontrol-workspace .kontrol-portal-nav a {
@@ -117,7 +117,7 @@ body.kontrol-workspace {
 
 .kontrol-workspace .kontrol-module-access {
   background: #FFFFFF; border: 1px solid var(--k-border); padding: 20px;
-  border-radius: 16px; margin-bottom: 24px; box-shadow: var(--k-shadow);
+  border-radius: 16px; margin-bottom: 16px; box-shadow: var(--k-shadow);
 }
 .kontrol-workspace .kontrol-module-access-label {
   font-size: 12px; font-weight: 700; color: var(--k-muted);
@@ -150,10 +150,10 @@ body.kontrol-workspace {
   box-shadow: none;
 }
 .kontrol-workspace :is(.portal-card, .kontrol-panel, .kontrol-ai, .kontrol-layanan) {
-  padding: 24px; border-radius: 16px; box-shadow: var(--k-shadow);
+  padding: 18px; border-radius: 16px; box-shadow: var(--k-shadow);
 }
 .kontrol-workspace .kontrol-portals {
-  display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px;
+  display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px;
 }
 .kontrol-workspace .portal-card { min-width: 0; transform: none; }
 .kontrol-workspace .portal-card::before { content: none; }
@@ -162,7 +162,7 @@ body.kontrol-workspace {
   border-color: #AAB4E5; box-shadow: var(--k-shadow); transform: none;
 }
 .kontrol-workspace .portal-card h2 {
-  color: var(--k-text); font-size: 21px; line-height: 1.4; letter-spacing: -.015em;
+  color: var(--k-text); font-size: 18px; line-height: 1.4; letter-spacing: -.015em;
 }
 .kontrol-workspace :is(.portal-card p, .portal-sub) { color: var(--k-muted); }
 .kontrol-workspace .portal-metric span { color: var(--k-muted); }
@@ -178,7 +178,7 @@ body.kontrol-workspace {
 .kontrol-workspace :is(.kpi-value, .quick-value, .portal-metric strong, .gauge-value) {
   font-family: 'Manrope', sans-serif; font-variant-numeric: tabular-nums; font-size: 28px;
 }
-.kontrol-workspace .kpi { border-radius: 14px; padding: 20px; }
+.kontrol-workspace .kpi { border-radius: 14px; padding: 16px; }
 .kontrol-workspace .kpi-critical { border-color: #F0C2BD; }
 .kontrol-workspace .kpi-critical .kpi-value { color: var(--k-critical); }
 .kontrol-workspace .kpi-watch { border-color: #EBD3AE; }
@@ -188,6 +188,20 @@ body.kontrol-workspace {
 
 .kontrol-workspace .kontrol-quickstrip { background: var(--k-border); border-radius: 14px; }
 .kontrol-workspace .quick-item { padding: 20px; }
+.kontrol-workspace .kontrol-kpis { margin-bottom: 16px; }
+.kontrol-workspace .kontrol-grid-2 { margin-bottom: 16px; }
+.kontrol-workspace .panel-head { margin-bottom: 10px; }
+.kontrol-workspace .kontrol-layanan { margin: 0 0 16px; }
+.kontrol-workspace .kontrol-ai { margin: 0 0 16px; }
+.kontrol-workspace .kontrol-emr-summary {
+  display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, .9fr);
+  gap: 16px; align-items: stretch; margin-bottom: 16px;
+}
+.kontrol-workspace .kontrol-emr-summary .kontrol-layanan,
+.kontrol-workspace .kontrol-emr-summary .kontrol-kpis { margin: 0; }
+.kontrol-workspace .kontrol-emr-summary .kontrol-kpis {
+  grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px;
+}
 .kontrol-workspace .bar-list li { background: #F7F8FC; border-radius: 9px; }
 .kontrol-workspace .matrix-cell:not(.has-data) {
   background: #EDF0F6; color: var(--k-muted);
@@ -200,8 +214,8 @@ body.kontrol-workspace {
 
 /* ── skala tipografi terbaca ────────────────────────────── */
 
-.kontrol-workspace .panel-head h2 { font-size: 18px; line-height: 1.4; }
-.kontrol-workspace .layanan-head h2 { font-size: 18px; line-height: 1.4; }
+.kontrol-workspace .panel-head h2 { font-size: 16px; line-height: 1.35; }
+.kontrol-workspace .layanan-head h2 { font-size: 16px; line-height: 1.35; }
 .kontrol-workspace .kpi-label {
   font-size: 14px; line-height: 1.5; font-weight: 600;
   text-transform: none; letter-spacing: normal;
@@ -215,7 +229,7 @@ body.kontrol-workspace {
 .kontrol-workspace .layanan-entry-text strong { font-size: 15px; line-height: 1.5; }
 .kontrol-workspace .layanan-entry-text small { font-size: 14px; line-height: 1.55; }
 .kontrol-workspace .kontrol-caption {
-  font-size: 14px; line-height: 1.55; color: var(--k-muted); margin: 12px 0 0;
+  font-size: 14px; line-height: 1.55; color: var(--k-muted); margin: 8px 0 0;
 }
 .kontrol-workspace :is(.quick-label, .portal-sub, .portal-foot, .portal-metric span,
   .bar-label, .bar-list-lg .bar-label, .proxy-label, .proxy-unit, .gauge-label,
@@ -233,12 +247,13 @@ body.kontrol-workspace {
   font-size: 14px; line-height: 1.5;
 }
 .kontrol-workspace .layanan-entry {
+  display: flex;
   min-height: 44px; padding: 16px; gap: 12px; align-items: center;
 }
 .kontrol-workspace .layanan-entry-text {
   min-width: 0; flex: 1 1 auto; white-space: normal; overflow-wrap: anywhere;
 }
-.kontrol-workspace .layanan-scope-note { margin-bottom: 12px; }
+.kontrol-workspace .layanan-scope-note { margin-bottom: 8px; }
 .kontrol-workspace .layanan-table { font-size: 14px; line-height: 1.55; }
 .kontrol-workspace .layanan-table thead th { font-size: 13px; letter-spacing: normal; }
 .kontrol-workspace .layanan-table .mono { font-size: 13px; }
@@ -251,7 +266,7 @@ body.kontrol-workspace {
 
 .kontrol-workspace .kontrol-unit-switch {
   background: #FFFFFF; border: 1px solid var(--k-border); box-shadow: var(--k-shadow);
-  border-radius: 12px; max-width: 100%; flex: 0 1 auto;
+  border-radius: 12px; width: min(100%, 440px); max-width: 100%; flex: 0 1 440px;
 }
 .kontrol-workspace .kontrol-unit-switch label { color: var(--k-muted); }
 .kontrol-workspace .kontrol-unit-switch .kontrol-note { color: var(--k-muted); }
@@ -346,6 +361,9 @@ body.kontrol-workspace {
   .kontrol-workspace .kontrol-header-main { flex: 0 0 auto; min-height: 0; }
   .kontrol-workspace :is(.portal-card, .kontrol-panel, .kontrol-ai, .kontrol-layanan) {
     padding: 20px;
+  }
+  .kontrol-workspace .kontrol-emr-summary {
+    grid-template-columns: minmax(0, 1fr);
   }
   .kontrol-workspace .kontrol-module-actions {
     display: grid; grid-template-columns: minmax(0, 1fr);

@@ -4,6 +4,7 @@
 {% block content %}
 {% include 'akreditasi/kontrol/_portal_header.html' %}
 
+<div class="kontrol-emr-summary">
 {% include "akreditasi/kontrol/_layanan_unit.html" %}
 
 <section class="kontrol-kpis">
@@ -28,6 +29,7 @@
         <span class="kpi-foot">{{ snapshot.emr.bed_total|default:0 }} bed aktif</span>
     </div>
 </section>
+</div>
 
 <div class="kontrol-grid-2">
     <section class="kontrol-panel">

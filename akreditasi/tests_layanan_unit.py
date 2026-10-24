@@ -397,7 +397,8 @@ class LayananBlockTemplateTest(TestCase):
         cache.clear()
 
         body = self.client.get(reverse('akreditasi:kontrol_emr')).content.decode()
-        self.assertIn('tidak memiliki layanan pendaftaran pasien', body)
+        self.assertIn('belum memiliki pemetaan layanan klinis untuk daftar kunjungan harian', body)
+        self.assertNotIn('tidak memiliki layanan pendaftaran pasien', body)
         self.assertNotIn('0 pasien', body)
 
 
