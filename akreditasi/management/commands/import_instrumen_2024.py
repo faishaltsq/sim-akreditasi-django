@@ -56,6 +56,7 @@ BAB_META = {
 
 FRAMEWORK_NAME_2024 = 'STARKES Edisi 2024 / KMK HK.01.07/MENKES/1596/2024'
 FRAMEWORK_VERSION_2024 = '2024'
+FRAMEWORK_EDITION_2024 = '2024'
 
 # Legacy prefix aliases (old code → new code)
 LEGACY_ALIASES = {
@@ -270,10 +271,17 @@ class Command(BaseCommand):
             name=framework_name,
             defaults={
                 'version': FRAMEWORK_VERSION_2024,
+                'edition': FRAMEWORK_EDITION_2024,
                 'cycle_type': 'PDCA',
                 'is_active': False,
             },
         )
+        # Repair catalogues created before `edition` was populated: the model
+        # default is '2022', so a 2024 framework could carry edition='2022' and
+        # then lose every edition-ordered comparison to the archived 2022 rows.
+        if framework.edition != FRAMEWORK_EDITION_2024:
+            framework.edition = FRAMEWORK_EDITION_2024
+            framework.save(update_fields=['edition'])
 
         # A code is globally unique. Capture score provenance before the legacy
         # codes are renamed, then retire them so 2024 rows can take the codes.
@@ -469,9 +477,14 @@ class Command(BaseCommand):
             version = (old_framework.version or 'lama').split('-')[0]
             old_framework.version = f'{version}-archived'
             old_framework.is_active = False
-            old_framework.save(update_fields=['version', 'is_active'])
+            old_framework.lifecycle = 'ARCHIVED'
+            old_framework.save(update_fields=['version', 'is_active', 'lifecycle'])
+        # `is_active` alone is not enough: every read path resolves through
+        # Framework.active(), which requires lifecycle='ACTIVE'. Setting only
+        # the boolean left the whole catalogue table non-ACTIVE.
         framework.is_active = True
-        framework.save(update_fields=['is_active'])
+        framework.lifecycle = 'ACTIVE'
+        framework.save(update_fields=['is_active', 'lifecycle'])
 
         report = {
             'framework': framework_name,

@@ -227,6 +227,36 @@ def resolve_catalogue(user, *, framework_id=None):
     return active
 
 
+def _fallback_sort_key(framework):
+    """Rank readable catalogues newest-first without trusting version strings.
+
+    ``version`` is free text and ``_replace`` stamps superseded catalogues with a
+    ``-archived`` suffix. That suffix sorts *above* the plain version
+    (``'2024-archived' > '2024'``), so a naive ``-version`` ordering made the
+    fallback serve the retired 2022 catalogue instead of the live 2024 one.
+    Superseded rows therefore rank below live ones, and ``edition`` is compared
+    numerically so ``'2022'``/``'2024'`` cannot be mis-ordered.
+    """
+    version = (framework.version or '')
+    is_superseded = version.endswith('-archived') or version.endswith('-lama')
+    edition = (framework.edition or '').strip()
+    edition_rank = int(edition) if edition.isdigit() else -1
+    version_rank = version.split('-')[0]
+    version_rank = int(version_rank) if version_rank.isdigit() else -1
+    return (0 if is_superseded else 1, edition_rank, version_rank, framework.pk)
+
+
+def _newest_readable_framework(*, allow_staged):
+    """Return the newest readable framework, edition-scoped, or ``None``."""
+    queryset = Framework.objects.all()
+    if not allow_staged:
+        queryset = queryset.exclude(lifecycle__in=('DRAFT', 'VALIDATED'))
+    candidates = list(queryset)
+    if not candidates:
+        return None
+    return max(candidates, key=_fallback_sort_key)
+
+
 def select_catalogue_for_read(user, *, framework_id=None):
     """Resolve the framework used for READ screens (EP list, matrix, dashboard).
 
@@ -258,12 +288,7 @@ def select_catalogue_for_read(user, *, framework_id=None):
         return active
 
     # Data-normalisation fallback: newest readable framework, still one edition.
-    fallback = (
-        Framework.objects
-        .exclude(lifecycle__in=('DRAFT', 'VALIDATED'))
-        .order_by('-edition', '-version', 'pk')
-        .first()
-    )
+    fallback = _newest_readable_framework(allow_staged=False)
     if fallback is not None:
         logger.warning(
             'No ACTIVE framework; read screens fall back to framework id=%s (%s, lifecycle=%s).',
@@ -272,7 +297,7 @@ def select_catalogue_for_read(user, *, framework_id=None):
         return fallback
 
     # Last resort: any framework at all (fresh/unseeded databases).
-    fallback = Framework.objects.order_by('-edition', '-version', 'pk').first()
+    fallback = _newest_readable_framework(allow_staged=True)
     if fallback is not None:
         logger.warning('No lifecycle-normalised framework; using framework id=%s.', fallback.pk)
         return fallback
