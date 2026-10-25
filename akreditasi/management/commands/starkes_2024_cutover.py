@@ -70,6 +70,8 @@ class Command(BaseCommand):
         )
 
         cache.clear()
+        from akreditasi.context_processors import invalidate_catalogue_caches
+        invalidate_catalogue_caches()
         self.stdout.write('Cache dibersihkan (sidebar memakai katalog baru).')
         self._postflight()
 

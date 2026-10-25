@@ -659,6 +659,11 @@ def activate_catalogue(*, actor, framework, reviewed_plan_hash,
     # mix editions.
     cache.delete(_cache_key('framework', 'active_id'))
     cache.set(_cache_key('active_framework_id', str(framework.pk)), framework.pk, None)
+    # The sidebar caches the catalogue identity separately; drop it so the very
+    # next request renders the newly activated edition instead of the previous
+    # one for the rest of the TTL.
+    from .context_processors import invalidate_catalogue_caches
+    invalidate_catalogue_caches()
     logger.info(
         "Katalog diaktifkan: framework=%s (%s) oleh %s, riwayat=%s",
         framework.pk, framework.name, getattr(actor, 'username', None),

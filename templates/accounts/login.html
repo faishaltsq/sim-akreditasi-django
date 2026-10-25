@@ -156,7 +156,7 @@
                         <h3 id="brandTitle" class="fw-bold mb-0 text-white" style="font-family: var(--font-display); letter-spacing:-0.02em;">ARIMA</h3>
                         <h6 class="mb-2" style="color: rgba(255,255,255,0.78); font-weight: 600;">RS MonsisKami</h6>
                         <div class="badge border border-white border-opacity-50 px-2.5 py-1 mb-3" style="background: rgba(255,255,255,0.12); color:#FFFFFF; font-size: 0.7rem; font-weight: 600;">
-                            STANDAR STARKES 2026 — RS TIPE B
+                            {% if sidebar_framework %}STANDAR STARKES {{ sidebar_framework.edition }} — RS TIPE B{% else %}STANDAR STARKES — RS TIPE B{% endif %}
                         </div>
                         <p class="small mb-0" style="color: rgba(255,255,255,0.72); line-height: 1.6;">
                             Aplikasi Terpadu Manajemen Risiko dan Tata Kelola Dokumen Akreditasi RS MonsisKami

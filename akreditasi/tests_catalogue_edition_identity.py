@@ -14,6 +14,7 @@ Each test pins one of them so a future import cannot silently regress to 2022.
 """
 
 from django.contrib.auth import get_user_model
+from django.core.cache import cache
 from django.test import TestCase
 
 from akreditasi import catalogue
@@ -138,3 +139,26 @@ class EditionScopedScreensTests(TestCase):
         body = response.content.decode('utf-8')
         self.assertIn('NEW 1 EP a', body)
         self.assertNotIn('OLD 1 EP a', body)
+
+
+class LoginBannerEditionTests(TestCase):
+    """The login banner must name the live edition, not a hardcoded year."""
+
+    def setUp(self):
+        # The sidebar caches the catalogue identity; a warm cache from an
+        # earlier test would mask the resolution this test is pinning.
+        cache.clear()
+
+    def test_login_banner_follows_the_active_catalogue(self):
+        Framework.objects.create(
+            name='STARKES Edisi 2024 / KMK HK.01.07/MENKES/1596/2024',
+            edition='2024', version='2024',
+            lifecycle='ACTIVE', is_active=True,
+        )
+        response = self.client.get('/accounts/login/')
+
+        self.assertEqual(response.status_code, 200)
+        body = response.content.decode('utf-8')
+        self.assertIn('STANDAR STARKES 2024', body)
+        # The stale hardcoded target year must not survive.
+        self.assertNotIn('STANDAR STARKES 2026', body)

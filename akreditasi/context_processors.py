@@ -12,17 +12,44 @@ KELOMPOK_META = {
 }
 
 _SIDEBAR_CACHE_TTL = 300  # 5 menit
+_CATALOGUE_IDENTITY_KEY = 'sidebar_catalogue_identity'
+# Short TTL so a catalogue switch that forgets to invalidate self-heals quickly.
+_CATALOGUE_IDENTITY_TTL = 60
+
+
+def invalidate_catalogue_caches():
+    """Drop the sidebar's catalogue identity so the next request re-resolves it.
+
+    Call this from every path that changes which catalogue is live. A catalogue
+    activation rewrites `lifecycle`/`is_active` in place, so a sidebar keyed only
+    on the pk would keep serving the previous edition for the whole TTL.
+    """
+    cache.delete(_CATALOGUE_IDENTITY_KEY)
+
+
+def _catalogue_identity():
+    """Return a cheap, cacheable identity string for the active catalogue.
+
+    `Framework.active()` introspects the table description on every call, which
+    is far too expensive for the per-request sidebar path. The resolved identity
+    is therefore cached; a warm request performs no catalogue query at all.
+    """
+    identity = cache.get(_CATALOGUE_IDENTITY_KEY)
+    if identity is not None:
+        return identity
+
+    active = Framework.active()
+    identity = f'{active.pk}:{active.edition}:{active.version}' if active else 'none'
+    cache.set(_CATALOGUE_IDENTITY_KEY, identity, _CATALOGUE_IDENTITY_TTL)
+    return identity
 
 
 def sidebar_context(request):
     # Cache framework + categories global (tidak bergantung user) selama 5 menit.
-    # The catalogue id is cached too: resolving it costs a query, and the warm
-    # request budget assumes the sidebar performs no lookups at all.
-    version_key = cache.get('sidebar_framework_id')
-    if version_key is None:
-        active = Framework.active()
-        version_key = getattr(active, 'pk', 'none')
-        cache.set('sidebar_framework_id', version_key, _SIDEBAR_CACHE_TTL)
+    # The catalogue identity is cached too: resolving it costs a schema
+    # introspection query, and the warm request budget assumes the sidebar
+    # performs no catalogue lookups at all.
+    version_key = _catalogue_identity()
 
     framework = cache.get(f'sidebar_framework:{version_key}')
     categories = cache.get(f'sidebar_categories:{version_key}')
