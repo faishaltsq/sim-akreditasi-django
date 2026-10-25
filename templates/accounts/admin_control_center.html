@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load static %}
 
 {% block title %}Pusat Kontrol Sistem &amp; Hak Akses | RS MonsisKami{% endblock %}
 {% block page_title %}Pusat Kontrol Sistem &amp; Hak Akses{% endblock %}
@@ -827,5 +828,5 @@ function getCookie(name) {
   return cookieValue;
 }
 </script>
-<script src="/static/js/ai-assist.js"></script>
+<script src="{% static 'js/ai-assist.js' %}"></script>
 {% endblock %}

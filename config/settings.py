@@ -232,13 +232,8 @@ STORAGES = {
         ),
     },
     'staticfiles': {
-        # CompressedManifest butuh manifest di filesystem — tidak cocok untuk Vercel serverless
-        # Gunakan WhiteNoise biasa di Vercel, manifest di server-based hosting
-        'BACKEND': (
-            'whitenoise.storage.CompressedStaticFilesStorage'
-            if os.environ.get('VERCEL')
-            else 'whitenoise.storage.CompressedManifestStaticFilesStorage'
-        ),
+        # Fingerprinted URLs keep year-long browser/CDN caching safe after deploys.
+        'BACKEND': 'whitenoise.storage.CompressedManifestStaticFilesStorage',
     },
 }
 

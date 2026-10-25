@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load static %}
 
 {% block title %}{% if is_edit %}Edit Risiko #{{ risiko.pk }} — ARIMA{% else %}Input Risiko Baru — ARIMA{% endif %}{% endblock %}
 {% block page_title %}{% if is_edit %}Edit Risiko{% else %}Input Risiko Baru{% endif %}{% endblock %}
@@ -589,7 +590,7 @@
 {% endblock %}
 
 {% block extra_js %}
-<script src="/static/js/ai-assist.js"></script>
+<script src="{% static 'js/ai-assist.js' %}"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     // ── Referensi Elemen Global & Lintas-Section (Scope Hoisted) ──────────

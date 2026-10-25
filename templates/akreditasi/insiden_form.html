@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load static %}
 
 {% block title %}Laporan Insiden Keselamatan — ARIMA{% endblock %}
 {% block page_title %}Laporan Insiden Keselamatan{% endblock %}
@@ -138,5 +139,5 @@
 {% endblock %}
 
 {% block extra_js %}
-<script src="/static/js/ai-assist.js"></script>
+<script src="{% static 'js/ai-assist.js' %}"></script>
 {% endblock %}
