@@ -495,6 +495,101 @@
     {% endif %}
     {% endwith %}
 
+    <!-- MODUL HUMAN CAPITAL — disaring berdasarkan capability grant per unit -->
+    {% if nav_pegawai or nav_formasi or nav_rekrutmen or nav_kredensial or nav_orientasi or nav_kinerja or nav_diklat or nav_k3 or nav_analitik %}
+    <div class="nav-section mt-2" style="border-top:1px solid var(--border); padding-top:10px; margin-top:8px;">
+        <i class="bi bi-people-fill me-1" style="font-size:0.6rem;"></i> Human Capital
+    </div>
+    <a href="{% url 'sdm:dashboard' %}" class="nav-link {% if request.resolver_match.app_name == 'sdm' and request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
+        <span class="nav-icon"><i class="bi bi-speedometer2"></i></span>
+        <span class="nav-text">
+            <span class="nav-title">Dasbor Human Capital</span>
+            <span class="nav-desc">Ringkasan SDM, Dokumen &amp; Kredensial</span>
+        </span>
+    </a>
+    {% if nav_pegawai %}
+    <a href="{% url 'sdm:pegawai_list' %}" class="nav-link {% if request.resolver_match.app_name == 'sdm' and request.resolver_match.url_name == 'pegawai_list' or request.resolver_match.url_name == 'pegawai_detail' or request.resolver_match.url_name == 'pegawai_wizard_step' or request.resolver_match.url_name == 'pegawai_create' %}active{% endif %}">
+        <span class="nav-icon"><i class="bi bi-person-vcard"></i></span>
+        <span class="nav-text">
+            <span class="nav-title">Direktori Pegawai</span>
+            <span class="nav-desc">Profil Digital &amp; Dokumen Staf</span>
+        </span>
+    </a>
+    {% endif %}
+    {% if nav_formasi %}
+    <a href="{% url 'sdm:formasi_list' %}" class="nav-link {% if request.resolver_match.app_name == 'sdm' and request.resolver_match.url_name == 'formasi_list' %}active{% endif %}">
+        <span class="nav-icon"><i class="bi bi-diagram-3"></i></span>
+        <span class="nav-text">
+            <span class="nav-title">Peta Ketenagaan</span>
+            <span class="nav-desc">Formasi &amp; Beban Kerja</span>
+        </span>
+    </a>
+    {% endif %}
+    {% if nav_rekrutmen %}
+    <a href="{% url 'sdm:rekrutmen_list' %}" class="nav-link {% if request.resolver_match.app_name == 'sdm' and request.resolver_match.url_name == 'rekrutmen_list' %}active{% endif %}">
+        <span class="nav-icon"><i class="bi bi-person-plus"></i></span>
+        <span class="nav-text">
+            <span class="nav-title">Rekrutmen</span>
+            <span class="nav-desc">Lowongan &amp; Seleksi</span>
+        </span>
+    </a>
+    {% endif %}
+    {% if nav_kredensial %}
+    <a href="{% url 'sdm:kredensial_list' %}" class="nav-link {% if request.resolver_match.app_name == 'sdm' and request.resolver_match.url_name == 'kredensial_list' %}active{% endif %}">
+        <span class="nav-icon"><i class="bi bi-patch-check"></i></span>
+        <span class="nav-text">
+            <span class="nav-title">Kredensial &amp; SPK</span>
+            <span class="nav-desc">Kewenangan Klinis</span>
+        </span>
+    </a>
+    {% endif %}
+    {% if nav_orientasi %}
+    <a href="{% url 'sdm:orientasi_list' %}" class="nav-link {% if request.resolver_match.app_name == 'sdm' and request.resolver_match.url_name == 'orientasi_list' %}active{% endif %}">
+        <span class="nav-icon"><i class="bi bi-compass"></i></span>
+        <span class="nav-text">
+            <span class="nav-title">Orientasi</span>
+            <span class="nav-desc">Program Staf Baru</span>
+        </span>
+    </a>
+    {% endif %}
+    {% if nav_kinerja %}
+    <a href="{% url 'sdm:kinerja_list' %}" class="nav-link {% if request.resolver_match.app_name == 'sdm' and request.resolver_match.url_name == 'kinerja_list' %}active{% endif %}">
+        <span class="nav-icon"><i class="bi bi-clipboard2-check"></i></span>
+        <span class="nav-text">
+            <span class="nav-title">Penilaian Kinerja</span>
+            <span class="nav-desc">Periode &amp; Butir Penilaian</span>
+        </span>
+    </a>
+    {% endif %}
+    {% if nav_diklat %}
+    <a href="{% url 'sdm:diklat_list' %}" class="nav-link {% if request.resolver_match.app_name == 'sdm' and request.resolver_match.url_name == 'diklat_list' %}active{% endif %}">
+        <span class="nav-icon"><i class="bi bi-mortarboard"></i></span>
+        <span class="nav-text">
+            <span class="nav-title">Diklat &amp; Sertifikasi</span>
+            <span class="nav-desc">Pelatihan &amp; Sertifikat</span>
+        </span>
+    </a>
+    {% endif %}
+    {% if nav_k3 %}
+    <a href="{% url 'sdm:k3_list' %}" class="nav-link {% if request.resolver_match.app_name == 'sdm' and request.resolver_match.url_name == 'k3_list' %}active{% endif %}">
+        <span class="nav-icon"><i class="bi bi-shield-plus"></i></span>
+        <span class="nav-text">
+            <span class="nav-title">Kesehatan Kerja (K3)</span>
+            <span class="nav-desc">Risiko, MCU &amp; Insiden</span>
+        </span>
+    </a>
+    {% endif %}
+    {% if nav_analitik %}
+    <a href="{% url 'sdm:analitik_dashboard' %}" class="nav-link {% if request.resolver_match.app_name == 'sdm' and request.resolver_match.url_name == 'analitik_dashboard' %}active{% endif %}">
+        <span class="nav-icon"><i class="bi bi-graph-up"></i></span>
+        <span class="nav-text">
+            <span class="nav-title">Analitik SDM</span>
+            <span class="nav-desc">Snapshot &amp; Tren Ketenagaan</span>
+        </span>
+    </a>
+    {% endif %}
+    {% endif %}
+
     <!-- PUSAT KONTROL ADMIN — hanya muncul jika user memiliki izin -->
     {% if request.user.is_superuser or request.user.profile.role == 'SUPER_ADMIN' or request.user.profile.role == 'ADMIN_RS' %}
     <a href="{% url 'accounts:admin_control_center' %}" class="nav-link {% if request.resolver_match.url_name == 'admin_control_center' %}active{% endif %}">
