@@ -1,5 +1,6 @@
 from datetime import timedelta
 from decimal import Decimal
+import uuid
 
 from django.contrib.auth import get_user_model
 from django.test import TestCase
@@ -106,17 +107,141 @@ class PegawaiDirectoryViewTests(TestCase):
 
         self.assertEqual(response.status_code, 404)
 
+    def test_resumed_step_renders_previous_link_for_same_draft(self):
+        self.client.force_login(self.manager)
+        draft = DrafInputPegawai.objects.create(
+            owner=self.manager, current_step=2, version=1,
+            expires_at=timezone.now() + timedelta(days=1),
+            draft_data={'1': {'nama_depan': 'Fixture'}},
+        )
+        response = self.client.get(reverse('sdm:pegawai_wizard_resume', kwargs={
+            'step': 2, 'draft_id': draft.pk,
+        }))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, reverse('sdm:pegawai_wizard_resume', kwargs={
+            'step': 1, 'draft_id': draft.pk,
+        }))
+        self.assertContains(response, 'name="expected_version"')
+        self.assertContains(response, 'enctype="multipart/form-data"')
+
+    def test_stale_draft_post_does_not_overwrite_saved_step(self):
+        self.client.force_login(self.manager)
+        draft = DrafInputPegawai.objects.create(
+            owner=self.manager, current_step=2, version=2,
+            expires_at=timezone.now() + timedelta(days=1),
+            draft_data={'1': {'nama_depan': 'Current'}},
+        )
+        response = self.client.post(reverse('sdm:pegawai_wizard_resume', kwargs={
+            'step': 1, 'draft_id': draft.pk,
+        }), {'nama_depan': 'Stale', 'expected_version': '1'})
+        self.assertEqual(response.status_code, 409)
+        draft.refresh_from_db()
+        self.assertEqual(draft.version, 2)
+        self.assertEqual(draft.draft_data['1']['nama_depan'], 'Current')
+
+    def test_detail_shows_personal_and_legal_sections(self):
+        from sdm.models import ProfilPribadiPegawai
+        ProfilPribadiPegawai.objects.create(
+            employee=self.visible, nik='3201010101010001',
+            nama_depan='Pegawai', nama_belakang='Terlihat',
+            telepon='081234567890', alamat_ktp='Jl. Merdeka 1',
+        )
+        self.client.force_login(self.manager)
+        response = self.client.get(
+            reverse('sdm:pegawai_detail', kwargs={'employee_id': self.visible.pk})
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, '3201010101010001')
+        self.assertContains(response, '081234567890')
+        self.assertContains(response, 'Identitas Pribadi')
+
+    def test_detail_masks_personal_data_for_a_view_only_grant(self):
+        from sdm.models import ProfilPribadiPegawai
+        ProfilPribadiPegawai.objects.create(
+            employee=self.visible, nik='3201010101010001',
+            tanggal_lahir=timezone.localdate() - timedelta(days=10000),
+            telepon='081299988877', email_terverifikasi='private@example.test',
+            alamat_ktp='Jl. Privat 9',
+        )
+        self.client.force_login(self.reader)
+        response = self.client.get(
+            reverse('sdm:pegawai_detail', kwargs={'employee_id': self.visible.pk})
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertNotContains(response, '3201010101010001')
+        self.assertNotContains(response, '081299988877')
+        self.assertNotContains(response, 'private@example.test')
+        self.assertNotContains(response, 'Jl. Privat 9')
+        self.assertContains(response, 'Tersembunyi')
+
+    def test_avatar_requires_a_view_grant(self):
+        import hashlib
+        from datetime import timedelta as _td
+        from unittest.mock import Mock, patch
+        from django.utils import timezone as _tz
+        from sdm.models import DokumenPegawai, ProfilPribadiPegawai, VersiDokumen
+        photo = b'\xff\xd8\xff' + b'jpeg-avatar'
+        document = DokumenPegawai.objects.create(
+            employee=self.visible, document_type='IDENTITY', jenis_berkas='FOTO',
+            title='Pas Foto', sensitivity='personnel',
+        )
+        version = VersiDokumen.objects.create(
+            document=document, version_number=1, original_filename='foto.jpg',
+            storage_key=f'personnel/{self.visible.pk}/{uuid.uuid4()}.jpg',
+            sha256=hashlib.sha256(photo).hexdigest(), size_bytes=len(photo),
+            content_type='image/jpeg', status='VERIFIED',
+            valid_until=_tz.localdate() + _td(days=365),
+        )
+        ProfilPribadiPegawai.objects.create(
+            employee=self.visible, foto_profil_versi=version,
+        )
+        storage = Mock()
+        storage.fetch_object.return_value = photo
+        self.client.force_login(self.reader)
+        with patch('sdm.views.get_private_storage', return_value=storage):
+            response = self.client.get(
+                reverse('sdm:pegawai_avatar', kwargs={'employee_id': self.visible.pk})
+            )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.content, photo)
+        self.assertEqual(response['Content-Type'], 'image/jpeg')
+        self.client.force_login(self._user('unscoped-photo-reader'))
+        with patch('sdm.views.get_private_storage', return_value=storage):
+            response = self.client.get(
+                reverse('sdm:pegawai_avatar', kwargs={'employee_id': self.visible.pk})
+            )
+        self.assertEqual(response.status_code, 404)
+
+    def test_avatar_refuses_a_photo_document_owned_by_another_employee(self):
+        from sdm.models import DokumenPegawai, ProfilPribadiPegawai, VersiDokumen
+        document = DokumenPegawai.objects.create(
+            employee=self.hidden, document_type='IDENTITY', jenis_berkas='FOTO',
+            title='Foto pegawai lain', sensitivity='personnel',
+        )
+        version = VersiDokumen.objects.create(
+            document=document, version_number=1, original_filename='foto.jpg',
+            storage_key=f'personnel/{self.hidden.pk}/{uuid.uuid4()}.jpg',
+            sha256='a' * 64, size_bytes=10, content_type='image/jpeg',
+            status='VERIFIED',
+        )
+        ProfilPribadiPegawai.objects.create(
+            employee=self.visible, foto_profil_versi=version,
+        )
+        self.client.force_login(self.reader)
+        response = self.client.get(
+            reverse('sdm:pegawai_avatar', kwargs={'employee_id': self.visible.pk})
+        )
+        self.assertEqual(response.status_code, 404)
+
     def test_create_employee_uses_scoped_unit_and_assignment_service(self):
         self.client.force_login(self.manager)
 
-        # Step 1: Identitas & Kontak
         response = self.client.post(reverse('sdm:pegawai_create'), {
             'nama_depan': 'Pegawai Baru',
             'nama_belakang': 'Wizard',
         })
         self.assertEqual(response.status_code, 302)
 
-        # Step 2: Kepegawaian & Penempatan
         draft = DrafInputPegawai.objects.filter(owner=self.manager).order_by('-pk').first()
         response = self.client.post(
             reverse('sdm:pegawai_wizard_resume', kwargs={'step': 2, 'draft_id': draft.pk}),
@@ -131,13 +256,25 @@ class PegawaiDirectoryViewTests(TestCase):
                 'tanggal_mulai': self.today.isoformat(),
                 'tanggal_selesai': '',
                 'alokasi_fte': '0.75',
+                'expected_version': str(draft.version),
             },
         )
         self.assertEqual(response.status_code, 302)
 
-        # Finalize
+        for step in (3, 4, 5):
+            draft.refresh_from_db()
+            response = self.client.post(
+                reverse('sdm:pegawai_wizard_resume', kwargs={
+                    'step': step, 'draft_id': draft.pk,
+                }),
+                {'expected_version': str(draft.version)},
+            )
+            self.assertEqual(response.status_code, 302)
+
+        draft.refresh_from_db()
         response = self.client.post(
-            reverse('sdm:pegawai_intake_finalize', kwargs={'draft_id': draft.pk})
+            reverse('sdm:pegawai_intake_finalize', kwargs={'draft_id': draft.pk}),
+            {'expected_version': str(draft.version)},
         )
         self.assertEqual(response.status_code, 302)
 

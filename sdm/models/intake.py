@@ -88,6 +88,14 @@ class ProfilPribadiPegawai(models.Model):
     alamat_ktp = models.TextField('Alamat KTP', blank=True)
     alamat_domisili = models.TextField('Alamat Domisili', blank=True)
     alamat_sama_dengan_ktp = models.BooleanField('Domisili Sama dengan KTP', default=True)
+    foto_profil_versi = models.ForeignKey(
+        'sdm.VersiDokumen',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='profil_foto_utama',
+        verbose_name='Versi Foto Profil',
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -237,7 +245,7 @@ class IzinProfesiPegawai(models.Model):
         ('OTHER', 'Lainnya'),
     ]
     VALIDITY_MODE_CHOICES = [
-        ('DATED', 'Tanggal Berthi'),
+        ('DATED', 'Tanggal Berlaku'),
         ('LIFETIME', 'Seumur Hidup'),
     ]
 
@@ -304,6 +312,17 @@ class DrafInputPegawai(models.Model):
         related_name='intake_drafts',
         verbose_name='Pegawai yang Diedit',
     )
+    finalized_employee = models.ForeignKey(
+        'sdm.Pegawai',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='finalized_intake_drafts',
+        verbose_name='Pegawai Hasil',
+    )
+    finalization_key = models.CharField(
+        'Kunci Finalisasi', max_length=100, null=True, blank=True, unique=True
+    )
     current_step = models.PositiveSmallIntegerField('Langkah Saat Ini', default=1)
     draft_data = models.JSONField('Data Draf', default=dict, blank=True)
     version = models.PositiveIntegerField('Versi Konkursi', default=1)
@@ -359,3 +378,75 @@ class BatchImporPegawai(models.Model):
 
     def __str__(self):
         return f'Impor {self.id} — {self.get_state_display()}'
+
+
+class LampiranDrafPegawai(models.Model):
+    """Private object staged against an intake draft before finalization."""
+
+    ARTIFACT_CHOICES = [
+        ('FOTO_PROFIL', 'Pas Foto Resmi'),
+        ('KTP', 'KTP'),
+        ('IJAZAH', 'Ijazah'),
+        ('TRANSKRIP', 'Transkrip Nilai'),
+        ('STR', 'STR'),
+        ('SIP', 'SIP'),
+        ('SIPA', 'SIPA'),
+        ('KONTRAK', 'Kontrak Kerja'),
+        ('SK_PENGANGKATAN', 'SK Pengangkatan'),
+        ('SPK_RKK', 'SPK RKK'),
+        ('URAIAN_TUGAS', 'Uraian Tugas'),
+        ('SERTIFIKAT', 'Sertifikat'),
+        ('OTHER', 'Lainnya'),
+    ]
+    STATE_CHOICES = [
+        ('STAGED', 'Menunggu Finalisasi'),
+        ('BOUND', 'Terhubung ke Dokumen'),
+        ('DELETED', 'Dihapus'),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    draft = models.ForeignKey(
+        'sdm.DrafInputPegawai',
+        on_delete=models.CASCADE,
+        related_name='attachments',
+        verbose_name='Draf',
+    )
+    artifact_kind = models.CharField(
+        'Jenis Berkas', max_length=20, choices=ARTIFACT_CHOICES
+    )
+    storage_key = models.CharField('Kunci Penyimpanan Privat', max_length=255, unique=True)
+    sha256 = models.CharField('SHA-256', max_length=64)
+    size_bytes = models.PositiveBigIntegerField('Ukuran (byte)')
+    content_type = models.CharField('MIME Type', max_length=100)
+    original_filename = models.CharField('Nama Berkas Asli', max_length=255)
+    state = models.CharField('Status', max_length=10, choices=STATE_CHOICES, default='STAGED')
+    bound_version = models.ForeignKey(
+        'sdm.VersiDokumen',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='source_attachments',
+        verbose_name='Versi Dokumen Terhubung',
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = 'Lampiran Draf Pegawai'
+        verbose_name_plural = 'Lampiran Draf Pegawai'
+        ordering = ['-created_at', '-pk']
+        indexes = [
+            models.Index(fields=['draft', 'state'], name='sdm_lampiran_draft_state_idx'),
+        ]
+        constraints = [
+            models.UniqueConstraint(
+                fields=['draft', 'artifact_kind'],
+                condition=Q(
+                    state='STAGED',
+                    artifact_kind__in=('FOTO_PROFIL', 'KTP'),
+                ),
+                name='sdm_lampiran_singleton_staged_uniq',
+            ),
+        ]
+
+    def __str__(self):
+        return f'{self.get_artifact_kind_display()} — {self.original_filename}'

@@ -7,6 +7,7 @@ from django.core.exceptions import PermissionDenied, ValidationError
 from django.core.paginator import Paginator
 from django.db import IntegrityError, transaction
 from django.db.models import Q
+from django.http import Http404, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.decorators.http import require_POST
@@ -90,9 +91,11 @@ from sdm.services.publikasi_bukti import build_kps_pack, publish_kps_artifact
 from sdm.services.penempatan import save_assignment
 from sdm.storage import (
     authorize_document_download,
+    get_private_storage,
     review_document_version,
     store_private_document,
 )
+from sdm.services.intake import build_staff_profile
 from sdm.storage_backend import PrivateStorageError
 
 
@@ -307,6 +310,7 @@ def pegawai_detail(request, employee_id):
             can_manage_documents = False
     return render(request, 'sdm/pegawai/detail.html', {
         'employee': employee,
+        'profile': build_staff_profile(employee, viewer=request.user),
         'assignments': assignments,
         'documents': documents,
         'compliance': compliance,
@@ -314,6 +318,42 @@ def pegawai_detail(request, employee_id):
         'can_manage': can_manage,
         'can_manage_documents': can_manage_documents,
     })
+
+
+@login_required
+def pegawai_avatar(request, employee_id):
+    employee = get_object_or_404(visible_employees(request.user), pk=employee_id)
+    require_hc_capability(request.user, 'can_view_hc', employee=employee)
+    personal = getattr(employee, 'profil_pribadi', None)
+    version = getattr(personal, 'foto_profil_versi', None)
+    if version is None:
+        raise Http404('Foto profil belum tersedia.')
+    document = version.document
+    if (
+        document.employee_id != employee.pk
+        or document.document_type != 'IDENTITY'
+        or document.jenis_berkas != 'FOTO'
+        or document.sensitivity != 'personnel'
+        or version.content_type != 'image/jpeg'
+        or version.status not in ('PENDING', 'VERIFIED')
+        or not 1 <= version.size_bytes <= 2_000_000
+    ):
+        raise Http404('Foto profil belum tersedia.')
+    storage = get_private_storage()
+    try:
+        data = storage.fetch_object(version.storage_key, max_bytes=2_000_000)
+    except PrivateStorageError:
+        raise Http404('Foto profil tidak dapat dibaca.') from None
+    if (
+        len(data) != version.size_bytes
+        or not data.startswith(b'\xff\xd8\xff')
+        or hashlib.sha256(data).hexdigest() != version.sha256
+    ):
+        raise Http404('Foto profil tidak dapat dibaca.')
+    response = HttpResponse(data, content_type='image/jpeg')
+    response['Cache-Control'] = 'private, max-age=300'
+    response['Content-Disposition'] = 'inline'
+    return response
 
 
 @login_required

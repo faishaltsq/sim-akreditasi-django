@@ -1,0 +1,166 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block page_title %}Input Pegawai{% endblock %}
+{% block page_subtitle %}Lima langkah: identitas, kepegawaian, legalitas, akun, dokumen{% endblock %}
+{% block extra_css %}{% include "sdm/_responsive.html" %}{% endblock %}
+
+{% block content %}
+<div class="container-fluid p-0">
+    <div class="page-header-box mb-3">
+        <div>
+            <h1 class="page-title h5 mb-1"><i class="bi bi-person-plus-fill text-primary me-2"></i>{{ title }}</h1>
+            <p class="page-subtitle text-muted mb-0">Simpan draf setiap langkah dan lanjutkan kapan saja sebelum batas waktu draf kadaluarsa.</p>
+        </div>
+        <a class="btn btn-outline-secondary btn-sm" href="{% url 'sdm:pegawai_list' %}">Kembali ke direktori</a>
+    </div>
+
+    {% if messages %}
+        {% for message in messages %}
+        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">{{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Tutup"></button>
+        </div>
+        {% endfor %}
+    {% endif %}
+
+    <form method="post" enctype="multipart/form-data" class="card border shadow-sm">
+        {% csrf_token %}
+        {% if draft %}<input type="hidden" name="expected_version" value="{{ draft.version }}">{% endif %}
+        <div class="card-body">
+            <nav aria-label="Langkah input pegawai" class="mb-3">
+                <ol class="progress-steps">
+                    {% for num, label in step_labels.items %}
+                    <li class="step {% if num == step %}active{% elif num < step %}done{% endif %}">
+                        <span class="step-badge">{{ num }}</span>
+                        <span class="step-label">{{ label }}</span>
+                    </li>
+                    {% endfor %}
+                </ol>
+            </nav>
+
+            <h6 class="fw-semibold text-muted small mb-3">Langkah {{ step }}: {{ step_label }}</h6>
+
+            {% if step == 5 and draft %}
+            {% with attachments=draft.attachments.all %}
+            {% if attachments %}
+            <div class="mb-3">
+                <h6 class="fw-semibold text-muted small mb-2">Lampiran tersimpan</h6>
+                <ul class="list-unstyled mb-0">
+                    {% for attachment in attachments %}
+                    {% if attachment.state == 'STAGED' %}
+                    <li class="d-flex align-items-center justify-content-between gap-2 border rounded px-2 py-1 mb-1">
+                        <span class="small">
+                            <span class="badge text-bg-secondary me-1">{{ attachment.get_artifact_kind_display }}</span>
+                            {{ attachment.original_filename }}
+                        </span>
+                        <form method="post" action="{% url 'sdm:pegawai_intake_attachment_remove' attachment.pk %}" class="d-inline">
+                            {% csrf_token %}
+                            <input type="hidden" name="expected_version" value="{{ draft.version }}">
+                            <button class="btn btn-outline-danger btn-sm" type="submit">
+                                <i class="bi bi-trash me-1"></i>Hapus
+                            </button>
+                        </form>
+                    </li>
+                    {% endif %}
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endif %}
+            {% endwith %}
+            {% endif %}
+
+            {% if form.non_field_errors %}
+            <div class="alert alert-danger" role="alert">{{ form.non_field_errors }}</div>
+            {% endif %}
+            <div class="row g-3">
+                {% for field in form %}
+                <div class="col-12 col-md-6">
+                    <label class="form-label small fw-semibold" for="{{ field.id_for_label }}">{{ field.label }}</label>
+                    {% if field.field.widget.input_type == 'file' %}
+                    <div class="border border-2 border-dashed rounded p-2" data-hc-drop-zone>
+                        {{ field }}
+                        <div class="form-text" data-hc-drop-name aria-live="polite"></div>
+                    </div>
+                    {% else %}
+                    {{ field }}
+                    {% endif %}
+                    {% if field.help_text %}<div class="form-text">{{ field.help_text }}</div>{% endif %}
+                    {% for error in field.errors %}<div class="text-danger small" role="alert">{{ error }}</div>{% endfor %}
+                </div>
+                {% endfor %}
+
+                {% if sip_formset %}
+                <div class="col-12">
+                    <h6 class="fw-semibold text-muted small mb-2">SIP — dapat lebih dari satu lokasi praktik</h6>
+                    {{ sip_formset.management_form }}
+                    {% for error in sip_formset.non_form_errors %}
+                    <div class="text-danger small" role="alert">{{ error }}</div>
+                    {% endfor %}
+                    {% for sip in sip_formset %}
+                    <div class="row g-2 align-items-end mb-2 border-bottom pb-2">
+                        {% for hidden in sip.hidden_fields %}{{ hidden }}{% endfor %}
+                        {% for field in sip.visible_fields %}
+                        <div class="col-12 col-md-3">
+                            <label class="form-label small" for="{{ field.id_for_label }}">{{ field.label }}</label>
+                            {{ field }}
+                            {% for error in field.errors %}<div class="text-danger small" role="alert">{{ error }}</div>{% endfor %}
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        <div class="card-footer bg-light d-flex justify-content-between align-items-center gap-2">
+            <div>
+                {% if step > 1 %}
+                <a class="btn btn-outline-secondary btn-sm" href="{% url 'sdm:pegawai_wizard_resume' step=prev_step draft_id=draft.pk %}">
+                    <i class="bi bi-arrow-left me-1"></i>Sebelumnya
+                </a>
+                {% else %}
+                <a class="btn btn-outline-secondary btn-sm" href="{% url 'sdm:pegawai_list' %}">Batal</a>
+                {% endif %}
+            </div>
+            <div class="d-flex gap-2">
+                {% if step < 5 %}
+                <button class="btn btn-primary btn-sm" type="submit"><i class="bi bi-arrow-right me-1"></i>Selanjutnya &amp; Simpan Draf</button>
+                {% else %}
+                <button class="btn btn-primary btn-sm" type="submit"><i class="bi bi-check-circle me-1"></i>Simpan &amp; Lanjut ke Ringkasan</button>
+                {% endif %}
+            </div>
+        </div>
+    </form>
+
+    {% if draft %}
+    <div class="card border shadow-sm mt-3">
+        <div class="card-body small">
+            <p class="mb-1"><strong>ID Draf:</strong> {{ draft.pk }}</p>
+            <p class="mb-1"><strong>Versi:</strong> {{ draft.version }} · <strong>Status:</strong> {{ draft.get_state_display }}</p>
+            <p class="mb-0 text-muted"><strong>Kadaluarsa:</strong> {{ draft.expires_at|date:"d M Y H:i" }} WIB</p>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{% if step == 5 %}<script src="{% static 'js/hc-intake-attachments.js' %}" defer></script>{% endif %}
+<style>
+.progress-steps {
+    display: flex; justify-content: space-between; list-style: none; padding: 0; margin: 0;
+}
+.progress-steps li {
+    flex: 1; position: relative; text-align: center; color: #adb5bd;
+}
+.progress-steps li.done, .progress-steps li.active { color: #0d6efd; }
+.step-badge {
+    width: 30px; height: 30px; line-height: 30px; border-radius: 50%; display: inline-block;
+    border: 2px solid #adb5bd; background: #fff; margin-bottom: 4px; font-size: 0.75rem;
+}
+.progress-steps li.done .step-badge, .progress-steps li.active .step-badge {
+    border-color: #0d6efd; background: #0d6efd; color: #fff;
+}
+.step-label { display: block; font-size: 0.65rem; line-height: 1.15; }
+</style>
+{% endblock %}

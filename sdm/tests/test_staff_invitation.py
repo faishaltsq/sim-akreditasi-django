@@ -2,7 +2,7 @@
 
 from django.contrib.auth import get_user_model
 from django.core import mail
-from django.core.exceptions import PermissionDenied
+from django.core.exceptions import PermissionDenied, ValidationError
 from django.test import TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
@@ -48,13 +48,14 @@ class StaffInvitationTests(TestCase):
         with override_settings(
             EMAIL_BACKEND='django.core.mail.backends.locmem.EmailBackend'
         ):
-            invitation = invite_staff_account(
-                actor=self.manager,
-                employee=self.employee,
-                email='baru@example.com',
-                role='STAF_NAKES',
-                idempotency_key='inv-001',
-            )
+            with self.captureOnCommitCallbacks(execute=True):
+                invitation = invite_staff_account(
+                    actor=self.manager,
+                    employee=self.employee,
+                    email='baru@example.com',
+                    role='STAF_NAKES',
+                    idempotency_key='inv-001',
+                )
         self.assertEqual(invitation.state, 'SENT')
         self.assertEqual(invitation.email, 'baru@example.com')
         self.assertEqual(len(mail.outbox), 1)
@@ -74,13 +75,14 @@ class StaffInvitationTests(TestCase):
         with override_settings(
             EMAIL_BACKEND='django.core.mail.backends.locmem.EmailBackend'
         ):
-            invitation = invite_staff_account(
-                actor=self.manager,
-                employee=self.employee,
-                email='baru2@example.com',
-                role='STAF_NAKES',
-                idempotency_key='inv-003',
-            )
+            with self.captureOnCommitCallbacks(execute=True):
+                invitation = invite_staff_account(
+                    actor=self.manager,
+                    employee=self.employee,
+                    email='baru2@example.com',
+                    role='STAF_NAKES',
+                    idempotency_key='inv-003',
+                )
         user = accept_staff_invitation(
             token=invitation.raw_token, password='StrongPass123!'
         )
@@ -95,27 +97,29 @@ class StaffInvitationTests(TestCase):
         with override_settings(
             EMAIL_BACKEND='django.core.mail.backends.locmem.EmailBackend'
         ):
-            invitation = invite_staff_account(
-                actor=self.manager,
-                employee=self.employee,
-                email='baru3@example.com',
-                role='STAF_NAKES',
-                idempotency_key='inv-004',
-            )
+            with self.captureOnCommitCallbacks(execute=True):
+                invitation = invite_staff_account(
+                    actor=self.manager,
+                    employee=self.employee,
+                    email='baru3@example.com',
+                    role='STAF_NAKES',
+                    idempotency_key='inv-004',
+                )
         with self.assertRaises(Exception):
             accept_staff_invitation(token=invitation.raw_token, password='weak')
 
     def test_accept_expired_token_is_rejected(self):
-        from django.utils import timezone
-        import datetime
-
+        import hashlib
+        raw = 'expired-token-raw'
         invitation = UndanganAkunPegawai.objects.create(
             employee=self.employee,
             email='expired@example.com',
             intended_role='STAF_NAKES',
-            token_digest='expired-digest',
-            expiry=timezone.now() - datetime.timedelta(hours=1),
+            token_digest=hashlib.sha256(raw.encode()).hexdigest(),
+            expiry=timezone.now() - timezone.timedelta(minutes=1),
             state='SENT',
         )
-        with self.assertRaises(Exception):
-            accept_staff_invitation(token='expired-digest', password='StrongPass123!')
+        with self.assertRaises(ValidationError):
+            accept_staff_invitation(token=raw, password='StrongPass123!')
+        invitation.refresh_from_db()
+        self.assertEqual(invitation.state, 'EXPIRED')

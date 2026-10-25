@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+
+{% block page_title %}Hasil Impor Pegawai{% endblock %}
+{% block page_subtitle %}Ringkasan batch yang telah diterapkan{% endblock %}
+{% block extra_css %}{% include "sdm/_responsive.html" %}{% endblock %}
+
+{% block content %}
+<div class="container-fluid p-0">
+    <div class="page-header-box mb-3">
+        <div>
+            <a class="small text-decoration-none" href="{% url 'sdm:pegawai_list' %}"><i class="bi bi-arrow-left me-1"></i>Kembali ke direktori</a>
+            <h1 class="page-title h5 mt-2 mb-1">{{ title }}</h1>
+            <p class="page-subtitle text-muted mb-0">Batch {{ batch.pk }} · {{ batch.get_state_display }}</p>
+        </div>
+    </div>
+
+    {% if messages %}
+        {% for message in messages %}
+        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">{{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Tutup"></button>
+        </div>
+        {% endfor %}
+    {% endif %}
+
+    <div class="card border shadow-sm">
+        <div class="card-body">
+            <dl class="row mb-0">
+                <dt class="col-sm-4">Baris dibuat</dt><dd class="col-sm-8">{{ batch.row_create }}</dd>
+                <dt class="col-sm-4">Baris diperbarui</dt><dd class="col-sm-8">{{ batch.row_update }}</dd>
+                <dt class="col-sm-4">Baris diblokir</dt><dd class="col-sm-8">{{ batch.row_blocked }}</dd>
+            </dl>
+        </div>
+        <div class="card-footer bg-light d-flex justify-content-end">
+            <a class="btn btn-outline-primary btn-sm" href="{% url 'sdm:pegawai_list' %}">Lihat direktori pegawai</a>
+        </div>
+    </div>
+</div>
+{% endblock %}

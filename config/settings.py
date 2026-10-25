@@ -282,3 +282,8 @@ BPJS_CONS_ID = os.environ.get('BPJS_CONS_ID', '')
 BPJS_SECRET_KEY = os.environ.get('BPJS_SECRET_KEY', '')
 BPJS_USER_KEY = os.environ.get('BPJS_USER_KEY', '')
 BPJS_KODE_PPK = os.environ.get('BPJS_KODE_PPK', '0000000')
+
+# Canonical public origin used to build account-activation links. It must be
+# set explicitly in production: deriving a token URL from ALLOWED_HOSTS or the
+# request Host header lets a spoofed host reach an emailed credential link.
+PUBLIC_BASE_URL = os.environ.get('PUBLIC_BASE_URL', '')

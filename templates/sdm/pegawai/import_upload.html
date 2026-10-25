@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+
+{% block page_title %}Impor Data Pegawai{% endblock %}
+{% block page_subtitle %}Unggah berkas Excel untuk ditinjau sebelum diterapkan{% endblock %}
+{% block extra_css %}{% include "sdm/_responsive.html" %}{% endblock %}
+
+{% block content %}
+<div class="container-fluid p-0">
+    <div class="page-header-box mb-3">
+        <div>
+            <a class="small text-decoration-none" href="{% url 'sdm:pegawai_list' %}"><i class="bi bi-arrow-left me-1"></i>Kembali ke direktori</a>
+            <h1 class="page-title h5 mt-2 mb-1">{{ title }}</h1>
+            <p class="page-subtitle text-muted mb-0">Pratinjau dibuat lebih dulu; tidak ada data pegawai yang tersimpan sampai Anda menekan terapkan.</p>
+        </div>
+        <a class="btn btn-outline-secondary btn-sm" href="{% url 'sdm:pegawai_import_template' %}">
+            <i class="bi bi-download me-1"></i>Unduh template
+        </a>
+    </div>
+
+    {% if messages %}
+        {% for message in messages %}
+        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">{{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Tutup"></button>
+        </div>
+        {% endfor %}
+    {% endif %}
+
+    <form method="post" enctype="multipart/form-data" class="card border shadow-sm">
+        {% csrf_token %}
+        <div class="card-body">
+            {% if form.non_field_errors %}<div class="alert alert-danger" role="alert">{{ form.non_field_errors }}</div>{% endif %}
+            <div class="mb-3">
+                <label class="form-label small fw-semibold" for="{{ form.workbook.id_for_label }}">{{ form.workbook.label }}</label>
+                {{ form.workbook }}
+                {% if form.workbook.help_text %}<div class="form-text">{{ form.workbook.help_text }}</div>{% endif %}
+                {% for error in form.workbook.errors %}<div class="text-danger small" role="alert">{{ error }}</div>{% endfor %}
+            </div>
+            {{ form.idempotency_key }}
+        </div>
+        <div class="card-footer bg-light d-flex justify-content-end">
+            <button class="btn btn-primary btn-sm" type="submit"><i class="bi bi-upload me-1"></i>Unggah &amp; Pratinjau</button>
+        </div>
+    </form>
+</div>
+{% endblock %}

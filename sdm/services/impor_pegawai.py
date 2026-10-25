@@ -3,6 +3,8 @@
 import hashlib
 import io
 import json
+import zipfile
+from decimal import Decimal
 
 import openpyxl
 from django.core.exceptions import ValidationError
@@ -16,7 +18,9 @@ from sdm.models import (
     Pegawai,
     PenempatanPegawai,
     PeristiwaSDM,
+    RiwayatKepegawaian,
 )
+from sdm.services.penempatan import save_assignment
 
 TEMPLATE_VERSION = '1'
 MAX_ROWS = 2000
@@ -33,9 +37,20 @@ def preview_staff_import(*, actor, workbook, idempotency_key):
     require_hc_capability(actor, 'can_view_hc')
     require_hc_capability(actor, 'can_manage_hc_employees')
 
-    raw = workbook.read()
-    if len(raw) > MAX_WORKBOOK_BYTES:
-        raise ValidationError({'file': f'Berkas melebihi batas {MAX_WORKBOOK_BYTES} byte.'})
+    raw = workbook.read(MAX_WORKBOOK_BYTES + 1)
+    if not isinstance(raw, bytes) or not raw or len(raw) > MAX_WORKBOOK_BYTES:
+        raise ValidationError({
+            'file': f'Berkas melebihi batas {MAX_WORKBOOK_BYTES} byte.'
+        })
+    try:
+        with zipfile.ZipFile(io.BytesIO(raw)) as archive:
+            expanded = sum(item.file_size for item in archive.infolist())
+            if expanded > MAX_ZIP_UNCOMPRESSED:
+                raise ValidationError({
+                    'file': 'Ukuran hasil ekstraksi workbook melebihi batas.'
+                })
+    except zipfile.BadZipFile:
+        raise ValidationError({'file': 'Berkas XLSX tidak valid.'}) from None
 
     try:
         wb = openpyxl.load_workbook(io.BytesIO(raw), data_only=True, read_only=True)
@@ -56,7 +71,10 @@ def preview_staff_import(*, actor, workbook, idempotency_key):
         raise ValidationError({'file': f'Kolom wajib hilang: {", ".join(missing)}'})
 
     idx = {name: i for i, name in enumerate(header)}
-    units = {u.code: u for u in UnitKerja.objects.all()}
+    units = {
+        u.code: u
+        for u in visible_units(actor, capability='can_manage_hc_employees')
+    }
 
     errors = []
     rows = []
@@ -102,11 +120,12 @@ def preview_staff_import(*, actor, workbook, idempotency_key):
             tgl = None
 
         try:
-            fte = float(alokasi_fte)
-            if not (0.01 <= fte <= 1.00):
+            fte = Decimal(str(alokasi_fte))
+            if not (Decimal('0.01') <= fte <= Decimal('1.00')):
                 row_errors.append('Alokasi FTE harus 0.01–1.00')
-        except (TypeError, ValueError):
+        except (ArithmeticError, ValueError):
             row_errors.append('Alokasi FTE tidak valid')
+            fte = None
 
         # Existing conflict check
         if nip and Pegawai.objects.filter(nomor_pegawai=nip).exists():
@@ -124,7 +143,7 @@ def preview_staff_import(*, actor, workbook, idempotency_key):
             'unit_pk': str(units[unit_code].pk) if unit_code in units else '',
             'tanggal_mulai': tgl.isoformat() if tgl else '',
             'tanggal_selesai': str(cell('tanggal_selesai') or '').strip(),
-            'alokasi_fte': str(fte) if 'fte' in locals() else '',
+            'alokasi_fte': str(fte) if fte is not None else '',
             'errors': row_errors,
             'action': 'BLOCKED' if row_errors else 'CREATE',
         })
@@ -135,17 +154,31 @@ def preview_staff_import(*, actor, workbook, idempotency_key):
     preview_hash = _sha256_bytes(
         json.dumps({'rows': rows, 'template_version': TEMPLATE_VERSION}).encode()
     )
-    batch = BatchImporPegawai.objects.create(
-        uploader=actor,
-        template_version=TEMPLATE_VERSION,
-        file_hash=file_hash,
+    if not isinstance(idempotency_key, str) or not idempotency_key.strip():
+        raise ValidationError({'batch': 'Kunci idempotensi wajib diisi.'})
+    if len(idempotency_key) > 100:
+        raise ValidationError({'batch': 'Kunci idempotensi terlalu panjang.'})
+
+    defaults = {
+        'uploader': actor,
+        'template_version': TEMPLATE_VERSION,
+        'file_hash': file_hash,
+        'preview_hash': preview_hash,
+        'state': 'PREVIEWED' if not errors else 'BLOCKED',
+        'row_create': sum(1 for r in rows if r['action'] == 'CREATE'),
+        'row_blocked': sum(1 for r in rows if r['action'] == 'BLOCKED'),
+        'decisions': rows,
+    }
+    batch, created = BatchImporPegawai.objects.get_or_create(
         idempotency_key=idempotency_key,
-        preview_hash=preview_hash,
-        state='PREVIEWED' if not errors else 'BLOCKED',
-        row_create=sum(1 for r in rows if r['action'] == 'CREATE'),
-        row_blocked=sum(1 for r in rows if r['action'] == 'BLOCKED'),
-        decisions=rows,
+        defaults=defaults,
     )
+    if not created:
+        if batch.uploader_id == actor.pk and batch.file_hash == file_hash:
+            return batch
+        raise ValidationError({
+            'batch': 'Permintaan pratinjau tidak dapat digunakan.'
+        })
     return batch
 
 
@@ -158,27 +191,26 @@ def apply_staff_import(*, actor, batch_id, preview_hash):
     require_hc_capability(actor, 'can_view_hc')
     require_hc_capability(actor, 'can_manage_hc_employees')
 
-    try:
-        batch = BatchImporPegawai.objects.get(pk=batch_id)
-    except BatchImporPegawai.DoesNotExist:
+    batch = BatchImporPegawai.objects.filter(
+        pk=batch_id, uploader=actor
+    ).first()
+    if batch is None:
         raise ValidationError({'batch': 'Batch impor tidak ditemukan.'})
 
-    if batch.preview_hash != preview_hash:
-        raise ValidationError({'batch': 'Hash pratinjau tidak sesuai; pratinjau telah berubah.'})
-
-    # Already applied: return recorded result (idempotent repeat apply).
-    if batch.state == 'APPLIED':
-        return batch
-
-    if batch.state != 'PREVIEWED':
-        raise ValidationError({'batch': 'Batch tidak dalam status yang dapat diimpor.'})
-
     with transaction.atomic():
-        batch.refresh_from_db()
+        batch = BatchImporPegawai.objects.select_for_update().get(
+            pk=batch_id, uploader=actor
+        )
+        if batch.preview_hash != preview_hash:
+            raise ValidationError({
+                'batch': 'Hash pratinjau tidak sesuai; pratinjau telah berubah.'
+            })
         if batch.state == 'APPLIED':
             return batch
-        if batch.preview_hash != preview_hash:
-            raise ValidationError({'batch': 'Hash pratinjau tidak sesuai; pratinjau telah berubah.'})
+        if batch.state != 'PREVIEWED':
+            raise ValidationError({
+                'batch': 'Batch tidak dalam status yang dapat diimpor.'
+            })
 
         created = updated = blocked = 0
         for decision in batch.decisions or []:
@@ -190,11 +222,13 @@ def apply_staff_import(*, actor, batch_id, preview_hash):
             require_hc_capability(actor, 'can_manage_hc_employees', unit=unit)
 
             try:
-                fte = float(decision['alokasi_fte'])
-            except (TypeError, ValueError):
-                fte = 1.00
+                fte = Decimal(str(decision['alokasi_fte'] or '1.00'))
+            except (ArithmeticError, ValueError):
+                raise ValidationError({
+                    'alokasi_fte': f'Baris {nip}: alokasi FTE tidak valid.'
+                }) from None
 
-            Pegawai.objects.create(
+            employee = Pegawai(
                 nomor_pegawai=nip,
                 nama_lengkap=decision['nama_lengkap'],
                 kategori=decision['kategori'],
@@ -203,14 +237,26 @@ def apply_staff_import(*, actor, batch_id, preview_hash):
                 status=decision['status'],
                 data_origin='VERIFIED_IMPORT',
             )
-            employee = Pegawai.objects.get(nomor_pegawai=nip)
-            PenempatanPegawai.objects.create(
+            employee.full_clean()
+            employee.save()
+            save_assignment(PenempatanPegawai(
                 pegawai=employee,
                 unit_kerja=unit,
                 tanggal_mulai=decision['tanggal_mulai'] or timezone.localdate(),
                 tanggal_selesai=decision['tanggal_selesai'] or None,
                 alokasi_fte=fte,
+            ))
+            employment_history = RiwayatKepegawaian(
+                pegawai=employee,
+                kategori_pegawai=decision['kategori_pegawai'],
+                tanggal_tmt=decision['tanggal_mulai'] or timezone.localdate(),
+                tanggal_akhir=decision['tanggal_selesai'] or None,
+                jabatan_struktural=decision['jabatan'],
+                review_status='UNREVIEWED',
+                provenance='Impor Excel terverifikasi.',
             )
+            employment_history.full_clean()
+            employment_history.save()
             PeristiwaSDM.objects.create(
                 actor=actor,
                 jenis_peristiwa='employee_created',

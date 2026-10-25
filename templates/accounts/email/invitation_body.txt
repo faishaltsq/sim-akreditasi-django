@@ -1,0 +1,11 @@
+Halo {{ employee.nama_lengkap }},
+
+Anda diundang untuk mengaktifkan akun login ARIMA Human Capital.
+
+Buka tautan berikut untuk menentukan sandi Anda sendiri (berlaku {{ expiry_hours }} jam):
+{{ activation_url }}
+
+Email tujuan: {{ email }}
+Diajukan oleh: {{ actor.username }}
+
+Tautan ini hanya dapat dipakai satu kali. Jika Anda tidak meminta undangan ini, abaikan pesan ini.

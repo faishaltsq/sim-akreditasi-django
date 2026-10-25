@@ -28,6 +28,12 @@ class UndanganAkunPegawai(models.Model):
     email = models.EmailField('Email Tujuan')
     email_version = models.PositiveIntegerField('Versi Email', default=1)
     intended_role = models.CharField('Peran yang Dimaksud', max_length=30, default='STAF_NAKES')
+    idempotency_key = models.CharField(
+        'Kunci Idempotensi', max_length=100, null=True, blank=True, unique=True
+    )
+    intended_is_active = models.BooleanField(
+        'Akun Aktif Setelah Aktivasi', default=True
+    )
     token_digest = models.CharField('Digest Token', max_length=128)
     expiry = models.DateTimeField('Kadaluarsa Pada')
     state = models.CharField('Status', max_length=12, choices=STATE_CHOICES, default='SENT')

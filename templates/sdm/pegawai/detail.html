@@ -19,6 +19,9 @@
         <div class="card-header bg-white">
             <ul class="nav nav-tabs card-header-tabs" id="employee-tabs" role="tablist">
                 <li class="nav-item" role="presentation"><button class="nav-link active" id="identity-tab" data-bs-toggle="tab" data-bs-target="#identity-pane" type="button" role="tab" aria-controls="identity-pane" aria-selected="true">Identitas &amp; Kepegawaian</button></li>
+                <li class="nav-item" role="presentation"><button class="nav-link" id="personal-tab" data-bs-toggle="tab" data-bs-target="#personal-pane" type="button" role="tab" aria-controls="personal-pane" aria-selected="false">Identitas Pribadi</button></li>
+                <li class="nav-item" role="presentation"><button class="nav-link" id="employment-tab" data-bs-toggle="tab" data-bs-target="#employment-pane" type="button" role="tab" aria-controls="employment-pane" aria-selected="false">Riwayat Kepegawaian</button></li>
+                <li class="nav-item" role="presentation"><button class="nav-link" id="legal-tab" data-bs-toggle="tab" data-bs-target="#legal-pane" type="button" role="tab" aria-controls="legal-pane" aria-selected="false">Legalitas &amp; Pendidikan</button></li>
                 <li class="nav-item" role="presentation"><button class="nav-link" id="placement-tab" data-bs-toggle="tab" data-bs-target="#placement-pane" type="button" role="tab" aria-controls="placement-pane" aria-selected="false">Riwayat Penempatan</button></li>
                 <li class="nav-item" role="presentation"><button class="nav-link" id="documents-tab" data-bs-toggle="tab" data-bs-target="#documents-pane" type="button" role="tab" aria-controls="documents-pane" aria-selected="false">Dokumen Kepegawaian</button></li>
                 <li class="nav-item" role="presentation"><button class="nav-link" id="activity-tab" data-bs-toggle="tab" data-bs-target="#activity-pane" type="button" role="tab" aria-controls="activity-pane" aria-selected="false">Aktivitas</button></li>
@@ -34,6 +37,72 @@
                     <dt class="col-sm-4">Jabatan</dt><dd class="col-sm-8">{{ employee.jabatan|default:"Belum dicatat" }}</dd>
                     <dt class="col-sm-4">Status</dt><dd class="col-sm-8">{{ employee.get_status_display }}</dd>
                 </dl>
+            </section>
+            <section class="tab-pane fade" id="personal-pane" role="tabpanel" aria-labelledby="personal-tab" tabindex="0">
+                {% if profile.can_view_personal and profile.personal %}
+                <dl class="row mb-0">
+                    <dt class="col-sm-4">NIK</dt><dd class="col-sm-8">{{ profile.masked_nik|default:"Belum dicatat" }}</dd>
+                    <dt class="col-sm-4">Nama lengkap</dt><dd class="col-sm-8">{{ profile.personal.nama_depan }} {{ profile.personal.nama_belakang }}</dd>
+                    <dt class="col-sm-4">Tempat / tanggal lahir</dt><dd class="col-sm-8">{{ profile.personal.tempat_lahir|default:"Belum dicatat" }}{% if profile.personal.tanggal_lahir %}, {{ profile.personal.tanggal_lahir|date:"d M Y" }}{% endif %}</dd>
+                    <dt class="col-sm-4">Jenis kelamin</dt><dd class="col-sm-8">{{ profile.personal.get_gender_display|default:"Belum dicatat" }}</dd>
+                    <dt class="col-sm-4">Agama</dt><dd class="col-sm-8">{{ profile.personal.get_agama_display|default:"Belum dicatat" }}</dd>
+                    <dt class="col-sm-4">Status pernikahan</dt><dd class="col-sm-8">{{ profile.personal.get_status_pernikahan_display|default:"Belum dicatat" }}</dd>
+                    <dt class="col-sm-4">Telepon</dt><dd class="col-sm-8">{{ profile.personal.telepon|default:"Belum dicatat" }}</dd>
+                    <dt class="col-sm-4">Email</dt><dd class="col-sm-8">{{ profile.personal.email_terverifikasi|default:"Belum dicatat" }}</dd>
+                    <dt class="col-sm-4">Alamat KTP</dt><dd class="col-sm-8">{{ profile.personal.alamat_ktp|default:"Belum dicatat" }}</dd>
+                    <dt class="col-sm-4">Alamat domisili</dt><dd class="col-sm-8">{{ profile.personal.alamat_domisili|default:"Belum dicatat" }}</dd>
+                </dl>
+                {% elif profile.has_personal_record %}
+                <p class="text-muted mb-0">Tersembunyi — data identitas pribadi hanya dapat dilihat oleh pemilik profil atau pengguna dengan kewenangan pengelolaan.</p>
+                {% else %}
+                <p class="text-muted mb-0">Belum ada data identitas pribadi untuk pegawai ini.</p>
+                {% endif %}
+            </section>
+            <section class="tab-pane fade" id="employment-pane" role="tabpanel" aria-labelledby="employment-tab" tabindex="0">
+                {% if profile.employment %}
+                <dl class="row mb-0">
+                    <dt class="col-sm-4">Kategori pegawai</dt><dd class="col-sm-8">{{ profile.employment.get_kategori_pegawai_display|default:"Belum dicatat" }}</dd>
+                    <dt class="col-sm-4">TMT</dt><dd class="col-sm-8">{{ profile.employment.tanggal_tmt|date:"d M Y"|default:"Belum dicatat" }}</dd>
+                    <dt class="col-sm-4">Masa kerja</dt><dd class="col-sm-8">{% if profile.tenure_days is not None %}{{ profile.tenure_days }} hari{% else %}Belum dapat dihitung{% endif %}</dd>
+                    <dt class="col-sm-4">Nomor kontrak</dt><dd class="col-sm-8">{{ profile.employment.nomor_kontrak|default:"Belum dicatat" }}</dd>
+                    <dt class="col-sm-4">Jam kontrak / minggu</dt><dd class="col-sm-8">{{ profile.employment.jam_kontrak_per_minggu|default:"Belum dicatat" }}</dd>
+                    <dt class="col-sm-4">Jam fulltime referensi</dt><dd class="col-sm-8">{{ profile.employment.jam_fulltime_referensi|default:"Belum dikonfigurasi" }}</dd>
+                    <dt class="col-sm-4">Status tinjauan</dt><dd class="col-sm-8">{{ profile.employment.get_review_status_display|default:"Belum dicatat" }}</dd>
+                </dl>
+                {% else %}
+                <p class="text-muted mb-0">Riwayat kepegawaian belum dicatat.</p>
+                {% endif %}
+            </section>
+            <section class="tab-pane fade" id="legal-pane" role="tabpanel" aria-labelledby="legal-tab" tabindex="0">
+                <h2 class="h6 mb-2">Izin &amp; legalitas</h2>
+                <div class="table-responsive mb-4">
+                    <table class="table table-sm align-middle">
+                        <caption class="visually-hidden">Daftar izin profesi pegawai</caption>
+                        <thead><tr><th scope="col">Jenis</th><th scope="col">Nomor</th><th scope="col">Masa berlaku</th><th scope="col">Lokasi praktik</th></tr></thead>
+                        <tbody>
+                            {% for permit in profile.permits %}
+                            <tr>
+                                <td>{{ permit.get_subtype_display }}</td>
+                                <td>{{ permit.nomor_izin|default:"Belum dicatat" }}</td>
+                                <td>{% if permit.validity_mode == 'LIFETIME' %}Seumur hidup{% elif permit.tanggal_berakhir %}{{ permit.tanggal_berakhir|date:"d M Y" }}{% else %}Belum dicatat{% endif %}</td>
+                                <td>{{ permit.lokasi_praktik|default:"—" }}{% if permit.is_local_rs %} <span class="badge text-bg-info">RS ini</span>{% endif %}</td>
+                            </tr>
+                            {% empty %}<tr><td colspan="4" class="text-muted text-center py-4">Belum ada izin profesi.</td></tr>{% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                <h2 class="h6 mb-2">Riwayat pendidikan</h2>
+                <div class="table-responsive">
+                    <table class="table table-sm align-middle">
+                        <caption class="visually-hidden">Riwayat pendidikan pegawai</caption>
+                        <thead><tr><th scope="col">Tingkat</th><th scope="col">Institusi</th><th scope="col">Program studi</th><th scope="col">Lulus</th></tr></thead>
+                        <tbody>
+                            {% for item in profile.education %}
+                            <tr><td>{{ item.get_tingkat_display }}</td><td>{{ item.institusi|default:"Belum dicatat" }}</td><td>{{ item.program_studi|default:"—" }}</td><td>{{ item.tanggal_lulus|date:"d M Y"|default:"Belum dicatat" }}</td></tr>
+                            {% empty %}<tr><td colspan="4" class="text-muted text-center py-4">Belum ada riwayat pendidikan.</td></tr>{% endfor %}
+                        </tbody>
+                    </table>
+                </div>
             </section>
             <section class="tab-pane fade" id="placement-pane" role="tabpanel" aria-labelledby="placement-tab" tabindex="0">
                 <div class="table-responsive">

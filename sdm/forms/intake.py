@@ -3,6 +3,7 @@
 from decimal import Decimal
 
 from django import forms
+from django.conf import settings
 from django.utils import timezone
 
 from akreditasi.models import UnitKerja
@@ -166,6 +167,11 @@ class IntakeStep2Form(forms.Form):
         label='Unit Kerja',
         widget=forms.Select(attrs={'class': SELECT_CLASS}),
     )
+    sub_unit = forms.ModelChoiceField(
+        queryset=UnitKerja.objects.none(),
+        label='Sub-Unit / Ruangan', required=False,
+        widget=forms.Select(attrs={'class': SELECT_CLASS}),
+    )
     tanggal_mulai = forms.DateField(
         label='Mulai Penempatan',
         initial=timezone.localdate,
@@ -186,6 +192,9 @@ class IntakeStep2Form(forms.Form):
     def __init__(self, *args, user, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields['unit_kerja'].queryset = visible_units(
+            user, capability='can_manage_hc_employees'
+        ).order_by('level', 'order', 'code')
+        self.fields['sub_unit'].queryset = visible_units(
             user, capability='can_manage_hc_employees'
         ).order_by('level', 'order', 'code')
 
@@ -213,7 +222,7 @@ class IntakeStep3Form(forms.Form):
     )
     validity_mode = forms.ChoiceField(
         label='Mode Masa Berlaku', choices=(
-            ('DATED', 'Tanggal Berthi'), ('LIFETIME', 'Seumur Hidup'),
+            ('DATED', 'Tanggal Berlaku'), ('LIFETIME', 'Seumur Hidup'),
         ), initial='DATED', required=False,
         widget=forms.Select(attrs={'class': SELECT_CLASS}),
     )
@@ -258,34 +267,129 @@ class IntakeStep3Form(forms.Form):
     )
 
 
+INTAKE_DELEGABLE_ROLES = frozenset({'STAF_NAKES', 'ASESOR'})
+
+
+def _delegable_role_choices():
+    from accounts.models import UserProfile
+
+    allowed = getattr(settings, 'HC_INTAKE_DELEGABLE_ROLES', None)
+    allowed = frozenset(allowed) if allowed else INTAKE_DELEGABLE_ROLES
+    return [
+        (code, label) for code, label in UserProfile.ROLE_CHOICES
+        if code in allowed
+    ]
+
+
 class IntakeStep4Form(forms.Form):
-    """Akun & Akses — optional account activation."""
+    """Akun & Akses — optional, delegated, never privileged."""
 
     create_account = forms.BooleanField(
-        label='Buat akun login untuk pegawai ini', required=False, initial=True,
+        label='Buat akun login untuk pegawai ini', required=False, initial=False,
         widget=forms.CheckboxInput(attrs={'class': 'form-check-input'}),
     )
     email = forms.EmailField(
         label='Email untuk undangan aktivasi', required=False,
         widget=forms.EmailInput(attrs={'class': FIELD_CLASS}),
     )
+    intended_role = forms.ChoiceField(
+        label='Peran Sistem', required=False,
+        widget=forms.Select(attrs={'class': SELECT_CLASS}),
+    )
+    account_active = forms.BooleanField(
+        label='Akun langsung aktif setelah aktivasi', required=False, initial=True,
+        widget=forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+    )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['intended_role'].choices = [('', '— Pilih peran —')] + (
+            _delegable_role_choices()
+        )
+
+    def clean(self):
+        cleaned = super().clean()
+        if not cleaned.get('create_account'):
+            return cleaned
+        if not cleaned.get('email'):
+            self.add_error('email', 'Email wajib diisi bila akun login diminta.')
+        if not cleaned.get('intended_role'):
+            self.add_error('intended_role', 'Peran sistem wajib dipilih.')
+        return cleaned
 
 
 class IntakeStep5Form(forms.Form):
-    """Dokumen Pendukung — metadata only; files staged via service."""
+    """Dokumen Pendukung — real files, staged against the draft."""
 
+    foto_profil = forms.FileField(
+        label='Pas Foto Resmi', required=False,
+        help_text='JPG/JPEG, minimal 200×200 piksel. Dipakai sebagai avatar direktori.',
+        widget=forms.ClearableFileInput(attrs={'class': FIELD_CLASS, 'accept': 'image/jpeg'}),
+    )
+    scan_ktp = forms.FileField(
+        label='Scan / Foto KTP', required=False,
+        help_text='PDF atau JPG, maksimal 5 MiB.',
+        widget=forms.ClearableFileInput(
+            attrs={'class': FIELD_CLASS, 'accept': '.pdf,image/jpeg'}
+        ),
+    )
+    dokumen_berkas = forms.FileField(
+        label='Berkas Pendukung Lain', required=False,
+        help_text='PDF atau JPG, maksimal 5 MiB.',
+        widget=forms.ClearableFileInput(
+            attrs={'class': FIELD_CLASS, 'accept': '.pdf,image/jpeg'}
+        ),
+    )
     dokumen_judul = forms.CharField(
-        label='Judul Dokumen Pendukung', max_length=250, required=False,
+        label='Judul Dokumen Pendukung Lain', max_length=250, required=False,
         widget=forms.TextInput(attrs={'class': FIELD_CLASS}),
     )
     dokumen_jenis_berkas = forms.ChoiceField(
         label='Jenis Berkas', choices=(
-            ('KTP', 'KTP'), ('FOTO', 'Foto'), ('IJAZAH', 'Ijazah'),
-            ('TRANSKRIP', 'Transkrip Nilai'), ('STR', 'STR'), ('SIP', 'SIP'),
-            ('SIPA', 'SIPA'), ('KONTRAK', 'Kontrak Kerja'),
-            ('SK_PENGANGKATAN', 'SK Pengangkatan'), ('SPK_RKK', 'SPK RKK'),
-            ('URAIAN_TUGAS', 'Uraian Tugas'), ('SERTIFIKAT', 'Sertifikat'),
-            ('OTHER', 'Lainnya'),
+            ('IJAZAH', 'Ijazah'), ('TRANSKRIP', 'Transkrip Nilai'),
+            ('STR', 'STR'), ('SIP', 'SIP'), ('SIPA', 'SIPA'),
+            ('KONTRAK', 'Kontrak Kerja'), ('SK_PENGANGKATAN', 'SK Pengangkatan'),
+            ('SPK_RKK', 'SPK RKK'), ('URAIAN_TUGAS', 'Uraian Tugas'),
+            ('SERTIFIKAT', 'Sertifikat'), ('OTHER', 'Lainnya'),
         ), required=False,
         widget=forms.Select(attrs={'class': SELECT_CLASS}),
     )
+
+
+class SipForm(forms.Form):
+    """One site-specific practice permit."""
+
+    nomor_izin = forms.CharField(
+        label='Nomor SIP', max_length=100, required=False,
+        widget=forms.TextInput(attrs={'class': FIELD_CLASS}),
+    )
+    lokasi_praktik = forms.CharField(
+        label='Tempat Praktik', max_length=200, required=False,
+        widget=forms.TextInput(attrs={'class': FIELD_CLASS}),
+    )
+    tanggal_terbit = forms.DateField(
+        label='Tanggal Terbit', required=False,
+        widget=forms.DateInput(attrs={'class': FIELD_CLASS, 'type': 'date'}),
+    )
+    tanggal_berakhir = forms.DateField(
+        label='Berlaku Sampai', required=False,
+        widget=forms.DateInput(attrs={'class': FIELD_CLASS, 'type': 'date'}),
+    )
+    is_local_rs = forms.BooleanField(
+        label='Praktik di RS Ini', required=False,
+        widget=forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+    )
+
+
+SipFormSet = forms.formset_factory(SipForm, extra=2, max_num=6)
+
+
+def optional_formset(formset_class, data, prefix):
+    """Build a formset only when its management fields are present.
+
+    Keeps a step that predates the formset (or a test posting an empty dict)
+    valid with zero rows instead of failing on a missing management form.
+    """
+    if data is None or f'{prefix}-TOTAL_FORMS' not in data:
+        return formset_class(data=None, prefix=prefix)
+    return formset_class(data=data, prefix=prefix)

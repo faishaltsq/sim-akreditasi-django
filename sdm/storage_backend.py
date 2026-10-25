@@ -271,3 +271,49 @@ class SupabasePrivateStorage:
                 "Authorization": f"Bearer {self.api_key}",
             },
         )
+
+    def fetch_object(self, storage_key: str, *, max_bytes: int | None = None) -> bytes:
+        """Download a private object's bytes for same-origin serving."""
+        match = re.fullmatch(
+            r"(personnel|health)/([0-9a-f-]{36})/([0-9a-f-]{36})\.(pdf|png|jpg|jpeg)",
+            storage_key or "",
+        )
+        if not match:
+            raise PrivateStorageError("Invalid private-object fetch request")
+        limit = max_bytes if max_bytes is not None else self.max_bytes
+        if type(limit) is not int or limit <= 0:
+            raise PrivateStorageError("Invalid private-object fetch request")
+        endpoint = (
+            f"{self.base_url}/storage/v1/object/{quote(self.bucket, safe='')}/"
+            f"{quote(storage_key, safe='/')}"
+        )
+        response = self._request(
+            "GET",
+            endpoint,
+            headers={
+                "apikey": self.api_key,
+                "Authorization": f"Bearer {self.api_key}",
+            },
+            stream=True,
+        )
+        try:
+            chunks = []
+            total = 0
+            for chunk in response.iter_content(chunk_size=65536):
+                if not chunk:
+                    continue
+                if not isinstance(chunk, bytes):
+                    raise PrivateStorageError("Private-object fetch failed")
+                total += len(chunk)
+                if total > limit:
+                    raise PrivateStorageError("Private-object fetch failed")
+                chunks.append(chunk)
+            return b"".join(chunks)
+        except PrivateStorageError:
+            raise
+        except Exception:
+            raise PrivateStorageError("Private-object fetch failed") from None
+        finally:
+            close = getattr(response, "close", None)
+            if close:
+                close()

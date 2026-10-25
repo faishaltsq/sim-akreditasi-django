@@ -2,6 +2,7 @@ from decimal import Decimal
 import uuid
 
 from django.conf import settings
+from django.core.exceptions import ValidationError
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.db.models import F, Q
@@ -39,6 +40,15 @@ class Pegawai(models.Model):
     nama_lengkap = models.CharField('Nama Lengkap', max_length=200)
     kategori = models.CharField('Kategori Staf', max_length=10, choices=KATEGORI_CHOICES)
     profesi = models.CharField('Profesi', max_length=120, blank=True)
+    profesi_master = models.ForeignKey(
+        'sdm.MasterProfesiPegawai',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='pegawai_master',
+        verbose_name='Profesi (Master)',
+        help_text='Tautan ke master profesi yang ditinjau; teks bebas lama tetap disimpan di kolom profesi.',
+    )
     jabatan = models.CharField('Jabatan', max_length=150, blank=True)
     status = models.CharField(
         'Status Kepegawaian', max_length=10, choices=STATUS_CHOICES, default='AKTIF'
@@ -80,6 +90,23 @@ class PenempatanPegawai(models.Model):
         related_name='penempatan_pegawai',
         verbose_name='Unit Kerja',
     )
+    unit_induk = models.ForeignKey(
+        'akreditasi.UnitKerja',
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name='penempatan_sub_unit',
+        verbose_name='Unit Induk',
+        help_text='Unit kerja utama ketika penempatan berada pada sub-unit.',
+    )
+    atasan_langsung = models.ForeignKey(
+        'sdm.Pegawai',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='bawahan_langsung',
+        verbose_name='Atasan Langsung',
+    )
     tanggal_mulai = models.DateField('Tanggal Mulai')
     tanggal_selesai = models.DateField('Tanggal Selesai', null=True, blank=True)
     alokasi_fte = models.DecimalField(
@@ -119,6 +146,23 @@ class PenempatanPegawai(models.Model):
                 name='sdm_penempatan_tanggal_valid',
             ),
         ]
+
+    def clean(self):
+        super().clean()
+        if self.unit_induk_id and self.unit_kerja_id:
+            if self.unit_induk_id == self.unit_kerja_id:
+                raise ValidationError({
+                    'unit_induk': 'Unit induk tidak boleh sama dengan unit penempatan.'
+                })
+            if self.unit_kerja.parent_id != self.unit_induk_id:
+                raise ValidationError({
+                    'unit_induk': 'Unit penempatan harus merupakan turunan langsung unit induk.'
+                })
+        if self.atasan_langsung_id and self.pegawai_id:
+            if self.atasan_langsung_id == self.pegawai_id:
+                raise ValidationError({
+                    'atasan_langsung': 'Pegawai tidak dapat menjadi atasan dirinya sendiri.'
+                })
 
     @property
     def is_current(self):

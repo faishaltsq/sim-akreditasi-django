@@ -1,12 +1,22 @@
 from django.urls import path
 from django.contrib.auth import views as auth_views
-from . import views
+from . import staff_activation_views, views
 
 app_name = 'accounts'
 
 urlpatterns = [
     path('login/', views.RateLimitedLoginView.as_view(), name='login'),
     path('logout/', auth_views.LogoutView.as_view(), name='logout'),
+    path(
+        'staf/aktivasi/<str:token>/',
+        staff_activation_views.activate,
+        name='staff_activate',
+    ),
+    path(
+        'staf/aktivasi-selesai/',
+        staff_activation_views.activation_complete,
+        name='staff_activation_complete',
+    ),
 
     # Manajemen Pengguna (CRUD)
     path('users/', views.user_list, name='user_list'),

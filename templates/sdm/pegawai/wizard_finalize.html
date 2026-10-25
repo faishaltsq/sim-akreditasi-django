@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+
+{% block page_title %}Selesaikan Input Pegawai{% endblock %}
+{% block page_subtitle %}Simpan semua langkah ke data pegawai kanonikal{% endblock %}
+{% block extra_css %}{% include "sdm/_responsive.html" %}{% endblock %}
+
+{% block content %}
+<div class="container-fluid p-0">
+    <div class="page-header-box mb-3">
+        <div>
+            <h1 class="page-title h5 mb-1"><i class="bi bi-check-circle text-success me-2"></i>{{ title }}</h1>
+            <p class="page-subtitle text-muted mb-0">Data yang disimpan draf akan dibuat sebagai pegawai kanonikal setelah konfirmasi ini.</p>
+        </div>
+        <a class="btn btn-outline-secondary btn-sm" href="{% url 'sdm:pegawai_list' %}">Kembali ke direktori</a>
+    </div>
+
+    {% if messages %}
+        {% for message in messages %}
+        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">{{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Tutup"></button>
+        </div>
+        {% endfor %}
+    {% endif %}
+
+    <div class="card border shadow-sm">
+        <div class="card-body">
+            <p class="mb-1"><strong>ID Draf:</strong> {{ draft.pk }}</p>
+            <p class="mb-1"><strong>Pemilik:</strong> {{ draft.owner.get_username }}</p>
+            <p class="mb-1"><strong>Langkah:</strong> 5 dari 5 (seluruh langkah telah diisi)</p>
+            <p class="mb-0 text-muted"><strong>Versi draf:</strong> {{ draft.version }}</p>
+        </div>
+        <div class="card-footer bg-light d-flex justify-content-between gap-2">
+            <a class="btn btn-outline-secondary btn-sm" href="{% url 'sdm:pegawai_wizard_resume' step=5 draft_id=draft.pk %}">Perbaiki Langkah Terakhir</a>
+            <form method="post" class="d-inline">
+                {% csrf_token %}
+                <input type="hidden" name="expected_version" value="{{ draft.version }}">
+                <button class="btn btn-success btn-sm" type="submit"><i class="bi bi-save me-1"></i>Buat Pegawai</button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

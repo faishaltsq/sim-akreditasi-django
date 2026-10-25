@@ -1,6 +1,7 @@
 from django.urls import path
 
 from sdm import views
+from sdm import import_views
 from sdm import intake_views
 from sdm import portal_views
 
@@ -10,11 +11,22 @@ app_name = 'sdm'
 urlpatterns = [
     path('', views.dashboard, name='dashboard'),
     path('pegawai/', views.pegawai_list, name='pegawai_list'),
+    path('pegawai/impor/', import_views.import_upload, name='pegawai_import'),
+    path('pegawai/impor/template/', import_views.import_template, name='pegawai_import_template'),
+    path('pegawai/impor/<uuid:batch_id>/', import_views.import_preview, name='pegawai_import_preview'),
+    path('pegawai/impor/<uuid:batch_id>/terapkan/', import_views.import_apply, name='pegawai_import_apply'),
+    path('pegawai/impor/<uuid:batch_id>/hasil/', import_views.import_result, name='pegawai_import_result'),
     path('pegawai/baru/', intake_views.intake_wizard, name='pegawai_create'),
     path('pegawai/input/baru/<int:step>/', intake_views.intake_wizard, name='pegawai_wizard_step'),
     path('pegawai/input/baru/<int:step>/draf/<uuid:draft_id>/', intake_views.intake_wizard, name='pegawai_wizard_resume'),
     path('pegawai/input/baru/<uuid:draft_id>/selesai/', intake_views.intake_finalize, name='pegawai_intake_finalize'),
+    path(
+        'pegawai/input/lampiran/<uuid:attachment_id>/hapus/',
+        intake_views.intake_attachment_remove,
+        name='pegawai_intake_attachment_remove',
+    ),
     path('pegawai/<uuid:employee_id>/', views.pegawai_detail, name='pegawai_detail'),
+    path('pegawai/<uuid:employee_id>/foto/', views.pegawai_avatar, name='pegawai_avatar'),
     path(
         'pegawai/<uuid:employee_id>/edit/',
         views.pegawai_edit,
