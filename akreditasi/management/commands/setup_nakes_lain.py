@@ -55,6 +55,23 @@ class Command(BaseCommand):
         from accounts.models import UserProfile
 
         self.stdout.write(self.style.SUCCESS('\n=== TENAGA KESEHATAN LAINNYA (STARKES KMK 1128/2022) ==='))
+        # Column-awareness: this command runs before Track C columns
+        # (source_ep_code on StandardItem, assessment_state on QualityRecord)
+        # exist on fresh databases (migration 0022 before 0052). Detect and
+        # fall back to raw SQL so the command still completes.
+        from django.db import connection
+
+        def _table_columns(table: str) -> set:
+            with connection.cursor() as _cur:
+                return {
+                    column.name
+                    for column in connection.introspection.get_table_description(_cur, table)
+                }
+
+        _si_columns = _table_columns(StandardItem._meta.db_table)
+        _si_modern = 'source_ep_code' in _si_columns
+        _qr_columns = _table_columns(QualityRecord._meta.db_table)
+        _qr_modern = 'assessment_state' in _qr_columns
 
         # ── 1. Tambah StandardItem KPS 14, 16, 17 ──
         cat_kps = Category.objects.filter(code='KPS').first()
@@ -63,35 +80,99 @@ class Command(BaseCommand):
             return
 
         unit_default = UnitKerja.objects.filter(code='BAG-SDM').first() or UnitKerja.objects.first()
-        max_order = StandardItem.objects.filter(category=cat_kps).order_by('-order').values_list('order', flat=True).first() or 200
+        if _si_modern:
+            max_order = StandardItem.objects.filter(category=cat_kps).order_by('-order').values_list('order', flat=True).first() or 200
+        else:
+            with connection.cursor() as _cur:
+                _cur.execute(
+                    'SELECT "order" FROM akreditasi_standarditem '
+                    'WHERE category_id = %s ORDER BY "order" DESC LIMIT 1',
+                    [cat_kps.pk],
+                )
+                _row = _cur.fetchone()
+                max_order = _row[0] if _row else 200
 
         added_eps = 0
         for block in KPS_NAKES_LAIN_ITEMS:
             for ep_code, ep_desc in block['eps']:
-                si, created = StandardItem.objects.update_or_create(
-                    code=ep_code,
-                    defaults={
-                        'category': cat_kps,
-                        'sub_standard': block['sub_standard'],
-                        'sub_title': block['sub_title'],
-                        'description': ep_desc,
-                        'order': max_order + added_eps + 1,
-                    }
-                )
-                if created:
-                    added_eps += 1
-                    QualityRecord.objects.get_or_create(
-                        standard_item=si,
+                if _si_modern:
+                    si, created = StandardItem.objects.update_or_create(
+                        code=ep_code,
                         defaults={
-                            'unit': unit_default,
-                            'score': 0,
+                            'category': cat_kps,
+                            'sub_standard': block['sub_standard'],
+                            'sub_title': block['sub_title'],
+                            'description': ep_desc,
+                            'order': max_order + added_eps + 1,
                         }
                     )
+                else:
+                    with connection.cursor() as _cur:
+                        _cur.execute(
+                            'SELECT id FROM akreditasi_standarditem WHERE code = %s LIMIT 1',
+                            [ep_code],
+                        )
+                        _row = _cur.fetchone()
+                        if _row is None:
+                            _cur.execute(
+                                'INSERT INTO akreditasi_standarditem '
+                                '(category_id, sub_standard, sub_title, code, description, "order") '
+                                'VALUES (%s, %s, %s, %s, %s, %s)',
+                                [cat_kps.pk, block['sub_standard'], block['sub_title'], ep_code, ep_desc, max_order + added_eps + 1],
+                            )
+                            _cur.execute(
+                                'SELECT id FROM akreditasi_standarditem WHERE code = %s LIMIT 1',
+                                [ep_code],
+                            )
+                            _row = _cur.fetchone()
+                            created = True
+                        else:
+                            created = False
+                    si = StandardItem(
+                        id=_row[0], category=cat_kps,
+                        sub_standard=block['sub_standard'], sub_title=block['sub_title'],
+                        code=ep_code, description=ep_desc,
+                        order=max_order + added_eps + 1,
+                    )
+                if created:
+                    added_eps += 1
+                    if _qr_modern:
+                        QualityRecord.objects.get_or_create(
+                            standard_item=si,
+                            defaults={
+                                'unit': unit_default,
+                                'score': 0,
+                            }
+                        )
+                    else:
+                        with connection.cursor() as _cur:
+                            _cur.execute(
+                                'SELECT id FROM akreditasi_qualityrecord '
+                                'WHERE standard_item_id = %s LIMIT 1',
+                                [si.id],
+                            )
+                            if _cur.fetchone() is None:
+                                _cur.execute(
+                                    'INSERT INTO akreditasi_qualityrecord '
+                                    '(standard_item_id, unit_id, score, budget_status, baseline_data, '
+                                    'quality_target, risk_mitigation, action_plan, pic, target_date, '
+                                    'budget_source, est_cost, eval_notes, updated_at) '
+                                    'VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, CURRENT_TIMESTAMP)',
+                                    [si.id, unit_default.id, 0, 'DRAFT', '', '', '', '', '', '', '', 0, ''],
+                                )
                 status = 'dibuat' if created else 'diupdate'
                 self.stdout.write(f"  {status}: {ep_code} | {block['sub_standard']}")
 
         # Update target_ep_count KPS
-        actual_kps_count = StandardItem.objects.filter(category=cat_kps).count()
+        if _si_modern:
+            actual_kps_count = StandardItem.objects.filter(category=cat_kps).count()
+        else:
+            with connection.cursor() as _cur:
+                _cur.execute(
+                    'SELECT COUNT(*) FROM akreditasi_standarditem WHERE category_id = %s',
+                    [cat_kps.pk],
+                )
+                actual_kps_count = _cur.fetchone()[0]
         cat_kps.target_ep_count = actual_kps_count
         cat_kps.save(update_fields=['target_ep_count'])
         self.stdout.write(f"  ✔ KPS target_ep_count diupdate → {actual_kps_count}")

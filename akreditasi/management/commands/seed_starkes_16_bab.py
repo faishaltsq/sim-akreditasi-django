@@ -369,6 +369,23 @@ class Command(BaseCommand):
                     cycle_type='PDCA',
                 )
 
+        # Column-awareness: this seed runs from data migration 0013, before
+        # Track C columns (source_ep_code, description_full, ...) exist on
+        # akreditasi_standarditem. Detect missing columns and fall back to raw
+        # SQL so the migration chain still completes on fresh databases.
+        from django.db import connection as _conn
+
+        def _table_columns(table: str) -> set:
+            with _conn.cursor() as _cur:
+                return {
+                    column.name
+                    for column in _conn.introspection.get_table_description(_cur, table)
+                }
+
+        _si_columns = _table_columns(StandardItem._meta.db_table)
+        _si_modern = 'source_ep_code' in _si_columns
+        _qr_columns = _table_columns(QualityRecord._meta.db_table)
+        _qr_modern = 'assessment_state' in _qr_columns
         # Fallback unit default
         default_fallback_unit = UnitKerja.objects.first()
 
@@ -416,34 +433,103 @@ class Command(BaseCommand):
                     ep_code = f"{sub['code']} EP {ep_idx}"
                     ep_desc = f"{sub['desc_prefix']} sesuai standar elemen penilaian ke-{ep_idx} STARKES."
 
-                    ep_item, ep_created = StandardItem.objects.get_or_create(
-                        category=category,
-                        code=ep_code,
-                        defaults={
-                            'sub_standard': sub['code'],
-                            'sub_title': sub['title'],
-                            'description': ep_desc,
-                            'order': ep_order,
-                        }
-                    )
-                    if ep_created:
-                        total_ep_created += 1
+                    if _si_modern:
+                        ep_item, ep_created = StandardItem.objects.get_or_create(
+                            category=category,
+                            code=ep_code,
+                            defaults={
+                                'sub_standard': sub['code'],
+                                'sub_title': sub['title'],
+                                'description': ep_desc,
+                                'order': ep_order,
+                            }
+                        )
+                        if ep_created:
+                            total_ep_created += 1
+                        else:
+                            total_ep_existing += 1
                     else:
-                        total_ep_existing += 1
+                        # Raw SQL fallback: Track C columns not yet present on
+                        # this (pre-migration) database; insert only legacy cols.
+                        with connection.cursor() as _cur:
+                            _cur.execute(
+                                "SELECT id FROM akreditasi_standarditem "
+                                "WHERE category_id = %s AND code = %s LIMIT 1",
+                                [category.pk, ep_code],
+                            )
+                            _row = _cur.fetchone()
+                            if _row is None:
+                                _cur.execute(
+                                    "INSERT INTO akreditasi_standarditem "
+                                    "(category_id, sub_standard, sub_title, code, description, \"order\") "
+                                    "VALUES (%s, %s, %s, %s, %s, %s)",
+                                    [category.pk, sub['code'], sub['title'], ep_code, ep_desc, ep_order],
+                                )
+                                _cur.execute(
+                                    "SELECT id FROM akreditasi_standarditem "
+                                    "WHERE category_id = %s AND code = %s LIMIT 1",
+                                    [category.pk, ep_code],
+                                )
+                                _row = _cur.fetchone()
+                                ep_created = True
+                                total_ep_created += 1
+                            else:
+                                ep_created = False
+                                total_ep_existing += 1
+                        ep_item = StandardItem(
+                            id=_row[0], category=category,
+                            sub_standard=sub['code'], sub_title=sub['title'],
+                            code=ep_code, description=ep_desc, order=ep_order,
+                        )
 
                     ep_order += 1
 
                     # Pastikan QualityRecord ada untuk setiap EP
                     if unit_obj:
-                        qr, qr_created = QualityRecord.objects.get_or_create(
-                            standard_item=ep_item,
-                            defaults={
-                                'unit': unit_obj,
-                                'score': 0,
-                                'budget_status': 'DRAFT',
-                                'eval_notes': f'Belum dinilai. Unit pengampu: {unit_obj.name}',
-                            }
-                        )
+                        if _qr_modern:
+                            qr, qr_created = QualityRecord.objects.get_or_create(
+                                standard_item=ep_item,
+                                defaults={
+                                    'unit': unit_obj,
+                                    'score': 0,
+                                    'budget_status': 'DRAFT',
+                                    'assessment_state': 'UNASSESSED',
+                                    'eval_notes': f'Belum dinilai. Unit pengampu: {unit_obj.name}',
+                                }
+                            )
+                        else:
+                            # Raw SQL fallback: assessment_state column not yet
+                            # present on this (pre-migration) database.
+                            with connection.cursor() as _cur:
+                                _cur.execute(
+                                    "SELECT id FROM akreditasi_qualityrecord "
+                                    "WHERE standard_item_id = %s LIMIT 1",
+                                    [ep_item.id],
+                                )
+                                _qrow = _cur.fetchone()
+                                if _qrow is None:
+                                    _cur.execute(
+                                        "INSERT INTO akreditasi_qualityrecord "
+                                        "(standard_item_id, unit_id, score, budget_status, baseline_data, quality_target, risk_mitigation, action_plan, pic, target_date, budget_source, est_cost, eval_notes, updated_at) "
+                                        "VALUES (%s, %s, %s, %s, '', '', '', '', '', '', '', 0, %s, CURRENT_TIMESTAMP)",
+                                        [ep_item.id, unit_obj.id, 0, 'DRAFT',
+                                         f'Belum dinilai. Unit pengampu: {unit_obj.name}'],
+                                    )
+                                    _cur.execute(
+                                        "SELECT id FROM akreditasi_qualityrecord "
+                                        "WHERE standard_item_id = %s LIMIT 1",
+                                        [ep_item.id],
+                                    )
+                                    _qrow = _cur.fetchone()
+                                    qr_created = True
+                                    total_qr_created += 1
+                                else:
+                                    qr_created = False
+                            qr = QualityRecord(
+                                id=_qrow[0], standard_item=ep_item, unit=unit_obj,
+                                score=0, budget_status='DRAFT',
+                                eval_notes=f'Belum dinilai. Unit pengampu: {unit_obj.name}',
+                            )
                         if qr_created:
                             total_qr_created += 1
 

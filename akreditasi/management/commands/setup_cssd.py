@@ -63,6 +63,7 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         from akreditasi.models import UnitKerja, Category, StandardItem, QualityRecord, Framework
+        from django.db import connection
 
         self.stdout.write(self.style.SUCCESS('\n=== CSSD (Instalasi Pusat Sterilisasi) ==='))
 
@@ -73,42 +74,142 @@ class Command(BaseCommand):
             self.stdout.write(self.style.ERROR('Category PPI tidak ditemukan!'))
             return
 
-        max_order = StandardItem.objects.filter(category=cat_ppi).order_by('-order').values_list('order', flat=True).first() or 100
+        # Track C columns (source_ep_code on StandardItem, assessment_state on
+        # QualityRecord) are added in migration 0052. Migration 0019 runs this
+        # command, so on a fresh DB where 0019 runs before 0052 those columns
+        # are missing. Detect once and branch: ORM on modern DBs, raw SQL
+        # (legacy columns only) on pre-0052 DBs. Behavior on modern DBs is
+        # unchanged.
+        def _column_exists(table, column):
+            with connection.cursor() as cursor:
+                try:
+                    cols = connection.introspection.get_table_description(cursor, table)
+                except Exception:
+                    return False
+            return any(getattr(c, 'name', None) == column for c in cols)
 
-        ep_count = 0
-        for item_data in PPI_STERILISASI_ITEMS:
-            for ep_code, ep_desc in item_data['eps']:
-                si, created = StandardItem.objects.update_or_create(
-                    code=ep_code,
-                    defaults={
-                        'category': cat_ppi,
-                        'sub_standard': item_data['sub_standard'],
-                        'sub_title': item_data['sub_title'],
-                        'description': ep_desc,
-                        'order': max_order + ep_count + 1,
-                    }
-                )
-                if created:
-                    ep_count += 1
-                    # Buat QualityRecord default
-                    unit_default = UnitKerja.objects.filter(code='CSSD').first() or UnitKerja.objects.first()
-                    QualityRecord.objects.get_or_create(
-                        standard_item=si,
+        _si_modern = _column_exists('akreditasi_standarditem', 'source_ep_code')
+        _qr_modern = _column_exists('akreditasi_qualityrecord', 'assessment_state')
+
+        if _si_modern:
+            max_order = StandardItem.objects.filter(category=cat_ppi).order_by('-order').values_list('order', flat=True).first() or 100
+
+            ep_count = 0
+            for item_data in PPI_STERILISASI_ITEMS:
+                for ep_code, ep_desc in item_data['eps']:
+                    si, created = StandardItem.objects.update_or_create(
+                        code=ep_code,
                         defaults={
-                            'unit': unit_default,
-                            'score': 0,
+                            'category': cat_ppi,
+                            'sub_standard': item_data['sub_standard'],
+                            'sub_title': item_data['sub_title'],
+                            'description': ep_desc,
+                            'order': max_order + ep_count + 1,
                         }
                     )
-                status = 'dibuat' if created else 'sudah ada'
-                self.stdout.write(f"  {status}: {ep_code} | {item_data['sub_standard']}")
+                    if created:
+                        ep_count += 1
+                        # Buat QualityRecord default
+                        unit_default = UnitKerja.objects.filter(code='CSSD').first() or UnitKerja.objects.first()
+                        QualityRecord.objects.get_or_create(
+                            standard_item=si,
+                            defaults={
+                                'unit': unit_default,
+                                'score': 0,
+                            }
+                        )
+                    status = 'dibuat' if created else 'sudah ada'
+                    self.stdout.write(f"  {status}: {ep_code} | {item_data['sub_standard']}")
 
-        self.stdout.write(f"  ✔ {ep_count} EP baru ditambahkan ke PPI")
+            self.stdout.write(f"  ✔ {ep_count} EP baru ditambahkan ke PPI")
 
-        # Update target_ep_count di Category PPI
-        actual_count = StandardItem.objects.filter(category=cat_ppi).count()
-        cat_ppi.target_ep_count = actual_count
-        cat_ppi.save(update_fields=['target_ep_count'])
-        self.stdout.write(f"  ✔ PPI target_ep_count diupdate → {actual_count}")
+            # Update target_ep_count di Category PPI
+            actual_count = StandardItem.objects.filter(category=cat_ppi).count()
+            cat_ppi.target_ep_count = actual_count
+            cat_ppi.save(update_fields=['target_ep_count'])
+            self.stdout.write(f"  ✔ PPI target_ep_count diupdate → {actual_count}")
+        else:
+            # Legacy path: raw SQL, legacy columns only (no source_ep_code /
+            # assessment_state). _qr_modern is always consistent with _si_modern
+            # since both columns land in the same migration (0052).
+            with connection.cursor() as cursor:
+                cursor.execute(
+                    'SELECT MAX("order") FROM akreditasi_standarditem WHERE category_id = %s',
+                    [cat_ppi.id],
+                )
+                row = cursor.fetchone()
+                max_order = row[0] if row and row[0] is not None else 100
+
+            ep_count = 0
+            for item_data in PPI_STERILISASI_ITEMS:
+                for ep_code, ep_desc in item_data['eps']:
+                    with connection.cursor() as cursor:
+                        cursor.execute(
+                            'SELECT id FROM akreditasi_standarditem WHERE category_id = %s AND code = %s',
+                            [cat_ppi.id, ep_code],
+                        )
+                        row = cursor.fetchone()
+                        if row:
+                            si_id = row[0]
+                            created = False
+                            cursor.execute(
+                                '''UPDATE akreditasi_standarditem
+                                   SET sub_standard = %s, sub_title = %s, description = %s, "order" = %s
+                                   WHERE id = %s''',
+                                [item_data['sub_standard'], item_data['sub_title'], ep_desc,
+                                 max_order + ep_count + 1, si_id],
+                            )
+                            si = StandardItem(
+                                id=si_id, code=ep_code, category=cat_ppi,
+                                sub_standard=item_data['sub_standard'], sub_title=item_data['sub_title'],
+                                description=ep_desc, order=max_order + ep_count + 1,
+                            )
+                        else:
+                            cursor.execute(
+                                '''INSERT INTO akreditasi_standarditem
+                                   (category_id, sub_standard, sub_title, code, description, "order")
+                                   VALUES (%s, %s, %s, %s, %s, %s)''',
+                                [cat_ppi.id, item_data['sub_standard'], item_data['sub_title'],
+                                 ep_code, ep_desc, max_order + ep_count + 1],
+                            )
+                            si_id = cursor.lastrowid
+                            created = True
+                            ep_count += 1
+                            si = StandardItem(
+                                id=si_id, code=ep_code, category=cat_ppi,
+                                sub_standard=item_data['sub_standard'], sub_title=item_data['sub_title'],
+                                description=ep_desc, order=max_order + ep_count + 1,
+                            )
+                            # Buat QualityRecord default (legacy columns only)
+                            unit_default = UnitKerja.objects.filter(code='CSSD').first() or UnitKerja.objects.first()
+                            with connection.cursor() as qcursor:
+                                qcursor.execute(
+                                    'SELECT id FROM akreditasi_qualityrecord WHERE standard_item_id = %s',
+                                    [si_id],
+                                )
+                                if not qcursor.fetchone():
+                                    qcursor.execute(
+                                        '''INSERT INTO akreditasi_qualityrecord
+                                           (standard_item_id, unit_id, score, budget_status, baseline_data,
+                                            quality_target, risk_mitigation, action_plan, pic, target_date,
+                                            budget_source, est_cost, eval_notes, updated_at)
+                                           VALUES (%s, %s, %s, %s, '', '', '', '', '', '', '', 0, '', CURRENT_TIMESTAMP)''',
+                                        [si_id, unit_default.id, 0, 'DRAFT'],
+                                    )
+                    status = 'dibuat' if created else 'sudah ada'
+                    self.stdout.write(f"  {status}: {ep_code} | {item_data['sub_standard']}")
+
+            self.stdout.write(f"  ✔ {ep_count} EP baru ditambahkan ke PPI")
+
+            with connection.cursor() as cursor:
+                cursor.execute(
+                    'SELECT COUNT(*) FROM akreditasi_standarditem WHERE category_id = %s',
+                    [cat_ppi.id],
+                )
+                actual_count = cursor.fetchone()[0]
+            cat_ppi.target_ep_count = actual_count
+            cat_ppi.save(update_fields=['target_ep_count'])
+            self.stdout.write(f"  ✔ PPI target_ep_count diupdate → {actual_count}")
 
         # ── 2. Set standar_terkait unit CSSD ──
         def set_standar(code, standar, label=''):

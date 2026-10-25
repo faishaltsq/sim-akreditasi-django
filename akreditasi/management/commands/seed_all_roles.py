@@ -26,6 +26,24 @@ class Command(BaseCommand):
 
     def handle(self, *args, **kwargs):
         self.stdout.write(self.style.MIGRATE_HEADING('=== SEEDING SEMUA TINGKATAN AKUN SIM AKREDITASI ===\n'))
+        # Column-awareness: this command may run before migration 0052 on
+        # fresh databases, where Track C columns (source_ep_code,
+        # assessment_state) do not yet exist. Detect missing columns and
+        # fall back to raw SQL so the command still completes.
+        from django.db import connection as _conn
+
+        def _table_columns(table: str) -> set:
+            with _conn.cursor() as _cur:
+                return {
+                    column.name
+                    for column in _conn.introspection.get_table_description(_cur, table)
+                }
+
+        _si_columns = _table_columns(StandardItem._meta.db_table)
+        _si_modern = 'source_ep_code' in _si_columns
+        _qr_columns = _table_columns(QualityRecord._meta.db_table)
+        _qr_modern = 'assessment_state' in _qr_columns
+
 
         # ----------------------------------------------------
         # 1. FRAMEWORK & POKJA
@@ -116,20 +134,90 @@ class Command(BaseCommand):
             ),
         ]
         for code, sub, subtitle, desc, order, unit, reqs, rec in pmkp_items:
-            it, created = StandardItem.objects.get_or_create(
-                code=code, category=pokja_pmkp,
-                defaults={'sub_standard': sub, 'sub_title': subtitle, 'description': desc, 'order': order}
-            )
+            if _si_modern:
+                it, created = StandardItem.objects.get_or_create(
+                    code=code, category=pokja_pmkp,
+                    defaults={'sub_standard': sub, 'sub_title': subtitle, 'description': desc, 'order': order}
+                )
+            else:
+                # Raw SQL fallback: Track C columns not yet present on
+                # this (pre-migration) database; insert only legacy cols.
+                with connection.cursor() as _cur:
+                    _cur.execute(
+                        "SELECT id FROM akreditasi_standarditem "
+                        "WHERE category_id = %s AND code = %s LIMIT 1",
+                        [pokja_pmkp.pk, code],
+                    )
+                    _row = _cur.fetchone()
+                    if _row is None:
+                        _cur.execute(
+                            "INSERT INTO akreditasi_standarditem "
+                            "(category_id, sub_standard, sub_title, code, description, \"order\") "
+                            "VALUES (%s, %s, %s, %s, %s, %s)",
+                            [pokja_pmkp.pk, sub, subtitle, code, desc, order],
+                        )
+                        _cur.execute(
+                            "SELECT id FROM akreditasi_standarditem "
+                            "WHERE category_id = %s AND code = %s LIMIT 1",
+                            [pokja_pmkp.pk, code],
+                        )
+                        _row = _cur.fetchone()
+                        created = True
+                    else:
+                        created = False
+                it = StandardItem(
+                    id=_row[0], category=pokja_pmkp,
+                    sub_standard=sub, sub_title=subtitle,
+                    code=code, description=desc, order=order,
+                )
             # Selalu pastikan EvidenceReq terisi
             for r_type, title, mand in reqs:
                 EvidenceReq.objects.get_or_create(
                     standard_item=it, category_type=r_type, title=title,
                     defaults={'is_mandatory': mand}
                 )
-            rec_obj, rec_created = QualityRecord.objects.update_or_create(
-                standard_item=it,
-                defaults={'unit': unit, **rec}
-            )
+            if _qr_modern:
+                rec_obj, rec_created = QualityRecord.objects.update_or_create(
+                    standard_item=it,
+                    defaults={'unit': unit, **rec}
+                )
+            else:
+                # Raw SQL fallback: assessment_state column not yet
+                # present on this (pre-migration) database.
+                with connection.cursor() as _cur:
+                    _cur.execute(
+                        "SELECT id FROM akreditasi_qualityrecord "
+                        "WHERE standard_item_id = %s LIMIT 1",
+                        [it.id],
+                    )
+                    _qrow = _cur.fetchone()
+                    if _qrow is None:
+                        _cur.execute(
+                            "INSERT INTO akreditasi_qualityrecord "
+                            "(standard_item_id, unit_id, score, baseline_data, quality_target, updated_at) "
+                            "VALUES (%s, %s, %s, %s, %s, CURRENT_TIMESTAMP)",
+                            [it.id, unit.id, rec.get('score', 0), rec.get('baseline_data', ''), rec.get('quality_target', '')],
+                        )
+                        _cur.execute(
+                            "SELECT id FROM akreditasi_qualityrecord "
+                            "WHERE standard_item_id = %s LIMIT 1",
+                            [it.id],
+                        )
+                        _qrow = _cur.fetchone()
+                        rec_created = True
+                    else:
+                        _cur.execute(
+                            "UPDATE akreditasi_qualityrecord "
+                            "SET unit_id = %s, score = %s, baseline_data = %s, quality_target = %s, updated_at = CURRENT_TIMESTAMP "
+                            "WHERE id = %s",
+                            [unit.id, rec.get('score', 0), rec.get('baseline_data', ''), rec.get('quality_target', ''), _qrow[0]],
+                        )
+                        rec_created = False
+                rec_obj = QualityRecord(
+                    id=_qrow[0], standard_item=it, unit=unit,
+                    score=rec.get('score', 0), baseline_data=rec.get('baseline_data', ''), quality_target=rec.get('quality_target', ''),
+                )
+
 
         # KPS EP
         kps_items = [
@@ -151,20 +239,90 @@ class Command(BaseCommand):
             ),
         ]
         for code, sub, subtitle, desc, order, unit, reqs, rec in kps_items:
-            it, created = StandardItem.objects.get_or_create(
-                code=code, category=pokja_kps,
-                defaults={'sub_standard': sub, 'sub_title': subtitle, 'description': desc, 'order': order}
-            )
+            if _si_modern:
+                it, created = StandardItem.objects.get_or_create(
+                    code=code, category=pokja_kps,
+                    defaults={'sub_standard': sub, 'sub_title': subtitle, 'description': desc, 'order': order}
+                )
+            else:
+                # Raw SQL fallback: Track C columns not yet present on
+                # this (pre-migration) database; insert only legacy cols.
+                with connection.cursor() as _cur:
+                    _cur.execute(
+                        "SELECT id FROM akreditasi_standarditem "
+                        "WHERE category_id = %s AND code = %s LIMIT 1",
+                        [pokja_kps.pk, code],
+                    )
+                    _row = _cur.fetchone()
+                    if _row is None:
+                        _cur.execute(
+                            "INSERT INTO akreditasi_standarditem "
+                            "(category_id, sub_standard, sub_title, code, description, \"order\") "
+                            "VALUES (%s, %s, %s, %s, %s, %s)",
+                            [pokja_kps.pk, sub, subtitle, code, desc, order],
+                        )
+                        _cur.execute(
+                            "SELECT id FROM akreditasi_standarditem "
+                            "WHERE category_id = %s AND code = %s LIMIT 1",
+                            [pokja_kps.pk, code],
+                        )
+                        _row = _cur.fetchone()
+                        created = True
+                    else:
+                        created = False
+                it = StandardItem(
+                    id=_row[0], category=pokja_kps,
+                    sub_standard=sub, sub_title=subtitle,
+                    code=code, description=desc, order=order,
+                )
             # Selalu pastikan EvidenceReq terisi
             for r_type, title, mand in reqs:
                 EvidenceReq.objects.get_or_create(
                     standard_item=it, category_type=r_type, title=title,
                     defaults={'is_mandatory': mand}
                 )
-            rec_obj, rec_created = QualityRecord.objects.update_or_create(
-                standard_item=it,
-                defaults={'unit': unit, **rec}
-            )
+            if _qr_modern:
+                rec_obj, rec_created = QualityRecord.objects.update_or_create(
+                    standard_item=it,
+                    defaults={'unit': unit, **rec}
+                )
+            else:
+                # Raw SQL fallback: assessment_state column not yet
+                # present on this (pre-migration) database.
+                with connection.cursor() as _cur:
+                    _cur.execute(
+                        "SELECT id FROM akreditasi_qualityrecord "
+                        "WHERE standard_item_id = %s LIMIT 1",
+                        [it.id],
+                    )
+                    _qrow = _cur.fetchone()
+                    if _qrow is None:
+                        _cur.execute(
+                            "INSERT INTO akreditasi_qualityrecord "
+                            "(standard_item_id, unit_id, score, baseline_data, quality_target, updated_at) "
+                            "VALUES (%s, %s, %s, %s, %s, CURRENT_TIMESTAMP)",
+                            [it.id, unit.id, rec.get('score', 0), rec.get('baseline_data', ''), rec.get('quality_target', '')],
+                        )
+                        _cur.execute(
+                            "SELECT id FROM akreditasi_qualityrecord "
+                            "WHERE standard_item_id = %s LIMIT 1",
+                            [it.id],
+                        )
+                        _qrow = _cur.fetchone()
+                        rec_created = True
+                    else:
+                        _cur.execute(
+                            "UPDATE akreditasi_qualityrecord "
+                            "SET unit_id = %s, score = %s, baseline_data = %s, quality_target = %s, updated_at = CURRENT_TIMESTAMP "
+                            "WHERE id = %s",
+                            [unit.id, rec.get('score', 0), rec.get('baseline_data', ''), rec.get('quality_target', ''), _qrow[0]],
+                        )
+                        rec_created = False
+                rec_obj = QualityRecord(
+                    id=_qrow[0], standard_item=it, unit=unit,
+                    score=rec.get('score', 0), baseline_data=rec.get('baseline_data', ''), quality_target=rec.get('quality_target', ''),
+                )
+
 
         self.stdout.write(self.style.SUCCESS('  ✓ Data Pokja PMKP & KPS berhasil dibuat'))
 

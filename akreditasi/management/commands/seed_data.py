@@ -1,10 +1,24 @@
 from django.core.management.base import BaseCommand
 from django.contrib.auth.models import User
+from django.db import connection
 from akreditasi.models import (
     Framework, UnitKerja, Category,
     StandardItem, EvidenceReq, QualityRecord, EvidenceFile
 )
-from accounts.models import UserProfile
+def _table_column_names(table_name):
+    """Return the set of column names for a table via connection.introspection."""
+    with connection.cursor() as cursor:
+        return {row[0] for row in connection.introspection.get_table_description(cursor, table_name)}
+
+
+def _si_modern():
+    """Track C columns present on akreditasi_standarditem."""
+    return 'source_ep_code' in _table_column_names(StandardItem._meta.db_table)
+
+
+def _qr_modern():
+    """Track C columns present on akreditasi_qualityrecord."""
+    return 'assessment_state' in _table_column_names(QualityRecord._meta.db_table)
 
 
 class Command(BaseCommand):
@@ -363,16 +377,47 @@ class Command(BaseCommand):
             code, sub_std, sub_title, desc, order, unit_code, reqs, record_data, *rest = ep_data
             sample_file = rest[0] if rest else None
 
-            item, created = StandardItem.objects.get_or_create(
-                code=code,
-                category=tkrs,
-                defaults={
-                    'sub_standard': sub_std,
-                    'sub_title': sub_title,
-                    'description': desc,
-                    'order': order,
-                }
-            )
+            if _si_modern():
+                item, created = StandardItem.objects.get_or_create(
+                    code=code,
+                    category=tkrs,
+                    defaults={
+                        'sub_standard': sub_std,
+                        'sub_title': sub_title,
+                        'description': desc,
+                        'order': order,
+                    }
+                )
+            else:
+                # Fresh DB: Track C columns absent — use raw SQL so ORM
+                # SELECT * (which lists every column) does not fail.
+                table = StandardItem._meta.db_table
+                with connection.cursor() as cursor:
+                    cursor.execute(
+                        f"SELECT id FROM {table} WHERE code = %s AND category_id = %s",
+                        [code, tkrs.pk],
+                    )
+                    row = cursor.fetchone()
+                    if row:
+                        item = StandardItem(
+                            pk=row[0], code=code, category=tkrs,
+                            sub_standard=sub_std, sub_title=sub_title,
+                            description=desc, order=order,
+                        )
+                        created = False
+                    else:
+                        cursor.execute(
+                            f"INSERT INTO {table} "
+                            "(code, category_id, sub_standard, sub_title, description, \"order\") "
+                            "VALUES (%s, %s, %s, %s, %s, %s)",
+                            [code, tkrs.pk, sub_std, sub_title, desc, order],
+                        )
+                        item = StandardItem(
+                            pk=cursor.lastrowid, code=code, category=tkrs,
+                            sub_standard=sub_std, sub_title=sub_title,
+                            description=desc, order=order,
+                        )
+                        created = True
 
             # Selalu pastikan EvidenceReq terisi jika belum ada
             req_objects = []
@@ -386,11 +431,38 @@ class Command(BaseCommand):
                 req_objects.append(req)
 
             if record_data and not QualityRecord.objects.filter(standard_item=item).exists():
-                QualityRecord.objects.create(
-                    standard_item=item,
-                    unit=units[unit_code],
-                    **record_data
-                )
+                if _qr_modern():
+                    QualityRecord.objects.create(
+                        standard_item=item,
+                        unit=units[unit_code],
+                        **record_data
+                    )
+                else:
+                    # Fresh DB: Track C columns absent — raw SQL insert for
+                    # only base columns that exist without Track C migration.
+                    base_fields = {
+                        'standard_item_id': item.pk,
+                        'unit_id': units[unit_code].pk,
+                        'baseline_data': record_data.get('baseline_data', ''),
+                        'quality_target': record_data.get('quality_target', ''),
+                        'risk_mitigation': record_data.get('risk_mitigation', ''),
+                        'score': record_data.get('score', 0),
+                        'eval_notes': record_data.get('eval_notes', ''),
+                        'action_plan': record_data.get('action_plan', ''),
+                        'pic': record_data.get('pic', ''),
+                        'target_date': record_data.get('target_date', ''),
+                        'est_cost': record_data.get('est_cost', 0),
+                        'budget_source': record_data.get('budget_source', ''),
+                        'budget_status': record_data.get('budget_status', 'DRAFT'),
+                    }
+                    cols = ', '.join(base_fields.keys())
+                    placeholders = ', '.join(['%s'] * len(base_fields))
+                    values = list(base_fields.values())
+                    with connection.cursor() as cursor:
+                        cursor.execute(
+                            f"INSERT INTO {QualityRecord._meta.db_table} ({cols}) VALUES ({placeholders})",
+                            values,
+                        )
 
             if sample_file and req_objects and not EvidenceFile.objects.filter(requirement=req_objects[0]).exists():
                 EvidenceFile.objects.create(
