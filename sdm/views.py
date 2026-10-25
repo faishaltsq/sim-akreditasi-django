@@ -1,4 +1,5 @@
 import hashlib
+from datetime import timedelta
 
 from django.contrib import messages
 from django.core.cache import cache
@@ -8,7 +9,7 @@ from django.core.paginator import Paginator
 from django.db import IntegrityError, transaction
 from django.db.models import Q
 from django.http import Http404, HttpResponse
-from django.shortcuts import get_object_or_404, redirect, render
+from django.shortcuts import get_object_or_404, redirect, render, reverse
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 
@@ -23,6 +24,7 @@ from sdm.forms import (
     PegawaiCreateForm,
     PegawaiEditForm,
     PengajuanKredensialForm,
+    PenilaianTindakanFormSet,
     ProgramOrientasiForm,
     RencanaFormasiForm,
     ReviewDokumenForm,
@@ -44,12 +46,17 @@ from sdm.models import (
     Pegawai,
     PenempatanPegawai,
     PengajuanKredensial,
+    PenilaianTindakan,
     PenilaianKinerja,
     PenilaianTalent,
     PenugasanKlinis,
     PenugasanOrientasi,
     HcGrant,
+    KatalogTindakan,
+    MasterJenjangProfesi,
+    MasterProfesiPegawai,
     PeristiwaSDM,
+    PrivilegeSnapshot,
     ProgramOrientasi,
     RencanaFormasi,
     ImunisasiPegawai,
@@ -85,8 +92,12 @@ from sdm.services.rekrutmen import (
     decide_credential,
     move_application,
     record_psv,
+    rekomendasikan_kredensial,
+    revoke_spk,
     start_orientation,
+    terbitkan_spk_lengkap,
 )
+from sdm.services.clinical_access import revoke_spk as revoke_spk_privileges
 from sdm.services.publikasi_bukti import build_kps_pack, publish_kps_artifact
 from sdm.services.penempatan import save_assignment
 from sdm.storage import (
@@ -617,6 +628,17 @@ def _hc_navigation(user):
     return items
 
 
+def privileges_without_penilaian(credential_request):
+    """Privilege lines that have no peer-review verdict yet, in display order."""
+    judged = set(
+        credential_request.penilaian_tindakan.values_list('rincian_id', flat=True)
+    )
+    return [
+        rincian for rincian in credential_request.privileges.all()
+        if rincian.pk not in judged
+    ]
+
+
 # ── Level 2–5 entry points ────────────────────────────────────────────────
 
 def _scoped_or_404(model, user, pk, *, capability, **filters):
@@ -682,12 +704,90 @@ def rekrutmen_move(request, application_id):
 
 @login_required
 def kredensial_list(request):
+    """Landing page: six Kredensial sub-menu cards (pola dashboard sdm)."""
+    require_hc_capability(request.user, 'can_review_hc_credentials')
+    cards = [
+        {
+            'level': 'A', 'title': 'Master Katalog RKK',
+            'description': 'Katalog kewenangan klinis per jenjang karir dan tingkat supervisi.',
+            'links': [{'url_name': 'sdm:kredensial_katalog', 'label': 'Buka Katalog',
+                       'allowed': True}],
+        },
+        {
+            'level': 'B', 'title': 'Pengajuan Mandiri',
+            'description': 'Portal pengajuan mandiri: kredensial awal, re-kredensial 3 tahunan, penambahan kewenangan.',
+            'links': [
+                {'url_name': 'sdm:kredensial_pengajuan_sendiri', 'label': 'Pengajuan Saya',
+                 'allowed': True},
+                {'url_name': 'sdm:kredensial_create', 'label': 'Ajukan untuk Pegawai',
+                 'allowed': True},
+            ],
+        },
+        {
+            'level': 'C', 'title': 'Verifikasi & Mitra Bestari',
+            'description': 'Daftar pengajuan, PSV, dan panel evaluasi mitra bestari.',
+            'links': [{'url_name': 'sdm:kredensial_daftar_pengajuan', 'label': 'Daftar Pengajuan',
+                       'allowed': True}],
+        },
+        {
+            'level': 'D', 'title': 'E-SPK & E-RKK',
+            'description': 'Penerbitan SPK/RKK oleh Direktur Utama beserta pencetakan.',
+            'links': [{'url_name': 'sdm:kredensial_spk_list', 'label': 'Daftar SPK',
+                       'allowed': True}],
+        },
+        {
+            'level': 'E', 'title': 'Kontrol Akses RME',
+            'description': 'Pemetaan kewenangan efektif dan tindakan terkunci di RME.',
+            'links': [{'url_name': 'sdm:kredensial_akses_rme', 'label': 'Lihat Akses',
+                       'allowed': True}],
+        },
+        {
+            'level': 'F', 'title': 'Peta & Direktori Kewenangan',
+            'description': 'Pencarian cepat wewenang klinis staf per unit.',
+            'links': [{'url_name': 'sdm:kredensial_peta', 'label': 'Buka Peta',
+                       'allowed': True}],
+        },
+    ]
+    return render(request, 'sdm/kredensial/landing.html', {
+        'sub_menu_cards': cards,
+    })
+
+
+@login_required
+def kredensial_daftar_pengajuan(request):
+    """Filtered, paginated list of credential requests (pola pegawai_list)."""
     require_hc_capability(request.user, 'can_review_hc_credentials')
     units = visible_units(request.user, capability='can_review_hc_credentials')
-    requests_qs = PengajuanKredensial.objects.filter(
+    queryset = PengajuanKredensial.objects.filter(
         unit_kerja__in=units
     ).select_related('employee', 'unit_kerja').order_by('-created_at')
-    return render(request, 'sdm/kredensial/daftar.html', {'requests': requests_qs})
+
+    status_filter = request.GET.get('status', '').strip()
+    if status_filter in dict(PengajuanKredensial.STATUS_CHOICES):
+        queryset = queryset.filter(status=status_filter)
+
+    page_obj = Paginator(queryset, PAGE_SIZE).get_page(request.GET.get('page'))
+    params = request.GET.copy()
+    params.pop('page', None)
+    return render(request, 'sdm/kredensial/daftar.html', {
+        'page_obj': page_obj,
+        'status_choices': PengajuanKredensial.STATUS_CHOICES,
+        'selected_status': status_filter,
+        'pagination_query': params.urlencode(),
+    })
+
+
+@login_required
+def kredensial_spk_list(request):
+    """List of issued clinical assignments (SPK) in scope."""
+    require_hc_capability(request.user, 'can_review_hc_credentials')
+    units = visible_units(request.user, capability='can_review_hc_credentials')
+    assignments = PenugasanKlinis.objects.filter(
+        unit_kerja__in=units
+    ).select_related('employee', 'unit_kerja', 'decision').order_by('-issued_at')
+    return render(request, 'sdm/kredensial/spk_daftar.html', {
+        'assignments': assignments,
+    })
 
 
 @login_required
@@ -747,7 +847,384 @@ def kredensial_cetak_spk(request, assignment_id):
         status_sesudah='PRINTED',
         alasan='spk render requested',
     )
-    return render(request, 'sdm/kredensial/cetak_spk.html', {'assignment': assignment})
+    verify_url = request.build_absolute_uri(
+        reverse('sdm:kredensial_detail', args=[assignment.decision.pengajuan_id])
+    )
+    qr_data_url = None
+    try:
+        import base64
+        import io
+
+        import qrcode
+
+        buffer = io.BytesIO()
+        qrcode.make(
+            f'{verify_url}?nomor_spk={assignment.nomor_spk}'
+        ).save(buffer, format='PNG')
+        qr_data_url = 'data:image/png;base64,' + base64.b64encode(
+            buffer.getvalue()
+        ).decode('ascii')
+    except Exception:
+        qr_data_url = None  # plain-text fallback URL stays in the template
+    return render(request, 'sdm/kredensial/cetak_spk.html', {
+        'assignment': assignment,
+        'qr_data_url': qr_data_url,
+        'verify_url': verify_url,
+    })
+
+
+@login_required
+@require_POST
+def kredensial_rekomendasikan(request, request_id):
+    """Committee recommendation action (DIREKOMENDASI) before director decision."""
+    credential_request = _scoped_or_404(
+        PengajuanKredensial, request.user, request_id,
+        capability='can_review_hc_credentials',
+    )
+    try:
+        rekomendasikan_kredensial(
+            credential_request,
+            actor=request.user,
+            catatan=(request.POST.get('catatan') or '')[:2000],
+        )
+    except (PermissionDenied, ValidationError) as exc:
+        message = getattr(exc, 'messages', None)
+        messages.error(request, '; '.join(message) if message else str(exc))
+    else:
+        messages.success(request, 'Rekomendasi komite dicatat.')
+    return redirect('sdm:kredensial_detail', request_id=credential_request.pk)
+
+
+@login_required
+@require_POST
+def kredensial_terbitkan_spk(request, request_id):
+    """Executive approval: issue SPK + RKK privilege snapshots (Direktur)."""
+    credential_request = _scoped_or_404(
+        PengajuanKredensial, request.user, request_id,
+        capability='can_review_hc_credentials',
+    )
+    require_hc_capability(
+        request.user, 'can_review_hc_credentials',
+        unit=credential_request.unit_kerja_id,
+    )
+    nomor_spk = (request.POST.get('nomor_spk') or '').strip()[:80]
+    berlaku_mulai = request.POST.get('berlaku_mulai') or ''
+    berlaku_sampai = (request.POST.get('berlaku_sampai') or '').strip() or None
+    if not nomor_spk or not berlaku_mulai:
+        messages.error(request, 'Nomor SPK dan tanggal berlaku mulai wajib diisi.')
+        return redirect('sdm:kredensial_detail', request_id=credential_request.pk)
+    from datetime import date
+    try:
+        mulai = date.fromisoformat(berlaku_mulai)
+        sampai = date.fromisoformat(berlaku_sampai) if berlaku_sampai else None
+        terbitkan_spk_lengkap(
+            credential_request, actor=request.user, nomor_spk=nomor_spk,
+            berlaku_mulai=mulai, berlaku_sampai=sampai,
+        )
+    except (PermissionDenied, ValidationError, ValueError) as exc:
+        message = getattr(exc, 'messages', None)
+        messages.error(request, '; '.join(message) if message else str(exc))
+    else:
+        messages.success(request, f'SPK {nomor_spk} diterbitkan beserta RKK.')
+    return redirect('sdm:kredensial_detail', request_id=credential_request.pk)
+
+
+@login_required
+@require_POST
+def kredensial_cabut_spk(request, assignment_id):
+    """Revoke an SPK and close its privilege snapshots effective today."""
+    assignment = _scoped_or_404(
+        PenugasanKlinis, request.user, assignment_id,
+        capability='can_review_hc_credentials',
+    )
+    require_hc_capability(
+        request.user, 'can_review_hc_credentials', unit=assignment.unit_kerja_id
+    )
+    alasan = (request.POST.get('alasan') or '').strip()
+    if not alasan:
+        messages.error(request, 'Alasan pencabutan wajib diisi.')
+        return redirect('sdm:kredensial_detail', request_id=assignment.decision.pengajuan_id)
+    try:
+        revoke_spk(assignment, actor=request.user, reason=alasan)
+        revoke_spk_privileges(
+            actor=request.user,
+            employee=assignment.employee,
+            unit=assignment.unit_kerja_id,
+            action_codes=[
+                s.action_code.code
+                for s in assignment.privilege_snapshots.select_related('action_code')
+            ],
+            at=timezone.localdate(),
+            reason=alasan,
+        )
+    except (PermissionDenied, ValidationError) as exc:
+        message = getattr(exc, 'messages', None)
+        messages.error(request, '; '.join(message) if message else str(exc))
+    else:
+        messages.success(request, 'SPK dicabut beserta snapshot kewenangan.')
+    return redirect('sdm:kredensial_detail', request_id=assignment.decision.pengajuan_id)
+
+
+@login_required
+def kredensial_cetak_rkk(request, assignment_id):
+    """Print the e-RKK attachment: all privilege lines incl. TIDAK_DIBERIKAN."""
+    assignment = _scoped_or_404(
+        PenugasanKlinis, request.user, assignment_id,
+        capability='can_review_hc_credentials',
+    )
+    require_hc_capability(
+        request.user, 'can_review_hc_credentials', unit=assignment.unit_kerja_id
+    )
+    lines = list(
+        assignment.decision.pengajuan.privileges.select_related('catalog_item')
+    )
+    PeristiwaSDM.objects.create(
+        actor=request.user,
+        jenis_peristiwa='rkk_printed',
+        target_tipe='clinical_assignment',
+        target_id=str(assignment.pk),
+        status_sesudah='PRINTED',
+        alasan='rkk render requested',
+    )
+    return render(request, 'sdm/kredensial/cetak_rkk.html', {
+        'assignment': assignment,
+        'lines': lines,
+    })
+
+
+@login_required
+def kredensial_bukti_audit(request, request_id):
+    """STARKES audit evidence sheet: request form + PSV checklist + peer review."""
+    credential_request = _scoped_or_404(
+        PengajuanKredensial, request.user, request_id,
+        capability='can_review_hc_credentials',
+    )
+    require_hc_capability(
+        request.user, 'can_review_hc_credentials',
+        unit=credential_request.unit_kerja_id,
+    )
+    return render(request, 'sdm/kredensial/bukti_audit.html', {
+        'credential_request': credential_request,
+        'privileges': credential_request.privileges.select_related('catalog_item'),
+        'psv_records': credential_request.employee.psv_records.select_related('version'),
+        'penilaian': credential_request.penilaian_tindakan.select_related('rincian'),
+    })
+
+
+@login_required
+def kredensial_akses_rme(request):
+    """Read-only clinical access control view (Sub-Menu E).
+
+    Shows effective privileges vs locked catalog actions for one employee+unit.
+    Enforcement in the future RME module uses require_clinical_action (see
+    sdm/services/clinical_access.py); this module documents access only.
+    """
+    require_hc_capability(request.user, 'can_review_hc_credentials')
+    units = visible_units(request.user, capability='can_review_hc_credentials').order_by(
+        'level', 'order', 'code'
+    )
+    employee_id = request.GET.get('pegawai', '').strip()
+    unit_id = request.GET.get('unit', '').strip()
+    pegawai = None
+    selected_unit = None
+    granted, locked = [], []
+    if employee_id:
+        pegawai = get_object_or_404(
+            Pegawai, pk=employee_id, penempatan__unit_kerja__in=units,
+        )
+        if unit_id:
+            selected_unit = get_object_or_404(units, pk=unit_id)
+        else:
+            placement = pegawai.penempatan.filter(
+                tanggal_mulai__lte=timezone.localdate(),
+            ).filter(
+                Q(tanggal_selesai__isnull=True)
+                | Q(tanggal_selesai__gte=timezone.localdate())
+            ).select_related('unit_kerja').order_by('unit_kerja__level').first()
+            selected_unit = placement.unit_kerja if placement else None
+        if selected_unit is not None:
+            today = timezone.localdate()
+            snapshots = PrivilegeSnapshot.objects.filter(
+                pegawai=pegawai, unit_kerja=selected_unit, valid_from__lte=today,
+            ).filter(
+                Q(valid_until__isnull=True) | Q(valid_until__gte=today)
+            ).select_related('action_code')
+            granted = sorted(snapshots, key=lambda s: s.action_code.code)
+            snapshot_codes = {s.action_code.code for s in granted}
+            locked = list(
+                KatalogTindakan.objects.filter(
+                    is_active=True,
+                    jenjang__profesi_id=pegawai.profesi_master_id,
+                ).select_related('jenjang').exclude(
+                    tingkat_supervisi='T',
+                ).exclude(
+                    kode__in=snapshot_codes,
+                ).order_by('kode')
+            )
+    employees = visible_employees(request.user).order_by('nama_lengkap')
+    return render(request, 'sdm/kredensial/akses_rme.html', {
+        'units': units,
+        'employees': employees[:200],
+        'pegawai': pegawai,
+        'selected_unit': selected_unit,
+        'granted': granted,
+        'locked': locked,
+        'selected_employee': employee_id,
+        'selected_unit_id': unit_id,
+    })
+
+
+@login_required
+def kredensial_peta(request):
+    """Hospital clinical mapping: who holds which privileges where (Sub-Menu F)."""
+    require_hc_capability(request.user, 'can_review_hc_credentials')
+    units = visible_units(request.user, capability='can_review_hc_credentials')
+    search_q = request.GET.get('q', '').strip()[:100]
+    unit_filter = request.GET.get('unit', '').strip()
+
+    today = timezone.localdate()
+    snapshots = PrivilegeSnapshot.objects.select_related(
+        'pegawai', 'unit_kerja', 'action_code',
+    ).filter(
+        unit_kerja__in=units,
+        valid_from__lte=today,
+    ).filter(
+        Q(valid_until__isnull=True) | Q(valid_until__gte=today)
+    ).order_by('pegawai__nama_lengkap', 'action_code__code')
+
+    if search_q:
+        snapshots = snapshots.filter(pegawai__nama_lengkap__icontains=search_q)
+    selected_unit_id = None
+    if unit_filter:
+        try:
+            unit_id = int(unit_filter)
+        except (TypeError, ValueError):
+            snapshots = snapshots.none()
+        else:
+            snapshots = snapshots.filter(unit_kerja_id=unit_id)
+            selected_unit_id = unit_id
+
+    # M/S status per action code from the RKK catalog; actions outside the
+    # catalog (EXT-*) count as independent grants.
+    katalog_status = dict(
+        KatalogTindakan.objects.values_list('kode', 'tingkat_supervisi')
+    )
+    rows = {}
+    matriks_map = {}
+    for snapshot in snapshots:
+        kode = snapshot.action_code.code
+        tingkat = katalog_status.get(kode, 'M')
+        row = rows.setdefault(snapshot.pegawai_id, {
+            'pegawai': snapshot.pegawai, 'units': set(),
+            'total': 0, 'mandiri': 0, 'supervisi': 0,
+        })
+        row['total'] += 1
+        row['units'].add(snapshot.unit_kerja.code)
+        if tingkat == 'S':
+            row['supervisi'] += 1
+        else:
+            row['mandiri'] += 1
+        if selected_unit_id:
+            matriks_map.setdefault(kode, {})[snapshot.pegawai_id] = tingkat
+
+    rows = sorted(rows.values(), key=lambda r: r['pegawai'].nama_lengkap)
+    matriks_actions = sorted(matriks_map.keys())
+    matriks = [
+        {
+            'pegawai': row['pegawai'],
+            'cells': [
+                {'action': action, 'tingkat': matriks_map[action].get(row['pegawai'].pk, '')}
+                for action in matriks_actions
+            ],
+        }
+        for row in rows
+    ]
+    params = request.GET.copy()
+    params.pop('page', None)
+    page_obj = Paginator(rows, PAGE_SIZE).get_page(request.GET.get('page'))
+    return render(request, 'sdm/kredensial/peta.html', {
+        'page_obj': page_obj,
+        'units': units.order_by('level', 'order', 'code'),
+        'search_q': search_q,
+        'selected_unit': unit_filter,
+        'selected_unit_id': selected_unit_id,
+        'matriks_actions': matriks_actions,
+        'matriks': matriks,
+        'pagination_query': params.urlencode(),
+    })
+
+
+@login_required
+def kredensial_katalog(request):
+    """Sub-Menu A: master catalog RKK grouped by committee then career grade.
+
+    Global model (no unit_kerja scope), so capability-only guard.
+    Editing via Django admin.
+    """
+    require_hc_capability(request.user, 'can_review_hc_credentials')
+    katalog = KatalogTindakan.objects.filter(
+        is_active=True,
+    ).select_related('jenjang__profesi').order_by(
+        'jenjang__profesi__keluarga', 'jenjang__profesi__nama', 'jenjang__urutan', 'kode'
+    )
+
+    profesi_filter = request.GET.get('profesi', '').strip()
+    jenjang_filter = request.GET.get('jenjang', '').strip()
+    search_q = request.GET.get('q', '').strip()[:100]
+    if profesi_filter:
+        try:
+            katalog = katalog.filter(jenjang__profesi_id=int(profesi_filter))
+        except (TypeError, ValueError):
+            katalog = katalog.none()
+    if jenjang_filter:
+        try:
+            katalog = katalog.filter(jenjang_id=jenjang_filter)
+        except (TypeError, ValueError, ValidationError):
+            katalog = katalog.none()
+    if search_q:
+        katalog = katalog.filter(nama__icontains=search_q)
+
+    page_obj = Paginator(katalog, PAGE_SIZE).get_page(request.GET.get('page'))
+    params = request.GET.copy()
+    params.pop('page', None)
+
+    profesi_list = MasterProfesiPegawai.objects.filter(is_active=True).order_by(
+        'keluarga', 'nama'
+    )
+    jenjang_list = MasterJenjangProfesi.objects.select_related('profesi').order_by(
+        'profesi__nama', 'urutan'
+    )
+
+    # Group current page by komite (= keluarga profesi) then jenjang.
+    komite_order = [
+        ('MEDIS', 'Komite Medis'),
+        ('KEPERAWATAN_KEBIDANAN', 'Komite Keperawatan & Kebidanan'),
+        ('NAKES_LAIN', 'Komite Tenaga Kesehatan Lainnya'),
+        ('NON_KLINIS', 'Non Klinis'),
+    ]
+    groups = []
+    for keluarga, label in komite_order:
+        jenjang_map = {}
+        for item in page_obj.object_list:
+            if item.jenjang.profesi.keluarga != keluarga:
+                continue
+            jenjang_map.setdefault(item.jenjang, []).append(item)
+        if jenjang_map:
+            groups.append({'label': label, 'jenjang': [
+                {'jenjang': jenjang_obj, 'items': items}
+                for jenjang_obj, items in jenjang_map.items()
+            ]})
+
+    return render(request, 'sdm/kredensial/katalog.html', {
+        'page_obj': page_obj,
+        'profesi_list': profesi_list,
+        'jenjang_list': jenjang_list,
+        'groups': groups,
+        'search_q': search_q,
+        'selected_profesi': profesi_filter,
+        'selected_jenjang': jenjang_filter,
+        'pagination_query': params.urlencode(),
+    })
 
 
 @login_required
@@ -1063,6 +1540,103 @@ def kredensial_create(request):
         return redirect('sdm:kredensial_detail', request_id=credential_request.pk)
     return render(request, 'sdm/kredensial/form.html', {
         'form': form, 'title': 'Pengajuan Kredensial Baru',
+    })
+
+
+@login_required
+def kredensial_pengajuan_sendiri(request):
+    """Self-service portal: the logged-in employee files their own RKK request."""
+    require_hc_capability(request.user, 'can_review_hc_credentials')
+    pegawai = getattr(request.user, 'pegawai_hc', None)
+    if pegawai is None:
+        messages.error(
+            request,
+            'Akun Anda belum terhubung dengan data pegawai; hubungi SDM.',
+        )
+        return redirect('sdm:kredensial_list')
+
+    form = PengajuanKredensialForm(request.POST or None, user=request.user)
+    if request.method == 'POST' and form.is_valid():
+        credential_request = form.save(commit=False)
+        credential_request.employee = pegawai
+        credential_request.submitted_by = request.user
+        credential_request.save()
+        messages.success(request, 'Pengajuan kredensial mandiri terkirim.')
+        return redirect('sdm:kredensial_detail', request_id=credential_request.pk)
+
+    my_requests = PengajuanKredensial.objects.filter(
+        employee=pegawai
+    ).select_related('unit_kerja').order_by('-created_at')
+    today = timezone.localdate()
+    spk_ews = PenugasanKlinis.objects.filter(
+        employee=pegawai, is_active=True, berlaku_sampai__isnull=False,
+        berlaku_sampai__lt=today + timedelta(days=90),
+    ).order_by('berlaku_sampai')
+    return render(request, 'sdm/kredensial/pengajuan_saya.html', {
+        'form': form,
+        'my_requests': my_requests,
+        'spk_ews': spk_ews,
+        'today': today,
+        'ews_threshold': today + timedelta(days=90),
+    })
+
+
+@login_required
+def kredensial_panel_bestari(request, request_id):
+    """Peer review (mitra bestari) panel: verdict per privilege line."""
+    credential_request = _scoped_or_404(
+        PengajuanKredensial, request.user, request_id,
+        capability='can_review_hc_credentials',
+    )
+    require_hc_capability(
+        request.user, 'can_review_hc_credentials',
+        unit=credential_request.unit_kerja_id,
+    )
+    privileges = credential_request.privileges.all().order_by('pk')
+    FormSet = PenilaianTindakanFormSet
+
+    if request.method == 'POST':
+        formset = FormSet(request.POST, instance=credential_request)
+        if formset.is_valid():
+            has_rows = False
+            with transaction.atomic():
+                for form in formset:
+                    if not form.has_changed():
+                        continue
+                    PenilaianTindakan.objects.update_or_create(
+                        pengajuan=credential_request,
+                        rincian=form.cleaned_data['rincian'],
+                        defaults={
+                            'rekomendasi': form.cleaned_data['rekomendasi'],
+                            'catatan_khusus': form.cleaned_data['catatan_khusus'],
+                            'reviewed_by': request.user,
+                        },
+                    )
+                    has_rows = True
+                if has_rows and credential_request.status == 'DIAJUKAN':
+                    credential_request.status = 'DITINJAU'
+                    credential_request.save(update_fields=['status', 'updated_at'])
+                    PeristiwaSDM.objects.create(
+                        actor=request.user,
+                        jenis_peristiwa='peer_review_submitted',
+                        target_tipe='credential_request',
+                        target_id=str(credential_request.pk),
+                        status_sesudah='DITINJAU',
+                        alasan='panel evaluasi mitra bestari menyimpan penilaian',
+                    )
+            messages.success(request, 'Penilaian mitra bestari disimpan.')
+            return redirect('sdm:kredensial_detail', request_id=credential_request.pk)
+        messages.error(request, 'Penilaian tidak valid; periksa kembali.')
+    else:
+        initial = [
+            {'rincian': rincian}
+            for rincian in privileges_without_penilaian(credential_request)
+        ]
+        formset = FormSet(instance=credential_request, initial=initial)
+    return render(request, 'sdm/kredensial/bestari.html', {
+        'credential_request': credential_request,
+        'privileges': privileges,
+        'formset': formset,
     })
 
 

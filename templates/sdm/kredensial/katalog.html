@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+{% block page_title %}Master Katalog RKK{% endblock %}
+{% block page_subtitle %}Kewenangan klinis per jenjang karir &amp; tingkat supervisi{% endblock %}
+{% block extra_css %}{% include "sdm/_responsive.html" %}{% endblock %}
+
+{% block content %}
+<div class="container-fluid p-0">
+    <a class="small text-decoration-none" href="{% url 'sdm:kredensial_list' %}"><i class="bi bi-arrow-left me-1"></i>Kembali</a>
+    <h1 class="page-title h4 mt-2 mb-1">Master Katalog RKK</h1>
+    <p class="text-muted small mb-3">Acuan kewenangan klinis per jenjang karir. Pengelolaan master via Django admin.</p>
+
+    <form method="get" class="card border shadow-sm mb-3" role="search" aria-label="Filter katalog RKK">
+        <div class="card-body row g-2 align-items-end">
+            <div class="col-12 col-md-3">
+                <label class="form-label small fw-semibold" for="kat-q">Cari tindakan</label>
+                <input id="kat-q" name="q" class="form-control form-control-sm" value="{{ search_q }}" maxlength="100" placeholder="Nama tindakan">
+            </div>
+            <div class="col-6 col-md-3">
+                <label class="form-label small fw-semibold" for="kat-profesi">Profesi</label>
+                <select id="kat-profesi" name="profesi" class="form-select form-select-sm">
+                    <option value="">Semua profesi</option>
+                    {% for p in profesi_list %}
+                    <option value="{{ p.pk }}" {% if selected_profesi == p.pk|stringformat:"s" %}selected{% endif %}>{{ p.nama }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-6 col-md-3">
+                <label class="form-label small fw-semibold" for="kat-jenjang">Jenjang</label>
+                <select id="kat-jenjang" name="jenjang" class="form-select form-select-sm">
+                    <option value="">Semua jenjang</option>
+                    {% for j in jenjang_list %}
+                    <option value="{{ j.pk }}" {% if selected_jenjang == j.pk|stringformat:"s" %}selected{% endif %}>{{ j.profesi.nama }} — {{ j.nama }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-12 col-md-3 d-flex gap-2">
+                <button class="btn btn-outline-primary btn-sm" type="submit">Terapkan</button>
+                <a class="btn btn-outline-secondary btn-sm" href="{% url 'sdm:kredensial_katalog' %}">Reset</a>
+            </div>
+        </div>
+    </form>
+
+    {% for group in groups %}
+    <h2 class="h6 mt-3 mb-2">{{ group.label }}</h2>
+    {% for entry in group.jenjang %}
+    <div class="card border shadow-sm mb-2">
+        <div class="card-header bg-white py-1"><span class="small fw-semibold">{{ entry.jenjang.nama }}</span></div>
+        <div class="table-responsive">
+            <table class="table table-sm align-middle mb-0">
+                <caption class="visually-hidden">Tindakan untuk {{ entry.jenjang.nama }}</caption>
+                <thead><tr><th scope="col">Kode</th><th scope="col">Nama Tindakan</th><th scope="col">Tingkat Supervisi</th></tr></thead>
+                <tbody>
+                    {% for item in entry.items %}
+                    <tr>
+                        <td class="font-monospace small">{{ item.kode }}</td>
+                        <td class="small">{{ item.nama }}</td>
+                        <td>
+                            {% if item.tingkat_supervisi == 'M' %}<span class="badge text-bg-success">Mandiri</span>
+                            {% elif item.tingkat_supervisi == 'S' %}<span class="badge text-bg-warning">Supervisi</span>
+                            {% elif item.tingkat_supervisi == 'MT' %}<span class="badge text-bg-info text-dark">Mandiri Terbatas</span>
+                            {% else %}<span class="badge text-bg-danger">Tidak Diberikan</span>{% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endfor %}
+    {% endfor %}
+
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mt-3">
+        <small class="text-muted">{{ page_obj.paginator.count }} tindakan · halaman {{ page_obj.number }} dari {{ page_obj.paginator.num_pages }}</small>
+        {% if page_obj.has_other_pages %}
+        <nav aria-label="Navigasi halaman katalog">
+            <ul class="pagination pagination-sm mb-0">
+                {% if page_obj.has_previous %}<li class="page-item"><a class="page-link" href="?{% if pagination_query %}{{ pagination_query }}&amp;{% endif %}page={{ page_obj.previous_page_number }}">Sebelumnya</a></li>{% else %}<li class="page-item disabled"><span class="page-link">Sebelumnya</span></li>{% endif %}
+                {% if page_obj.has_next %}<li class="page-item"><a class="page-link" href="?{% if pagination_query %}{{ pagination_query }}&amp;{% endif %}page={{ page_obj.next_page_number }}">Berikutnya</a></li>{% else %}<li class="page-item disabled"><span class="page-link">Berikutnya</span></li>{% endif %}
+            </ul>
+        </nav>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

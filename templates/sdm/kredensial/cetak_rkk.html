@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<title>RKK {{ assignment.nomor_spk }}</title>
+<style>
+    @page { size: A4; margin: 15mm; }
+    body { font-family: 'Times New Roman', serif; color: #111; font-size: 10pt; }
+    h1 { font-size: 13pt; text-align: center; margin-bottom: 2px; }
+    h2 { font-size: 11pt; text-align: center; font-weight: normal; margin: 0 0 4px; }
+    .meta { text-align: center; font-size: 10pt; color: #333; margin-bottom: 14px; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { border: 1px solid #444; padding: 4px 6px; font-size: 9pt; vertical-align: top; }
+    th { background: #eee; font-weight: bold; text-align: left; }
+    .signature { margin-top: 24mm; display: flex; justify-content: space-between; }
+    .signature div { text-align: center; width: 45%; }
+    .signature p { margin: 0; }
+    .ttd-space { height: 18mm; }
+    @media print { .noprint { display: none; } }
+</style>
+</head>
+<body>
+<div class="noprint" style="text-align:right;margin-bottom:8px;">
+    <button onclick="window.print()">Cetak / Simpan PDF</button>
+    <a href="{% url 'sdm:kredensial_detail' assignment.decision.pengajuan_id %}">Kembali</a>
+</div>
+<h1>RINCIAN KEWENANGAN KLINIS (RKK)</h1>
+<h2>Lampiran Surat Penugasan Klinis Nomor {{ assignment.nomor_spk }}</h2>
+<p class="meta">
+    Nama: {{ assignment.employee.nama_lengkap }} &nbsp;|&nbsp;
+    Unit: {{ assignment.unit_kerja.code }} — {{ assignment.unit_kerja.name }} &nbsp;|&nbsp;
+    Berlaku: {{ assignment.berlaku_mulai|date:"d F Y" }} s.d. {{ assignment.berlaku_sampai|date:"d F Y"|default:"—" }}
+</p>
+<table>
+    <thead>
+        <tr>
+            <th style="width:11%">Kode Prosedur</th>
+            <th style="width:26%">Nama Prosedur / Tindakan Klinis</th>
+            <th style="width:13%">Kategori Profesi</th>
+            <th style="width:10%">Usulan Mandiri</th>
+            <th style="width:13%">Rekomendasi Komite</th>
+            <th style="width:14%">Status SPK Direktur</th>
+            <th style="width:13%">Keterangan / Batasan</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for line in lines %}
+        <tr>
+            <td>{% if line.catalog_item %}{{ line.catalog_item.kode }}{% else %}—{% endif %}</td>
+            <td>{% if line.kewenangan %}{{ line.kewenangan }}{% elif line.catalog_item %}{{ line.catalog_item.nama }}{% else %}—{% endif %}</td>
+            <td>{{ assignment.employee.profesi }}</td>
+            <td>{{ line.get_usulan_display }}</td>
+            <td>{{ line.get_rekomendasi_display|default:"—" }}</td>
+            <td>{{ line.get_status_spk_display|default:"Belum ditetapkan" }}</td>
+            <td>{{ line.batasan }}{% if line.catatan %} {{ line.catatan }}{% endif %}</td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="7" style="text-align:center">Belum ada rincian kewenangan.</td></tr>
+        {% endfor %}
+    </tbody>
+</table>
+<div class="signature">
+    <div>
+        <p>Disetujui oleh,</p>
+        <div class="ttd-space"></div>
+        <p><strong>Direktur Utama</strong></p>
+        <p>{{ assignment.issued_by.get_full_name|default:assignment.issued_by.username }}</p>
+    </div>
+    <div>
+        <p>Diterbitkan pada,</p>
+        <div class="ttd-space"></div>
+        <p>{{ assignment.issued_at|date:"d F Y" }}</p>
+        <p>Ketua Komite Kredensial</p>
+    </div>
+</div>
+</body>
+</html>

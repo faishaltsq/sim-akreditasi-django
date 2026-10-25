@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block page_title %}Panel Mitra Bestari{% endblock %}
+{% block page_subtitle %}{{ credential_request.employee.nama_lengkap }}{% endblock %}
+{% block content %}
+<div class="container-fluid p-0">
+    <a class="small text-decoration-none" href="{% url 'sdm:kredensial_detail' credential_request.pk %}"><i class="bi bi-arrow-left me-1"></i>Kembali</a>
+    <h1 class="page-title h4 mt-2 mb-1">Panel Evaluasi Mitra Bestari</h1>
+    <p class="text-muted small mb-3">{{ credential_request.employee.nama_lengkap }} · {{ credential_request.unit_kerja.code }} · {{ credential_request.get_status_display }}</p>
+
+    <div class="card border shadow-sm mb-3">
+        <div class="card-header bg-white"><h2 class="h6 mb-0">Usulan Kewenangan Pemohon</h2></div>
+        <ul class="list-group list-group-flush">
+            {% for item in privileges %}
+            <li class="list-group-item small">
+                <strong>{{ item.kewenangan }}</strong>
+                {% if item.catalog_item %}<span class="badge text-bg-light border">{{ item.catalog_item.kode }}</span>{% endif %}
+                <span class="badge text-bg-secondary">Usulan: {{ item.get_usulan_display }}</span>
+                {% if item.catatan %}<div class="text-muted">{{ item.catatan }}</div>{% endif %}
+            </li>
+            {% empty %}<li class="list-group-item small text-muted">Belum ada rincian kewenangan.</li>{% endfor %}
+        </ul>
+    </div>
+
+    <form method="post">
+        {% csrf_token %}
+        {{ formset.management_form }}
+        {% for form in formset %}
+        <div class="card border shadow-sm mb-2">
+            <div class="card-body py-2">
+                {{ form.rincian }}
+                {% if form.non_field_errors %}<div class="text-danger small">{{ form.non_field_errors }}</div>{% endif %}
+                <div class="row g-2 align-items-end">
+                    <div class="col-12 col-md-4">
+                        <label class="form-label small fw-semibold" for="{{ form.rekomendasi.id_for_label }}">Rekomendasi</label>
+                        {{ form.rekomendasi }}
+                        {% for error in form.rekomendasi.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+                    </div>
+                    <div class="col-12 col-md-8">
+                        <label class="form-label small fw-semibold" for="{{ form.catatan_khusus.id_for_label }}">Catatan Khusus / Syarat</label>
+                        {{ form.catatan_khusus }}
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+        <button class="btn btn-primary btn-sm" type="submit">Simpan Penilaian</button>
+    </form>
+</div>
+{% endblock %}

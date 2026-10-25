@@ -24,6 +24,7 @@ class PengingatSDM(models.Model):
         ('ORIENTATION', 'Orientasi'),
         ('APPRAISAL', 'Penilaian Kinerja'),
         ('TRAINING', 'Diklat'),
+        ('SPK', 'SPK / RKK'),
     ]
     CHANNEL_CHOICES = [('IN_APP', 'Dalam aplikasi')]
 
@@ -196,5 +197,59 @@ def sync_task_reminders(*, as_of=None):
     return created
 
 
+def sync_spk_reminders(*, as_of=None):
+    """EWS for expiring SPK/RKK: warn 90/30 days before expiry and when expired.
+
+    Idempotent via key SPK:{employee_id}:{assignment_id}:{band}; recipient is the
+    employee's own account.
+    """
+    from datetime import timedelta
+
+    from sdm.models import PenugasanKlinis
+
+    as_of = as_of or timezone.localdate()
+    d30 = as_of + timedelta(days=30)
+    d90 = as_of + timedelta(days=90)
+
+    created = 0
+    assignments = PenugasanKlinis.objects.filter(
+        is_active=True, berlaku_sampai__isnull=False,
+    ).select_related('employee__akun')
+    for assignment in assignments:
+        due = assignment.berlaku_sampai
+        if due < as_of:
+            band = 'EXPIRED'
+        elif due <= d30:
+            band = 'LT_30'
+        elif due <= d90:
+            band = 'LT_90'
+        else:
+            continue
+        employee = assignment.employee
+        key = PengingatSDM.build_key(
+            employee_id=employee.pk,
+            version_id=assignment.pk,
+            band=band,
+            target_type='SPK',
+        )
+        _, was_created = PengingatSDM.objects.get_or_create(
+            idempotency_key=key,
+            defaults={
+                'employee': employee,
+                'band': band,
+                'target_type': 'SPK',
+                'recipient': employee.akun,
+                'due_date': due,
+                'alasan': f'SPK {assignment.nomor_spk} berakhir {due.isoformat()}',
+            },
+        )
+        created += int(was_created)
+    return created
+
+
 def sync_all_reminders(*, as_of=None):
-    return sync_expiry_reminders(as_of=as_of) + sync_task_reminders(as_of=as_of)
+    return (
+        sync_expiry_reminders(as_of=as_of)
+        + sync_task_reminders(as_of=as_of)
+        + sync_spk_reminders(as_of=as_of)
+    )

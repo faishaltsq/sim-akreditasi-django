@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% block page_title %}Kontrol Akses RME{% endblock %}
+{% block page_subtitle %}Integrasi kewenangan klinis ke Rekam Medis Elektronik{% endblock %}
+{% block content %}
+<div class="container-fluid p-0">
+    <a class="small text-decoration-none" href="{% url 'sdm:kredensial_list' %}"><i class="bi bi-arrow-left me-1"></i>Kembali</a>
+    <h1 class="page-title h4 mt-2 mb-1">Kontrol Akses RME</h1>
+    <p class="text-muted small mb-3">
+        Pemetaan baca-saja: kewenangan efektif vs tindakan terkunci untuk satu pegawai + unit.
+        Enforcement formulir RME memakai <code>require_clinical_action</code> (sdm/services/clinical_access.py) saat modul RME dibangun.
+    </p>
+
+    <form method="get" class="card border shadow-sm mb-3" role="search" aria-label="Filter akses RME">
+        <div class="card-body row g-2 align-items-end">
+            <div class="col-12 col-md-5">
+                <label class="form-label small fw-semibold" for="rme-pegawai">Pegawai</label>
+                <select id="rme-pegawai" name="pegawai" class="form-select form-select-sm" required>
+                    <option value="">— pilih pegawai —</option>
+                    {% for e in employees %}
+                    <option value="{{ e.pk }}" {% if selected_employee == e.pk|stringformat:"s" %}selected{% endif %}>{{ e.nama_lengkap }}{% if e.profesi %} ({{ e.profesi }}){% endif %}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-12 col-md-4">
+                <label class="form-label small fw-semibold" for="rme-unit">Unit</label>
+                <select id="rme-unit" name="unit" class="form-select form-select-sm">
+                    <option value="">Penempatan aktif</option>
+                    {% for unit in units %}
+                    <option value="{{ unit.pk }}" {% if selected_unit_id == unit.pk|stringformat:"s" %}selected{% endif %}>{{ unit.code }} — {{ unit.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-12 col-md-2">
+                <button class="btn btn-outline-primary btn-sm w-100" type="submit">Tampilkan</button>
+            </div>
+        </div>
+    </form>
+
+    {% if pegawai and selected_unit %}
+    <div class="row g-3">
+        <div class="col-12 col-lg-6">
+            <div class="card border shadow-sm h-100">
+                <div class="card-header bg-white"><h2 class="h6 mb-0">Kewenangan Efektif (snapshot aktif)</h2></div>
+                <ul class="list-group list-group-flush">
+                    {% for snapshot in granted %}
+                    <li class="list-group-item small d-flex justify-content-between align-items-center">
+                        <span><span class="font-monospace">{{ snapshot.action_code.code }}</span> — {{ snapshot.action_code.label }}</span>
+                        <span class="badge text-bg-success">Aktif</span>
+                    </li>
+                    {% empty %}<li class="list-group-item small text-muted">Tidak ada snapshot kewenangan aktif.</li>{% endfor %}
+                </ul>
+            </div>
+        </div>
+        <div class="col-12 col-md-6">
+            <div class="card border shadow-sm h-100">
+                <div class="card-header bg-white"><h2 class="h6 mb-0">Tindakan Terkunci (katalog − snapshot)</h2></div>
+                <ul class="list-group list-group-flush">
+                    {% for item in locked %}
+                    <li class="list-group-item small">
+                        <span class="font-monospace">{{ item.kode }}</span> — {{ item.nama }}
+                        {% if item.tingkat_supervisi == 'S' %}<span class="badge text-bg-warning">Butuh co-signature DPJP (Supervisi)</span>
+                        {% elif item.tingkat_supervisi == 'MT' %}<span class="badge text-bg-info text-dark">Mandiri Terbatas</span>{% endif %}
+                    </li>
+                    {% empty %}<li class="list-group-item small text-muted">Semua tindakan katalog aktif sudah diberikan (atau katalog profesi belum diisi).</li>{% endfor %}
+                </ul>
+            </div>
+        </div>
+    </div>
+    {% elif pegawai %}
+    <div class="alert alert-info">Tidak ada penempatan aktif; pilih unit secara manual.</div>
+    {% endif %}
+</div>
+{% endblock %}

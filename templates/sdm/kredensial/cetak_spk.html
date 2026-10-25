@@ -10,10 +10,21 @@
     .meta { text-align: center; font-size: 10pt; color: #444; margin-bottom: 24px; }
     dl { display: grid; grid-template-columns: 45mm 1fr; gap: 6px 12px; }
     dt { font-weight: bold; }
-    .signature { margin-top: 40mm; text-align: right; }
+    .signature { margin-top: 30mm; display: flex; justify-content: space-between; align-items: flex-end; }
+    .esign { text-align: left; max-width: 60%; }
+    .esign p { margin: 2px 0; font-size: 10pt; }
+    .qr { text-align: right; }
+    .qr img { width: 30mm; height: 30mm; }
+    .qr p { font-size: 8pt; color: #444; max-width: 45mm; word-break: break-all; }
+    @media print { .noprint { display: none; } }
 </style>
 </head>
 <body>
+<div class="noprint" style="text-align:right;margin-bottom:8px;">
+    <button onclick="window.print()">Cetak / Simpan PDF</button>
+    <a href="{% url 'sdm:kredensial_detail' assignment.decision.pengajuan_id %}">Kembali</a>
+    <a href="{% url 'sdm:kredensial_cetak_rkk' assignment.pk %}">Cetak RKK</a>
+</div>
 <h1>SURAT PENUGASAN KLINIS</h1>
 <p class="meta">Nomor {{ assignment.nomor_spk }} · Versi {{ assignment.versi }}</p>
 <dl>
@@ -24,8 +35,18 @@
     <dt>Diterbitkan</dt><dd>{{ assignment.issued_at|date:"d F Y H:i" }} WIB</dd>
 </dl>
 <div class="signature">
-    <p>Diterbitkan oleh</p>
-    <p style="margin-top: 22mm;">{{ assignment.issued_by.get_full_name|default:assignment.issued_by.username }}</p>
+    <div class="esign">
+        <p><strong>Tanda Tangan Elektronik</strong></p>
+        <p>{{ assignment.issued_by.get_full_name|default:assignment.issued_by.username }}</p>
+        <p>Direktur Utama</p>
+        <p>{{ assignment.issued_at|date:"d F Y" }}</p>
+    </div>
+    <div class="qr">
+        {% if qr_data_url %}
+        <img src="{{ qr_data_url }}" alt="QR verifikasi SPK {{ assignment.nomor_spk }}">
+        {% endif %}
+        <p>Verifikasi: {{ verify_url }}?nomor_spk={{ assignment.nomor_spk }}</p>
+    </div>
 </div>
 </body>
 </html>

@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% block page_title %}Pengajuan Kredensial Mandiri{% endblock %}
+{% block page_subtitle %}Portal pengajuan mandiri RKK{% endblock %}
+{% block content %}
+<div class="container-fluid p-0">
+    <a class="small text-decoration-none" href="{% url 'sdm:kredensial_list' %}"><i class="bi bi-arrow-left me-1"></i>Kembali</a>
+    <h1 class="page-title h4 mt-2 mb-3">Pengajuan Kredensial Mandiri</h1>
+
+    {% if spk_ews %}
+    <div class="alert alert-warning">
+        <strong>EWS Masa Berlaku SPK/RKK</strong> — perhatian masa berlaku SPK Anda akan habis:
+        <ul class="mb-0 mt-1">
+            {% for spk in spk_ews %}
+            <li>{{ spk.nomor_spk }} berakhir {{ spk.berlaku_sampai|date:"d M Y" }}
+                {% if spk.berlaku_sampai <= today %}<span class="badge text-bg-danger">Kedaluwarsa</span>
+                {% else %}<span class="badge text-bg-warning">Segera habis</span>{% endif %}
+            </li>
+            {% endfor %}
+        </ul>
+        <p class="small mb-0 mt-2">Ajukan re-kredensial 3 tahunan sebelum masa berlaku habis.</p>
+    </div>
+    {% endif %}
+
+    <div class="row g-3">
+        <div class="col-12 col-lg-5">
+            <div class="card border shadow-sm">
+                <div class="card-header bg-white"><h2 class="h6 mb-0">Ajukan Kredensial</h2></div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        {% for field in form %}
+                        <div class="mb-2">
+                            <label class="form-label small fw-semibold" for="{{ field.id_for_label }}">{{ field.label }}</label>
+                            {{ field }}
+                            {% for error in field.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+                        </div>
+                        {% endfor %}
+                        <button class="btn btn-primary btn-sm" type="submit">Kirim Pengajuan</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+        <div class="col-12 col-lg-7">
+            <div class="card border shadow-sm h-100">
+                <div class="card-header bg-white"><h2 class="h6 mb-0">Pengajuan Saya</h2></div>
+                <div class="table-responsive">
+                    <table class="table table-sm align-middle mb-0">
+                        <thead><tr><th scope="col">Unit</th><th scope="col">Jenis</th><th scope="col">Status</th><th scope="col">Diajukan</th></tr></thead>
+                        <tbody>
+                            {% for item in my_requests %}
+                            <tr>
+                                <td><a href="{% url 'sdm:kredensial_detail' item.pk %}">{{ item.get_jenis_display }}</a></td>
+                                <td class="small">{{ item.unit_kerja.code }}</td>
+                                <td><span class="badge text-bg-light text-dark">{{ item.get_status_display }}</span></td>
+                                <td class="small">{{ item.created_at|date:"d M Y" }}</td>
+                            </tr>
+                            {% empty %}<tr><td colspan="4" class="text-center text-muted py-4">Belum ada pengajuan.</td></tr>{% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<title>Bukti Audit Kredensial {{ credential_request.pk }}</title>
+<style>
+    @page { size: A4; margin: 18mm; }
+    body { font-family: 'Times New Roman', serif; color: #111; font-size: 11pt; }
+    h1 { font-size: 13pt; text-align: center; margin-bottom: 2px; }
+    h2 { font-size: 11pt; margin: 18px 0 6px; border-bottom: 1px solid #444; }
+    .meta { text-align: center; font-size: 10pt; color: #444; margin-bottom: 10px; }
+    dl { display: grid; grid-template-columns: 50mm 1fr; gap: 4px 10px; font-size: 10pt; }
+    dt { font-weight: bold; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { border: 1px solid #444; padding: 4px 6px; font-size: 9pt; text-align: left; vertical-align: top; }
+    th { background: #eee; }
+    ul.checklist { list-style: none; padding-left: 0; font-size: 10pt; }
+    ul.checklist li::before { content: '[  ]  '; font-weight: bold; }
+    .signature { margin-top: 22mm; display: flex; justify-content: space-between; }
+    .signature div { text-align: center; width: 45%; }
+    .ttd-space { height: 16mm; }
+    @media print { .noprint { display: none; } }
+</style>
+</head>
+<body>
+<div class="noprint" style="text-align:right;margin-bottom:8px;">
+    <button onclick="window.print()">Cetak / Simpan PDF</button>
+    <a href="{% url 'sdm:kredensial_detail' credential_request.pk %}">Kembali</a>
+</div>
+<h1>BUKTI AUDIT PROSES KREDENSIAL</h1>
+<p class="meta">Formulir Pengajuan · Checklist PSV · Lembar Penilaian Mitra Bestari — STARKES KPS 10/12/16/20</p>
+
+<h2>A. Formulir Pengajuan</h2>
+<dl>
+    <dt>Pegawai</dt><dd>{{ credential_request.employee.nama_lengkap }}</dd>
+    <dt>Unit Kerja</dt><dd>{{ credential_request.unit_kerja.code }} — {{ credential_request.unit_kerja.name }}</dd>
+    <dt>Jenis Pengajuan</dt><dd>{{ credential_request.get_jenis_display }}</dd>
+    <dt>Status</dt><dd>{{ credential_request.get_status_display }}</dd>
+    <dt>Diajukan Oleh</dt><dd>{{ credential_request.submitted_by.get_full_name|default:credential_request.submitted_by.username|default:"—" }} · {{ credential_request.created_at|date:"d F Y H:i" }}</dd>
+</dl>
+
+<h2>B. Checklist Verifikasi Primary Source (PSV)</h2>
+<table>
+    <thead><tr><th style="width:22%">Penerbit</th><th style="width:22%">Referensi</th><th style="width:22%">Metode</th><th style="width:16%">Hasil</th><th style="width:18%">Tanggal</th></tr></thead>
+    <tbody>
+        {% for psv in psv_records %}
+        <tr>
+            <td>{{ psv.issuer }}</td>
+            <td>{{ psv.reference }}</td>
+            <td>{{ psv.method }}</td>
+            <td>{{ psv.get_outcome_display }}</td>
+            <td>{{ psv.verified_at|date:"d F Y" }}</td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="5" style="text-align:center">Belum ada verifikasi PSV tercatat.</td></tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<h2>C. Lembar Penilaian Mitra Bestari</h2>
+<table>
+    <thead><tr><th style="width:40%">Kewenangan</th><th style="width:20%">Rekomendasi</th><th style="width:25%">Catatan / Syarat</th><th style="width:15%">Penilai</th></tr></thead>
+    <tbody>
+        {% for p in penilaian %}
+        <tr>
+            <td>{{ p.rincian.kewenangan }}</td>
+            <td>{{ p.get_rekomendasi_display }}</td>
+            <td>{{ p.catatan_khusus }}</td>
+            <td>{{ p.reviewed_by.get_full_name|default:p.reviewed_by.username|default:"—" }}</td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="4" style="text-align:center">Belum ada penilaian mitra bestari.</td></tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<h2>D. Rincian Kewenangan Diajukan</h2>
+<ul class="checklist">
+    {% for line in privileges %}
+    <li>{{ line.kewenangan }} ({{ line.get_usulan_display }}){% if line.catalog_item %} — {{ line.catalog_item.kode }}{% endif %}</li>
+    {% empty %}
+    <li>Belum ada rincian.</li>
+    {% endfor %}
+</ul>
+
+<div class="signature">
+    <div>
+        <p>Petugas Kredensial,</p>
+        <div class="ttd-space"></div>
+        <p>________________________</p>
+    </div>
+    <div>
+        <p>Ketua Komite,</p>
+        <div class="ttd-space"></div>
+        <p>________________________</p>
+    </div>
+</div>
+</body>
+</html>

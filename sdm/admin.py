@@ -5,7 +5,9 @@ from .models import (
     AturanDokumen,
     HcGrant,
     InsidenK3Pegawai,
+    KatalogTindakan,
     Lowongan,
+    MasterJenjangProfesi,
     PemetaanStandarSDM,
     PengajuanKredensial,
     PenugasanKlinis,
@@ -150,6 +152,31 @@ class PengajuanKredensialAdmin(admin.ModelAdmin):
     list_display = ('employee', 'unit_kerja', 'status', 'decided_by', 'decided_at')
     list_filter = ('status',)
     search_fields = ('employee__nama_lengkap', 'unit_kerja__code')
+
+
+class KatalogTindakanInline(admin.TabularInline):
+    model = KatalogTindakan
+    extra = 0
+    fields = ('kode', 'nama', 'tingkat_supervisi', 'catatan', 'is_active')
+    ordering = ('kode',)
+    search_fields = ('kode', 'nama')
+
+
+@admin.register(MasterJenjangProfesi)
+class MasterJenjangProfesiAdmin(admin.ModelAdmin):
+    list_display = ('profesi', 'kode', 'nama', 'urutan')
+    list_filter = ('profesi__keluarga',)
+    search_fields = ('kode', 'nama', 'profesi__nama')
+    ordering = ('profesi__keluarga', 'profesi__nama', 'urutan')
+    inlines = (KatalogTindakanInline,)
+
+
+@admin.register(KatalogTindakan)
+class KatalogTindakanAdmin(admin.ModelAdmin):
+    list_display = ('kode', 'nama', 'jenjang', 'tingkat_supervisi', 'is_active')
+    list_filter = ('is_active', 'jenjang__profesi__keluarga', 'tingkat_supervisi')
+    search_fields = ('kode', 'nama')
+    ordering = ('kode',)
 
 
 @admin.register(PenugasanKlinis)

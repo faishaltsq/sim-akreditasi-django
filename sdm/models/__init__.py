@@ -45,10 +45,12 @@ from .k3 import (
 from .kredensial import (
     KeputusanKredensial,
     PengajuanKredensial,
+    PenilaianTindakan,
     PenugasanKlinis,
     RincianKewenangan,
     VerifikasiSumber,
 )
+from .katalog_rkk import KatalogTindakan, MasterJenjangProfesi
 from .orientasi import (
     AktivitasOrientasi,
     PenugasanOrientasi,
@@ -107,6 +109,8 @@ __all__ = [
     'BebanKerja',
     'BatchImporPegawai',
     'ClinicalActionCode',
+    'KatalogTindakan',
+    'MasterJenjangProfesi',
     'MasterUraianTugas',
     'PenerimaanUraianTugas',
     'PrivilegeSnapshot',
@@ -135,6 +139,7 @@ __all__ = [
     'PenilaianKinerja',
     'PeriodeKinerja',
     'PengajuanKredensial',
+    'PenilaianTindakan',
     'PenugasanKlinis',
     'PenugasanOrientasi',
     'PenyelesaianOrientasi',

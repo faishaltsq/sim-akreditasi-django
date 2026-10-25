@@ -5,11 +5,13 @@ from django.utils import timezone
 
 from sdm.akses import require_hc_capability, visible_units
 from sdm.models import (
+    ClinicalActionCode,
     KeputusanKredensial,
     Lamaran,
     Lowongan,
     Pegawai,
     PengajuanKredensial,
+    PrivilegeSnapshot,
     PenugasanKlinis,
     PenugasanOrientasi,
     PenyelesaianOrientasi,
@@ -143,6 +145,35 @@ def record_psv(employee, version, *, actor, issuer, reference, method, outcome):
     return record
 
 
+def rekomendasikan_kredensial(application, *, actor, catatan=''):
+    """Committee recommendation step before the final director decision."""
+    require_hc_capability(
+        actor, 'can_review_hc_credentials', unit=application.unit_kerja_id
+    )
+    if application.status not in {'DIAJUKAN', 'DITINJAU'}:
+        raise ValidationError({
+            'status': 'Pengajuan belum pada tahap rekomendasi komite.'
+        })
+    with transaction.atomic():
+        locked = PengajuanKredensial.objects.select_for_update().get(pk=application.pk)
+        if locked.decided_at is not None:
+            raise ValidationError({'status': 'Keputusan sudah final.'})
+        if locked.status not in {'DIAJUKAN', 'DITINJAU'}:
+            raise ValidationError({'status': 'Pengajuan tidak dapat direkomendasikan.'})
+        locked.status = 'DIREKOMENDASI'
+        locked.committee_notes = catatan or locked.committee_notes
+        locked.save(update_fields=['status', 'committee_notes', 'updated_at'])
+        PeristiwaSDM.objects.create(
+            actor=actor,
+            jenis_peristiwa='credential_recommended',
+            target_tipe='credential_request',
+            target_id=str(locked.pk),
+            status_sesudah='DIREKOMENDASI',
+            alasan=catatan[:200] if catatan else 'komite merekomendasikan pengajuan',
+        )
+    return locked
+
+
 def decide_credential(application, *, actor, outcome, notes=''):
     """Committee decision; immutable, and never derived from document review alone."""
     require_hc_capability(
@@ -227,6 +258,57 @@ def issue_spk(application, *, actor, nomor_spk, berlaku_mulai, berlaku_sampai=No
             target_id=str(assignment.pk),
             status_sesudah='AKTIF',
             alasan=f'spk_number={nomor_spk}',
+        )
+    return assignment
+
+
+def terbitkan_spk_lengkap(application, *, actor, nomor_spk, berlaku_mulai,
+                         berlaku_sampai=None):
+    """Issue an SPK and derive one PrivilegeSnapshot per approved privilege line.
+
+    Wraps issue_spk (the single issuance path): committee-approved lines map to
+    snapshots (MANDIRI -> DISETUJUI_MANDIRI, SUPERVISI -> DISETUJUI_SUPERVISI)
+    with ClinicalActionCode synced from KatalogTindakan; TIDAK_DIBERIKAN lines
+    get no snapshot. One atomic transaction for decision + snapshots.
+    """
+    require_hc_capability(
+        actor, 'can_review_hc_credentials', unit=application.unit_kerja_id
+    )
+    with transaction.atomic():
+        assignment = issue_spk(
+            application, actor=actor, nomor_spk=nomor_spk,
+            berlaku_mulai=berlaku_mulai, berlaku_sampai=berlaku_sampai,
+        )
+        granted_codes = []
+        for rincian in application.privileges.select_related('catalog_item'):
+            if not rincian.status_spk or rincian.status_spk == 'TIDAK_DIBERIKAN':
+                continue
+            kode = rincian.catalog_item.kode if rincian.catalog_item else ''
+            label = rincian.catalog_item.nama if rincian.catalog_item else rincian.kewenangan
+            if not kode:
+                kode = f'EXT-{rincian.pk}'
+            action, _ = ClinicalActionCode.objects.get_or_create(
+                code=kode, defaults={'label': label[:100]},
+            )
+            PrivilegeSnapshot.objects.get_or_create(
+                pegawai=application.employee,
+                unit_kerja=application.unit_kerja,
+                action_code=action,
+                valid_from=berlaku_mulai,
+                defaults={
+                    'valid_until': berlaku_sampai,
+                    'granted_by': actor,
+                    'source_decision': assignment,
+                },
+            )
+            granted_codes.append(kode)
+        PeristiwaSDM.objects.create(
+            actor=actor,
+            jenis_peristiwa='spk_privileges_mapped',
+            target_tipe='clinical_assignment',
+            target_id=str(assignment.pk),
+            status_sesudah='AKTIF',
+            alasan=f'privilege_snapshots={len(granted_codes)}',
         )
     return assignment
 

@@ -83,11 +83,35 @@
     </div>
 
     <div class="card border shadow-sm mt-3">
+        <div class="card-header bg-white d-flex justify-content-between align-items-center">
+            <h2 class="h6 mb-0">Penilaian Mitra Bestari</h2>
+            <a class="btn btn-outline-primary btn-sm" href="{% url 'sdm:kredensial_panel_bestari' credential_request.pk %}">Buka Panel</a>
+        </div>
+        <ul class="list-group list-group-flush">
+            {% for penilaian in credential_request.penilaian_tindakan.all %}
+            <li class="list-group-item small">
+                {{ penilaian.rincian.kewenangan }} —
+                <span class="badge {% if penilaian.rekomendasi == 'DITOLAK' %}text-bg-danger{% elif penilaian.rekomendasi == 'MANDIRI' %}text-bg-success{% else %}text-bg-warning{% endif %}">{{ penilaian.get_rekomendasi_display }}</span>
+                {% if penilaian.catatan_khusus %}<div class="text-muted">{{ penilaian.catatan_khusus }}</div>{% endif %}
+            </li>
+            {% empty %}<li class="list-group-item small text-muted">Belum ada penilaian mitra bestari.</li>{% endfor %}
+        </ul>
+    </div>
+
+    <div class="card border shadow-sm mt-3">
         <div class="card-header bg-white"><h2 class="h6 mb-0">Keputusan Komite</h2></div>
         <div class="card-body">
             {% if credential_request.decided_at %}
             <p class="mb-0 small">Diputuskan {{ credential_request.decided_at|date:"d M Y H:i" }} · {{ credential_request.get_status_display }}</p>
             {% else %}
+            <form method="post" action="{% url 'sdm:kredensial_rekomendasikan' credential_request.pk %}" class="row g-2 align-items-end mb-2">
+                {% csrf_token %}
+                <div class="col-12 col-md-8">
+                    <label class="form-label small fw-semibold" for="reko-notes">Rekomendasi Komite (catatan)</label>
+                    <input id="reko-notes" name="catatan" class="form-control form-control-sm" maxlength="2000">
+                </div>
+                <div class="col-12 col-md-4"><button class="btn btn-outline-primary btn-sm w-100" type="submit">Rekomendasikan Komite</button></div>
+            </form>
             <form method="post" action="{% url 'sdm:kredensial_decide' credential_request.pk %}" class="row g-2 align-items-end">
                 {% csrf_token %}
                 <div class="col-12 col-md-4">
@@ -107,13 +131,58 @@
         </div>
     </div>
 
+    {% if credential_request.status == 'DISETUJUI' %}
+    <div class="card border shadow-sm mt-3">
+        <div class="card-header bg-white"><h2 class="h6 mb-0">Terbitkan SPK &amp; RKK (Direktur)</h2></div>
+        <div class="card-body">
+            <form method="post" action="{% url 'sdm:kredensial_terbitkan_spk' credential_request.pk %}" class="row g-2 align-items-end">
+                {% csrf_token %}
+                <div class="col-12 col-md-4">
+                    <label class="form-label small fw-semibold" for="spk-no">Nomor SPK</label>
+                    <input id="spk-no" name="nomor_spk" class="form-control form-control-sm" maxlength="80" required>
+                </div>
+                <div class="col-6 col-md-3">
+                    <label class="form-label small fw-semibold" for="spk-mulai">Berlaku Mulai</label>
+                    <input id="spk-mulai" name="berlaku_mulai" type="date" class="form-control form-control-sm" required>
+                </div>
+                <div class="col-6 col-md-3">
+                    <label class="form-label small fw-semibold" for="spk-until">Berlaku Sampai</label>
+                    <input id="spk-until" name="berlaku_sampai" type="date" class="form-control form-control-sm">
+                </div>
+                <div class="col-6 col-md-2"><button class="btn btn-primary btn-sm w-100" type="submit">Terbitkan</button></div>
+            </form>
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="card border shadow-sm mt-3">
+        <div class="card-header bg-white d-flex justify-content-between align-items-center">
+            <h2 class="h6 mb-0">Bukti Audit STARKES</h2>
+            <a class="btn btn-outline-secondary btn-sm" href="{% url 'sdm:kredensial_bukti_audit' credential_request.pk %}">Cetak Bukti Audit</a>
+        </div>
+    </div>
+
     <div class="card border shadow-sm mt-3">
         <div class="card-header bg-white"><h2 class="h6 mb-0">SPK Terbit</h2></div>
         <ul class="list-group list-group-flush">
             {% for spk in spk_list %}
-            <li class="list-group-item small d-flex justify-content-between align-items-center">
-                <span>{{ spk.nomor_spk }} · v{{ spk.versi }} · {{ spk.berlaku_mulai|date:"d M Y" }}{% if not spk.is_active %} (dicabut){% endif %}</span>
-                <a class="btn btn-outline-secondary btn-sm" href="{% url 'sdm:kredensial_cetak_spk' spk.pk %}">Cetak</a>
+            <li class="list-group-item small">
+                <div class="d-flex justify-content-between align-items-center">
+                    <span>{{ spk.nomor_spk }} · v{{ spk.versi }} · {{ spk.berlaku_mulai|date:"d M Y" }}{% if not spk.is_active %} (dicabut){% endif %}</span>
+                    <span class="d-flex gap-1">
+                        <a class="btn btn-outline-secondary btn-sm" href="{% url 'sdm:kredensial_cetak_spk' spk.pk %}">Cetak SPK</a>
+                        <a class="btn btn-outline-secondary btn-sm" href="{% url 'sdm:kredensial_cetak_rkk' spk.pk %}">Cetak RKK</a>
+                    </span>
+                </div>
+                {% if spk.is_active %}
+                <form method="post" action="{% url 'sdm:kredensial_cabut_spk' spk.pk %}" class="row g-1 mt-1">
+                    {% csrf_token %}
+                    <div class="col-8">
+                        <input name="alasan" class="form-control form-control-sm" maxlength="200" placeholder="Alasan pencabutan" required>
+                    </div>
+                    <div class="col-4"><button class="btn btn-outline-danger btn-sm w-100" type="submit">Cabut SPK</button></div>
+                </form>
+                {% endif %}
             </li>
             {% empty %}<li class="list-group-item small text-muted">Belum ada SPK.</li>{% endfor %}
         </ul>

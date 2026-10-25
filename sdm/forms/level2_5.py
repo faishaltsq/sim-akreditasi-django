@@ -1,4 +1,5 @@
 from django import forms
+from django.forms import inlineformset_factory
 
 from sdm.akses import visible_employees, visible_units
 from sdm.models import (
@@ -7,6 +8,7 @@ from sdm.models import (
     Lamaran,
     Lowongan,
     PengajuanKredensial,
+    PenilaianTindakan,
     ProgramOrientasi,
     RincianKewenangan,
     VerifikasiSumber,
@@ -62,8 +64,11 @@ class PengajuanKredensialForm(forms.ModelForm):
 
     class Meta:
         model = PengajuanKredensial
-        fields = ['employee', 'unit_kerja']
-        widgets = {'unit_kerja': forms.Select(attrs={'class': SELECT_CLASS})}
+        fields = ['employee', 'unit_kerja', 'jenis']
+        widgets = {
+            'unit_kerja': forms.Select(attrs={'class': SELECT_CLASS}),
+            'jenis': forms.Select(attrs={'class': SELECT_CLASS}),
+        }
 
     def __init__(self, *args, user, **kwargs):
         super().__init__(*args, **kwargs)
@@ -77,13 +82,20 @@ class PengajuanKredensialForm(forms.ModelForm):
 class RincianKewenanganForm(forms.ModelForm):
     class Meta:
         model = RincianKewenangan
-        fields = ['kewenangan', 'catatan']
+        fields = ['kewenangan', 'catalog_item', 'usulan', 'catatan']
         widgets = {
             'kewenangan': forms.TextInput(
                 attrs={'class': FIELD_CLASS, 'maxlength': 200}
             ),
+            'catalog_item': forms.Select(attrs={'class': SELECT_CLASS}),
+            'usulan': forms.Select(attrs={'class': SELECT_CLASS}),
             'catatan': forms.Textarea(attrs={'class': TEXTAREA_CLASS, 'rows': 2}),
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['usulan'].initial = 'MANDIRI'
+        self.fields['usulan'].required = False
 
 
 class VerifikasiSumberForm(forms.ModelForm):
@@ -158,3 +170,25 @@ class KebutuhanPelatihanForm(forms.ModelForm):
         self.fields['employee'].queryset = visible_employees(
             user, capability='can_manage_hc_training'
         ).order_by('nama_lengkap')
+
+
+class PenilaianTindakanForm(forms.ModelForm):
+    class Meta:
+        model = PenilaianTindakan
+        fields = ['rincian', 'rekomendasi', 'catatan_khusus']
+        widgets = {
+            'rincian': forms.HiddenInput(),
+            'rekomendasi': forms.Select(attrs={'class': SELECT_CLASS}),
+            'catatan_khusus': forms.Textarea(
+                attrs={'class': TEXTAREA_CLASS, 'rows': 2}
+            ),
+        }
+
+
+PenilaianTindakanFormSet = inlineformset_factory(
+    PengajuanKredensial,
+    PenilaianTindakan,
+    form=PenilaianTindakanForm,
+    extra=0,
+    can_delete=False,
+)

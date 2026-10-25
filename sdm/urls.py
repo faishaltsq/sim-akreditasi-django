@@ -83,6 +83,28 @@ urlpatterns = [
         name='rekrutmen_move',
     ),
     path('kredensial/', views.kredensial_list, name='kredensial_list'),
+    path(
+        'kredensial/katalog/',
+        views.kredensial_katalog,
+        name='kredensial_katalog',
+    ),
+    path(
+        'kredensial/pengajuan/',
+        views.kredensial_daftar_pengajuan,
+        name='kredensial_daftar_pengajuan',
+    ),
+    path('kredensial/spk/', views.kredensial_spk_list, name='kredensial_spk_list'),
+    path(
+        'kredensial/akses-rme/',
+        views.kredensial_akses_rme,
+        name='kredensial_akses_rme',
+    ),
+    path('kredensial/peta/', views.kredensial_peta, name='kredensial_peta'),
+    path(
+        'kredensial/pengajuan-saya/',
+        views.kredensial_pengajuan_sendiri,
+        name='kredensial_pengajuan_sendiri',
+    ),
     path('kredensial/baru/', views.kredensial_create, name='kredensial_create'),
     path(
         'kredensial/<uuid:request_id>/kewenangan/',
@@ -100,9 +122,39 @@ urlpatterns = [
         name='kredensial_detail',
     ),
     path(
+        'kredensial/<uuid:request_id>/bestari/',
+        views.kredensial_panel_bestari,
+        name='kredensial_panel_bestari',
+    ),
+    path(
         'kredensial/<uuid:request_id>/putuskan/',
         views.kredensial_decide,
         name='kredensial_decide',
+    ),
+    path(
+        'kredensial/<uuid:request_id>/terbitkan/',
+        views.kredensial_terbitkan_spk,
+        name='kredensial_terbitkan_spk',
+    ),
+    path(
+        'kredensial/<uuid:request_id>/rekomendasikan/',
+        views.kredensial_rekomendasikan,
+        name='kredensial_rekomendasikan',
+    ),
+    path(
+        'kredensial/spk/<uuid:assignment_id>/cabut/',
+        views.kredensial_cabut_spk,
+        name='kredensial_cabut_spk',
+    ),
+    path(
+        'kredensial/spk/<uuid:assignment_id>/cetak-rkk/',
+        views.kredensial_cetak_rkk,
+        name='kredensial_cetak_rkk',
+    ),
+    path(
+        'kredensial/<uuid:request_id>/bukti-audit/',
+        views.kredensial_bukti_audit,
+        name='kredensial_bukti_audit',
     ),
     path(
         'kredensial/spk/<uuid:assignment_id>/cetak/',

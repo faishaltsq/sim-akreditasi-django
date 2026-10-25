@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block page_title %}Kredensial &amp; RKK/SPK{% endblock %}
+{% block page_subtitle %}Modul E-Kredensial &amp; Penugasan Klinis{% endblock %}
+{% block content %}
+<div class="container-fluid p-0">
+    <h1 class="page-title h5 mb-1">Kredensial &amp; RKK/SPK</h1>
+    <p class="text-muted small mb-3">Siklus kredensial end-to-end: katalog RKK, pengajuan mandiri, verifikasi &amp; mitra bestari, penerbitan SPK/RKK, kontrol akses RME, hingga peta kewenangan klinis.</p>
+    {% include "sdm/_navigasi.html" %}
+    <div class="row g-3">
+        {% for card in sub_menu_cards %}
+        <div class="col-12 col-md-6 col-xl-4">
+            <div class="card border shadow-sm h-100"><div class="card-body">
+                <span class="badge text-bg-light text-dark border mb-2">{{ card.level }}</span>
+                <h2 class="h6 mb-1">{{ card.title }}</h2>
+                <p class="small text-muted mb-2">{{ card.description }}</p>
+                <div class="d-flex flex-wrap gap-2">
+                    {% for link in card.links %}
+                        {% if link.allowed %}
+                        <a class="btn btn-outline-secondary btn-sm" href="{% url link.url_name %}">{{ link.label }}</a>
+                        {% endif %}
+                    {% endfor %}
+                </div>
+            </div></div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

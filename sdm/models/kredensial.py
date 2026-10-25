@@ -63,6 +63,11 @@ class PengajuanKredensial(models.Model):
         ('DITOLAK', 'Ditolak'),
         ('DICABUT', 'Dicabut'),
     ]
+    JENIS_CHOICES = [
+        ('AWAL', 'Kredensial Awal'),
+        ('REKREDENSIAL', 'Re-Kredensial 3 Tahunan'),
+        ('PENAMBAHAN', 'Penambahan Kewenangan'),
+    ]
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     employee = models.ForeignKey(
         'sdm.Pegawai', on_delete=models.PROTECT, related_name='credential_requests',
@@ -71,6 +76,14 @@ class PengajuanKredensial(models.Model):
     unit_kerja = models.ForeignKey(
         'akreditasi.UnitKerja', on_delete=models.PROTECT,
         related_name='sdm_credential_requests', verbose_name='Unit Kerja',
+    )
+    jenis = models.CharField(
+        'Jenis Pengajuan', max_length=20, choices=JENIS_CHOICES, default='AWAL'
+    )
+    logbook = models.ForeignKey(
+        'sdm.VersiDokumen', on_delete=models.SET_NULL,
+        null=True, blank=True, related_name='credential_logbook',
+        verbose_name='Logbook / Portofolio',
     )
     status = models.CharField(
         'Status', max_length=20, choices=STATUS_CHOICES, default='DIAJUKAN'
@@ -102,11 +115,43 @@ class PengajuanKredensial(models.Model):
 
 
 class RincianKewenangan(models.Model):
+    USULAN_CHOICES = [
+        ('MANDIRI', 'Mandiri'),
+        ('SUPERVISI', 'Supervisi'),
+    ]
+    REKOMENDASI_CHOICES = [
+        ('MANDIRI', 'Disetujui Mandiri'),
+        ('SUPERVISI', 'Disetujui dengan Supervisi'),
+        ('DITOLAK', 'Ditolak'),
+    ]
+    STATUS_SPK_CHOICES = [
+        ('DISETUJUI_MANDIRI', 'Disetujui Mandiri'),
+        ('DISETUJUI_SUPERVISI', 'Disetujui dengan Supervisi'),
+        ('TIDAK_DIBERIKAN', 'Tidak Diberikan'),
+    ]
     pengajuan = models.ForeignKey(
         PengajuanKredensial, on_delete=models.CASCADE, related_name='privileges',
         verbose_name='Pengajuan Kredensial',
     )
     kewenangan = models.CharField('Kewenangan Klinis', max_length=200)
+    catalog_item = models.ForeignKey(
+        'sdm.KatalogTindakan', on_delete=models.SET_NULL,
+        null=True, blank=True, related_name='rincian',
+        verbose_name='Katalog Tindakan',
+    )
+    usulan = models.CharField(
+        'Usulan Pegawai', max_length=12, choices=USULAN_CHOICES,
+        default='MANDIRI',
+    )
+    rekomendasi = models.CharField(
+        'Rekomendasi Komite', max_length=12, choices=REKOMENDASI_CHOICES,
+        blank=True,
+    )
+    status_spk = models.CharField(
+        'Status SPK Direktur', max_length=20, choices=STATUS_SPK_CHOICES,
+        blank=True,
+    )
+    batasan = models.TextField('Keterangan / Batasan', blank=True)
     catatan = models.TextField('Catatan', blank=True)
 
     class Meta:
@@ -115,6 +160,8 @@ class RincianKewenangan(models.Model):
         ordering = ['pengajuan_id', 'pk']
 
     def __str__(self):
+        if not self.kewenangan and self.catalog_item_id:
+            return self.catalog_item.nama
         return self.kewenangan
 
 
@@ -193,3 +240,43 @@ class PenugasanKlinis(models.Model):
 
     def __str__(self):
         return f'{self.nomor_spk} — {self.employee_id}'
+
+
+class PenilaianTindakan(models.Model):
+    """Peer review (mitra bestari) verdict for one privilege line."""
+
+    REKOMENDASI_CHOICES = RincianKewenangan.REKOMENDASI_CHOICES
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    pengajuan = models.ForeignKey(
+        PengajuanKredensial, on_delete=models.CASCADE,
+        related_name='penilaian_tindakan', verbose_name='Pengajuan Kredensial',
+    )
+    rincian = models.ForeignKey(
+        RincianKewenangan, on_delete=models.PROTECT, related_name='penilaian',
+        verbose_name='Rincian Kewenangan',
+    )
+    rekomendasi = models.CharField(
+        'Rekomendasi', max_length=12, choices=REKOMENDASI_CHOICES
+    )
+    catatan_khusus = models.TextField('Catatan Khusus / Syarat', blank=True)
+    reviewed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL,
+        null=True, blank=True, related_name='sdm_peer_reviews',
+        verbose_name='Dinilai Oleh',
+    )
+    reviewed_at = models.DateTimeField('Waktu Penilaian', auto_now=True)
+
+    class Meta:
+        verbose_name = 'Penilaian Mitra Bestari'
+        verbose_name_plural = 'Penilaian Mitra Bestari'
+        ordering = ['pengajuan_id', 'rincian_id']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['pengajuan', 'rincian'],
+                name='sdm_penilaian_pengajuan_rincian_uniq',
+            ),
+        ]
+
+    def __str__(self):
+        return f'{self.rincian_id} — {self.get_rekomendasi_display()}'

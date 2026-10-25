@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+{% block page_title %}Peta &amp; Direktori Kewenangan Klinis{% endblock %}
+{% block page_subtitle %}Verifikasi cepat wewenang klinis staf per unit{% endblock %}
+{% block extra_css %}{% include "sdm/_responsive.html" %}{% endblock %}
+
+{% block content %}
+<div class="container-fluid p-0">
+    <a class="small text-decoration-none" href="{% url 'sdm:kredensial_list' %}"><i class="bi bi-arrow-left me-1"></i>Kembali</a>
+    <h1 class="page-title h4 mt-2 mb-1">Peta Kewenangan Klinis RS</h1>
+    <p class="text-muted small mb-3">Cari staf untuk memastikan wewenang klinisnya sah di unit Anda.</p>
+
+    <form method="get" class="card border shadow-sm mb-3" role="search" aria-label="Filter peta kewenangan">
+        <div class="card-body row g-2 align-items-end">
+            <div class="col-12 col-md-4">
+                <label class="form-label small fw-semibold" for="peta-q">Cari pegawai</label>
+                <input id="peta-q" name="q" class="form-control form-control-sm" value="{{ search_q }}" maxlength="100" placeholder="Nama pegawai">
+            </div>
+            <div class="col-6 col-md-4">
+                <label class="form-label small fw-semibold" for="peta-unit">Unit</label>
+                <select id="peta-unit" name="unit" class="form-select form-select-sm">
+                    <option value="">Semua unit</option>
+                    {% for unit in units %}
+                    <option value="{{ unit.pk }}" {% if selected_unit == unit.pk|stringformat:"s" %}selected{% endif %}>{{ unit.code }} — {{ unit.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-12 col-md-3 d-flex gap-2">
+                <button class="btn btn-outline-primary btn-sm" type="submit">Terapkan</button>
+                <a class="btn btn-outline-secondary btn-sm" href="{% url 'sdm:kredensial_peta' %}">Reset</a>
+            </div>
+        </div>
+    </form>
+
+    <div class="table-card mb-3">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <caption class="visually-hidden">Rekapitulasi kewenangan aktif per pegawai</caption>
+                <thead>
+                    <tr>
+                        <th scope="col">Pegawai</th>
+                        <th scope="col">Unit</th>
+                        <th scope="col">SPK Aktif</th>
+                        <th scope="col">Mandiri</th>
+                        <th scope="col">Supervisi</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in page_obj %}
+                    <tr>
+                        <td class="fw-semibold">{{ row.pegawai.nama_lengkap }}</td>
+                        <td>{% for code in row.units %}<span class="badge bg-light text-dark border">{{ code }}</span> {% endfor %}</td>
+                        <td>{{ row.total }}</td>
+                        <td><span class="badge text-bg-success">{{ row.mandiri }}</span></td>
+                        <td><span class="badge text-bg-warning">{{ row.supervisi }}</span></td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="4" class="text-center py-4 text-muted">Tidak ada snapshot kewenangan aktif yang cocok.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mt-3 mb-4">
+        <small class="text-muted">{{ page_obj.paginator.count }} pegawai · halaman {{ page_obj.number }} dari {{ page_obj.paginator.num_pages }}</small>
+        {% if page_obj.has_other_pages %}
+        <nav aria-label="Navigasi halaman peta">
+            <ul class="pagination pagination-sm mb-0">
+                {% if page_obj.has_previous %}<li class="page-item"><a class="page-link" href="?{% if pagination_query %}{{ pagination_query }}&amp;{% endif %}page={{ page_obj.previous_page_number }}">Sebelumnya</a></li>{% else %}<li class="page-item disabled"><span class="page-link">Sebelumnya</span></li>{% endif %}
+                {% if page_obj.has_next %}<li class="page-item"><a class="page-link" href="?{% if pagination_query %}{{ pagination_query }}&amp;{% endif %}page={{ page_obj.next_page_number }}">Berikutnya</a></li>{% else %}<li class="page-item disabled"><span class="page-link">Berikutnya</span></li>{% endif %}
+            </ul>
+        </nav>
+        {% endif %}
+    </div>
+
+    {% if matriks_actions %}
+    <div class="card border shadow-sm">
+        <div class="card-header bg-white"><h2 class="h6 mb-0">Matriks Sebaran Kompetensi (unit terpilih)</h2></div>
+        <div class="table-responsive">
+            <table class="table table-sm table-bordered align-middle mb-0">
+                <caption class="visually-hidden">Matriks pegawai × tindakan per unit</caption>
+                <thead>
+                    <tr>
+                        <th scope="col">Pegawai</th>
+                        {% for action in matriks_actions %}<th scope="col" class="small font-monospace">{{ action }}</th>{% endfor %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in matriks %}
+                    <tr>
+                        <td class="small fw-semibold">{{ row.pegawai.nama_lengkap }}</td>
+                        {% for cell in row.cells %}
+                        <td class="text-center small">
+                            {% if cell.tingkat == 'M' %}<span class="badge text-bg-success">M</span>
+                            {% elif cell.tingkat == 'S' %}<span class="badge text-bg-warning">S</span>
+                            {% elif cell.tingkat == 'MT' %}<span class="badge text-bg-info text-dark">MT</span>{% endif %}
+                        </td>
+                        {% endfor %}
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

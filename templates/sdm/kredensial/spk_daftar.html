@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block page_title %}Daftar SPK{% endblock %}
+{% block page_subtitle %}E-SPK &amp; E-RKK terbit{% endblock %}
+{% block content %}
+<div class="container-fluid p-0">
+    <a class="small text-decoration-none" href="{% url 'sdm:kredensial_list' %}"><i class="bi bi-arrow-left me-1"></i>Kembali</a>
+    <h1 class="page-title h5 mt-2 mb-3">Surat Penugasan Klinis Terbit</h1>
+    {% include "sdm/_navigasi.html" %}
+    <div class="table-card">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <caption class="visually-hidden">Daftar SPK terbit</caption>
+                <thead><tr><th scope="col">Nomor SPK</th><th scope="col">Pegawai</th><th scope="col">Unit</th><th scope="col">Berlaku</th><th scope="col">Status</th><th scope="col" aria-label="Aksi"></th></tr></thead>
+                <tbody>
+                    {% for spk in assignments %}
+                    <tr>
+                        <td class="font-monospace small">{{ spk.nomor_spk }} <span class="text-muted">v{{ spk.versi }}</span></td>
+                        <td>{{ spk.employee.nama_lengkap }}</td>
+                        <td class="small">{{ spk.unit_kerja.code }}</td>
+                        <td class="small">{{ spk.berlaku_mulai|date:"d M Y" }} — {{ spk.berlaku_sampai|date:"d M Y"|default:"—" }}</td>
+                        <td>{% if spk.is_active %}<span class="badge text-bg-success">Aktif</span>{% else %}<span class="badge text-bg-secondary">Dicabut</span>{% endif %}</td>
+                        <td class="d-flex gap-1">
+                            <a class="btn btn-outline-secondary btn-sm" href="{% url 'sdm:kredensial_detail' spk.decision.pengajuan_id %}">Detail</a>
+                            <a class="btn btn-outline-secondary btn-sm" href="{% url 'sdm:kredensial_cetak_spk' spk.pk %}">Cetak SPK</a>
+                            <a class="btn btn-outline-secondary btn-sm" href="{% url 'sdm:kredensial_cetak_rkk' spk.pk %}">Cetak RKK</a>
+                        </td>
+                    </tr>
+                    {% empty %}<tr><td colspan="6" class="text-center text-muted py-4">Belum ada SPK terbit.</td></tr>{% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

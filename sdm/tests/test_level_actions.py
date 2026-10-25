@@ -107,6 +107,7 @@ class CredentialCreateTests(CreateFlowBase):
         response = self.client.post(reverse('sdm:kredensial_create'), {
             'employee': self.employee.pk,
             'unit_kerja': self.unit.pk,
+            'jenis': 'AWAL',
         })
 
         self.assertEqual(response.status_code, 302)
