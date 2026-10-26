@@ -20,6 +20,18 @@ class DokumenPegawai(models.Model):
         ('SPK_RKK', 'SPK RKK'),
         ('URAIAN_TUGAS', 'Uraian Tugas'),
         ('SERTIFIKAT', 'Sertifikat'),
+        ('CV', 'Daftar Riwayat Hidup (CV)'),
+        ('SERTIFIKAT_KOMPETENSI', 'Sertifikat Kompetensi'),
+        ('LOGBOOK', 'Logbook'),
+        ('TRAINING_RECORD', 'Rekaman Pelatihan'),
+        ('MCU', 'MCU (Medical Check-up)'),
+        ('PSIKOLOGIS', 'Asesmen Psikologis'),
+        ('BEBAS_SANKSI', 'Surat Bebas Sanksi'),
+        ('MALPRACTICE_RECORD', 'Catatan Malpraktik'),
+        ('KEANGGOTAAN', 'Kartu Keanggotaan Organisasi'),
+        ('PENGANTAR_KSM', 'Surat Pengantar KSM/KBM'),
+        ('BERITA_ACARA_RAPAT', 'Berita Acara Rapat'),
+        ('REKOMENDASI_KOMITE', 'Rekomendasi Komite'),
         ('OTHER', 'Lainnya'),
     ]
     DOCUMENT_TYPE_CHOICES = [
@@ -29,6 +41,7 @@ class DokumenPegawai(models.Model):
         ('CREDENTIAL', 'Kredensial'),
         ('TRAINING', 'Pelatihan'),
         ('HEALTH', 'Kesehatan Kerja'),
+        ('PROFESSIONAL', 'Rekam Profesi'),
         ('OTHER', 'Lainnya'),
     ]
     SENSITIVITY_CHOICES = [
@@ -46,7 +59,7 @@ class DokumenPegawai(models.Model):
         'Jenis Dokumen', max_length=20, choices=DOCUMENT_TYPE_CHOICES
     )
     jenis_berkas = models.CharField(
-        'Jenis Berkas', max_length=20, choices=DOCUMENT_KIND_CHOICES,
+        'Jenis Berkas', max_length=30, choices=DOCUMENT_KIND_CHOICES,
         default='OTHER', blank=False,
         help_text='Identitas berkas yang diuji terhadap persyaratan spesifik, bukan sekadar kelompok sensitivitas.',
     )
@@ -79,6 +92,10 @@ class DokumenPegawai(models.Model):
         if self.sensitivity == 'health' and self.document_type != 'HEALTH':
             raise ValidationError({
                 'document_type': 'Dokumen kesehatan kerja harus diklasifikasikan sebagai HEALTH.'
+            })
+        if self.document_type == 'HEALTH' and self.sensitivity != 'health':
+            raise ValidationError({
+                'sensitivity': 'Dokumen HEALTH harus diklasifikasikan sebagai kesehatan kerja.'
             })
 
     def __str__(self):
@@ -230,7 +247,7 @@ class AturanDokumen(models.Model):
         'Jenis Dokumen', max_length=20, choices=DokumenPegawai.DOCUMENT_TYPE_CHOICES
     )
     jenis_berkas_wajib = models.CharField(
-        'Jenis Berkas Wajib', max_length=20,
+        'Jenis Berkas Wajib', max_length=30,
         choices=DokumenPegawai.DOCUMENT_KIND_CHOICES,
         default='OTHER', blank=False,
         help_text='Persyaratan spesifik jenis berkas yang diijinkan untuk aturan ini.',

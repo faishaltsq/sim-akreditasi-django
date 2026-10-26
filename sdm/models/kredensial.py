@@ -118,15 +118,24 @@ class RincianKewenangan(models.Model):
     USULAN_CHOICES = [
         ('MANDIRI', 'Mandiri'),
         ('SUPERVISI', 'Supervisi'),
+        ('MANDIRI_TERBATAS', 'Mandiri Terbatas'),
     ]
+    # Catalog supervision level -> requested privilege level (KatalogTindakan.TINGKAT_CHOICES).
+    USULAN_DARI_TINGKAT = {
+        'M': 'MANDIRI',
+        'S': 'SUPERVISI',
+        'MT': 'MANDIRI_TERBATAS',
+    }
     REKOMENDASI_CHOICES = [
         ('MANDIRI', 'Disetujui Mandiri'),
         ('SUPERVISI', 'Disetujui dengan Supervisi'),
+        ('MANDIRI_TERBATAS', 'Disetujui Mandiri Terbatas'),
         ('DITOLAK', 'Ditolak'),
     ]
     STATUS_SPK_CHOICES = [
         ('DISETUJUI_MANDIRI', 'Disetujui Mandiri'),
         ('DISETUJUI_SUPERVISI', 'Disetujui dengan Supervisi'),
+        ('DISETUJUI_MANDIRI_TERBATAS', 'Disetujui Mandiri Terbatas'),
         ('TIDAK_DIBERIKAN', 'Tidak Diberikan'),
     ]
     pengajuan = models.ForeignKey(
@@ -140,15 +149,15 @@ class RincianKewenangan(models.Model):
         verbose_name='Katalog Tindakan',
     )
     usulan = models.CharField(
-        'Usulan Pegawai', max_length=12, choices=USULAN_CHOICES,
+        'Usulan Pegawai', max_length=16, choices=USULAN_CHOICES,
         default='MANDIRI',
     )
     rekomendasi = models.CharField(
-        'Rekomendasi Komite', max_length=12, choices=REKOMENDASI_CHOICES,
+        'Rekomendasi Komite', max_length=16, choices=REKOMENDASI_CHOICES,
         blank=True,
     )
     status_spk = models.CharField(
-        'Status SPK Direktur', max_length=20, choices=STATUS_SPK_CHOICES,
+        'Status SPK Direktur', max_length=26, choices=STATUS_SPK_CHOICES,
         blank=True,
     )
     batasan = models.TextField('Keterangan / Batasan', blank=True)
@@ -257,7 +266,7 @@ class PenilaianTindakan(models.Model):
         verbose_name='Rincian Kewenangan',
     )
     rekomendasi = models.CharField(
-        'Rekomendasi', max_length=12, choices=REKOMENDASI_CHOICES
+        'Rekomendasi', max_length=16, choices=REKOMENDASI_CHOICES
     )
     catatan_khusus = models.TextField('Catatan Khusus / Syarat', blank=True)
     reviewed_by = models.ForeignKey(
@@ -280,3 +289,90 @@ class PenilaianTindakan(models.Model):
 
     def __str__(self):
         return f'{self.rincian_id} — {self.get_rekomendasi_display()}'
+
+
+class DokumenSyaratKredensial(models.Model):
+    """C-3: one supporting-document requirement row per credential request."""
+
+    DOMAIN_CHOICES = [
+        ('LEGA', 'Legalitas & Identitas'),
+        ('KOMP', 'Kompetensi & CPD'),
+        ('SEHAT', 'Kesehatan Fisik & Mental'),
+        ('ETIK', 'Etik, Disiplin, Riwayat Hukum'),
+        ('KINE', 'Kinerja & Portofolio'),
+        ('PROS', 'Administrasi Proses'),
+    ]
+    JENIS_CHOICES = [
+        ('CV', 'CV'),
+        ('SERTIFIKAT_KOMPETENSI', 'Sertifikat Kompetensi'),
+        ('LOGBOOK_36BULAN', 'Logbook 36 Bulan'),
+        ('SEHAT_JASMANI', 'Pemeriksaan Kesehatan Jasmani'),
+        ('SEHAT_PSIKOLOGIS', 'Asesmen Psikologis'),
+        ('BEBAS_SANKSI', 'Surat Bebas Sanksi'),
+        ('MALPRACTICE_RECORD', 'Riwayat Malpraktik'),
+        ('KEANGGOTAAN', 'Keanggotaan Organisasi Profesi'),
+        ('PENGANTAR_KSM', 'Pengantar/Rekomendasi KSM'),
+        ('BERITA_ACARA', 'Berita Acara Rapat'),
+        ('REKOMENDASI_KOMITE', 'Rekomendasi Komite'),
+        ('SURAT_PERMOHONAN', 'Surat Permohonan'),
+        ('LAINNYA', 'Dokumen Pendukung Lain'),
+    ]
+    STATUS_CHOICES = [
+        ('TERPENUHI', 'Terpenuhi'),
+        ('KURANG', 'Kurang'),
+        ('INFO', 'Informasi'),
+    ]
+    WORKFLOW_JENIS = ('SURAT_PERMOHONAN', 'BERITA_ACARA', 'REKOMENDASI_KOMITE')
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    pengajuan = models.ForeignKey(
+        PengajuanKredensial, on_delete=models.CASCADE, related_name='requirements',
+        verbose_name='Pengajuan Kredensial',
+    )
+    domain = models.CharField('Domain', max_length=6, choices=DOMAIN_CHOICES)
+    jenis = models.CharField('Persyaratan', max_length=30, choices=JENIS_CHOICES)
+    label = models.CharField('Label Khusus', max_length=200, blank=True)
+    document_version = models.ForeignKey(
+        'sdm.VersiDokumen', on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='syarat_kredensial', verbose_name='Berkas Tertaut',
+    )
+    logbook_ok = models.BooleanField('Logbook Terpenuhi', default=False)
+    status = models.CharField(
+        'Status', max_length=12, choices=STATUS_CHOICES, default='KURANG'
+    )
+    note = models.CharField('Catatan', max_length=200, blank=True)
+
+    class Meta:
+        verbose_name = 'Syarat Dokumen Kredensial'
+        verbose_name_plural = 'Syarat Dokumen Kredensial'
+        ordering = ['domain', 'jenis']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['pengajuan', 'jenis'],
+                name='sdm_syarat_pengajuan_jenis_uniq',
+            ),
+        ]
+
+    def clean(self):
+        if self.jenis in self.WORKFLOW_JENIS:
+            if self.status != 'INFO':
+                raise ValidationError({
+                    'status': 'Baris alur kerja tidak dapat ditandai manual.'
+                })
+            return
+        if self.status == 'TERPENUHI':
+            if not self.document_version_id and not self.logbook_ok:
+                raise ValidationError({
+                    'status': 'Status terpenuhi memerlukan berkas tertaut atau logbook.'
+                })
+        if self.status == 'INFO' and self.document_version_id:
+            raise ValidationError({
+                'status': 'Baris informasional tidak boleh menautkan berkas.'
+            })
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        return super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f'{self.get_domain_display()} — {self.get_jenis_display()} ({self.get_status_display()})'

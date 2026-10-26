@@ -25,6 +25,7 @@
 <body>
 <div class="noprint" style="text-align:right;margin-bottom:8px;">
     <button onclick="window.print()">Cetak / Simpan PDF</button>
+    <a href="{% url 'sdm:kredensial_berita_acara_rapat' credential_request.pk %}">Berita Acara Rapat</a>
     <a href="{% url 'sdm:kredensial_detail' credential_request.pk %}">Kembali</a>
 </div>
 <h1>BUKTI AUDIT PROSES KREDENSIAL</h1>
@@ -34,9 +35,10 @@
 <dl>
     <dt>Pegawai</dt><dd>{{ credential_request.employee.nama_lengkap }}</dd>
     <dt>Unit Kerja</dt><dd>{{ credential_request.unit_kerja.code }} — {{ credential_request.unit_kerja.name }}</dd>
+    <dt>Profesi / Jenjang</dt><dd>{{ profesi_label }}{% if jenjang_labels %} — {{ jenjang_labels|join:", " }}{% endif %}</dd>
     <dt>Jenis Pengajuan</dt><dd>{{ credential_request.get_jenis_display }}</dd>
     <dt>Status</dt><dd>{{ credential_request.get_status_display }}</dd>
-    <dt>Diajukan Oleh</dt><dd>{{ credential_request.submitted_by.get_full_name|default:credential_request.submitted_by.username|default:"—" }} · {{ credential_request.created_at|date:"d F Y H:i" }}</dd>
+    <dt>Diajukan Oleh</dt><dd>{% if credential_request.submitted_by %}{{ credential_request.submitted_by.get_full_name|default:credential_request.submitted_by.username }}{% else %}—{% endif %} · {{ credential_request.created_at|date:"d F Y H:i" }}</dd>
 </dl>
 
 <h2>B. Checklist Verifikasi Primary Source (PSV)</h2>
@@ -66,7 +68,7 @@
             <td>{{ p.rincian.kewenangan }}</td>
             <td>{{ p.get_rekomendasi_display }}</td>
             <td>{{ p.catatan_khusus }}</td>
-            <td>{{ p.reviewed_by.get_full_name|default:p.reviewed_by.username|default:"—" }}</td>
+            <td>{% if p.reviewed_by %}{{ p.reviewed_by.get_full_name|default:p.reviewed_by.username }}{% else %}—{% endif %}</td>
         </tr>
         {% empty %}
         <tr><td colspan="4" style="text-align:center">Belum ada penilaian mitra bestari.</td></tr>
@@ -74,14 +76,41 @@
     </tbody>
 </table>
 
-<h2>D. Rincian Kewenangan Diajukan</h2>
-<ul class="checklist">
-    {% for line in privileges %}
-    <li>{{ line.kewenangan }} ({{ line.get_usulan_display }}){% if line.catalog_item %} — {{ line.catalog_item.kode }}{% endif %}</li>
-    {% empty %}
-    <li>Belum ada rincian.</li>
-    {% endfor %}
-</ul>
+<h2>D. Kelengkapan Dokumen Pendukung</h2>
+<table>
+    <thead><tr><th style="width:20%">Domain</th><th style="width:30%">Persyaratan</th><th style="width:16%">Status</th><th style="width:22%">Berkas</th><th style="width:12%">Tanggal</th></tr></thead>
+    <tbody>
+        {% for row in requirements %}
+        <tr>
+            <td>{{ row.get_domain_display }}</td>
+            <td>{{ row.get_jenis_display }}{% if row.label %} — {{ row.label }}{% endif %}</td>
+            <td>{% if row.status == 'TERPENUHI' %}Terpenuhi{% elif row.status == 'KURANG' %}Kurang{% else %}Informasi{% endif %}</td>
+            <td>{% if row.document_version %}{{ row.document_version.document.title }}{% elif row.logbook_ok %}Logbook terpenuhi{% else %}—{% endif %}</td>
+            <td>{% if row.document_version and row.document_version.valid_until %}{{ row.document_version.valid_until|date:"d F Y" }}{% else %}—{% endif %}</td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="5" style="text-align:center">Belum ada baris persyaratan.</td></tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<h2>E. Rincian Kewenangan Diajukan (RKK)</h2>
+<table>
+    <thead><tr><th style="width:16%">Kode Katalog</th><th style="width:34%">Kewenangan</th><th style="width:14%">Jenjang</th><th style="width:18%">Usulan</th><th style="width:18%">Status SPK</th></tr></thead>
+    <tbody>
+        {% for line in privileges %}
+        <tr>
+            <td>{% if line.catalog_item %}{{ line.catalog_item.kode }}{% else %}<em>di luar katalog</em>{% endif %}</td>
+            <td>{% if line.kewenangan %}{{ line.kewenangan }}{% elif line.catalog_item %}{{ line.catalog_item.nama }}{% else %}—{% endif %}</td>
+            <td>{% if line.catalog_item %}{{ line.catalog_item.jenjang.nama }}{% else %}—{% endif %}</td>
+            <td>{{ line.get_usulan_display }}</td>
+            <td>{{ line.get_status_spk_display|default:"Belum ditetapkan" }}</td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="5" style="text-align:center">Belum ada rincian.</td></tr>
+        {% endfor %}
+    </tbody>
+</table>
 
 <div class="signature">
     <div>

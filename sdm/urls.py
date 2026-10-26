@@ -158,6 +158,21 @@ urlpatterns = [
         name='kredensial_bukti_audit',
     ),
     path(
+        'kredensial/<uuid:request_id>/berita-acara-rapat/',
+        views.kredensial_berita_acara_rapat,
+        name='kredensial_berita_acara_rapat',
+    ),
+    path(
+        'kredensial/<uuid:request_id>/syarat/<uuid:row_id>/tautkan/',
+        views.kredensial_syarat_tautkan,
+        name='kredensial_syarat_tautkan',
+    ),
+    path(
+        'kredensial/<uuid:request_id>/syarat/<uuid:row_id>/unggah/',
+        views.kredensial_syarat_upload,
+        name='kredensial_syarat_upload',
+    ),
+    path(
         'kredensial/spk/<uuid:assignment_id>/cetak/',
         views.kredensial_cetak_spk,
         name='kredensial_cetak_spk',
@@ -194,6 +209,23 @@ urlpatterns = [
     path('k3/insiden/tambah/', views.k3_insiden_tambah, name='k3_insiden_tambah'),
     path('k3/insiden/<uuid:incident_id>/tindak-lanjut/', views.k3_tindak_lanjut_tambah, name='k3_tindak_lanjut_tambah'),
     path('saya/', portal_views.portal_index, name='portal_index'),
+    path(
+        'saya/dokumen/unggah/',
+        views.portal_dokumen_upload,
+        name='portal_dokumen_upload',
+    ),
+    path('logbook/', views.logbook_list, name='logbook_list'),
+    path('logbook/baru/', views.logbook_create, name='logbook_create'),
+    path(
+        'logbook/<uuid:entry_id>/ubah/',
+        views.logbook_edit,
+        name='logbook_edit',
+    ),
+    path(
+        'logbook/<uuid:entry_id>/hapus/',
+        views.logbook_delete,
+        name='logbook_delete',
+    ),
     path('saya/ajukan/', portal_views.portal_request_create, name='portal_request_create'),
     path('saya/ajukan/<uuid:request_id>/batal/', portal_views.portal_request_cancel, name='portal_request_cancel'),
     path('analitik/', views.analitik_dashboard, name='analitik_dashboard'),

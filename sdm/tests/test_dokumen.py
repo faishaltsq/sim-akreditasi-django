@@ -5,6 +5,7 @@ from decimal import Decimal
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.urls import reverse
+from django.core.exceptions import ValidationError
 from django.utils import timezone
 
 from accounts.models import RolePermissionConfig, UserProfile
@@ -396,3 +397,97 @@ class EmployeeDocumentViewTests(TestCase):
             self.employee, as_of=self.today, ruleset=[str_rule],
         )
         self.assertEqual(summary.results[0].state, 'REJECTED')
+
+
+class DocumentVocabularyTests(TestCase):
+    """C-1: new supporting-data kinds and health-rule sensitivity resolution."""
+
+    def setUp(self):
+        self.today = timezone.localdate()
+        self.employee = Pegawai.objects.create(
+            nama_lengkap='Pegawai Kosakata', kategori='PPA', profesi='Perawat'
+        )
+
+    def _version(self, *, document_type, jenis_berkas, sensitivity, status='VERIFIED',
+                 valid_until=None):
+        document = DokumenPegawai.objects.create(
+            employee=self.employee,
+            document_type=document_type,
+            jenis_berkas=jenis_berkas,
+            title=f'{jenis_berkas} uji',
+            sensitivity=sensitivity,
+        )
+        return VersiDokumen.objects.create(
+            document=document,
+            version_number=1,
+            original_filename='uji.pdf',
+            storage_key=f'{sensitivity}/{self.employee.pk}/{document.pk}.pdf',
+            sha256='b' * 64,
+            size_bytes=10,
+            content_type='application/pdf',
+            status=status,
+            valid_until=valid_until,
+        )
+
+    def test_new_credential_kinds_are_registered(self):
+        kinds = dict(DokumenPegawai.DOCUMENT_KIND_CHOICES)
+        for kind in [
+            'CV', 'SERTIFIKAT_KOMPETENSI', 'LOGBOOK', 'TRAINING_RECORD', 'MCU',
+            'PSIKOLOGIS', 'BEBAS_SANKSI', 'MALPRACTICE_RECORD', 'KEANGGOTAAN',
+            'PENGANTAR_KSM', 'BERITA_ACARA_RAPAT', 'REKOMENDASI_KOMITE',
+        ]:
+            self.assertIn(kind, kinds)
+
+    def test_professional_document_type_registered(self):
+        types = dict(DokumenPegawai.DOCUMENT_TYPE_CHOICES)
+        self.assertEqual(types.get('PROFESSIONAL'), 'Rekam Profesi')
+
+    def test_mcu_health_document_passes_full_clean(self):
+        document = DokumenPegawai(
+            employee=self.employee, document_type='HEALTH', jenis_berkas='MCU',
+            title='Hasil MCU', sensitivity='health',
+        )
+        document.full_clean()  # must not raise
+
+    def test_psikologis_health_document_passes_full_clean(self):
+        document = DokumenPegawai(
+            employee=self.employee, document_type='HEALTH', jenis_berkas='PSIKOLOGIS',
+            title='Asesmen Psikologis', sensitivity='health',
+        )
+        document.full_clean()  # must not raise
+
+    def test_personnel_sensitivity_with_health_type_still_rejected(self):
+        document = DokumenPegawai(
+            employee=self.employee, document_type='HEALTH', jenis_berkas='MCU',
+            title='MCU salah klasifikasi', sensitivity='personnel',
+        )
+        with self.assertRaises(ValidationError):
+            document.full_clean()
+
+    def test_health_rule_resolves_health_sensitivity_version(self):
+        rule = AturanDokumen.objects.create(
+            document_type='HEALTH', jenis_berkas_wajib='MCU',
+            name='MCU Berkala', validity_policy='EXPIRY_REQUIRED', version=1,
+        )
+        version = self._version(
+            document_type='HEALTH', jenis_berkas='MCU', sensitivity='health',
+            valid_until=self.today + timedelta(days=200),
+        )
+        from sdm.services.kepatuhan import evaluate_employee_compliance
+        summary = evaluate_employee_compliance(self.employee, as_of=self.today, ruleset=[rule])
+        self.assertEqual(summary.results[0].state, 'VALID')
+        self.assertEqual(summary.results[0].version.pk, version.pk)
+
+    def test_personnel_rule_still_resolves_personnel_version(self):
+        rule = AturanDokumen.objects.create(
+            document_type='CREDENTIAL', jenis_berkas_wajib='STR',
+            name='STR Berkala', validity_policy='EXPIRY_REQUIRED', version=1,
+        )
+        version = self._version(
+            document_type='CREDENTIAL', jenis_berkas='STR', sensitivity='personnel',
+            valid_until=self.today + timedelta(days=200),
+        )
+        from sdm.services.kepatuhan import evaluate_employee_compliance
+        summary = evaluate_employee_compliance(self.employee, as_of=self.today, ruleset=[rule])
+        self.assertEqual(summary.results[0].state, 'VALID')
+        self.assertEqual(summary.results[0].version.pk, version.pk)

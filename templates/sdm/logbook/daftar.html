@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+{% block page_title %}Logbook Tindakan Klinis{% endblock %}
+{% block page_subtitle %}Rekap 36 bulan{% endblock %}
+{% block extra_css %}{% include "sdm/_responsive.html" %}{% endblock %}
+
+{% block content %}
+<div class="container-fluid p-0">
+    <a class="small text-decoration-none" href="{% url 'sdm:dashboard' %}"><i class="bi bi-arrow-left me-1"></i>Kembali</a>
+    <div class="page-header-box mb-3 d-flex justify-content-between align-items-center mt-2">
+        <h1 class="page-title h5 mb-0">Logbook Tindakan Klinis</h1>
+    </div>
+    {% include "sdm/_navigasi.html" %}
+
+    {% if messages %}
+        {% for message in messages %}
+        <div class="alert alert-warning alert-dismissible fade show" role="alert">{{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Tutup"></button>
+        </div>
+        {% endfor %}
+    {% endif %}
+
+    {% if employees %}
+    <form method="get" class="card border shadow-sm mb-3" role="search" aria-label="Filter pegawai">
+        <div class="card-body row g-2 align-items-end">
+            <div class="col-8 col-md-4">
+                <label class="form-label small fw-semibold" for="pegawai-filter">Pegawai</label>
+                <select id="pegawai-filter" name="pegawai" class="form-select form-select-sm">
+                    <option value="">Semua pegawai dalam lingkup</option>
+                    {% for emp in employees %}
+                    <option value="{{ emp.pk }}" {% if selected_employee.pk == emp.pk %}selected{% endif %}>{{ emp.nama_lengkap }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-4 col-md-3 d-flex gap-2">
+                <button class="btn btn-outline-primary btn-sm" type="submit">Terapkan</button>
+                <a class="btn btn-outline-secondary btn-sm" href="{% url 'sdm:logbook_list' %}">Reset</a>
+            </div>
+        </div>
+    </form>
+    {% endif %}
+
+    {% if page_obj.object_list %}
+    <div class="card border shadow-sm">
+        <div class="table-responsive">
+            <table class="table table-sm table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th scope="col">Tanggal</th>
+                        <th scope="col">Pegawai</th>
+                        <th scope="col">Unit</th>
+                        <th scope="col">Tindakan</th>
+                        <th scope="col" class="text-center">Mandiri</th>
+                        <th scope="col" class="text-center">Supervisi</th>
+                        <th scope="col">Catatan</th>
+                        <th scope="col" class="text-end">Aksi</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for entry in page_obj.object_list %}
+                    <tr>
+                        <td>{{ entry.tanggal|date:"d M Y" }}</td>
+                        <td>{{ entry.employee.nama_lengkap }}</td>
+                        <td>{{ entry.unit_kerja.name }}</td>
+                        <td>{% if entry.katalog_tindakan %}{{ entry.katalog_tindakan.nama }}{% else %}{{ entry.tindakan }}{% endif %}</td>
+                        <td class="text-center">{{ entry.jumlah_mandiri }}</td>
+                        <td class="text-center">{{ entry.jumlah_supervisi }}</td>
+                        <td class="small">{{ entry.catatan|default:"—" }}</td>
+                        <td class="text-end">
+                            {% if can_manage %}
+                            <form method="post" action="{% url 'sdm:logbook_delete' entry.pk %}" class="d-inline" onsubmit="return confirm('Hapus entri ini?');">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-outline-danger btn-sm" aria-label="Hapus entri logbook">Hapus</button>
+                            </form>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% if page_obj.has_other_pages %}
+    <nav aria-label="Navigasi halaman" class="mt-2">
+        <ul class="pagination pagination-sm mb-0">
+            {% if page_obj.has_previous %}
+            <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if selected_employee %}&pegawai={{ selected_employee.pk }}{% endif %}">Sebelumnya</a></li>
+            {% endif %}
+            <li class="page-item disabled"><span class="page-link">Halaman {{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span></li>
+            {% if page_obj.has_next %}
+            <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}{% if selected_employee %}&pegawai={{ selected_employee.pk }}{% endif %}">Berikutnya</a></li>
+            {% endif %}
+        </ul>
+    </nav>
+    {% endif %}
+    {% else %}
+    <div class="card border shadow-sm"><div class="card-body text-muted">Belum ada entri logbook.</div></div>
+    {% endif %}
+</div>
+{% endblock %}

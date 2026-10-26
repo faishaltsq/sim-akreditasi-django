@@ -267,9 +267,11 @@ def terbitkan_spk_lengkap(application, *, actor, nomor_spk, berlaku_mulai,
     """Issue an SPK and derive one PrivilegeSnapshot per approved privilege line.
 
     Wraps issue_spk (the single issuance path): committee-approved lines map to
-    snapshots (MANDIRI -> DISETUJUI_MANDIRI, SUPERVISI -> DISETUJUI_SUPERVISI)
-    with ClinicalActionCode synced from KatalogTindakan; TIDAK_DIBERIKAN lines
-    get no snapshot. One atomic transaction for decision + snapshots.
+    snapshots (MANDIRI/DISETUJUI_MANDIRI, SUPERVISI/DISETUJUI_SUPERVISI,
+    MANDIRI_TERBATAS/DISETUJUI_MANDIRI_TERBATAS) with ClinicalActionCode synced
+    from KatalogTindakan; TIDAK_DIBERIKAN lines get no snapshot, and a granted
+    line without a catalog item is rejected rather than silently coded EXT-*.
+    One atomic transaction for decision + snapshots.
     """
     require_hc_capability(
         actor, 'can_review_hc_credentials', unit=application.unit_kerja_id
@@ -283,10 +285,17 @@ def terbitkan_spk_lengkap(application, *, actor, nomor_spk, berlaku_mulai,
         for rincian in application.privileges.select_related('catalog_item'):
             if not rincian.status_spk or rincian.status_spk == 'TIDAK_DIBERIKAN':
                 continue
-            kode = rincian.catalog_item.kode if rincian.catalog_item else ''
-            label = rincian.catalog_item.nama if rincian.catalog_item else rincian.kewenangan
-            if not kode:
-                kode = f'EXT-{rincian.pk}'
+            if rincian.catalog_item_id is None:
+                # A granted line must map back to the RKK catalog; EXT-* codes
+                # would leave the audit trail unlinkable (KPS 8/10/12/14/16).
+                raise ValidationError({
+                    'privileges': (
+                        f'Rincian "{rincian.kewenangan}" belum ditautkan ke katalog '
+                        'RKK; lengkapi katalog sebelum menerbitkan SPK.'
+                    )
+                })
+            kode = rincian.catalog_item.kode
+            label = rincian.catalog_item.nama
             action, _ = ClinicalActionCode.objects.get_or_create(
                 code=kode, defaults={'label': label[:100]},
             )

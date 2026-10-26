@@ -24,6 +24,116 @@
     <div class="row g-3">
         <div class="col-12 col-lg-5">
             <div class="card border shadow-sm">
+                <div class="card-header bg-white"><h2 class="h6 mb-0">Logbook saya</h2></div>
+                <div class="card-body">
+                    {% if logbook_recap %}
+                    <div class="row g-2 mb-2">
+                        <div class="col-4"><div class="small text-muted">Mandiri</div><div class="fw-semibold">{{ logbook_recap.mandiri }}</div></div>
+                        <div class="col-4"><div class="small text-muted">Supervisi</div><div class="fw-semibold">{{ logbook_recap.supervisi }}</div></div>
+                        <div class="col-4"><div class="small text-muted">Total</div><div class="fw-semibold">{{ logbook_recap.total }}</div></div>
+                    </div>
+                    <p class="small text-muted mb-2">36 bulan terakhir, dari {{ logbook_recap.dari_tanggal|date:"d M Y" }}.</p>
+                    {% endif %}
+                    <form method="post" action="{% url 'sdm:logbook_create' %}" class="row g-2">
+                        {% csrf_token %}
+                        <input type="hidden" name="employee" value="{{ request.user.pegawai_hc.pk }}">
+                        <div class="col-12">
+                            <label class="form-label small fw-semibold" for="lb-tanggal">Tanggal</label>
+                            <input id="lb-tanggal" type="date" name="tanggal" class="form-control form-control-sm" required>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label small fw-semibold" for="lb-unit">Unit Kerja</label>
+                            <select id="lb-unit" name="unit_kerja" class="form-select form-select-sm" required>
+                                {% for p in request.user.pegawai_hc.penempatan.all %}
+                                <option value="{{ p.unit_kerja_id }}" {% if forloop.first %}selected{% endif %}>{{ p.unit_kerja.code }} — {{ p.unit_kerja.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label small fw-semibold" for="lb-modus">Jenis Tindakan</label>
+                            <select id="lb-modus" name="modus" class="form-select form-select-sm">
+                                <option value="katalog">Tindakan Katalog</option>
+                                <option value="bebas">Tindakan Lain (Teks Bebas)</option>
+                            </select>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label small fw-semibold" for="lb-katalog">Tindakan</label>
+                            <input id="lb-katalog" name="katalog_tindakan" class="form-control form-control-sm" placeholder="ID katalog tindakan">
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label small fw-semibold" for="lb-teks">Tindakan (teks bebas)</label>
+                            <input id="lb-teks" name="tindakan" class="form-control form-control-sm" maxlength="200">
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small fw-semibold" for="lb-mandiri">Mandiri</label>
+                            <input id="lb-mandiri" type="number" min="0" name="jumlah_mandiri" class="form-control form-control-sm" value="0">
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small fw-semibold" for="lb-supervisi">Supervisi</label>
+                            <input id="lb-supervisi" type="number" min="0" name="jumlah_supervisi" class="form-control form-control-sm" value="0">
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label small fw-semibold" for="lb-catatan">Catatan</label>
+                            <input id="lb-catatan" name="catatan" class="form-control form-control-sm">
+                        </div>
+                        <div class="col-12"><button class="btn btn-outline-primary btn-sm" type="submit">Tambah entri</button></div>
+                    </form>
+                    {% if logbook_entries %}
+                    <hr>
+                    <ul class="list-unstyled small mb-0">
+                        {% for entry in logbook_entries %}
+                        <li class="mb-1">{{ entry.tanggal|date:"d M Y" }} — {% if entry.katalog_tindakan %}{{ entry.katalog_tindakan.nama }}{% else %}{{ entry.tindakan }}{% endif %} ({{ entry.jumlah_mandiri }} M / {{ entry.jumlah_supervisi }} S)</li>
+                        {% endfor %}
+                    </ul>
+                    {% else %}
+                    <p class="small text-muted mb-0">Belum ada entri logbook.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        <div class="col-12 col-lg-7">
+            <div class="card border shadow-sm h-100">
+                <div class="card-header bg-white"><h2 class="h6 mb-0">Dokumen Pendukung</h2></div>
+                <div class="card-body">
+                    <p class="small text-muted">Status keberadaan berkas, tanpa isi dokumen.</p>
+                    <ul class="list-unstyled small mb-3">
+                        {% for item in supporting_documents %}
+                        <li class="d-flex justify-content-between border-bottom py-1">
+                            <span>{{ item.label }}</span>
+                            {% if item.ada %}<span class="badge bg-success">Terpenuhi</span>{% else %}<span class="badge bg-secondary">Belum ada</span>{% endif %}
+                        </li>
+                        {% endfor %}
+                    </ul>
+                    <form method="post" action="{% url 'sdm:portal_dokumen_upload' %}" enctype="multipart/form-data" class="row g-2">
+                        {% csrf_token %}
+                        <div class="col-12 col-md-5">
+                            <label class="form-label small fw-semibold" for="pd-jenis">Jenis Dokumen</label>
+                            <select id="pd-jenis" name="jenis_berkas" class="form-select form-select-sm">
+                                <option value="CV">CV</option>
+                                <option value="SERTIFIKAT_KOMPETENSI">Sertifikat Kompetensi</option>
+                                <option value="TRAINING_RECORD">Rekaman Pelatihan</option>
+                                <option value="KEANGGOTAAN">Kartu Keanggotaan</option>
+                                <option value="MCU">MCU</option>
+                                <option value="PSIKOLOGIS">Asesmen Psikologis</option>
+                                <option value="BEBAS_SANKSI">Surat Bebas Sanksi</option>
+                            </select>
+                        </div>
+                        <div class="col-12 col-md-5">
+                            <label class="form-label small fw-semibold" for="pd-berkas">Berkas</label>
+                            <input id="pd-berkas" type="file" name="berkas" class="form-control form-control-sm" required>
+                        </div>
+                        <div class="col-12 col-md-2 d-flex align-items-end">
+                            <button class="btn btn-outline-primary btn-sm w-100" type="submit">Unggah</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-3 mt-1">
+        <div class="col-12 col-lg-5">
+            <div class="card border shadow-sm">
                 <div class="card-header bg-white"><h2 class="h6 mb-0">Ajukan Kredensial</h2></div>
                 <div class="card-body">
                     <form method="post">

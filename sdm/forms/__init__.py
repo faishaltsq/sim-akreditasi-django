@@ -18,11 +18,13 @@ from .level2_5 import (
     RincianKewenanganForm,
     VerifikasiSumberForm,
 )
+from .logbook import EntriLogbookForm
 from .pegawai import PegawaiCreateForm, PegawaiEditForm
 
 __all__ = [
     'AktivitasBebanKerjaForm',
     'DokumenForm',
+    'EntriLogbookForm',
     'KebutuhanPelatihanForm',
     'LamaranForm',
     'LowonganForm',

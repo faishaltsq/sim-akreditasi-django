@@ -1,3 +1,4 @@
+import datetime
 import hashlib
 from datetime import timedelta
 
@@ -14,9 +15,11 @@ from django.utils import timezone
 from django.views.decorators.http import require_POST
 
 from sdm.akses import require_hc_capability, visible_employees, visible_units
+from sdm.services.logbook import logbook_recap
 from sdm.forms import (
     AktivitasBebanKerjaForm,
     DokumenForm,
+    EntriLogbookForm,
     KebutuhanPelatihanForm,
     LamaranForm,
     LowonganForm,
@@ -39,12 +42,15 @@ from django.http import HttpResponse
 
 from sdm.models import (
     AktivitasBebanKerja,
+    EntriLogbookKlinis,
     InsidenK3Pegawai,
     KebutuhanPelatihan,
     Lamaran,
     Lowongan,
     Pegawai,
     PenempatanPegawai,
+    DokumenSyaratKredensial,
+    DokumenPegawai,
     PengajuanKredensial,
     PenilaianTindakan,
     PenilaianKinerja,
@@ -58,6 +64,7 @@ from sdm.models import (
     PeristiwaSDM,
     PrivilegeSnapshot,
     ProgramOrientasi,
+    RincianKewenangan,
     RencanaFormasi,
     ImunisasiPegawai,
     InsidenK3Pegawai,
@@ -110,6 +117,11 @@ from sdm.storage import (
     store_private_document,
 )
 from sdm.services.intake import build_staff_profile
+from sdm.services.syarat_kredensial import (
+    DEFAULT_ROWS as DEFAULT_SYARAT_ROWS,
+    evaluate_requirements,
+    populate_requirements,
+)
 from sdm.storage_backend import PrivateStorageError
 
 
@@ -842,6 +854,63 @@ def kredensial_spk_list(request):
     })
 
 
+def _syarat_rows(credential_request):
+    """Populate (idempotent) then evaluate the six-domain checklist rows."""
+    populate_requirements(credential_request)
+    rows = evaluate_requirements(credential_request)
+    return sorted(rows, key=lambda row: (row.domain, row.jenis))
+
+
+def _missing_requirement_labels(credential_request):
+    """Labels of non-INFO rows still KURANG; empty means nothing is missing."""
+    return [
+        row.get_jenis_display() for row in _syarat_rows(credential_request)
+        if row.status == 'KURANG'
+    ]
+
+
+def _detail_context(credential_request):
+    """Shared detail-page context (page render and blocked decision re-render)."""
+    employee = credential_request.employee
+    profesi = employee.profesi_master
+    jenjang_qs = list(
+        MasterJenjangProfesi.objects.filter(profesi=profesi).order_by('urutan')
+    ) if profesi else []
+    katalog_qs = KatalogTindakan.objects.none()
+    katalog_error = ''
+    if profesi is None:
+        katalog_error = (
+            'Profesi pegawai belum tertaut ke master profesi; '
+            'katalog RKK tidak dapat dimuat.'
+        )
+    else:
+        katalog_qs = KatalogTindakan.objects.filter(
+            jenjang__profesi=profesi, is_active=True,
+        ).exclude(tingkat_supervisi='T').select_related('jenjang').order_by(
+            'jenjang__urutan', 'kode'
+        )
+        if not katalog_qs.exists():
+            katalog_error = (
+                f'Katalog RKK untuk profesi {profesi.nama} belum tersedia; '
+                'isi kewenangan secara manual.'
+            )
+    return {
+        'credential_request': credential_request,
+        'privileges': credential_request.privileges.select_related(
+            'catalog_item', 'catalog_item__jenjang',
+        ),
+        'katalog': katalog_qs,
+        'katalog_error': katalog_error,
+        'profesi_label': profesi.nama if profesi else '—',
+        'jenjang_labels': [j.nama for j in jenjang_qs],
+        'psv_records': credential_request.employee.psv_records.select_related('version')[:20],
+        'spk_list': credential_request.employee.clinical_assignments.select_related('decision'),
+        'logbook_recap': logbook_recap(credential_request.employee),
+        'requirements': _syarat_rows(credential_request),
+        'requirement_domain_labels': DokumenSyaratKredensial.DOMAIN_CHOICES,
+    }
+
+
 @login_required
 def kredensial_detail(request, request_id):
     credential_request = _scoped_or_404(
@@ -852,12 +921,7 @@ def kredensial_detail(request, request_id):
         request.user, 'can_review_hc_credentials',
         unit=credential_request.unit_kerja_id,
     )
-    return render(request, 'sdm/kredensial/detail.html', {
-        'credential_request': credential_request,
-        'privileges': credential_request.privileges.all(),
-        'psv_records': credential_request.employee.psv_records.select_related('version')[:20],
-        'spk_list': credential_request.employee.clinical_assignments.select_related('decision'),
-    })
+    return render(request, 'sdm/kredensial/detail.html', _detail_context(credential_request))
 
 
 @login_required
@@ -867,12 +931,26 @@ def kredensial_decide(request, request_id):
         PengajuanKredensial, request.user, request_id,
         capability='can_review_hc_credentials',
     )
+    notes = (request.POST.get('notes') or '')[:2000]
+    missing = _missing_requirement_labels(credential_request)
+    if missing and not request.POST.get('abaikan_syarat'):
+        messages.warning(
+            request,
+            'Belum lengkap: ' + ', '.join(missing)
+            + '. Centang "putuskan tanpa kelengkapan" untuk melanjutkan.',
+        )
+        return render(request, 'sdm/kredensial/detail.html', {
+            **_detail_context(credential_request),
+            'missing_requirements': missing,
+        })
+    if missing:
+        notes = (notes + '\n' if notes else '') + 'Syarat belum lengkap: ' + ', '.join(missing)
     try:
         decide_credential(
             credential_request,
             actor=request.user,
             outcome=request.POST.get('outcome', ''),
-            notes=(request.POST.get('notes') or '')[:2000],
+            notes=notes[:2000],
         )
     except (PermissionDenied, ValidationError) as exc:
         message = getattr(exc, 'messages', None)
@@ -1057,10 +1135,168 @@ def kredensial_bukti_audit(request, request_id):
     )
     return render(request, 'sdm/kredensial/bukti_audit.html', {
         'credential_request': credential_request,
-        'privileges': credential_request.privileges.select_related('catalog_item'),
+        'privileges': credential_request.privileges.select_related(
+            'catalog_item', 'catalog_item__jenjang',
+        ),
+        'profesi_label': (
+            credential_request.employee.profesi_master.nama
+            if credential_request.employee.profesi_master else '—'
+        ),
+        'jenjang_labels': [
+            j.nama for j in MasterJenjangProfesi.objects.filter(
+                profesi=credential_request.employee.profesi_master,
+            ).order_by('urutan')
+        ] if credential_request.employee.profesi_master else [],
         'psv_records': credential_request.employee.psv_records.select_related('version'),
         'penilaian': credential_request.penilaian_tindakan.select_related('rincian'),
+        'requirements': _syarat_rows(credential_request),
     })
+
+
+@login_required
+def kredensial_berita_acara_rapat(request, request_id):
+    """C-4: committee minutes print sheet; hand-filled attendees, no DB model."""
+    credential_request = _scoped_or_404(
+        PengajuanKredensial, request.user, request_id,
+        capability='can_review_hc_credentials',
+    )
+    require_hc_capability(
+        request.user, 'can_review_hc_credentials',
+        unit=credential_request.unit_kerja_id,
+    )
+    tanggal_rapat = None
+    raw_tanggal = (request.GET.get('tanggal') or '').strip()
+    if raw_tanggal:
+        try:
+            tanggal_rapat = datetime.date.fromisoformat(raw_tanggal)
+        except ValueError:
+            tanggal_rapat = None
+    decision = getattr(credential_request, 'decision', None)
+    if tanggal_rapat is None:
+        tanggal_rapat = (
+            timezone.localdate(decision.decided_at) if decision else None
+        )
+    PeristiwaSDM.objects.create(
+        actor=request.user,
+        jenis_peristiwa='berita_acara_rapat_printed',
+        target_tipe='credential_request',
+        target_id=str(credential_request.pk),
+        status_sesudah='PRINTED',
+        alasan='committee minutes render requested',
+    )
+    return render(request, 'sdm/kredensial/berita_acara_rapat.html', {
+        'credential_request': credential_request,
+        'decision': decision,
+        'tanggal_rapat': tanggal_rapat,
+        'privileges': credential_request.privileges.select_related(
+            'catalog_item', 'catalog_item__jenjang',
+        ),
+        'penilaian': credential_request.penilaian_tindakan.select_related('rincian'),
+    })
+
+
+@login_required
+@require_POST
+def kredensial_syarat_tautkan(request, request_id, row_id):
+    """C-3: link an existing employee document version to a requirement row."""
+    credential_request = _scoped_or_404(
+        PengajuanKredensial, request.user, request_id,
+        capability='can_review_hc_credentials',
+    )
+    require_hc_capability(
+        request.user, 'can_review_hc_credentials',
+        unit=credential_request.unit_kerja_id,
+    )
+    row = get_object_or_404(
+        DokumenSyaratKredensial, pk=row_id, pengajuan=credential_request,
+    )
+    if row.jenis in DokumenSyaratKredensial.WORKFLOW_JENIS:
+        messages.error(request, 'Baris alur kerja tidak dapat ditautkan manual.')
+        return HttpResponse(status=400)
+    version = VersiDokumen.objects.filter(
+        pk=request.POST.get('document_version') or '',
+        document__employee=credential_request.employee,
+    ).first()
+    if version is None:
+        messages.error(request, 'Berkas tidak ditemukan untuk pegawai ini.')
+        return redirect('sdm:kredensial_detail', request_id=credential_request.pk)
+    row.document_version = version
+    row.status = 'TERPENUHI'
+    row.save()
+    PeristiwaSDM.objects.create(
+        actor=request.user,
+        jenis_peristiwa='syarat_linked',
+        target_tipe='credential_requirement',
+        target_id=str(row.pk),
+        status_sebelum='KURANG',
+        status_sesudah='TERPENUHI',
+        alasan=f'jenis={row.jenis};version={version.pk}',
+    )
+    messages.success(request, 'Berkas pendukung ditautkan.')
+    return redirect('sdm:kredensial_detail', request_id=credential_request.pk)
+
+
+@login_required
+@require_POST
+def kredensial_syarat_upload(request, request_id, row_id):
+    """C-3: upload a new private document for a requirement row, then link it."""
+    credential_request = _scoped_or_404(
+        PengajuanKredensial, request.user, request_id,
+        capability='can_review_hc_credentials',
+    )
+    require_hc_capability(
+        request.user, 'can_review_hc_credentials',
+        unit=credential_request.unit_kerja_id,
+    )
+    row = get_object_or_404(
+        DokumenSyaratKredensial, pk=row_id, pengajuan=credential_request,
+    )
+    if row.jenis in DokumenSyaratKredensial.WORKFLOW_JENIS:
+        messages.error(request, 'Baris alur kerja tidak menerima unggahan.')
+        return HttpResponse(status=400)
+    berkas = request.FILES.get('berkas')
+    if berkas is None:
+        messages.error(request, 'Pilih berkas terlebih dahulu.')
+        return redirect('sdm:kredensial_detail', request_id=credential_request.pk)
+    spec = next(
+        (item for item in DEFAULT_SYARAT_ROWS if item['jenis'] == row.jenis), None
+    )
+    kind = (spec or {}).get('kind') or row.jenis
+    health = bool((spec or {}).get('health'))
+    sensitivity = 'health' if health else 'personnel'
+    document_type = 'HEALTH' if health else 'CREDENTIAL'
+    try:
+        _document, version = store_private_document(
+            berkas,
+            employee=credential_request.employee,
+            sensitivity=sensitivity,
+            document_type=document_type,
+            title=f'{row.get_jenis_display()} — kredensial',
+            uploaded_by=request.user,
+        )
+    except (PermissionDenied, ValidationError) as exc:
+        message = getattr(exc, 'messages', None)
+        messages.error(request, '; '.join(message) if message else str(exc))
+        return redirect('sdm:kredensial_detail', request_id=credential_request.pk)
+    if kind != 'OTHER':
+        version.document.jenis_berkas = kind if kind in dict(
+            DokumenPegawai.DOCUMENT_KIND_CHOICES
+        ) else version.document.jenis_berkas
+        version.document.save(update_fields=['jenis_berkas'])
+    row.document_version = version
+    row.status = 'TERPENUHI'
+    row.save()
+    PeristiwaSDM.objects.create(
+        actor=request.user,
+        jenis_peristiwa='syarat_linked',
+        target_tipe='credential_requirement',
+        target_id=str(row.pk),
+        status_sebelum='KURANG',
+        status_sesudah='TERPENUHI',
+        alasan=f'jenis={row.jenis};version={version.pk};upload=true',
+    )
+    messages.success(request, 'Berkas pendukung diunggah dan ditautkan.')
+    return redirect('sdm:kredensial_detail', request_id=credential_request.pk)
 
 
 @login_required
@@ -1597,8 +1833,11 @@ def kredensial_create(request):
 
 @login_required
 def kredensial_pengajuan_sendiri(request):
-    """Self-service portal: the logged-in employee files their own RKK request."""
-    require_hc_capability(request.user, 'can_review_hc_credentials')
+    """Self-service portal: the logged-in employee files their own RKK request.
+
+    Own-employee staff do not need an HC grant here; the page only ever sees
+    their own rows, so an empty grant is not an access barrier (C-5).
+    """
     pegawai = getattr(request.user, 'pegawai_hc', None)
     if pegawai is None:
         messages.error(
@@ -1624,12 +1863,35 @@ def kredensial_pengajuan_sendiri(request):
         employee=pegawai, is_active=True, berlaku_sampai__isnull=False,
         berlaku_sampai__lt=today + timedelta(days=90),
     ).order_by('berlaku_sampai')
+    logbook_entries = EntriLogbookKlinis.objects.filter(
+        employee=pegawai
+    ).select_related('unit_kerja', 'katalog_tindakan').order_by(
+        '-tanggal', '-created_at'
+    )[:25]
+    from sdm.services.syarat_kredensial import DEFAULT_ROWS
+    owned_kinds = set(
+        DokumenPegawai.objects.filter(employee=pegawai).values_list(
+            'jenis_berkas', flat=True
+        )
+    )
+    supporting_documents = [
+        {
+            'jenis': row['jenis'],
+            'label': dict(DokumenSyaratKredensial.JENIS_CHOICES).get(row['jenis']),
+            'ada': row['kind'] in owned_kinds if row['kind'] else False,
+        }
+        for row in DEFAULT_ROWS
+        if row['kind']
+    ]
     return render(request, 'sdm/kredensial/pengajuan_saya.html', {
         'form': form,
         'my_requests': my_requests,
         'spk_ews': spk_ews,
         'today': today,
         'ews_threshold': today + timedelta(days=90),
+        'logbook_entries': logbook_entries,
+        'logbook_recap': logbook_recap(pegawai),
+        'supporting_documents': supporting_documents,
     })
 
 
@@ -1693,8 +1955,8 @@ def kredensial_panel_bestari(request, request_id):
 
 
 @login_required
-@require_POST
 def kredensial_add_privilege(request, request_id):
+    """Add one RKK line: catalog auto-loads for the employee's profession."""
     credential_request = _scoped_or_404(
         PengajuanKredensial, request.user, request_id,
         capability='can_review_hc_credentials',
@@ -1703,13 +1965,29 @@ def kredensial_add_privilege(request, request_id):
         request.user, 'can_review_hc_credentials',
         unit=credential_request.unit_kerja_id,
     )
-    form = RincianKewenanganForm(request.POST)
-    if form.is_valid():
-        privilege = form.save(commit=False)
-        privilege.pengajuan = credential_request
-        privilege.save()
-    else:
+    if request.method != 'POST':
+        return redirect('sdm:kredensial_detail', request_id=credential_request.pk)
+
+    form = RincianKewenanganForm(request.POST, pengajuan=credential_request)
+    if not form.is_valid():
         messages.error(request, 'Rincian kewenangan tidak valid.')
+        return redirect('sdm:kredensial_detail', request_id=credential_request.pk)
+
+    privilege = form.save(commit=False)
+    privilege.pengajuan = credential_request
+    if privilege.catalog_item_id:
+        if not privilege.kewenangan:
+            privilege.kewenangan = privilege.catalog_item.nama
+        # Requested level follows the catalog's default supervision level.
+        privilege.usulan = RincianKewenangan.USULAN_DARI_TINGKAT[
+            privilege.catalog_item.tingkat_supervisi
+        ]
+    elif not privilege.kewenangan:
+        messages.error(
+            request, 'Pilih tindakan dari katalog atau isi nama kewenangan manual.'
+        )
+        return redirect('sdm:kredensial_detail', request_id=credential_request.pk)
+    privilege.save()
     return redirect('sdm:kredensial_detail', request_id=credential_request.pk)
 
 
@@ -1923,3 +2201,232 @@ def analitik_export_pdf(request):
         f'attachment; filename="audit-kepatuhan-{unit.code}.pdf"'
     )
     return response
+
+
+# ── C-2: structured clinical logbook ─────────────────────────────────────
+
+def _portal_pegawai_or_none(user):
+    """Own-employee resolver for self-service surfaces (plan K-A8 overlap)."""
+    return getattr(user, 'pegawai_hc', None)
+
+
+def _logbook_context(user, *, pegawai_filter=None):
+    """Shared logbook list context: scope rows to own employee or HC units."""
+    base = EntriLogbookKlinis.objects.select_related(
+        'employee', 'unit_kerja', 'katalog_tindakan'
+    )
+    pegawai = _portal_pegawai_or_none(user)
+    has_grant = HcGrant.objects.filter(
+        user=user, capability='can_review_hc_credentials'
+    ).exists() and visible_units(
+        user, capability='can_review_hc_credentials'
+    ).exists()
+    if not has_grant:
+        return pegawai, (
+            base.filter(employee=pegawai) if pegawai else base.none()
+        )
+    units = visible_units(user, capability='can_review_hc_credentials')
+    queryset = base.filter(employee__penempatan__unit_kerja__in=units).distinct()
+    selected = None
+    if pegawai_filter:
+        selected = visible_employees(
+            user, capability='can_review_hc_credentials'
+        ).filter(pk=pegawai_filter).first()
+        if selected:
+            queryset = queryset.filter(employee=selected)
+    return selected, queryset
+
+
+@login_required
+def logbook_list(request):
+    employee, queryset = _logbook_context(
+        request.user, pegawai_filter=request.GET.get('pegawai') or None,
+    )
+    page_obj = Paginator(queryset.order_by('-tanggal', '-created_at'), PAGE_SIZE).get_page(
+        request.GET.get('page')
+    )
+    employees = None
+    if HcGrant.objects.filter(
+        user=request.user, capability='can_review_hc_credentials'
+    ).exists():
+        employees = visible_employees(
+            request.user, capability='can_review_hc_credentials'
+        ).order_by('nama_lengkap')
+    return render(request, 'sdm/logbook/daftar.html', {
+        'page_obj': page_obj,
+        'selected_employee': employee,
+        'employees': employees,
+    })
+
+
+@login_required
+def logbook_create(request):
+    """POST-only creation; HC reviewers pick any visible employee, portal staff
+    may only create for their own employee record."""
+    if request.method == 'POST':
+        pegawai = _portal_pegawai_or_none(request.user)
+        posted_employee = Pegawai.objects.filter(
+            pk=request.POST.get('employee') or ''
+        ).first()
+        if pegawai is not None and (
+            posted_employee is None or posted_employee.pk == pegawai.pk
+        ):
+            form_employee = pegawai
+        else:
+            form_employee = posted_employee
+        form = EntriLogbookForm(
+            request.POST, employee=form_employee, user=request.user,
+        )
+        if form.is_valid():
+            entry = form.save(commit=False)
+            target = form_employee
+            if target is None:
+                messages.error(request, 'Akun belum terhubung data pegawai.')
+                return redirect('sdm:logbook_list')
+            if not _logbook_target_allowed(request.user, target):
+                raise PermissionDenied('Pegawai di luar lingkup.')
+            entry.employee = target
+            entry.created_by = request.user
+            entry.save()
+            PeristiwaSDM.objects.create(
+                actor=request.user,
+                jenis_peristiwa='logbook_entry_created',
+                target_tipe='logbook_entry',
+                target_id=str(entry.pk),
+                status_sesudah='CREATED',
+                alasan='logbook entry recorded',
+            )
+            messages.success(request, 'Entri logbook dicatat.')
+            return redirect('sdm:logbook_list')
+        messages.error(request, 'Data tidak valid; periksa kembali.')
+    return redirect('sdm:logbook_list')
+
+
+def _logbook_target_allowed(user, target):
+    """HC grant covering target's placement unit, or target == own employee."""
+    if target.pk == getattr(_portal_pegawai_or_none(user), 'pk', None):
+        return True
+    try:
+        visible_employees(user).get(pk=target.pk)
+    except (Pegawai.DoesNotExist, PermissionDenied):
+        return False
+    return True
+
+
+@login_required
+@require_POST
+def logbook_edit(request, entry_id):
+    entry = get_object_or_404(
+        EntriLogbookKlinis.objects.select_related('employee'), pk=entry_id,
+    )
+    own = entry.employee_id == getattr(_portal_pegawai_or_none(request.user), 'pk', None)
+    if not own:
+        require_hc_capability(
+            request.user, 'can_review_hc_credentials', employee=entry.employee,
+        )
+    form = EntriLogbookForm(
+        request.POST,
+        instance=entry,
+        employee=entry.employee,
+        user=request.user,
+    )
+    if form.is_valid():
+        updated = form.save(commit=False)
+        updated.employee = entry.employee
+        updated.save()
+        PeristiwaSDM.objects.create(
+            actor=request.user,
+            jenis_peristiwa='logbook_entry_updated',
+            target_tipe='logbook_entry',
+            target_id=str(entry.pk),
+            status_sebelum='UPDATED_PRIOR',
+            status_sesudah='UPDATED',
+            alasan='logbook entry revised',
+        )
+        messages.success(request, 'Entri logbook diperbarui.')
+    else:
+        messages.error(request, 'Data tidak valid; periksa kembali.')
+    return redirect('sdm:logbook_list')
+
+
+@login_required
+@require_POST
+def logbook_delete(request, entry_id):
+    entry = get_object_or_404(
+        EntriLogbookKlinis.objects.select_related('employee'), pk=entry_id,
+    )
+    own = entry.employee_id == getattr(_portal_pegawai_or_none(request.user), 'pk', None)
+    if not own:
+        require_hc_capability(
+            request.user, 'can_review_hc_credentials', employee=entry.employee,
+        )
+        if entry.created_by_id not in (None, request.user.pk):
+            # HC reviewers may only delete rows they created; portal staff their own.
+            hc_creator_grant = HcGrant.objects.filter(
+                user=request.user, capability='can_review_hc_credentials',
+            ).exists()
+            raise PermissionDenied(
+                'Hanya pembuat entri atau pemilik yang dapat menghapus.'
+            ) if not hc_creator_grant else None
+    entry.delete()
+    PeristiwaSDM.objects.create(
+        actor=request.user,
+        jenis_peristiwa='logbook_entry_deleted',
+        target_tipe='logbook_entry',
+        target_id=str(entry_id),
+        status_sebelum='CREATED',
+        status_sesudah='DELETED',
+        alasan='logbook entry removed',
+    )
+    messages.success(request, 'Entri logbook dihapus.')
+    return redirect('sdm:logbook_list')
+
+
+# ── C-5: self-service supporting-document upload ─────────────────────────
+
+# Kinds a portal user may upload into their own vault. Health and legal-risk
+# documents stay with HC staff (owner decision #3).
+PORTAL_UPLOAD_KINDS = {
+    'CV': ('personnel', 'CREDENTIAL'),
+    'SERTIFIKAT_KOMPETENSI': ('personnel', 'CREDENTIAL'),
+    'TRAINING_RECORD': ('personnel', 'TRAINING'),
+    'KEANGGOTAAN': ('personnel', 'PROFESSIONAL'),
+    'MCU': ('health', 'HEALTH'),
+    'PSIKOLOGIS': ('health', 'HEALTH'),
+    'BEBAS_SANKSI': ('personnel', 'PROFESSIONAL'),
+}
+
+
+@login_required
+@require_POST
+def portal_dokumen_upload(request):
+    """Own-vault upload: the employee record comes from the session, never POST."""
+    pegawai = _portal_pegawai_or_none(request.user)
+    if pegawai is None:
+        raise PermissionDenied('Akun Anda tidak terhubung dengan data pegawai.')
+    jenis = (request.POST.get('jenis_berkas') or '').strip()
+    spec = PORTAL_UPLOAD_KINDS.get(jenis)
+    if spec is None:
+        raise PermissionDenied('Jenis berkas tidak dapat diunggah dari portal.')
+    berkas = request.FILES.get('berkas')
+    if berkas is None:
+        messages.error(request, 'Pilih berkas terlebih dahulu.')
+        return redirect('sdm:kredensial_pengajuan_sendiri')
+    sensitivity, document_type = spec
+    try:
+        document, _version = store_private_document(
+            berkas,
+            employee=pegawai,
+            sensitivity=sensitivity,
+            document_type=document_type,
+            title=f'{dict(DokumenPegawai.DOCUMENT_KIND_CHOICES).get(jenis, jenis)} — unggahan mandiri',
+            uploaded_by=request.user,
+        )
+    except (PermissionDenied, ValidationError) as exc:
+        message = getattr(exc, 'messages', None)
+        messages.error(request, '; '.join(message) if message else str(exc))
+    else:
+        document.jenis_berkas = jenis
+        document.save(update_fields=['jenis_berkas'])
+        messages.success(request, 'Dokumen berhasil diunggah ke berkas pribadi Anda.')
+    return redirect('sdm:kredensial_pengajuan_sendiri')

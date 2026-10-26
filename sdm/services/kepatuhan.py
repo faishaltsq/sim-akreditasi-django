@@ -94,11 +94,12 @@ def _active_rules(ruleset=None):
 
 
 def _latest_version(employee, rule):
+    sensitivity = 'health' if rule.document_type == 'HEALTH' else 'personnel'
     return VersiDokumen.objects.filter(
         document__employee=employee,
         document__document_type=rule.document_type,
         document__jenis_berkas=rule.jenis_berkas_wajib,
-        document__sensitivity='personnel',
+        document__sensitivity=sensitivity,
     ).select_related('document').order_by('-version_number', '-pk').first()
 
 

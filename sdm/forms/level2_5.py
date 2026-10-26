@@ -4,6 +4,7 @@ from django.forms import inlineformset_factory
 from sdm.akses import visible_employees, visible_units
 from sdm.models import (
     AktivitasOrientasi,
+    KatalogTindakan,
     KebutuhanPelatihan,
     Lamaran,
     Lowongan,
@@ -92,10 +93,26 @@ class RincianKewenanganForm(forms.ModelForm):
             'catatan': forms.Textarea(attrs={'class': TEXTAREA_CLASS, 'rows': 2}),
         }
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, pengajuan=None, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields['usulan'].initial = 'MANDIRI'
         self.fields['usulan'].required = False
+        catalog = KatalogTindakan.objects.filter(is_active=True).exclude(
+            tingkat_supervisi='T'
+        )
+        profesi_id = getattr(
+            getattr(pengajuan, 'employee', None), 'profesi_master_id', None
+        )
+        if profesi_id:
+            # Auto-load: only the profession's own RKK catalog is selectable.
+            catalog = catalog.filter(jenjang__profesi_id=profesi_id)
+        else:
+            catalog = catalog.none()
+        self.fields['catalog_item'].queryset = catalog.select_related(
+            'jenjang'
+        ).order_by('jenjang__urutan', 'kode')
+        self.fields['catalog_item'].required = False
+        self.fields['kewenangan'].required = False
 
 
 class VerifikasiSumberForm(forms.ModelForm):

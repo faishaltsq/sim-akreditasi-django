@@ -5,7 +5,43 @@
 <div class="container-fluid p-0">
     <a class="small text-decoration-none" href="{% url 'sdm:kredensial_list' %}"><i class="bi bi-arrow-left me-1"></i>Kembali</a>
     <h1 class="page-title h4 mt-2 mb-1">{{ credential_request.employee.nama_lengkap }}</h1>
-    <p class="text-muted small mb-3">{{ credential_request.unit_kerja.code }} · {{ credential_request.get_status_display }}</p>
+    <p class="text-muted small mb-3">{{ credential_request.unit_kerja.code }} · {{ credential_request.get_status_display }} · {{ profesi_label }}{% if jenjang_labels %} ({{ jenjang_labels|join:", " }}){% endif %}</p>
+
+    <div class="card border shadow-sm mb-3{% if credential_request.jenis == 'REKREDENSIAL' %} border-primary{% endif %}">
+        <div class="card-header bg-white d-flex justify-content-between align-items-center">
+            <h2 class="h6 mb-0">Logbook Tindakan Klinis (36 bulan)</h2>
+            <a class="btn btn-outline-secondary btn-sm" href="{% url 'sdm:logbook_list' %}?pegawai={{ credential_request.employee.pk }}">Kelola</a>
+        </div>
+        <div class="card-body">
+            {% if logbook_recap %}
+            <div class="row g-2 mb-2">
+                <div class="col-4"><div class="small text-muted">Mandiri</div><div class="fw-semibold">{{ logbook_recap.mandiri }}</div></div>
+                <div class="col-4"><div class="small text-muted">Supervisi</div><div class="fw-semibold">{{ logbook_recap.supervisi }}</div></div>
+                <div class="col-4"><div class="small text-muted">Total</div><div class="fw-semibold">{{ logbook_recap.total }}</div></div>
+            </div>
+            {% if logbook_recap.per_tindakan %}
+            <div class="table-responsive">
+                <table class="table table-sm table-striped mb-0 small">
+                    <thead><tr><th>Tindakan</th><th class="text-center">Mandiri</th><th class="text-center">Supervisi</th></tr></thead>
+                    <tbody>
+                        {% for row in logbook_recap.per_tindakan %}
+                        <tr><td>{{ row.label }}</td><td class="text-center">{{ row.mandiri }}</td><td class="text-center">{{ row.supervisi }}</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <p class="small text-muted mb-0">Belum ada entri logbook.</p>
+            {% endif %}
+            <p class="small text-muted mb-0 mt-2">Dari tanggal {{ logbook_recap.dari_tanggal|date:"d M Y" }}.</p>
+            {% else %}
+            <p class="small text-muted mb-0">Belum ada entri logbook.</p>
+            {% endif %}
+            {% if credential_request.logbook_id %}
+            <p class="small mb-0 mt-2">Berkas logbook terlampir: {{ credential_request.logbook.original_filename }}</p>
+            {% endif %}
+        </div>
+    </div>
 
     <div class="row g-3">
         <div class="col-12 col-lg-6">
@@ -34,11 +70,25 @@
             <div class="card border shadow-sm h-100">
                 <div class="card-header bg-white"><h2 class="h6 mb-0">Tambah Rincian Kewenangan</h2></div>
                 <div class="card-body">
-                    <form method="post" action="{% url 'sdm:kredensial_add_privilege' credential_request.pk %}" class="row g-2 align-items-end">
+                    <p class="small text-muted mb-2">
+                        Profesi: {{ profesi_label }}
+                        {% if jenjang_labels %}· Jenjang: {{ jenjang_labels|join:", " }}{% endif %}
+                    </p>
+                    {% if katalog_error %}<div class="alert alert-warning py-2 small mb-2">{{ katalog_error }}</div>{% endif %}
+                    <form method="post" action="{% url 'sdm:kredensial_add_privilege' credential_request.pk %}" class="row g-2">
                         {% csrf_token %}
                         <div class="col-12">
-                            <label class="form-label small fw-semibold" for="priv-name">Kewenangan</label>
-                            <input id="priv-name" name="kewenangan" class="form-control form-control-sm" maxlength="200" required>
+                            <label class="form-label small fw-semibold" for="priv-catalog">Katalog Tindakan (RKK)</label>
+                            <select id="priv-catalog" name="catalog_item" class="form-select form-select-sm">
+                                <option value="">— pilih dari katalog —</option>
+                                {% for item in katalog %}
+                                <option value="{{ item.pk }}">{{ item.kode }} — {{ item.nama }} ({{ item.get_tingkat_supervisi_display }})</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label small fw-semibold" for="priv-name">Kewenangan (manual, bila di luar katalog)</label>
+                            <input id="priv-name" name="kewenangan" class="form-control form-control-sm" maxlength="200">
                         </div>
                         <div class="col-12">
                             <label class="form-label small fw-semibold" for="priv-note">Catatan</label>
@@ -99,10 +149,55 @@
     </div>
 
     <div class="card border shadow-sm mt-3">
+        <div class="card-header bg-white"><h2 class="h6 mb-0">Kelengkapan Dokumen Pendukung</h2></div>
+        <div class="card-body">
+            {% regroup requirements by get_domain_display as domain_groups %}
+            {% for group in domain_groups %}
+            <h3 class="h6 mt-2 mb-1 small fw-semibold">{{ group.grouper }}</h3>
+            <div class="table-responsive mb-2">
+                <table class="table table-sm align-middle mb-0">
+                    <thead class="table-light"><tr><th style="width:30%">Persyaratan</th><th style="width:14%">Status</th><th style="width:34%">Berkas</th><th style="width:22%">Aksi</th></tr></thead>
+                    <tbody>
+                        {% for row in group.list %}
+                        <tr>
+                            <td class="small">{{ row.get_jenis_display }}{% if row.label %} — {{ row.label }}{% endif %}</td>
+                            <td>
+                                {% if row.status == 'TERPENUHI' %}<span class="badge bg-success">Terpenuhi</span>
+                                {% elif row.status == 'KURANG' %}<span class="badge bg-warning text-dark">Kurang</span>
+                                {% else %}<span class="badge bg-secondary">Informasi</span>{% endif %}
+                            </td>
+                            <td class="small">
+                                {% if row.document_version %}{{ row.document_version.document.title }} · {{ row.document_version.valid_until|date:"d M Y"|default:"seharian" }}
+                                {% elif row.logbook_ok %}Logbook terpenuhi
+                                {% elif row.note %}{{ row.note }}
+                                {% else %}—{% endif %}
+                            </td>
+                            <td>
+                                {% if row.status == 'KURANG' %}
+                                <form method="post" action="{% url 'sdm:kredensial_syarat_upload' credential_request.pk row.pk %}" enctype="multipart/form-data" class="d-flex gap-1">
+                                    {% csrf_token %}
+                                    <input type="file" name="berkas" class="form-control form-control-sm" aria-label="Unggah berkas {{ row.get_jenis_display }}" required>
+                                    <button class="btn btn-outline-primary btn-sm text-nowrap" type="submit">Unggah</button>
+                                </form>
+                                {% else %}<span class="text-muted small">—</span>{% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% empty %}
+            <p class="small text-muted mb-0">Belum ada baris persyaratan.</p>
+            {% endfor %}
+        </div>
+    </div>
+
+    <div class="card border shadow-sm mt-3">
         <div class="card-header bg-white"><h2 class="h6 mb-0">Keputusan Komite</h2></div>
         <div class="card-body">
             {% if credential_request.decided_at %}
-            <p class="mb-0 small">Diputuskan {{ credential_request.decided_at|date:"d M Y H:i" }} · {{ credential_request.get_status_display }}</p>
+            <p class="mb-2 small">Diputuskan {{ credential_request.decided_at|date:"d M Y H:i" }} · {{ credential_request.get_status_display }}</p>
+            <a class="btn btn-outline-secondary btn-sm" href="{% url 'sdm:kredensial_berita_acara_rapat' credential_request.pk %}">Cetak Berita Acara Rapat</a>
             {% else %}
             <form method="post" action="{% url 'sdm:kredensial_rekomendasikan' credential_request.pk %}" class="row g-2 align-items-end mb-2">
                 {% csrf_token %}
@@ -114,6 +209,17 @@
             </form>
             <form method="post" action="{% url 'sdm:kredensial_decide' credential_request.pk %}" class="row g-2 align-items-end">
                 {% csrf_token %}
+                {% if missing_requirements %}
+                <div class="col-12">
+                    <div class="alert alert-warning py-2 small mb-0">
+                        Belum lengkap: {{ missing_requirements|join:", " }}.
+                        <div class="form-check mt-1">
+                            <input class="form-check-input" type="checkbox" value="1" id="abaikan-syarat" name="abaikan_syarat">
+                            <label class="form-check-label small" for="abaikan-syarat">Putuskan tanpa kelengkapan dokumen pendukung</label>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
                 <div class="col-12 col-md-4">
                     <label class="form-label small fw-semibold" for="outcome">Keputusan</label>
                     <select id="outcome" name="outcome" class="form-select form-select-sm">
