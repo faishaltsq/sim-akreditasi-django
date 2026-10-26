@@ -21,7 +21,7 @@ Dokumentasi ini disusun secara terpisah per sub-sistem agar mudah dipelajari ole
 
 ## 🌐 Informasi Lingkungan Sistem
 
-- **URL Production:** [https://sim-akreditasi-web-production.up.railway.app](https://sim-akreditasi-web-production.up.railway.app)
+- **URL Production:** [https://sim-akreditasi-django.vercel.app](https://sim-akreditasi-django.vercel.app)
 - **Repository Source Code:** [https://github.com/faishaltsq/sim-akreditasi-django](https://github.com/faishaltsq/sim-akreditasi-django)
 - **Basis Standar Akreditasi:** Standar Akreditasi Rumah Sakit Kemenkes (STARKES) / KARS 2023–2026.
 - **Penyimpanan Berkas Bukti:** Cloud Object Storage (Supabase Storage) ber-enkripsi SSL.

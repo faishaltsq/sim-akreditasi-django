@@ -5,7 +5,7 @@
 
 ## 1. Akses Sistem
 Buka peramban internet (Google Chrome, Mozilla Firefox, atau Microsoft Edge) dan ketik alamat:
-👉 **[https://sim-akreditasi-web-production.up.railway.app](https://sim-akreditasi-web-production.up.railway.app)**
+👉 **[https://sim-akreditasi-django.vercel.app](https://sim-akreditasi-django.vercel.app)**
 
 Halaman login resmi **RS MonsisKami** akan tampil dengan nuansa warna Putih & Hijau Teal (#0d9488).
 
