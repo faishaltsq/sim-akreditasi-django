@@ -158,6 +158,16 @@ urlpatterns = [
         name='kredensial_bukti_audit',
     ),
     path(
+        'kredensial/bukti-starkes/',
+        views.kredensial_bukti_starkes,
+        name='kredensial_bukti_starkes',
+    ),
+    path(
+        'kredensial/<uuid:request_id>/tahap/',
+        views.kredensial_tahap,
+        name='kredensial_tahap',
+    ),
+    path(
         'kredensial/<uuid:request_id>/berita-acara-rapat/',
         views.kredensial_berita_acara_rapat,
         name='kredensial_berita_acara_rapat',

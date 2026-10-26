@@ -6,6 +6,8 @@
     <a class="small text-decoration-none" href="{% url 'sdm:kredensial_list' %}"><i class="bi bi-arrow-left me-1"></i>Kembali</a>
     <h1 class="page-title h4 mt-2 mb-3">Pengajuan Kredensial Mandiri</h1>
 
+    {% include "sdm/kredensial/_profil_kartu.html" %}
+
     {% if spk_ews %}
     <div class="alert alert-warning">
         <strong>EWS Masa Berlaku SPK/RKK</strong> — perhatian masa berlaku SPK Anda akan habis:
@@ -131,6 +133,48 @@
         </div>
     </div>
 
+    {% if checklist %}
+    <div class="card border shadow-sm mt-1">
+        <div class="card-header bg-white d-flex justify-content-between align-items-center">
+            <h2 class="h6 mb-0">Kelengkapan Dokumen Pendukung</h2>
+            <span class="small text-muted">Jenis: {{ form.jenis.value|default:selected_jenis }}</span>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-sm align-middle mb-0">
+                <thead class="table-light">
+                    <tr><th scope="col" style="width:26%">Domain</th><th scope="col" style="width:30%">Persyaratan</th><th scope="col" style="width:16%">Status</th><th scope="col" style="width:28%">Aksi</th></tr>
+                </thead>
+                <tbody>
+                    {% for row in checklist %}
+                    <tr>
+                        <td class="small">{{ row.domain|capfirst }}</td>
+                        <td class="small">{{ row.label }}</td>
+                        <td>
+                            {% if row.evidence_state == 'AKTIF' %}<span class="badge bg-success">Aktif</span>
+                            {% elif row.evidence_state == 'KADALUARSA' %}<span class="badge bg-warning text-dark">Kadaluarsa</span>
+                            {% else %}<span class="badge bg-secondary">Belum Diunggah</span>{% endif %}
+                        </td>
+                        <td>
+                            {% if row.evidence_state != 'AKTIF' %}
+                            <form method="post" action="{% url 'sdm:portal_dokumen_upload' %}" enctype="multipart/form-data" class="d-flex gap-1">
+                                {% csrf_token %}
+                                <input type="hidden" name="jenis_berkas" value="{{ row.upload_kind }}">
+                                <input type="hidden" name="next_jenis" value="{{ selected_jenis }}">
+                                <input type="file" name="berkas" class="form-control form-control-sm" aria-label="Unggah {{ row.label }}" required>
+                                <button class="btn btn-outline-primary btn-sm text-nowrap" type="submit">Unggah</button>
+                            </form>
+                            {% else %}
+                            <span class="text-muted small">{% if row.document_version %}{{ row.document_version.document.title }}{% else %}—{% endif %}</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+
     <div class="row g-3 mt-1">
         <div class="col-12 col-lg-5">
             <div class="card border shadow-sm">
@@ -145,7 +189,10 @@
                             {% for error in field.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
                         </div>
                         {% endfor %}
-                        <button class="btn btn-primary btn-sm" type="submit">Kirim Pengajuan</button>
+                        <div class="d-flex gap-2">
+                            <button class="btn btn-primary btn-sm" type="submit">Kirim Pengajuan</button>
+                            <a class="btn btn-outline-secondary btn-sm" href="?jenis={% if selected_jenis %}{{ selected_jenis }}{% endif %}">Periksa Kelengkapan</a>
+                        </div>
                     </form>
                 </div>
             </div>
@@ -155,16 +202,17 @@
                 <div class="card-header bg-white"><h2 class="h6 mb-0">Pengajuan Saya</h2></div>
                 <div class="table-responsive">
                     <table class="table table-sm align-middle mb-0">
-                        <thead><tr><th scope="col">Unit</th><th scope="col">Jenis</th><th scope="col">Status</th><th scope="col">Diajukan</th></tr></thead>
+                        <thead><tr><th scope="col">Unit</th><th scope="col">Jenis</th><th scope="col">Status</th><th scope="col">Tahap</th><th scope="col">Diajukan</th></tr></thead>
                         <tbody>
                             {% for item in my_requests %}
                             <tr>
                                 <td><a href="{% url 'sdm:kredensial_detail' item.pk %}">{{ item.get_jenis_display }}</a></td>
                                 <td class="small">{{ item.unit_kerja.code }}</td>
                                 <td><span class="badge text-bg-light text-dark">{{ item.get_status_display }}</span></td>
+                                <td class="small">{% if item.stage_label %}{{ item.stage_label }}{% if item.stage_kekurangan %}<div class="text-danger">{{ item.stage_kekurangan }}</div>{% endif %}{% else %}—{% endif %}</td>
                                 <td class="small">{{ item.created_at|date:"d M Y" }}</td>
                             </tr>
-                            {% empty %}<tr><td colspan="4" class="text-center text-muted py-4">Belum ada pengajuan.</td></tr>{% endfor %}
+                            {% empty %}<tr><td colspan="5" class="text-center text-muted py-4">Belum ada pengajuan.</td></tr>{% endfor %}
                         </tbody>
                     </table>
                 </div>

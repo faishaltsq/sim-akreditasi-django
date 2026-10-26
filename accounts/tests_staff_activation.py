@@ -15,6 +15,9 @@ from sdm.models import HcGrant, Pegawai, PenempatanPegawai, UndanganAkunPegawai
 
 class StaffActivationViewTests(TestCase):
     def setUp(self):
+        # Demo seed migrations create accounts at DB setup; assertions below are
+        # about the delta this test causes, never the absolute user count.
+        self.users_before = get_user_model().objects.count()
         self.root = UnitKerja.objects.create(name='Direktorat HC', code='ACT-HC')
         self.employee = Pegawai.objects.create(
             nama_lengkap='Pegawai Aktivasi', kategori='NON_PPA', status='AKTIF',
@@ -44,7 +47,7 @@ class StaffActivationViewTests(TestCase):
         self.assertEqual(response.status_code, 200)
         invitation.refresh_from_db()
         self.assertEqual(invitation.state, 'SENT')
-        self.assertFalse(get_user_model().objects.exists())
+        self.assertEqual(get_user_model().objects.count(), self.users_before)
         self.assertEqual(response['Cache-Control'], 'no-store')
         self.assertEqual(response['Referrer-Policy'], 'no-referrer')
 
@@ -59,7 +62,7 @@ class StaffActivationViewTests(TestCase):
         self.assertEqual(invitation.state, 'ACCEPTED')
         self.employee.refresh_from_db()
         self.assertIsNotNone(self.employee.akun_id)
-        self.assertEqual(get_user_model().objects.count(), 1)
+        self.assertEqual(get_user_model().objects.count(), self.users_before + 1)
 
     def test_replay_does_not_create_a_second_account(self):
         self._invitation()
@@ -71,7 +74,7 @@ class StaffActivationViewTests(TestCase):
             reverse('accounts:staff_activate', kwargs={'token': 'raw-token'}), payload
         )
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(get_user_model().objects.count(), 1)
+        self.assertEqual(get_user_model().objects.count(), self.users_before + 1)
 
     def test_unknown_token_is_a_generic_failure(self):
         response = self.client.get(
@@ -87,7 +90,7 @@ class StaffActivationViewTests(TestCase):
             {'new_password1': 'StrongPass123!', 'new_password2': 'Different123!'},
         )
         self.assertEqual(response.status_code, 200)
-        self.assertFalse(get_user_model().objects.exists())
+        self.assertEqual(get_user_model().objects.count(), self.users_before)
 
     def test_intentionally_inactive_account_does_not_get_login_promise(self):
         self._invitation(intended_is_active=False)
@@ -113,7 +116,7 @@ class StaffActivationViewTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.employee.refresh_from_db()
         self.assertEqual(self.employee.akun_id, existing.pk)
-        self.assertEqual(get_user_model().objects.count(), 1)
+        self.assertEqual(get_user_model().objects.count(), self.users_before + 1)
 
     def test_case_insensitive_email_collision_is_refused(self):
         get_user_model().objects.create_user(
@@ -125,7 +128,7 @@ class StaffActivationViewTests(TestCase):
             {'new_password1': 'StrongPass123!', 'new_password2': 'StrongPass123!'},
         )
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(get_user_model().objects.count(), 1)
+        self.assertEqual(get_user_model().objects.count(), self.users_before + 1)
         self.employee.refresh_from_db()
         self.assertIsNone(self.employee.akun_id)
 

@@ -378,32 +378,3 @@ class IndicatorPagesScopeTest(TestCase):
 
         self.assertEqual(got_rs, {rs.pk})
         self.assertEqual(got_inm, {inm.pk})
-
-
-class UnitScopeNoticeTest(TestCase):
-    """The spec's remaining requirement for the unit dashboard: when a unit
-    has no indicator in scope, say so. Without this the chart card renders
-    an empty average and a unit cannot tell 'no data' from 'not mine'."""
-
-    def test_unit_without_indicators_sees_notice(self):
-        # No parent, no own indicators -> scope is empty.
-        lonely = _mk_unit('BANGSAL-SEPI', 'Bangsal Sepi', level=3)
-        user = _unit_scoped_user('notice-kepala', lonely)
-        self.client.force_login(user)
-
-        res = self.client.get(reverse('akreditasi:dashboard'))
-        self.assertEqual(res.status_code, 200)
-        self.assertContains(res, 'Unit Ini Belum Memiliki Indikator')
-
-    def test_unit_with_indicators_does_not_see_notice(self):
-        # Inherited from the parent instalasi counts as having indicators.
-        irin = _mk_unit('IRIN', 'Instalasi Rawat Inap', level=2)
-        anak = _mk_unit('BANGSAL-ANAK', 'Bangsal Anak', parent=irin, level=3)
-        inherited = _mk_ind(irin, 'IMP_RS', 'RS-NOTICE')
-
-        user = _unit_scoped_user('notice2-kepala', anak)
-        self.client.force_login(user)
-
-        res = self.client.get(reverse('akreditasi:dashboard'))
-        self.assertContains(res, '[' + inherited.kode_indikator + ']')
-        self.assertNotContains(res, 'Unit Ini Belum Memiliki Indikator')

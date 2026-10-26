@@ -74,6 +74,10 @@ HC_PERMISSION_LABELS = [
     ('can_plan_hc_workforce', 'Kelola Perencanaan Ketenagaan'),
     ('can_manage_hc_recruitment', 'Kelola Rekrutmen'),
     ('can_review_hc_credentials', 'Tinjau Kredensial'),
+    ('hc_verify_credentials', 'Verifikasi Kredensial (SDM)'),
+    ('hc_review_subkomite', 'Review Subkomite Kredensial'),
+    ('hc_recommend_komite', 'Rekomendasi Ketua Komite'),
+    ('hc_approve_credentials', 'Pengesahan Kredensial (Direktur)'),
     ('can_manage_hc_orientation', 'Kelola Orientasi'),
     ('can_manage_hc_appraisals', 'Kelola Penilaian Kinerja'),
     ('can_manage_hc_training', 'Kelola Diklat'),
@@ -474,6 +478,10 @@ class RolePermissionConfig(models.Model):
     can_plan_hc_workforce = models.BooleanField('Kelola Perencanaan Ketenagaan', default=False)
     can_manage_hc_recruitment = models.BooleanField('Kelola Rekrutmen Human Capital', default=False)
     can_review_hc_credentials = models.BooleanField('Tinjau Kredensial Human Capital', default=False)
+    hc_verify_credentials = models.BooleanField('Verifikasi Kredensial (SDM)', default=False)
+    hc_review_subkomite = models.BooleanField('Review Subkomite Kredensial', default=False)
+    hc_recommend_komite = models.BooleanField('Rekomendasi Ketua Komite', default=False)
+    hc_approve_credentials = models.BooleanField('Pengesahan Kredensial (Direktur)', default=False)
     can_manage_hc_orientation = models.BooleanField('Kelola Orientasi Human Capital', default=False)
     can_manage_hc_appraisals = models.BooleanField('Kelola Penilaian Kinerja Human Capital', default=False)
     can_manage_hc_training = models.BooleanField('Kelola Diklat Human Capital', default=False)

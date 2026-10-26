@@ -7,6 +7,57 @@
     <h1 class="page-title h4 mt-2 mb-1">{{ credential_request.employee.nama_lengkap }}</h1>
     <p class="text-muted small mb-3">{{ credential_request.unit_kerja.code }} · {{ credential_request.get_status_display }} · {{ profesi_label }}{% if jenjang_labels %} ({{ jenjang_labels|join:", " }}){% endif %}</p>
 
+    <div class="card border shadow-sm mb-3">
+        <div class="card-header bg-white"><h2 class="h6 mb-0">Tahap Kredensial</h2></div>
+        <div class="card-body">
+            <ol class="list-inline small mb-2">
+                {% for step in stepper %}
+                <li class="list-inline-item me-2 mb-1">
+                    <span class="badge {% if step.done %}bg-success{% elif step.current %}bg-primary{% else %}bg-light text-dark border{% endif %}">
+                        {% if step.done %}✓ {% endif %}{{ step.label }}
+                    </span>
+                </li>
+                {% if not forloop.last %}<li class="list-inline-item me-1 text-muted">→</li>{% endif %}
+                {% endfor %}
+            </ol>
+            {% if stage_history %}
+            <ul class="list-unstyled small mb-2">
+                {% for row in stage_history %}
+                <li class="mb-1">
+                    <span class="fw-semibold">{{ row.get_tahap_display }}</span>
+                    · {{ row.created_at|date:"d M Y H:i" }}
+                    {% if row.aktor %}· {{ row.aktor.get_full_name|default:row.aktor.username }}{% endif %}
+                    {% if row.kekurangan %}<div class="text-danger">Kekurangan: {{ row.kekurangan }}</div>{% endif %}
+                    {% if row.catatan %}<div class="text-muted">{{ row.catatan }}</div>{% endif %}
+                </li>
+                {% endfor %}
+            </ul>
+            {% else %}
+            <p class="small text-muted mb-2">Belum ada tahap tercatat.</p>
+            {% endif %}
+            <form method="post" action="{% url 'sdm:kredensial_tahap' credential_request.pk %}" class="row g-2 align-items-end">
+                {% csrf_token %}
+                <div class="col-12 col-md-4">
+                    <label class="form-label small fw-semibold" for="tahap-next">Tahap Berikutnya</label>
+                    <select id="tahap-next" name="tahap" class="form-select form-select-sm">
+                        {% for value, label in stage_choices %}
+                        <option value="{{ value }}">{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-12 col-md-4">
+                    <label class="form-label small fw-semibold" for="tahap-kekurangan">Kekurangan</label>
+                    <input id="tahap-kekurangan" name="kekurangan" class="form-control form-control-sm" maxlength="2000">
+                </div>
+                <div class="col-12 col-md-2">
+                    <label class="form-label small fw-semibold" for="tahap-catatan">Catatan</label>
+                    <input id="tahap-catatan" name="catatan" class="form-control form-control-sm" maxlength="2000">
+                </div>
+                <div class="col-12 col-md-2"><button class="btn btn-outline-primary btn-sm w-100" type="submit">Simpan Tahap</button></div>
+            </form>
+        </div>
+    </div>
+
     <div class="card border shadow-sm mb-3{% if credential_request.jenis == 'REKREDENSIAL' %} border-primary{% endif %}">
         <div class="card-header bg-white d-flex justify-content-between align-items-center">
             <h2 class="h6 mb-0">Logbook Tindakan Klinis (36 bulan)</h2>

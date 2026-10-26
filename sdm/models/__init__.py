@@ -45,6 +45,7 @@ from .k3 import (
 )
 from .kredensial import (
     DokumenSyaratKredensial,
+    TahapKredensial,
     KeputusanKredensial,
     PengajuanKredensial,
     PenilaianTindakan,
@@ -151,6 +152,7 @@ __all__ = [
     'PengajuanKredensial',
     'PenilaianTindakan',
     'DokumenSyaratKredensial',
+    'TahapKredensial',
     'PenugasanKlinis',
     'PenugasanOrientasi',
     'PenyelesaianOrientasi',

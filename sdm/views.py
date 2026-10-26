@@ -16,6 +16,7 @@ from django.views.decorators.http import require_POST
 
 from sdm.akses import require_hc_capability, visible_employees, visible_units
 from sdm.services.logbook import logbook_recap
+from sdm.forms.kredensial_portal import PengajuanPortalForm
 from sdm.forms import (
     AktivitasBebanKerjaForm,
     DokumenForm,
@@ -51,6 +52,7 @@ from sdm.models import (
     PenempatanPegawai,
     DokumenSyaratKredensial,
     DokumenPegawai,
+    TahapKredensial,
     PengajuanKredensial,
     PenilaianTindakan,
     PenilaianKinerja,
@@ -117,8 +119,16 @@ from sdm.storage import (
     store_private_document,
 )
 from sdm.services.intake import build_staff_profile
+from sdm.services.profil_kredensial import credential_profile
+from sdm.services.workflow_kredensial import (
+    current_stage,
+    current_stage_row,
+    stage_history,
+    stepper_rows,
+)
 from sdm.services.syarat_kredensial import (
     DEFAULT_ROWS as DEFAULT_SYARAT_ROWS,
+    evaluate_employee_requirements,
     evaluate_requirements,
     populate_requirements,
 )
@@ -908,6 +918,10 @@ def _detail_context(credential_request):
         'logbook_recap': logbook_recap(credential_request.employee),
         'requirements': _syarat_rows(credential_request),
         'requirement_domain_labels': DokumenSyaratKredensial.DOMAIN_CHOICES,
+        'stepper': stepper_rows(credential_request),
+        'stage_history': stage_history(credential_request),
+        'current_stage': current_stage(credential_request),
+        'stage_choices': TahapKredensial.TAHAP_CHOICES,
     }
 
 
@@ -1826,8 +1840,16 @@ def kredensial_create(request):
         )
         credential_request.save()
         return redirect('sdm:kredensial_detail', request_id=credential_request.pk)
+    profile = None
+    selected_employee = form['employee'].value()
+    if selected_employee:
+        from sdm.models import Pegawai
+        employee = Pegawai.objects.filter(pk=selected_employee).first()
+        if employee is not None:
+            profile = credential_profile(employee)
     return render(request, 'sdm/kredensial/form.html', {
         'form': form, 'title': 'Pengajuan Kredensial Baru',
+        'profile': profile,
     })
 
 
@@ -1846,18 +1868,36 @@ def kredensial_pengajuan_sendiri(request):
         )
         return redirect('sdm:kredensial_list')
 
-    form = PengajuanKredensialForm(request.POST or None, user=request.user)
+    form = PengajuanPortalForm(request.POST or None, user=request.user)
     if request.method == 'POST' and form.is_valid():
         credential_request = form.save(commit=False)
         credential_request.employee = pegawai
         credential_request.submitted_by = request.user
+        unit = form.cleaned_data.get('unit_kerja')
+        if unit is None:
+            latest = pegawai.penempatan.select_related('unit_kerja').order_by(
+                '-tanggal_mulai', '-pk'
+            ).first()
+            unit = latest.unit_kerja if latest else None
+        if unit is None:
+            messages.error(
+                request,
+                'Data penempatan unit kerja belum ada; hubungi SDM.',
+            )
+            return redirect('sdm:kredensial_pengajuan_sendiri')
+        credential_request.unit_kerja = unit
         credential_request.save()
         messages.success(request, 'Pengajuan kredensial mandiri terkirim.')
         return redirect('sdm:kredensial_detail', request_id=credential_request.pk)
 
-    my_requests = PengajuanKredensial.objects.filter(
-        employee=pegawai
-    ).select_related('unit_kerja').order_by('-created_at')
+    my_requests = list(
+        PengajuanKredensial.objects.filter(employee=pegawai)
+        .select_related('unit_kerja').order_by('-created_at')
+    )
+    for item in my_requests:
+        row = current_stage_row(item)
+        item.stage_label = row.get_tahap_display() if row else ''
+        item.stage_kekurangan = row.kekurangan if row else ''
     today = timezone.localdate()
     spk_ews = PenugasanKlinis.objects.filter(
         employee=pegawai, is_active=True, berlaku_sampai__isnull=False,
@@ -1885,6 +1925,12 @@ def kredensial_pengajuan_sendiri(request):
     ]
     return render(request, 'sdm/kredensial/pengajuan_saya.html', {
         'form': form,
+        'profile': credential_profile(pegawai),
+        'checklist': (
+            evaluate_employee_requirements(pegawai)
+            if (request.GET.get('jenis') or '').strip() else None
+        ),
+        'selected_jenis': (request.GET.get('jenis') or '').strip(),
         'my_requests': my_requests,
         'spk_ews': spk_ews,
         'today': today,
@@ -2397,6 +2443,14 @@ PORTAL_UPLOAD_KINDS = {
 }
 
 
+def _portal_redirect(request):
+    """Return to the portal, keeping the jenis the user was inspecting."""
+    next_jenis = (request.POST.get('next_jenis') or '').strip()
+    if next_jenis in dict(PengajuanKredensial.JENIS_CHOICES):
+        return redirect(f"{reverse('sdm:kredensial_pengajuan_sendiri')}?jenis={next_jenis}")
+    return redirect('sdm:kredensial_pengajuan_sendiri')
+
+
 @login_required
 @require_POST
 def portal_dokumen_upload(request):
@@ -2411,7 +2465,7 @@ def portal_dokumen_upload(request):
     berkas = request.FILES.get('berkas')
     if berkas is None:
         messages.error(request, 'Pilih berkas terlebih dahulu.')
-        return redirect('sdm:kredensial_pengajuan_sendiri')
+        return _portal_redirect(request)
     sensitivity, document_type = spec
     try:
         document, _version = store_private_document(
@@ -2429,4 +2483,47 @@ def portal_dokumen_upload(request):
         document.jenis_berkas = jenis
         document.save(update_fields=['jenis_berkas'])
         messages.success(request, 'Dokumen berhasil diunggah ke berkas pribadi Anda.')
-    return redirect('sdm:kredensial_pengajuan_sendiri')
+    return _portal_redirect(request)
+
+
+# ── D-3: staged credential workflow ──────────────────────────────────────
+
+@login_required
+@require_POST
+def kredensial_tahap(request, request_id):
+    """Advance the credential request one stage; the legacy status is untouched."""
+    from sdm.services.workflow_kredensial import advance_stage
+
+    credential_request = _scoped_or_404(
+        PengajuanKredensial, request.user, request_id,
+        capability='can_review_hc_credentials',
+    )
+    try:
+        advance_stage(
+            credential_request,
+            actor=request.user,
+            tahap=(request.POST.get('tahap') or '').strip(),
+            catatan=(request.POST.get('catatan') or '')[:2000],
+            kekurangan=(request.POST.get('kekurangan') or '')[:2000],
+        )
+    except (PermissionDenied, ValidationError) as exc:
+        message = getattr(exc, 'messages', None)
+        messages.error(request, '; '.join(message) if message else str(exc))
+    else:
+        messages.success(request, 'Tahap kredensial diperbarui.')
+    return redirect('sdm:kredensial_detail', request_id=credential_request.pk)
+
+
+# ── D-4: credential evidence documents mapped to STARKES EP ─────────────
+
+@login_required
+def kredensial_bukti_starkes(request):
+    """Printable index of the 13 credential evidence documents and their EPs."""
+    require_hc_capability(request.user, 'can_review_hc_credentials')
+    from sdm.services.bukti_kredensial import map_to_catalog
+
+    rows = map_to_catalog()
+    return render(request, 'sdm/kredensial/bukti_starkes.html', {
+        'rows': rows,
+        'unmatched_total': sum(len(row['unmatched']) for row in rows),
+    })

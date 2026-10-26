@@ -35,7 +35,7 @@ STARKES_DATA = [
         'code': 'KPS',
         'name': 'Kualifikasi & Pendidikan Staf',
         'kelompok': 'MANAJEMEN',
-        'target_ep_count': 23,
+        'target_ep_count': 25,
         'order': 2,
         'unit_pengampu': 'Bagian SDM/Kepegawaian, Komite Medis, Komite Keperawatan, Komite Nakes Lain, Bagian Diklat.',
         'default_unit_code': 'BAG-SDM',
@@ -52,6 +52,7 @@ STARKES_DATA = [
             {'code': 'KPS 10', 'title': 'Kredensial & Rekredensial Staf Keperawatan', 'ep_count': 2, 'desc_prefix': 'Verifikasi STR, SIP, dan SPK/RKK perawat dan bidan sesuai jenjang karir klinis'},
             {'code': 'KPS 11', 'title': 'Evaluasi Kinerja Praktik Keperawatan', 'ep_count': 2, 'desc_prefix': 'Evaluasi mutu asuhan keperawatan berkala oleh komite keperawatan'},
             {'code': 'KPS 12', 'title': 'Kredensial Tenaga Kesehatan Lainnya', 'ep_count': 2, 'desc_prefix': 'Kredensial apoteker, analis lab, radiografer, nutrisionis, dan fisioterapis'},
+            {'code': 'KPS 13', 'title': 'Monitoring Mutu Praktik Profesional Tenaga Kesehatan Lainnya', 'ep_count': 2, 'desc_prefix': 'Evaluasi mutu praktik berkelanjutan (OPPE/FPPE) tenaga kesehatan lain oleh mitra bestari'},
         ]
     },
     {

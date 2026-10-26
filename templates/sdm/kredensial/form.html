@@ -5,6 +5,7 @@
 <div class="container-fluid p-0">
     <a class="small text-decoration-none" href="{% url 'sdm:kredensial_list' %}"><i class="bi bi-arrow-left me-1"></i>Kembali</a>
     <h1 class="page-title h4 mt-2 mb-3">{{ title }}</h1>
+    {% include "sdm/kredensial/_profil_kartu.html" %}
     <form method="post">
         {% csrf_token %}
         {% include "sdm/_form_card.html" %}

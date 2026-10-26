@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<title>Dokumen Bukti Kredensial — STARKES</title>
+<style>
+    @page { size: A4 landscape; margin: 14mm; }
+    body { font-family: 'Times New Roman', serif; color: #111; font-size: 10pt; }
+    h1 { font-size: 13pt; text-align: center; margin-bottom: 2px; }
+    h2 { font-size: 11pt; margin: 14px 0 6px; border-bottom: 1px solid #444; }
+    .meta { text-align: center; font-size: 9pt; color: #444; margin-bottom: 10px; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { border: 1px solid #444; padding: 4px 6px; font-size: 9pt; text-align: left; vertical-align: top; }
+    th { background: #eee; }
+    .unmatched { color: #8a1c1c; font-weight: bold; }
+    .ok { color: #1c5c2a; }
+    .warning { border: 1px solid #8a1c1c; padding: 6px 8px; margin: 10px 0; font-size: 9pt; }
+    @media print { .noprint { display: none; } }
+</style>
+</head>
+<body>
+<div class="noprint" style="text-align:right;margin-bottom:8px;">
+    <button onclick="window.print()">Cetak / Simpan PDF</button>
+    <a href="{% url 'sdm:kredensial_list' %}">Kembali</a>
+</div>
+<h1>DOKUMEN BUKTI PROSES KREDENSIAL &amp; KESESUAIAN EP</h1>
+<p class="meta">E-Kredensial ARIMA · STARKES KPS 5/7/10/11/12/14/17</p>
+
+{% if unmatched_total %}
+<div class="warning">
+    {{ unmatched_total }} standar belum memiliki baris EP pada katalog aktif. Baris tersebut
+    ditandai <span class="unmatched">merah</span> dan tidak boleh diklaim sebagai bukti
+    terverifikasi sampai katalognya dilengkapi.
+</div>
+{% endif %}
+
+<h2>Daftar Dokumen Bukti</h2>
+<table>
+    <thead>
+        <tr>
+            <th style="width:4%">No</th>
+            <th style="width:26%">Dokumen Bukti</th>
+            <th style="width:20%">Standar STARKES</th>
+            <th style="width:50%">Elemen Penilaian</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for row in rows %}
+        <tr>
+            <td>{{ forloop.counter }}</td>
+            <td>{{ row.label }}</td>
+            <td>
+                {% for standard in row.matched %}<span class="ok">{{ standard }}</span>{% if not forloop.last %}, {% endif %}{% endfor %}
+                {% for standard in row.unmatched %}<span class="unmatched">{{ standard }}</span>{% if not forloop.last %}, {% endif %}{% endfor %}
+            </td>
+            <td>{{ row.ep }}</td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="4" style="text-align:center">Belum ada dokumen bukti.</td></tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<p class="meta" style="margin-top:14px;">
+    Catatan: terdapat pula dokumen hasil Evaluasi Praktik Profesional Berkelanjutan
+    (OPPE-FPPE) yang terhubung langsung pada standar KPS 10.1.
+</p>
+</body>
+</html>

@@ -190,3 +190,148 @@ class PortalPageTests(PortalBase):
         self.assertTrue(
             DokumenPegawai.objects.filter(employee=self.employee).exists()
         )
+
+
+class PortalFormD1Tests(PortalBase):
+    """D-1: no self-selection, auto unit, read-only profile card."""
+
+    def setUp(self):
+        super().setUp()
+        self._portal_user(username='c5-staff', employee=self.employee)
+
+    def test_portal_form_has_no_employee_field(self):
+        from sdm.forms.kredensial_portal import PengajuanPortalForm
+        form = PengajuanPortalForm(user=self.user)
+        self.assertNotIn('employee', form.fields)
+
+    def test_portal_form_auto_selects_placement_unit(self):
+        from sdm.forms.kredensial_portal import PengajuanPortalForm
+        form = PengajuanPortalForm(user=self.user)
+        self.assertEqual(list(form.fields['unit_kerja'].queryset),
+                         [self.unit])
+
+    def test_portal_submit_uses_logged_in_employee_and_unit(self):
+        from sdm.models import PengajuanKredensial
+        self.client.force_login(self.user)
+        response = self.client.post(reverse('sdm:kredensial_pengajuan_sendiri'), {
+            'jenis': 'AWAL',
+        })
+        self.assertEqual(response.status_code, 302)
+        application = PengajuanKredensial.objects.get()
+        self.assertEqual(application.employee, self.employee)
+        self.assertEqual(application.unit_kerja, self.unit)
+
+    def test_profile_card_shows_identity_and_license_state(self):
+        from sdm.models import IzinProfesiPegawai
+        IzinProfesiPegawai.objects.create(
+            pegawai=self.employee, subtype='STR', nomor_izin='STR-123',
+            profesi='Perawat', pemberi_izin='KTKI',
+            validity_mode='EXPIRY_REQUIRED',
+            tanggal_terbit=self.today - timedelta(days=100),
+            tanggal_berakhir=self.today + timedelta(days=400),
+        )
+        self.client.force_login(self.user)
+        response = self.client.get(reverse('sdm:kredensial_pengajuan_sendiri'))
+        content = response.content.decode('utf-8')
+        self.assertIn('Profil Kredensial', content)
+        self.assertIn(self.employee.nama_lengkap, content)
+        self.assertIn('STR', content)
+        self.assertIn('Berlaku', content)
+
+    def test_profile_card_marks_absent_license(self):
+        self.client.force_login(self.user)
+        response = self.client.get(reverse('sdm:kredensial_pengajuan_sendiri'))
+        content = response.content.decode('utf-8')
+        self.assertIn('Belum ada', content)
+
+    def test_hc_form_keeps_employee_field(self):
+        from sdm.forms import PengajuanKredensialForm
+        from sdm.models import HcGrant
+        from accounts.models import RolePermissionConfig, UserProfile
+        manager = get_user_model().objects.create_user(username='d1-manager')
+        UserProfile.objects.create(user=manager, role='ADMIN_RS', unit_kerja=self.unit)
+        config = RolePermissionConfig.get_config_for_role('ADMIN_RS')
+        config.can_view_hc = True
+        config.can_review_hc_credentials = True
+        config.save(update_fields=['can_view_hc', 'can_review_hc_credentials', 'updated_at'])
+        HcGrant.objects.create(user=manager, capability='can_view_hc', unit_kerja=self.unit)
+        HcGrant.objects.create(
+            user=manager, capability='can_review_hc_credentials', unit_kerja=self.unit,
+        )
+        form = PengajuanKredensialForm(user=manager)
+        self.assertIn('employee', form.fields)
+
+
+class PortalChecklistD2Tests(PortalBase):
+    """D-2: the checklist appears on the portal before submitting."""
+
+    def setUp(self):
+        super().setUp()
+        self._portal_user(username='c5-staff', employee=self.employee)
+
+    def test_checklist_hidden_until_jenis_chosen(self):
+        self.client.force_login(self.user)
+        response = self.client.get(reverse('sdm:kredensial_pengajuan_sendiri'))
+        self.assertNotContains(response, 'Kelengkapan Dokumen Pendukung')
+
+    def test_checklist_renders_three_states_when_jenis_chosen(self):
+        from sdm.models import DokumenPegawai, VersiDokumen
+        valid = DokumenPegawai.objects.create(
+            employee=self.employee, document_type='CREDENTIAL', jenis_berkas='CV',
+            title='CV', sensitivity='personnel',
+        )
+        VersiDokumen.objects.create(
+            document=valid, version_number=1, original_filename='cv.pdf',
+            storage_key='p/cv.pdf', sha256='a' * 64, size_bytes=1,
+            content_type='application/pdf', status='VERIFIED',
+            valid_until=self.today + timedelta(days=400),
+        )
+        expired = DokumenPegawai.objects.create(
+            employee=self.employee, document_type='PROFESSIONAL',
+            jenis_berkas='KEANGGOTAAN', title='KTA', sensitivity='personnel',
+        )
+        VersiDokumen.objects.create(
+            document=expired, version_number=1, original_filename='kta.pdf',
+            storage_key='p/kta.pdf', sha256='b' * 64, size_bytes=1,
+            content_type='application/pdf', status='VERIFIED',
+            valid_until=self.today - timedelta(days=1),
+        )
+        self.client.force_login(self.user)
+        response = self.client.get(
+            reverse('sdm:kredensial_pengajuan_sendiri'), {'jenis': 'REKREDENSIAL'}
+        )
+        content = response.content.decode('utf-8')
+        self.assertIn('Kelengkapan Dokumen Pendukung', content)
+        self.assertIn('Aktif', content)
+        self.assertIn('Kadaluarsa', content)
+        self.assertIn('Belum Diunggah', content)
+
+    def test_checklist_does_not_create_saved_rows(self):
+        from sdm.models.kredensial import DokumenSyaratKredensial
+        self.client.force_login(self.user)
+        self.client.get(
+            reverse('sdm:kredensial_pengajuan_sendiri'), {'jenis': 'AWAL'}
+        )
+        self.assertEqual(DokumenSyaratKredensial.objects.count(), 0)
+
+    def test_portal_upload_redirects_back_to_chosen_jenis(self):
+        self.client.force_login(self.user)
+        upload = SimpleUploadedFile('cv.pdf', b'%PDF-1.4', content_type='application/pdf')
+        response = self.client.post(reverse('sdm:portal_dokumen_upload'), {
+            'jenis_berkas': 'CV',
+            'berkas': upload,
+            'next_jenis': 'REKREDENSIAL',
+        })
+        self.assertEqual(response.status_code, 302)
+        self.assertIn('jenis=REKREDENSIAL', response.url)
+
+    def test_upload_switches_state_to_aktif(self):
+        self.client.force_login(self.user)
+        upload = SimpleUploadedFile('cv.pdf', b'%PDF-1.4', content_type='application/pdf')
+        self.client.post(reverse('sdm:portal_dokumen_upload'), {
+            'jenis_berkas': 'CV', 'berkas': upload,
+        })
+        response = self.client.get(
+            reverse('sdm:kredensial_pengajuan_sendiri'), {'jenis': 'AWAL'}
+        )
+        self.assertIn('Aktif', response.content.decode('utf-8'))

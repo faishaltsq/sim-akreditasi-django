@@ -327,3 +327,86 @@ class HumanCapitalAccessTests(TestCase):
         self.assertTrue(
             RolePermissionConfig.objects.get(role='ADMIN_RS').can_view_hc
         )
+
+
+class StageCapabilityTests(TestCase):
+    """D-0: per-stage credential capabilities are first-class and scoped."""
+
+    STAGE_CAPABILITIES = (
+        'hc_verify_credentials',
+        'hc_review_subkomite',
+        'hc_recommend_komite',
+        'hc_approve_credentials',
+    )
+
+    def setUp(self):
+        self.today = timezone.localdate()
+        self.unit = UnitKerja.objects.create(name='Unit Tahap', code='HC-TAHAP')
+        self.other_unit = UnitKerja.objects.create(name='Unit Tahap Lain', code='HC-TAHAP2')
+
+    def test_stage_capabilities_are_declared(self):
+        from sdm.models import HcGrant
+
+        choices = dict(HcGrant.CAPABILITY_CHOICES)
+        for capability in self.STAGE_CAPABILITIES:
+            self.assertIn(capability, choices)
+
+    def test_role_configuration_exposes_stage_fields(self):
+        config = RolePermissionConfig.get_config_for_role('ADMIN_RS')
+        for capability in self.STAGE_CAPABILITIES:
+            self.assertTrue(hasattr(config, capability), capability)
+            self.assertFalse(getattr(config, capability), capability)
+
+    def test_grant_without_role_permission_is_denied(self):
+        user = get_user_model().objects.create_user(username='stage-denied')
+        UserProfile.objects.create(user=user, role='ADMIN_RS', unit_kerja=self.unit)
+        HcGrant.objects.create(
+            user=user, capability='hc_review_subkomite', unit_kerja=self.unit,
+        )
+        with self.assertRaises(PermissionDenied):
+            require_hc_capability(user, 'hc_review_subkomite', unit=self.unit)
+
+    def test_grant_with_role_permission_is_allowed(self):
+        user = get_user_model().objects.create_user(username='stage-allowed')
+        UserProfile.objects.create(user=user, role='ADMIN_RS', unit_kerja=self.unit)
+        config = RolePermissionConfig.get_config_for_role('ADMIN_RS')
+        config.hc_review_subkomite = True
+        config.save(update_fields=['hc_review_subkomite', 'updated_at'])
+        HcGrant.objects.create(
+            user=user, capability='hc_review_subkomite', unit_kerja=self.unit,
+        )
+        self.assertIsNone(
+            require_hc_capability(user, 'hc_review_subkomite', unit=self.unit)
+        )
+
+    def test_stage_capability_still_respects_unit_scope(self):
+        user = get_user_model().objects.create_user(username='stage-scope')
+        UserProfile.objects.create(user=user, role='ADMIN_RS', unit_kerja=self.other_unit)
+        config = RolePermissionConfig.get_config_for_role('ADMIN_RS')
+        config.hc_approve_credentials = True
+        config.save(update_fields=['hc_approve_credentials', 'updated_at'])
+        HcGrant.objects.create(
+            user=user, capability='hc_approve_credentials', unit_kerja=self.other_unit,
+        )
+        with self.assertRaises(PermissionDenied):
+            require_hc_capability(user, 'hc_approve_credentials', unit=self.unit)
+
+    def test_stage_capabilities_do_not_widen_legacy_review_access(self):
+        user = get_user_model().objects.create_user(username='stage-legacy')
+        UserProfile.objects.create(user=user, role='ADMIN_RS', unit_kerja=self.unit)
+        config = RolePermissionConfig.get_config_for_role('ADMIN_RS')
+        config.hc_review_subkomite = True
+        config.hc_recommend_komite = True
+        config.hc_approve_credentials = True
+        config.save(update_fields=[
+            'hc_review_subkomite', 'hc_recommend_komite',
+            'hc_approve_credentials', 'updated_at',
+        ])
+        HcGrant.objects.create(
+            user=user, capability='hc_review_subkomite', unit_kerja=self.unit,
+        )
+        # Legacy review capability is not implied by any stage capability.
+        with self.assertRaises(PermissionDenied):
+            require_hc_capability(
+                user, 'can_review_hc_credentials', unit=self.unit,
+            )

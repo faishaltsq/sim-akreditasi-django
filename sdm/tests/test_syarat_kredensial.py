@@ -454,3 +454,50 @@ class DecisionSoftGateTests(SyaratBase):
             )
             if row.status == 'KURANG'
         ]
+
+
+class EmployeeRequirementStateTests(SyaratBase):
+    """D-2: pre-submission checklist reads three evidence states."""
+
+    def _states(self):
+        from sdm.services.syarat_kredensial import evaluate_employee_requirements
+        return {row['jenis']: row for row in evaluate_employee_requirements(self.employee)}
+
+    def test_no_document_reads_belum(self):
+        states = self._states()
+        self.assertEqual(states['CV']['evidence_state'], 'BELUM')
+        self.assertIsNone(states['CV']['document_version'])
+
+    def test_valid_document_reads_aktif(self):
+        version = self._document(
+            kind='CV', valid_until=self.today + timedelta(days=400),
+        )
+        states = self._states()
+        self.assertEqual(states['CV']['evidence_state'], 'AKTIF')
+        self.assertEqual(states['CV']['document_version'].pk, version.pk)
+
+    def test_expired_only_reads_kadaluarsa(self):
+        self._document(
+            kind='CV', valid_until=self.today - timedelta(days=1),
+        )
+        self.assertEqual(self._states()['CV']['evidence_state'], 'KADALUARSA')
+
+    def test_undated_document_reads_aktif(self):
+        self._document(kind='CV', valid_until=None)
+        self.assertEqual(self._states()['CV']['evidence_state'], 'AKTIF')
+
+    def test_evaluation_writes_nothing(self):
+        from sdm.models.kredensial import DokumenSyaratKredensial
+        before = DokumenSyaratKredensial.objects.count()
+        self._states()
+        self.assertEqual(DokumenSyaratKredensial.objects.count(), before)
+
+    def test_rows_cover_every_evidence_kind_without_workflow(self):
+        states = self._states()
+        self.assertIn('SEHAT_PSIKOLOGIS', states)
+        self.assertNotIn('SURAT_PERMOHONAN', states)
+
+    def test_row_carries_domain_and_label(self):
+        states = self._states()
+        self.assertEqual(states['SEHAT_JASMANI']['domain'], 'SEHAT')
+        self.assertTrue(states['SEHAT_JASMANI']['label'])

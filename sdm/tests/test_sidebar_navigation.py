@@ -43,28 +43,28 @@ class HumanCapitalSidebarTests(TestCase):
     def test_menu_is_absent_without_any_hc_grant(self):
         body = self._sidebar()
 
-        self.assertNotIn('Dasbor Human Capital', body)
+        self.assertNotIn('Dasbor SDM', body)
         self.assertNotIn('/human-capital/', body)
 
     def test_dashboard_entry_appears_with_a_view_grant(self):
         self._allow('can_view_hc')
         body = self._sidebar()
 
-        self.assertIn('Human Capital', body)
-        self.assertIn('Dasbor Human Capital', body)
+        self.assertIn('Human capital', body)
+        self.assertIn('Dasbor SDM', body)
         self.assertIn('/human-capital/', body)
 
     def test_employee_directory_only_appears_with_its_capability(self):
         self._allow('can_view_hc')
         body = self._sidebar()
-        self.assertIn('Direktori Pegawai', body)
+        self.assertIn('Direktori pegawai', body)
 
         # A grant that does not cover the directory must not advertise it.
         HcGrant.objects.filter(user=self.user, capability='can_view_hc').delete()
         self._allow('can_manage_hc_training')
         body = self._sidebar()
-        self.assertNotIn('Direktori Pegawai', body)
-        self.assertIn('Diklat &amp; Sertifikasi', body)
+        self.assertNotIn('Direktori pegawai', body)
+        self.assertIn('Diklat &amp; sertifikasi', body)
 
     def test_every_menu_entry_resolves_to_a_live_route(self):
         from django.urls import reverse

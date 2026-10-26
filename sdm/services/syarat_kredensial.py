@@ -42,30 +42,26 @@ def populate_requirements(pengajuan):
 
 
 def _latest_valid_version(employee, kind, *, health, today):
+    """Newest non-rejected version that is either undated or not yet expired.
+
+    PENDING counts as present evidence (it is awaiting review, not invalid);
+    only REJECTED and SUPERSEDED are excluded so the checklist never claims
+    a document the employee does not actually have.
+    """
     sensitivity = 'health' if health else 'personnel'
-    return (
-        VersiDokumen.objects.filter(
-            document__employee=employee,
-            document__jenis_berkas=kind,
-            document__sensitivity=sensitivity,
-        )
-        .exclude(status__in=('REJECTED', 'PENDING'))
-        .filter(valid_until__isnull=False)
-        .filter(valid_until__gte=today)
-        .select_related('document')
-        .order_by('-version_number', '-pk')
-        .first()
-        or VersiDokumen.objects.filter(
-            document__employee=employee,
-            document__jenis_berkas=kind,
-            document__sensitivity=sensitivity,
-            valid_until__isnull=True,
-        )
-        .exclude(status__in=('REJECTED', 'PENDING'))
-        .select_related('document')
-        .order_by('-version_number', '-pk')
-        .first()
-    )
+    base = VersiDokumen.objects.filter(
+        document__employee=employee,
+        document__jenis_berkas=kind,
+        document__sensitivity=sensitivity,
+    ).exclude(status__in=('REJECTED', 'SUPERSEDED')).select_related('document')
+    dated = base.filter(
+        valid_until__isnull=False, valid_until__gte=today,
+    ).order_by('-version_number', '-pk').first()
+    if dated is not None:
+        return dated
+    return base.filter(valid_until__isnull=True).order_by(
+        '-version_number', '-pk'
+    ).first()
 
 
 def _logbook_satisfied(employee, *, today):
@@ -112,3 +108,57 @@ def evaluate_requirements(pengajuan):
         row.status = 'TERPENUHI' if version is not None else 'KURANG'
         row.save(update_fields=['document_version', 'status'])
     return list(rows)
+
+
+EVIDENCE_AKTIF = 'AKTIF'
+EVIDENCE_KADALUARSA = 'KADALUARSA'
+EVIDENCE_BELUM = 'BELUM'
+
+EVIDENCE_LABELS = {
+    EVIDENCE_AKTIF: 'Aktif',
+    EVIDENCE_KADALUARSA: 'Kadaluarsa',
+    EVIDENCE_BELUM: 'Belum Diunggah',
+}
+
+
+def evaluate_employee_requirements(employee, *, as_of=None):
+    """Read-only checklist for an unsaved request (D-2).
+
+    Returns one row per evidence requirement with ``evidence_state`` in
+    AKTIF / KADALUARSA / BELUM. Never writes ``DokumenSyaratKredensial``:
+    rows belong to a saved request, not to a pre-submission preview.
+    """
+    as_of = as_of or timezone.localdate()
+    jenis_labels = dict(DokumenSyaratKredensial.JENIS_CHOICES)
+    rows = []
+    for spec in DEFAULT_ROWS:
+        if spec['jenis'] in WORKFLOW_JENIS or spec['kind'] is None:
+            continue
+        current = _latest_valid_version(
+            employee, spec['kind'], health=spec['health'], today=as_of,
+        )
+        if current is not None:
+            state = EVIDENCE_AKTIF
+        elif _has_any_version(employee, spec['kind'], health=spec['health']):
+            state = EVIDENCE_KADALUARSA
+        else:
+            state = EVIDENCE_BELUM
+        rows.append({
+            'domain': spec['domain'],
+            'jenis': spec['jenis'],
+            'label': jenis_labels.get(spec['jenis'], spec['jenis']),
+            'upload_kind': spec['kind'],
+            'evidence_state': state,
+            'evidence_label': EVIDENCE_LABELS[state],
+            'document_version': current,
+        })
+    return rows
+
+
+def _has_any_version(employee, kind, *, health):
+    sensitivity = 'health' if health else 'personnel'
+    return VersiDokumen.objects.filter(
+        document__employee=employee,
+        document__jenis_berkas=kind,
+        document__sensitivity=sensitivity,
+    ).exclude(status='REJECTED').exists()

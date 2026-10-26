@@ -56,12 +56,20 @@ class VerifikasiSumber(models.Model):
 
 class PengajuanKredensial(models.Model):
     STATUS_CHOICES = [
+        # Legacy values stay valid: existing rows keep routing as before.
         ('DIAJUKAN', 'Diajukan'),
         ('DITINJAU', 'Ditinjau Komite'),
         ('DIREKOMENDASI', 'Direkomendasikan'),
         ('DISETUJUI', 'Disetujui'),
         ('DITOLAK', 'Ditolak'),
         ('DICABUT', 'Dicabut'),
+        # D-3 staged values (additive).
+        ('DRAFT', 'Draf'),
+        ('VERIFIKASI_SDM', 'Verifikasi SDM'),
+        ('REVIEW_SUBKOMITE', 'Review Subkomite Kredensial'),
+        ('REKOMENDASI_KETUA_KOMITE', 'Rekomendasi Ketua Komite'),
+        ('BERKAS_LENGKAP', 'Berkas Lengkap'),
+        ('DIAJUKAN_DIREKTUR', 'Diajukan ke Direktur'),
     ]
     JENIS_CHOICES = [
         ('AWAL', 'Kredensial Awal'),
@@ -86,7 +94,7 @@ class PengajuanKredensial(models.Model):
         verbose_name='Logbook / Portofolio',
     )
     status = models.CharField(
-        'Status', max_length=20, choices=STATUS_CHOICES, default='DIAJUKAN'
+        'Status', max_length=30, choices=STATUS_CHOICES, default='DIAJUKAN'
     )
     committee_notes = models.TextField('Catatan Komite', blank=True)
     recommendation = models.TextField('Rekomendasi', blank=True)
@@ -376,3 +384,57 @@ class DokumenSyaratKredensial(models.Model):
 
     def __str__(self):
         return f'{self.get_domain_display()} — {self.get_jenis_display()} ({self.get_status_display()})'
+
+
+class TahapKredensial(models.Model):
+    """D-3: append-only stage transition for a credential request.
+
+    Status on ``PengajuanKredensial`` stays the single source of truth for
+    routing; this table records who moved the request, when, and what was
+    still missing at that moment.
+    """
+
+    TAHAP_CHOICES = [
+        ('VERIFIKASI_SDM', 'Verifikasi SDM'),
+        ('REVIEW_SUBKOMITE', 'Review Subkomite Kredensial'),
+        ('REKOMENDASI_KETUA_KOMITE', 'Rekomendasi Ketua Komite'),
+        ('BERKAS_LENGKAP', 'Berkas Lengkap'),
+        ('DIAJUKAN_DIREKTUR', 'Diajukan ke Direktur'),
+        ('SK_TERBIT', 'SK RKK Terbit'),
+        ('DITOLAK', 'Ditolak'),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    pengajuan = models.ForeignKey(
+        PengajuanKredensial, on_delete=models.CASCADE, related_name='tahapan',
+        verbose_name='Pengajuan Kredensial',
+    )
+    tahap = models.CharField('Tahap', max_length=30, choices=TAHAP_CHOICES)
+    aktor = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='sdm_credential_stages', verbose_name='Pelaku',
+    )
+    catatan = models.TextField('Catatan', blank=True)
+    kekurangan = models.TextField('Kekurangan pada Tahap Ini', blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = 'Tahap Kredensial'
+        verbose_name_plural = 'Tahap Kredensial'
+        ordering = ['-created_at', '-pk']
+        indexes = [
+            models.Index(
+                fields=['pengajuan', '-created_at'], name='sdm_tahap_pgj_crt_idx',
+            ),
+        ]
+
+    def save(self, *args, **kwargs):
+        if self.pk and type(self).objects.filter(pk=self.pk).exists():
+            raise ValidationError('Tahap kredensial bersifat immutable.')
+        return super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        raise ValidationError('Tahap kredensial tidak dapat dihapus.')
+
+    def __str__(self):
+        return f'{self.pengajuan_id} — {self.get_tahap_display()}'
