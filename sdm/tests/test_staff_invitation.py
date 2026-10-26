@@ -13,7 +13,19 @@ from sdm.models import HcGrant, Pegawai, PenempatanPegawai, UndanganAkunPegawai
 from sdm.services.undangan import accept_staff_invitation, invite_staff_account
 
 
+@override_settings(
+    EMAIL_BACKEND='django.core.mail.backends.locmem.EmailBackend',
+    PUBLIC_BASE_URL='https://arima.example.org',
+)
 class StaffInvitationTests(TestCase):
+    """Invitation delivery needs a configured PUBLIC_BASE_URL.
+
+    `_send_invitation_email` refuses to build an activation link without one
+    (deriving it from the request Host would let a spoofed host reach an
+    emailed credential link), so the test class supplies a canonical origin
+    instead of depending on the developer's environment.
+    """
+
     def setUp(self):
         self.root = UnitKerja.objects.create(name='Direktorat HC', code='DIR-HC')
         self.manager = self._user('impor-manager')
@@ -45,17 +57,14 @@ class StaffInvitationTests(TestCase):
         return user
 
     def test_invite_creates_sent_invitation_and_email(self):
-        with override_settings(
-            EMAIL_BACKEND='django.core.mail.backends.locmem.EmailBackend'
-        ):
-            with self.captureOnCommitCallbacks(execute=True):
-                invitation = invite_staff_account(
-                    actor=self.manager,
-                    employee=self.employee,
-                    email='baru@example.com',
-                    role='STAF_NAKES',
-                    idempotency_key='inv-001',
-                )
+        with self.captureOnCommitCallbacks(execute=True):
+            invitation = invite_staff_account(
+                actor=self.manager,
+                employee=self.employee,
+                email='baru@example.com',
+                role='STAF_NAKES',
+                idempotency_key='inv-001',
+            )
         self.assertEqual(invitation.state, 'SENT')
         self.assertEqual(invitation.email, 'baru@example.com')
         self.assertEqual(len(mail.outbox), 1)
@@ -72,17 +81,14 @@ class StaffInvitationTests(TestCase):
             )
 
     def test_accept_activates_account_and_links_employee(self):
-        with override_settings(
-            EMAIL_BACKEND='django.core.mail.backends.locmem.EmailBackend'
-        ):
-            with self.captureOnCommitCallbacks(execute=True):
-                invitation = invite_staff_account(
-                    actor=self.manager,
-                    employee=self.employee,
-                    email='baru2@example.com',
-                    role='STAF_NAKES',
-                    idempotency_key='inv-003',
-                )
+        with self.captureOnCommitCallbacks(execute=True):
+            invitation = invite_staff_account(
+                actor=self.manager,
+                employee=self.employee,
+                email='baru2@example.com',
+                role='STAF_NAKES',
+                idempotency_key='inv-003',
+            )
         user = accept_staff_invitation(
             token=invitation.raw_token, password='StrongPass123!'
         )
@@ -94,17 +100,14 @@ class StaffInvitationTests(TestCase):
         self.assertEqual(invitation.state, 'ACCEPTED')
 
     def test_accept_with_weak_password_is_rejected(self):
-        with override_settings(
-            EMAIL_BACKEND='django.core.mail.backends.locmem.EmailBackend'
-        ):
-            with self.captureOnCommitCallbacks(execute=True):
-                invitation = invite_staff_account(
-                    actor=self.manager,
-                    employee=self.employee,
-                    email='baru3@example.com',
-                    role='STAF_NAKES',
-                    idempotency_key='inv-004',
-                )
+        with self.captureOnCommitCallbacks(execute=True):
+            invitation = invite_staff_account(
+                actor=self.manager,
+                employee=self.employee,
+                email='baru3@example.com',
+                role='STAF_NAKES',
+                idempotency_key='inv-004',
+            )
         with self.assertRaises(Exception):
             accept_staff_invitation(token=invitation.raw_token, password='weak')
 
