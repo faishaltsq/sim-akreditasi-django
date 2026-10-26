@@ -366,8 +366,8 @@ code, .font-mono, .mono, .font-monospace {
     flex-shrink: 0;
 }
 .sidebar-brand-text { min-width: 0; }
-.sidebar-brand-text h6 {
-    margin: 0;
+.sidebar-brand-text .brand-name {
+    display: block;
     font-size: 14px;
     font-weight: 600;
     letter-spacing: 0.06em;
@@ -427,6 +427,29 @@ code, .font-mono, .mono, .font-monospace {
     font-size: 15px;
     color: var(--rail-dim);
 }
+
+/* Icon tones: the glyph says which task group the item belongs to, the label
+   still carries the meaning. Each tone is >= 6:1 on the rail, and every row
+   that becomes active forces the icon to white so it stays legible on indigo. */
+.sidebar-nav .nav-icon-indigo { color: #8E97EE; }
+.sidebar-nav .nav-icon-teal   { color: #6FC3BC; }
+.sidebar-nav .nav-icon-green  { color: #6CC58A; }
+.sidebar-nav .nav-icon-amber  { color: #DFAE62; }
+.sidebar-nav .nav-icon-red    { color: #E88B8B; }
+.sidebar-nav .nav-icon-cyan   { color: #6FB6DE; }
+.sidebar-nav .nav-icon-violet { color: #B49AEC; }
+.sidebar-nav .nav-icon-slate  { color: #9FB0C8; }
+
+.sidebar-nav .nav-link:hover .nav-icon,
+.sidebar-nav .nav-link.active .nav-icon,
+.sidebar-nav .nav-link.active .nav-icon-indigo,
+.sidebar-nav .nav-link.active .nav-icon-teal,
+.sidebar-nav .nav-link.active .nav-icon-green,
+.sidebar-nav .nav-link.active .nav-icon-amber,
+.sidebar-nav .nav-link.active .nav-icon-red,
+.sidebar-nav .nav-link.active .nav-icon-cyan,
+.sidebar-nav .nav-link.active .nav-icon-violet,
+.sidebar-nav .nav-link.active .nav-icon-slate { color: #FFFFFF; }
 .sidebar-nav .nav-link .nav-text {
     display: flex;
     flex-direction: column;
@@ -472,7 +495,7 @@ code, .font-mono, .mono, .font-monospace {
     margin-top: 6px;
 }
 .sidebar-nav .sidebar-kelompok > .nav-pokja:hover { background: #232F49 !important; }
-.sidebar-nav .sidebar-kelompok > .nav-pokja .bi { color: var(--rail-dim) !important; }
+.sidebar-nav .sidebar-kelompok > .nav-pokja .nav-icon { color: inherit; }
 
 .sidebar-nav .collapse > div {
     background: transparent !important;
@@ -569,7 +592,7 @@ code, .font-mono, .mono, .font-monospace {
     border-bottom: 1px solid var(--line);
 }
 .top-bar .page-heading { flex: 1 1 auto; min-width: 0; }
-.top-bar .page-heading h5 {
+.top-bar .page-title {
     margin: 0;
     font-size: 17px;
     font-weight: 600;
@@ -625,10 +648,13 @@ code, .font-mono, .mono, .font-monospace {
     min-width: 0;
     border: 0;
     background: transparent;
-    outline: none;
     font-size: 13px;
     color: var(--ink-900);
 }
+/* Focus is drawn by the field wrapper (border + ring), so the inner input
+   must not add a second ring on top of it. */
+.v3-topsearch input:focus { outline: none; box-shadow: none; }
+.v3-topsearch input:focus-visible { outline: none; }
 .v3-topsearch input::placeholder { color: var(--ink-500); }
 .v3-topsearch kbd {
     font-family: var(--font-mono);
@@ -1122,7 +1148,7 @@ code, .font-mono, .mono, .font-monospace {
 .form-control:focus, .form-select:focus {
     border-color: var(--accent);
     box-shadow: var(--focus-ring);
-    outline: none;
+    outline: none;   /* the ring above replaces it, 3:1 against the field edge */
 }
 .form-control::placeholder { color: var(--ink-500); opacity: 1; }
 .form-control:disabled, .form-select:disabled { background: var(--neutral-light); color: var(--ink-500); }
@@ -1191,7 +1217,7 @@ code, .font-mono, .mono, .font-monospace {
     border-bottom: 1px solid var(--rail-line) !important;
     color: #FFFFFF;
 }
-.offcanvas-sidebar .offcanvas-header h6 { color: #FFFFFF; }
+.offcanvas-sidebar .offcanvas-header .brand-name { color: #FFFFFF; font-size: 13px; letter-spacing: 0.05em; }
 .offcanvas-sidebar .offcanvas-header small { color: var(--rail-dim); }
 .offcanvas-sidebar .btn-close { filter: invert(1) grayscale(1) brightness(1.8); }
 .offcanvas-body { padding: 0; }
@@ -1504,3 +1530,20 @@ select:focus-visible, input:focus-visible, textarea:focus-visible {
    stays ink so long messages remain readable. */
 #appToast.toast-success { border-left: 3px solid #5DBE7E; }
 #appToast.toast-danger { border-left: 3px solid #E08585; }
+
+/* --------------------------------------------------------------------------
+   21. Coarse pointers (tablet, touch)
+   Dense tables keep 24-28px controls for mouse use. On a touch screen the same
+   controls must be reachable with a fingertip, so every interactive target
+   grows to the 44px minimum without changing the desktop density.
+   -------------------------------------------------------------------------- */
+@media (pointer: coarse) {
+    .btn, .btn-sm, .btn-xs { min-height: 44px; padding-left: 14px; padding-right: 14px; }
+    .btn-logout, .mobile-topbar .btn-menu { width: 44px; height: 44px; }
+    .page-link { min-width: 44px; min-height: 44px; display: inline-flex; align-items: center; justify-content: center; }
+    .form-control, .form-select { min-height: 44px; }
+    .nav-tabs .nav-link, .nav-pills .nav-link { min-height: 44px; }
+    .cell-attach { width: 44px; height: 44px; font-size: 16px; }
+    .pdca-cell { min-height: 96px; }
+    .cell-tag { min-height: 32px; padding: 4px 8px; }
+}
