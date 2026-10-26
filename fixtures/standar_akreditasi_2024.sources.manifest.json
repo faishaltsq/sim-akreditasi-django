@@ -1,0 +1,73 @@
+{
+  "schema_version": 1,
+  "review_status": "PENDING_OWNER_REVIEW",
+  "production_ready": false,
+  "sources": {
+    "decree": {
+      "filename": "starkes 2024.pdf",
+      "sha256": "22d2247e6a2b272789141536ca4539f99ebb825ad6c7bfe61106d065aa453116",
+      "pages": 356,
+      "document_type": "STANDARD_DECREE",
+      "decree_number": "HK.01.07/MENKES/1596/2024",
+      "role": "CANONICAL_EP_TEXT"
+    },
+    "survey": {
+      "filename": "instrumen standar survey akreditasi  rs 2024.pdf",
+      "sha256": "fde4091e97bd4b9de944994e3764a125bdc83f07d3fba680ecb5023bb478dd80",
+      "pages": 415,
+      "document_type": "SURVEY_INSTRUMENT",
+      "decree_number": "HK.02.02/D/47104/2024",
+      "role": "RDWOS_EVIDENCE"
+    }
+  },
+  "inventory_is_official": false,
+  "inventory": {
+    "decree_eps": 806,
+    "survey_eps": 794,
+    "exact_text_links": 715,
+    "evidence_instructions": 1271,
+    "chapters": {
+      "TKRS": 71,
+      "KPS": 81,
+      "MFK": 72,
+      "PMKP": 44,
+      "MRMIK": 51,
+      "PPI": 62,
+      "PPK": 23,
+      "AKP": 67,
+      "HPK": 39,
+      "PP": 58,
+      "PAP": 52,
+      "PAB": 38,
+      "PKPO": 53,
+      "KE": 25,
+      "SKP": 24,
+      "PROGNAS": 46
+    },
+    "evidence_types": {
+      "R": 171,
+      "D": 612,
+      "W": 356,
+      "O": 109,
+      "S": 21,
+      "UNTYPED": 2
+    },
+    "review_reasons": {
+      "source_code_conflict": 14,
+      "source_text_diff": 63,
+      "survey_ep_without_exact_decree_match": 16,
+      "decree_ep_without_exact_survey_match": 91
+    },
+    "parser_anomalies": {
+      "decree": {
+        "nonsequential_ep_labels": 1
+      },
+      "survey": {
+        "incomplete_evidence_cell": 2,
+        "duplicate_survey_code": 10
+      }
+    }
+  },
+  "artifact_sha256": "d155acc178f9cd5d327a6239a160bec1d92efe477f239eadc15e652e8534eaac",
+  "review_csv_sha256": "8d08e46bdb8a8bc16bdf0fb2220c052f82a8a0893c26463228ae9af69e89eb12"
+}

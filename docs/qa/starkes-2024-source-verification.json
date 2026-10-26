@@ -1,0 +1,27 @@
+{
+  "verification_scope": "Immutable source-only snapshot; not activation or historical migrations",
+  "snapshot_path": "C:\\Users\\cubeb\\AppData\\Local\\hermes\\cache\\scratch\\starkes-source-snapshot-ef7cuwaj",
+  "base_commit": "aabddb7b6b21a685a781b6b1a2e1c801a8f2684e",
+  "command": [
+    "C:\\Users\\cubeb\\OneDrive\\Documents\\coding\\sim-akreditasi-django\\.venv\\Scripts\\python.exe",
+    "-m",
+    "unittest",
+    "akreditasi.tests_starkes_sources",
+    "akreditasi.tests_starkes_source_fixture",
+    "-q"
+  ],
+  "exit_code": 0,
+  "test_output": "----------------------------------------------------------------------\nRan 40 tests in 0.218s\n\nOK\n",
+  "sha256": {
+    "akreditasi/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "akreditasi/starkes_sources.py": "40215a5be401d37e321cc3604004997da15dc8ae5734ba6a1979fb3a40c540b9",
+    "akreditasi/starkes_survey.py": "20d7ae847672cb12a4262f64ff51b7d1498fa637b822e2d4304923d6cc3be012",
+    "akreditasi/starkes_source_fixture.py": "5f1ffaab04fdf516f2b88af336013abba09c0a342cb785d361df747779dd3e2d",
+    "akreditasi/tests_starkes_sources.py": "f48af6db22fa65a171fc8454db309736ac46769015e0a78a6d347b7c3e231ddf",
+    "akreditasi/tests_starkes_source_fixture.py": "b511dcb6fef720d5d38428488a793d29056081331ecb10f247c8dd1db55392c0",
+    "fixtures/standar_akreditasi_2024.sources.json": "d155acc178f9cd5d327a6239a160bec1d92efe477f239eadc15e652e8534eaac",
+    "fixtures/standar_akreditasi_2024.sources.manifest.json": "04ed53018577b80cf358abb0f37a29e5a290172114af10b1a817668585160038",
+    "fixtures/standar_akreditasi_2024.sources.review.csv": "8d08e46bdb8a8bc16bdf0fb2220c052f82a8a0893c26463228ae9af69e89eb12"
+  },
+  "live_owned_files_unchanged_after_gate": true
+}

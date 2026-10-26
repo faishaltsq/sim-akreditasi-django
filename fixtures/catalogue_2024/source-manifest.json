@@ -1,0 +1,24 @@
+{
+  "schema_version": 1,
+  "review_status": "DISETUJUI",
+  "production_ready": true,
+  "framework_name": "STARKES Edisi 2024 / KMK HK.01.07/MENKES/1596/2024",
+  "edition": "2024",
+  "document_type": "STANDARD_DECREE",
+  "decree_number": "HK.01.07/MENKES/1596/2024",
+  "instrument_type": "Standar Akreditasi Rumah Sakit",
+  "sha256": "22d2247e6a2b272789141536ca4539f99ebb825ad6c7bfe61106d065aa453116",
+  "pages": 356,
+  "source_path": "fixtures/catalogue_2024/starkes-2024-decree.pdf",
+  "artifact_path": "fixtures/catalogue_2024/starkes-2024-reviewed-artifact.json",
+  "artifact_digest": "REVIEWED_ARTIFACT_DIGEST_PLACEHOLDER",
+  "expected_inventory": [
+    {"code": "TKRS 1", "ep_count": 4},
+    {"code": "TKRS 2", "ep_count": 5},
+    {"code": "KPS 1", "ep_count": 4},
+    {"code": "PROGNAS 1", "ep_count": 3}
+  ],
+  "required_chapters": ["TKRS", "KPS", "MFK", "PMKP", "MRMIK", "PPI", "PPK", "AKP", "HPK", "PP", "PAP", "PAB", "PKPO", "KE", "SKP", "PROGNAS"],
+  "reviewed_by": "owner_reviewer",
+  "reviewed_at": "2026-10-24T00:00:00Z"
+}

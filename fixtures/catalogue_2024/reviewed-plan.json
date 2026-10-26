@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "review_status": "DISETUJUI",
+  "plan_hash": "REVIEWED_PLAN_HASH_PLACEHOLDER",
+  "backup_reference": "var/backup/starkes-2024-pre-activation-20261024.sql",
+  "expected_previous_framework_id": null,
+  "mappings": [
+    {
+      "source_code": "TKRS 1 EP a",
+      "target_code": "TKRS 1 EP a",
+      "classification": "UNCHANGED",
+      "score_policy": "CARRY_ASSESSMENT",
+      "reason": "Konten teks sama persis antara edisi 2022 dan 2024, persetujuan pemilik tercatat."
+    },
+    {
+      "source_code": "TKRS 2 EP a",
+      "target_code": "TKRS 2 EP a",
+      "classification": "CHANGED",
+      "score_policy": "REASSESS",
+      "reason": "Pengujian kualitas ditetapkan ulang; skor tidak boleh dibawa."
+    }
+  ],
+  "activation_rules": {
+    "allow_unresolved": false,
+    "require_owner_approval": true,
+    "cache_namespace_rotation": true
+  }
+}
