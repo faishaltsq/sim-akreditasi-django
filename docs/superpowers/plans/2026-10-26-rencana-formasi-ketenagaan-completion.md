@@ -95,9 +95,11 @@ Read-only inspection on `master` at `d9bc2f5`. `sdm.tests.test_formasi` = **13 t
 - [ ] Add RED tests: an approved reference version is immutable; a plan referencing a retired standard still renders its historical value; a missing ratio renders `Belum dikonfigurasi`; effective minutes derived from the factor breakdown equals the sum of the components.
 - [ ] Add `StandarKetenagaan` (unit type / profession / `jenis` ∈ rasio_regulasi | standar_waktu | faktor_koreksi, `nilai`, `satuan`, `sumber_regulasi`, `berlaku_mulai`, `is_active`, `reviewed_by`, `reviewed_at`) and `JamKerjaEfektif` (tahun, hari_kerja, cuti_tahunan, hari_sakit_rata2, libur_nasional, jam_pelatihan, `hasil_menit_efektif` computed, `is_approved`).
 - [ ] Compute `effective_minutes_per_employee` from the approved `JamKerjaEfektif` for the plan's year; keep manual override available but flag the plan as `override manual` in the UI and in the printed report.
-- [ ] Split `support_allowance_pct` into its components (`cuti`, `sakit`, `pelatihan`, `libur`) and derive the total, so the printed report shows the arithmetic instead of one opaque percentage.
+- [ ] **Corrected during implementation:** do NOT split `support_allowance_pct` into `cuti`/`sakit`/`pelatihan`/`libur`. Those four are already subtracted inside `JamKerjaEfektif`; adding them again as a percentage double counts and inflates the requirement. The breakdown belongs to `JamKerjaEfektif`; `support_allowance_pct` covers indirect/support activity only (documentation, handover, meetings, coordination). The printed report shows both blocks separately so the arithmetic stays visible without counting anything twice.
 - [ ] Seed **only** what the owner supplies. Empty is `Belum dikonfigurasi`.
 - [ ] GREEN gate: immutability enforced in `save()` mirroring `HasilFormasi`; `test_formasi` green.
+
+**Delivered:** `sdm/models/referensi.py` (`JamKerjaEfektif`, `StandarKetenagaan`), `RencanaFormasi.jam_kerja_efektif` FK + `resolve_effective_minutes()`, migration `0033_*`, `sdm/tests/test_referensi.py`.
 
 ## Task F-A3 — Gap map with risk coding (P0)
 

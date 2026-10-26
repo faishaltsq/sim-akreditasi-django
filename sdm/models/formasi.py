@@ -43,6 +43,16 @@ class RencanaFormasi(models.Model):
         'Menit Efektif per Pegawai', max_digits=12, decimal_places=2,
         validators=[MinValueValidator(Decimal('0.01'))],
     )
+    jam_kerja_efektif = models.ForeignKey(
+        'sdm.JamKerjaEfektif', on_delete=models.PROTECT,
+        null=True, blank=True, related_name='rencana_formasi',
+        verbose_name='Jam Kerja Efektif',
+        help_text='Acuan JKE tahunan; kosong berarti memakai override manual.',
+    )
+    override_alasan = models.TextField(
+        'Alasan Override Manual', blank=True,
+        help_text='Wajib diisi bila menit efektif tidak diambil dari JKE tahunan.',
+    )
     support_allowance_pct = models.DecimalField(
         'Tunjangan Waktu Pendukung (%)', max_digits=6, decimal_places=2,
         default=Decimal('0.00'), validators=[MinValueValidator(Decimal('0.00'))],
@@ -94,6 +104,41 @@ class RencanaFormasi(models.Model):
             raise ValidationError(
                 {'periode_selesai': 'Periode selesai tidak boleh mendahului mulai.'}
             )
+        if self.is_manual_override and not (self.override_alasan or '').strip():
+            raise ValidationError({
+                'override_alasan': (
+                    'Alasan override wajib diisi bila menit efektif tidak '
+                    'diambil dari Jam Kerja Efektif tahunan.'
+                )
+            })
+
+    # ── effective working time resolution (F-A2) ───────────────────────────
+
+    @property
+    def is_manual_override(self):
+        """True when the plan does not draw its minutes from an approved JKE."""
+        return self.jam_kerja_efektif_id is None
+
+    def resolve_effective_minutes(self):
+        """Return the minutes-per-employee this plan is entitled to use.
+
+        Prefers the linked, approved :class:`JamKerjaEfektif` so two units can
+        never quote different denominators for the same year. Falls back to the
+        manual column, which requires a recorded reason — enforced in
+        :meth:`clean` so the gate sits at save/approval, not at every read.
+        Raises instead of guessing when the linked reference is not approved.
+        """
+        if self.jam_kerja_efektif_id is None:
+            return self.effective_minutes_per_employee
+        reference = self.jam_kerja_efektif
+        if not reference.is_approved:
+            raise ValidationError({
+                'jam_kerja_efektif': (
+                    f'Jam Kerja Efektif {reference.tahun} v{reference.versi} '
+                    'Belum disetujui; setujui acuan sebelum menghitung formasi.'
+                )
+            })
+        return reference.menit_efektif_per_tahun
 
     def __str__(self):
         return f'{self.unit_kerja_id} — {self.profesi} — {self.periode_mulai}'
@@ -187,9 +232,8 @@ def calculate_formasi(plan):
     """Compute needs/actual/gap with Decimal arithmetic; never returns a bad result."""
     from sdm.models import PenempatanPegawai
 
-    if not plan.effective_minutes_per_employee or (
-        plan.effective_minutes_per_employee <= 0
-    ):
+    effective_minutes = plan.resolve_effective_minutes()
+    if not effective_minutes or effective_minutes <= 0:
         raise ValidationError(
             {'effective_minutes_per_employee': 'Menit efektif harus lebih dari nol.'}
         )
@@ -209,10 +253,10 @@ def calculate_formasi(plan):
 
     allowance = Decimal('1.00') + (plan.support_allowance_pct / Decimal('100.00'))
     required_fte = _quantize(
-        total_minutes * allowance / plan.effective_minutes_per_employee
+        total_minutes * allowance / effective_minutes
     )
     required_headcount = int(
-        (total_minutes * allowance / plan.effective_minutes_per_employee).to_integral_value(
+        (total_minutes * allowance / effective_minutes).to_integral_value(
             rounding=ROUND_CEILING
         )
     )
@@ -242,7 +286,7 @@ def calculate_formasi(plan):
     digest = hashlib.sha256(
         json.dumps({
             'version': plan.calculation_version,
-            'effective_minutes': str(plan.effective_minutes_per_employee),
+            'effective_minutes': str(effective_minutes),
             'allowance_pct': str(plan.support_allowance_pct),
             'activities': sorted(
                 (

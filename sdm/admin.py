@@ -5,6 +5,7 @@ from .models import (
     AturanDokumen,
     HcGrant,
     InsidenK3Pegawai,
+    JamKerjaEfektif,
     KatalogTindakan,
     Lowongan,
     MasterJenjangProfesi,
@@ -17,6 +18,7 @@ from .models import (
     ProgramOrientasi,
     RencanaFormasi,
     SnapshotAnalitikSDM,
+    StandarKetenagaan,
 )
 
 
@@ -138,6 +140,26 @@ class RencanaFormasiAdmin(admin.ModelAdmin):
     list_filter = ('status', 'metode')
     search_fields = ('unit_kerja__code', 'profesi')
     readonly_fields = ('calculation_version', 'approved_by', 'approved_at')
+    autocomplete_fields = ('jam_kerja_efektif',)
+
+
+@admin.register(JamKerjaEfektif)
+class JamKerjaEfektifAdmin(admin.ModelAdmin):
+    list_display = (
+        'tahun', 'versi', 'hari_produktif', 'menit_efektif_per_tahun',
+        'is_approved', 'is_active',
+    )
+    list_filter = ('tahun', 'is_approved', 'is_active')
+    search_fields = ('sumber',)
+    readonly_fields = ('approved_by', 'approved_at', 'created_at', 'updated_at')
+
+
+@admin.register(StandarKetenagaan)
+class StandarKetenagaanAdmin(admin.ModelAdmin):
+    list_display = ('nama', 'unit_kerja', 'profesi', 'jenis', 'nilai', 'satuan', 'is_active')
+    list_filter = ('jenis', 'is_active', 'profesi')
+    search_fields = ('nama', 'profesi', 'sumber_regulasi', 'unit_kerja__code')
+    readonly_fields = ('reviewed_at', 'created_at', 'updated_at')
 
 
 @admin.register(Lowongan)
