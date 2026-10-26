@@ -17,7 +17,13 @@ from sdm.models import (
     RencanaFormasi,
     calculate_formasi,
 )
-from sdm.services.formasi import approve_plan, save_plan, submit_for_review
+from sdm.services.formasi import (
+    review_budget,
+    review_director,
+    review_hrd,
+    save_plan,
+    submit_for_review,
+)
 
 
 class FormasiCalculationTests(TestCase):
@@ -158,10 +164,30 @@ class FormasiWorkflowTests(TestCase):
         self.approver = self._user('approver')
         config = RolePermissionConfig.get_config_for_role('ADMIN_RS')
         config.can_plan_hc_workforce = True
-        config.save(update_fields=['can_plan_hc_workforce', 'updated_at'])
+        config.can_verify_hc_formasi = True
+        config.can_verify_hc_formasi_budget = True
+        config.can_approve_hc_formasi = True
+        config.save(update_fields=[
+            'can_plan_hc_workforce', 'can_verify_hc_formasi',
+            'can_verify_hc_formasi_budget', 'can_approve_hc_formasi',
+            'updated_at',
+        ])
         for user in (self.creator, self.approver):
             HcGrant.objects.create(
-                user=user, capability='can_plan_hc_workforce', unit_kerja=self.unit
+                user=user, capability='can_plan_hc_workforce',
+                unit_kerja=self.unit
+            )
+            HcGrant.objects.create(
+                user=user, capability='can_verify_hc_formasi',
+                unit_kerja=self.unit
+            )
+            HcGrant.objects.create(
+                user=user, capability='can_verify_hc_formasi_budget',
+                unit_kerja=self.unit
+            )
+            HcGrant.objects.create(
+                user=user, capability='can_approve_hc_formasi',
+                unit_kerja=self.unit
             )
         self.plan = RencanaFormasi.objects.create(
             unit_kerja=self.unit,
@@ -183,7 +209,12 @@ class FormasiWorkflowTests(TestCase):
 
     def test_approval_freezes_an_immutable_result_version(self):
         submit_for_review(self.plan, user=self.creator)
-        approve_plan(self.plan, user=self.approver)
+        review_hrd(self.plan, user=self.approver)
+        review_budget(
+            self.plan, user=self.approver, tahunan=Decimal('1000000'),
+            sumber_anggaran='RKA', plafond=Decimal('2000000'),
+        )
+        review_director(self.plan, user=self.approver)
 
         result = HasilFormasi.objects.get(rencana=self.plan)
         self.assertEqual(result.required_fte, Decimal('1.00'))
@@ -193,13 +224,22 @@ class FormasiWorkflowTests(TestCase):
 
     def test_creator_cannot_approve_their_own_plan(self):
         submit_for_review(self.plan, user=self.creator)
-
+        review_hrd(self.plan, user=self.approver)
+        review_budget(
+            self.plan, user=self.approver, tahunan=Decimal('1000000'),
+            sumber_anggaran='RKA', plafond=Decimal('2000000'),
+        )
         with self.assertRaises(PermissionDenied):
-            approve_plan(self.plan, user=self.creator)
+            review_director(self.plan, user=self.creator)
 
     def test_approved_plan_cannot_be_edited(self):
         submit_for_review(self.plan, user=self.creator)
-        approve_plan(self.plan, user=self.approver)
+        review_hrd(self.plan, user=self.approver)
+        review_budget(
+            self.plan, user=self.approver, tahunan=Decimal('1000000'),
+            sumber_anggaran='RKA', plafond=Decimal('2000000'),
+        )
+        review_director(self.plan, user=self.approver)
         self.plan.profesi = 'Perawat Baru'
 
         with self.assertRaises(ValidationError):
@@ -207,7 +247,12 @@ class FormasiWorkflowTests(TestCase):
 
     def test_approving_a_new_plan_supersedes_the_previous_one(self):
         submit_for_review(self.plan, user=self.creator)
-        approve_plan(self.plan, user=self.approver)
+        review_hrd(self.plan, user=self.approver)
+        review_budget(
+            self.plan, user=self.approver, tahunan=Decimal('1000000'),
+            sumber_anggaran='RKA', plafond=Decimal('2000000'),
+        )
+        review_director(self.plan, user=self.approver)
         new_plan = RencanaFormasi.objects.create(
             unit_kerja=self.unit,
             profesi='Perawat',
@@ -222,10 +267,13 @@ class FormasiWorkflowTests(TestCase):
         )
 
         submit_for_review(new_plan, user=self.creator)
-        approve_plan(new_plan, user=self.approver)
-
-        self.plan.refresh_from_db()
-        self.assertEqual(self.plan.status, 'SUPERSEDED')
+        review_hrd(new_plan, user=self.approver)
+        review_budget(new_plan, user=self.approver, tahunan=Decimal('1000000'),
+                      sumber_anggaran='RKA', plafond=Decimal('2000000'))
+        review_director(new_plan, user=self.approver)
+        self.assertEqual(
+            RencanaFormasi.objects.get(pk=self.plan.pk).status, 'SUPERSEDED'
+        )
 
     def test_submitting_a_plan_without_activities_is_rejected(self):
         empty = RencanaFormasi.objects.create(

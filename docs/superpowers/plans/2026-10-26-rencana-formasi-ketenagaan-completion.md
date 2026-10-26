@@ -113,14 +113,16 @@ Read-only inspection on `master` at `d9bc2f5`. `sdm.tests.test_formasi` = **13 t
 
 **Delivered:** `sdm/services/risiko.py` (`classify_risiko`, `resolve_ambang_risiko`, `gap_rows`, `gap_totals`), `sdm/views.py:formasi_peta`, `sdm/urls.py` route `sdm:formasi_peta`, `templates/sdm/formasi/peta.html`, migration `0034_*`, `sdm/tests/test_risiko_formasi.py` (23 tests). Thresholds are `StandarKetenagaan` rows of `jenis=AMBANG_RISIKO` named `Ambang Ketercukupan Marginal` / `Ambang Defisit Kritis`; unit-specific wins over hospital-wide. Boundary semantics: exactly at the critical threshold is `MARGINAL`, not critical. The N+1 guard asserts the query count is identical with 1 and 5 approved plans.
 
-## Task F-A4 — Submission form with justification and attachments (P1)
+## Task F-A4 — Submission form with justification and attachments (P1) — ✅ DONE 2026-10-26
 
-**Depends on:** F-A3.
+**Depends on:** F-A1, F-A2.
 
-- [ ] Add RED tests: a submission without a reason is rejected; a reason of `hasil FTE` requires a linked approved result; attachments are private (no public URL, no anonymous download); an attachment belonging to another unit is refused.
-- [ ] Add fields to `RencanaFormasi`: `alasan` (choices: layanan_baru / replacement / regulasi_baru / defisit_fte), `alasan_catatan`, `kualifikasi_pendidikan`, `sertifikat_wajib` (JSON list), `target_pemenuhan` (date), `lowongan` (nullable FK).
-- [ ] Add `LampiranFormasi` (plan, `VersiDokumen`, keterangan) reusing the private-storage path from `sdm/storage.py`.
-- [ ] GREEN gate: `test_dokumen`/`test_private_documents` patterns reused; no signed URL leaks into a list response.
+- [x] Add RED tests: a submission without a reason is rejected; a reason of `hasil FTE` requires a linked approved result; attachments are private (no public URL, no anonymous download); an attachment belonging to another unit is refused.
+- [x] Add fields to `RencanaFormasi`: `alasan` (choices: layanan_baru / replacement / regulasi_baru / defisit_fte), `alasan_catatan`, `kualifikasi_pendidikan`, `sertifikat_wajib` (JSON list), `target_pemenuhan` (date), `lowongan` (nullable FK).
+- [x] Add `LampiranFormasi` (plan, `VersiDokumen`, keterangan) reusing the private-storage path from `sdm/storage.py`.
+- [x] GREEN gate: `test_dokumen`/`test_private_documents` patterns reused; no signed URL leaks into a list response.
+
+**Delivered:** `sdm/models/formasi.py` fields, `sdm/models/lampiran_formasi.py`, `sdm/forms/formasi.py` (justification block + sertifikat_wajib parser), migration `0035_*`. 394/394 suite OK.
 
 ## Task F-A5 — Three-stage approval with a budget gate (P0)
 

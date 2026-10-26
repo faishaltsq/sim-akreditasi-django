@@ -481,6 +481,11 @@ class RolePermissionConfig(models.Model):
     can_manage_hc_talent = models.BooleanField('Kelola Talent Human Capital', default=False)
     can_export_hc = models.BooleanField('Ekspor Data Human Capital', default=False)
 
+    # Formation approval stages (F-A5)
+    can_verify_hc_formasi = models.BooleanField('Verifikasi Tinjauan Formasi (HRD)', default=False)
+    can_verify_hc_formasi_budget = models.BooleanField('Verifikasi Anggaran Formasi (Keuangan)', default=False)
+    can_approve_hc_formasi = models.BooleanField('Pengesahan Formasi (Direktur)', default=False)
+
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:

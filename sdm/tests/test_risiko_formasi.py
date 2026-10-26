@@ -25,7 +25,7 @@ from sdm.models import (
     RencanaFormasi,
     StandarKetenagaan,
 )
-from sdm.services.formasi import approve_plan, save_plan, submit_for_review
+from sdm.services.formasi import review_budget, review_director, review_hrd, save_plan, submit_for_review
 from sdm.services.risiko import classify_risiko, resolve_ambang_risiko
 
 
@@ -155,10 +155,22 @@ class ApprovalStoresRisikoTests(TestCase):
         self.approver = self._user('risk-approver')
         config = RolePermissionConfig.get_config_for_role('ADMIN_RS')
         config.can_plan_hc_workforce = True
-        config.save(update_fields=['can_plan_hc_workforce', 'updated_at'])
+        config.can_verify_hc_formasi = True
+        config.can_verify_hc_formasi_budget = True
+        config.can_approve_hc_formasi = True
+        config.save(update_fields=['can_plan_hc_workforce', 'can_verify_hc_formasi', 'can_verify_hc_formasi_budget', 'can_approve_hc_formasi', 'updated_at'])
         for user in (self.creator, self.approver):
             HcGrant.objects.create(
                 user=user, capability='can_plan_hc_workforce', unit_kerja=self.unit
+            )
+            HcGrant.objects.create(
+                user=user, capability='can_verify_hc_formasi', unit_kerja=self.unit
+            )
+            HcGrant.objects.create(
+                user=user, capability='can_verify_hc_formasi_budget', unit_kerja=self.unit
+            )
+            HcGrant.objects.create(
+                user=user, capability='can_approve_hc_formasi', unit_kerja=self.unit
             )
 
     def _user(self, username):
@@ -197,7 +209,10 @@ class ApprovalStoresRisikoTests(TestCase):
         )
         plan = self._plan()
         submit_for_review(plan, user=self.creator)
-        approve_plan(plan, user=self.approver)
+        review_hrd(plan, user=self.approver)
+        review_budget(plan, user=self.approver, tahunan=Decimal('1000000'),
+                      sumber_anggaran='x', plafond=Decimal('200000000'))
+        review_director(plan, user=self.approver)
 
         result = HasilFormasi.objects.get(rencana=plan)
         # required 1.00 FTE, actual 0.00 -> 0% sufficiency
@@ -208,7 +223,10 @@ class ApprovalStoresRisikoTests(TestCase):
     def test_approval_without_thresholds_records_belum_dikonfigurasi(self):
         plan = self._plan()
         submit_for_review(plan, user=self.creator)
-        approve_plan(plan, user=self.approver)
+        review_hrd(plan, user=self.approver)
+        review_budget(plan, user=self.approver, tahunan=Decimal('1000000'),
+                      sumber_anggaran='x', plafond=Decimal('200000000'))
+        review_director(plan, user=self.approver)
 
         result = HasilFormasi.objects.get(rencana=plan)
         self.assertEqual(result.status_risiko, 'BELUM_DIKONFIGURASI')

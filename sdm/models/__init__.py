@@ -15,6 +15,7 @@ from .dokumen import (
 )
 from .formasi import (
     AktivitasBebanKerja,
+    AnggaranFormasi,
     HasilFormasi,
     RencanaFormasi,
     calculate_formasi,
@@ -111,6 +112,7 @@ __all__ = [
     'BebanKerja',
     'JamKerjaEfektif',
     'LampiranFormasi',
+    'AnggaranFormasi',
     'StandarKetenagaan',
     'BatchImporPegawai',
     'ClinicalActionCode',

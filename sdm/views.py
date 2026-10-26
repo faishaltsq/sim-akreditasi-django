@@ -81,7 +81,10 @@ from sdm.services.analitik import (
     export_audit_xlsx,
 )
 from sdm.services.dashboard import build_hc_dashboard
-from sdm.services.formasi import approve_plan, save_plan, submit_for_review
+from sdm.services.formasi import (
+    save_plan, submit_for_review, review_hrd, review_budget,
+    review_director,
+)
 from sdm.services.k3 import (
     add_followup,
     record_health_exam,
@@ -552,7 +555,7 @@ def formasi_approve(request, plan_id):
         RencanaFormasi.objects.filter(pk=plan_id, unit_kerja__in=units)
     )
     try:
-        approve_plan(plan, user=request.user)
+        review_director(plan, user=request.user)
     except (PermissionDenied, ValidationError) as exc:
         message = getattr(exc, 'messages', None)
         messages.error(request, '; '.join(message) if message else str(exc))

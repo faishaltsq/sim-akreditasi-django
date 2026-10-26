@@ -1,9 +1,18 @@
+from decimal import Decimal
+
+from django.conf import settings
 from django.core.exceptions import PermissionDenied, ValidationError
-from django.db import transaction
+from django.db import models, transaction
 from django.utils import timezone
 
 from sdm.akses import require_hc_capability
-from sdm.models import HasilFormasi, PeristiwaSDM, RencanaFormasi, calculate_formasi
+from sdm.models import (
+    AnggaranFormasi,
+    HasilFormasi,
+    PeristiwaSDM,
+    RencanaFormasi,
+    calculate_formasi,
+)
 from sdm.services.risiko import (
     RISIKO_UNCONFIGURED,
     classify_risiko,
@@ -26,19 +35,24 @@ def save_plan(plan, *, user):
             raise ValidationError(
                 {'status': 'Rencana yang sudah disetujui tidak dapat diubah.'}
             )
+        if existing == 'DITOLAK':
+            raise ValidationError(
+                {'status': 'Rencana yang ditolak tidak dapat diubah.'}
+            )
     plan.full_clean()
     plan.save()
     return plan
 
 
 def submit_for_review(plan, *, user):
+    """Unit head submits a draft for HRD review."""
     require_hc_capability(user, 'can_plan_hc_workforce', unit=plan.unit_kerja_id)
     with transaction.atomic():
         locked = RencanaFormasi.objects.select_for_update().get(pk=plan.pk)
         if locked.status != 'DRAFT':
             raise ValidationError({'status': 'Hanya draf yang dapat diajukan.'})
         calculate_formasi(locked)
-        locked.status = 'REVIEW'
+        locked.status = 'REVIEW_HRD'
         locked.save(update_fields=['status', 'updated_at'])
         PeristiwaSDM.objects.create(
             actor=user,
@@ -46,20 +60,106 @@ def submit_for_review(plan, *, user):
             target_tipe='formasi_plan',
             target_id=str(locked.pk),
             status_sebelum='DRAFT',
-            status_sesudah='REVIEW',
+            status_sesudah='REVIEW_HRD',
             alasan='rencana formasi diajukan untuk tinjauan',
         )
     return locked
 
 
-def approve_plan(plan, *, user):
-    require_hc_capability(user, 'can_plan_hc_workforce', unit=plan.unit_kerja_id)
+def review_hrd(plan, *, user):
+    """HRD verifies the staffing analysis before finance sees it."""
+    require_hc_capability(user, 'can_verify_hc_formasi', unit=plan.unit_kerja_id)
     with transaction.atomic():
         locked = RencanaFormasi.objects.select_for_update().get(pk=plan.pk)
-        if locked.status != 'REVIEW':
-            raise ValidationError({'status': 'Hanya rencana dalam tinjauan yang dapat disetujui.'})
+        if locked.status != 'REVIEW_HRD':
+            raise ValidationError({'status': 'Hanya rencana dalam tinjauan HRD.'})
         if locked.created_by_id == getattr(user, 'pk', None):
-            raise PermissionDenied('Pembuat rencana tidak dapat menyetujuinya sendiri.')
+            raise PermissionDenied(
+                'Pemberi verifikasi HRD tidak dapat meninjau rencana milik dirinya sendiri.'
+            )
+        locked.status = 'REVIEW_ANGGARAN'
+        locked.save(update_fields=['status', 'updated_at'])
+        PeristiwaSDM.objects.create(
+            actor=user,
+            jenis_peristiwa='formasi_reviewed_hrd',
+            target_tipe='formasi_plan',
+            target_id=str(locked.pk),
+            status_sebelum='REVIEW_HRD',
+            status_sesudah='REVIEW_ANGGARAN',
+            alasan='verifikasi HRD selesai',
+        )
+    return locked
+
+
+def review_budget(plan, *, user, tahunan, sumber_anggaran, plafond, catatan=''):
+    """Finance checks affordability against the HR ceiling."""
+    require_hc_capability(
+        user, 'can_verify_hc_formasi_budget', unit=plan.unit_kerja_id
+    )
+    if plafond < 0 or tahunan < 0:
+        raise ValidationError({
+            'biaya_tahunan': 'Nilai biaya dan plafond tidak boleh negatif.'
+        })
+    sisa = Decimal(plafond) - Decimal(tahunan)
+    if sisa < 0:
+        # Catat penolakan di luar transaksi utama agar tidak ikut dirollback
+        # ketika ValidationError dilempar di bawah ini.
+        PeristiwaSDM.objects.create(
+            actor=user,
+            jenis_peristiwa='formasi_budget_rejected',
+            target_tipe='formasi_plan',
+            target_id=str(plan.pk),
+            status_sebelum='REVIEW_ANGGARAN',
+            status_sesudah='DITOLAK',
+            alasan=f'biaya={tahunan} melebihi plafond={plafond}; {catatan}',
+        )
+        raise ValidationError({
+            'biaya_tahunan': (
+                'Biaya tahunan melebihi plafond anggaran tersedia; '
+                'rencana ditolak.'
+            )
+        })
+
+    with transaction.atomic():
+        locked = RencanaFormasi.objects.select_for_update().get(pk=plan.pk)
+        if locked.status != 'REVIEW_ANGGARAN':
+            raise ValidationError(
+                {'status': 'Rencana belum pada tahap verifikasi anggaran.'}
+            )
+        AnggaranFormasi.objects.create(
+            rencana=locked,
+            biaya_tahunan=tahunan,
+            sumber_anggaran=sumber_anggaran,
+            plafond_tersedia=plafond,
+            sisa_setelah=sisa,
+            catatan_keuangan=catatan,
+            verified_by=user,
+        )
+        locked.status = 'REVIEW_DIREKSI'
+        locked.save(update_fields=['status', 'updated_at'])
+        PeristiwaSDM.objects.create(
+            actor=user,
+            jenis_peristiwa='formasi_reviewed_budget',
+            target_tipe='formasi_plan',
+            target_id=str(locked.pk),
+            status_sebelum='REVIEW_ANGGARAN',
+            status_sesudah='REVIEW_DIREKSI',
+            alasan=f'biaya={tahunan}, sisa={sisa}; {catatan}',
+        )
+    return locked
+def review_director(plan, *, user):
+    """Director approves the plan and freezes the calculation result."""
+    require_hc_capability(user, 'can_approve_hc_formasi', unit=plan.unit_kerja_id)
+    with transaction.atomic():
+        locked = RencanaFormasi.objects.select_for_update().get(pk=plan.pk)
+        if locked.status != 'REVIEW_DIREKSI':
+            raise ValidationError(
+                {'status': 'Hanya rencana dalam tinjauan direksi.'}
+            )
+        if locked.created_by_id == getattr(user, 'pk', None):
+            raise PermissionDenied(
+                'Direktur tidak dapat menyetujui rencana milik dirinya sendiri.'
+            )
         result = calculate_formasi(locked)
         ambang = resolve_ambang_risiko(locked.unit_kerja, locked.profesi)
         if ambang is None:
@@ -112,7 +212,7 @@ def approve_plan(plan, *, user):
             jenis_peristiwa='formasi_approved',
             target_tipe='formasi_plan',
             target_id=str(locked.pk),
-            status_sebelum='REVIEW',
+            status_sebelum='REVIEW_DIREKSI',
             status_sesudah='APPROVED',
             alasan=f"calculation_version={result['calculation_version']}",
         )

@@ -17,8 +17,11 @@ FTE_QUANTUM = Decimal('0.01')
 class RencanaFormasi(models.Model):
     STATUS_CHOICES = [
         ('DRAFT', 'Draf'),
-        ('REVIEW', 'Menunggu Tinjauan'),
+        ('REVIEW_HRD', 'Menunggu Tinjauan HRD'),
+        ('REVIEW_ANGGARAN', 'Menunggu Verifikasi Anggaran'),
+        ('REVIEW_DIREKSI', 'Menunggu Pengesahan Direksi'),
         ('APPROVED', 'Disetujui'),
+        ('DITOLAK', 'Ditolak'),
         ('SUPERSEDED', 'Digantikan'),
     ]
     METHOD_CHOICES = [
@@ -82,7 +85,7 @@ class RencanaFormasi(models.Model):
         default=Decimal('0.00'), validators=[MinValueValidator(Decimal('0.00'))],
     )
     status = models.CharField(
-        'Status', max_length=12, choices=STATUS_CHOICES, default='DRAFT'
+        'Status', max_length=15, choices=STATUS_CHOICES, default='DRAFT'
     )
     approved_by = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
@@ -166,6 +169,46 @@ class RencanaFormasi(models.Model):
 
     def __str__(self):
         return f'{self.unit_kerja_id} — {self.profesi} — {self.periode_mulai}'
+
+
+class AnggaranFormasi(models.Model):
+    """Plafon anggaran dan sisa setelah biaya formasi, tertulis pada tahap keuangan."""
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    rencana = models.OneToOneField(
+        'sdm.RencanaFormasi', on_delete=models.CASCADE,
+        related_name='anggaran', verbose_name='Rencana Formasi',
+    )
+    biaya_tahunan = models.DecimalField(
+        'Biaya Tahunan (Rp)', max_digits=14, decimal_places=2,
+    )
+    sumber_anggaran = models.CharField(
+        'Sumber Anggaran', max_length=200, blank=True
+    )
+    plafond_tersedia = models.DecimalField(
+        'Plafond Tersedia (Rp)', max_digits=14, decimal_places=2,
+    )
+    sisa_setelah = models.DecimalField(
+        'Sisa Setelah (Rp)', max_digits=14, decimal_places=2,
+        editable=False,
+    )
+    catatan_keuangan = models.TextField('Catatan Keuangan', blank=True)
+    verified_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT,
+        related_name='sdm_formasi_budget_verified', verbose_name='Diverifikasi Oleh',
+    )
+    verified_at = models.DateTimeField('Waktu Verifikasi', auto_now_add=True)
+
+    class Meta:
+        verbose_name = 'Anggaran Formasi'
+        verbose_name_plural = 'Anggaran Formasi'
+
+    def save(self, *args, **kwargs):
+        self.sisa_setelah = self.plafond_tersedia - self.biaya_tahunan
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f'Anggaran {self.rencana_id} — {self.sisa_setelah}'
 
 
 class AktivitasBebanKerja(models.Model):
