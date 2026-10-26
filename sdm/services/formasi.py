@@ -4,6 +4,11 @@ from django.utils import timezone
 
 from sdm.akses import require_hc_capability
 from sdm.models import HasilFormasi, PeristiwaSDM, RencanaFormasi, calculate_formasi
+from sdm.services.risiko import (
+    RISIKO_UNCONFIGURED,
+    classify_risiko,
+    resolve_ambang_risiko,
+)
 
 
 def save_plan(plan, *, user):
@@ -56,6 +61,17 @@ def approve_plan(plan, *, user):
         if locked.created_by_id == getattr(user, 'pk', None):
             raise PermissionDenied('Pembuat rencana tidak dapat menyetujuinya sendiri.')
         result = calculate_formasi(locked)
+        ambang = resolve_ambang_risiko(locked.unit_kerja, locked.profesi)
+        if ambang is None:
+            status_risiko = RISIKO_UNCONFIGURED
+            ambang_marginal = ambang_kritis = None
+        else:
+            ambang_marginal, ambang_kritis = ambang
+            status_risiko = classify_risiko(
+                result['sufficiency_pct'],
+                ambang_marginal=ambang_marginal,
+                ambang_kritis=ambang_kritis,
+            )
         previous = RencanaFormasi.objects.filter(
             unit_kerja_id=locked.unit_kerja_id,
             profesi__iexact=locked.profesi,
@@ -82,6 +98,9 @@ def approve_plan(plan, *, user):
             gap_fte=result['gap_fte'],
             sufficiency_pct=result['sufficiency_pct'],
             inputs_digest=result['inputs_digest'],
+            status_risiko=status_risiko,
+            ambang_marginal_pct=ambang_marginal,
+            ambang_kritis_pct=ambang_kritis,
             approved_by=user,
         )
         locked.status = 'APPROVED'

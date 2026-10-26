@@ -201,6 +201,28 @@ class HasilFormasi(models.Model):
         'Kecukupan (%)', max_digits=7, decimal_places=2, null=True, blank=True
     )
     inputs_digest = models.CharField('Digest Input', max_length=64)
+    status_risiko = models.CharField(
+        'Status Risiko', max_length=24, blank=True,
+        choices=[
+            ('DEFISIT_KRITIS', 'Defisit Kritis'),
+            ('MARGINAL', 'Ketercukupan Marginal'),
+            ('IDEAL', 'Ideal'),
+            ('SURPLUS', 'Surplus'),
+            ('BELUM_DIKONFIGURASI', 'Belum Dikonfigurasi'),
+        ],
+        help_text=(
+            'Dihitung saat persetujuan dan disimpan, agar warna laporan tetap '
+            'sama setelah ambang batas direvisi.'
+        ),
+    )
+    ambang_marginal_pct = models.DecimalField(
+        'Ambang Marginal Dipakai (%)', max_digits=7, decimal_places=2,
+        null=True, blank=True,
+    )
+    ambang_kritis_pct = models.DecimalField(
+        'Ambang Kritis Dipakai (%)', max_digits=7, decimal_places=2,
+        null=True, blank=True,
+    )
     calculated_at = models.DateTimeField('Waktu Kalkulasi', default=timezone.now)
     approved_by = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,

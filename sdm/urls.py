@@ -48,6 +48,7 @@ urlpatterns = [
         name='dokumen_download',
     ),
     path('formasi/', views.formasi_list, name='formasi_list'),
+    path('formasi/peta/', views.formasi_peta, name='formasi_peta'),
     path('formasi/baru/', views.formasi_create, name='formasi_create'),
     path('formasi/<uuid:plan_id>/', views.formasi_detail, name='formasi_detail'),
     path(

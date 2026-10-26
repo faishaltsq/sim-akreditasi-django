@@ -212,6 +212,7 @@ class StandarKetenagaan(models.Model):
         ('RASIO_REGULASI', 'Rasio Regulasi'),
         ('STANDAR_WAKTU', 'Standar Waktu Tindakan'),
         ('FAKTOR_KOREKSI', 'Faktor Koreksi'),
+        ('AMBANG_RISIKO', 'Ambang Risiko Ketenagaan'),
     ]
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)

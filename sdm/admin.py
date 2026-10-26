@@ -4,6 +4,7 @@ from django.db import transaction
 from .models import (
     AturanDokumen,
     HcGrant,
+    HasilFormasi,
     InsidenK3Pegawai,
     JamKerjaEfektif,
     KatalogTindakan,
@@ -160,6 +161,23 @@ class StandarKetenagaanAdmin(admin.ModelAdmin):
     list_filter = ('jenis', 'is_active', 'profesi')
     search_fields = ('nama', 'profesi', 'sumber_regulasi', 'unit_kerja__code')
     readonly_fields = ('reviewed_at', 'created_at', 'updated_at')
+
+
+@admin.register(HasilFormasi)
+class HasilFormasiAdmin(admin.ModelAdmin):
+    list_display = (
+        'rencana', 'required_fte', 'actual_fte', 'gap_fte',
+        'sufficiency_pct', 'status_risiko', 'calculated_at',
+    )
+    list_filter = ('status_risiko',)
+    search_fields = ('rencana__unit_kerja__code', 'rencana__profesi')
+    readonly_fields = [f.name for f in HasilFormasi._meta.fields]
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
 
 
 @admin.register(Lowongan)

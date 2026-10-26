@@ -1,0 +1,161 @@
+{% extends "base.html" %}
+
+{% block page_title %}Peta Ketenagaan &amp; Analisis Kesenjangan{% endblock %}
+{% block page_subtitle %}Kebutuhan vs aktual FTE per unit dan profesi{% endblock %}
+{% block extra_css %}{% include "sdm/_responsive.html" %}{% endblock %}
+
+{% block content %}
+<div class="container-fluid p-0">
+    <div class="page-header-box mb-3">
+        <div>
+            <a class="small text-decoration-none" href="{% url 'sdm:formasi_list' %}"><i class="bi bi-arrow-left me-1"></i>Kembali ke daftar formasi</a>
+            <h1 class="page-title h5 mt-2 mb-1"><i class="bi bi-diagram-3 text-primary me-2"></i>Peta Ketenagaan</h1>
+            <p class="page-subtitle text-muted mb-0">Warna risiko dihitung dari kecukupan FTE saat rencana disetujui, bukan dari ambang batas hari ini.</p>
+        </div>
+    </div>
+
+    <form method="get" class="card border shadow-sm mb-3" role="search" aria-label="Filter peta ketenagaan">
+        <div class="card-body row g-2 align-items-end">
+            <div class="col-12 col-md-4">
+                <label class="form-label small fw-semibold" for="peta-unit">Unit Kerja</label>
+                <select id="peta-unit" name="unit" class="form-select form-select-sm">
+                    <option value="">Semua unit dalam lingkup</option>
+                    {% for u in units %}
+                    <option value="{{ u.pk }}" {% if selected_unit == u.pk|stringformat:"s" %}selected{% endif %}>{{ u.code }} — {{ u.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-12 col-md-3">
+                <label class="form-label small fw-semibold" for="peta-profesi">Profesi</label>
+                <select id="peta-profesi" name="profesi" class="form-select form-select-sm">
+                    <option value="">Semua profesi</option>
+                    {% for p in profession_options %}
+                    <option value="{{ p }}" {% if profesi == p %}selected{% endif %}>{{ p }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-12 col-md-3">
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="peta-defisit" name="hanya_defisit" value="1" {% if hanya_defisit %}checked{% endif %}>
+                    <label class="form-check-label small" for="peta-defisit">Hanya defisit (kritis &amp; marginal)</label>
+                </div>
+            </div>
+            <div class="col-12 col-md-2 d-flex gap-2">
+                <button class="btn btn-outline-primary btn-sm" type="submit">Terapkan</button>
+                <a class="btn btn-outline-secondary btn-sm" href="{% url 'sdm:formasi_peta' %}">Reset</a>
+            </div>
+        </div>
+    </form>
+
+    <div class="row g-2 mb-3">
+        <div class="col-6 col-md-3">
+            <div class="card border shadow-sm h-100"><div class="card-body py-2">
+                <div class="small text-muted">Baris ditampilkan</div>
+                <div class="h5 mb-0">{{ totals.jumlah_baris }}</div>
+            </div></div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="card border shadow-sm h-100"><div class="card-body py-2">
+                <div class="small text-muted">Kebutuhan FTE</div>
+                <div class="h5 mb-0">{{ totals.required_fte }}</div>
+            </div></div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="card border shadow-sm h-100"><div class="card-body py-2">
+                <div class="small text-muted">FTE Aktual</div>
+                <div class="h5 mb-0">{{ totals.actual_fte }}</div>
+            </div></div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="card border shadow-sm h-100"><div class="card-body py-2">
+                <div class="small text-muted">Defisit kritis</div>
+                <div class="h5 mb-0 text-danger">{{ totals.jumlah_kritis }}</div>
+            </div></div>
+        </div>
+    </div>
+
+    <div class="card border shadow-sm">
+        <div class="table-responsive">
+            <table class="table table-sm align-middle mb-0">
+                <caption class="visually-hidden">Matriks kesenjangan ketenagaan per unit dan profesi</caption>
+                <thead>
+                    <tr>
+                        <th scope="col">Unit</th>
+                        <th scope="col">Profesi</th>
+                        <th scope="col">Periode</th>
+                        <th scope="col" class="text-end">Kebutuhan</th>
+                        <th scope="col" class="text-end">Kepala</th>
+                        <th scope="col" class="text-end">Aktual</th>
+                        <th scope="col" class="text-end">Selisih</th>
+                        <th scope="col" class="text-end">Kecukupan</th>
+                        <th scope="col">Status Risiko</th>
+                        <th scope="col" aria-label="Aksi"></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in rows %}
+                    <tr>
+                        <td class="small">{{ row.unit.code }}</td>
+                        <td>{{ row.profesi }}</td>
+                        <td class="small text-muted">{{ row.periode.0|date:"d M Y" }} – {{ row.periode.1|date:"d M Y" }}</td>
+                        <td class="text-end">{{ row.required_fte }}</td>
+                        <td class="text-end">{{ row.required_headcount }}</td>
+                        <td class="text-end">{{ row.actual_fte }}</td>
+                        <td class="text-end {% if row.gap_fte > 0 %}text-danger fw-semibold{% endif %}">{{ row.gap_fte }}</td>
+                        <td class="text-end">{% if row.sufficiency_pct is not None %}{{ row.sufficiency_pct }}%{% else %}<span class="text-muted">Belum dapat dihitung</span>{% endif %}</td>
+                        <td>
+                            <span class="badge {{ row.risiko_badge }}">{{ row.risiko_label }}</span>
+                            {% if row.risiko == 'BELUM_DIKONFIGURASI' %}
+                            <div class="small text-muted mt-1">Ambang risiko belum ditetapkan untuk unit/profesi ini.</div>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if row.risiko == 'DEFISIT_KRITIS' or row.risiko == 'MARGINAL' %}
+                            <a class="btn btn-outline-primary btn-sm" href="{% url 'sdm:formasi_create' %}{{ row.buat_usulan_url }}">Buat usulan</a>
+                            {% else %}
+                            <a class="btn btn-outline-secondary btn-sm" href="{% url 'sdm:formasi_detail' row.rencana.pk %}">Detail</a>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="10" class="text-center py-4">
+                            <p class="text-muted mb-1">Belum dapat dihitung.</p>
+                            <p class="small text-muted mb-0">
+                                Peta hanya menampilkan rencana yang sudah disetujui.
+                                {% if pending_count %}{{ pending_count }} rencana masih menunggu persetujuan.{% endif %}
+                            </p>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+                {% if rows %}
+                <tfoot class="table-light">
+                    <tr>
+                        <th scope="row" colspan="3">Total {{ totals.jumlah_baris }} baris</th>
+                        <th class="text-end">{{ totals.required_fte }}</th>
+                        <th></th>
+                        <th class="text-end">{{ totals.actual_fte }}</th>
+                        <th class="text-end">{{ totals.gap_fte }}</th>
+                        <th colspan="3"></th>
+                    </tr>
+                </tfoot>
+                {% endif %}
+            </table>
+        </div>
+    </div>
+
+    <div class="card border shadow-sm mt-3">
+        <div class="card-body small text-muted">
+            <p class="mb-1"><strong>Arti warna:</strong></p>
+            <ul class="mb-0">
+                <li>🔴 <strong>Defisit Kritis</strong> — kecukupan di bawah ambang kritis; berisiko pada keselamatan pasien, perlu rekrutmen atau mutasi segera.</li>
+                <li>🟡 <strong>Ketercukupan Marginal</strong> — di bawah ambang marginal; pantau beban kerja dan alokasi lembur.</li>
+                <li>🟢 <strong>Ideal</strong> — kecukupan seimbang.</li>
+                <li>🔵 <strong>Surplus</strong> — FTE aktual melebihi kebutuhan; pertimbangkan redistribusi ke unit yang defisit.</li>
+                <li>⚪ <strong>Belum Dikonfigurasi</strong> — ambang risiko belum ditetapkan; warna tidak diberikan agar tidak menyesatkan.</li>
+            </ul>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -101,15 +101,17 @@ Read-only inspection on `master` at `d9bc2f5`. `sdm.tests.test_formasi` = **13 t
 
 **Delivered:** `sdm/models/referensi.py` (`JamKerjaEfektif`, `StandarKetenagaan`), `RencanaFormasi.jam_kerja_efektif` FK + `resolve_effective_minutes()`, migration `0033_*`, `sdm/tests/test_referensi.py`.
 
-## Task F-A3 — Gap map with risk coding (P0)
+## Task F-A3 — Gap map with risk coding (P0) — ✅ DONE 2026-10-26
 
 **Depends on:** F-A1, F-A2.
 
-- [ ] Add RED tests: deficit beyond the critical threshold → `Defisit Kritis`; between thresholds → `Ketercukupan Marginal`; within tolerance → `Ideal`; negative gap → `Surplus`; a plan without an approved result renders `Belum dapat dihitung` and is never coloured green; a parent unit aggregates its descendants once, without double counting.
-- [ ] Add `HasilFormasi.status_risiko` computed at approval time (immutable), with thresholds read from `StandarKetenagaan`; store the threshold values used in the result row so the colour is reproducible.
-- [ ] Add a gap-map view: unit × profession grid, colour badge, existing / required FTE / headcount / gap / sufficiency, as-of period selector, and a "hanya defisit" filter. One query set with `select_related`, no per-row queries.
-- [ ] Link each deficit row to a "Buat usulan formasi" action that pre-fills the submission form with the unit, profession, period, and computed gap.
-- [ ] GREEN gate: page renders under 200 employees and 200 units without N+1 (assert query count in the test).
+- [x] Add RED tests: deficit beyond the critical threshold → `Defisit Kritis`; between thresholds → `Ketercukupan Marginal`; within tolerance → `Ideal`; negative gap → `Surplus`; a plan without an approved result renders `Belum dapat dihitung` and is never coloured green; a parent unit aggregates its descendants once, without double counting.
+- [x] Add `HasilFormasi.status_risiko` computed at approval time (immutable), with thresholds read from `StandarKetenagaan`; store the threshold values used in the result row so the colour is reproducible.
+- [x] Add a gap-map view: unit × profession grid, colour badge, existing / required FTE / headcount / gap / sufficiency, as-of period selector, and a "hanya defisit" filter. One query set with `select_related`, no per-row queries.
+- [x] Link each deficit row to a "Buat usulan formasi" action that pre-fills the submission form with the unit, profession, period, and computed gap.
+- [x] GREEN gate: page renders under 200 employees and 200 units without N+1 (assert query count in the test).
+
+**Delivered:** `sdm/services/risiko.py` (`classify_risiko`, `resolve_ambang_risiko`, `gap_rows`, `gap_totals`), `sdm/views.py:formasi_peta`, `sdm/urls.py` route `sdm:formasi_peta`, `templates/sdm/formasi/peta.html`, migration `0034_*`, `sdm/tests/test_risiko_formasi.py` (23 tests). Thresholds are `StandarKetenagaan` rows of `jenis=AMBANG_RISIKO` named `Ambang Ketercukupan Marginal` / `Ambang Defisit Kritis`; unit-specific wins over hospital-wide. Boundary semantics: exactly at the critical threshold is `MARGINAL`, not critical. The N+1 guard asserts the query count is identical with 1 and 5 approved plans.
 
 ## Task F-A4 — Submission form with justification and attachments (P1)
 

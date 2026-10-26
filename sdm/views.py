@@ -562,6 +562,55 @@ def formasi_approve(request, plan_id):
 
 
 @login_required
+def formasi_peta(request):
+    """Gap analysis map with four-band risk coding (F-A3).
+
+    Only plans carrying an approved, immutable result appear. A plan still in
+    draft is reported as `Belum dapat dihitung`, never coloured.
+    """
+    from sdm.services.risiko import gap_rows, gap_totals
+
+    require_hc_capability(request.user, 'can_plan_hc_workforce')
+    units = visible_units(request.user, capability='can_plan_hc_workforce')
+
+    unit_id = (request.GET.get('unit') or '').strip()
+    selected_unit = None
+    if unit_id.isdigit():
+        selected_unit = units.filter(pk=unit_id).first()
+
+    profesi = (request.GET.get('profesi') or '').strip()[:120]
+    hanya_defisit = request.GET.get('hanya_defisit') in ('1', 'on', 'true')
+
+    rows = gap_rows(
+        request.user,
+        unit=selected_unit,
+        profesi=profesi,
+        hanya_defisit=hanya_defisit,
+    )
+
+    pending_count = RencanaFormasi.objects.filter(
+        unit_kerja__in=units,
+    ).exclude(status='APPROVED').count()
+
+    return render(request, 'sdm/formasi/peta.html', {
+        'rows': rows,
+        'totals': gap_totals(rows),
+        'units': units.order_by('level', 'order', 'code'),
+        'selected_unit': str(selected_unit.pk) if selected_unit else '',
+        'profesi': profesi,
+        'hanya_defisit': hanya_defisit,
+        'pending_count': pending_count,
+        'profession_options': (
+            RencanaFormasi.objects.filter(unit_kerja__in=units)
+            .exclude(profesi='')
+            .values_list('profesi', flat=True)
+            .distinct()
+            .order_by('profesi')
+        ),
+    })
+
+
+@login_required
 def dashboard(request):
     unit_id = (request.GET.get('unit') or '').strip()
     unit = None
