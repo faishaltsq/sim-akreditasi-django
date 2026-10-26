@@ -427,6 +427,29 @@ code, .font-mono, .mono, .font-monospace {
     font-size: 15px;
     color: var(--rail-dim);
 }
+
+/* Icon tones: the glyph says which task group the item belongs to, the label
+   still carries the meaning. Each tone is >= 6:1 on the rail, and every row
+   that becomes active forces the icon to white so it stays legible on indigo. */
+.sidebar-nav .nav-icon-indigo { color: #8E97EE; }
+.sidebar-nav .nav-icon-teal   { color: #6FC3BC; }
+.sidebar-nav .nav-icon-green  { color: #6CC58A; }
+.sidebar-nav .nav-icon-amber  { color: #DFAE62; }
+.sidebar-nav .nav-icon-red    { color: #E88B8B; }
+.sidebar-nav .nav-icon-cyan   { color: #6FB6DE; }
+.sidebar-nav .nav-icon-violet { color: #B49AEC; }
+.sidebar-nav .nav-icon-slate  { color: #9FB0C8; }
+
+.sidebar-nav .nav-link:hover .nav-icon,
+.sidebar-nav .nav-link.active .nav-icon,
+.sidebar-nav .nav-link.active .nav-icon-indigo,
+.sidebar-nav .nav-link.active .nav-icon-teal,
+.sidebar-nav .nav-link.active .nav-icon-green,
+.sidebar-nav .nav-link.active .nav-icon-amber,
+.sidebar-nav .nav-link.active .nav-icon-red,
+.sidebar-nav .nav-link.active .nav-icon-cyan,
+.sidebar-nav .nav-link.active .nav-icon-violet,
+.sidebar-nav .nav-link.active .nav-icon-slate { color: #FFFFFF; }
 .sidebar-nav .nav-link .nav-text {
     display: flex;
     flex-direction: column;
@@ -472,7 +495,7 @@ code, .font-mono, .mono, .font-monospace {
     margin-top: 6px;
 }
 .sidebar-nav .sidebar-kelompok > .nav-pokja:hover { background: #232F49 !important; }
-.sidebar-nav .sidebar-kelompok > .nav-pokja .bi { color: var(--rail-dim) !important; }
+.sidebar-nav .sidebar-kelompok > .nav-pokja .nav-icon { color: inherit; }
 
 .sidebar-nav .collapse > div {
     background: transparent !important;

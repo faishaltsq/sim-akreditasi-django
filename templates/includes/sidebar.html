@@ -5,13 +5,13 @@
     <a href="{% url 'akreditasi:kontrol_hub' %}"
        class="nav-link{% if u == 'kontrol_hub' or u == 'kontrol_risiko' or u == 'kontrol_emr' or u == 'kontrol_dokumen' %} active{% endif %}"
        title="Dasbor eksekutif per unit kerja">
-        <span class="nav-icon"><i class="bi bi-grid-1x2" aria-hidden="true"></i></span>
+        <span class="nav-icon"><i class="bi bi-grid-1x2 nav-icon-indigo" aria-hidden="true"></i></span>
         <span class="nav-text"><span class="nav-title">Integrated Control</span></span>
     </a>
     <a href="{% url 'akreditasi:dashboard' %}"
        class="nav-link{% if u == 'dashboard' or u == 'dashboard_alias' %} active{% endif %}"
        title="Ringkasan status PDCA seluruh rumah sakit">
-        <span class="nav-icon"><i class="bi bi-house-door" aria-hidden="true"></i></span>
+        <span class="nav-icon"><i class="bi bi-house-door nav-icon-indigo" aria-hidden="true"></i></span>
         <span class="nav-text"><span class="nav-title">Dashboard</span></span>
     </a>
 
@@ -19,19 +19,19 @@
     <a href="{% url 'akreditasi:matriks_pdca' %}"
        class="nav-link{% if u == 'matriks_pdca' %} active{% endif %}"
        title="Matriks Plan, Do, Check, Action per pokja">
-        <span class="nav-icon"><i class="bi bi-table" aria-hidden="true"></i></span>
+        <span class="nav-icon"><i class="bi bi-table nav-icon-teal" aria-hidden="true"></i></span>
         <span class="nav-text"><span class="nav-title">Matriks PDCA</span></span>
     </a>
     <a href="{% url 'akreditasi:ep_list' %}"
        class="nav-link{% if u == 'ep_list' %} active{% endif %}"
        title="Daftar seluruh elemen penilaian">
-        <span class="nav-icon"><i class="bi bi-list-check" aria-hidden="true"></i></span>
+        <span class="nav-icon"><i class="bi bi-list-check nav-icon-teal" aria-hidden="true"></i></span>
         <span class="nav-text"><span class="nav-title">Elemen Penilaian</span></span>
     </a>
     <a href="{% url 'akreditasi:dokumen_hub' %}"
        class="nav-link{% if u == 'dokumen_hub' %} active{% endif %}"
        title="Repositori dokumen bukti RDWOS">
-        <span class="nav-icon"><i class="bi bi-folder2-open" aria-hidden="true"></i></span>
+        <span class="nav-icon"><i class="bi bi-folder2-open nav-icon-teal" aria-hidden="true"></i></span>
         <span class="nav-text"><span class="nav-title">Dokumen Bukti</span></span>
     </a>
 
@@ -41,7 +41,7 @@
     <div class="sidebar-bab">
         <a class="nav-link nav-pokja" data-bs-toggle="collapse" href="#bab-{{ bab.code }}-{{ sidebar_uid }}"
            role="button" aria-expanded="false" aria-controls="bab-{{ bab.code }}-{{ sidebar_uid }}">
-            <span class="nav-icon"><i class="bi bi-journal-bookmark" aria-hidden="true"></i></span>
+            <span class="nav-icon"><i class="bi bi-journal-bookmark nav-icon-teal" aria-hidden="true"></i></span>
             <span class="nav-text">
                 <span class="nav-title font-mono">{{ bab.code }}</span>
                 <span class="nav-desc">{{ bab.standar|length }} standar</span>
@@ -98,7 +98,7 @@
     {% for cat in sidebar_categories %}
     <a href="{% url 'akreditasi:matriks_pdca' %}?cat={{ cat.id }}"
        class="nav-link nav-pokja{% if u == 'matriks_pdca' and active_category.id == cat.id %} active{% endif %}">
-        <span class="nav-icon"><i class="bi bi-folder2" aria-hidden="true"></i></span>
+        <span class="nav-icon"><i class="bi bi-folder2 nav-icon-teal" aria-hidden="true"></i></span>
         <span class="nav-text">
             <span class="nav-title font-mono">{{ cat.code }}</span>
             <span class="nav-desc">{{ cat.ep_selesai|default:0 }}/{{ cat.ep_total|default:0 }} EP, {{ cat.percentage }}%</span>
@@ -110,100 +110,100 @@
 
     <div class="nav-section">Risiko dan insiden</div>
     <a href="{% url 'akreditasi:risiko_daftar' %}" class="nav-link{% if u == 'risiko_daftar' %} active{% endif %}">
-        <span class="nav-icon"><i class="bi bi-clipboard2-pulse" aria-hidden="true"></i></span>
+        <span class="nav-icon"><i class="bi bi-clipboard2-pulse nav-icon-red" aria-hidden="true"></i></span>
         <span class="nav-text"><span class="nav-title">Daftar risiko</span></span>
     </a>
     <a href="{% url 'akreditasi:risiko_input' %}" class="nav-link{% if u == 'risiko_input' %} active{% endif %}">
-        <span class="nav-icon"><i class="bi bi-plus-square" aria-hidden="true"></i></span>
+        <span class="nav-icon"><i class="bi bi-plus-square nav-icon-red" aria-hidden="true"></i></span>
         <span class="nav-text"><span class="nav-title">Input risiko</span></span>
     </a>
     <a href="{% url 'akreditasi:risiko_perencanaan' %}" class="nav-link{% if 'risiko_perencanaan' in u %} active{% endif %}" title="Format cetak STARKES 5.15, tahap Plan">
-        <span class="nav-icon"><i class="bi bi-file-earmark-ruled" aria-hidden="true"></i></span>
+        <span class="nav-icon"><i class="bi bi-file-earmark-ruled nav-icon-red" aria-hidden="true"></i></span>
         <span class="nav-text"><span class="nav-title">Perencanaan (Plan)</span></span>
     </a>
     <a href="{% url 'akreditasi:risiko_pelaksanaan' %}" class="nav-link{% if 'risiko_pelaksanaan' in u %} active{% endif %}" title="Dokumen cetak siklus Do">
-        <span class="nav-icon"><i class="bi bi-check2-square" aria-hidden="true"></i></span>
+        <span class="nav-icon"><i class="bi bi-check2-square nav-icon-red" aria-hidden="true"></i></span>
         <span class="nav-text"><span class="nav-title">Pelaksanaan (Do)</span></span>
     </a>
     <a href="{% url 'akreditasi:risiko_monev' %}" class="nav-link{% if 'risiko_monev' in u %} active{% endif %}" title="Capaian, RCA, dan rencana tindak lanjut">
-        <span class="nav-icon"><i class="bi bi-clipboard2-data" aria-hidden="true"></i></span>
+        <span class="nav-icon"><i class="bi bi-clipboard2-data nav-icon-red" aria-hidden="true"></i></span>
         <span class="nav-text"><span class="nav-title">Monitoring dan evaluasi</span></span>
     </a>
     <a href="{% url 'akreditasi:risiko_laporan_lengkap' %}" class="nav-link{% if 'risiko_laporan_lengkap' in u %} active{% endif %}" title="Plan, Do, monev, dan RTL dalam satu laporan">
-        <span class="nav-icon"><i class="bi bi-journal-check" aria-hidden="true"></i></span>
+        <span class="nav-icon"><i class="bi bi-journal-check nav-icon-red" aria-hidden="true"></i></span>
         <span class="nav-text"><span class="nav-title">Laporan PDCA lengkap</span></span>
     </a>
     <a href="{% url 'akreditasi:risiko_laporan' %}" class="nav-link{% if u == 'risiko_laporan' %} active{% endif %}">
-        <span class="nav-icon"><i class="bi bi-file-earmark-bar-graph" aria-hidden="true"></i></span>
+        <span class="nav-icon"><i class="bi bi-file-earmark-bar-graph nav-icon-red" aria-hidden="true"></i></span>
         <span class="nav-text"><span class="nav-title">Laporan manajemen risiko</span></span>
     </a>
     <a href="{% url 'akreditasi:risiko_fmea_rca' %}" class="nav-link{% if 'fmea' in u %} active{% endif %}" title="Analisis proaktif FMEA dan reaktif RCA">
-        <span class="nav-icon"><i class="bi bi-diagram-3" aria-hidden="true"></i></span>
+        <span class="nav-icon"><i class="bi bi-diagram-3 nav-icon-red" aria-hidden="true"></i></span>
         <span class="nav-text"><span class="nav-title">FMEA dan RCA</span></span>
     </a>
     <a href="{% url 'akreditasi:insiden_daftar' %}" class="nav-link{% if u == 'insiden_daftar' or u == 'insiden_detail' %} active{% endif %}" title="Register insiden keselamatan pasien">
-        <span class="nav-icon"><i class="bi bi-shield-exclamation" aria-hidden="true"></i></span>
+        <span class="nav-icon"><i class="bi bi-shield-exclamation nav-icon-red" aria-hidden="true"></i></span>
         <span class="nav-text"><span class="nav-title">Register insiden</span></span>
     </a>
     <a href="{% url 'akreditasi:insiden_lapor' %}" class="nav-link{% if u == 'insiden_lapor' %} active{% endif %}">
-        <span class="nav-icon"><i class="bi bi-megaphone" aria-hidden="true"></i></span>
+        <span class="nav-icon"><i class="bi bi-megaphone nav-icon-red" aria-hidden="true"></i></span>
         <span class="nav-text"><span class="nav-title">Lapor insiden</span></span>
     </a>
 
     <div class="nav-section">Mutu dan kinerja</div>
     <a href="{% url 'akreditasi:indikator_dashboard' %}" class="nav-link{% if 'indikator' in u %} active{% endif %}" title="Indikator nasional dan indikator mutu RS">
-        <span class="nav-icon"><i class="bi bi-graph-up" aria-hidden="true"></i></span>
+        <span class="nav-icon"><i class="bi bi-graph-up nav-icon-green" aria-hidden="true"></i></span>
         <span class="nav-text"><span class="nav-title">Indikator mutu</span></span>
     </a>
     <a href="{% url 'akreditasi:laporan_mutu_daftar' %}" class="nav-link{% if u|slice:':12' == 'laporan_mutu' %} active{% endif %}">
-        <span class="nav-icon"><i class="bi bi-file-earmark-text" aria-hidden="true"></i></span>
+        <span class="nav-icon"><i class="bi bi-file-earmark-text nav-icon-green" aria-hidden="true"></i></span>
         <span class="nav-text"><span class="nav-title">Laporan Mutu</span></span>
     </a>
     <a href="{% url 'akreditasi:logbook_daftar' %}" class="nav-link{% if u|slice:':7' == 'logbook' %} active{% endif %}" title="Logbook harian IGD dan rawat inap per shift">
-        <span class="nav-icon"><i class="bi bi-journal-medical" aria-hidden="true"></i></span>
+        <span class="nav-icon"><i class="bi bi-journal-medical nav-icon-green" aria-hidden="true"></i></span>
         <span class="nav-text"><span class="nav-title">Logbook harian</span></span>
     </a>
 
     {% if not request.user.profile.is_unit_scoped %}
     <div class="nav-section">Laporan</div>
     <a href="{% url 'akreditasi:auto_scoring' %}" class="nav-link{% if u == 'auto_scoring' %} active{% endif %}" title="Prediksi hasil survei akreditasi">
-        <span class="nav-icon"><i class="bi bi-award" aria-hidden="true"></i></span>
+        <span class="nav-icon"><i class="bi bi-award nav-icon-amber" aria-hidden="true"></i></span>
         <span class="nav-text"><span class="nav-title">Auto-scoring</span></span>
     </a>
     <a href="{% url 'akreditasi:rekap' %}" class="nav-link{% if u == 'rekap' %} active{% endif %}">
-        <span class="nav-icon"><i class="bi bi-bar-chart" aria-hidden="true"></i></span>
+        <span class="nav-icon"><i class="bi bi-bar-chart nav-icon-amber" aria-hidden="true"></i></span>
         <span class="nav-text"><span class="nav-title">Rekap capaian</span></span>
     </a>
     <a href="{% url 'akreditasi:export_excel' %}" class="nav-link">
-        <span class="nav-icon"><i class="bi bi-download" aria-hidden="true"></i></span>
+        <span class="nav-icon"><i class="bi bi-download nav-icon-amber" aria-hidden="true"></i></span>
         <span class="nav-text"><span class="nav-title">Ekspor Excel</span></span>
     </a>
 
     <div class="nav-section">Data induk</div>
     <a href="{% url 'akreditasi:pokja_manage' %}" class="nav-link{% if u == 'pokja_manage' %} active{% endif %}">
-        <span class="nav-icon"><i class="bi bi-diagram-2" aria-hidden="true"></i></span>
+        <span class="nav-icon"><i class="bi bi-diagram-2 nav-icon-slate" aria-hidden="true"></i></span>
         <span class="nav-text"><span class="nav-title">Pokja dan standar</span></span>
     </a>
     <a href="{% url 'akreditasi:unit_list' %}" class="nav-link{% if u == 'unit_list' %} active{% endif %}">
-        <span class="nav-icon"><i class="bi bi-building" aria-hidden="true"></i></span>
+        <span class="nav-icon"><i class="bi bi-building nav-icon-slate" aria-hidden="true"></i></span>
         <span class="nav-text"><span class="nav-title">Unit kerja</span></span>
     </a>
     <a href="{% url 'akreditasi:unit_tree' %}" class="nav-link{% if u == 'unit_tree' %} active{% endif %}" title="Pohon organisasi tiga tingkat">
-        <span class="nav-icon"><i class="bi bi-node-plus" aria-hidden="true"></i></span>
+        <span class="nav-icon"><i class="bi bi-node-plus nav-icon-slate" aria-hidden="true"></i></span>
         <span class="nav-text"><span class="nav-title">Hierarki unit</span></span>
     </a>
     <a href="{% url 'accounts:user_list' %}" class="nav-link{% if u == 'user_list' or u == 'user_create' or u == 'user_edit' %} active{% endif %}">
-        <span class="nav-icon"><i class="bi bi-people" aria-hidden="true"></i></span>
+        <span class="nav-icon"><i class="bi bi-people nav-icon-slate" aria-hidden="true"></i></span>
         <span class="nav-text"><span class="nav-title">Pengguna</span></span>
     </a>
 
     <div class="nav-section">Pengaturan</div>
     <a href="{% url 'akreditasi:profil_rs' %}" class="nav-link{% if u == 'profil_rs' %} active{% endif %}">
-        <span class="nav-icon"><i class="bi bi-hospital" aria-hidden="true"></i></span>
+        <span class="nav-icon"><i class="bi bi-hospital nav-icon-slate" aria-hidden="true"></i></span>
         <span class="nav-text"><span class="nav-title">Profil RS</span></span>
     </a>
     <a href="{% url 'akreditasi:audit_log' %}" class="nav-link{% if u == 'audit_log' %} active{% endif %}">
-        <span class="nav-icon"><i class="bi bi-clock-history" aria-hidden="true"></i></span>
+        <span class="nav-icon"><i class="bi bi-clock-history nav-icon-slate" aria-hidden="true"></i></span>
         <span class="nav-text"><span class="nav-title">Log sistem</span></span>
     </a>
     {% endif %}
@@ -211,13 +211,13 @@
     {% if request.user.profile.unit_kerja %}
     <div class="nav-section">Portal saya</div>
     <a href="{% url 'akreditasi:portal_nakes' %}" class="nav-link{% if u == 'portal_nakes' %} active{% endif %}">
-        <span class="nav-icon"><i class="bi bi-person-badge" aria-hidden="true"></i></span>
+        <span class="nav-icon"><i class="bi bi-person-badge nav-icon-cyan" aria-hidden="true"></i></span>
         <span class="nav-text"><span class="nav-title">Portal nakes</span></span>
     </a>
     {% endif %}
     {% if request.user.profile.role == 'SUPER_ADMIN' or request.user.profile.role == 'ADMIN_RS' or request.user.profile.role == 'KEPALA_UNIT' %}
     <a href="{% url 'akreditasi:rekap_kps' %}" class="nav-link{% if u == 'rekap_kps' %} active{% endif %}" title="Verifikasi STR, SIP, dan pelatihan staf">
-        <span class="nav-icon"><i class="bi bi-person-vcard" aria-hidden="true"></i></span>
+        <span class="nav-icon"><i class="bi bi-person-vcard nav-icon-cyan" aria-hidden="true"></i></span>
         <span class="nav-text"><span class="nav-title">Rekap KPS</span></span>
     </a>
     {% endif %}
@@ -225,18 +225,18 @@
     {% with allowed_mods=request.user.profile.get_allowed_patient_modules %}
     <div class="nav-section">Pasien</div>
     <a href="{% url 'pasien:dashboard' %}" class="nav-link{% if app == 'pasien' and u == 'dashboard' %} active{% endif %}">
-        <span class="nav-icon"><i class="bi bi-speedometer2" aria-hidden="true"></i></span>
+        <span class="nav-icon"><i class="bi bi-speedometer2 nav-icon-cyan" aria-hidden="true"></i></span>
         <span class="nav-text"><span class="nav-title">Dashboard pasien</span></span>
     </a>
     {% if 'pendaftaran' in allowed_mods %}
     <a href="{% url 'pasien:pendaftaran_dashboard' %}" class="nav-link{% if u == 'pendaftaran_dashboard' %} active{% endif %}">
-        <span class="nav-icon"><i class="bi bi-person-plus" aria-hidden="true"></i></span>
+        <span class="nav-icon"><i class="bi bi-person-plus nav-icon-cyan" aria-hidden="true"></i></span>
         <span class="nav-text"><span class="nav-title">Pendaftaran &amp; Admisi</span></span>
     </a>
     {% endif %}
     {% if 'igd' in allowed_mods %}
     <a href="{% url 'pasien:igd_dashboard' %}" class="nav-link{% if u == 'igd_dashboard' %} active{% endif %}">
-        <span class="nav-icon"><i class="bi bi-heart-pulse" aria-hidden="true"></i></span>
+        <span class="nav-icon"><i class="bi bi-heart-pulse nav-icon-cyan" aria-hidden="true"></i></span>
         <span class="nav-text"><span class="nav-title">Gawat Darurat (IGD)</span></span>
     </a>
     {% endif %}
@@ -244,7 +244,7 @@
     <div class="sidebar-rajal">
         <a href="{% url 'pasien:rajal_dashboard' %}"
            class="nav-link{% if u == 'rajal_dashboard' and not request.GET.poli %} active{% endif %}">
-            <span class="nav-icon"><i class="bi bi-hospital" aria-hidden="true"></i></span>
+            <span class="nav-icon"><i class="bi bi-hospital nav-icon-slate" aria-hidden="true"></i></span>
             <span class="nav-text"><span class="nav-title">Poli Rawat Jalan</span></span>
         </a>
         <div class="ps-3">
@@ -262,31 +262,31 @@
     {% endif %}
     {% if 'ranap' in allowed_mods %}
     <a href="{% url 'pasien:bed_management' %}" class="nav-link{% if u == 'bed_management' %} active{% endif %}" title="Ketersediaan tempat tidur dan BOR">
-        <span class="nav-icon"><i class="bi bi-grid-3x3-gap" aria-hidden="true"></i></span>
+        <span class="nav-icon"><i class="bi bi-grid-3x3-gap nav-icon-cyan" aria-hidden="true"></i></span>
         <span class="nav-text"><span class="nav-title">Rawat Inap &amp; Bed</span></span>
     </a>
     {% endif %}
     {% if 'laboratorium' in allowed_mods %}
     <a href="{% url 'pasien:laboratorium_dashboard' %}" class="nav-link{% if u == 'laboratorium_dashboard' %} active{% endif %}">
-        <span class="nav-icon"><i class="bi bi-droplet" aria-hidden="true"></i></span>
+        <span class="nav-icon"><i class="bi bi-droplet nav-icon-cyan" aria-hidden="true"></i></span>
         <span class="nav-text"><span class="nav-title">Laboratorium &amp; LIS</span></span>
     </a>
     {% endif %}
     {% if 'farmasi' in allowed_mods %}
     <a href="{% url 'pasien:farmasi_antrean' %}" class="nav-link{% if u == 'farmasi_antrean' %} active{% endif %}">
-        <span class="nav-icon"><i class="bi bi-capsule" aria-hidden="true"></i></span>
+        <span class="nav-icon"><i class="bi bi-capsule nav-icon-cyan" aria-hidden="true"></i></span>
         <span class="nav-text"><span class="nav-title">Farmasi</span></span>
     </a>
     {% endif %}
     {% if 'master_pasien' in allowed_mods %}
     <a href="{% url 'pasien:pasien_daftar' %}" class="nav-link{% if u == 'pasien_daftar' or u == 'pasien_baru' %} active{% endif %}">
-        <span class="nav-icon"><i class="bi bi-person-lines-fill" aria-hidden="true"></i></span>
+        <span class="nav-icon"><i class="bi bi-person-lines-fill nav-icon-cyan" aria-hidden="true"></i></span>
         <span class="nav-text"><span class="nav-title">Master pasien</span></span>
     </a>
     {% endif %}
     {% if 'riwayat' in allowed_mods %}
     <a href="{% url 'pasien:kunjungan_daftar' %}" class="nav-link{% if u == 'kunjungan_daftar' or u == 'kunjungan_baru' %} active{% endif %}">
-        <span class="nav-icon"><i class="bi bi-clock-history" aria-hidden="true"></i></span>
+        <span class="nav-icon"><i class="bi bi-clock-history nav-icon-slate" aria-hidden="true"></i></span>
         <span class="nav-text"><span class="nav-title">Riwayat kunjungan</span></span>
     </a>
     {% endif %}
@@ -295,60 +295,60 @@
     {% if nav_pegawai or nav_formasi or nav_rekrutmen or nav_kredensial or nav_orientasi or nav_kinerja or nav_diklat or nav_k3 or nav_analitik %}
     <div class="nav-section">Human capital</div>
     <a href="{% url 'sdm:dashboard' %}" class="nav-link{% if app == 'sdm' and u == 'dashboard' %} active{% endif %}">
-        <span class="nav-icon"><i class="bi bi-people" aria-hidden="true"></i></span>
+        <span class="nav-icon"><i class="bi bi-people nav-icon-slate" aria-hidden="true"></i></span>
         <span class="nav-text"><span class="nav-title">Dasbor SDM</span></span>
     </a>
     {% if nav_pegawai %}
     <a href="{% url 'sdm:pegawai_list' %}" class="nav-link{% if app == 'sdm' and u == 'pegawai_list' or u == 'pegawai_detail' or u == 'pegawai_wizard_step' or u == 'pegawai_create' %} active{% endif %}">
-        <span class="nav-icon"><i class="bi bi-person-vcard" aria-hidden="true"></i></span>
+        <span class="nav-icon"><i class="bi bi-person-vcard nav-icon-cyan" aria-hidden="true"></i></span>
         <span class="nav-text"><span class="nav-title">Direktori pegawai</span></span>
     </a>
     {% endif %}
     {% if nav_formasi %}
     <a href="{% url 'sdm:formasi_list' %}" class="nav-link{% if app == 'sdm' and u == 'formasi_list' %} active{% endif %}" title="Formasi dan beban kerja">
-        <span class="nav-icon"><i class="bi bi-diagram-3" aria-hidden="true"></i></span>
+        <span class="nav-icon"><i class="bi bi-diagram-3 nav-icon-red" aria-hidden="true"></i></span>
         <span class="nav-text"><span class="nav-title">Peta ketenagaan</span></span>
     </a>
     {% endif %}
     {% if nav_rekrutmen %}
     <a href="{% url 'sdm:rekrutmen_list' %}" class="nav-link{% if app == 'sdm' and u == 'rekrutmen_list' %} active{% endif %}">
-        <span class="nav-icon"><i class="bi bi-person-plus" aria-hidden="true"></i></span>
+        <span class="nav-icon"><i class="bi bi-person-plus nav-icon-cyan" aria-hidden="true"></i></span>
         <span class="nav-text"><span class="nav-title">Rekrutmen</span></span>
     </a>
     {% endif %}
     {% if nav_kredensial %}
     <a href="{% url 'sdm:kredensial_list' %}" class="nav-link{% if app == 'sdm' and u == 'kredensial_list' %} active{% endif %}" title="Kewenangan klinis dan surat penugasan">
-        <span class="nav-icon"><i class="bi bi-patch-check" aria-hidden="true"></i></span>
+        <span class="nav-icon"><i class="bi bi-patch-check nav-icon-violet" aria-hidden="true"></i></span>
         <span class="nav-text"><span class="nav-title">Kredensial &amp; SPK</span></span>
     </a>
     {% endif %}
     {% if nav_orientasi %}
     <a href="{% url 'sdm:orientasi_list' %}" class="nav-link{% if app == 'sdm' and u == 'orientasi_list' %} active{% endif %}">
-        <span class="nav-icon"><i class="bi bi-compass" aria-hidden="true"></i></span>
+        <span class="nav-icon"><i class="bi bi-compass nav-icon-violet" aria-hidden="true"></i></span>
         <span class="nav-text"><span class="nav-title">Orientasi</span></span>
     </a>
     {% endif %}
     {% if nav_kinerja %}
     <a href="{% url 'sdm:kinerja_list' %}" class="nav-link{% if app == 'sdm' and u == 'kinerja_list' %} active{% endif %}">
-        <span class="nav-icon"><i class="bi bi-clipboard2-check" aria-hidden="true"></i></span>
+        <span class="nav-icon"><i class="bi bi-clipboard2-check nav-icon-violet" aria-hidden="true"></i></span>
         <span class="nav-text"><span class="nav-title">Penilaian kinerja</span></span>
     </a>
     {% endif %}
     {% if nav_diklat %}
     <a href="{% url 'sdm:diklat_list' %}" class="nav-link{% if app == 'sdm' and u == 'diklat_list' %} active{% endif %}">
-        <span class="nav-icon"><i class="bi bi-mortarboard" aria-hidden="true"></i></span>
+        <span class="nav-icon"><i class="bi bi-mortarboard nav-icon-violet" aria-hidden="true"></i></span>
         <span class="nav-text"><span class="nav-title">Diklat &amp; sertifikasi</span></span>
     </a>
     {% endif %}
     {% if nav_k3 %}
     <a href="{% url 'sdm:k3_list' %}" class="nav-link{% if app == 'sdm' and u == 'k3_list' %} active{% endif %}">
-        <span class="nav-icon"><i class="bi bi-shield-plus" aria-hidden="true"></i></span>
+        <span class="nav-icon"><i class="bi bi-shield-plus nav-icon-violet" aria-hidden="true"></i></span>
         <span class="nav-text"><span class="nav-title">Kesehatan kerja</span></span>
     </a>
     {% endif %}
     {% if nav_analitik %}
     <a href="{% url 'sdm:analitik_dashboard' %}" class="nav-link{% if app == 'sdm' and u == 'analitik_dashboard' %} active{% endif %}">
-        <span class="nav-icon"><i class="bi bi-bar-chart-line" aria-hidden="true"></i></span>
+        <span class="nav-icon"><i class="bi bi-bar-chart-line nav-icon-violet" aria-hidden="true"></i></span>
         <span class="nav-text"><span class="nav-title">Analitik SDM</span></span>
     </a>
     {% endif %}
@@ -357,14 +357,14 @@
     {% if request.user.is_superuser or request.user.profile.role == 'SUPER_ADMIN' or request.user.profile.role == 'ADMIN_RS' %}
     <div class="nav-section">Administrasi</div>
     <a href="{% url 'accounts:admin_control_center' %}" class="nav-link{% if u == 'admin_control_center' %} active{% endif %}" title="Hierarki, hak akses, dan konfigurasi sistem">
-        <span class="nav-icon"><i class="bi bi-sliders" aria-hidden="true"></i></span>
+        <span class="nav-icon"><i class="bi bi-sliders nav-icon-slate" aria-hidden="true"></i></span>
         <span class="nav-text"><span class="nav-title">Pusat kontrol</span></span>
     </a>
     {% endif %}
 
     <div class="nav-section">Bantuan</div>
     <a href="{% url 'akreditasi:panduan' %}" class="nav-link" target="_blank" rel="noopener">
-        <span class="nav-icon"><i class="bi bi-book" aria-hidden="true"></i></span>
+        <span class="nav-icon"><i class="bi bi-book nav-icon-slate" aria-hidden="true"></i></span>
         <span class="nav-text"><span class="nav-title">Panduan pengguna</span></span>
     </a>
 </div>
