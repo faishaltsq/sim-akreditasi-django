@@ -465,3 +465,67 @@ class IndikatorDropdownTanpaDataTest(TestCase):
         # Simbol perbandingan, bukan kode arah mentah; angkanya tetap ter-lokalisasi.
         self.assertNotRegex(html, r'MIN[\d,\.]')
         self.assertIn('&le;', html)
+
+
+class DashboardCategoryIndicatorConsistencyTest(TestCase):
+    """A category change must not leave the dashboard acting on a foreign indicator."""
+
+    def setUp(self):
+        self.user = User.objects.create_superuser('admin_filter', 'admin_filter@rs.id', 'secret123')
+        self.client = Client()
+        self.client.force_login(self.user)
+        self.unit = UnitKerja.objects.create(name='IGD Filter', code='IGD-F', tipe_unit='RUANGAN')
+
+        self.inm = IndikatorMutu.objects.create(
+            nama_indikator='Kepatuhan Hand Hygiene', kode_indikator='INM-F1',
+            unit=self.unit, jenis='NASIONAL', dimensi_mutu='AMAN',
+            numerator='Patuh', denominator='Total peluang',
+            target_nilai=Decimal('85.00'), satuan='%', aktif=True,
+        )
+        self.imrs = IndikatorMutu.objects.create(
+            nama_indikator='Kepatuhan Identifikasi Pasien', kode_indikator='IMRS-F1',
+            unit=self.unit, jenis='IMRS', dimensi_mutu='AMAN',
+            numerator='Patuh', denominator='Total kunjungan',
+            target_nilai=Decimal('100.00'), satuan='%', aktif=True,
+        )
+        for ind in (self.inm, self.imrs):
+            CatatanIndikator.objects.create(
+                indikator=ind, bulan=1, tahun=2026,
+                nilai_numerator=Decimal('80'), nilai_denominator=Decimal('100'),
+            )
+
+    def _indikator_select(self, html):
+        m = re.search(r'<select name="mutu_indikator".*?</select>', html, re.S)
+        self.assertIsNotNone(m, 'select mutu_indikator tidak dirender')
+        return m.group(0)
+
+    def _mutu_ind_id(self, html):
+        m = re.search(r'MUTU_IND_ID\s*=\s*"([^"]*)"', html)
+        self.assertIsNotNone(m, 'const MUTU_IND_ID tidak dirender')
+        return m.group(1)
+
+    def test_stale_indicator_id_is_cleared_from_client_context(self):
+        """An INM id carried into an IMRS view must not reach the drill-down/PDCA link."""
+        url = (reverse('akreditasi:dashboard')
+               + f'?mutu_jenis=IMRS&mutu_tahun=2026&mutu_indikator={self.inm.pk}')
+        html = self.client.get(url).content.decode()
+        self.assertEqual(self._mutu_ind_id(html), '',
+                         'MUTU_IND_ID masih memuat indikator dari kategori lain')
+        self.assertNotIn(f'value="{self.inm.pk}"', self._indikator_select(html),
+                         'indikator INM masih ditawarkan di bawah filter IMRS')
+
+    def test_valid_indicator_in_same_category_stays_selected(self):
+        """The fix must not throw away a legitimate selection."""
+        url = (reverse('akreditasi:dashboard')
+               + f'?mutu_jenis=IMRS&mutu_tahun=2026&mutu_indikator={self.imrs.pk}')
+        html = self.client.get(url).content.decode()
+        self.assertEqual(self._mutu_ind_id(html), str(self.imrs.pk))
+        self.assertRegex(self._indikator_select(html),
+                         rf'<option value="{self.imrs.pk}"[^>]*\bselected\b')
+
+    def test_category_select_clears_indicator_before_submit(self):
+        """The category/unit/year selects must reset the indicator selection explicitly."""
+        html = self.client.get(reverse('akreditasi:dashboard')).content.decode()
+        self.assertRegex(html, r'name="mutu_jenis"[^>]*onchange="arimaMutuFilterChange\(this\)"')
+        self.assertRegex(html, r'name="mutu_tahun"[^>]*onchange="arimaMutuFilterChange\(this\)"')
+        self.assertIn('window.arimaMutuFilterChange', html)

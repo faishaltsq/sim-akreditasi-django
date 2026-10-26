@@ -1,6 +1,19 @@
 from django import template
 
+from akreditasi.instrumen_2024 import sort_standards
+
 register = template.Library()
+
+
+@register.filter
+def sort_standards_filter(codes):
+    """Urutkan kode standar secara natural: TKRS 3 sebelum TKRS 3.1, lalu TKRS 10.
+
+    Pengurutan string biasa menempatkan "TKRS 10" sebelum "TKRS 2" dan
+    "TKRS 3.1" sebelum "TKRS 3" — keduanya salah untuk 227 standar STARKES
+    2024. Lihat ``akreditasi.instrumen_2024.natural_sort_key``.
+    """
+    return sort_standards(codes)
 
 
 @register.filter

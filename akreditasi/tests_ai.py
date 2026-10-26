@@ -6,6 +6,7 @@ dan penanganan timeout/error API eksternal tanpa 500.
 """
 import json
 from unittest.mock import patch, MagicMock
+from django.core.cache import cache
 from django.test import TestCase, Client
 from django.contrib.auth import get_user_model
 from django.urls import reverse
@@ -267,4 +268,168 @@ class EndpointAIIntegrationTest(TestCase):
         self.client.force_login(self.user_biasa)
         resp = self.client.post(reverse('akreditasi:ai_test_connection'))
         self.assertEqual(resp.status_code, 403)
+        self.assertFalse(resp.json()['success'])
+
+class InvestigasiRTLServiceTest(TestCase):
+    """The investigation/RTL generator must always return the full contract."""
+
+    CONTRACT = (
+        'analisis_investigasi', 'fishbone', 'akar_masalah_sistemik',
+        'verifikasi_efektivitas', 'rencana_tindak_lanjut', 'pj_saran',
+        'target_hari', 'indikator_keberhasilan', 'status_rtl_saran',
+    )
+    FISHBONE_KEYS = ('manpower', 'process', 'material', 'machine', 'environment', 'system')
+
+    def setUp(self):
+        self.user = User.objects.create_superuser('admin_inv', 'admin_inv@rs.id', 'password123')
+        self.config = SystemConfig.get_solo()
+        self.config.ai_enabled = True
+        self.config.ai_enable_risiko = True
+        self.config.ai_api_key = "sk-test-fake-key-for-testing"
+        self.config.save()
+
+    def _call(self, **over):
+        from akreditasi.ai_service import generate_investigasi_rtl
+        kw = dict(
+            unit_name='IGD', jenis_risiko='Keterlambatan penanganan pasien kritis',
+            masalah='Waktu tunggu triase melebihi 5 menit pada jam sibuk',
+            data_pendukung='Rata-rata 8 menit pada shift sore', dampak=4, probabilitas=3,
+            evaluasi_capaian='Target tidak tercapai pada 3 bulan terakhir',
+            capaian_nilai='62%', target_capaian='90%',
+        )
+        kw.update(over)
+        return generate_investigasi_rtl(self.user, **kw)
+
+    @patch('akreditasi.ai_service.requests.post')
+    def test_service_returns_full_contract(self, mock_post):
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {'choices': [{'message': {'content': json.dumps({
+            'analisis_investigasi': '1. Kronologi ...',
+            'fishbone': {k: 'penyebab ' + k for k in self.FISHBONE_KEYS},
+            'akar_masalah_sistemik': 'Belum ada SPO triase berbasis beban kerja',
+            'verifikasi_efektivitas': 'Audit waktu tunggu mingguan',
+            'rencana_tindak_lanjut': '1. Revisi SPO triase',
+            'pj_saran': 'Kepala Instalasi Gawat Darurat',
+            'target_hari': 21,
+            'indikator_keberhasilan': 'Waktu tunggu triase <= 5 menit',
+            'status_rtl_saran': 'PROSES',
+        })}}]}
+        mock_post.return_value = mock_response
+
+        res = self._call()
+        self.assertTrue(res['success'])
+        for key in self.CONTRACT:
+            self.assertIn(key, res['data'], 'kontrak "' + key + '" hilang dari respons')
+        for key in self.FISHBONE_KEYS:
+            self.assertIn(key, res['data']['fishbone'])
+        self.assertNotIn('test-fake-key', json.dumps(res))
+
+    @patch('akreditasi.ai_service.requests.post')
+    def test_service_fills_missing_contract_keys(self, mock_post):
+        """A model that returns only prose must still yield a usable form payload."""
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {'choices': [{'message': {'content': json.dumps({
+            'analisis_investigasi': 'Hanya narasi investigasi tanpa field lain.',
+        })}}]}
+        mock_post.return_value = mock_response
+
+        res = self._call()
+        self.assertTrue(res['success'])
+        data = res['data']
+        for key in self.CONTRACT:
+            self.assertIn(key, data, 'kontrak "' + key + '" tidak diisi saat model tidak lengkap')
+        self.assertTrue(str(data['rencana_tindak_lanjut']).strip())
+        self.assertIsInstance(data['target_hari'], int)
+
+    def test_ai_disabled_returns_fallback_not_error(self):
+        self.config.ai_enabled = False
+        self.config.save()
+        res = self._call()
+        self.assertTrue(res['success'], 'AI nonaktif tidak boleh menghasilkan error')
+        self.assertTrue(res.get('fallback'))
+        for key in self.CONTRACT:
+            self.assertIn(key, res['data'])
+        self.assertIn('IGD', res['data']['analisis_investigasi'])
+
+    def test_timeout_returns_fallback_not_error(self):
+        import requests
+        with patch('akreditasi.ai_service.requests.post') as mock_post:
+            mock_post.side_effect = requests.exceptions.Timeout('timeout')
+            res = self._call()
+        self.assertTrue(res['success'])
+        self.assertTrue(res.get('fallback'))
+
+class EndpointInvestigasiRTLTest(TestCase):
+    """HTTP contract of the investigation/RTL endpoint."""
+
+    def setUp(self):
+        # All /ai/ endpoints share one rate-limit scope and SQLite rollback reuses
+        # user ids, so the bucket persists across tests and returns 429 instead of
+        # the status code under test. Reset it per test.
+        cache.clear()
+        self.client = Client()
+        self.admin = User.objects.create_superuser('admin_inv_http', 'admin_inv_http@rs.id', 'password123')
+        self.config = SystemConfig.get_solo()
+        self.config.ai_enabled = True
+        self.config.ai_enable_risiko = True
+        self.config.ai_api_key = "sk-test-fake-key-for-testing"
+        self.config.save()
+        self.url = reverse('akreditasi:ai_investigasi_rtl')
+
+    def _payload(self, **over):
+        p = {
+            'mode': 'both', 'unit_name': 'IGD',
+            'jenis_risiko': 'Keterlambatan penanganan pasien kritis',
+            'masalah': 'Waktu tunggu triase melebihi 5 menit',
+            'data_pendukung': 'Rata-rata 8 menit shift sore',
+            'dampak': 4, 'probabilitas': 3,
+            'evaluasi_capaian': 'Target tidak tercapai 3 bulan',
+            'capaian_nilai': '62%', 'target_capaian': '90%',
+            'fishbone': {'manpower': 'Beban kerja shift sore tinggi'},
+            'metode_evaluasi': 'RCA',
+        }
+        p.update(over)
+        return p
+
+    def test_anon_gets_401_json(self):
+        resp = self.client.post(self.url, data=json.dumps(self._payload()),
+                                content_type='application/json')
+        self.assertEqual(resp.status_code, 401)
+        self.assertFalse(resp.json()['success'])
+
+    def test_both_mode_returns_full_contract(self):
+        self.client.force_login(self.admin)
+        resp = self.client.post(self.url, data=json.dumps(self._payload()),
+                                content_type='application/json')
+        self.assertEqual(resp.status_code, 200)
+        body = resp.json()
+        self.assertTrue(body['success'])
+        for key in ('analisis_investigasi', 'rencana_tindak_lanjut', 'fishbone',
+                    'pj_saran', 'target_hari', 'indikator_keberhasilan'):
+            self.assertIn(key, body['data'])
+        self.assertNotIn('test-fake-key', resp.content.decode())
+
+    def test_invalid_mode_returns_400(self):
+        self.client.force_login(self.admin)
+        resp = self.client.post(self.url, data=json.dumps(self._payload(mode='hapus-semua')),
+                                content_type='application/json')
+        self.assertEqual(resp.status_code, 400)
+        self.assertFalse(resp.json()['success'])
+
+    def test_missing_context_returns_400(self):
+        self.client.force_login(self.admin)
+        resp = self.client.post(
+            self.url,
+            data=json.dumps({'mode': 'both', 'unit_name': 'IGD'}),
+            content_type='application/json')
+        self.assertEqual(resp.status_code, 400)
+        self.assertFalse(resp.json()['success'])
+
+    def test_non_json_body_returns_400(self):
+        self.client.force_login(self.admin)
+        resp = self.client.post(self.url, data='bukan json',
+                                content_type='application/json')
+        self.assertEqual(resp.status_code, 400)
         self.assertFalse(resp.json()['success'])

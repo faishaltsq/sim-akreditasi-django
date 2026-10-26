@@ -504,9 +504,17 @@
                         {% endif %}
 
                         {# ── G.4 ROOT CAUSE ANALYSIS (RCA) FISHBONE ── #}
-                        <h6 class="fw-bold mb-3 pb-1 border-bottom pt-2" style="color:var(--text-primary); font-size:.82rem;">
-                            <i class="bi bi-diagram-3-fill text-danger me-1"></i>G.4 Root Cause Analysis (RCA) Terstruktur — Metode Fishbone / 5-Whys
-                        </h6>
+                        <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 pb-1 border-bottom pt-2 gap-2">
+                            <h6 class="fw-bold mb-0" style="color:var(--text-primary); font-size:.82rem;">
+                                <i class="bi bi-diagram-3-fill text-danger me-1"></i>G.4 Root Cause Analysis (RCA) Terstruktur — Metode Fishbone / 5-Whys
+                            </h6>
+                            <div class="d-flex align-items-center gap-2">
+                                <span id="ai-inv-status" class="small" style="font-size:.72rem;"></span>
+                                <button type="button" class="btn btn-outline-primary btn-sm py-0 px-2 fw-semibold" id="btn-ai-investigasi" style="font-size:.72rem;">
+                                    <i class="bi bi-stars me-1 text-warning"></i>✨ AI Ringkasan Investigasi
+                                </button>
+                            </div>
+                        </div>
                         <div class="p-3 mb-3 rounded-3 border" style="background:var(--body-bg);">
                             <small class="text-muted d-block mb-2" style="font-size:.72rem;">
                                 Petakan akar masalah penyebab deviasi atau kegagalan pencapaian target berdasarkan 6 kategori Fishbone (Ishikawa):
@@ -553,9 +561,17 @@
                         </div>
 
                         {# ── G.5 RENCANA TINDAK LANJUT (RTL) & BUKTI ── #}
-                        <h6 class="fw-bold mb-3 pb-1 border-bottom pt-2" style="color:var(--text-primary); font-size:.82rem;">
-                            <i class="bi bi-calendar2-check text-primary me-1"></i>G.5 Rencana Tindak Lanjut (RTL) &amp; Bukti Penyelesaian
-                        </h6>
+                        <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 pb-1 border-bottom pt-2 gap-2">
+                            <h6 class="fw-bold mb-0" style="color:var(--text-primary); font-size:.82rem;">
+                                <i class="bi bi-calendar2-check text-primary me-1"></i>G.5 Rencana Tindak Lanjut (RTL) &amp; Bukti Penyelesaian
+                            </h6>
+                            <div class="d-flex align-items-center gap-2">
+                                <span id="ai-rtl-status" class="small" style="font-size:.72rem;"></span>
+                                <button type="button" class="btn btn-outline-primary btn-sm py-0 px-2 fw-semibold" id="btn-ai-rtl" style="font-size:.72rem;">
+                                    <i class="bi bi-stars me-1 text-warning"></i>✨ AI Rencana Tindak Lanjut
+                                </button>
+                            </div>
+                        </div>
                         <div class="mb-3">
                             <label for="rencana_tindak_lanjut" class="form-label fw-semibold" style="font-size:.8rem;">
                                 Uraian Rencana Tindak Lanjut (RTL)
@@ -857,5 +873,129 @@
         updateResidual();
     }
 })();
+
+// ── G.4/G.5 AI: Ringkasan Investigasi & Rencana Tindak Lanjut ──────────
+window.arimaGenerateInvestigasiRTL = async function (mode, opts) {
+    opts = opts || {};
+    const invBtn = document.getElementById('btn-ai-investigasi');
+    const rtlBtn = document.getElementById('btn-ai-rtl');
+    const invMsg = document.getElementById('ai-inv-status');
+    const rtlMsg = document.getElementById('ai-rtl-status');
+    const csrf = document.querySelector('[name=csrfmiddlewaretoken]');
+    if (!csrf) { return null; }
+
+    const setMsg = (el, cls, html) => {
+        if (!el) { return; }
+        el.className = 'small ' + cls;
+        el.style.fontSize = '.72rem';
+        el.innerHTML = html;
+    };
+    const restore = () => {
+        if (invBtn) { invBtn.disabled = false; invBtn.innerHTML = '<i class="bi bi-stars me-1 text-warning"></i>✨ AI Ringkasan Investigasi'; }
+        if (rtlBtn) { rtlBtn.disabled = false; rtlBtn.innerHTML = '<i class="bi bi-stars me-1 text-warning"></i>✨ AI Rencana Tindak Lanjut'; }
+    };
+    if (invBtn) { invBtn.disabled = true; }
+    if (rtlBtn) { rtlBtn.disabled = true; }
+    setMsg(invMsg, 'text-muted', '<i class="bi bi-hourglass-split me-1"></i>Menyusun analisis…');
+    setMsg(rtlMsg, 'text-muted', '<i class="bi bi-hourglass-split me-1"></i>Menyusun analisis…');
+
+    const fishbone = {};
+    ['manpower', 'process', 'material', 'machine', 'environment', 'system'].forEach(function (k) {
+        const el = document.querySelector('[name="rca_' + k + '"]');
+        if (el && el.value.trim()) { fishbone[k] = el.value.trim(); }
+    });
+
+    const payload = {
+        mode: mode,
+        unit_name: "{{ risiko.unit.name|escapejs }}",
+        jenis_risiko: "{{ risiko.jenis_risiko|escapejs }}",
+        masalah: "{{ risiko.masalah|default:risiko.deskripsi_risiko|escapejs }}",
+        data_pendukung: "{{ risiko.data_pendukung|escapejs }}",
+        dampak: {{ risiko.dampak|default:3 }},
+        probabilitas: {{ risiko.probabilitas|default:3 }},
+        evaluasi_capaian: (document.getElementById('evaluasi_capaian') || {}).value || '',
+        capaian_nilai: (document.getElementById('capaian_nilai') || {}).value || '',
+        target_capaian: (document.getElementById('target_capaian_indikator') || {}).value || '',
+        fishbone: fishbone,
+        metode_evaluasi: "{{ risiko.metode_evaluasi|default:'RCA'|escapejs }}"
+    };
+
+    try {
+        const resp = await fetch("{% url 'akreditasi:ai_investigasi_rtl' %}", {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrf.value },
+            body: JSON.stringify(payload)
+        });
+        const res = await resp.json();
+        if (!res.success || !res.data) { throw new Error(res.error || 'Respon AI tidak valid'); }
+        const d = res.data;
+        const applied = [];
+
+        const fillIfEmpty = (el, val) => {
+            if (!el || !val) { return false; }
+            if (el.value && el.value.trim() && !opts.overwrite) { return false; }
+            el.value = val;
+            el.dispatchEvent(new Event('input', { bubbles: true }));
+            return true;
+        };
+
+        if (mode === 'investigasi' || mode === 'both') {
+            if (d.analisis_investigasi && fillIfEmpty(document.getElementById('rca_ulang'), d.analisis_investigasi)) {
+                applied.push('ringkasan investigasi');
+            }
+            if (d.fishbone) {
+                Object.keys(d.fishbone).forEach(function (k) {
+                    if (fillIfEmpty(document.querySelector('[name="rca_' + k + '"]'), d.fishbone[k])) {
+                        applied.push('fishbone ' + k);
+                    }
+                });
+            }
+        }
+        if (mode === 'rtl' || mode === 'both') {
+            if (d.rencana_tindak_lanjut && fillIfEmpty(document.getElementById('rencana_tindak_lanjut'), d.rencana_tindak_lanjut)) {
+                applied.push('RTL');
+            }
+            if (fillIfEmpty(document.getElementById('pj_rtl'), d.pj_saran)) { applied.push('PIC'); }
+            const dl = document.getElementById('deadline_rtl');
+            if (dl && !dl.value && d.target_hari) {
+                const t = new Date();
+                t.setDate(t.getDate() + parseInt(d.target_hari, 10));
+                dl.value = t.toISOString().slice(0, 10);
+                applied.push('tenggat');
+            }
+            const st = document.getElementById('status_rtl');
+            if (st && d.status_rtl_saran) { st.value = d.status_rtl_saran; }
+        }
+
+        const note = res.fallback
+            ? '<i class="bi bi-info-circle me-1"></i>Draf dasar (AI eksternal nonaktif) — periksa &amp; lengkapi.'
+            : '<i class="bi bi-check-circle me-1"></i>Draf AI siap — periksa sebelum menyimpan.';
+        const detail = applied.length
+            ? ' Terisi: ' + applied.join(', ') + '.'
+            : ' Semua kolom tujuan sudah berisi teks; kosongkan dulu bila ingin ditimpa.';
+        if (mode === 'investigasi' || mode === 'both') { setMsg(invMsg, 'text-success fw-semibold', note + detail); }
+        if (mode === 'rtl' || mode === 'both') { setMsg(rtlMsg, 'text-success fw-semibold', note + detail); }
+        return d;
+    } catch (err) {
+        setMsg(invMsg, 'text-danger', '<i class="bi bi-exclamation-triangle me-1"></i>Gagal AI: ' + err.message);
+        setMsg(rtlMsg, 'text-danger', '<i class="bi bi-exclamation-triangle me-1"></i>Gagal AI: ' + err.message);
+        return null;
+    } finally {
+        restore();
+    }
+};
+
+document.addEventListener('DOMContentLoaded', function () {
+    const invBtn = document.getElementById('btn-ai-investigasi');
+    const rtlBtn = document.getElementById('btn-ai-rtl');
+    if (invBtn) { invBtn.addEventListener('click', function () { window.arimaGenerateInvestigasiRTL('investigasi'); }); }
+    if (rtlBtn) { rtlBtn.addEventListener('click', function () { window.arimaGenerateInvestigasiRTL('rtl'); }); }
+
+    // Bridge from the MONEV table (?ai=both|investigasi|rtl): generate once on load.
+    const want = new URLSearchParams(window.location.search).get('ai');
+    if (want && ['investigasi', 'rtl', 'both'].indexOf(want) !== -1) {
+        window.arimaGenerateInvestigasiRTL(want);
+    }
+});
 </script>
 {% endblock %}

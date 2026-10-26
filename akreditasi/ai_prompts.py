@@ -457,3 +457,50 @@ Format Output JSON:
   "aksi_minggu_ini": ["...", "...", "..."],
   "batas_data": "..."
 }}"""
+
+
+# --- Section G: RINGKASAN INVESTIGASI LANJUTAN (G.4) & RENCANA TINDAK LANJUT (G.5) ---
+PROMPT_INVESTIGASI_RTL = """Konteks Evaluasi Risiko Rumah Sakit (STARKES PMKP 7 & 12):
+- Unit Kerja: {unit_name}
+- Jenis Risiko: {jenis_risiko}
+- Pernyataan Masalah: {masalah}
+- Data Pendukung / Bukti: {data_pendukung}
+- Skor Risiko Awal: {skor} (Dampak {dampak} x Probabilitas {probabilitas}) - Tingkat: {level}
+- Metode Evaluasi Mendalam: {metode_evaluasi}
+- Uraian Evaluasi Capaian yang Sudah Diisi: {evaluasi_capaian}
+- Capaian Indikator Realisasi: {capaian_nilai}
+- Target Indikator: {target_capaian}
+- Analisis Fishbone yang Sudah Diisi User: {fishbone_terisi}
+
+Tugas: Susun DUA bagian berikut sekaligus, saling konsisten.
+
+BAGIAN 1 - RINGKASAN INVESTIGASI LANJUTAN (untuk kolom G.4):
+Tulis narasi investigasi akar masalah yang siap ditempel ke dokumen akreditasi, memakai
+5-Whys dan kerangka Fishbone (Manpower, Process/Method, Material, Machine, Environment,
+System). Pisahkan penyebab langsung dari akar masalah sistemik. Jangan mengulang kalimat
+template; gunakan bahasa faktual khas rumah sakit.
+
+BAGIAN 2 - RENCANA TINDAK LANJUT / RTL (untuk kolom G.5):
+Susun RTL yang SMART (Specific, Measurable, Achievable, Relevant, Time-bound), berupa
+langkah bernomor yang benar-benar menyelesaikan akar masalah sistemik di Bagian 1 - bukan
+sekadar quick fix. Sertakan saran PIC dan tenggat dalam hari.
+
+Format Output JSON (tanpa markdown code block):
+{{
+  "analisis_investigasi": "1. Kronologi & Dampak: ...\\n2. Analisis 5-Whys: 1) Mengapa ... 2) Mengapa ... 3) Mengapa ... 4) Mengapa ... 5) Akar masalah: ...\\n3. Akar Masalah Sistemik: ...\\n4. Penyebab Langsung: ...\\n5. Kesimpulan Investigasi: ...",
+  "fishbone": {{
+    "manpower": "Kontributor dari sisi SDM / kompetensi / beban kerja",
+    "process": "Kontributor dari sisi metode / SPO / alur kerja",
+    "material": "Kontributor dari sisi bahan / sarana / dokumen",
+    "machine": "Kontributor dari sisi alat / fasilitas / SIMRS",
+    "environment": "Kontributor dari sisi lingkungan kerja / budaya keselamatan",
+    "system": "Kontributor dari sisi kebijakan / tata kelola / sistem RS"
+  }},
+  "akar_masalah_sistemik": "Satu paragraf akar masalah tingkat sistem",
+  "verifikasi_efektivitas": "Cara membuktikan perbaikan berhasil (indikator, frekuensi, ambang)",
+  "rencana_tindak_lanjut": "1. [Langkah perbaikan konkret]\\n2. [Revisi SPO / sarana]\\n3. [Pelatihan & sosialisasi]\\n4. [Audit kepatuhan berkala]\\n5. [Pelaporan hasil ke Komite Mutu]",
+  "pj_saran": "Jabatan PIC yang paling tepat (mis. Kepala Instalasi / Ka. Unit / Komite Mutu)",
+  "target_hari": 30,
+  "indikator_keberhasilan": "Indikator terukur yang menandakan RTL berhasil",
+  "status_rtl_saran": "BELUM / PROSES / SELESAI"
+}}"""

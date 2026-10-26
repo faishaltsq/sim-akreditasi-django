@@ -692,3 +692,48 @@ def api_ai_narasi_laporan(request):
             'narasi': str(data_res.get('narasi') or ''),
         },
     }, status=200)
+
+
+def api_ai_investigasi_rtl(request):
+    """Endpoint tombol AI pada G.4 (investigasi) dan G.5 (RTL) halaman evaluasi risiko."""
+    profile = getattr(request.user, 'profile', None)
+    if profile and not profile.has_permission('can_view_risiko'):
+        return JsonResponse({'success': False, 'error': 'Anda tidak memiliki hak akses melihat data risiko.'}, status=403)
+
+    data = _parse_json_body(request)
+    if not data:
+        return JsonResponse({'success': False, 'error': 'Payload request tidak valid (bukan JSON).'}, status=400)
+
+    mode = (data.get('mode') or 'both').strip().lower()
+    if mode not in ('investigasi', 'rtl', 'both'):
+        return JsonResponse({'success': False, 'error': 'Mode harus investigasi, rtl, atau both.'}, status=400)
+
+    jenis_risiko = (data.get('jenis_risiko') or '').strip()
+    masalah = (data.get('masalah') or '').strip()
+    if not jenis_risiko and not masalah:
+        return JsonResponse({
+            'success': False,
+            'error': 'Harap isi Jenis Risiko atau Pernyataan Masalah sebelum meminta analisis AI.',
+        }, status=400)
+
+    fishbone = data.get('fishbone')
+    if not isinstance(fishbone, dict):
+        fishbone = None
+
+    res = generate_investigasi_rtl(
+        user=request.user,
+        unit_name=(data.get('unit_name') or 'Unit Kerja').strip(),
+        jenis_risiko=jenis_risiko,
+        masalah=masalah,
+        data_pendukung=(data.get('data_pendukung') or '').strip(),
+        dampak=int(data.get('dampak') or 3),
+        probabilitas=int(data.get('probabilitas') or 3),
+        evaluasi_capaian=(data.get('evaluasi_capaian') or '').strip(),
+        capaian_nilai=str(data.get('capaian_nilai') or ''),
+        target_capaian=str(data.get('target_capaian') or ''),
+        fishbone=fishbone,
+        metode_evaluasi=(data.get('metode_evaluasi') or 'RCA').strip(),
+    )
+    if res.get('success'):
+        res['mode'] = mode
+    return JsonResponse(res, status=200 if res['success'] else 400)
