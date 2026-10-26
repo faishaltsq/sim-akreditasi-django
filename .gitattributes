@@ -1,0 +1,8 @@
+# Fixture files whose bytes are pinned by a SHA-256 manifest must never be
+# rewritten on checkout. With core.autocrlf=true (the Windows default) Git
+# converts LF to CRLF, so a fresh clone hashes differently from the manifest
+# and akreditasi.tests_starkes_source_fixture fails on an untouched checkout.
+fixtures/standar_akreditasi_2024.sources.json -text
+fixtures/standar_akreditasi_2024.sources.manifest.json -text
+fixtures/standar_akreditasi_2024.sources.review.csv -text
+fixtures/standar_akreditasi_2024.json -text
