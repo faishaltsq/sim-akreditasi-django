@@ -53,6 +53,30 @@ class RencanaFormasi(models.Model):
         'Alasan Override Manual', blank=True,
         help_text='Wajib diisi bila menit efektif tidak diambil dari JKE tahunan.',
     )
+    ALASAN_CHOICES = [
+        ('LAYANAN_BARU', 'Peningkatan volume / layanan baru'),
+        ('REPLACEMENT', 'Replacement (pensiun, resign, mutasi)'),
+        ('REGULASI_BARU', 'Pemenuhan standar regulasi baru'),
+        ('DEFISIT_FTE', 'Hasil kalkulasi FTE menunjukkan defisit'),
+    ]
+    alasan = models.CharField(
+        'Alasan Pengajuan', max_length=20, choices=ALASAN_CHOICES, blank=True,
+        help_text='Wajib dipilih saat rencana diajukan untuk tinjauan.',
+    )
+    alasan_catatan = models.TextField('Rincian Justifikasi', blank=True)
+    kualifikasi_pendidikan = models.CharField(
+        'Kualifikasi Pendidikan', max_length=200, blank=True,
+        help_text='Ijazah minimum yang dipersyaratkan.',
+    )
+    sertifikat_wajib = models.JSONField(
+        'Sertifikat Wajib', default=list, blank=True,
+        help_text='Contoh: ["Sertifikat ICU", "BTCLS"].',
+    )
+    target_pemenuhan = models.DateField('Target Pemenuhan', null=True, blank=True)
+    lowongan = models.ForeignKey(
+        'sdm.Lowongan', on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='rencana_formasi', verbose_name='Lowongan Terkait',
+    )
     support_allowance_pct = models.DecimalField(
         'Tunjangan Waktu Pendukung (%)', max_digits=6, decimal_places=2,
         default=Decimal('0.00'), validators=[MinValueValidator(Decimal('0.00'))],

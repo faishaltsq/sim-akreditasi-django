@@ -61,6 +61,7 @@ from .pegawai import MasterProfesiPegawai, Pegawai, PenempatanPegawai
 from .undangan import UndanganAkunPegawai
 from .layanan_mandiri import LayananMandiri
 from .beban_kerja import BebanKerja
+from .lampiran_formasi import LampiranFormasi
 from .referensi import JamKerjaEfektif, StandarKetenagaan
 from .clinical_access import (
     ClinicalActionCode,
@@ -109,6 +110,7 @@ __all__ = [
     'Lowongan',
     'BebanKerja',
     'JamKerjaEfektif',
+    'LampiranFormasi',
     'StandarKetenagaan',
     'BatchImporPegawai',
     'ClinicalActionCode',

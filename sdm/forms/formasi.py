@@ -24,7 +24,13 @@ class RencanaFormasiForm(forms.ModelForm):
             'periode_selesai',
             'metode',
             'effective_minutes_per_employee',
+            'override_alasan',
             'support_allowance_pct',
+            'alasan',
+            'alasan_catatan',
+            'kualifikasi_pendidikan',
+            'sertifikat_wajib',
+            'target_pemenuhan',
         ]
         widgets = {
             'profesi': forms.TextInput(attrs={'class': FIELD_CLASS, 'maxlength': 120}),
@@ -37,6 +43,19 @@ class RencanaFormasiForm(forms.ModelForm):
             'support_allowance_pct': forms.NumberInput(
                 attrs={'class': FIELD_CLASS, 'min': '0', 'step': '0.01'}
             ),
+            'override_alasan': forms.Textarea(
+                attrs={'class': FIELD_CLASS, 'rows': 2}
+            ),
+            'alasan': forms.Select(attrs={'class': SELECT_CLASS}),
+            'alasan_catatan': forms.Textarea(
+                attrs={'class': FIELD_CLASS, 'rows': 3}
+            ),
+            'kualifikasi_pendidikan': forms.TextInput(
+                attrs={'class': FIELD_CLASS, 'maxlength': 200}
+            ),
+            'target_pemenuhan': forms.DateInput(
+                attrs={'class': FIELD_CLASS, 'type': 'date'}
+            ),
         }
 
     def __init__(self, *args, user, **kwargs):
@@ -44,6 +63,23 @@ class RencanaFormasiForm(forms.ModelForm):
         self.fields['unit_kerja'].queryset = visible_units(
             user, capability='can_plan_hc_workforce'
         ).order_by('level', 'order', 'code')
+        self.fields['sertifikat_wajib'] = forms.CharField(
+            label='Sertifikat Wajib', required=False,
+            help_text='Pisahkan dengan koma. Contoh: Sertifikat ICU, BTCLS',
+            widget=forms.TextInput(attrs={'class': FIELD_CLASS}),
+        )
+        if self.instance.pk and self.instance.sertifikat_wajib:
+            self.fields['sertifikat_wajib'].initial = ', '.join(
+                item.get('nama', str(item)) if isinstance(item, dict) else str(item)
+                for item in self.instance.sertifikat_wajib
+            )
+
+    def clean_sertifikat_wajib(self):
+        raw = self.cleaned_data.get('sertifikat_wajib') or ''
+        if isinstance(raw, (list, tuple)):
+            return list(raw)
+        items = [part.strip() for part in raw.split(',') if part.strip()]
+        return [{'nama': item[:100]} for item in items][:20]
 
 
 class AktivitasBebanKerjaForm(forms.Form):
