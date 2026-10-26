@@ -1,0 +1,122 @@
+{% extends 'base.html' %}
+{% load akreditasi_tags %}
+
+{% block title %}Validasi Sumber Katalog — ARIMA{% endblock %}
+{% block page_title %}Validasi Sumber Katalog{% endblock %}
+{% block page_subtitle %}Daftar entri SumberKatalog dengan SHA-256, halaman, status review, dan anomali{% endblock %}
+
+{% block breadcrumb %}
+<li><a href="{% url 'akreditasi:dashboard' %}">ARIMA</a></li>
+<li><a href="{% url 'akreditasi:katalog_daftar' %}">Katalog</a></li>
+<li class="current" aria-current="page">Validasi Sumber</li>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-3">
+
+    {# ── Header ────────────────────────────────────── #}
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-3">
+        <h5 class="fw-bold mb-0" style="color:var(--text-primary);"><i class="bi bi-check-circle me-1" style="color:var(--primary);"></i>Validasi Sumber Katalog</h5>
+        <div class="d-flex flex-wrap gap-2">
+            <a href="{% url 'akreditasi:katalog_daftar' %}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-arrow-left me-1"></i>Kembali ke Daftar Katalog</a>
+        </div>
+    </div>
+
+    {# ── Ringkasan ─────────────────────────────────── #}
+    <div class="row g-3 mb-3">
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body text-center py-3">
+                    <div class="text-muted small fw-semibold">Total Entri</div>
+                    <div class="fw-bold text-dark" style="font-size:1.25rem;">{{ total_count }}</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body text-center py-3">
+                    <div class="text-muted small fw-semibold">Direview</div>
+                    <div class="fw-bold text-success" style="font-size:1.25rem;">{{ reviewed_count }}</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body text-center py-3">
+                    <div class="text-muted small fw-semibold">Belum Direview</div>
+                    <div class="fw-bold text-warning text-dark" style="font-size:1.25rem;">{{ unreviewed_count }}</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body text-center py-3">
+                    <div class="text-muted small fw-semibold">Anomali</div>
+                    <div class="fw-bold text-danger" style="font-size:1.25rem;">{{ anomaly_count }}</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {# ── Tabel Sumber ──────────────────────────────── #}
+    <div class="card border-0 shadow-sm">
+        <div class="card-header bg-white border-bottom py-2 d-flex justify-content-between align-items-center">
+            <span class="fw-bold text-dark" style="font-size:.85rem;"><i class="bi bi-database me-1"></i>Daftar Sumber Katalog</span>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-hover mb-0" style="font-size:.8rem;">
+                <thead style="background:var(--surface-hover);">
+                    <tr>
+                        <th style="color:var(--text-primary);">#</th>
+                        <th style="color:var(--text-primary);">Framework</th>
+                        <th style="color:var(--text-primary);">Tipe Dokumen</th>
+                        <th style="color:var(--text-primary);">Path Sumber</th>
+                        <th class="text-center" style="color:var(--text-primary);">SHA-256</th>
+                        <th class="text-center" style="color:var(--text-primary);">Halaman</th>
+                        <th class="text-center" style="color:var(--text-primary);">Direview</th>
+                        <th style="color:var(--text-primary);">Anomali</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in validated %}
+                    {% with s=item.entry %}
+                    <tr>
+                        <td>{{ forloop.counter }}</td>
+                        <td>{{ s.framework.name }} <span class="text-muted small">({{ s.framework.edition }})</span></td>
+                        <td>{{ s.document_type|default:"—" }}</td>
+                        <td class="text-truncate" style="max-width:260px;" title="{{ s.source_path }}">{{ s.source_path|default:"—" }}</td>
+                        <td class="text-center font-monospace" style="font-size:.7rem;">
+                            {{ item.hash_short }}
+                        </td>
+                        <td class="text-center">{{ s.pages }}</td>
+                        <td class="text-center">
+                            {% if s.reviewed %}
+                                <span class="badge bg-success" style="font-size:.65rem;"><i class="bi bi-check-circle-fill me-1"></i>Ya</span>
+                            {% else %}
+                                <span class="badge bg-secondary">Belum</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if item.anomalies %}
+                                <span class="badge bg-danger-subtle text-danger border border-danger" style="font-size:.65rem;" title="{% for a in item.anomalies %}{{ a }}; {% endfor %}">
+                                    <i class="bi bi-exclamation-circle me-1"></i>{{ item.anomalies|length }}
+                                </span>
+                                <div class="mt-1 text-danger small" style="font-size:.7rem;">
+                                    {% for a in item.anomalies %}• {{ a }}{% if not forloop.last %}<br>{% endif %}{% endfor %}
+                                </div>
+                            {% else %}
+                                <span class="text-muted small">—</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endwith %}
+                    {% empty %}
+                    <tr><td colspan="8" class="text-center text-muted py-4">Belum ada entri sumber katalog.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</div>
+{% endblock %}

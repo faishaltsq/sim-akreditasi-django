@@ -1,0 +1,86 @@
+{% extends 'base.html' %}
+{% load akreditasi_tags %}
+
+{% block title %}Pengumuman Aktivasi Katalog — ARIMA{% endblock %}
+{% block page_title %}Pengumuman Aktivasi Katalog{% endblock %}
+{% block page_subtitle %}Daftar AktivasiKatalog — catatan penerimaan aktivasi katalog standar{% endblock %}
+
+{% block breadcrumb %}
+<li><a href="{% url 'akreditasi:dashboard' %}">ARIMA</a></li>
+<li><a href="{% url 'akreditasi:katalog_daftar' %}">Katalog</a></li>
+<li class="current" aria-current="page">Pengumuman Aktivasi</li>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-3">
+
+    {# ── Header ────────────────────────────────────── #}
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-3">
+        <h5 class="fw-bold mb-0" style="color:var(--text-primary);"><i class="bi bi-megaphone me-1" style="color:var(--primary);"></i>Pengumuman Aktivasi Katalog</h5>
+        <div class="d-flex flex-wrap gap-2">
+            <a href="{% url 'akreditasi:katalog_daftar' %}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-arrow-left me-1"></i>Kembali ke Daftar Katalog</a>
+        </div>
+    </div>
+
+    {# ── Tabel Aktivasi ────────────────────────────── #}
+    <div class="card border-0 shadow-sm">
+        <div class="card-header bg-white border-bottom py-2 d-flex justify-content-between align-items-center">
+            <span class="fw-bold text-dark" style="font-size:.85rem;"><i class="bi bi-journal me-1"></i>Daftar Penerimaan Aktivasi</span>
+            <span class="badge text-bg-light border" style="font-size:.68rem;">{{ receipts.count }} penerimaan</span>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-hover mb-0" style="font-size:.8rem;">
+                <thead style="background:var(--surface-hover);">
+                    <tr>
+                        <th style="color:var(--text-primary);">#</th>
+                        <th style="color:var(--text-primary);">Status</th>
+                        <th style="color:var(--text-primary);">Framework Diaktifkan</th>
+                        <th style="color:var(--text-primary);">Edisi</th>
+                        <th class="text-center" style="color:var(--text-primary);">Status Aktivasi</th>
+                        <th class="text-center" style="color:var(--text-primary);">SHA-256 Sumber</th>
+                        <th style="color:var(--text-primary);">Aktor</th>
+                        <th class="text-center" style="color:var(--text-primary);">Diaktifkan Pada</th>
+                        <th style="color:var(--text-primary);">Framework Sebelumnya</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for r in receipts %}
+                    <tr>
+                        <td>{{ forloop.counter }}</td>
+                        <td>
+                            <span class="badge
+                                {% if r.status == 'ACTIVE' %}bg-success
+                                {% elif r.status == 'PLANNED' %}bg-warning text-dark
+                                {% elif r.status == 'ROLLED_BACK' %}bg-secondary
+                                {% else %}bg-danger
+                                {% endif %}"
+                                style="font-size:.65rem;">{{ r.get_status_display }}</span>
+                        </td>
+                        <td>{{ r.framework.name }} <span class="text-muted small">({{ r.framework.edition }})</span></td>
+                        <td class="text-center">{{ r.framework.edition }}</td>
+                        <td class="text-center">
+                            <span class="badge
+                                {% if r.status == 'ACTIVE' %}bg-success
+                                {% elif r.status == 'PLANNED' %}bg-warning text-dark
+                                {% elif r.status == 'ROLLED_BACK' %}bg-secondary
+                                {% else %}bg-danger
+                                {% endif %}"
+                                style="font-size:.65rem;">{{ r.get_status_display }}</span>
+                        </td>
+                        <td class="text-center font-monospace" style="font-size:.7rem;">
+                            {{ r.source_hash|slice:":16" }}{% if r.source_hash %}…{% else %}—{% endif %}
+                        </td>
+                        <td>{{ r.actor|default:'—' }}</td>
+                        <td class="text-center">{{ r.activated_at|date:"d/m/Y H:i" }}</td>
+                        <td>{{ r.previous_framework|default:'—' }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="9" class="text-center text-muted py-4">Belum ada penerimaan aktivasi katalog.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</div>
+{% endblock %}

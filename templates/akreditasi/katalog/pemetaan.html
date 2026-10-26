@@ -1,0 +1,160 @@
+{% extends 'base.html' %}
+{% load akreditasi_tags %}
+
+{% block title %}Pemetaan Edisi Katalog — ARIMA{% endblock %}
+{% block page_title %}Pemetaan Edisi Katalog{% endblock %}
+{% block page_subtitle %}Review dan catat keputusan pemetaan item antar edisi katalog standar{% endblock %}
+
+{% block breadcrumb %}
+<li><a href="{% url 'akreditasi:dashboard' %}">ARIMA</a></li>
+<li><a href="{% url 'akreditasi:katalog_daftar' %}">Katalog</a></li>
+<li class="current" aria-current="page">Pemetaan Edisi</li>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-3">
+
+    {# ── Header ────────────────────────────────────── #}
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-3">
+        <div>
+            <h5 class="fw-bold mb-0" style="color:var(--text-primary);"><i class="bi bi-arrow-repeat me-1" style="color:var(--primary);"></i>Pemetaan Edisi Katalog</h5>
+            <p class="text-muted small mb-0">Catat keputusan pemetaan item sumber ke item target antar edisi katalog.</p>
+        </div>
+        <div class="d-flex flex-wrap gap-2">
+            <a href="{% url 'akreditasi:katalog_daftar' %}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-arrow-left me-1"></i>Kembali ke Daftar Katalog</a>
+        </div>
+    </div>
+
+    {# ── Katalog aktif (persyaratan tulis) ─────────── #}
+    {% if active and active.lifecycle == 'ACTIVE' %}
+    <div class="alert alert-success border-0 shadow-sm mb-3">
+        <div class="d-flex align-items-center gap-2">
+            <i class="bi bi-check-circle-fill text-success"></i>
+            <div>
+                <div class="fw-semibold text-dark">{{ active.name }} — Edisi {{ active.edition }}</div>
+                <div class="text-muted small">Katalog aktif: penulisan pemetaan diizinkan.</div>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div class="alert alert-warning border-0 shadow-sm mb-3">
+        <div class="d-flex align-items-center gap-2">
+            <i class="bi bi-exclamation-triangle text-warning"></i>
+            <div>
+                <div class="fw-semibold text-dark">Tidak ada katalog AKTIF.</div>
+                <div class="text-muted small">Pemetaan hanya dapat ditampilkan; pembuatan/ubah pemetaan ditolak hingga katalog diaktifkan.</div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    {# ── Form buat/ubah pemetaan ───────────────────── #}
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header bg-white border-bottom py-2">
+            <span class="fw-bold text-dark" style="font-size:.85rem;"><i class="bi bi-plus-square me-1"></i>Buat / Ubah Pemetaan</span>
+        </div>
+        <div class="card-body p-3">
+            <form method="post" class="row g-3 align-items-end">
+                {% csrf_token %}
+                <div class="col-md-3">
+                    <label class="form-label form-label-sm" style="font-size:.75rem;">Item Sumber</label>
+                    <select name="source_item_id" class="form-select form-select-sm" required>
+                        <option value="">— Pilih sumber —</option>
+                        {% for it in source_items %}
+                        <option value="{{ it.pk }}">{{ it.category.framework.version }} · {{ it.code }} — {{ it.sub_title|default:it.description|truncatechars:40 }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label form-label-sm" style="font-size:.75rem;">Item Target</label>
+                    <select name="target_item_id" class="form-select form-select-sm" required>
+                        <option value="">— Pilih target —</option>
+                        {% for it in target_items %}
+                        <option value="{{ it.pk }}">{{ it.category.framework.version }} · {{ it.code }} — {{ it.sub_title|default:it.description|truncatechars:40 }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label form-label-sm" style="font-size:.75rem;">Klasifikasi</label>
+                    <select name="classification" class="form-select form-select-sm">
+                        {% for val, label in classifications %}
+                        <option value="{{ val }}">{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label form-label-sm" style="font-size:.75rem;">Kebijakan Skor</label>
+                    <select name="score_policy" class="form-select form-select-sm">
+                        {% for val, label in score_policies %}
+                        <option value="{{ val }}">{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2 d-flex align-items-end gap-2">
+                    <button type="submit" class="btn btn-sm text-white w-100" style="background:var(--primary);" {% if not active or active.lifecycle != 'ACTIVE' %}disabled{% endif %}>
+                        <i class="bi bi-save me-1"></i>Simpan
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    {# ── Daftar pemetaan yang ada ──────────────────── #}
+    <div class="card border-0 shadow-sm">
+        <div class="card-header bg-white border-bottom py-2 d-flex justify-content-between align-items-center">
+            <span class="fw-bold text-dark" style="font-size:.85rem;"><i class="bi bi-list me-1"></i>Daftar Pemetaan Edisi</span>
+            <span class="badge text-bg-light border" style="font-size:.68rem;">{{ mappings.count }} pemetaan</span>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-hover mb-0" style="font-size:.8rem;">
+                <thead style="background:var(--surface-hover);">
+                    <tr>
+                        <th style="color:var(--text-primary);">#</th>
+                        <th style="color:var(--text-primary);">Framework Sumber</th>
+                        <th class="text-center" style="color:var(--text-primary);">Kode Sumber</th>
+                        <th style="color:var(--text-primary);">Framework Target</th>
+                        <th class="text-center" style="color:var(--text-primary);">Kode Target</th>
+                        <th class="text-center" style="color:var(--text-primary);">Klasifikasi</th>
+                        <th class="text-center" style="color:var(--text-primary);">Kebijakan Skor</th>
+                        <th class="text-center" style="color:var(--text-primary);">Disetujui</th>
+                        <th style="color:var(--text-primary);">Reviewer</th>
+                        <th class="text-center" style="color:var(--text-primary);">Ditinjau Pada</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for m in mappings %}
+                    <tr>
+                        <td>{{ forloop.counter }}</td>
+                        <td>{{ m.source_framework.name }} <span class="text-muted small">({{ m.source_framework.edition }})</span></td>
+                        <td class="text-center font-monospace">{{ m.source_code }}</td>
+                        <td>{{ m.target_framework.name }} <span class="text-muted small">({{ m.target_framework.edition }})</span></td>
+                        <td class="text-center font-monospace">{{ m.target_code }}</td>
+                        <td class="text-center">
+                            <span class="badge
+                                {% if m.classification == 'UNCHANGED' %}bg-success
+                                {% elif m.classification == 'CHANGED' %}bg-warning text-dark
+                                {% elif m.classification == 'SPLIT' %}bg-info text-dark
+                                {% elif m.classification == 'MERGED' %}bg-primary
+                                {% elif m.classification == 'RETIRED' %}bg-danger
+                                {% elif m.classification == 'NEW' %}bg-secondary
+                                {% else %}bg-secondary
+                                {% endif %}"
+                                style="font-size:.65rem;">{{ m.get_classification_display }}</span>
+                        </td>
+                        <td class="text-center">{{ m.get_score_policy_display }}</td>
+                        <td class="text-center">
+                            {% if m.approved %}<span class="badge bg-success" style="font-size:.65rem;"><i class="bi bi-check-circle-fill me-1"></i>Ya</span>{% else %}<span class="badge bg-secondary">Belum</span>{% endif %}
+                        </td>
+                        <td>{{ m.reviewer|default:'—' }}</td>
+                        <td class="text-center">{{ m.reviewed_at|date:"d/m/Y H:i"|default:"—" }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="10" class="text-center text-muted py-4">Belum ada pemetaan edisi.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</div>
+{% endblock %}

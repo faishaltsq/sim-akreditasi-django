@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+
+{% block page_title %}Paket KPS{% endblock %}
+{% block page_subtitle %}Bukti sampel untuk tinjauan sebelum publikasi{% endblock %}
+{% block extra_css %}{% include "sdm/_responsive.html" %}{% endblock %}
+
+{% block content %}
+<div class="container-fluid p-0">
+    <div class="page-header-box mb-3">
+        <div>
+            <h1 class="page-title h5 mb-1"><i class="bi bi-box text-primary me-2"></i>Paket Sampel KPS</h1>
+            <p class="page-subtitle text-muted mb-0">Kerangka: {{ artifact.framework_name }} · ditinjau pada {{ artifact.as_of }}</p>
+        </div>
+        <form method="post" action="{% url 'sdm:kps_pack_publish' %}">
+            {% csrf_token %}
+            <label class="form-label small fw-semibold mb-2 d-block">Publikasikan ke elemen penilaian</label>
+            <select name="requirement" class="form-select form-select-sm" required>
+                <option value="">— pilih elemen —</option>
+            </select>
+            <div class="mt-2 d-flex gap-2">
+                <button class="btn btn-primary btn-sm" type="submit"><i class="bi bi-cloud-upload me-1"></i>Terbitkan untuk ditinjau</button>
+                <a class="btn btn-outline-secondary btn-sm" href="{% url 'sdm:analitik_dashboard' %}">Batal</a>
+            </div>
+        </form>
+    </div>
+
+    <div class="card border shadow-sm mt-3">
+        <div class="card-body">
+            <p class="mb-1"><strong>Jumlah pegawai:</strong> {{ artifact.employee_count }}</p>
+            <p class="mb-0 text-muted"><strong>Hash:</strong> {{ artifact.workbook_hash }}</p>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,125 @@
+{% extends "base.html" %}
+
+{% block page_title %}Portal Mandiri{% endblock %}
+{% block page_subtitle %}Profil, dokumen dan pengajuan Anda{% endblock %}
+{% block extra_css %}{% include "sdm/_responsive.html" %}{% endblock %}
+
+{% block content %}
+<div class="container-fluid p-0">
+    <div class="page-header-box mb-3">
+        <div>
+            <h1 class="page-title h5 mb-1"><i class="bi bi-person-badge-fill text-primary me-2"></i>Portal Mandiri</h1>
+            <p class="page-subtitle text-muted mb-0">{{ employee.nama_lengkap }} · {{ employee.get_kategori_display }}</p>
+        </div>
+        <a class="btn btn-primary btn-sm" href="{% url 'sdm:portal_request_create' %}">
+            <i class="bi bi-plus-circle me-1"></i>Ajukan Layanan
+        </a>
+    </div>
+
+    {% if messages %}
+        {% for message in messages %}
+        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">{{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Tutup"></button>
+        </div>
+        {% endfor %}
+    {% endif %}
+
+    <div class="row g-3">
+        <div class="col-12 col-lg-6">
+            <div class="card border shadow-sm h-100">
+                <div class="card-header bg-light fw-semibold small">Legalitas & Masa Berlaku</div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-sm mb-0 align-middle">
+                            <caption class="visually-hidden">Status legalitas Anda</caption>
+                            <thead><tr><th scope="col">Jenis</th><th scope="col">Nomor</th><th scope="col">Status</th></tr></thead>
+                            <tbody>
+                                {% for item in legal.items %}
+                                <tr>
+                                    <td>{{ item.subtype|default:"—" }}</td>
+                                    <td class="font-monospace small">{{ item.nomor_izin|default:"—" }}</td>
+                                    <td>
+                                        {% if item.band == 'valid' %}<span class="badge text-bg-success">{{ item.label }}</span>
+                                        {% elif item.band == 'unknown' %}<span class="badge text-bg-secondary">{{ item.label }}</span>
+                                        {% else %}<span class="badge text-bg-warning">{{ item.label }}</span>{% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12 col-lg-6">
+            <div class="card border shadow-sm h-100">
+                <div class="card-header bg-light fw-semibold small">Kelengkapan Dokumen Wajib</div>
+                <div class="card-body">
+                    {% if compliance.completeness_pct is not None %}
+                    <p class="mb-1"><strong>{{ compliance.completeness_pct }}%</strong> persyaratan terpenuhi</p>
+                    <ul class="list-unstyled small mb-0">
+                        {% for result in compliance.results %}
+                        <li class="d-flex justify-content-between border-bottom py-1">
+                            <span>{{ result.rule.name }}</span>
+                            <span class="text-muted">{{ result.label }}</span>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                    {% else %}
+                    <p class="text-muted mb-0">Belum dikonfigurasi.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12 col-lg-6">
+            <div class="card border shadow-sm h-100">
+                <div class="card-header bg-light fw-semibold small">Penempatan & SPK</div>
+                <div class="card-body">
+                    <p class="small fw-semibold mb-1">Penempatan</p>
+                    <ul class="list-unstyled small mb-3">
+                        {% for placement in assignments %}
+                        <li>{{ placement.unit_kerja.code }} — {{ placement.alokasi_fte }} FTE · mulai {{ placement.tanggal_mulai|date:"d M Y" }}</li>
+                        {% empty %}<li class="text-muted">Belum ada penempatan.</li>{% endfor %}
+                    </ul>
+                    <p class="small fw-semibold mb-1">SPK Aktif</p>
+                    <ul class="list-unstyled small mb-0">
+                        {% for item in spk %}
+                        <li>{{ item.nomor_spk }} · {{ item.unit_kerja.code }} · s.d. {{ item.berlaku_sampai|date:"d M Y"|default:"—" }}</li>
+                        {% empty %}<li class="text-muted">Belum ada SPK aktif.</li>{% endfor %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12 col-lg-6">
+            <div class="card border shadow-sm h-100">
+                <div class="card-header bg-light fw-semibold small">Pengingat & Pengajuan</div>
+                <div class="card-body">
+                    <p class="small fw-semibold mb-1">Pengingat belum dibaca</p>
+                    <ul class="list-unstyled small mb-3">
+                        {% for reminder in reminders %}
+                        <li>{{ reminder.get_band_display }}{% if reminder.due_date %} · {{ reminder.due_date|date:"d M Y" }}{% endif %}</li>
+                        {% empty %}<li class="text-muted">Tidak ada pengingat.</li>{% endfor %}
+                    </ul>
+                    <p class="small fw-semibold mb-1">Pengajuan terakhir</p>
+                    <ul class="list-unstyled small mb-0">
+                        {% for item in requests %}
+                        <li class="d-flex justify-content-between align-items-center gap-2 border-bottom py-1">
+                            <span>{{ item.get_kind_display }} — {{ item.get_state_display }}</span>
+                            {% if item.state == 'SUBMITTED' or item.state == 'DRAFT' %}
+                            <form method="post" action="{% url 'sdm:portal_request_cancel' item.pk %}">
+                                {% csrf_token %}
+                                <button class="btn btn-outline-secondary btn-sm py-0" type="submit">Batalkan</button>
+                            </form>
+                            {% endif %}
+                        </li>
+                        {% empty %}<li class="text-muted">Belum ada pengajuan.</li>{% endfor %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

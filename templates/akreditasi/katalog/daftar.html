@@ -1,0 +1,120 @@
+{% extends 'base.html' %}
+{% load akreditasi_tags %}
+
+{% block title %}Daftar Katalog Standar — ARIMA{% endblock %}
+{% block page_title %}Katalog Standar Akreditasi{% endblock %}
+{% block page_subtitle %}Daftar semua edisi katalog standar (edisi, siklus, hash sumber, status review){% endblock %}
+
+{% block breadcrumb %}
+<li><a href="{% url 'akreditasi:dashboard' %}">ARIMA</a></li>
+<li><a href="{% url 'akreditasi:katalog_daftar' %}">Katalog</a></li>
+<li class="current" aria-current="page">Daftar Katalog</li>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-3">
+
+    {# ── Header + Aksi ─────────────────────────────── #}
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-3">
+        <h5 class="fw-bold mb-0" style="color:var(--text-primary);"><i class="bi bi-library me-1" style="color:var(--primary);"></i>Daftar Katalog Standar</h5>
+        <div class="d-flex flex-wrap gap-2">
+            <a href="{% url 'akreditasi:katalog_pemetaan' %}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-arrow-repeat me-1"></i>Pemetaan Edisi</a>
+            <a href="{% url 'akreditasi:katalog_validasi' %}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-check-circle me-1"></i>Validasi Sumber</a>
+            <a href="{% url 'akreditasi:katalog_pengumuman' %}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-megaphone me-1"></i>Pengumuman Aktivasi</a>
+        </div>
+    </div>
+
+    {# ── Katalog aktif saat ini ────────────────────── #}
+    {% if active %}
+    <div class="alert alert-info border-0 shadow-sm mb-3" style="background:var(--primary-subtle); border:1px solid var(--primary);">
+        <div class="d-flex align-items-center gap-2">
+            <i class="bi bi-info-circle text-teal"></i>
+            <div>
+                <div class="fw-semibold text-dark" style="font-size:.85rem;">Katalog aktif saat ini</div>
+                <div class="text-muted small">{{ active.name }} — Edisi <span class="fw-bold">{{ active.edition }}</span> ({{ active.get_lifecycle_display }})</div>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div class="alert alert-warning border-0 shadow-sm mb-3">
+        <div class="d-flex align-items-center gap-2">
+            <i class="bi bi-exclamation-triangle text-warning"></i>
+            <div class="fw-semibold text-dark">Tidak ada katalog aktif.</div>
+        </div>
+    </div>
+    {% endif %}
+
+    {# ── Tabel Katalog ─────────────────────────────── #}
+    <div class="card border-0 shadow-sm">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0" style="font-size:.8rem;">
+                <thead style="background:var(--surface-hover);">
+                    <tr>
+                        <th style="color:var(--text-primary);">#</th>
+                        <th style="color:var(--text-primary);">Nama Standar</th>
+                        <th class="text-center" style="color:var(--text-primary);">Versi</th>
+                        <th class="text-center" style="color:var(--text-primary);">Edisi</th>
+                        <th class="text-center" style="color:var(--text-primary);">Siklus Katalog</th>
+                        <th style="color:var(--text-primary);">SHA-256 Sumber</th>
+                        <th class="text-center" style="color:var(--text-primary);">Direview</th>
+                        <th class="text-center" style="color:var(--text-primary);">Aktif</th>
+                        <th class="text-center" style="color:var(--text-primary);">Keterangan</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for fw in frameworks %}
+                    <tr>
+                        <td>{{ forloop.counter }}</td>
+                        <td>{{ fw.name }}</td>
+                        <td class="text-center">{{ fw.version }}</td>
+                        <td class="text-center">{{ fw.edition }}</td>
+                        <td class="text-center">
+                            <span class="badge
+                                {% if fw.lifecycle == 'ACTIVE' %}bg-success
+                                {% elif fw.lifecycle == 'VALIDATED' %}bg-info text-dark
+                                {% elif fw.lifecycle == 'DRAFT' %}bg-warning text-dark
+                                {% else %}bg-secondary
+                                {% endif %}"
+                                style="font-size:.68rem;">
+                                {{ fw.get_lifecycle_display }}
+                            </span>
+                        </td>
+                        <td>
+                            <span class="text-truncate d-inline-block" style="max-width:220px;" title="{{ fw.source_hash|default:'—' }}">
+                                {{ fw.source_hash|slice:":16" }}{% if fw.source_hash %}…{% else %}—{% endif %}
+                            </span>
+                        </td>
+                        <td class="text-center">
+                            {% if fw.reviewed_at %}
+                                <span class="badge bg-success" style="font-size:.65rem;">Direview {{ fw.reviewed_at|date:"d/m/Y" }}</span>
+                            {% else %}
+                                <span class="badge bg-secondary">Belum direview</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-center">
+                            {% if active and fw.pk == active.pk %}
+                                <span class="badge bg-success" style="font-size:.65rem;"><i class="bi bi-check-circle-fill me-1"></i>Aktif</span>
+                            {% else %}
+                                <span class="text-muted small">—</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-center">
+                            {% if fw.lifecycle == 'ARCHIVED' %}
+                                <span class="badge bg-secondary text-decoration-underline" style="font-size:.65rem;" title="Hanya boleh dibaca; tidak dapat ditulis.">Baca saja</span>
+                            {% elif fw.lifecycle == 'DRAFT' or fw.lifecycle == 'VALIDATED' %}
+                                <span class="badge bg-warning text-dark" style="font-size:.65rem;" title="Staging; belum aktif.">Staging</span>
+                            {% else %}
+                                <span class="text-muted small">—</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="9" class="text-center text-muted py-4">Belum ada katalog standar.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</div>
+{% endblock %}
