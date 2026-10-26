@@ -216,45 +216,58 @@ def _get_mutu_renstra_charts_context(request, profile, db_roadmaps, renstra_year
 
     BULAN_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des']
 
-    # 1. Monthly Combo Chart (Jan - Des) for the selected filter set
-    month_data_map = {}
-    monthly_cat = CatatanIndikator.objects.filter(
-        indikator_id__in=filtered_ind_ids, tahun=mutu_tahun
-    ).values('bulan').annotate(
-        sum_num=Sum('nilai_numerator'),
-        sum_den=Sum('nilai_denominator')
-    )
-    for c in monthly_cat:
-        if c['sum_den'] and c['sum_den'] > 0:
-            month_data_map[c['bulan']] = round(float((c['sum_num'] / c['sum_den']) * 100), 1)
-
-    # Per-month tooltip detail: how many measurements back each average, and which
-    # indicators missed their own target that month (the reason a bar is red).
-    month_meta = {}
+    # 1. Monthly chart (Jan - Des) for the selected filter set.
+    #
+    # Every measurement is converted to that indicator's own capaian first, then
+    # averaged. Summing numerators and denominators across indicators is wrong:
+    # it weights a high-volume indicator over a small one and mixes units
+    # (percent, per-1000, counts), so one big denominator can drag the whole
+    # month down even when every indicator hit its own target.
+    month_samples = {}
     for c in CatatanIndikator.objects.filter(
             indikator_id__in=filtered_ind_ids, tahun=mutu_tahun
     ).select_related('indikator').order_by('bulan', 'indikator__kode_indikator'):
         if not c.nilai_denominator or c.nilai_denominator <= 0:
             continue
-        slot = month_meta.setdefault(c.bulan, {'n': 0, 'ok': 0, 'miss': []})
-        slot['n'] += 1
-        if c.tercapai:
-            slot['ok'] += 1
-        else:
-            cap = round(float(c.nilai_capaian), 2)
-            slot['miss'].append(
-                f"{c.indikator.kode_indikator} ({cap:g}{c.indikator.satuan or '%'})"
-            )
+        month_samples.setdefault(c.bulan, []).append(round(float(c.nilai_capaian), 1))
 
-    chart_mutu_meta = []
-    for m in range(1, 13):
-        s = month_meta.get(m)
-        chart_mutu_meta.append(None if not s else {
-            'n': s['n'],
-            'ok': s['ok'],
-            'miss': s['miss'][:5],
-            'miss_more': max(0, len(s['miss']) - 5),
-        })
+    month_data_map = {
+        m: round(sum(vals) / len(vals), 1) for m, vals in month_samples.items() if vals
+    }
+
+    # Per-month tooltip detail: how many measurements back each average, and which
+    # indicators missed their own target that month (the reason a bar is red).
+    # Tooltip detail: which indicators produced this month's average, each with
+    # its own capaian, unit and target. Without this the hover showed a number
+    # nobody could trace back to a measurement.
+    chart_mutu_meta = [None] * 12
+    for m, caps in month_samples.items():
+        rows = []
+        for c in CatatanIndikator.objects.filter(
+                indikator_id__in=filtered_ind_ids, tahun=mutu_tahun, bulan=m
+        ).select_related('indikator').order_by('indikator__kode_indikator'):
+            if not c.nilai_denominator or c.nilai_denominator <= 0:
+                continue
+            ind = c.indikator
+            rows.append({
+                'kode': ind.kode_indikator,
+                'nama': ind.nama_indikator,
+                'capaian': round(float(c.nilai_capaian), 1),
+                'target': round(float(ind.target_nilai), 1),
+                'satuan': ind.satuan or '%',
+                'ok': c.tercapai,
+                'num': str(c.nilai_numerator),
+                'den': str(c.nilai_denominator),
+            })
+        if not rows:
+            continue
+        chart_mutu_meta[m - 1] = {
+            'n': len(rows),
+            'ok': sum(1 for r in rows if r['ok']),
+            'mean': round(sum(vals) / len(vals), 1) if (vals := month_samples.get(m)) else None,
+            'rows': rows[:8],
+            'more': max(0, len(rows) - 8),
+        }
 
     chart_mutu_bulanan_data = []
     chart_mutu_colors = []
@@ -268,22 +281,27 @@ def _get_mutu_renstra_charts_context(request, profile, db_roadmaps, renstra_year
             has_monthly_data = True
             chart_mutu_colors.append('#198754' if _tercapai(val, chart_target_val, arah_target) else '#dc3545')
 
-    # 2. Multi-year trend + recap matrix: current year and the 4 before it
+    # 2. Multi-year trend + recap matrix: current year and the 4 before it.
+    # Same rule as the monthly series: average per-indicator capaian, never a
+    # pooled numerator/denominator ratio.
     trend_years = list(range(mutu_tahun - 4, mutu_tahun + 1))
-    yearly_map = {}
+    yearly_samples = {}
     matrix_map = {}
-    yearly_rows = CatatanIndikator.objects.filter(
-        indikator_id__in=filtered_ind_ids, tahun__in=trend_years
-    ).values('tahun', 'bulan').annotate(
-        sum_num=Sum('nilai_numerator'),
-        sum_den=Sum('nilai_denominator')
-    )
-    for r in yearly_rows:
-        if not (r['sum_den'] and r['sum_den'] > 0):
+    for c in CatatanIndikator.objects.filter(
+            indikator_id__in=filtered_ind_ids, tahun__in=trend_years
+    ).only('tahun', 'bulan', 'nilai_numerator', 'nilai_denominator',
+           'indikator__tipe_pengukuran', 'indikator__faktor_pengali'):
+        if not c.nilai_denominator or c.nilai_denominator <= 0:
             continue
-        pct = round(float((r['sum_num'] / r['sum_den']) * 100), 1)
-        matrix_map[(r['tahun'], r['bulan'])] = pct
-        yearly_map.setdefault(r['tahun'], []).append(pct)
+        yearly_samples.setdefault((c.tahun, c.bulan), []).append(float(c.nilai_capaian))
+
+    for (y, m), caps in yearly_samples.items():
+        if caps:
+            matrix_map[(y, m)] = round(sum(caps) / len(caps), 1)
+
+    yearly_map = {}
+    for (y, _m), pct in matrix_map.items():
+        yearly_map.setdefault(y, []).append(pct)
 
     chart_tahunan_data = []
     chart_tahunan_colors = []
@@ -331,6 +349,35 @@ def _get_mutu_renstra_charts_context(request, profile, db_roadmaps, renstra_year
     kpi_mutu_tercapai = current_year_stat['tercapai'] if current_year_stat else 0
     kpi_mutu_total = current_year_stat['total_catatan'] if current_year_stat else 0
 
+    # Renstra tooltip detail: what backs each year's realisation.
+    renstra_meta = {}
+    for yr in renstra_years_list:
+        stat = next((y for y in renstra_years if y['year'] == yr), None)
+        renstra_meta[yr] = None if not stat else {
+            'label': stat['label'],
+            'avg': stat['avg_capaian'],
+            'tercapai': stat['tercapai'],
+            'total': stat['total_catatan'],
+            'has_data': stat['has_data'],
+            'target': renstra_targets_map[yr],
+        }
+
+    # Yearly tooltip detail: which months contributed and what the range was.
+    chart_tahunan_meta = {}
+    for y in trend_years:
+        vals = yearly_map.get(y, [])
+        if not vals:
+            chart_tahunan_meta[y] = None
+            continue
+        chart_tahunan_meta[y] = {
+            'n': len(vals),
+            'min': min(vals),
+            'max': max(vals),
+            'months': sorted({
+                m for (yy, m) in matrix_map if yy == y
+            }),
+        }
+
     return {
         'filter_mutu_jenis': mutu_jenis,
         'filter_mutu_unit': mutu_unit,
@@ -366,6 +413,9 @@ def _get_mutu_renstra_charts_context(request, profile, db_roadmaps, renstra_year
         'chart_renstra_years_json': _json.dumps(renstra_years_list),
         'chart_renstra_targets_json': _json.dumps(renstra_targets_series),
         'chart_renstra_actuals_json': _json.dumps(renstra_actual_series),
+        'chart_renstra_targets_map_json': _json.dumps(renstra_targets_map),
+        'chart_renstra_meta_json': _json.dumps({str(k): v for k, v in renstra_meta.items()}),
+        'chart_tahunan_meta_json': _json.dumps({str(k): v for k, v in chart_tahunan_meta.items()}),
         'kpi_mutu_avg': kpi_mutu_avg,
         'kpi_mutu_tercapai': kpi_mutu_tercapai,
         'kpi_mutu_total': kpi_mutu_total,

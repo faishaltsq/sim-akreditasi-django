@@ -52,22 +52,43 @@ document.addEventListener('DOMContentLoaded', function() {
     const NAMA_BULAN = ['Januari','Februari','Maret','April','Mei','Juni',
                         'Juli','Agustus','September','Oktober','November','Desember'];
 
-    // Inline plugin: draws "74.2%" above every non-null bar (dataset index 1)
+    // Number formatting: Indonesian decimal comma, grouped thousands. Every
+    // axis, label and tooltip goes through these so a value never reads two
+    // different ways on the same screen.
+    const fmtNum = (v, digits) => (v === null || v === undefined)
+        ? '-'
+        : Number(v).toLocaleString('id-ID', {
+            minimumFractionDigits: digits,
+            maximumFractionDigits: digits,
+        });
+    const fmtPct = (v, digits) => (v === null || v === undefined)
+        ? 'Belum ada data'
+        : fmtNum(v, digits === undefined ? 1 : digits) + '%';
+
+    // Inline plugin: draws the value above every non-null bar of the first bar
+    // dataset. Skips bars too narrow to hold the text instead of overlapping.
     const valueLabelsPlugin = {
         id: 'valueLabels',
         afterDatasetsDraw(chart) {
+            const barIndex = chart.data.datasets.findIndex(d => d.type === 'bar');
+            if (barIndex < 0) return;
             const ctx = chart.ctx;
-            const meta = chart.getDatasetMeta(1);
-            const data = chart.data.datasets[1].data;
+            const meta = chart.getDatasetMeta(barIndex);
+            const data = chart.data.datasets[barIndex].data;
             ctx.save();
             ctx.font = "500 10px 'IBM Plex Mono', ui-monospace, monospace";
             ctx.textAlign = 'center';
             ctx.textBaseline = 'bottom';
+            const widths = meta.data.map(el => el.width || 0).filter(Boolean);
+            const room = widths.length ? Math.min.apply(null, widths) : 0;
             meta.data.forEach(function (bar, i) {
                 const v = data[i];
                 if (v === null || v === undefined) return;
+                const label = fmtNum(v, 1) + '%';
+                if (room && ctx.measureText(label).width > room - 4) return;
                 ctx.fillStyle = '#141C2E';
-                ctx.fillText(v.toFixed(1) + '%', bar.x, bar.y - 3);
+                const y = Math.max(bar.y - 4, ctx.measureText(label).width ? 10 : 10);
+                ctx.fillText(label, bar.x, y);
             });
             ctx.restore();
         }
@@ -81,10 +102,50 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('dd-indikator-nama').textContent = MUTU_IND_ID
             ? '[' + MUTU_IND_KODE + '] ' + MUTU_IND_NAMA
             : 'Rata-rata semua indikator terfilter';
-        document.getElementById('dd-nilai').textContent = val.toFixed(1) + '%';
-        document.getElementById('dd-target').textContent = MUTU_TARGET;
+        document.getElementById('dd-nilai').textContent = fmtPct(val, 1);
+        document.getElementById('dd-target').textContent = fmtPct(MUTU_TARGET);
         const gap = val - MUTU_TARGET;
-        document.getElementById('dd-gap').textContent = (gap >= 0 ? '+' : '') + gap.toFixed(1) + '%';
+        document.getElementById('dd-gap').textContent =
+            (gap >= 0 ? '+' : '') + fmtNum(gap, 1) + ' poin';
+        const meta = mutuMeta[idx];
+        const box = document.getElementById('dd-basis');
+        if (box) {
+            if (!meta) {
+                box.innerHTML = '<p class="small text-muted mb-0">Belum ada pengukuran pada bulan ini.</p>';
+            } else {
+                box.innerHTML = '';
+                const head = document.createElement('p');
+                head.className = 'small text-muted mb-1';
+                head.textContent = meta.n + ' pengukuran, ' + meta.ok + ' tercapai, '
+                    + (meta.n - meta.ok) + ' di bawah target';
+                const table = document.createElement('table');
+                table.className = 'table table-sm mb-0';
+                const thead = table.createTHead().insertRow();
+                ['Indikator', 'Capaian', 'Target'].forEach(function (h) {
+                    const th = document.createElement('th');
+                    th.textContent = h;
+                    thead.appendChild(th);
+                });
+                const tb = table.createTBody();
+                meta.rows.forEach(function (r) {
+                    const tr = tb.insertRow();
+                    tr.insertCell().textContent = r.kode;
+                    const cap = tr.insertCell();
+                    cap.className = 'font-mono ' + (r.ok ? 'text-success' : 'text-danger');
+                    cap.textContent = fmtNum(r.capaian, 1) + ' ' + r.satuan;
+                    tr.insertCell().textContent = fmtNum(r.target, 1) + ' ' + r.satuan;
+                });
+                if (meta.more) {
+                    const tr = tb.insertRow();
+                    const td = tr.insertCell();
+                    td.colSpan = 3;
+                    td.className = 'small text-muted';
+                    td.textContent = 'dan ' + meta.more + ' indikator lain';
+                }
+                box.append(head, table);
+            }
+        }
+
         const st = document.getElementById('dd-status');
         st.textContent = below ? 'Di bawah Target' : 'Tercapai';
         st.className = 'badge ' + (below
@@ -189,33 +250,45 @@ document.addEventListener('DOMContentLoaded', function() {
                         boxPadding: 4,
                         callbacks: {
                             title: function(items) {
-                                return NAMA_BULAN[items[0].dataIndex] + ' ' + MUTU_TAHUN;
+                                const m = items[0].dataIndex;
+                                return NAMA_BULAN[m] + ' ' + MUTU_TAHUN +
+                                    (mutuMeta[m] ? ` · ${mutuMeta[m].n} pengukuran` : '');
                             },
                             label: function(ctx) {
-                                if (ctx.datasetIndex === 0) {
-                                    return ` Batas target: ${targetVal}%`;
+                                if (ctx.datasetIndex === 0 || ctx.dataset.type === 'line') {
+                                    return 'Batas target ' + fmtPct(targetVal);
                                 }
                                 const meta = mutuMeta[ctx.dataIndex];
                                 if (ctx.raw === null || ctx.raw === undefined) {
                                     return ' Belum ada pengukuran bulan ini';
                                 }
                                 const lines = [
-                                    ` Capaian      : ${ctx.raw.toFixed(2)}%`,
-                                    ` Target       : ${targetVal}% (${MUTU_ARAH === 'MAX' ? '≤ target, makin kecil makin baik' : '≥ target, makin besar makin baik'})`,
-                                    ` Selisih      : ${(ctx.raw - targetVal >= 0 ? '+' : '')}${(ctx.raw - targetVal).toFixed(2)} poin`,
+                                    ` Rata-rata    : ${fmtPct(ctx.raw, 2)}`,
+                                    ` Target       : ${fmtPct(targetVal)} (${MUTU_ARAH === 'MAX' ? 'maksimal, makin kecil makin baik' : 'minimal, makin besar makin baik'})`,
+                                    ` Selisih      : ${(ctx.raw - targetVal >= 0 ? '+' : '')}${fmtNum(ctx.raw - targetVal, 2)} poin`,
                                 ];
                                 if (meta) {
-                                    lines.push(` Basis        : ${meta.n} pengukuran (${meta.ok} tercapai, ${meta.n - meta.ok} di bawah target)`);
-                                    if (meta.miss.length) {
-                                        lines.push(` Di bawah target: ${meta.miss.join(', ')}${meta.miss_more ? ` +${meta.miss_more} lainnya` : ''}`);
-                                    }
+                                    lines.push(` Tercapai     : ${meta.ok} dari ${meta.n} pengukuran`);
+                                    // Setiap indikator penyumbang, apa adanya.
+                                    meta.rows.forEach(function (r) {
+                                        const mark = r.ok ? '  ' : '  ';
+                                        const status = r.ok ? 'tercapai' : 'di bawah target';
+                                        lines.push(`   ${mark}${r.kode} ${fmtPct(r.capaian, 1)} dari target ${fmtNum(r.target, 1)} ${r.satuan} (${status})`);
+                                    });
+                                    if (meta.more) lines.push(`   dan ${meta.more} indikator lain`);
                                 }
                                 return lines;
                             },
-                            afterBody: function() {
+                            afterBody: function(items) {
+                                const m = items[0].dataIndex;
+                                const meta = mutuMeta[m];
                                 const parts = ['', mutuNama];
                                 if (mutuRumus) parts.push(`Rumus: ${mutuRumus}`);
-                                parts.push('Klik bar untuk buka rincian PDCA bulan ini.');
+                                if (meta && meta.rows.length) {
+                                    const r = meta.rows[0];
+                                    parts.push(`Contoh hitungan ${r.kode}: ${r.num} ÷ ${r.den} × 100`);
+                                }
+                                parts.push('Klik bar untuk rincian PDCA bulan ini.');
                                 return parts;
                             }
                         }
@@ -227,7 +300,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         max: 105,
                         ticks: {
                             stepSize: 20,
-                            callback: v => v + '%'
+                            callback: v => fmtNum(v, 0) + '%'
                         },
                         grid: { color: '#EDF1F6' }
                     },
@@ -247,6 +320,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const thYears  = {{ chart_tahunan_years_json|safe }};
         const thData   = {{ chart_tahunan_data_json|safe }};
         const thColors = {{ chart_tahunan_colors_json|safe }};
+        const thMeta   = {{ chart_tahunan_meta_json|safe }};
 
         chartTahunan = new Chart(tahunanEl.getContext('2d'), {
             type: 'bar',
@@ -290,11 +364,41 @@ document.addEventListener('DOMContentLoaded', function() {
                     },
                     tooltip: {
                         callbacks: {
+                            title: function (items) {
+                                const year = thYears[items[0].dataIndex];
+                                const meta = thMeta[String(year)];
+                                return `Tahun ${year}` + (meta ? ` · ${meta.n} bulan terukur` : '');
+                            },
                             label: function (ctx) {
-                                if (ctx.raw === null || ctx.raw === undefined) {
-                                    return `${ctx.dataset.label}: Belum ada data`;
+                                if (ctx.dataset.type === 'line') {
+                                    return 'Batas target ' + fmtPct(MUTU_TARGET);
                                 }
-                                return `${ctx.dataset.label}: ${ctx.raw}%`;
+                                const year = thYears[ctx.dataIndex];
+                                const meta = thMeta[String(year)];
+                                if (ctx.raw === null || ctx.raw === undefined) {
+                                    return ' Belum ada pengukuran pada tahun ini';
+                                }
+                                const lines = [
+                                    ` Rata-rata tahunan : ${fmtPct(ctx.raw, 2)}`,
+                                    ` Target            : ${fmtPct(MUTU_TARGET)}`,
+                                    ` Selisih           : ${(ctx.raw - MUTU_TARGET >= 0 ? '+' : '')}${fmtNum(ctx.raw - MUTU_TARGET, 2)} poin`,
+                                ];
+                                if (meta) {
+                                    lines.push(` Bulan terukur     : ${meta.n} dari 12`);
+                                    lines.push(` Rentang bulanan   : ${fmtPct(meta.min)} sampai ${fmtPct(meta.max)}`);
+                                }
+                                return lines;
+                            },
+                            afterBody: function (items) {
+                                const year = thYears[items[0].dataIndex];
+                                const meta = thMeta[String(year)];
+                                const parts = [''];
+                                if (meta && meta.months && meta.months.length) {
+                                    parts.push('Bulan: ' + meta.months.map(m => NAMA_BULAN[m - 1].slice(0, 3)).join(', '));
+                                }
+                                parts.push(mutuNama);
+                                parts.push('Rata-rata tahunan = rata-rata capaian tiap bulan, bukan rasio total numerator.');
+                                return parts;
                             }
                         }
                     }
@@ -303,7 +407,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     y: {
                         beginAtZero: true,
                         max: 105,
-                        ticks: { stepSize: 20, callback: v => v + '%' },
+                        ticks: { stepSize: 20, callback: v => fmtNum(v, 0) + '%' },
                         grid: { color: '#EDF1F6' }
                     },
                     x: { grid: { display: false } }
@@ -319,6 +423,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const renstraYears = {{ chart_renstra_years_json|safe }};
         const renstraTargets = {{ chart_renstra_targets_json|safe }};
         const renstraActuals = {{ chart_renstra_actuals_json|safe }};
+        const renstraMeta = {{ chart_renstra_meta_json|safe }};
 
         chartRenstra = new Chart(renstraEl.getContext('2d'), {
             type: 'bar',
@@ -355,11 +460,37 @@ document.addEventListener('DOMContentLoaded', function() {
                     },
                     tooltip: {
                         callbacks: {
+                            title: function (items) {
+                                const year = renstraYears[items[0].dataIndex];
+                                const meta = renstraMeta[String(year)];
+                                return `Tahun ${year}` + (meta && meta.label ? ` · ${meta.label}` : '');
+                            },
                             label: function(ctx) {
-                                if (ctx.raw === null || ctx.raw === undefined) {
-                                    return `${ctx.dataset.label}: Belum ada realisasi`;
+                                const year = renstraYears[ctx.dataIndex];
+                                const meta = renstraMeta[String(year)];
+                                if (ctx.datasetIndex === 0) {
+                                    return ' Target Renstra : ' + fmtPct(ctx.raw);
                                 }
-                                return `${ctx.dataset.label}: ${ctx.raw}%`;
+                                if (ctx.raw === null || ctx.raw === undefined) {
+                                    return ' Realisasi      : belum ada pengukuran';
+                                }
+                                const lines = [
+                                    ` Realisasi      : ${fmtPct(ctx.raw, 2)}`,
+                                ];
+                                if (meta) {
+                                    const gap = ctx.raw - meta.target;
+                                    lines.push(` Selisih target : ${(gap >= 0 ? '+' : '')}${fmtNum(gap, 2)} poin`);
+                                    lines.push(` Pengukuran     : ${meta.tercapai} tercapai dari ${meta.total} catatan`);
+                                }
+                                return lines;
+                            },
+                            afterBody: function (items) {
+                                const year = renstraYears[items[0].dataIndex];
+                                const meta = renstraMeta[String(year)];
+                                if (!meta || !meta.has_data) {
+                                    return ['', 'Belum ada capaian indikator pada tahun ini.'];
+                                }
+                                return ['', 'Realisasi = rata-rata capaian indikator yang diukur tahun itu.'];
                             }
                         }
                     }
@@ -370,7 +501,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         max: 105,
                         ticks: {
                             stepSize: 20,
-                            callback: v => v + '%'
+                            callback: v => fmtNum(v, 0) + '%'
                         },
                         grid: { color: '#EDF1F6' }
                     },

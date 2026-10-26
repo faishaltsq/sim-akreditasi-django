@@ -528,6 +528,13 @@ document.addEventListener('DOMContentLoaded', function() {
     const unitCapaian = {{ chart_unit_capaian|safe }};
     const jenisDS  = {{ chart_jenis_json|safe }};
 
+    const bulanCount = {{ chart_bulan_count_json|safe }};
+    const fmtNum = (v, d) => (v === null || v === undefined)
+        ? '-' : Number(v).toLocaleString('id-ID', {
+            minimumFractionDigits: d, maximumFractionDigits: d });
+    const fmtPct = (v, d) => (v === null || v === undefined)
+        ? 'Belum ada data' : fmtNum(v, d === undefined ? 1 : d) + '%';
+
     // Per-indikator mode
     const hasInd    = {{ has_indikator|yesno:"true,false" }};
     const indData   = {{ chart_indikator_data_json|safe }};
@@ -573,11 +580,11 @@ document.addEventListener('DOMContentLoaded', function() {
         if (!m) return ['Belum ada data pengukuran pada bulan ini'];
         const arahTxt = indArah === 'MAX' ? 'maksimal (makin kecil makin baik)' : 'minimal (makin besar makin baik)';
         const lines = [
-            `Capaian      : ${m.capaian.toFixed(2)} ${indSatuan}`,
-            `Target       : ${indTarget} ${indSatuan} — arah ${arahTxt}`,
-            `Selisih      : ${(m.capaian - indTarget >= 0 ? '+' : '')}${(m.capaian - indTarget).toFixed(2)} ${indSatuan}`,
+            `Capaian      : ${fmtNum(m.capaian, 2)} ${indSatuan}`,
+            `Target       : ${fmtNum(indTarget, 2)} ${indSatuan}, arah ${arahTxt}`,
+            `Selisih      : ${(m.capaian - indTarget >= 0 ? '+' : '')}${fmtNum(m.capaian - indTarget, 2)} ${indSatuan}`,
             `Rumus        : ${indNumLabel || 'Numerator'} ÷ ${indDenLabel || 'Denominator'} × 100`,
-            `Nilai mentah : ${m.num} ÷ ${m.den}`,
+            `Nilai mentah : ${fmtNum(m.num, 2)} ÷ ${fmtNum(m.den, 2)}`,
             `Status       : ${m.tercapai ? 'TERCAPAI' : 'DI BAWAH TARGET'}`,
         ];
         if (m.catatan) lines.push(`Catatan      : ${m.catatan}`);
@@ -719,14 +726,27 @@ document.addEventListener('DOMContentLoaded', function() {
                         callbacks: {
                             title: function(items) {
                                 const th = document.querySelector('select[name="tahun"]');
-                                return `${items[0].label} ${th ? th.value : ''}`.trim() + ' — rata-rata seluruh indikator';
+                                const n = bulanCount[String(items[0].dataIndex + 1)] || 0;
+                                return `${items[0].label} ${th ? th.value : ''}`.trim()
+                                    + (n ? ` · ${n} indikator diukur` : '');
                             },
                             label: function(c) {
-                                if (c.raw === null) return 'Belum ada data pengukuran bulan ini';
-                                return `Rata-rata capaian: ${c.raw.toFixed(2)}% (dari seluruh indikator aktif)`;
+                                if (c.raw === null || c.raw === undefined) {
+                                    return 'Belum ada pengukuran bulan ini';
+                                }
+                                if (c.datasetIndex > 0 && c.dataset.label.startsWith('Realisasi Unit')) {
+                                    return `Realisasi unit: ${fmtPct(c.raw, 2)}`;
+                                }
+                                return `Rata-rata capaian: ${fmtPct(c.raw, 2)}`;
                             },
-                            afterBody: function() {
-                                return ['', 'Agregat lintas indikator — pilih satu indikator di dropdown atas untuk rincian rumus, numerator/denominator, dan catatan pengukuran per bulan.'];
+                            afterBody: function(items) {
+                                const parts = [''];
+                                const n = bulanCount[String(items[0].dataIndex + 1)] || 0;
+                                if (n > 1) {
+                                    parts.push(`Rata-rata dari ${n} indikator; tiap indikator dihitung sekali, bukan digabung numeratornya.`);
+                                }
+                                parts.push('Pilih satu indikator di dropdown atas untuk rincian rumus, numerator/denominator, dan catatan.');
+                                return parts;
                             }
                         }
                     }
@@ -837,7 +857,22 @@ document.addEventListener('DOMContentLoaded', function() {
                             legend: { position: 'bottom', labels: { font: { size: 10 } } },
                             tooltip: {
                                 callbacks: {
-                                    label: ctx => ctx.raw !== null ? `${ctx.dataset.label}: ${ctx.raw.toFixed(1)}` : 'Belum ada data'
+                                    title: items => `${items[0].label} ${tahun}`,
+                                    label: function (ctx) {
+                                        if (ctx.raw === null || ctx.raw === undefined) {
+                                            return 'Belum ada pengukuran bulan ini';
+                                        }
+                                        if (ctx.dataset.type === 'line') {
+                                            return `Target ${fmtNum(d.target, 2)} ${d.satuan || '%'}`;
+                                        }
+                                        const selisih = ctx.raw - d.target;
+                                        return [
+                                            `Capaian : ${fmtNum(ctx.raw, 2)} ${d.satuan || '%'}`,
+                                            `Target  : ${fmtNum(d.target, 2)} ${d.satuan || '%'}`,
+                                            `Selisih : ${(selisih >= 0 ? '+' : '')}${fmtNum(selisih, 2)} ${d.satuan || '%'}`,
+                                            `Status  : ${ctx.raw >= d.target ? 'Tercapai' : 'Di bawah target'}`,
+                                        ];
+                                    },
                                 }
                             }
                         },
@@ -915,9 +950,24 @@ document.addEventListener('DOMContentLoaded', function() {
                         legend: { position: 'bottom', labels: { font: { size: 10 } } },
                         tooltip: {
                             callbacks: {
-                                label: ctx => {
-                                    if (ctx.raw === null) return 'Belum ada data';
-                                    return `${ctx.dataset.label}: ${ctx.raw.toFixed(1)}%`;
+                                title: items => {
+                                    const it = kompItems[items[0].dataIndex];
+                                    return it ? `${it.kode} · ${it.unit}` : items[0].label;
+                                },
+                                label: function (ctx) {
+                                    const it = kompItems[ctx.dataIndex];
+                                    if (ctx.raw === null || ctx.raw === undefined) {
+                                        return 'Belum ada pengukuran';
+                                    }
+                                    if (ctx.datasetIndex === 1) {
+                                        return 'Target : ' + fmtPct(ctx.raw, 2);
+                                    }
+                                    const lines = ['Capaian : ' + fmtPct(ctx.raw, 2)];
+                                    if (it && it.target !== undefined) {
+                                        lines.push('Target  : ' + fmtPct(it.target, 2));
+                                        lines.push('Status  : ' + (it.tercapai ? 'Tercapai' : 'Di bawah target'));
+                                    }
+                                    return lines;
                                 }
                             }
                         }

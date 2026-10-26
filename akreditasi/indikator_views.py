@@ -375,22 +375,21 @@ def indikator_dashboard(request):
 
     # Ambil semua catatan indikator untuk tahun ini yang indikatornya masuk filter
     ind_ids = [i.pk for i in indikators_with_stats]
-    catatan_qs = CatatanIndikator.objects.filter(
-        indikator_id__in=ind_ids, tahun=tahun_int
-    ).values('bulan').annotate(
-        avg_num=Sum('nilai_numerator'),
-        avg_den=Sum('nilai_denominator'),
-        count=Count('id'),
-    ).order_by('bulan')
+    # Average of per-indicator capaian, one value per indicator per month.
+    # Pooling numerators and denominators across indicators mixes units and
+    # lets one high-volume indicator decide the whole month's number.
+    monthly_samples = {}
+    for c in (CatatanIndikator.objects
+              .filter(indikator_id__in=ind_ids, tahun=tahun_int)
+              .select_related('indikator')):
+        if not c.nilai_denominator or c.nilai_denominator <= 0:
+            continue
+        monthly_samples.setdefault(c.bulan, []).append(float(c.nilai_capaian))
 
-    # Build monthly avg capaian %
-    monthly_avg = {}
-    for c in catatan_qs:
-        if c['avg_den'] and c['avg_den'] > 0:
-            pct = float(round((c['avg_num'] / c['avg_den']) * 100, 1))
-        else:
-            pct = 0.0
-        monthly_avg[c['bulan']] = {'pct': pct, 'count': c['count']}
+    monthly_avg = {
+        m: {'pct': round(sum(v) / len(v), 1), 'count': len(v)}
+        for m, v in monthly_samples.items() if v
+    }
 
     chart_labels = _json.dumps(BULAN_LABELS)
     chart_capaian = _json.dumps([monthly_avg.get(m, {}).get('pct', None) for m in range(1, 13)])
@@ -407,15 +406,16 @@ def indikator_dashboard(request):
             .values_list('pk', flat=True)
         )
         if unit_row_ids:
-            unit_monthly = {}
-            rows = (CatatanIndikator.objects
-                    .filter(indikator_id__in=unit_row_ids, tahun=tahun_int)
-                    .values('bulan')
-                    .annotate(num=Sum('nilai_numerator'), den=Sum('nilai_denominator')))
-            for r in rows:
-                unit_monthly[r['bulan']] = (
-                    float(round((r['num'] / r['den']) * 100, 1)) if r['den'] else 0.0
-                )
+            unit_samples = {}
+            for c in (CatatanIndikator.objects
+                      .filter(indikator_id__in=unit_row_ids, tahun=tahun_int)
+                      .select_related('indikator')):
+                if not c.nilai_denominator or c.nilai_denominator <= 0:
+                    continue
+                unit_samples.setdefault(c.bulan, []).append(float(c.nilai_capaian))
+            unit_monthly = {
+                m: round(sum(v) / len(v), 1) for m, v in unit_samples.items() if v
+            }
             chart_unit_label = profile.unit_kerja.name
             chart_unit_capaian = _json.dumps([unit_monthly.get(m) for m in range(1, 13)])
 
@@ -518,6 +518,9 @@ def indikator_dashboard(request):
         'chart_unit_label': chart_unit_label,
         'chart_unit_capaian': chart_unit_capaian,
         'chart_jumlah': chart_jumlah,
+        'chart_bulan_count_json': _json.dumps(
+            {str(m): monthly_avg.get(m, {}).get('count', 0) for m in range(1, 13)}
+        ),
         'chart_jenis_json': chart_jenis_json,
         'indikator_choices': indikator_choices,
         'filter_indikator': indikator_id,

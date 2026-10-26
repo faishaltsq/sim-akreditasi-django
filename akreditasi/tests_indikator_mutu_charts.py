@@ -399,7 +399,13 @@ class IndikatorMutuChartsAndUploadTest(TestCase):
         self.assertIsNotNone(jan)
         self.assertEqual(jan['n'], 1)
         self.assertEqual(jan['ok'], 0)
-        self.assertIn('INM-01', jan['miss'][0])
+        # Setiap baris mencantumkan indikator penyumbang beserta capaian dan
+        # targetnya sendiri, jadi angka rata-rata bisa dilacak ke pengukurannya.
+        row = jan['rows'][0]
+        self.assertEqual(row['kode'], 'INM-01')
+        self.assertFalse(row['ok'])
+        self.assertAlmostEqual(row['capaian'], round(95.11 / 135.00 * 100, 1), places=1)
+        self.assertAlmostEqual(row['target'], float(self.indikator.target_nilai), places=1)
 
     def test_dashboard_tooltip_has_formula_and_name(self):
         self._mk(1, '95.11', '135.00', 'catatan')

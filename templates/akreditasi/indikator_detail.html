@@ -242,6 +242,8 @@
   const data = {{ chart_data|safe }};
   const target = {{ target_line|unlocalize }};  {# locale id renders comma -> breaks JS #}
   const hasData = data.some(v => v !== null);
+  const fmtNum = (v, d) => (v === null || v === undefined)
+    ? '-' : Number(v).toLocaleString('id-ID', { minimumFractionDigits: d, maximumFractionDigits: d });
 
   // Plugin: tampilkan pesan ketika semua data null
   const noDataPlugin = {
@@ -297,7 +299,22 @@
         legend: { position: 'bottom' },
         tooltip: {
           callbacks: {
-            label: ctx => ctx.parsed.y !== null ? ctx.dataset.label + ': ' + ctx.parsed.y.toFixed(1) + '%' : 'Belum ada data'
+            title: items => labels[items[0].dataIndex] + ' ' + (new URLSearchParams(location.search).get('tahun') || ''),
+            label: function (ctx) {
+              if (ctx.parsed.y === null || ctx.parsed.y === undefined) {
+                return 'Belum ada pengukuran bulan ini';
+              }
+              if (ctx.datasetIndex === 1) {
+                return 'Target : ' + fmtNum(target, 2) + '%';
+              }
+              const selisih = ctx.parsed.y - target;
+              return [
+                'Capaian : ' + fmtNum(ctx.parsed.y, 2) + '%',
+                'Target  : ' + fmtNum(target, 2) + '%',
+                'Selisih : ' + (selisih >= 0 ? '+' : '') + fmtNum(selisih, 2) + ' poin',
+                'Status  : ' + (ctx.parsed.y >= target ? 'Tercapai' : 'Di bawah target'),
+              ];
+            }
           }
         }
       },
@@ -305,7 +322,7 @@
         y: {
           beginAtZero: true,
           max: Math.max(110, target + 20),
-          ticks: { callback: v => v + '%' }
+          ticks: { callback: v => fmtNum(v, 0) + '%' }
         }
       }
     },
