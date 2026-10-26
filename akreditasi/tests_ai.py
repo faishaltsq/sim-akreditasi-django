@@ -393,11 +393,17 @@ class EndpointInvestigasiRTLTest(TestCase):
         p.update(over)
         return p
 
-    def test_anon_gets_401_json(self):
+    def test_anon_is_redirected_to_login(self):
+        """Anonim mendapat redirect ke login (302) yang membawa ?next=.
+
+        Kontrak yang sama berlaku untuk seluruh endpoint /ai/: middleware tidak
+        boleh mengubahnya menjadi JSON 401 karena itu memutus alur login browser.
+        """
         resp = self.client.post(self.url, data=json.dumps(self._payload()),
                                 content_type='application/json')
-        self.assertEqual(resp.status_code, 401)
-        self.assertFalse(resp.json()['success'])
+        self.assertEqual(resp.status_code, 302)
+        self.assertIn('/accounts/login/', resp['Location'])
+        self.assertIn('next=', resp['Location'])
 
     def test_both_mode_returns_full_contract(self):
         self.client.force_login(self.admin)

@@ -13,16 +13,6 @@
     <link rel="stylesheet" href="{% static 'css/v3-tokens.css' %}">
 
     {% block extra_css %}{% endblock %}
-    <script>
-        // Terapkan state sidebar sebelum paint agar tidak ada flash lebar penuh.
-        (function () {
-            try {
-                if (localStorage.getItem('arima.sidebar.collapsed') === '1') {
-                    document.documentElement.classList.add('sidebar-collapsed');
-                }
-            } catch (e) {}
-        })();
-    </script>
 </head>
 <body data-theme="{{ sys_config.theme_color|default:'teal' }}">
 

@@ -25,6 +25,13 @@ class ReadResolverPrefersLiveEditionTests(TestCase):
     """The read fallback must never serve a superseded catalogue."""
 
     def setUp(self):
+        # Migrasi 0013 menanam satu Framework STARKES 2022 pada database test
+        # (dipakai suite lain yang memang butuh struktur 16 bab). Kelas ini
+        # menguji resolusi edisi secara terisolasi, jadi tabel katalog
+        # dikosongkan lebih dulu — tanpa itu resolver selalu menemukan katalog
+        # seed dan setiap assertion membandingkan pk yang salah.
+        Framework.objects.all().delete()
+        cache.clear()
         self.user = get_user_model().objects.create_user(
             username='resolver-admin', password='x'
         )
@@ -95,6 +102,12 @@ class EditionScopedScreensTests(TestCase):
         )
         self.user.is_superuser = True
         self.user.save(update_fields=['is_superuser'])
+
+        # Lihat catatan di ReadResolverPrefersLiveEditionTests: buang katalog
+        # hasil seed migrasi 0013 agar layar EP hanya memuat dua edisi yang
+        # dibuat di sini.
+        Framework.objects.all().delete()
+        cache.clear()
 
         self.retired = Framework.objects.create(
             name='STARKES Edisi 2022 / Kemenkes RI',

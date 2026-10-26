@@ -932,6 +932,16 @@ def generate_kontrol_ringkasan(user, snapshot, portal='risiko'):
     return result
 
 
+# --- SECTION G: RINGKASAN INVESTIGASI LANJUTAN & RENCANA TINDAK LANJUT (RTL) ---
+
+_INVESTIGASI_CONTRACT = (
+    'analisis_investigasi', 'fishbone', 'akar_masalah_sistemik', 'verifikasi_efektivitas',
+    'rencana_tindak_lanjut', 'pj_saran', 'target_hari', 'indikator_keberhasilan',
+    'status_rtl_saran',
+)
+_FISHBONE_KEYS = ('manpower', 'process', 'material', 'machine', 'environment', 'system')
+
+
 def _fallback_fishbone(unit: str) -> dict:
     return {
         'manpower': f'Beban kerja dan variasi kompetensi staf {unit} belum terpetakan per shift.',

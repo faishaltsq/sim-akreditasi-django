@@ -26,6 +26,7 @@ from .ai_service import (
     generate_indicator_draft,
     generate_risk_analysis_from_problem,
     generate_fmea_suggestion,
+    generate_investigasi_rtl,
     generate_rca_suggestion,
     test_deepseek_connection,
 )
@@ -694,6 +695,9 @@ def api_ai_narasi_laporan(request):
     }, status=200)
 
 
+@login_required
+@require_POST
+@rate_limit(max_calls=12, window=60, scope='ai')
 def api_ai_investigasi_rtl(request):
     """Endpoint tombol AI pada G.4 (investigasi) dan G.5 (RTL) halaman evaluasi risiko."""
     profile = getattr(request.user, 'profile', None)

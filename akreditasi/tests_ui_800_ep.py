@@ -287,7 +287,12 @@ class MatriksPdcaSortTests(TestCase):
 # ---------------------------------------------------------------------------
 class SidebarCounterTests(TestCase):
     def setUp(self):
+        from django.core.cache import cache
         from django.contrib.auth.models import User
+        # The sidebar caches the catalogue identity and per-pokja counters; a
+        # warm cache from an earlier test would mask the precompute this class
+        # pins (it resolved 'none' and returned zero counters).
+        cache.clear()
         self.user = User.objects.create_user('sb_user', password='x')
         self.user.is_staff = True
         self.user.save()

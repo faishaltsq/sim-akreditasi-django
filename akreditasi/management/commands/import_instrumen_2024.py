@@ -84,6 +84,62 @@ def load_fixture(path):
     return standards
 
 
+FRAMEWORK_NAME_2024 = 'STARKES Edisi 2024 / KMK HK.01.07/MENKES/1596/2024'
+
+
+def _extract_ep_items(block: str) -> list:
+    """
+    Extract individual EP sub-items from an EP block.
+    Handles:
+      a) b) c) ...   lettered bullets (most chapters)
+      1) 2) 3) ...   numbered bullets (SKP)
+      1. 2. 3. ...   dotted numbering (PROGNAS)
+    """
+    items = []
+
+    # Lettered first. A repeated letter means the block ran into the next
+    # standard's EP list (the PDF prints some EP lists on the page before their
+    # own header, e.g. MFK 4), so stop at the restart.
+    seen = set()
+    for m in re.finditer(
+        r'(?:^|\n)\s*([a-z])\)\s+(.*?)(?=\n\s*[a-z]\)|\n\s*(?:[a-z]\.|\d+[.)])\s*[Ss]tandar|\Z)',
+        block, re.DOTALL
+    ):
+        letter = m.group(1)
+        if letter in seen:
+            break
+        seen.add(letter)
+        raw = m.group(2)
+        desc = re.sub(r'\s+', ' ', raw).strip()[:300]
+        # "poin a) - e) pada maksud dan tujuan" is prose, not an EP item.
+        if len(desc) < 25 and re.match(r'^(pada|dalam|di)\b', desc):
+            continue
+        rdwos = sorted(set(re.findall(r'\b([RDWOS])\b', raw[:200])))
+        items.append({'letter': letter, 'description': desc, 'evidence_types': rdwos})
+
+    if items:
+        return items
+
+    # Numbered bullets: "1)" (SKP) or "1." (PROGNAS)
+    seen = set()
+    for m in re.finditer(
+        r'(?:^|\n)\s*(\d+)[.)]\s+(.*?)(?=\n\s*\d+[.)]|\n\s*(?:[a-z]\.|\d+[.)])\s*[Ss]tandar|\Z)',
+        block, re.DOTALL
+    ):
+        num = m.group(1)
+        if num in seen:
+            break
+        seen.add(num)
+        raw = m.group(2)
+        desc = re.sub(r'\s+', ' ', raw).strip()[:300]
+        if not desc:
+            continue
+        rdwos = sorted(set(re.findall(r'\b([RDWOS])\b', raw[:200])))
+        items.append({'letter': num, 'description': desc, 'evidence_types': rdwos})
+
+    return items
+
+
 class Command(BaseCommand):
     help = 'Import STARKES 2024 accreditation standards & EP (fixture or PDF)'
 

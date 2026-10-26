@@ -45,35 +45,43 @@ def _catalogue_identity():
 
 
 def sidebar_context(request):
-    # Jangan cache instance model. Instance ``Category`` yang di-pickle membawa
-    # prefetch ``items`` dan atribut ``_pre_*`` hasil hitung request sebelumnya;
-    # begitu PK dipakai ulang (mis. setelah rollback atau reseed), cache
-    # menyajikan pokja milik framework lain beserta angka EP yang salah.
-    # Yang di-cache hanya penanda framework aktif; kategori selalu dibaca ulang
-    # (satu query) supaya angkanya tidak pernah basi.
-    framework = active_framework()
-    fw_key = framework.pk if framework else 'none'
-    if cache.get('sidebar_fw_key') != fw_key:
-        cache.set('sidebar_fw_key', fw_key, _SIDEBAR_CACHE_TTL)
+    # Cache framework + categories global (tidak bergantung user) selama 5 menit.
+    # The catalogue identity is cached too: resolving it costs a schema
+    # introspection query, and the warm request budget assumes the sidebar
+    # performs no catalogue lookups at all.
+    version_key = _catalogue_identity()
 
-    categories = []
-    categories_by_kelompok = {}
+    framework = cache.get(f'sidebar_framework:{version_key}')
+    categories = cache.get(f'sidebar_categories:{version_key}')
+    categories_by_kelompok = cache.get(f'sidebar_categories_by_kelompok:{version_key}')
 
-    if framework:
-        categories = list(framework.categories.prefetch_related(
-            'items__record'
-        ).order_by('order'))
+    if framework is None or categories is None:
+        framework = Framework.active() if version_key != 'none' else None
+        categories = []
+        categories_by_kelompok = {}
 
-        for code, meta in KELOMPOK_META.items():
-            k_cats = [c for c in categories if c.kelompok == code]
-            if k_cats:
-                categories_by_kelompok[code] = {
-                    'label': meta['label'],
-                    'icon': meta['icon'],
-                    'color': meta['color'],
-                    'categories': k_cats,
-                    'count': len(k_cats),
-                }
+        if framework:
+            categories = list(framework.categories.prefetch_related(
+                'items__record'
+            ).order_by('order'))
+
+            for code, meta in KELOMPOK_META.items():
+                k_cats = [c for c in categories if c.kelompok == code]
+                if k_cats:
+                    categories_by_kelompok[code] = {
+                        'label': meta['label'],
+                        'icon': meta['icon'],
+                        'color': meta['color'],
+                        'categories': k_cats,
+                        'count': len(k_cats),
+                    }
+
+        cache.set(f'sidebar_framework:{version_key}', framework, _SIDEBAR_CACHE_TTL)
+        cache.set(f'sidebar_categories:{version_key}', categories, _SIDEBAR_CACHE_TTL)
+        cache.set(
+            f'sidebar_categories_by_kelompok:{version_key}',
+            categories_by_kelompok, _SIDEBAR_CACHE_TTL,
+        )
 
     # Precompute stat per pokja (2 query total). Tanpa ini, property model
     # (total_score/max_possible_score) menembak 2 query per kategori di setiap
@@ -94,9 +102,18 @@ def sidebar_context(request):
             .filter(category_id__in=cat_ids)
             .values('category').annotate(n=Count('id'))
         }
+        # EP yang sudah dinilai: record dengan skor > 0 (skor 0 = belum terpenuhi).
+        done = {
+            row['standard_item__category']: row['n']
+            for row in QualityRecord.objects
+            .filter(standard_item__category_id__in=cat_ids, score__gt=0)
+            .values('standard_item__category').annotate(n=Count('id'))
+        }
         for c in categories:
             c._pre_total = sums.get(c.id, 0)
             c._pre_max = counts.get(c.id, 0) * 10
+            c._pre_ep_total = counts.get(c.id, 0)
+            c._pre_ep_selesai = done.get(c.id, 0)
 
     rs_profile = cache.get('sidebar_rs_profile')
     if rs_profile is None:

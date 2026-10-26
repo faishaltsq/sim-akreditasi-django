@@ -37,6 +37,7 @@ class Migration(migrations.Migration):
 
     dependencies = [
         ('akreditasi', '0040_standarditem_scoped_code_unique'),
+        ('akreditasi', '0057_repair_starkes_2024_edition_identity'),
     ]
 
     operations = [
