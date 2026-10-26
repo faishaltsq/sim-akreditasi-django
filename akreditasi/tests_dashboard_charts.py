@@ -25,6 +25,8 @@ from accounts.models import UserProfile
 
 TEMPLATE = (Path(__file__).resolve().parent.parent
             / 'templates' / 'akreditasi' / 'dashboard.html')
+CHART_JS = (Path(__file__).resolve().parent.parent
+            / 'templates' / 'akreditasi' / '_dashboard_charts_js.html')
 
 
 class DashboardInlineScriptTest(TestCase):
@@ -74,7 +76,7 @@ class DashboardInlineScriptTest(TestCase):
 
     def test_objek_font_chart_memakai_titik_dua(self):
         """Koma di posisi properti adalah SyntaxError yang mematikan semua chart."""
-        html = TEMPLATE.read_text(encoding='utf-8')
+        html = CHART_JS.read_text(encoding='utf-8')
         rusak = re.findall(r'family:\s*"[^"]*"\s*,\s*[a-z-]+\s*,', html)
         self.assertFalse(
             rusak,
@@ -82,9 +84,13 @@ class DashboardInlineScriptTest(TestCase):
             f'(SyntaxError, mematikan semua grafik): {rusak[:3]}')
 
     def test_kanvas_grafik_masih_ada(self):
-        """Grafik tidak boleh hilang saat merapikan tampilan."""
-        html = TEMPLATE.read_text(encoding='utf-8')
-        for cid in ('chartMutuBulanan', 'chartRenstraTahunan',
-                    'chartTahunanMulti', 'kepatuhanChart'):
-            self.assertIn(f'id="{cid}"', html,
-                          f'kanvas {cid} hilang dari dashboard')
+        """Grafik tidak boleh hilang saat merapikan tampilan.
+
+        Diperiksa pada HTML hasil render, bukan sumber templat: kanvas kini
+        berada di partial ``_dashboard_charts_js.html`` dan dashboard memakai
+        bar bertumpuk (bukan doughnut) untuk status kepatuhan.
+        """
+        self.client.force_login(self.user)
+        html = self.client.get(reverse('akreditasi:dashboard')).content.decode('utf-8')
+        for cid in ('chartMutuBulanan', 'chartRenstraTahunan', 'chartTahunanMulti'):
+            self.assertIn(f'id="{cid}"', html, f'kanvas {cid} hilang dari dashboard')

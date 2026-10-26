@@ -1,30 +1,45 @@
 {% extends "base.html" %}
 
-{% block title %}Belum Ada Data | SIM Akreditasi RS{% endblock %}
-{% block page_title %}Belum Ada Data{% endblock %}
-{% block page_subtitle %}Jalankan seed data untuk memulai{% endblock %}
+{% block title %}Belum ada data | ARIMA{% endblock %}
+{% block page_title %}Katalog akreditasi belum dimuat{% endblock %}
+{% block page_subtitle %}Aplikasi membutuhkan data standar STARKES sebelum halaman ini bisa ditampilkan{% endblock %}
 
 {% block content %}
-<div class="d-flex justify-content-center align-items-center" style="min-height: 60vh;">
-    <div class="text-center">
-        <i class="bi bi-database-x" style="font-size: 4rem; color: var(--text-muted);"></i>
-        <h5 class="fw-bold mt-3 mb-2" style="color: var(--text-primary);">Belum ada data</h5>
-        <p class="text-muted mb-4" style="max-width: 400px; margin: 0 auto; font-size: 0.85rem;">
-            Database masih kosong. Jalankan perintah berikut di terminal untuk mengisi data awal Standar STARKES:
-        </p>
-        <div class="p-3 rounded mb-4 mx-auto" style="background: var(--sidebar-bg); max-width: 420px;">
-            <code class="text-info font-mono" style="font-size: 0.85rem;">python manage.py seed_data</code>
+<div class="d-flex justify-content-center">
+    <section class="panel" style="max-width:560px; width:100%;" aria-labelledby="emptyTitle">
+        <div class="panel-body">
+            <div class="state">
+                <i class="bi bi-database-exclamation state-icon" aria-hidden="true"></i>
+                <span class="state-title" id="emptyTitle">Katalog standar masih kosong</span>
+                <span class="state-text">
+                    Belum ada framework, pokja, atau elemen penilaian di database. Halaman matriks membutuhkan
+                    katalog STARKES sebelum bisa menampilkan EP. Muat data awal lewat perintah seed, atau
+                    impor katalog dari halaman Pokja dan Standar.
+                </span>
+                <code class="empty-cmd">python manage.py seed_data</code>
+                <div class="d-flex flex-wrap justify-content-center gap-2 state-action">
+                    <a href="{% url 'akreditasi:pokja_manage' %}" class="btn btn-sm btn-primary">Buka Pokja dan Standar</a>
+                    <a href="{% url 'admin:index' %}" class="btn btn-sm btn-outline-secondary" target="_blank" rel="noopener">Django admin</a>
+                    <a href="{% url 'akreditasi:dashboard' %}" class="btn btn-sm btn-outline-secondary">Muat ulang dashboard</a>
+                </div>
+            </div>
         </div>
-        <div class="d-flex justify-content-center gap-2">
-            <a href="{% url 'admin:index' %}" class="btn btn-outline-secondary d-inline-flex align-items-center gap-1" target="_blank">
-                <i class="bi bi-shield-lock"></i>
-                Buka Django Admin
-            </a>
-            <a href="{% url 'akreditasi:dashboard' %}" class="btn btn-primary d-inline-flex align-items-center gap-1">
-                <i class="bi bi-arrow-clockwise"></i>
-                Refresh Dashboard
-            </a>
-        </div>
-    </div>
+    </section>
 </div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .empty-cmd {
+        display: block;
+        margin-top: 4px;
+        padding: 8px 12px;
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+        background: var(--subtle);
+        color: var(--ink-900);
+        font-family: var(--font-mono);
+        font-size: 13px;
+    }
+</style>
 {% endblock %}

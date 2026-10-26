@@ -7,7 +7,7 @@ from django.test import SimpleTestCase
 
 class SidebarShrinkTest(SimpleTestCase):
     def _css(self):
-        return (settings.BASE_DIR / 'static' / 'css' / 'v3-tokens.css').read_text(encoding='utf-8')
+        return (settings.BASE_DIR / 'static' / 'css' / 'style.css').read_text(encoding='utf-8')
 
     def test_brand_dilindungi_dari_flex_shrink(self):
         """.sidebar-desktop adalah flex column setinggi viewport dengan 70+ item
@@ -31,11 +31,11 @@ class SidebarShrinkTest(SimpleTestCase):
             css, r'\.sidebar-nav\s*\{[^}]*min-height\s*:\s*0',
             '.sidebar-nav butuh min-height: 0 supaya boleh menyusut di flex column')
         self.assertRegex(
-            css, r'\.sidebar-desktop\s*\{\s*overflow\s*:\s*hidden\s*;\s*\}',
+            css, r'\.sidebar-desktop\s*\{[^}]*overflow\s*:\s*hidden',
             '.sidebar-desktop harus overflow: hidden')
 
     def test_footer_juga_dilindungi(self):
         css = self._css()
         self.assertRegex(
-            css, r'\.sidebar-footer\s*\{\s*flex\s*:\s*0\s+0\s+auto\s*;\s*\}',
+            css, r'\.sidebar-footer\s*\{[^}]*flex\s*:\s*0\s+0\s+auto',
             '.sidebar-footer harus flex: 0 0 auto')

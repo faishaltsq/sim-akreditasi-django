@@ -1,0 +1,394 @@
+{# Chart.js wiring for the dashboard. Extracted so the page markup stays readable. #}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+// Changing category/unit/year invalidates the indicator selection: clear it before
+// the GET submit so the URL never carries an id from the previous filter set.
+window.arimaMutuFilterChange = function (el) {
+    const form = el.form;
+    const ind = form ? form.querySelector('[name="mutu_indikator"]') : null;
+    if (ind) { ind.value = ''; }
+    if (form) { form.submit(); }
+};
+document.addEventListener('DOMContentLoaded', function() {
+    // Kategori / tahun berubah → muat ulang daftar indikator, kosongkan
+    // pilihan indikator (indikator lama milik kategori lain), lalu submit
+    // supaya grafik langsung menampilkan rata-rata kategori baru.
+    function reloadIndikator(andSubmit) {
+        const jenis = document.getElementById('filterMutuJenis');
+        const tahun = document.getElementById('filterMutuTahun');
+        const ind = document.getElementById('filterMutuIndikator');
+        if (!jenis || !tahun || !ind) return;
+        const url = "{% url 'akreditasi:api_mutu_indikator' %}?jenis="
+            + encodeURIComponent(jenis.value) + "&tahun=" + encodeURIComponent(tahun.value);
+        fetch(url).then(r => r.json()).then(data => {
+            ind.innerHTML = '<option value="">Semua Indikator (Rata-rata)</option>';
+            (data.indikator || []).forEach(function (i) {
+                const o = document.createElement('option');
+                o.value = i.id;
+                o.textContent = '[' + i.kode + '] ' + i.nama + (i.punya_data ? '' : ', belum ada data');
+                ind.appendChild(o);
+            });
+            if (andSubmit) ind.form.submit();
+        });
+    }
+    document.getElementById('filterMutuJenis')?.addEventListener('change', function () { reloadIndikator(true); });
+    document.getElementById('filterMutuTahun')?.addEventListener('change', function () { reloadIndikator(true); });
+
+    // Validasi form: "Semua Indikator" = rata-rata, bukan error. Kontrol
+    // dinonaktifkan agar URL bersih (tanpa mutu_indikator=).
+    document.querySelector('form[method="GET"]')?.addEventListener('submit', function (e) {
+        const ind = document.getElementById('filterMutuIndikator');
+        if (ind && ind.value === '') ind.disabled = true;
+    });
+
+    // ── Shared chart helpers: value labels + drill-down ──────────────────
+    const MUTU_IND_ID   = "{{ filter_mutu_indikator|default:'' }}";
+    const MUTU_IND_NAMA = "{{ mutu_indikator_terpilih.nama_indikator|escapejs|default:'' }}";
+    const MUTU_IND_KODE = "{{ mutu_indikator_terpilih.kode_indikator|escapejs|default:'' }}";
+    const MUTU_TAHUN    = {{ filter_mutu_tahun }};
+    const MUTU_ARAH     = "{{ mutu_arah_target }}";
+    const MUTU_TARGET   = {{ chart_mutu_target_val_json|safe }};
+    const PDCA_URL_BASE = "{% url 'akreditasi:risiko_input' %}";
+    const NAMA_BULAN = ['Januari','Februari','Maret','April','Mei','Juni',
+                        'Juli','Agustus','September','Oktober','November','Desember'];
+
+    // Inline plugin: draws "74.2%" above every non-null bar (dataset index 1)
+    const valueLabelsPlugin = {
+        id: 'valueLabels',
+        afterDatasetsDraw(chart) {
+            const ctx = chart.ctx;
+            const meta = chart.getDatasetMeta(1);
+            const data = chart.data.datasets[1].data;
+            ctx.save();
+            ctx.font = "500 10px 'IBM Plex Mono', ui-monospace, monospace";
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'bottom';
+            meta.data.forEach(function (bar, i) {
+                const v = data[i];
+                if (v === null || v === undefined) return;
+                ctx.fillStyle = '#141C2E';
+                ctx.fillText(v.toFixed(1) + '%', bar.x, bar.y - 3);
+            });
+            ctx.restore();
+        }
+    };
+
+    function openDrilldown(idx, val) {
+        const modalEl = document.getElementById('modalDrilldownMutu');
+        if (!modalEl) return;
+        const below = (MUTU_ARAH === 'MAX') ? (val > MUTU_TARGET) : (val < MUTU_TARGET);
+        document.getElementById('dd-bulan-label').textContent = NAMA_BULAN[idx] + ' ' + MUTU_TAHUN;
+        document.getElementById('dd-indikator-nama').textContent = MUTU_IND_ID
+            ? '[' + MUTU_IND_KODE + '] ' + MUTU_IND_NAMA
+            : 'Rata-rata semua indikator terfilter';
+        document.getElementById('dd-nilai').textContent = val.toFixed(1) + '%';
+        document.getElementById('dd-target').textContent = MUTU_TARGET;
+        const gap = val - MUTU_TARGET;
+        document.getElementById('dd-gap').textContent = (gap >= 0 ? '+' : '') + gap.toFixed(1) + '%';
+        const st = document.getElementById('dd-status');
+        st.textContent = below ? 'Di bawah Target' : 'Tercapai';
+        st.className = 'badge ' + (below
+            ? 'bg-danger-subtle text-danger border border-danger-subtle'
+            : 'bg-success-subtle text-success border border-success-subtle');
+        const btn = document.getElementById('dd-btn-pdca');
+        const hint = document.getElementById('dd-hint-null');
+        if (MUTU_IND_ID) {
+            btn.href = PDCA_URL_BASE + '?indikator=' + MUTU_IND_ID +
+                       '&bulan=' + (idx + 1) + '&tahun=' + MUTU_TAHUN;
+            btn.classList.remove('d-none');
+            hint.classList.add('d-none');
+        } else {
+            btn.classList.add('d-none');
+            hint.classList.remove('d-none');
+        }
+        new bootstrap.Modal(modalEl).show();
+    }
+
+    // 2. Chart Capaian Mutu Bulanan (Combo Bar + Target Line)
+    let chartMutu = null;
+    const mutuEl = document.getElementById('chartMutuBulanan');
+    if (mutuEl) {
+        const mutuLabels = {{ chart_mutu_labels_json|safe }};
+        const mutuData = {{ chart_mutu_data_json|safe }};
+        const mutuColors = {{ chart_mutu_colors_json|safe }};
+        const targetLine = {{ chart_mutu_target_line_json|safe }};
+        const targetVal = {{ chart_mutu_target_val_json|safe }};
+        const hasMutuData = {{ has_monthly_data|yesno:"true,false" }};
+        const mutuMeta  = {{ chart_mutu_meta_json|safe }};
+        const mutuNama  = {{ chart_mutu_nama_json|safe }};
+        const mutuRumus = {{ chart_mutu_rumus_json|safe }};
+
+        if (!hasMutuData) {
+            // Tidak ada catatan bulanan: ganti canvas dengan penjelasan sebabnya.
+            const empty = document.getElementById('mutuEmpty');
+            mutuEl.classList.add('d-none');
+            if (empty) { empty.classList.remove('d-none'); empty.classList.add('d-flex'); }
+        } else {
+        chartMutu = new Chart(mutuEl.getContext('2d'), {
+            type: 'bar',
+            plugins: [valueLabelsPlugin],
+            data: {
+                labels: mutuLabels,
+                datasets: [
+                    {
+                        type: 'line',
+                        label: `Batas Target (${targetVal}%)`,
+                        data: targetLine,
+                        borderColor: '#DC2626',
+                        borderWidth: 2,
+                        borderDash: [6, 4],
+                        pointRadius: 0,
+                        pointHoverRadius: 0,
+                        fill: false,
+                        order: 1
+                    },
+                    {
+                        type: 'bar',
+                        label: 'Realisasi Capaian (%)',
+                        data: mutuData,
+                        backgroundColor: mutuColors,
+                        borderRadius: 5,
+                        maxBarThickness: 38,
+                        order: 2
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: { mode: 'index', intersect: false },
+                onClick: function (evt, elements) {
+                    if (!elements.length) return;
+                    const el = elements[0];
+                    if (el.datasetIndex !== 1) return;
+                    const val = mutuData[el.index];
+                    if (val === null || val === undefined) return;
+                    openDrilldown(el.index, val);
+                },
+                onHover: function (evt, elements) {
+                    evt.native.target.style.cursor = elements.length ? 'pointer' : 'default';
+                },
+                plugins: {
+                    legend: {
+                        position: 'top',
+                        labels: {
+                            boxWidth: 14,
+                            usePointStyle: true,
+                            font: { family: "IBM Plex Sans, sans-serif", size: 11 }
+                        }
+                    },
+                    tooltip: {
+                        // ponytail: selalu di atas bar — tooltip tebal (rumus + 
+                        // rincian PDCA) tidak boleh menutup label bulan di sumbu X.
+                        position: 'top',
+                        backgroundColor: 'rgba(20, 28, 46, 0.96)',
+                        titleFont: { family: "IBM Plex Sans, sans-serif", size: 12, weight: '700' },
+                        bodyFont: { family: "ui-monospace, Menlo, Consolas, monospace", size: 11 },
+                        bodySpacing: 4,
+                        padding: 12,
+                        boxPadding: 4,
+                        callbacks: {
+                            title: function(items) {
+                                return NAMA_BULAN[items[0].dataIndex] + ' ' + MUTU_TAHUN;
+                            },
+                            label: function(ctx) {
+                                if (ctx.datasetIndex === 0) {
+                                    return ` Batas target: ${targetVal}%`;
+                                }
+                                const meta = mutuMeta[ctx.dataIndex];
+                                if (ctx.raw === null || ctx.raw === undefined) {
+                                    return ' Belum ada pengukuran bulan ini';
+                                }
+                                const lines = [
+                                    ` Capaian      : ${ctx.raw.toFixed(2)}%`,
+                                    ` Target       : ${targetVal}% (${MUTU_ARAH === 'MAX' ? '≤ target, makin kecil makin baik' : '≥ target, makin besar makin baik'})`,
+                                    ` Selisih      : ${(ctx.raw - targetVal >= 0 ? '+' : '')}${(ctx.raw - targetVal).toFixed(2)} poin`,
+                                ];
+                                if (meta) {
+                                    lines.push(` Basis        : ${meta.n} pengukuran (${meta.ok} tercapai, ${meta.n - meta.ok} di bawah target)`);
+                                    if (meta.miss.length) {
+                                        lines.push(` Di bawah target: ${meta.miss.join(', ')}${meta.miss_more ? ` +${meta.miss_more} lainnya` : ''}`);
+                                    }
+                                }
+                                return lines;
+                            },
+                            afterBody: function() {
+                                const parts = ['', mutuNama];
+                                if (mutuRumus) parts.push(`Rumus: ${mutuRumus}`);
+                                parts.push('Klik bar untuk buka rincian PDCA bulan ini.');
+                                return parts;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        max: 105,
+                        ticks: {
+                            stepSize: 20,
+                            callback: v => v + '%'
+                        },
+                        grid: { color: '#EDF1F6' }
+                    },
+                    x: {
+                        grid: { display: false }
+                    }
+                }
+            }
+        });
+        }
+    }
+
+    // 2b. Chart Tren Tahunan (Multi-Year Bar + Target Line)
+    let chartTahunan = null;
+    const tahunanEl = document.getElementById('chartTahunanMulti');
+    if (tahunanEl) {
+        const thYears  = {{ chart_tahunan_years_json|safe }};
+        const thData   = {{ chart_tahunan_data_json|safe }};
+        const thColors = {{ chart_tahunan_colors_json|safe }};
+
+        chartTahunan = new Chart(tahunanEl.getContext('2d'), {
+            type: 'bar',
+            plugins: [valueLabelsPlugin],
+            data: {
+                labels: thYears.map(y => `Tahun ${y}`),
+                datasets: [
+                    {
+                        type: 'line',
+                        label: `Batas Target (${MUTU_TARGET}%)`,
+                        data: thYears.map(() => MUTU_TARGET),
+                        borderColor: '#DC2626',
+                        borderWidth: 2,
+                        borderDash: [6, 4],
+                        pointRadius: 0,
+                        fill: false,
+                        order: 1
+                    },
+                    {
+                        type: 'bar',
+                        label: 'Rata-rata Capaian Tahunan (%)',
+                        data: thData,
+                        backgroundColor: thColors,
+                        borderRadius: 5,
+                        maxBarThickness: 46,
+                        order: 2
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'top',
+                        labels: {
+                            boxWidth: 14,
+                            usePointStyle: true,
+                            font: { family: "IBM Plex Sans, sans-serif", size: 11 }
+                        }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function (ctx) {
+                                if (ctx.raw === null || ctx.raw === undefined) {
+                                    return `${ctx.dataset.label}: Belum ada data`;
+                                }
+                                return `${ctx.dataset.label}: ${ctx.raw}%`;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        max: 105,
+                        ticks: { stepSize: 20, callback: v => v + '%' },
+                        grid: { color: '#EDF1F6' }
+                    },
+                    x: { grid: { display: false } }
+                }
+            }
+        });
+    }
+
+    // 3. Chart Tren Renstra 2026-2030 (Grouped Bar Target vs Realisasi)
+    let chartRenstra = null;
+    const renstraEl = document.getElementById('chartRenstraTahunan');
+    if (renstraEl) {
+        const renstraYears = {{ chart_renstra_years_json|safe }};
+        const renstraTargets = {{ chart_renstra_targets_json|safe }};
+        const renstraActuals = {{ chart_renstra_actuals_json|safe }};
+
+        chartRenstra = new Chart(renstraEl.getContext('2d'), {
+            type: 'bar',
+            data: {
+                labels: renstraYears.map(y => `Tahun ${y}`),
+                datasets: [
+                    {
+                        label: 'Target Renstra (%)',
+                        data: renstraTargets,
+                        backgroundColor: '#4F5BD5',
+                        borderRadius: 5,
+                        maxBarThickness: 34
+                    },
+                    {
+                        label: 'Realisasi Aktual (%)',
+                        data: renstraActuals,
+                        backgroundColor: '#15803D',
+                        borderRadius: 5,
+                        maxBarThickness: 34
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'top',
+                        labels: {
+                            boxWidth: 14,
+                            usePointStyle: true,
+                            font: { family: "IBM Plex Sans, sans-serif", size: 11 }
+                        }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(ctx) {
+                                if (ctx.raw === null || ctx.raw === undefined) {
+                                    return `${ctx.dataset.label}: Belum ada realisasi`;
+                                }
+                                return `${ctx.dataset.label}: ${ctx.raw}%`;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        max: 105,
+                        ticks: {
+                            stepSize: 20,
+                            callback: v => v + '%'
+                        },
+                        grid: { color: '#EDF1F6' }
+                    },
+                    x: {
+                        grid: { display: false }
+                    }
+                }
+            }
+        });
+    }
+
+    // Resize listener when switching tab pills
+    document.querySelectorAll('#pills-mutu-tab button[data-bs-toggle="pill"]').forEach(function(pill) {
+        pill.addEventListener('shown.bs.tab', function() {
+            if (chartMutu) chartMutu.resize();
+            if (chartRenstra) chartRenstra.resize();
+            if (chartTahunan) chartTahunan.resize();
+        });
+    });
+});
+</script>

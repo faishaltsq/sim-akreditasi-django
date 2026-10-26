@@ -42,12 +42,13 @@ Sistem telah dilengkapi dengan 13 jenis akun percontohan sesuai struktur tata ke
 ---
 
 ## 4. Navigasi Antarmuka (Sidebar)
-Sidebar kiri memiliki menu terorganisir:
-- 📊 **Dashboard:** Rangkuman statistik capaian, KPI, dan Pohon Struktur Organisasi RS MonsisKami.
-- 📋 **Matriks PDCA:** Tabel matriks kerja 7-kolom untuk pemenuhan akreditasi.
-- 📂 **Manajemen Dokumen (RDWOS):** Gudang berkas regulasi dan bukti akreditasi.
-- 🛡️ **Manajemen Risiko:** Register risiko unit (5×5) dan evaluasi rencana tindakan (PDCA Risiko).
-- 🚨 **Pelaporan Insiden:** Form pelaporan insiden keselamatan pasien tanpa rasa takut (Blameless/Anonim).
-- 🎯 **Auto-Scoring KARS:** Simulasi nilai kelulusan akreditasi (Paripurna, Utama, Madya, Dasar).
-- 🏢 **Unit Kerja & Pohon Struktur:** Visualisasi dan rincian 65 unit kerja RS MonsisKami.
-- 👨‍⚕️ **Kredensial Nakes:** Rekap kelengkapan berkas staf nakes (STR, SIP, SPK, RKK).
+Sidebar kiri dikelompokkan per tugas, bukan per modul teknis:
+
+- **Dashboard:** satu angka kesiapan (capaian rata-rata), distribusi EP tercapai / dalam proses / belum ada bukti, lalu capaian per pokja diurutkan dari yang terendah. Pohon struktur organisasi tidak lagi ada di sini; gunakan menu **Hierarki unit**.
+- **Akreditasi:** Matriks PDCA, Elemen Penilaian, Dokumen Bukti, dan daftar 16 bab STARKES yang bisa dicari.
+- **Risiko dan insiden:** daftar risiko, input risiko, Perencanaan (Plan), Pelaksanaan (Do), Monitoring dan evaluasi, Laporan PDCA lengkap, Laporan manajemen risiko, FMEA dan RCA, register insiden, lapor insiden.
+- **Mutu dan kinerja:** Indikator mutu, Laporan Mutu, Logbook harian.
+- **Laporan:** Auto-scoring, Rekap capaian, Ekspor Excel.
+- **Data induk dan Pengaturan:** Pokja dan standar, unit kerja, hierarki unit, pengguna, profil RS, log sistem.
+
+Setiap item menu memakai nama pendek satu baris. Keterangan panjang muncul sebagai tooltip saat kursor berhenti di atas item.

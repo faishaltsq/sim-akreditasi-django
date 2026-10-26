@@ -1,0 +1,348 @@
+{# Evidence modal, inline cell editing and quick scoring for the PDCA matrix. #}
+<script>
+// Endpoint dibangun dari URLconf, bukan path literal: aplikasi bisa dipasang di
+// prefix selain root tanpa memutus quick scoring dan modal bukti. Django
+// merender id 0 sebagai penanda yang diganti di klien.
+const EP_URL = {
+    score: "{% url 'akreditasi:quick_score' 0 %}",
+    inline: "{% url 'akreditasi:inline_edit' 0 %}",
+    bukti: "{% url 'akreditasi:modal_bukti_data' 0 %}",
+    upload: "{% url 'akreditasi:upload_bukti_ajax' 0 %}",
+    link: "{% url 'akreditasi:link_existing_doc' %}",
+    unlink: "{% url 'akreditasi:unlink_doc' 0 %}"
+};
+function epUrl(template, id) {
+    return template.replace('/0/', '/' + id + '/');
+}
+
+// QUICK SCORE AJAX
+function updateQuickScore(selectElem) {
+    const recordId = selectElem.getAttribute('data-record-id');
+    const newScore = selectElem.value;
+    const indicator = document.getElementById(`saving-indicator-${recordId}`);
+
+    // Update style class
+    selectElem.classList.remove('score-10', 'score-5', 'score-0');
+    selectElem.classList.add(`score-${newScore}`);
+
+    if (indicator) indicator.classList.add('is-visible');
+
+    fetch(epUrl(EP_URL.score, recordId), {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'X-CSRFToken': getCookie('csrftoken')
+        },
+        body: `score=${newScore}`
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (indicator) indicator.classList.remove('is-visible');
+        if (data.success) {
+            showToast('Skor tersimpan.', 'success');
+        } else {
+            showToast('Skor gagal disimpan: ' + (data.error || ''), 'danger');
+        }
+    })
+    .catch(err => {
+        if (indicator) indicator.classList.remove('is-visible');
+        showToast('Koneksi gagal. Skor belum tersimpan, coba lagi.', 'danger');
+    });
+}
+
+// INLINE EDIT MODAL
+let inlineModalInstance = null;
+function openInlineEditModal(recordId, field, label, epCode, currentPic, currentCost) {
+    document.getElementById('inlineRecordId').value = recordId;
+    document.getElementById('inlineField').value = field;
+    document.getElementById('modalInlineTitle').innerText = `${epCode} — ${label}`;
+
+    // Ambil isi teks saat ini dari DOM
+    const cellElem = document.getElementById(`cell-${field}-${recordId}`);
+    // Sel kosong menampilkan paragraf petunjuk (.cell-empty); jangan disalin
+    // ke textarea sebagai isi.
+    let currentText = '';
+    if (cellElem && !cellElem.querySelector('.cell-empty')) {
+        currentText = cellElem.innerText.trim();
+    }
+    document.getElementById('inlineTextValue').value = currentText;
+
+    // Tampilkan/sembunyikan section PJ + Biaya hanya untuk kolom Action
+    const extraDiv = document.getElementById('inlineActionExtra');
+    if (field === 'action_plan') {
+        extraDiv.style.display = 'block';
+        document.getElementById('inlinePic').value = currentPic || '';
+        const costVal = parseFloat(currentCost) || 0;
+        document.getElementById('inlineEstCost').value = costVal > 0 ? costVal : '';
+        const displayEl = document.getElementById('inlineCostDisplay');
+        if (costVal > 0) {
+            displayEl.textContent = 'Rp ' + costVal.toLocaleString('id-ID');
+        } else {
+            displayEl.textContent = '';
+        }
+    } else {
+        extraDiv.style.display = 'none';
+    }
+
+    if (!inlineModalInstance) {
+        inlineModalInstance = new bootstrap.Modal(document.getElementById('modalInlineEdit'));
+    }
+    inlineModalInstance.show();
+}
+
+// Update live preview Rp saat ketik biaya
+document.addEventListener('DOMContentLoaded', function() {
+    const costInput = document.getElementById('inlineEstCost');
+    if (costInput) {
+        costInput.addEventListener('input', function() {
+            const v = parseFloat(this.value) || 0;
+            document.getElementById('inlineCostDisplay').textContent =
+                v > 0 ? 'Rp ' + v.toLocaleString('id-ID') : '';
+        });
+    }
+});
+
+function saveInlineEdit() {
+    const recordId = document.getElementById('inlineRecordId').value;
+    const field = document.getElementById('inlineField').value;
+    const value = document.getElementById('inlineTextValue').value.trim();
+
+    const payload = { field: field, value: value };
+
+    // Sertakan PJ + Biaya jika di kolom Action
+    if (field === 'action_plan') {
+        payload.pic = document.getElementById('inlinePic').value.trim();
+        const rawCost = document.getElementById('inlineEstCost').value.trim();
+        payload.est_cost = rawCost ? parseFloat(rawCost) : 0;
+    }
+
+    fetch(epUrl(EP_URL.inline, recordId), {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCookie('csrftoken')
+        },
+        body: JSON.stringify(payload)
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            const cellElem = document.getElementById(`cell-${field}-${recordId}`);
+            if (cellElem) {
+                cellElem.innerHTML = value ? escapeHtml(value) : `<span class="cell-empty">Belum diisi. Klik untuk menulis.</span>`;
+            }
+            // Reload halaman agar badge PJ + Biaya terupdate di sel
+            if (field === 'action_plan') {
+                location.reload();
+                return;
+            }
+            if (inlineModalInstance) inlineModalInstance.hide();
+            showToast('Isi sel tersimpan.', 'success');
+        } else {
+            showToast('Perubahan gagal disimpan: ' + (data.error || ''), 'danger');
+        }
+    })
+    .catch(err => {
+        showToast('Server menolak perubahan. Coba lagi.', 'danger');
+    });
+}
+
+// MODAL BUKTI DOKUMEN AJAX
+let buktiModalInstance = null;
+let currentActiveItemId = null;
+
+function openBuktiModal(itemId, itemCode) {
+    currentActiveItemId = itemId;
+    document.getElementById('modalBuktiTitle').innerText = `Bukti dokumen EP ${itemCode}`;
+    document.getElementById('modalBuktiSubtitle').innerText = 'Memuat berkas';
+
+    if (!buktiModalInstance) {
+        buktiModalInstance = new bootstrap.Modal(document.getElementById('modalBuktiDokumen'));
+    }
+    buktiModalInstance.show();
+
+    // Fetch data
+    fetch(epUrl(EP_URL.bukti, itemId))
+    .then(r => r.json())
+    .then(data => {
+        document.getElementById('modalBuktiSubtitle').innerText = data.item_desc || '';
+        document.getElementById('countLinkedFiles').innerText = data.linked_files.length;
+
+        // Populate dropdown requirements
+        const uploadSelect = document.getElementById('uploadReqSelect');
+        const linkSelect = document.getElementById('linkTargetReqSelect');
+        uploadSelect.innerHTML = '';
+        linkSelect.innerHTML = '';
+
+        data.reqs.forEach(req => {
+            const opt = `<option value="${req.id}">[${req.type}] ${req.title}</option>`;
+            uploadSelect.innerHTML += opt;
+            linkSelect.innerHTML += opt;
+        });
+
+        // Populate Tab 3: Linked Files
+        const linkedTbody = document.getElementById('linkedFilesTableBody');
+        linkedTbody.innerHTML = '';
+        if (data.linked_files.length === 0) {
+            linkedTbody.innerHTML = `<tr><td colspan="5" class="text-center text-muted py-3">Belum ada berkas ditautkan.</td></tr>`;
+        } else {
+            data.linked_files.forEach(f => {
+                linkedTbody.innerHTML += `
+                    <tr>
+                        <td><span class="badge badge-rdwos-${(f.req_type || '').toLowerCase()}">${f.req_type}</span></td>
+                        <td>
+                            <a href="${f.file_url}" target="_blank" class="fw-bold text-decoration-none">
+                                <i class="bi bi-file-earmark-text text-primary me-1"></i>${escapeHtml(f.file_name)}
+                            </a>
+                        </td>
+                        <td class="font-mono">${f.file_size}</td>
+                        <td><span class="badge bg-success-subtle text-success border border-success">${f.status}</span></td>
+                        <td class="text-center">
+                            <button class="btn btn-sm btn-outline-danger py-0 px-1" onclick="unlinkDocFile(${f.id})" title="Hapus tautan">
+                                <i class="bi bi-x-lg"></i>
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            });
+        }
+
+        // Populate Tab 2: Repo Files
+        const repoTbody = document.getElementById('repoFilesTableBody');
+        repoTbody.innerHTML = '';
+        if (data.repo_files.length === 0) {
+            repoTbody.innerHTML = `<tr><td colspan="4" class="text-center text-muted py-3">Tidak ada berkas repositori tersedia.</td></tr>`;
+        } else {
+            data.repo_files.forEach(rf => {
+                repoTbody.innerHTML += `
+                    <tr>
+                        <td class="text-center">
+                            <input type="radio" name="selected_repo_file" value="${rf.id}">
+                        </td>
+                        <td class="fw-semibold">${escapeHtml(rf.file_name)}</td>
+                        <td><span class="badge bg-light text-dark border">${rf.ep_origin} (${rf.type})</span></td>
+                        <td class="font-mono text-muted">${rf.file_size}</td>
+                    </tr>
+                `;
+            });
+        }
+    })
+    .catch(err => {
+        document.getElementById('modalBuktiSubtitle').innerText = 'Berkas gagal dimuat. Tutup lalu buka kembali.';
+    });
+}
+
+function submitUploadBukti(e) {
+    e.preventDefault();
+    const reqId = document.getElementById('uploadReqSelect').value;
+    const docName = document.getElementById('uploadDocName').value;
+    const fileInput = document.getElementById('uploadFileInput');
+
+    if (!fileInput.files || fileInput.files.length === 0) {
+        showToast('Pilih berkas lebih dulu.', 'warning');
+        return;
+    }
+
+    const formData = new FormData();
+    formData.append('doc_name', docName);
+    formData.append('file', fileInput.files[0]);
+
+    const submitBtn = document.getElementById('btnSubmitUpload');
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = `<i class="bi bi-arrow-repeat spin me-1"></i> Mengunggah...`;
+
+    fetch(epUrl(EP_URL.upload, reqId), {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': getCookie('csrftoken')
+        },
+        body: formData
+    })
+    .then(r => r.json())
+    .then(data => {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = `<i class="bi bi-upload me-1"></i> Simpan & Link Dokumen`;
+        if (data.success) {
+            showToast('Berkas terunggah dan tertaut ke EP ini.', 'success');
+            document.getElementById('formUploadBuktiAjax').reset();
+            openBuktiModal(currentActiveItemId, '');
+        } else {
+            showToast('Unggahan gagal: ' + (data.error || ''), 'danger');
+        }
+    })
+    .catch(err => {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = `<i class="bi bi-upload me-1"></i> Simpan & Link Dokumen`;
+        showToast('Unggahan gagal. Periksa ukuran dan format berkas.', 'danger');
+    });
+}
+
+function linkSelectedRepoDoc() {
+    const selectedRadio = document.querySelector('input[name="selected_repo_file"]:checked');
+    if (!selectedRadio) {
+        showToast('Pilih satu berkas dari repositori.', 'warning');
+        return;
+    }
+    const targetReqId = document.getElementById('linkTargetReqSelect').value;
+    const fileId = selectedRadio.value;
+
+    fetch(EP_URL.link, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCookie('csrftoken')
+        },
+        body: JSON.stringify({ req_id: targetReqId, file_id: fileId })
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            showToast('Berkas tertaut ke EP ini.', 'success');
+            openBuktiModal(currentActiveItemId, '');
+        } else {
+            showToast('Berkas gagal ditautkan: ' + (data.error || ''), 'danger');
+        }
+    });
+}
+
+function unlinkDocFile(fileId) {
+    if (!confirm('Lepas tautan berkas ini dari EP? Berkas tetap tersimpan di repositori.')) return;
+
+    fetch(epUrl(EP_URL.unlink, fileId), {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': getCookie('csrftoken')
+        }
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            showToast('Tautan berkas dilepas.', 'info');
+            openBuktiModal(currentActiveItemId, '');
+        } else {
+            showToast('Tautan gagal dilepas: ' + (data.error || ''), 'danger');
+        }
+    });
+}
+
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.innerText = text;
+    return div.innerHTML;
+}
+</script>

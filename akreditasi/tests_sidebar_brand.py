@@ -13,7 +13,7 @@ from django.test import SimpleTestCase
 
 class SidebarBrandLayoutTest(SimpleTestCase):
     def _css(self):
-        path = settings.BASE_DIR / 'static' / 'css' / 'v3-tokens.css'
+        path = settings.BASE_DIR / 'static' / 'css' / 'style.css'
         return path.read_text(encoding='utf-8')
 
     def _brand_block(self):
@@ -32,16 +32,15 @@ class SidebarBrandLayoutTest(SimpleTestCase):
             block, r'min-height\s*:',
             'min-height membuat brand tumbuh melebihi topbar saat teks panjang')
 
-    def test_subjudul_mendapat_kolom_lebar_penuh(self):
-        """Subjudul harus membentang melewati kolom judul, bukan terkurung."""
-        block = self._brand_block()
-        m = re.search(r'grid-template-areas\s*:\s*"([^"]*)"\s*"([^"]*)"', block)
-        self.assertIsNotNone(m, 'brand harus memakai grid dua baris')
-        baris2 = m.group(2).split()
-        self.assertEqual(
-            baris2.count('sub'), 2,
-            'subjudul harus menempati dua kolom agar "Akreditasi & Manajemen '
-            'Risiko" tidak terpotong ellipsis')
+    def test_subjudul_punya_baris_sendiri(self):
+        """Subjudul berada di blok teks sendiri, bukan berbagi baris dengan ikon."""
+        css = self._css()
+        m = re.search(r'\.sidebar-brand-text small\s*\{([^}]*)\}', css, re.S)
+        self.assertIsNotNone(m, 'blok .sidebar-brand-text small tidak ditemukan')
+        self.assertRegex(
+            m.group(1), r'display\s*:\s*block',
+            'subjudul harus jadi baris sendiri agar nama RS panjang tidak '
+            'berebut lebar dengan judul')
 
     def test_subjudul_tidak_disembunyikan_di_mode_penuh(self):
         css = self._css()

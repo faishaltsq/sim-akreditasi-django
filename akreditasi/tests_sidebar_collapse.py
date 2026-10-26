@@ -1,4 +1,10 @@
-"""Sidebar desktop selalu penuh, tanpa kontrol ciut/perluas."""
+"""Sidebar desktop: tidak ada mode ciut, dan URL aset statis ber-fingerprint.
+
+Keputusan produk: rail navigasi selalu selebar penuh. Tidak ada tombol
+perkecil/perbesar, tidak ada state yang dipulihkan dari localStorage, dan tidak
+ada aturan CSS untuk mode ikon. Tes ini mengunci keputusan tersebut supaya
+kontrol ciut tidak muncul lagi tanpa sengaja.
+"""
 
 import os
 import re
@@ -9,25 +15,23 @@ from django.conf import settings
 from django.test import SimpleTestCase
 
 
-
-
 class SidebarExpandedTest(SimpleTestCase):
-    def test_tombol_collapse_desktop_dihapus(self):
+    def test_tidak_ada_tombol_collapse_di_shell(self):
         template = (settings.BASE_DIR / 'templates/base.html').read_text(encoding='utf-8')
+        self.assertNotIn('data-sidebar-toggle', template)
         self.assertNotIn('sidebarCollapseBtn', template)
         self.assertNotIn('sidebar-collapse-btn', template)
 
-    def test_preferensi_lama_tidak_memulihkan_mode_ciut(self):
+    def test_tidak_ada_state_ciut_yang_dipulihkan(self):
         template = (settings.BASE_DIR / 'templates/base.html').read_text(encoding='utf-8')
-        script = (settings.BASE_DIR / 'static/js/v3-shell.js').read_text(encoding='utf-8')
-        self.assertNotIn('localStorage.getItem', template)
-        self.assertNotIn('localStorage.getItem', script)
-        self.assertNotIn('localStorage.setItem', script)
-        self.assertIn("localStorage.removeItem('arima.v3.sidebar.collapsed')", script)
+        script = (settings.BASE_DIR / 'static/js/main.js').read_text(encoding='utf-8')
+        self.assertNotIn('localStorage', template)
+        self.assertNotIn('sidebar-collapsed', script)
 
     def test_css_tidak_menyediakan_mode_rail(self):
-        css = (settings.BASE_DIR / 'static/css/v3-tokens.css').read_text(encoding='utf-8')
+        css = (settings.BASE_DIR / 'static/css/style.css').read_text(encoding='utf-8')
         self.assertNotIn('.sb-collapsed', css)
+        self.assertNotIn('sidebar-collapsed', css)
         self.assertNotIn('.sidebar-collapse-btn', css)
 
     def test_vercel_merender_url_static_berfingerprint(self):
@@ -41,7 +45,7 @@ class SidebarExpandedTest(SimpleTestCase):
             [sys.executable, '-c', (
                 "import django; django.setup(); "
                 "from django.templatetags.static import static; "
-                "print(static('js/v3-shell.js'))"
+                "print(static('css/style.css'))"
             )],
             cwd=settings.BASE_DIR,
             env=env,
@@ -51,7 +55,7 @@ class SidebarExpandedTest(SimpleTestCase):
         )
         self.assertRegex(
             result.stdout.strip(),
-            re.compile(r'^/static/js/v3-shell\.[0-9a-f]{12}\.js$'),
+            re.compile(r'^/static/css/style\.[0-9a-f]{12}\.css$'),
         )
 
     def test_template_ai_memakai_url_static_berfingerprint(self):

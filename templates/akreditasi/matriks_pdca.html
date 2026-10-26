@@ -1,857 +1,542 @@
 {% extends "base.html" %}
 {% load akreditasi_tags l10n %}
 
-{% block title %}Matriks PDCA — {{ active_category.code }} | ARIMA{% endblock %}
-{% block page_title %}Matriks PDCA: {{ active_category.code }} — {{ active_category.name }}{% endblock %}
-{% block page_subtitle %}Siklus Plan-Do-Check-Action & Manajemen Bukti RDWOS Standar STARKES{% endblock %}
-
-{% block extra_css %}
-<style>
-    .matriks-table th {
-        background-color: var(--body-bg);
-        color: var(--text-primary);
-        font-size: 0.72rem;
-        font-weight: 700;
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
-        vertical-align: middle;
-        padding: 0.75rem 0.6rem;
-        border-bottom: 2px solid var(--border);
-    }
-    .matriks-table td {
-        font-size: 0.78rem;
-        vertical-align: top;
-        padding: 0.65rem 0.6rem;
-        border-bottom: 1px solid var(--surface-hover);
-    }
-    .col-ep-code { width: 9%; }
-    .col-ep-desc { width: 21%; }
-    .col-pdca { width: 15%; position: relative; }
-    .col-score { width: 10%; }
-    
-    .pdca-cell-content {
-        min-height: 68px;
-        cursor: pointer;
-        padding: 0.5rem;
-        border-radius: var(--radius);
-        background: var(--body-bg);
-        border: 1px dashed var(--border-strong);
-        transition: all 0.15s ease-in-out;
-        display: flex;
-        flex-direction: column;
-        justify-content: space-between;
-    }
-    .pdca-cell-content:hover {
-        background: var(--primary-tint);
-        border-color: var(--primary);
-        box-shadow: var(--shadow-xs);
-    }
-    .cell-text {
-        font-size: 0.74rem;
-        line-height: 1.4;
-        color: var(--text-primary);
-        white-space: pre-wrap;
-        word-break: break-word;
-    }
-    .cell-footer {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-top: 0.45rem;
-        padding-top: 0.35rem;
-        border-top: 1px dotted var(--border);
-    }
-    .score-select {
-        font-family: 'JetBrains Mono', monospace;
-        font-weight: 700;
-        font-size: 0.75rem;
-        border-radius: 6px;
-        padding: 0.35rem 0.3rem;
-        min-width: 105px;
-        transition: background-color 0.2s;
-    }
-    .score-10 { background-color: #ECFDF5 !important; color: var(--success) !important; border: 1px solid #BFE8CC !important; }
-    .score-5  { background-color: #fffbeb !important; color: #b45309 !important; border: 1px solid #fde68a !important; }
-    .score-0  { background-color: #fff1f2 !important; color: #be123c !important; border: 1px solid #FCA5A5 !important; }
-
-    .badge-rdwos-r { background-color: var(--primary-tint) !important; color: var(--primary-strong) !important; border: 1px solid #bfdbfe; font-weight: 700; }
-    .badge-rdwos-d { background-color: #ECFDF5 !important; color: var(--success) !important; border: 1px solid #BFE8CC; font-weight: 700; }
-    .badge-rdwos-w { background-color: #fffbeb !important; color: #b45309 !important; border: 1px solid #fde68a; font-weight: 700; }
-    .badge-rdwos-o { background-color: #faf5ff !important; color: #6b21a8 !important; border: 1px solid #e9d5ff; font-weight: 700; }
-    .badge-rdwos-s { background-color: #fff1f2 !important; color: #be123c !important; border: 1px solid #FCA5A5; font-weight: 700; }
-</style>
+{% block title %}Matriks PDCA {{ active_category.code }} | ARIMA{% endblock %}
+{% block page_title %}Matriks PDCA {{ active_category.code }}{% endblock %}
+{% block page_subtitle %}{{ active_category.name }} · Plan, Do, Check, Action dan bukti RDWOS{% endblock %}
+{% block breadcrumb %}
+<li><a href="{% url 'akreditasi:matriks_pdca' %}">Matriks PDCA</a></li>
+<li class="current" aria-current="page">{{ active_category.code }}</li>
 {% endblock %}
 
 {% block content %}
 <div class="container-fluid p-0">
 
-    <!-- HEADER FILTER & CONTROL BAR -->
-    <div class="card shadow-sm border-0 mb-3 bg-white">
-        <div class="card-body p-3">
-            <form method="get" class="row g-2 align-items-center">
-                <!-- Dropdown Pokja -->
-                <div class="col-12 col-md-3">
-                    <label class="form-label small text-muted mb-1 fw-semibold">Pilih Pokja / Bab</label>
-                    <select name="cat" class="form-select form-select-sm font-mono" onchange="this.form.submit()">
+    <!-- FILTER BAR -->
+    <section class="panel mb-3" aria-label="Filter matriks">
+        <div class="panel-body">
+            <form method="get" class="row g-2 align-items-end">
+                <div class="col-12 col-md-4 col-lg-3">
+                    <label class="form-label" for="filterCat">Pokja</label>
+                    <select name="cat" id="filterCat" class="form-select form-select-sm font-mono">
                         {% if is_unit_scoped %}
                             {% for cat in categories %}
-                            <option value="{{ cat.id }}" {% if cat.id == active_category.id %}selected{% endif %}>
-                                [{{ cat.code }}] {{ cat.name }}
-                            </option>
+                            <option value="{{ cat.id }}" {% if cat.id == active_category.id %}selected{% endif %}>[{{ cat.code }}] {{ cat.name }}</option>
                             {% endfor %}
                         {% elif categories_by_kelompok %}
                             {% for k_code, k_info in categories_by_kelompok.items %}
-                            <optgroup label="── {{ k_info.label|upper }} ──">
+                            <optgroup label="{{ k_info.label }}">
                                 {% for cat in k_info.categories %}
-                                <option value="{{ cat.id }}" {% if cat.id == active_category.id %}selected{% endif %}>
-                                    [{{ cat.code }}] {{ cat.name }}
-                                </option>
+                                <option value="{{ cat.id }}" {% if cat.id == active_category.id %}selected{% endif %}>[{{ cat.code }}] {{ cat.name }}</option>
                                 {% endfor %}
                             </optgroup>
                             {% endfor %}
                         {% else %}
                             {% for cat in categories %}
-                            <option value="{{ cat.id }}" {% if cat.id == active_category.id %}selected{% endif %}>
-                                [{{ cat.code }}] {{ cat.name }}
-                            </option>
+                            <option value="{{ cat.id }}" {% if cat.id == active_category.id %}selected{% endif %}>[{{ cat.code }}] {{ cat.name }}</option>
                             {% endfor %}
                         {% endif %}
                     </select>
                 </div>
 
-                <!-- Dropdown Standar -->
-                <div class="col-12 col-md-3">
-                    <label class="form-label small text-muted mb-1 fw-semibold">Pilih Standar</label>
-                    <select name="sub" class="form-select form-select-sm font-mono" onchange="this.form.submit()">
-                        <option value="ALL">-- Semua Standar --</option>
+                <div class="col-12 col-md-3 col-lg-3">
+                    <label class="form-label" for="filterSub">Standar</label>
+                    <select name="sub" id="filterSub" class="form-select form-select-sm font-mono">
+                        <option value="ALL">Semua standar</option>
                         {% for sub in sub_standards %}
-                        <option value="{{ sub }}" {% if sub == selected_sub %}selected{% endif %}>
-                            Standar {{ sub }}
-                        </option>
+                        <option value="{{ sub }}" {% if sub == selected_sub %}selected{% endif %}>{{ sub }}</option>
                         {% endfor %}
                     </select>
                 </div>
 
-                <!-- Filter Unit Kerja -->
-                <div class="col-12 col-md-2">
-                    <label class="form-label small text-muted mb-1 fw-semibold">Unit Kerja</label>
+                <div class="col-12 col-md-3 col-lg-3">
+                    <label class="form-label" for="filterUnit">Unit kerja</label>
                     {% if is_unit_scoped %}
-                        <div class="form-control form-control-sm bg-light" style="font-size:0.78rem;">
-                            {{ units.0.code }} — {{ units.0.name }}
-                        </div>
                         <input type="hidden" name="unit" value="{{ selected_unit_id }}">
+                        <p class="form-control form-control-sm bg-slate-100 mb-0 font-mono">{{ units.0.code }} · {{ units.0.name }}</p>
                     {% else %}
-                    <select name="unit" class="form-select form-select-sm" onchange="this.form.submit()">
-                        <option value="ALL">-- Semua Unit --</option>
+                    <select name="unit" id="filterUnit" class="form-select form-select-sm">
+                        <option value="ALL">Semua unit</option>
                         {% for u in units %}
-                        <option value="{{ u.id }}" {% if u.id|stringformat:"s" == selected_unit_id %}selected{% endif %}>
-                            {{ u.code }} - {{ u.name }}
-                        </option>
+                        <option value="{{ u.id }}" {% if u.id|stringformat:"s" == selected_unit_id %}selected{% endif %}>{{ u.code }} · {{ u.name }}</option>
                         {% endfor %}
                     </select>
                     {% endif %}
                 </div>
 
-                <!-- Right Action Buttons -->
-                <div class="col-12 col-md-4 text-md-end pt-3 pt-md-0">
-                    <div class="d-flex justify-content-md-end gap-2">
-                        <a href="{% url 'akreditasi:ep_create' %}" class="btn btn-sm btn-success d-inline-flex align-items-center gap-1">
-                            <i class="bi bi-plus-circle"></i> Tambah EP
-                        </a>
-                        <a href="{% url 'akreditasi:export_excel' %}" class="btn btn-sm btn-outline-primary d-inline-flex align-items-center gap-1">
-                            <i class="bi bi-file-earmark-excel"></i> Ekspor Excel
-                        </a>
-                    </div>
+                <div class="col-12 col-lg-3 d-flex justify-content-lg-end gap-2">
+                    <button type="submit" class="btn btn-sm btn-primary">Terapkan</button>
+                    <a href="{% url 'akreditasi:ep_create' %}" class="btn btn-sm btn-outline-secondary">
+                        <i class="bi bi-plus-lg" aria-hidden="true"></i> Tambah EP
+                    </a>
+                    <a href="{% url 'akreditasi:export_excel' %}" class="btn btn-sm btn-outline-secondary">
+                        <i class="bi bi-download" aria-hidden="true"></i> Ekspor
+                    </a>
                 </div>
             </form>
         </div>
-    </div>
+    </section>
 
-    <!-- POKJA SUMMARY STRIP -->
-    <div class="d-flex justify-content-between align-items-center bg-light border rounded px-3 py-2 mb-3">
-        <div class="d-flex align-items-center gap-3">
-            <span class="badge bg-primary fs-6 font-mono">{{ active_category.code }}</span>
-            <span class="fw-bold text-dark">{{ active_category.name }}</span>
-            <span class="text-muted small">({{ items|length }} Elemen Penilaian)</span>
-        </div>
-        <div class="d-flex align-items-center gap-3">
-            <span class="small text-muted font-mono">Skor: <strong>{{ total_score }} / {{ total_possible }}</strong></span>
-            <div class="progress" style="width: 120px; height: 8px;">
-                <div class="progress-bar {% if percentage >= 80 %}bg-success{% elif percentage >= 60 %}bg-warning{% else %}bg-danger{% endif %}"
-                     role="progressbar" style="width: {{ percentage|unlocalize }}%;"></div>
+    <!-- POKJA SUMMARY -->
+    <section class="panel mb-3" aria-label="Ringkasan pokja">
+        <div class="panel-body d-flex flex-wrap align-items-center justify-content-between gap-3">
+            <div class="d-flex flex-wrap align-items-center gap-2">
+                <span class="badge bg-primary font-mono">{{ active_category.code }}</span>
+                <span class="fw-semibold">{{ active_category.name }}</span>
+                <span class="small text-muted">{{ items|length }} elemen penilaian</span>
             </div>
-            <span class="badge {% if percentage >= 80 %}bg-success{% elif percentage >= 60 %}bg-warning{% else %}bg-danger{% endif %} font-mono">
-                {{ percentage }}%
-            </span>
+            <div class="d-flex align-items-center gap-3">
+                <span class="small text-muted">Skor <span class="font-mono text-dark">{{ total_score }}</span> dari <span class="font-mono">{{ total_possible }}</span></span>
+                <div class="progress" style="width:140px;" role="img" aria-label="Capaian pokja {{ percentage }} persen">
+                    <div class="progress-bar bg-{% if percentage >= 80 %}success{% elif percentage >= 60 %}warning{% else %}danger{% endif %}"
+                         style="width: {{ percentage|unlocalize }}%;"></div>
+                </div>
+                <span class="font-mono fw-semibold">{{ percentage }}%</span>
+            </div>
         </div>
-    </div>
+    </section>
 
-    <!-- MATRIKS UTAMA (TABEL 7 KOLOM) -->
-    <div class="card shadow-sm border-0 mb-4">
-        <div class="table-responsive">
-            <table class="table table-bordered align-middle mb-0 matriks-table">
+    <!-- MATRIX -->
+    <section class="panel" aria-label="Matriks PDCA">
+        <div class="table-responsive border-0" style="max-height:calc(100vh - 210px);">
+            <table class="table matriks-table mb-0">
+                <caption class="visually-hidden">
+                    Matriks PDCA untuk {{ active_category.name }}. Kolom Plan, Do, Check, dan Action dapat diklik untuk mengisi teks. Setiap sel punya tombol kelola bukti.
+                </caption>
                 <thead>
                     <tr>
-                        <th class="col-ep-code text-center">Nomor EP</th>
-                        <th class="col-ep-desc">Elemen Penilaian (EP)</th>
-                        <th class="col-pdca">Plan (Risiko/Regulasi)</th>
-                        <th class="col-pdca">Do (SOP/Implementasi)</th>
-                        <th class="col-pdca">Check (Evaluasi RDWOS)</th>
-                        <th class="col-pdca">Action (Tindak Lanjut RTL)</th>
-                        <th class="col-score text-center">Skor (10/5/0)</th>
+                        <th class="col-ep">Nomor EP</th>
+                        <th class="col-desc">Elemen penilaian</th>
+                        <th class="col-pdca">Plan<br><span class="th-note">Risiko dan regulasi</span></th>
+                        <th class="col-pdca">Do<br><span class="th-note">SOP dan implementasi</span></th>
+                        <th class="col-pdca">Check<br><span class="th-note">Evaluasi RDWOS</span></th>
+                        <th class="col-pdca">Action<br><span class="th-note">Tindak lanjut</span></th>
+                        <th class="col-score">Skor</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for item in items %}
                     <tr id="row-ep-{{ item.id }}">
-                        <!-- Kolom 1: Nomor EP -->
-                        <td class="text-center bg-white">
-                            <span class="fw-bold font-mono text-primary d-block">{{ item.code }}</span>
-                            <span class="badge bg-secondary font-mono small" style="font-size:0.65rem;">Std {{ item.sub_standard }}</span>
-                            <div class="mt-2">
-                                <a href="{% url 'akreditasi:ep_detail' item.id %}" class="btn btn-xs btn-outline-secondary py-0 px-1" style="font-size:0.65rem;" title="Detail Lengkap">
-                                    <i class="bi bi-eye"></i> Detail
-                                </a>
-                            </div>
+                        <td class="col-ep">
+                            <span class="ep-code font-mono">{{ item.code }}</span>
+                            <span class="ep-sub">Standar {{ item.sub_standard }}</span>
+                            <a href="{% url 'akreditasi:ep_detail' item.id %}" class="ep-detail-link">Detail</a>
                         </td>
 
-                        <!-- Kolom 2: Teks Lengkap EP -->
-                        <td class="bg-white">
-                            <div class="fw-semibold text-dark mb-1" style="line-height:1.35;">{{ item.description }}</div>
-                            {% if item.sub_title %}
-                            <div class="text-muted small mb-1" style="font-size:0.7rem;"><em>{{ item.sub_title }}</em></div>
-                            {% endif %}
-                            <div class="d-flex flex-wrap gap-1 mt-1">
+                        <td class="col-desc">
+                            <p class="ep-text">{{ item.description }}</p>
+                            {% if item.sub_title %}<p class="ep-subtitle">{{ item.sub_title }}</p>{% endif %}
+                            <div class="ep-meta">
                                 {% if item.record.unit %}
-                                <span class="badge bg-light text-dark border font-mono" style="font-size:0.65rem;">
-                                    <i class="bi bi-building me-1"></i>{{ item.record.unit.code }}
-                                </span>
+                                <span class="meta-chip font-mono" title="Unit penanggung jawab">{{ item.record.unit.code }}</span>
                                 {% endif %}
                                 {% if item.record.target_date %}
-                                <span class="badge bg-light text-muted border font-mono" style="font-size:0.65rem;">
-                                    <i class="bi bi-calendar-event me-1"></i>{{ item.record.target_date|date:"d/m/Y" }}
-                                </span>
+                                <span class="meta-chip font-mono" title="Target penyelesaian">{{ item.record.target_date|date:"d/m/Y" }}</span>
                                 {% endif %}
                             </div>
                         </td>
 
-                        <!-- Kolom 3: Plan (Analisis Risiko/Regulasi) -->
-                        <td>
-                            <div class="pdca-cell-content" onclick="openInlineEditModal({{ item.record.id }}, 'risk_mitigation', 'Plan (Analisis Risiko/Regulasi)', '{{ item.code }}')">
+                        <td class="col-pdca">
+                            <div class="pdca-cell" role="button" tabindex="0"
+                                 onclick="openInlineEditModal({{ item.record.id }}, 'risk_mitigation', 'Plan: analisis risiko dan regulasi', '{{ item.code }}')"
+                                 onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openInlineEditModal({{ item.record.id }}, 'risk_mitigation', 'Plan: analisis risiko dan regulasi', '{{ item.code }}');}">
                                 <div class="cell-text" id="cell-risk_mitigation-{{ item.record.id }}">
-                                    {{ item.record.risk_mitigation|default:"<span class='text-muted fst-italic'>Klik untuk isi Plan / Analisis Risiko...</span>"|safe }}
+                                    {% if item.record.risk_mitigation %}{{ item.record.risk_mitigation }}{% else %}<span class="cell-empty">Belum diisi. Klik untuk menulis analisis risiko atau dasar regulasi.</span>{% endif %}
                                 </div>
-                                <div class="cell-footer">
-                                    <span class="badge bg-white text-secondary border font-mono" style="font-size:0.6rem;">Plan</span>
-                                    <button type="button" class="btn btn-sm btn-link p-0 text-primary text-decoration-none" 
-                                            onclick="event.stopPropagation(); openBuktiModal({{ item.id }}, '{{ item.code }}');" title="Manajemen Bukti Dokumen">
-                                        <i class="bi bi-paperclip fs-6"></i>
+                                <div class="cell-foot">
+                                    <span class="cell-phase">Plan</span>
+                                    <button type="button" class="cell-attach"
+                                            onclick="event.stopPropagation(); openBuktiModal({{ item.id }}, '{{ item.code }}');"
+                                            aria-label="Kelola bukti untuk EP {{ item.code }}, kolom Plan">
+                                        <i class="bi bi-paperclip" aria-hidden="true"></i>
                                     </button>
                                 </div>
                             </div>
                         </td>
 
-                        <!-- Kolom 4: Do (Implementasi/SOP/Kebijakan) -->
-                        <td>
-                            <div class="pdca-cell-content" onclick="openInlineEditModal({{ item.record.id }}, 'quality_target', 'Do (Implementasi / SOP / Kebijakan)', '{{ item.code }}')">
+                        <td class="col-pdca">
+                            <div class="pdca-cell" role="button" tabindex="0"
+                                 onclick="openInlineEditModal({{ item.record.id }}, 'quality_target', 'Do: implementasi, SOP, kebijakan', '{{ item.code }}')"
+                                 onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openInlineEditModal({{ item.record.id }}, 'quality_target', 'Do: implementasi, SOP, kebijakan', '{{ item.code }}');}">
                                 <div class="cell-text" id="cell-quality_target-{{ item.record.id }}">
-                                    {{ item.record.quality_target|default:"<span class='text-muted fst-italic'>Klik untuk isi Do / SOP...</span>"|safe }}
+                                    {% if item.record.quality_target %}{{ item.record.quality_target }}{% else %}<span class="cell-empty">Belum diisi. Klik untuk menulis SOP atau kebijakan yang berlaku.</span>{% endif %}
                                 </div>
-                                <div class="cell-footer">
-                                    <span class="badge bg-white text-secondary border font-mono" style="font-size:0.6rem;">Do</span>
-                                    <button type="button" class="btn btn-sm btn-link p-0 text-primary text-decoration-none" 
-                                            onclick="event.stopPropagation(); openBuktiModal({{ item.id }}, '{{ item.code }}');" title="Manajemen Bukti Dokumen">
-                                        <i class="bi bi-paperclip fs-6"></i>
+                                <div class="cell-foot">
+                                    <span class="cell-phase">Do</span>
+                                    <button type="button" class="cell-attach"
+                                            onclick="event.stopPropagation(); openBuktiModal({{ item.id }}, '{{ item.code }}');"
+                                            aria-label="Kelola bukti untuk EP {{ item.code }}, kolom Do">
+                                        <i class="bi bi-paperclip" aria-hidden="true"></i>
                                     </button>
                                 </div>
                             </div>
                         </td>
 
-                        <!-- Kolom 5: Check (Evaluasi Pelaksanaan/RDWOS) -->
-                        <td>
-                            <div class="pdca-cell-content" onclick="openInlineEditModal({{ item.record.id }}, 'eval_notes', 'Check (Evaluasi Pelaksanaan / RDWOS)', '{{ item.code }}')">
+                        <td class="col-pdca">
+                            <div class="pdca-cell" role="button" tabindex="0"
+                                 onclick="openInlineEditModal({{ item.record.id }}, 'eval_notes', 'Check: evaluasi pelaksanaan dan RDWOS', '{{ item.code }}')"
+                                 onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openInlineEditModal({{ item.record.id }}, 'eval_notes', 'Check: evaluasi pelaksanaan dan RDWOS', '{{ item.code }}');}">
                                 <div class="cell-text" id="cell-eval_notes-{{ item.record.id }}">
-                                    {{ item.record.eval_notes|default:"<span class='text-muted fst-italic'>Klik untuk isi Check / Evaluasi...</span>"|safe }}
+                                    {% if item.record.eval_notes %}{{ item.record.eval_notes }}{% else %}<span class="cell-empty">Belum diisi. Klik untuk menulis hasil evaluasi.</span>{% endif %}
                                 </div>
-                                <div class="cell-footer">
-                                    <!-- Badges RDWOS Berkas Terlampir -->
-                                    <div class="d-flex gap-1 flex-wrap">
+                                <div class="cell-foot">
+                                    <span class="d-flex flex-wrap gap-1">
                                         {% for req in item.evidence_reqs.all %}
                                             {% if req.files.all %}
-                                                <span class="badge badge-rdwos-{{ req.category_type|lower }} font-mono" style="font-size:0.6rem;" title="{{ req.title }}">
-                                                    {{ req.category_type }}: {{ req.files.count }}
-                                                </span>
+                                            <span class="badge badge-rdwos-{{ req.category_type|lower }}" title="{{ req.title }}">{{ req.category_type }} {{ req.files.count }}</span>
                                             {% endif %}
                                         {% endfor %}
-                                    </div>
-                                    <button type="button" class="btn btn-sm btn-link p-0 text-primary text-decoration-none ms-auto" 
-                                            onclick="event.stopPropagation(); openBuktiModal({{ item.id }}, '{{ item.code }}');" title="Manajemen Bukti Dokumen">
-                                        <i class="bi bi-paperclip fs-6"></i>
+                                    </span>
+                                    <button type="button" class="cell-attach"
+                                            onclick="event.stopPropagation(); openBuktiModal({{ item.id }}, '{{ item.code }}');"
+                                            aria-label="Kelola bukti untuk EP {{ item.code }}, kolom Check">
+                                        <i class="bi bi-paperclip" aria-hidden="true"></i>
                                     </button>
                                 </div>
                             </div>
                         </td>
 
-                        <!-- Kolom 6: Action (Tindak Lanjut / RTL) -->
-                        <td>
-                            <div class="pdca-cell-content"
-                                 onclick="openInlineEditModal({{ item.record.id }}, 'action_plan', 'Action (Tindak Lanjut / RTL)', '{{ item.code }}', '{{ item.record.pic|escapejs }}', '{{ item.record.est_cost|default:0 }}')"
+                        <td class="col-pdca">
+                            <div class="pdca-cell" role="button" tabindex="0"
+                                 onclick="openInlineEditModal({{ item.record.id }}, 'action_plan', 'Action: rencana tindak lanjut', '{{ item.code }}', '{{ item.record.pic|escapejs }}', '{{ item.record.est_cost|default:0 }}')"
+                                 onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openInlineEditModal({{ item.record.id }}, 'action_plan', 'Action: rencana tindak lanjut', '{{ item.code }}', '{{ item.record.pic|escapejs }}', '{{ item.record.est_cost|default:0 }}');}"
                                  data-pic="{{ item.record.pic|escapejs }}"
                                  data-cost="{{ item.record.est_cost|default:0 }}">
                                 <div class="cell-text" id="cell-action_plan-{{ item.record.id }}">
-                                    {{ item.record.action_plan|default:"<span class='text-muted fst-italic'>Klik untuk isi Action / RTL...</span>"|safe }}
+                                    {% if item.record.action_plan %}{{ item.record.action_plan }}{% else %}<span class="cell-empty">Belum diisi. Klik untuk menulis rencana tindak lanjut.</span>{% endif %}
                                 </div>
                                 {% if item.record.pic or item.record.est_cost %}
-                                <div class="d-flex flex-column gap-1 mt-1">
+                                <div class="cell-tags">
                                     {% if item.record.pic %}
-                                    <span class="badge" style="font-size:0.6rem; background:#e6f9f7; color:var(--primary); border:1px solid var(--primary); text-align:left; font-weight:500; white-space:normal;">
-                                        <i class="bi bi-person-fill me-1"></i>{{ item.record.pic }}
-                                    </span>
+                                    <span class="cell-tag"><i class="bi bi-person" aria-hidden="true"></i>{{ item.record.pic }}</span>
                                     {% endif %}
                                     {% if item.record.est_cost %}
-                                    <span class="badge bg-light border text-secondary" style="font-size:0.6rem; text-align:left; font-weight:500;">
-                                        <i class="bi bi-cash-coin me-1"></i>Rp {{ item.record.est_cost|floatformat:0 }}
-                                    </span>
+                                    <span class="cell-tag"><i class="bi bi-cash" aria-hidden="true"></i>{{ item.record.est_cost|rupiah }}</span>
                                     {% endif %}
                                 </div>
                                 {% endif %}
-                                <div class="cell-footer">
-                                    <span class="badge bg-white text-secondary border font-mono" style="font-size:0.6rem;">Action</span>
-                                    <button type="button" class="btn btn-sm btn-link p-0 text-primary text-decoration-none"
-                                            onclick="event.stopPropagation(); openBuktiModal({{ item.id }}, '{{ item.code }}');" title="Manajemen Bukti Dokumen">
-                                        <i class="bi bi-paperclip fs-6"></i>
+                                <div class="cell-foot">
+                                    <span class="cell-phase">Action</span>
+                                    <button type="button" class="cell-attach"
+                                            onclick="event.stopPropagation(); openBuktiModal({{ item.id }}, '{{ item.code }}');"
+                                            aria-label="Kelola bukti untuk EP {{ item.code }}, kolom Action">
+                                        <i class="bi bi-paperclip" aria-hidden="true"></i>
                                     </button>
                                 </div>
                             </div>
                         </td>
 
-                        <!-- Kolom 7: Skor (10, 5, 0) Quick Scoring AJAX -->
-                        <td class="text-center bg-white">
-                            <select class="form-select score-select score-{{ item.record.score|default:0 }}" 
+                        <td class="col-score">
+                            <label class="visually-hidden" for="score-select-{{ item.record.id }}">Skor EP {{ item.code }}</label>
+                            <select class="form-select form-select-sm score-select score-{{ item.record.score|default:0 }}"
                                     id="score-select-{{ item.record.id }}"
-                                    aria-label="Skor EP {{ item.code }}"
                                     data-record-id="{{ item.record.id }}"
                                     onchange="updateQuickScore(this)">
-                                <option value="10" {% if item.record.score == 10 %}selected{% endif %}>10 ✓</option>
-                                <option value="5"  {% if item.record.score == 5 %}selected{% endif %}>5 △</option>
-                                <option value="0"  {% if item.record.score == 0 or not item.record.score %}selected{% endif %}>0 ✗</option>
+                                <option value="10" {% if item.record.score == 10 %}selected{% endif %}>10 tercapai</option>
+                                <option value="5"  {% if item.record.score == 5 %}selected{% endif %}>5 sebagian</option>
+                                <option value="0"  {% if item.record.score == 0 or not item.record.score %}selected{% endif %}>0 belum ada</option>
                             </select>
-                            <span class="small font-mono text-muted mt-1 score-saving-indicator" id="saving-indicator-{{ item.record.id }}" style="display:none; font-size:0.65rem;">
-                                <i class="bi bi-arrow-repeat spin"></i> Menyimpan...
+                            <span class="score-saving" id="saving-indicator-{{ item.record.id }}" role="status">
+                                <i class="bi bi-arrow-repeat spin" aria-hidden="true"></i> Menyimpan
                             </span>
                         </td>
                     </tr>
                     {% empty %}
                     <tr>
-                        <td colspan="7" class="text-center py-5 text-muted">
-                            <i class="bi bi-folder-x fs-1 d-block mb-2 text-secondary"></i>
-                            Tidak ada Elemen Penilaian pada filter ini.
+                        <td colspan="7">
+                            <div class="state">
+                                <i class="bi bi-folder2-open state-icon" aria-hidden="true"></i>
+                                <span class="state-title">Tidak ada EP pada filter ini</span>
+                                <span class="state-text">Pokja atau standar yang dipilih belum punya elemen penilaian, atau unit kerja yang dipilih tidak terkait. Coba pilih standar lain atau semua unit.</span>
+                                <a href="{% url 'akreditasi:ep_create' %}" class="btn btn-sm btn-outline-primary state-action">Tambah EP baru</a>
+                            </div>
                         </td>
                     </tr>
                     {% endfor %}
                 </tbody>
             </table>
         </div>
-    </div>
+    </section>
 
 </div>
 
-<!-- ========================================================================== -->
-<!-- MODAL: MANAJEMEN BUKTI DOKUMEN (3-TAB SESUAI SPEC)                         -->
-<!-- ========================================================================== -->
-<div class="modal fade" id="modalBuktiDokumen" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-centered">
-        <div class="modal-content shadow-lg border-0">
-            <div class="modal-header bg-primary text-white py-3">
+<!-- EVIDENCE MODAL -->
+<div class="modal fade" id="modalBuktiDokumen" tabindex="-1" aria-labelledby="modalBuktiTitle" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
                 <div>
-                    <h6 class="modal-title fw-bold" id="modalBuktiTitle">Manajemen Bukti Dokumen</h6>
-                    <small class="text-white-50" id="modalBuktiSubtitle">Memuat detail EP...</small>
+                    <h2 class="modal-title" id="modalBuktiTitle">Kelola bukti dokumen</h2>
+                    <p class="small text-muted mb-0" id="modalBuktiSubtitle">Memuat detail EP</p>
                 </div>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tutup"></button>
             </div>
             <div class="modal-body p-0">
-                <!-- Nav Tabs -->
-                <ul class="nav nav-tabs px-3 pt-2 bg-light border-bottom" role="tablist">
-                    <li class="nav-item">
-                        <button class="nav-link active fw-semibold small" data-bs-toggle="tab" data-bs-target="#tabUploadBaru">
-                            <i class="bi bi-cloud-arrow-up me-1"></i> Tab 1: Upload Baru
+                <ul class="nav nav-tabs px-3 pt-2" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" id="tabUploadBaruBtn" data-bs-toggle="tab" data-bs-target="#tabUploadBaru" type="button" role="tab" aria-controls="tabUploadBaru" aria-selected="true">
+                            Unggah baru
                         </button>
                     </li>
-                    <li class="nav-item">
-                        <button class="nav-link fw-semibold small" data-bs-toggle="tab" data-bs-target="#tabPilihRepo">
-                            <i class="bi bi-collection me-1"></i> Tab 2: Pilih dari Repositori
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="tabPilihRepoBtn" data-bs-toggle="tab" data-bs-target="#tabPilihRepo" type="button" role="tab" aria-controls="tabPilihRepo" aria-selected="false">
+                            Pilih dari repositori
                         </button>
                     </li>
-                    <li class="nav-item">
-                        <button class="nav-link fw-semibold small" data-bs-toggle="tab" data-bs-target="#tabDaftarTerlink">
-                            <i class="bi bi-link-45deg me-1"></i> Tab 3: Daftar Terlink (<span id="countLinkedFiles">0</span>)
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="tabDaftarTerlinkBtn" data-bs-toggle="tab" data-bs-target="#tabDaftarTerlink" type="button" role="tab" aria-controls="tabDaftarTerlink" aria-selected="false">
+                            Terlink (<span id="countLinkedFiles">0</span>)
                         </button>
                     </li>
                 </ul>
 
                 <div class="tab-content p-3">
-                    <!-- TAB 1: UPLOAD BARU -->
-                    <div class="tab-pane fade show active" id="tabUploadBaru">
+                    <div class="tab-pane fade show active" id="tabUploadBaru" role="tabpanel" aria-labelledby="tabUploadBaruBtn" tabindex="0">
                         <form id="formUploadBuktiAjax" onsubmit="submitUploadBukti(event)">
                             <div class="mb-3">
-                                <label for="uploadReqSelect" class="form-label small fw-bold">Jenis Regulasi / Bukti (RDWOS)</label>
+                                <label for="uploadReqSelect" class="form-label">Jenis bukti RDWOS</label>
                                 <select class="form-select form-select-sm" id="uploadReqSelect" required>
-                                    <!-- Populated via AJAX -->
+                                    <option value="">Memuat daftar kebutuhan bukti</option>
                                 </select>
                             </div>
                             <div class="mb-3">
-                                <label for="uploadDocName" class="form-label small fw-bold">Nama Dokumen</label>
-                                <input type="text" class="form-control form-control-sm" id="uploadDocName" placeholder="Contoh: SK Direktur tentang Struktur Organisasi RS" required>
+                                <label for="uploadDocName" class="form-label">Nama dokumen</label>
+                                <input type="text" class="form-control form-control-sm" id="uploadDocName"
+                                       placeholder="Contoh: SK Direktur tentang struktur organisasi" required>
                             </div>
                             <div class="mb-3">
-                                <label for="uploadFileInput" class="form-label small fw-bold">Berkas (PDF, DOCX, XLSX, max 15MB)</label>
-                                <input type="file" class="form-control form-control-sm" id="uploadFileInput" required>
+                                <label for="uploadFileInput" class="form-label">Berkas</label>
+                                <input type="file" class="form-control form-control-sm" id="uploadFileInput" required
+                                       aria-describedby="uploadFileHelp">
+                                <p class="form-text mb-0" id="uploadFileHelp">PDF, DOCX, XLSX, JPG, atau PNG. Maksimum 15 MB per berkas.</p>
                             </div>
-                            <div class="text-end">
+                            <div class="d-flex justify-content-end">
                                 <button type="submit" class="btn btn-sm btn-primary" id="btnSubmitUpload">
-                                    <i class="bi bi-upload me-1"></i> Simpan &amp; Link Dokumen
+                                    <i class="bi bi-upload" aria-hidden="true"></i> Simpan dan link
                                 </button>
                             </div>
                         </form>
                     </div>
 
-                    <!-- TAB 2: PILIH DARI REPOSITORI -->
-                    <div class="tab-pane fade" id="tabPilihRepo">
-                        <p class="small text-muted mb-2">Pilih dokumen yang sudah pernah diunggah di sistem untuk ditautkan ke EP ini:</p>
+                    <div class="tab-pane fade" id="tabPilihRepo" role="tabpanel" aria-labelledby="tabPilihRepoBtn" tabindex="0">
+                        <p class="small text-muted">Berkas yang sudah pernah diunggah dapat ditautkan ulang ke EP ini tanpa mengunggah ulang.</p>
                         <div class="mb-3">
-                            <label for="linkTargetReqSelect" class="form-label small fw-bold">Tautkan ke Kategori Bukti:</label>
+                            <label for="linkTargetReqSelect" class="form-label">Tautkan ke kebutuhan bukti</label>
                             <select class="form-select form-select-sm" id="linkTargetReqSelect">
-                                <!-- Populated via AJAX -->
+                                <option value="">Memuat daftar kebutuhan bukti</option>
                             </select>
                         </div>
-                        <div class="table-responsive" style="max-height: 250px;">
-                            <table class="table table-sm table-hover align-middle mb-0" style="font-size:0.75rem;">
-                                <thead class="table-light">
+                        <div class="table-responsive" style="max-height:260px;">
+                            <table class="table table-sm table-hover align-middle mb-0">
+                                <thead>
                                     <tr>
-                                        <th style="width:40px;">Pilih</th>
-                                        <th>Nama Berkas</th>
-                                        <th>Kategori Asal</th>
+                                        <th style="width:44px;">Pilih</th>
+                                        <th>Nama berkas</th>
+                                        <th>Asal</th>
                                         <th>Ukuran</th>
                                     </tr>
                                 </thead>
                                 <tbody id="repoFilesTableBody">
-                                    <!-- Populated via AJAX -->
+                                    <tr><td colspan="4" class="text-center text-muted py-3">Memuat berkas repositori</td></tr>
                                 </tbody>
                             </table>
                         </div>
-                        <div class="text-end mt-3">
+                        <div class="d-flex justify-content-end mt-3">
                             <button type="button" class="btn btn-sm btn-primary" onclick="linkSelectedRepoDoc()">
-                                <i class="bi bi-link me-1"></i> Link Dokumen Terpilih
+                                <i class="bi bi-link-45deg" aria-hidden="true"></i> Link dokumen terpilih
                             </button>
                         </div>
                     </div>
 
-                    <!-- TAB 3: DAFTAR DOKUMEN TERLINK -->
-                    <div class="tab-pane fade" id="tabDaftarTerlink">
+                    <div class="tab-pane fade" id="tabDaftarTerlink" role="tabpanel" aria-labelledby="tabDaftarTerlinkBtn" tabindex="0">
                         <div class="table-responsive">
-                            <table class="table table-sm table-bordered align-middle mb-0" style="font-size:0.75rem;">
-                                <thead class="table-light">
+                            <table class="table table-sm align-middle mb-0">
+                                <thead>
                                     <tr>
                                         <th>Tipe</th>
-                                        <th>Nama Dokumen</th>
+                                        <th>Nama dokumen</th>
                                         <th>Ukuran</th>
                                         <th>Status</th>
-                                        <th class="text-center" style="width:70px;">Aksi</th>
+                                        <th class="text-center" style="width:72px;">Aksi</th>
                                     </tr>
                                 </thead>
                                 <tbody id="linkedFilesTableBody">
-                                    <!-- Populated via AJAX -->
+                                    <tr><td colspan="5" class="text-center text-muted py-3">Memuat berkas terlink</td></tr>
                                 </tbody>
                             </table>
                         </div>
                     </div>
                 </div>
             </div>
-            <div class="modal-footer py-2 bg-light">
-                <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Tutup</button>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal">Tutup</button>
             </div>
         </div>
     </div>
 </div>
 
-<!-- ========================================================================== -->
-<!-- MODAL: INLINE EDIT TEXT SEL PDCA                                           -->
-<!-- ========================================================================== -->
-<div class="modal fade" id="modalInlineEdit" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-md modal-dialog-centered">
-        <div class="modal-content shadow-lg border-0">
-            <div class="modal-header bg-dark text-white py-2">
-                <h6 class="modal-title small fw-bold" id="modalInlineTitle">Edit Sel PDCA</h6>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+<!-- INLINE CELL EDIT MODAL -->
+<div class="modal fade" id="modalInlineEdit" tabindex="-1" aria-labelledby="modalInlineTitle" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title" id="modalInlineTitle">Edit isi sel</h2>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tutup"></button>
             </div>
-            <div class="modal-body p-3">
+            <div class="modal-body">
                 <input type="hidden" id="inlineRecordId">
                 <input type="hidden" id="inlineField">
                 <div class="mb-2">
-                    <label for="inlineTextValue" class="form-label small text-muted mb-1" id="inlineFieldLabel">Isi Teks:</label>
-                    <textarea class="form-control" id="inlineTextValue" rows="5" placeholder="Masukkan rincian..."></textarea>
+                    <label for="inlineTextValue" class="form-label" id="inlineFieldLabel">Isi teks</label>
+                    <textarea class="form-control" id="inlineTextValue" rows="5"
+                              placeholder="Tulis rincian, dasar regulasi, atau hasil evaluasi"></textarea>
                 </div>
-                <!-- PJ + Biaya: tampil hanya saat edit kolom Action -->
                 <div id="inlineActionExtra" style="display:none;">
-                    <hr class="my-2">
+                    <hr>
                     <div class="row g-2">
                         <div class="col-md-7">
-                            <label class="form-label small fw-semibold mb-1">
-                                <i class="bi bi-person-fill text-teal me-1"></i>Penanggung Jawab (PJ)
-                            </label>
+                            <label for="inlinePic" class="form-label">Penanggung jawab</label>
                             <input type="text" class="form-control form-control-sm" id="inlinePic"
-                                   placeholder="Nama penanggung jawab RTL...">
+                                   placeholder="Nama penanggung jawab tindak lanjut">
                         </div>
                         <div class="col-md-5">
-                            <label class="form-label small fw-semibold mb-1">
-                                <i class="bi bi-cash-coin text-teal me-1"></i>Estimasi Biaya (Rp)
-                            </label>
+                            <label for="inlineEstCost" class="form-label">Estimasi biaya (Rp)</label>
                             <input type="number" class="form-control form-control-sm" id="inlineEstCost"
                                    placeholder="0" min="0" step="1000">
-                            <div class="text-muted" style="font-size:0.65rem;" id="inlineCostDisplay"></div>
+                            <p class="form-text mb-0" id="inlineCostDisplay"></p>
                         </div>
                     </div>
                 </div>
             </div>
-            <div class="modal-footer py-2 bg-light">
-                <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Batal</button>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal">Batal</button>
                 <button type="button" class="btn btn-sm btn-primary" id="btnSaveInline" onclick="saveInlineEdit()">
-                    <i class="bi bi-check-lg me-1"></i> Simpan Perubahan
+                    Simpan perubahan
                 </button>
             </div>
         </div>
     </div>
 </div>
+{% endblock %}
 
+{% block extra_css %}
+<style>
+    .matriks-table { font-size: 13px; }
+    .matriks-table thead th {
+        position: sticky;
+        top: 0;
+        z-index: 3;
+        background: var(--subtle);
+        border-bottom: 1px solid var(--line);
+        vertical-align: top;
+        line-height: 1.25;
+    }
+    .matriks-table .th-note {
+        display: block;
+        margin-top: 2px;
+        font-size: 10px;
+        font-weight: 400;
+        letter-spacing: 0;
+        text-transform: none;
+        color: var(--ink-500);
+    }
+    .col-ep { width: 104px; }
+    .col-desc { width: 23%; min-width: 220px; }
+    .col-pdca { width: 16%; min-width: 168px; }
+    .col-score { width: 118px; }
+
+    .matriks-table tbody tr:hover td { background: var(--subtle); }
+
+    .ep-code { display: block; font-size: 12px; font-weight: 500; color: var(--accent-ink); }
+    .ep-sub { display: block; margin-top: 2px; font-size: 11px; color: var(--ink-500); }
+    .ep-detail-link { display: inline-block; margin-top: 6px; font-size: 11px; }
+
+    .ep-text { margin: 0; font-size: 13px; line-height: 1.45; color: var(--ink-900); }
+    .ep-subtitle { margin: 4px 0 0; font-size: 12px; font-style: italic; color: var(--ink-500); }
+    .ep-meta { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
+    .meta-chip {
+        padding: 1px 5px;
+        border: 1px solid var(--line);
+        border-radius: var(--radius-sm);
+        font-size: 10px;
+        color: var(--ink-500);
+        background: var(--surface);
+    }
+
+    .pdca-cell {
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        min-height: 74px;
+        padding: 8px;
+        border: 1px solid transparent;
+        border-radius: var(--radius);
+        cursor: pointer;
+        transition: background var(--dur) var(--ease), border-color var(--dur) var(--ease);
+    }
+    .pdca-cell:hover { background: var(--accent-tint); border-color: var(--accent-line); }
+    .pdca-cell:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+    .cell-text { font-size: 12px; line-height: 1.45; color: var(--ink-900); white-space: pre-wrap; overflow-wrap: anywhere; }
+    .cell-empty { color: var(--ink-500); font-style: italic; }
+    .cell-foot {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 6px;
+        margin-top: 8px;
+        padding-top: 5px;
+        border-top: 1px solid var(--line-soft);
+    }
+    .cell-phase { font-size: 10px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-500); }
+    .cell-attach {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 24px;
+        height: 24px;
+        padding: 0;
+        border: 1px solid transparent;
+        border-radius: var(--radius-sm);
+        background: transparent;
+        color: var(--ink-500);
+        font-size: 13px;
+        cursor: pointer;
+    }
+    .cell-attach:hover { background: var(--surface); border-color: var(--line-strong); color: var(--accent-ink); }
+    .cell-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
+    .cell-tag {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 1px 6px;
+        border: 1px solid var(--line);
+        border-radius: var(--radius-sm);
+        background: var(--surface);
+        font-size: 11px;
+        color: var(--ink-700);
+    }
+
+    .score-select {
+        font-family: var(--font-mono);
+        font-size: 12px;
+        font-weight: 500;
+        min-width: 104px;
+    }
+    .score-select.score-10 { background: var(--success-bg); border-color: var(--success-line); color: var(--success-ink); }
+    .score-select.score-5  { background: var(--warning-bg); border-color: var(--warning-line); color: var(--warning-ink); }
+    .score-select.score-0  { background: var(--danger-bg);  border-color: var(--danger-line);  color: var(--danger-ink); }
+
+    .score-saving { display: none; margin-top: 4px; font-size: 11px; color: var(--ink-500); }
+    .score-saving.is-visible { display: block; }
+
+    @media (max-width: 991.98px) {
+        .matriks-table { font-size: 12px; }
+        .col-desc { min-width: 190px; }
+        .col-pdca { min-width: 150px; }
+    }
+</style>
 {% endblock %}
 
 {% block extra_js %}
-<script>
-// QUICK SCORE AJAX
-function updateQuickScore(selectElem) {
-    const recordId = selectElem.getAttribute('data-record-id');
-    const newScore = selectElem.value;
-    const indicator = document.getElementById(`saving-indicator-${recordId}`);
-
-    // Update style class
-    selectElem.classList.remove('score-10', 'score-5', 'score-0');
-    selectElem.classList.add(`score-${newScore}`);
-
-    if (indicator) indicator.style.display = 'block';
-
-    fetch(`/ep/record/${recordId}/quick-score/`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/x-www-form-urlencoded',
-            'X-CSRFToken': getCookie('csrftoken')
-        },
-        body: `score=${newScore}`
-    })
-    .then(r => r.json())
-    .then(data => {
-        if (indicator) indicator.style.display = 'none';
-        if (data.success) {
-            showToast('Skor berhasil disimpan!', 'success');
-        } else {
-            showToast('Gagal simpan skor: ' + (data.error || ''), 'danger');
-        }
-    })
-    .catch(err => {
-        if (indicator) indicator.style.display = 'none';
-        showToast('Terjadi kesalahan jaringan', 'danger');
-    });
-}
-
-// INLINE EDIT MODAL
-let inlineModalInstance = null;
-function openInlineEditModal(recordId, field, label, epCode, currentPic, currentCost) {
-    document.getElementById('inlineRecordId').value = recordId;
-    document.getElementById('inlineField').value = field;
-    document.getElementById('modalInlineTitle').innerText = `${epCode} — ${label}`;
-
-    // Ambil isi teks saat ini dari DOM
-    const cellElem = document.getElementById(`cell-${field}-${recordId}`);
-    let currentText = cellElem ? cellElem.innerText.trim() : '';
-    if (currentText.includes('Klik untuk isi')) currentText = '';
-    document.getElementById('inlineTextValue').value = currentText;
-
-    // Tampilkan/sembunyikan section PJ + Biaya hanya untuk kolom Action
-    const extraDiv = document.getElementById('inlineActionExtra');
-    if (field === 'action_plan') {
-        extraDiv.style.display = 'block';
-        document.getElementById('inlinePic').value = currentPic || '';
-        const costVal = parseFloat(currentCost) || 0;
-        document.getElementById('inlineEstCost').value = costVal > 0 ? costVal : '';
-        const displayEl = document.getElementById('inlineCostDisplay');
-        if (costVal > 0) {
-            displayEl.textContent = 'Rp ' + costVal.toLocaleString('id-ID');
-        } else {
-            displayEl.textContent = '';
-        }
-    } else {
-        extraDiv.style.display = 'none';
-    }
-
-    if (!inlineModalInstance) {
-        inlineModalInstance = new bootstrap.Modal(document.getElementById('modalInlineEdit'));
-    }
-    inlineModalInstance.show();
-}
-
-// Update live preview Rp saat ketik biaya
-document.addEventListener('DOMContentLoaded', function() {
-    const costInput = document.getElementById('inlineEstCost');
-    if (costInput) {
-        costInput.addEventListener('input', function() {
-            const v = parseFloat(this.value) || 0;
-            document.getElementById('inlineCostDisplay').textContent =
-                v > 0 ? 'Rp ' + v.toLocaleString('id-ID') : '';
-        });
-    }
-});
-
-function saveInlineEdit() {
-    const recordId = document.getElementById('inlineRecordId').value;
-    const field = document.getElementById('inlineField').value;
-    const value = document.getElementById('inlineTextValue').value.trim();
-
-    const payload = { field: field, value: value };
-
-    // Sertakan PJ + Biaya jika di kolom Action
-    if (field === 'action_plan') {
-        payload.pic = document.getElementById('inlinePic').value.trim();
-        const rawCost = document.getElementById('inlineEstCost').value.trim();
-        payload.est_cost = rawCost ? parseFloat(rawCost) : 0;
-    }
-
-    fetch(`/ep/record/${recordId}/inline-edit/`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRFToken': getCookie('csrftoken')
-        },
-        body: JSON.stringify(payload)
-    })
-    .then(r => r.json())
-    .then(data => {
-        if (data.success) {
-            const cellElem = document.getElementById(`cell-${field}-${recordId}`);
-            if (cellElem) {
-                cellElem.innerHTML = value ? escapeHtml(value) : `<span class='text-muted fst-italic'>Klik untuk isi...</span>`;
-            }
-            // Reload halaman agar badge PJ + Biaya terupdate di sel
-            if (field === 'action_plan') {
-                location.reload();
-                return;
-            }
-            if (inlineModalInstance) inlineModalInstance.hide();
-            showToast('Data berhasil diperbarui!', 'success');
-        } else {
-            showToast('Gagal update: ' + (data.error || ''), 'danger');
-        }
-    })
-    .catch(err => {
-        showToast('Kesalahan server saat menyimpan', 'danger');
-    });
-}
-
-// MODAL BUKTI DOKUMEN AJAX
-let buktiModalInstance = null;
-let currentActiveItemId = null;
-
-function openBuktiModal(itemId, itemCode) {
-    currentActiveItemId = itemId;
-    document.getElementById('modalBuktiTitle').innerText = `Bukti Dokumen: ${itemCode}`;
-    document.getElementById('modalBuktiSubtitle').innerText = 'Mengambil data berkas...';
-
-    if (!buktiModalInstance) {
-        buktiModalInstance = new bootstrap.Modal(document.getElementById('modalBuktiDokumen'));
-    }
-    buktiModalInstance.show();
-
-    // Fetch data
-    fetch(`/ep/${itemId}/bukti-data/`)
-    .then(r => r.json())
-    .then(data => {
-        document.getElementById('modalBuktiSubtitle').innerText = data.item_desc || '';
-        document.getElementById('countLinkedFiles').innerText = data.linked_files.length;
-
-        // Populate dropdown requirements
-        const uploadSelect = document.getElementById('uploadReqSelect');
-        const linkSelect = document.getElementById('linkTargetReqSelect');
-        uploadSelect.innerHTML = '';
-        linkSelect.innerHTML = '';
-
-        data.reqs.forEach(req => {
-            const opt = `<option value="${req.id}">[${req.type}] ${req.title}</option>`;
-            uploadSelect.innerHTML += opt;
-            linkSelect.innerHTML += opt;
-        });
-
-        // Populate Tab 3: Linked Files
-        const linkedTbody = document.getElementById('linkedFilesTableBody');
-        linkedTbody.innerHTML = '';
-        if (data.linked_files.length === 0) {
-            linkedTbody.innerHTML = `<tr><td colspan="5" class="text-center text-muted py-3">Belum ada berkas ditautkan.</td></tr>`;
-        } else {
-            data.linked_files.forEach(f => {
-                linkedTbody.innerHTML += `
-                    <tr>
-                        <td><span class="badge bg-secondary font-mono">${f.req_type}</span></td>
-                        <td>
-                            <a href="${f.file_url}" target="_blank" class="fw-bold text-decoration-none">
-                                <i class="bi bi-file-earmark-text text-primary me-1"></i>${escapeHtml(f.file_name)}
-                            </a>
-                        </td>
-                        <td class="font-mono">${f.file_size}</td>
-                        <td><span class="badge bg-success-subtle text-success border border-success">${f.status}</span></td>
-                        <td class="text-center">
-                            <button class="btn btn-sm btn-outline-danger py-0 px-1" onclick="unlinkDocFile(${f.id})" title="Hapus tautan">
-                                <i class="bi bi-x-lg"></i>
-                            </button>
-                        </td>
-                    </tr>
-                `;
-            });
-        }
-
-        // Populate Tab 2: Repo Files
-        const repoTbody = document.getElementById('repoFilesTableBody');
-        repoTbody.innerHTML = '';
-        if (data.repo_files.length === 0) {
-            repoTbody.innerHTML = `<tr><td colspan="4" class="text-center text-muted py-3">Tidak ada berkas repositori tersedia.</td></tr>`;
-        } else {
-            data.repo_files.forEach(rf => {
-                repoTbody.innerHTML += `
-                    <tr>
-                        <td class="text-center">
-                            <input type="radio" name="selected_repo_file" value="${rf.id}">
-                        </td>
-                        <td class="fw-semibold">${escapeHtml(rf.file_name)}</td>
-                        <td><span class="badge bg-light text-dark border">${rf.ep_origin} (${rf.type})</span></td>
-                        <td class="font-mono text-muted">${rf.file_size}</td>
-                    </tr>
-                `;
-            });
-        }
-    })
-    .catch(err => {
-        document.getElementById('modalBuktiSubtitle').innerText = 'Gagal memuat berkas.';
-    });
-}
-
-function submitUploadBukti(e) {
-    e.preventDefault();
-    const reqId = document.getElementById('uploadReqSelect').value;
-    const docName = document.getElementById('uploadDocName').value;
-    const fileInput = document.getElementById('uploadFileInput');
-
-    if (!fileInput.files || fileInput.files.length === 0) {
-        showToast('Pilih berkas terlebih dahulu', 'warning');
-        return;
-    }
-
-    const formData = new FormData();
-    formData.append('doc_name', docName);
-    formData.append('file', fileInput.files[0]);
-
-    const submitBtn = document.getElementById('btnSubmitUpload');
-    submitBtn.disabled = true;
-    submitBtn.innerHTML = `<i class="bi bi-arrow-repeat spin me-1"></i> Mengunggah...`;
-
-    fetch(`/ep/bukti/upload-ajax/${reqId}/`, {
-        method: 'POST',
-        headers: {
-            'X-CSRFToken': getCookie('csrftoken')
-        },
-        body: formData
-    })
-    .then(r => r.json())
-    .then(data => {
-        submitBtn.disabled = false;
-        submitBtn.innerHTML = `<i class="bi bi-upload me-1"></i> Simpan & Link Dokumen`;
-        if (data.success) {
-            showToast('Berkas bukti berhasil diunggah & ditautkan!', 'success');
-            document.getElementById('formUploadBuktiAjax').reset();
-            openBuktiModal(currentActiveItemId, '');
-        } else {
-            showToast('Gagal upload: ' + (data.error || ''), 'danger');
-        }
-    })
-    .catch(err => {
-        submitBtn.disabled = false;
-        submitBtn.innerHTML = `<i class="bi bi-upload me-1"></i> Simpan & Link Dokumen`;
-        showToast('Kesalahan server saat upload', 'danger');
-    });
-}
-
-function linkSelectedRepoDoc() {
-    const selectedRadio = document.querySelector('input[name="selected_repo_file"]:checked');
-    if (!selectedRadio) {
-        showToast('Pilih salah satu berkas dari repositori', 'warning');
-        return;
-    }
-    const targetReqId = document.getElementById('linkTargetReqSelect').value;
-    const fileId = selectedRadio.value;
-
-    fetch('/ep/bukti/link/', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRFToken': getCookie('csrftoken')
-        },
-        body: JSON.stringify({ req_id: targetReqId, file_id: fileId })
-    })
-    .then(r => r.json())
-    .then(data => {
-        if (data.success) {
-            showToast('Berkas berhasil ditautkan!', 'success');
-            openBuktiModal(currentActiveItemId, '');
-        } else {
-            showToast('Gagal tautkan berkas: ' + (data.error || ''), 'danger');
-        }
-    });
-}
-
-function unlinkDocFile(fileId) {
-    if (!confirm('Yakin ingin melepas tautan berkas ini?')) return;
-
-    fetch(`/ep/bukti/unlink/${fileId}/`, {
-        method: 'POST',
-        headers: {
-            'X-CSRFToken': getCookie('csrftoken')
-        }
-    })
-    .then(r => r.json())
-    .then(data => {
-        if (data.success) {
-            showToast('Tautan berkas berhasil dilepas', 'info');
-            openBuktiModal(currentActiveItemId, '');
-        } else {
-            showToast('Gagal melepas: ' + (data.error || ''), 'danger');
-        }
-    });
-}
-
-function getCookie(name) {
-    let cookieValue = null;
-    if (document.cookie && document.cookie !== '') {
-        const cookies = document.cookie.split(';');
-        for (let i = 0; i < cookies.length; i++) {
-            const cookie = cookies[i].trim();
-            if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                break;
-            }
-        }
-    }
-    return cookieValue;
-}
-
-function escapeHtml(text) {
-    const div = document.createElement('div');
-    div.innerText = text;
-    return div.innerHTML;
-}
-</script>
+{% include "akreditasi/_matriks_pdca_js.html" %}
 {% endblock %}

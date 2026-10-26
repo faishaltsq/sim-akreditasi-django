@@ -1,12 +1,23 @@
 {% extends 'base.html' %}
-{% block title %}Akses Ditolak{% endblock %}
+
+{% block title %}Akses ditolak | ARIMA{% endblock %}
+{% block page_title %}Akses ditolak{% endblock %}
+{% block page_subtitle %}Akun Anda tidak memiliki izin untuk halaman ini{% endblock %}
+
 {% block content %}
-<div class="container py-5 text-center">
-  <h1 class="display-3 text-danger">403</h1>
-  <h4>Akses Ditolak</h4>
-  <p class="text-muted">Anda tidak memiliki izin untuk mengakses halaman ini.</p>
-  <a href="{% url 'akreditasi:dashboard' %}" class="btn btn-primary mt-3">
-    <i class="bi bi-house"></i> Kembali ke Dashboard
-  </a>
+<div class="d-flex justify-content-center">
+    <section class="panel" style="max-width:520px; width:100%;" aria-labelledby="deniedTitle">
+        <div class="panel-body">
+            <div class="state">
+                <i class="bi bi-shield-lock state-icon" aria-hidden="true"></i>
+                <span class="state-title" id="deniedTitle">Halaman ini dibatasi</span>
+                <span class="state-text">
+                    Peran akun Anda tidak mencakup halaman ini. Bila akses memang diperlukan,
+                    minta admin RS menambahkan peran atau izin yang sesuai, lalu masuk kembali.
+                </span>
+                <a href="{% url 'akreditasi:dashboard' %}" class="btn btn-sm btn-primary state-action">Kembali ke dashboard</a>
+            </div>
+        </div>
+    </section>
 </div>
 {% endblock %}

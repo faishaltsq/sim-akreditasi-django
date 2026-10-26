@@ -1,471 +1,205 @@
 {% extends "base.html" %}
 {% load akreditasi_tags l10n %}
 
-{% block breadcrumb %}<li class="current" aria-current="page">{% if unit_dashboard %}Dashboard Unit{% else %}Dashboard{% endif %}</li>{% endblock %}
-{% block page_title %}{% if unit_dashboard %}{{ unit.name|upper }}{% else %}ARIMA — RS MonsisKami{% endif %}{% endblock %}
-{% block page_subtitle %}{% if unit_dashboard %}Dashboard Unit — {{ unit.get_tipe_unit_display|default:"Unit Pelayanan" }} | {{ rs_profile.nama_rs|default:"RS MonsisKami Tipe B" }}{% else %}ARIMA — Aplikasi Terpadu Manajemen Risiko dan Tata Kelola Dokumen Akreditasi RS MonsisKami{% endif %}{% endblock %}
+{% block breadcrumb %}
+<li class="current" aria-current="page">{% if unit_dashboard %}Dashboard unit{% else %}Dashboard{% endif %}</li>
+{% endblock %}
 
-{% block extra_css %}
-<style>
-    .kpi-card {
-        background: #FFFFFF;
-        border: 1px solid var(--border);
-        border-radius: var(--radius-lg);
-        padding: 1.15rem 1.25rem;
-        box-shadow: var(--shadow);
-        height: 100%;
-        display: flex;
-        flex-direction: column;
-        justify-content: space-between;
-        position: relative;
-        overflow: hidden;
-    }
-    .kpi-card::before {
-        content: '';
-        position: absolute;
-        top: 0; left: 0;
-        width: 4px; height: 100%;
-    }
-    .kpi-card.kpi-capaian::before { background: var(--success); }
-    .kpi-card.kpi-dokumen::before { background: var(--success); }
-    .kpi-card.kpi-evaluasi::before { background: var(--warning); }
-    .kpi-card.kpi-anggaran::before { background: #8B7CF6; }
-
-    .kpi-label {
-        font-size: 0.68rem;
-        font-weight: 700;
-        text-transform: uppercase;
-        letter-spacing: 0.06em;
-        color: var(--text-muted);
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-    }
-    .kpi-value {
-        font-size: 1.85rem;
-        font-weight: 800;
-        font-family: var(--font-mono);
-        color: var(--text-primary);
-        line-height: 1.1;
-        margin: 0.35rem 0;
-    }
-    .kpi-sub {
-        font-size: 0.72rem;
-        color: var(--text-secondary);
-    }
-    .chart-container {
-        position: relative;
-        height: 220px;
-        width: 100%;
-    }
-    /* Stepper line Roadmap Renstra */
-    .renstra-stepper {
-        position: relative;
-    }
-
-    .renstra-year-card {
-        position: relative;
-        z-index: 1;
-    }
-    .renstra-year-active {
-        box-shadow: 0 0 0 2px var(--primary), 0 0 18px 4px rgba(79,91,213,0.3) !important;
-        border-color: var(--primary) !important;
-    }
-</style>
+{% block page_title %}{% if unit_dashboard %}{{ unit.name }}{% else %}Kesiapan akreditasi{% endif %}{% endblock %}
+{% block page_subtitle %}
+{% if unit_dashboard %}{{ unit.code }} · {{ unit.get_tipe_unit_display|default:"Unit pelayanan" }}{% if unit.pic_name %} · Penanggung jawab {{ unit.pic_name }}{% endif %}
+{% else %}{{ rs_profile.nama_rs|default:"RS MonsisKami" }} · Standar STARKES {{ rs_profile.akreditasi_tahun|default:"2024" }}{% endif %}
 {% endblock %}
 
 {% block content %}
 <div class="container-fluid p-0">
 
     {% if unit_dashboard %}
-    <!-- ========================================================================= -->
-    <!-- HERO BANNER KHUSUS UNIT KERJA (BRANDED UNIT LANDING)                     -->
-    <!-- ========================================================================= -->
-    <div class="card border-0 shadow-sm mb-4" style="background: var(--primary-strong); border-radius: var(--radius-lg); color: #ffffff;">
-        <div class="card-body p-4 p-md-5">
-            <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3">
-                <div>
-                    <div class="d-flex align-items-center gap-2 mb-2">
-                        <span class="badge bg-white text-teal fw-bold px-3 py-1 font-monospace" style="color: var(--primary-strong) !important; font-size: 0.75rem;">
-                            <i class="bi bi-diagram-3 me-1"></i>KODE: {{ unit.code }}
-                        </span>
-                        <span class="badge bg-white/20 text-white border border-white/30 px-2.5 py-1" style="font-size: 0.72rem;">
-                            LEVEL {{ unit.level }} &bull; {{ unit.get_tipe_unit_display|default:"UNIT PELAYANAN" }}
-                        </span>
-                        {% if unit.parent %}
-                        <span class="badge bg-white/10 text-white-50 px-2.5 py-1" style="font-size: 0.72rem;">
-                            <i class="bi bi-arrow-return-right me-1"></i>Induk: {{ unit.parent.name }}
-                        </span>
-                        {% endif %}
-                    </div>
-                    <h1 class="display-6 fw-bold mb-1 text-white text-uppercase" style="letter-spacing: -0.02em;">
-                        {{ unit.name }}
-                    </h1>
-                    <p class="text-white-50 mb-0 fs-6">
-                        {% if unit.pic_name %}
-                        <i class="bi bi-person-badge me-1"></i>Kepala / Penanggung Jawab: <strong class="text-white">{{ unit.pic_name }}</strong> &bull;
-                        {% endif %}
-                        {{ rs_profile.nama_rs|default:"RS MonsisKami Tipe B" }}
-                    </p>
-                </div>
-
-                <div class="d-flex flex-wrap gap-2">
-                    <a href="{% url 'akreditasi:matriks_pdca' %}?unit={{ unit.id }}" class="btn btn-light fw-bold px-3 shadow-sm text-teal" style="color: var(--primary-strong);">
-                        <i class="bi bi-table me-1"></i>Matriks PDCA Unit
-                    </a>
-                    <a href="{% url 'akreditasi:risiko_input' %}" class="btn btn-outline-light fw-semibold px-3">
-                        <i class="bi bi-shield-plus me-1"></i>Input Risiko
-                    </a>
-                    <a href="{% url 'akreditasi:insiden_lapor' %}" class="btn btn-outline-light fw-semibold px-3">
-                        <i class="bi bi-exclamation-triangle me-1"></i>Lapor Insiden
-                    </a>
-                </div>
-            </div>
-        </div>
+    <div class="alert alert-info d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+        <span>
+            <strong>Lingkup unit {{ unit.code }}.</strong>
+            Angka di halaman ini hanya menghitung EP, dokumen, dan risiko milik unit ini beserta sub-unitnya.
+        </span>
+        <a href="{% url 'akreditasi:matriks_pdca' %}?unit={{ unit.id }}" class="btn btn-sm btn-primary">Buka matriks unit</a>
     </div>
     {% endif %}
 
-    <!-- ========================================================================= -->
-    <!-- HERO BANNER GLOBAL: ARIMA — RS MonsisKami (SEMUA USER)                    -->
-    <!-- ========================================================================= -->
-    {% if not unit_dashboard %}
-    <div class="card border-0 mb-4 overflow-hidden" style="border-radius: var(--radius-lg); background: radial-gradient(120% 120% at 12% 0%, rgba(79,91,213,0.42) 0%, rgba(20,33,61,0) 55%), linear-gradient(140deg, var(--brand-navy) 0%, var(--brand-navy-deep) 100%); border: 1px solid var(--brand-navy); box-shadow: var(--shadow-md);">
-        <!-- Decorative grid overlay -->
-        <div class="card-body p-4 p-md-4 text-white position-relative">
-            <div class="d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-3">
-                <div class="d-flex align-items-center gap-3">
-                    <div class="d-none d-sm-flex align-items-center justify-content-center rounded-3 flex-shrink-0" style="width: 54px; height: 54px; background: rgba(139,124,246,0.16); border: 1px solid rgba(139,124,246,0.42); box-shadow: 0 0 24px rgba(139,124,246,0.22);">
-                        <i class="bi bi-hospital text-white" style="font-size:1.5rem;"></i>
-                    </div>
-                    <div>
-                        <div class="d-flex flex-wrap align-items-center gap-2 mb-1">
-                            <span style="font-family: var(--font-mono); font-size:0.62rem; font-weight:600; background:rgba(139,124,246,0.18); border:1px solid rgba(139,124,246,0.42); color:#C7C0FB; padding:2px 8px; border-radius:4px; letter-spacing:0.05em;">
-                                <span class="sidebar-status-dot me-1" style="vertical-align:middle; display:inline-block;"></span>SYSTEM: NOMINAL
-                            </span>
-                            <span style="font-family: var(--font-mono); font-size:0.62rem; color:rgba(255,255,255,0.35); border:1px solid rgba(255,255,255,0.1); padding:2px 8px; border-radius:4px;">
-                                STARKES {{ rs_profile.akreditasi_tahun|default:"2026" }} &bull; KMK 1128
-                            </span>
-                            <span style="font-family: var(--font-mono); font-size:0.62rem; color:rgba(255,255,255,0.3); padding:2px 8px;">
-                                TARGET: PARIPURNA
-                            </span>
-                        </div>
-                        <h2 class="fw-bold text-white mb-1" style="font-size: 1.55rem; letter-spacing: -0.02em; line-height: 1.2;">
-                            {{ rs_profile.nama_rs|default:"RS MonsisKami" }}
-                        </h2>
-                        <p class="mb-0" style="font-size: 0.78rem; max-width: 600px; color: rgba(255,255,255,0.45); font-family: var(--font-mono); letter-spacing:0.01em;">
-                            ARIMA // Manajemen Risiko Klinis &amp; Tata Kelola Dokumen Akreditasi 16 Pokja
-                        </p>
-                    </div>
-                </div>
-                <div class="d-flex flex-wrap align-items-center gap-2">
-                    <a href="{% url 'akreditasi:matriks_pdca' %}" class="btn btn-sm fw-bold px-3" style="background:rgba(79,91,213,0.24); border:1px solid rgba(139,124,246,0.5); color:#DCDCFB; font-family: var(--font-mono); font-size:0.72rem;">
-                        <i class="bi bi-table me-1"></i>Matriks PDCA
-                    </a>
-                    <a href="{% url 'akreditasi:risiko_input' %}" class="btn btn-outline-light btn-sm fw-semibold px-3" style="font-size:0.72rem;">
-                        <i class="bi bi-shield-plus me-1"></i>Input Risiko
-                    </a>
-                    <a href="{% url 'akreditasi:insiden_lapor' %}" class="btn btn-outline-light btn-sm fw-semibold px-3" style="font-size:0.72rem;">
-                        <i class="bi bi-exclamation-triangle me-1"></i>Lapor Insiden
-                    </a>
-                </div>
-            </div>
-        </div>
-    </div>
-    {% endif %}
-
-    <!-- 1. METRIC RIBBON (KPI BAR 4 CARDS) SESUAI SPEC -->
-    <div class="row g-3 mb-4">
-        <!-- BOX 1: CAPAIAN RATA-RATA -->
-        <div class="col-12 col-sm-6 col-xl-3">
-            <div class="kpi-card kpi-capaian">
-                <div>
-                    <div class="kpi-label">
-                        <span>Capaian Rata-rata</span>
-                        <i class="bi bi-award-fill text-success fs-5"></i>
-                    </div>
-                    <div class="kpi-value text-success">
-                        {{ capaian_rata_rata }}%
-                    </div>
-                </div>
-                <div>
-                    <div class="progress" style="height: 6px; border-radius: 6px; background: var(--border);">
-                        <div class="progress-bar bg-success" role="progressbar" style="width: {{ capaian_rata_rata|unlocalize }}%;"></div>
-                    </div>
-                    <div class="d-flex justify-content-between kpi-sub mt-1.5">
-                        <span>Status Akreditasi</span>
-                        <span class="fw-bold {% if capaian_rata_rata >= 80 %}text-success{% elif capaian_rata_rata >= 60 %}text-warning{% else %}text-danger{% endif %}">
-                            {% if capaian_rata_rata >= 80 %}PARIPURNA{% elif capaian_rata_rata >= 70 %}UTAMA{% elif capaian_rata_rata >= 60 %}MADYA{% else %}BELUM MEMENUHI{% endif %}
-                        </span>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- BOX 2: TOTAL DOKUMEN -->
-        <div class="col-12 col-sm-6 col-xl-3">
-            <div class="kpi-card kpi-dokumen">
-                <div>
-                    <div class="kpi-label">
-                        <span>Total Dokumen Bukti</span>
-                        <i class="bi bi-file-earmark-check-fill text-primary fs-5"></i>
-                    </div>
-                    <div class="kpi-value text-primary">
-                        {{ total_uploaded_dokumen }}<span class="fs-5 text-muted fw-normal">/{{ total_target_dokumen }}</span>
-                    </div>
-                </div>
-                <div>
-                    {% if total_target_dokumen > 0 %}
-                    {% widthratio total_uploaded_dokumen total_target_dokumen 100 as pct_doc %}
-                    <div class="progress" style="height: 8px; border-radius: 6px; background: var(--border);">
-                        <div class="progress-bar bg-primary" role="progressbar" style="width: {{ pct_doc|unlocalize }}%;" title="Dokumen Terunggah (Do): {{ pct_doc }}%"></div>
-                    </div>
-                    <div class="d-flex justify-content-between kpi-sub mt-2" style="font-size:0.75rem;">
-                        <span class="text-muted"><i class="bi bi-cloud-arrow-up text-primary me-1"></i>Do: {{ total_uploaded_dokumen }} berkas</span>
-                        <span class="fw-bold text-primary">{{ pct_doc }}% Terunggah</span>
-                    </div>
-                    {% else %}
-                    <div class="kpi-sub">Target dokumen belum diset</div>
-                    {% endif %}
-                </div>
-            </div>
-        </div>
-
-        {% if unit_dashboard %}
-        <!-- BOX 3 (UNIT): TOTAL RISIKO UNIT + PDCA BREAKDOWN -->
-        <div class="col-12 col-sm-6 col-xl-3">
-            <div class="kpi-card kpi-evaluasi">
-                <div>
-                    <div class="kpi-label">
-                        <span>Register Risiko Unit</span>
-                        <i class="bi bi-shield-exclamation text-warning fs-5"></i>
-                    </div>
-                    <div class="kpi-value text-warning">{{ total_risiko }}</div>
-                </div>
-                <div class="border-top pt-1 mt-1">
-                    <div class="d-flex justify-content-between kpi-sub mb-1">
-                        <span>🟡 Plan (Draft Mitigasi)</span>
-                        <span class="fw-bold text-warning">{{ risiko_plan }}</span>
-                    </div>
-                    <div class="d-flex justify-content-between kpi-sub mb-1">
-                        <span>🔵 Do (In Implementation)</span>
-                        <span class="fw-bold text-primary">{{ risiko_do }}</span>
-                    </div>
-                    <div class="d-flex justify-content-between kpi-sub">
-                        <span>🟢 RTL / Terkendali</span>
-                        <span class="fw-bold text-success">{{ risiko_rtl }}</span>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- BOX 4 (UNIT): EP TERISI -->
-        <div class="col-12 col-sm-6 col-xl-3">
-            <div class="kpi-card kpi-anggaran">
-                <div>
-                    <div class="kpi-label">
-                        <span>Standar EP Terisi</span>
-                        <i class="bi bi-list-check text-purple fs-5" style="color:#8B7CF6;"></i>
-                    </div>
-                    <div class="kpi-value" style="color:var(--accent); font-size:1.6rem;">
-                        {{ count_tercapai|add:count_proses }}<span class="fs-5 text-muted fw-normal">/{{ total_ep }}</span>
-                    </div>
-                </div>
-                <div class="kpi-sub pt-1 border-top">
-                    <div class="d-flex justify-content-between">
-                        <span class="text-success fw-bold">{{ count_tercapai }} Tercapai</span>
-                        <span class="text-warning fw-bold">{{ count_proses }} Proses</span>
-                    </div>
-                    <div class="text-muted mt-0.5" style="font-size:0.68rem;">
-                        {{ count_belum }} EP belum diisi (skor 0)
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- ERM SHORTCUT BUTTONS (unit dashboard only) -->
-        <div class="col-12 mt-1 mb-2">
-            <div class="d-flex gap-2 flex-wrap align-items-center">
-                <a href="{% url 'akreditasi:risiko_perencanaan_unit' unit.id %}"
-                   class="btn btn-sm btn-outline-warning d-inline-flex align-items-center gap-1">
-                    <i class="bi bi-shield-check"></i>
-                    🛡️ Risk Management (ERM) — Siklus PDCA Unit
-                </a>
-                <a href="{% url 'akreditasi:risiko_monev_unit' unit.id %}"
-                   class="btn btn-sm btn-outline-primary d-inline-flex align-items-center gap-1">
-                    <i class="bi bi-arrow-repeat"></i>
-                    Monitoring &amp; Evaluasi
-                </a>
-                <a href="{% url 'akreditasi:indikator_dashboard' %}"
-                   class="btn btn-sm btn-outline-success d-inline-flex align-items-center gap-1">
-                    <i class="bi bi-graph-up"></i>
-                    Indikator Mutu
-                </a>
-            </div>
-            <p class="text-muted mt-1 mb-0" style="font-size:0.72rem;">
-                Data otomatis terhubung: Register Risiko Unit (ERM) ↔ Matriks PDCA EP Akreditasi ↔ Indikator Mutu
-            </p>
-        </div>
-        {% else %}
-        <!-- BOX 3: EVALUASI PDCA -->
-        <div class="col-12 col-sm-6 col-xl-3">
-            <div class="kpi-card kpi-evaluasi">
-                <div>
-                    <div class="kpi-label">
-                        <span>Evaluasi PDCA</span>
-                        <i class="bi bi-arrow-repeat text-warning fs-5"></i>
-                    </div>
-                    <div class="kpi-value text-warning">
-                        {{ persen_evaluasi_pdca }}%
-                    </div>
-                </div>
-                <div>
-                    <div class="progress" style="height: 6px; border-radius: 6px; background: var(--border);">
-                        <div class="progress-bar bg-warning" role="progressbar" style="width: {{ persen_evaluasi_pdca|unlocalize }}%;"></div>
-                    </div>
-                    <div class="d-flex justify-content-between kpi-sub mt-1.5">
-                        <span>Tahap Check / Action</span>
-                        <span class="fw-bold">{{ ep_check_action }}/{{ total_ep }} EP</span>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- BOX 4: ANGGARAN RKA -->
-        <div class="col-12 col-sm-6 col-xl-3">
-            <div class="kpi-card kpi-anggaran">
-                <div>
-                    <div class="kpi-label">
-                        <span>Anggaran RKA Akreditasi</span>
-                        <i class="bi bi-coin text-purple fs-5" style="color:#8B7CF6;"></i>
-                    </div>
-                    <div class="kpi-value" style="color:var(--accent); font-size:1.45rem;">
-                        {{ total_anggaran|rupiah }}
-                    </div>
-                </div>
-                <div class="kpi-sub pt-1 border-top">
-                    <div class="d-flex justify-content-between" style="font-size:0.85rem;">
-                        <span class="text-dark"><i class="bi bi-box-arrow-in-down text-success me-1"></i>Capex: <strong class="text-success">{{ anggaran_capex|rupiah }}</strong></span>
-                        <span class="text-dark"><i class="bi bi-arrow-repeat text-info me-1"></i>Opex: <strong class="text-info">{{ anggaran_opex|rupiah }}</strong></span>
-                    </div>
-                    <div class="text-muted mt-1" style="font-size:0.72rem;">
-                        {{ non_biaya_count }} Tindakan Non-Biaya (Rp 0)
-                    </div>
-                </div>
-            </div>
-        </div>
-        {% endif %}
-    </div>
-
-    <!-- ================================================================= -->
-    <!-- VISI, MISI & MOTTO RS (SEMUA USER)                                -->
-    <!-- ================================================================= -->
-    <div class="card shadow-sm border-0 mb-4 rounded-3 overflow-hidden">
-      <div class="card-body p-0">
-        <div class="row g-0">
-
-          <!-- VISI & MOTTO -->
-          <div class="col-12 col-lg-5 p-4" style="background: var(--text-primary);">
-            <span class="badge bg-white text-dark fw-bold font-monospace px-2.5 py-1 mb-3 d-inline-block" style="font-size:0.7rem;">
-              <i class="bi bi-eye-fill me-1 text-primary"></i>VISI RS
-            </span>
-            <h5 class="fw-bold text-white mb-3" style="line-height:1.45; letter-spacing:-0.01em;">
-              {{ rs_profile.visi }}
-            </h5>
-            {% if rs_profile.motto %}
-            <div class="border-top border-white/20 pt-3 mt-3">
-              <span class="text-white-50 small text-uppercase fw-bold d-block mb-1" style="font-size:0.65rem; letter-spacing:0.06em;">Motto</span>
-              <p class="text-warning fw-semibold mb-0" style="font-size:0.95rem;">
-                <i class="bi bi-quote me-1"></i>{{ rs_profile.motto }}
-              </p>
-            </div>
-            {% endif %}
-          </div>
-
-          <!-- MISI -->
-          <div class="col-12 col-lg-7 p-4 bg-white">
-            <div class="d-flex justify-content-between align-items-start mb-3">
-              <div>
-                <span class="badge bg-primary-subtle text-primary fw-bold font-monospace px-2.5 py-1 d-inline-block" style="font-size:0.7rem;">
-                  <i class="bi bi-flag-fill me-1"></i>MISI RS
-                </span>
-              </div>
-              <span class="badge bg-light text-secondary border font-monospace" style="font-size:0.65rem;">
-                Renstra 2026–2030
-              </span>
-            </div>
-            <ol class="list-unstyled mb-0">
-              {% for m in rs_profile.misi_list %}
-              <li class="d-flex align-items-start gap-2 {% if not forloop.last %}mb-2 pb-2 border-bottom{% endif %}">
-                <span class="badge bg-primary rounded-circle text-white fw-bold d-flex align-items-center justify-content-center flex-shrink-0" style="width:24px; height:24px; font-size:0.7rem; margin-top:2px;">
-                  {{ forloop.counter }}
-                </span>
-                <span class="text-dark small" style="line-height:1.5;">{{ m }}</span>
-              </li>
-              {% endfor %}
-            </ol>
-            {% if rs_profile.tujuan %}
-            <div class="bg-light rounded-3 p-3 mt-3">
-              <span class="text-muted text-uppercase fw-bold small d-block mb-1" style="font-size:0.65rem; letter-spacing:0.05em;">
-                <i class="bi bi-bullseye me-1 text-success"></i>Tujuan Strategis
-              </span>
-              <p class="text-dark small mb-0" style="line-height:1.55;">{{ rs_profile.tujuan }}</p>
-            </div>
-            {% endif %}
-          </div>
-
-        </div>
-      </div>
-    </div>
-
-    <!-- ========================================================================= -->
-    <!-- GRUP GRAFIK CAPAIAN INDIKATOR MUTU & TREN RENSTRA RS (STARKES PMKP 12)    -->
-    <!-- ========================================================================= -->
-    <div class="card shadow-sm border-0 mb-4 rounded-3">
-        <div class="card-header bg-white py-3 border-0 d-flex flex-wrap justify-content-between align-items-center gap-2">
-            <div>
-                <div class="d-flex align-items-center gap-2">
-                    <span class="badge fw-bold font-monospace px-2.5 py-1" style="background:var(--primary-light); color:var(--primary-deep); font-size:0.75rem;">
-                        <i class="bi bi-graph-up-arrow me-1"></i>STARKES PMKP 12 &amp; RENSTRA
+    <!-- =====================================================================
+         1. FOKUS: seberapa siap kita
+         ===================================================================== -->
+    <div class="row g-3 mb-3">
+        <div class="col-12 col-lg-7">
+            <section class="panel h-100" aria-labelledby="readinessTitle">
+                <div class="panel-head">
+                    <h2 id="readinessTitle">Capaian rata-rata</h2>
+                    <span class="badge {% if capaian_rata_rata >= 80 %}bg-success{% elif capaian_rata_rata >= 60 %}bg-warning{% else %}bg-danger{% endif %}">
+                        {% if capaian_rata_rata >= 80 %}Paripurna{% elif capaian_rata_rata >= 70 %}Utama{% elif capaian_rata_rata >= 60 %}Madya{% else %}Belum memenuhi{% endif %}
                     </span>
-                    <h5 class="fw-bold mb-0 text-dark" style="font-size:1.05rem;">
-                        Grafik Capaian Indikator Mutu &amp; Roadmap Renstra
-                    </h5>
                 </div>
-                <span class="text-muted small">Visualisasi pencapaian indikator bulanan dan komparasi target Renstra RS 2026–2030</span>
-            </div>
+                <div class="panel-body">
+                    <div class="d-flex flex-wrap align-items-end gap-3 mb-3">
+                        <div class="metric">
+                            <span class="metric-value">{{ capaian_rata_rata }}<span class="unit">%</span></span>
+                            <span class="metric-note">dari {{ total_ep }} elemen penilaian, skor maksimum 10 per EP</span>
+                        </div>
+                    </div>
 
-            <!-- TAB NAVIGATOR -->
+                    <p class="small text-muted mb-2">
+                        Distribusi {{ total_ep }} EP menurut skor terakhir. Angka di atas adalah skor terbobot, bukan rata-rata ketiga bagian ini.
+                    </p>
+                    <div class="readiness-bar" role="img"
+                         aria-label="Tercapai {{ pct_tercapai }} persen, dalam proses {{ pct_proses }} persen, belum ada bukti {{ pct_belum }} persen">
+                        <span class="seg seg-success" style="width: {{ pct_tercapai|unlocalize }}%;"></span>
+                        <span class="seg seg-warning" style="width: {{ pct_proses|unlocalize }}%;"></span>
+                        <span class="seg seg-danger" style="width: {{ pct_belum|unlocalize }}%;"></span>
+                    </div>
+
+                    <dl class="readiness-legend">
+                        <div>
+                            <dt><span class="dot dot-success" aria-hidden="true"></span>Tercapai (skor 10)</dt>
+                            <dd>{{ count_tercapai }} EP · {{ pct_tercapai }}%</dd>
+                        </div>
+                        <div>
+                            <dt><span class="dot dot-warning" aria-hidden="true"></span>Dalam proses (skor 5)</dt>
+                            <dd>{{ count_proses }} EP · {{ pct_proses }}%</dd>
+                        </div>
+                        <div>
+                            <dt><span class="dot dot-danger" aria-hidden="true"></span>Belum ada bukti (skor 0)</dt>
+                            <dd>{{ count_belum }} EP · {{ pct_belum }}%</dd>
+                        </div>
+                    </dl>
+                </div>
+                <div class="panel-foot d-flex flex-wrap justify-content-between align-items-center gap-2">
+                    <span class="small text-muted">
+                        {% if count_belum > 0 %}
+                        {{ count_belum }} EP belum punya bukti. Mulai dari pokja dengan capaian terendah.
+                        {% else %}
+                        Semua EP sudah punya bukti. Periksa tahap Check dan Action pada matriks.
+                        {% endif %}
+                    </span>
+                    <a href="{% url 'akreditasi:matriks_pdca' %}" class="btn btn-sm btn-primary">
+                        Buka matriks PDCA
+                    </a>
+                </div>
+            </section>
+        </div>
+
+        <div class="col-12 col-lg-5">
+            <section class="panel h-100" aria-labelledby="factsTitle">
+                <div class="panel-head">
+                    <h2 id="factsTitle">Fakta pendukung</h2>
+                </div>
+                <div class="panel-body p-0">
+                    <dl class="fact-list">
+                        <div class="fact-row">
+                            <dt>Dokumen bukti terunggah</dt>
+                            <dd>
+                                <span class="fact-value font-mono">{{ total_uploaded_dokumen }}<span class="fact-of">/{{ total_target_dokumen }}</span></span>
+                                {% if total_target_dokumen > 0 %}
+                                {% widthratio total_uploaded_dokumen total_target_dokumen 100 as pct_doc %}
+                                <div class="progress mt-2" role="img" aria-label="{{ pct_doc }} persen dokumen target sudah terunggah">
+                                    <div class="progress-bar bg-primary" style="width: {{ pct_doc|unlocalize }}%;"></div>
+                                </div>
+                                <span class="fact-note">{{ pct_doc }}% dari kebutuhan bukti RDWOS</span>
+                                {% else %}
+                                <span class="fact-note">Target dokumen belum ditetapkan pada standar ini.</span>
+                                {% endif %}
+                            </dd>
+                        </div>
+
+                        {% if unit_dashboard %}
+                        <div class="fact-row">
+                            <dt>Register risiko unit</dt>
+                            <dd>
+                                <span class="fact-value font-mono">{{ total_risiko }}</span>
+                                <span class="fact-note">
+                                    {{ risiko_tinggi }} risiko tinggi ·
+                                    {{ risiko_plan }} tahap Plan ·
+                                    {{ risiko_do }} tahap Do ·
+                                    {{ risiko_rtl }} terkendali
+                                </span>
+                                <a href="{% url 'akreditasi:risiko_perencanaan_unit' unit.id %}" class="small">Buka siklus risiko unit</a>
+                            </dd>
+                        </div>
+                        <div class="fact-row">
+                            <dt>Elemen penilaian terisi</dt>
+                            <dd>
+                                <span class="fact-value font-mono">{{ count_tercapai|add:count_proses }}<span class="fact-of">/{{ total_ep }}</span></span>
+                                <span class="fact-note">{{ count_belum }} EP masih skor 0</span>
+                            </dd>
+                        </div>
+                        {% else %}
+                        <div class="fact-row">
+                            <dt>Evaluasi PDCA</dt>
+                            <dd>
+                                <span class="fact-value font-mono">{{ persen_evaluasi_pdca }}<span class="unit">%</span></span>
+                                <div class="progress mt-2" role="img" aria-label="{{ persen_evaluasi_pdca }} persen EP sudah masuk tahap Check atau Action">
+                                    <div class="progress-bar bg-warning" style="width: {{ persen_evaluasi_pdca|unlocalize }}%;"></div>
+                                </div>
+                                <span class="fact-note">{{ ep_check_action }} dari {{ total_ep }} EP punya catatan evaluasi atau rencana tindak lanjut</span>
+                            </dd>
+                        </div>
+                        <div class="fact-row">
+                            <dt>Anggaran RKA akreditasi</dt>
+                            <dd>
+                                <span class="fact-value">{{ total_anggaran|rupiah }}</span>
+                                <span class="fact-note">
+                                    Capex {{ anggaran_capex|rupiah }} ·
+                                    Opex {{ anggaran_opex|rupiah }} ·
+                                    {{ non_biaya_count }} tindakan tanpa biaya
+                                </span>
+                            </dd>
+                        </div>
+                        {% endif %}
+                    </dl>
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <!-- =====================================================================
+         2. Indikator mutu dan Renstra
+         ===================================================================== -->
+    <section class="panel mb-3" aria-labelledby="mutuTitle">
+        <div class="panel-head flex-wrap">
+            <div>
+                <h2 id="mutuTitle">Grafik Capaian Indikator Mutu &amp; Roadmap Renstra</h2>
+                <span class="small text-muted">
+                    <span class="badge">STARKES PMKP 12 &amp; RENSTRA</span>
+                    Capaian bulanan indikator mutu dan perbandingannya dengan target Renstra RS.
+                </span>
+            </div>
             <ul class="nav nav-pills" id="pills-mutu-tab" role="tablist">
                 <li class="nav-item" role="presentation">
-                    <button class="nav-link active py-1.5 px-3 rounded-pill fw-semibold small" id="pills-bulanan-tab" data-bs-toggle="pill" data-bs-target="#pills-bulanan" type="button" role="tab">
-                        <i class="bi bi-calendar3 me-1"></i>Tren Bulanan ({{ filter_mutu_tahun }})
+                    <button class="nav-link active" id="pills-bulanan-tab" data-bs-toggle="pill" data-bs-target="#pills-bulanan" type="button" role="tab" aria-controls="pills-bulanan" aria-selected="true">
+                        Bulanan {{ filter_mutu_tahun }}
                     </button>
                 </li>
                 <li class="nav-item" role="presentation">
-                    <button class="nav-link py-1.5 px-3 rounded-pill fw-semibold small" id="pills-renstra-tab" data-bs-toggle="pill" data-bs-target="#pills-renstra" type="button" role="tab">
-                        <i class="bi bi-bar-chart-steps me-1"></i>Progres Renstra 2026–2030
+                    <button class="nav-link" id="pills-renstra-tab" data-bs-toggle="pill" data-bs-target="#pills-renstra" type="button" role="tab" aria-controls="pills-renstra" aria-selected="false">
+                        Renstra 2026-2030
                     </button>
                 </li>
                 <li class="nav-item" role="presentation">
-                    <button class="nav-link py-1.5 px-3 rounded-pill fw-semibold small" id="pills-tahunan-tab" data-bs-toggle="pill" data-bs-target="#pills-tahunan" type="button" role="tab">
-                        <i class="bi bi-calendar-range me-1"></i>Tren Tahunan
+                    <button class="nav-link" id="pills-tahunan-tab" data-bs-toggle="pill" data-bs-target="#pills-tahunan" type="button" role="tab" aria-controls="pills-tahunan" aria-selected="false">
+                        Tahunan
                     </button>
                 </li>
                 <li class="nav-item" role="presentation">
-                    <button class="nav-link py-1.5 px-3 rounded-pill fw-semibold small" id="pills-matriks-tab" data-bs-toggle="pill" data-bs-target="#pills-matriks" type="button" role="tab">
-                        <i class="bi bi-table me-1"></i>Matriks Rekap
+                    <button class="nav-link" id="pills-matriks-tab" data-bs-toggle="pill" data-bs-target="#pills-matriks" type="button" role="tab" aria-controls="pills-matriks" aria-selected="false">
+                        Matriks rekap
                     </button>
                 </li>
             </ul>
         </div>
 
-        <div class="card-body p-3 pt-0">
-            <!-- FILTER TOOLBAR (GET FORM) -->
-            <form method="GET" class="row g-2 align-items-center p-2 mb-3 rounded-3 bg-light border">
+        <div class="panel-body">
+            <form method="get" class="row g-2 align-items-end mb-3">
                 <div class="col-12 col-md-3">
-                    <label class="form-label mb-0 small text-muted fw-semibold">Kategori Indikator</label>
-                    <select name="mutu_jenis" id="filterMutuJenis" class="form-select form-select-sm" onchange="arimaMutuFilterChange(this)">
-                        <option value="">Semua Kategori (INM + IMRS + IMU)</option>
+                    <label class="form-label" for="filterMutuJenis">Kategori indikator</label>
+                    <select name="mutu_jenis" id="filterMutuJenis" class="form-select form-select-sm"
+                            onchange="arimaMutuFilterChange(this)">
+                        <option value="">Semua kategori (INM, IMRS, IMU)</option>
                         {% for jval, jtxt in mutu_jenis_choices %}
                         <option value="{{ jval }}" {% if filter_mutu_jenis == jval %}selected{% endif %}>{{ jtxt }}</option>
                         {% endfor %}
@@ -473,186 +207,144 @@
                 </div>
                 {% if not unit_dashboard %}
                 <div class="col-12 col-md-3">
-                    <label class="form-label mb-0 small text-muted fw-semibold">Unit Kerja</label>
-                    <select name="mutu_unit" class="form-select form-select-sm" onchange="arimaMutuFilterChange(this)">
-                        <option value="">Semua Unit Kerja RS</option>
+                    <label class="form-label" for="filterMutuUnit">Unit kerja</label>
+                    <select name="mutu_unit" id="filterMutuUnit" class="form-select form-select-sm"
+                            onchange="arimaMutuFilterChange(this)">
+                        <option value="">Semua unit kerja</option>
                         {% for u in mutu_units_choices %}
-                        <option value="{{ u.id }}" {% if filter_mutu_unit == u.id|stringformat:"s" %}selected{% endif %}>
-                            {{ u.code }} — {{ u.name }}
-                        </option>
+                        <option value="{{ u.id }}" {% if filter_mutu_unit == u.id|stringformat:"s" %}selected{% endif %}>{{ u.code }} · {{ u.name }}</option>
                         {% endfor %}
                     </select>
                 </div>
                 {% endif %}
                 <div class="col-12 col-md-3">
-                    <label class="form-label mb-0 small text-muted fw-semibold">Indikator Mutu</label>
-                    <select name="mutu_indikator" id="filterMutuIndikator" class="form-select form-select-sm" onchange="this.form.submit()">
-                        <option value="">Semua Indikator (Rata-rata)</option>
+                    <label class="form-label" for="filterMutuIndikator">Indikator mutu</label>
+                    <select name="mutu_indikator" id="filterMutuIndikator" class="form-select form-select-sm">
+                        <option value="">Semua indikator (rata-rata)</option>
                         {% for ind in mutu_indikator_choices %}
-                        <option value="{{ ind.pk }}" title="[{{ ind.kode_indikator }}] {{ ind.nama_indikator }} — Target {{ ind.target_nilai|unlocalize }}{{ ind.satuan }} | PJ: {{ ind.pj|default:'-' }} | Dimensi: {{ ind.get_dimensi_mutu_display }}" {% if filter_mutu_indikator == ind.pk %}selected{% endif %}>
-                            [{{ ind.kode_indikator }}] {{ ind.nama_indikator }}{% if not ind.punya_data %} — belum ada data {{ filter_mutu_tahun }}{% endif %}
+                        <option value="{{ ind.pk }}" title="Target {{ ind.target_nilai|unlocalize }}{{ ind.satuan }}, penanggung jawab {{ ind.pj|default:'belum ditetapkan' }}" {% if filter_mutu_indikator == ind.pk %}selected{% endif %}>
+                            [{{ ind.kode_indikator }}] {{ ind.nama_indikator }}{% if not ind.punya_data %}, belum ada data {{ filter_mutu_tahun }}{% endif %}
                         </option>
                         {% endfor %}
                     </select>
                 </div>
-                <div class="col-12 col-md-2">
-                    <label class="form-label mb-0 small text-muted fw-semibold">Tahun Pengukuran</label>
-                    <select name="mutu_tahun" id="filterMutuTahun" class="form-select form-select-sm" onchange="arimaMutuFilterChange(this)">
+                <div class="col-8 col-md-2">
+                    <label class="form-label" for="filterMutuTahun">Tahun</label>
+                    <select name="mutu_tahun" id="filterMutuTahun" class="form-select form-select-sm"
+                            onchange="arimaMutuFilterChange(this)">
                         {% for yr in mutu_tahun_choices %}
-                        <option value="{{ yr }}" {% if filter_mutu_tahun == yr %}selected{% endif %}>Tahun {{ yr }}</option>
+                        <option value="{{ yr }}" {% if filter_mutu_tahun == yr %}selected{% endif %}>{{ yr }}</option>
                         {% endfor %}
                     </select>
                 </div>
-                <div class="col-12 col-md-1 d-flex align-items-end">
+                <div class="col-4 col-md-1 d-flex">
                     <a href="{% url 'akreditasi:indikator_dashboard' %}?tahun={{ filter_mutu_tahun }}"
-                       class="btn btn-sm btn-outline-primary w-100 px-1" title="Input &amp; Detail Indikator">
-                        <i class="bi bi-box-arrow-up-right"></i>
+                       class="btn btn-sm btn-outline-primary w-100" title="Buka halaman indikator mutu">
+                        <i class="bi bi-arrow-up-right" aria-hidden="true"></i>
+                        <span class="visually-hidden">Buka indikator mutu</span>
                     </a>
                 </div>
             </form>
 
             {% if not mutu_indikator_choices %}
-            <!-- Spesifikasi 19.10: unit tanpa indikator dalam lingkupnya harus
-                 diberi tahu, bukan dibiarkan melihat grafik rata-rata kosong tanpa
-                 penjelasan. Lingkup sudah mencakup rantai induk, jadi unit ini
-                 memang tidak punya indikator sama sekali. -->
-            <div class="alert alert-info d-flex align-items-start gap-2 py-2 px-3 mb-3" role="alert">
-                <i class="bi bi-info-circle mt-1"></i>
-                <div>
-                    <strong class="small">Unit Ini Belum Memiliki Indikator</strong>
-                    <div class="text-muted" style="font-size:.78rem;">
-                        Unit ini belum memiliki indikator mutu, termasuk dari unit induknya.
-                        Silakan hubungi Pokja Mutu RS untuk pengisian indikator.
-                    </div>
-                </div>
+            <div class="alert alert-info mb-3" role="status">
+                <strong>Unit Ini Belum Memiliki Indikator.</strong>
+                Belum ada indikator mutu yang tercatat untuk unit ini maupun unit induknya.
+                Hubungi Pokja Mutu RS untuk pengisian, lalu muat ulang halaman ini.
             </div>
             {% endif %}
 
-            <!-- TAB CONTENT -->
             <div class="tab-content" id="pills-mutu-tabContent">
-                <!-- TAB 1: TREN BULANAN COMBO CHART -->
-                <div class="tab-pane fade show active" id="pills-bulanan" role="tabpanel">
-                    <div class="row align-items-center mb-2 px-2">
-                        <div class="col-12 col-md-7">
-                            <span class="small text-muted">
-                                {% if mutu_indikator_terpilih %}
-                                Tren capaian <strong class="font-monospace">[{{ mutu_indikator_terpilih.kode_indikator }}]</strong>
-                                {{ mutu_indikator_terpilih.nama_indikator }} per bulan vs garis target
-                                <strong class="text-danger font-monospace">({% if mutu_arah_target == 'MAX' %}&le;{% else %}&ge;{% endif %} {{ chart_mutu_target_val }}{{ mutu_indikator_terpilih.satuan }})</strong>.
-                                {% else %}
-                                Realisasi rata-rata per bulan vs garis target standar minimal
-                                <strong class="text-danger font-monospace">({% if mutu_arah_target == 'MAX' %}&le;{% else %}&ge;{% endif %} {{ chart_mutu_target_val }}%)</strong>.
-                                {% endif %}
-                            </span>
-                        </div>
-                        <div class="col-12 col-md-5 text-md-end">
-                            <span class="badge bg-success-subtle text-success border border-success-subtle me-1" style="font-size:0.7rem;">
-                                <i class="bi bi-square-fill me-1"></i>Tercapai ({% if mutu_arah_target == 'MAX' %}&le;{% else %}&ge;{% endif %} {{ chart_mutu_target_val }}{% if mutu_indikator_terpilih %}{{ mutu_indikator_terpilih.satuan }}{% else %}%{% endif %})
-                            </span>
-                            <span class="badge bg-danger-subtle text-danger border border-danger-subtle" style="font-size:0.7rem;">
-                                <i class="bi bi-square-fill me-1"></i>Di luar Target ({% if mutu_arah_target == 'MAX' %}&gt;{% else %}&lt;{% endif %} {{ chart_mutu_target_val }}{% if mutu_indikator_terpilih %}{{ mutu_indikator_terpilih.satuan }}{% else %}%{% endif %})
-                            </span>
-                        </div>
-                    </div>
-                    <div style="position: relative; height: 260px; width: 100%;">
-                        <canvas id="chartMutuBulanan" role="img" aria-label="Grafik capaian mutu bulanan: nilai tercapai dan di luar target"></canvas>
-                        <div id="mutuEmpty" class="h-100 d-none flex-column align-items-center justify-content-center text-center px-3">
-                            <i class="bi bi-bar-chart text-secondary" style="font-size:2rem;"></i>
+                <div class="tab-pane fade show active" id="pills-bulanan" role="tabpanel" aria-labelledby="pills-bulanan-tab" tabindex="0">
+                    <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-2">
+                        <span class="small text-muted">
                             {% if mutu_indikator_terpilih %}
-                            <span class="fw-semibold text-dark mt-2" style="font-size:.85rem;">Belum ada pengukuran {{ filter_mutu_tahun }}</span>
-                            <span class="text-muted" style="font-size:.72rem;">
-                                Indikator ini belum punya catatan bulanan. Input capaian lewat menu Indikator Mutu.
-                            </span>
+                            Tren <span class="font-mono">[{{ mutu_indikator_terpilih.kode_indikator }}]</span> {{ mutu_indikator_terpilih.nama_indikator }} per bulan terhadap garis target
+                            <span class="font-mono">({% if mutu_arah_target == 'MAX' %}&le;{% else %}&ge;{% endif %} {{ chart_mutu_target_val }}{{ mutu_indikator_terpilih.satuan }})</span>.
                             {% else %}
-                            <span class="fw-semibold text-dark mt-2" style="font-size:.85rem;">Belum ada catatan untuk kategori ini</span>
-                            <span class="text-muted" style="font-size:.72rem;">
-                                Pilih indikator lain, ganti kategori, atau ganti tahun.
-                            </span>
+                            Realisasi rata-rata per bulan terhadap target minimal
+                            <span class="font-mono">({% if mutu_arah_target == 'MAX' %}&le;{% else %}&ge;{% endif %} {{ chart_mutu_target_val }}%)</span>.
                             {% endif %}
-                            <a href="{% url 'akreditasi:indikator_dashboard' %}?tahun={{ filter_mutu_tahun }}"
-                               class="btn btn-sm btn-outline-primary mt-2">
-                                <i class="bi bi-box-arrow-up-right me-1"></i>Buka Indikator Mutu
+                        </span>
+                        <span class="d-flex gap-2">
+                            <span class="badge bg-success">Tercapai</span>
+                            <span class="badge bg-danger">Di luar target</span>
+                        </span>
+                    </div>
+                    <div class="chart-frame">
+                        <canvas id="chartMutuBulanan" role="img" aria-label="Grafik capaian mutu bulanan dibanding batas target"></canvas>
+                        <div id="mutuEmpty" class="state d-none">
+                            <i class="bi bi-bar-chart state-icon" aria-hidden="true"></i>
+                            {% if mutu_indikator_terpilih %}
+                            <span class="state-title">Belum ada pengukuran {{ filter_mutu_tahun }}</span>
+                            <span class="state-text">Indikator ini belum punya catatan bulanan pada tahun tersebut. Isi capaian lewat halaman indikator mutu.</span>
+                            {% else %}
+                            <span class="state-title">Belum ada catatan untuk kategori ini</span>
+                            <span class="state-text">Pilih indikator lain, ganti kategori, atau ganti tahun pengukuran.</span>
+                            {% endif %}
+                            <a href="{% url 'akreditasi:indikator_dashboard' %}?tahun={{ filter_mutu_tahun }}" class="btn btn-sm btn-outline-primary state-action">
+                                Isi capaian indikator
                             </a>
                         </div>
                     </div>
                 </div>
 
-                <!-- TAB 2: TREN RENSTRA 2026-2030 GROUPED BAR -->
-                <div class="tab-pane fade" id="pills-renstra" role="tabpanel">
-                    <div class="row align-items-center mb-2 px-2">
-                        <div class="col-12 col-md-7">
-                            <span class="small text-muted">
-                                Perbandingan Target Rencana Strategis (Renstra) vs Realisasi Capaian Aktual RS 2026–2030.
-                            </span>
-                        </div>
-                        <div class="col-12 col-md-5 text-md-end">
-                            <span class="badge bg-primary-subtle text-primary border border-primary-subtle me-1" style="font-size:0.7rem;">
-                                <i class="bi bi-square-fill me-1"></i>Target Renstra
-                            </span>
-                            <span class="badge bg-success-subtle text-success border border-success-subtle" style="font-size:0.7rem;">
-                                <i class="bi bi-square-fill me-1"></i>Realisasi Aktual
-                            </span>
-                        </div>
+                <div class="tab-pane fade" id="pills-renstra" role="tabpanel" aria-labelledby="pills-renstra-tab" tabindex="0">
+                    <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-2">
+                        <span class="small text-muted">Target Renstra 2026-2030 dibanding realisasi capaian aktual RS.</span>
+                        <span class="d-flex gap-2">
+                            <span class="badge bg-primary">Target Renstra (%)</span>
+                            <span class="badge bg-success">Realisasi aktual (%)</span>
+                        </span>
                     </div>
-                    <div style="position: relative; height: 260px; width: 100%;">
-                        <canvas id="chartRenstraTahunan" role="img" aria-label="Grafik target Rencana Strategis 2026-2030 dibanding realisasi aktual"></canvas>
+                    <div class="chart-frame">
+                        <canvas id="chartRenstraTahunan" role="img" aria-label="Grafik target Renstra 2026 sampai 2030 dibanding realisasi aktual"></canvas>
                     </div>
                 </div>
 
-                <!-- TAB 3: MULTI-YEAR TREND -->
-                <div class="tab-pane fade" id="pills-tahunan" role="tabpanel">
-                    <div class="row align-items-center mb-2 px-2">
-                        <div class="col-12 col-md-7">
-                            <span class="small text-muted">
-                                Rata-rata capaian tahunan
-                                {% if mutu_indikator_terpilih %}[{{ mutu_indikator_terpilih.kode_indikator }}] {{ mutu_indikator_terpilih.nama_indikator }}{% else %}(semua indikator terfilter){% endif %}
-                                — tahun berjalan dan 4 tahun sebelumnya.
-                            </span>
-                        </div>
-                        <div class="col-12 col-md-5 text-md-end">
-                            <span class="badge bg-success-subtle text-success border border-success-subtle me-1" style="font-size:0.7rem;">
-                                <i class="bi bi-square-fill me-1"></i>Tercapai
-                            </span>
-                            <span class="badge bg-danger-subtle text-danger border border-danger-subtle" style="font-size:0.7rem;">
-                                <i class="bi bi-square-fill me-1"></i>Di bawah Target
-                            </span>
-                        </div>
+                <div class="tab-pane fade" id="pills-tahunan" role="tabpanel" aria-labelledby="pills-tahunan-tab" tabindex="0">
+                    <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-2">
+                        <span class="small text-muted">
+                            Rata-rata capaian tahunan
+                            {% if mutu_indikator_terpilih %}<span class="font-mono">[{{ mutu_indikator_terpilih.kode_indikator }}]</span> {{ mutu_indikator_terpilih.nama_indikator }}{% else %}untuk semua indikator terfilter{% endif %},
+                            tahun berjalan dan empat tahun sebelumnya.
+                        </span>
+                        <span class="d-flex gap-2">
+                            <span class="badge bg-success">Tercapai</span>
+                            <span class="badge bg-danger">Di bawah target</span>
+                        </span>
                     </div>
-                    <div style="position: relative; height: 260px; width: 100%;">
+                    <div class="chart-frame">
                         <canvas id="chartTahunanMulti" role="img" aria-label="Grafik capaian tahun berjalan dan empat tahun sebelumnya"></canvas>
                     </div>
                 </div>
 
-                <!-- TAB 4: MONTHLY x YEARLY RECAP MATRIX -->
-                <div class="tab-pane fade" id="pills-matriks" role="tabpanel">
-                    <div class="px-2 mb-2">
-                        <span class="small text-muted">
-                            Matriks capaian per bulan × tahun ({{ bulan_labels|length }} bulan) untuk filter aktif.
-                            Warna hijau = tercapai, merah = di bawah target ({{ chart_mutu_target_val }}%).
-                        </span>
-                    </div>
-                    <div class="table-responsive" style="max-height: 320px;">
-                        <table class="table table-sm table-bordered align-middle mb-0" id="tabelMatriksRekap" style="font-size:0.78rem;">
-                            <thead class="table-light sticky-top">
+                <div class="tab-pane fade" id="pills-matriks" role="tabpanel" aria-labelledby="pills-matriks-tab" tabindex="0">
+                    <p class="small text-muted mb-2">
+                        Capaian per bulan dan tahun untuk filter aktif. Nilai hijau mencapai target {{ chart_mutu_target_val }}%, merah di bawahnya, tanda hubung berarti belum ada pengukuran.
+                    </p>
+                    <div class="table-responsive" style="max-height:320px;">
+                        <table class="table table-sm table-bordered align-middle mb-0" id="tabelMatriksRekap">
+                            <thead>
                                 <tr>
-                                    <th class="text-center" style="min-width:64px;">Tahun</th>
+                                    <th class="text-center">Tahun</th>
                                     {% for bln in bulan_labels %}
                                     <th class="text-center">{{ bln }}</th>
                                     {% endfor %}
-                                    <th class="text-center bg-light">Rata²</th>
+                                    <th class="text-center">Rata-rata</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {% for row in matrix_rows %}
                                 <tr>
-                                    <th class="text-center font-monospace">{{ row.year }}</th>
+                                    <th class="text-center font-mono">{{ row.year }}</th>
                                     {% for c in row.months %}
-                                    <td class="text-center font-monospace {% if c.val is None %}text-muted{% elif c.ok %}text-success{% else %}text-danger fw-semibold{% endif %}">
-                                        {% if c.val is None %}–{% else %}{{ c.val }}{% endif %}
+                                    <td class="text-center font-mono {% if c.val is None %}text-muted{% elif c.ok %}text-success{% else %}text-danger{% endif %}">
+                                        {% if c.val is None %}-{% else %}{{ c.val }}{% endif %}
                                     </td>
                                     {% endfor %}
-                                    <td class="text-center font-monospace fw-bold bg-light">
-                                        {% if row.avg is None %}–{% else %}{{ row.avg }}%{% endif %}
+                                    <td class="text-center font-mono fw-semibold">
+                                        {% if row.avg is None %}-{% else %}{{ row.avg }}%{% endif %}
                                     </td>
                                 </tr>
                                 {% endfor %}
@@ -662,305 +354,235 @@
                 </div>
             </div>
         </div>
-    </div>
+    </section>
 
-    <!-- ROADMAP RENSTRA 2026–2030 (MENU TAHUN KLIK → INDIKATOR MUTU) -->
+    <!-- =====================================================================
+         3. Roadmap Renstra
+         ===================================================================== -->
     {% if renstra_years %}
-    <div class="card shadow-sm border-0 mb-4 rounded-3">
-        <div class="card-header bg-white py-3 d-flex flex-wrap justify-content-between align-items-center border-0">
+    <section class="panel mb-3" aria-labelledby="renstraTitle">
+        <div class="panel-head">
             <div>
-                <h6 class="fw-bold mb-0 text-dark">
-                    <i class="bi bi-rocket-takeoff text-primary me-2"></i>Roadmap Renstra RS 2026–2030
-                </h6>
-                <span class="text-muted small">Klik tahun untuk melihat indikator mutu tahunan</span>
+                <h2 id="renstraTitle">Roadmap Renstra 2026-2030</h2>
+                <span class="small text-muted">Klik satu tahun untuk membuka indikator mutu tahun tersebut.</span>
             </div>
-            <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-3 py-2">
-                {{ renstra_years.0.total_indikator }} Indikator Mutu Aktif
-            </span>
+            <span class="badge bg-light">{{ renstra_years.0.total_indikator }} indikator aktif</span>
         </div>
-        <div class="card-body px-3 pt-0 pb-3">
-            <div class="row g-3 renstra-stepper">
+        <div class="panel-body p-0">
+            <ul class="year-strip">
                 {% for yr in renstra_years %}
-                <div class="col-12 col-sm-6 col-lg renstra-year-card">
-                    <a href="{% url 'akreditasi:indikator_dashboard' %}?tahun={{ yr.year }}"
-                       class="text-decoration-none d-block">
-                        <div class="border rounded-3 p-3 h-100 position-relative overflow-hidden transition-all {% if yr.year == 2026 %}renstra-year-active{% endif %}"
-                             style="background: {{ yr.color }}0D; border-color: {{ yr.color }}40 !important;"
-                             onmouseover="this.style.transform='translateY(-3px)'; this.style.boxShadow='0 6px 20px {{ yr.color }}25'"
-                             onmouseout="this.style.transform=''; this.style.boxShadow=''">
-                            <!-- Year Badge -->
-                            <div class="d-flex align-items-center justify-content-between mb-2">
-                                <span class="d-inline-flex align-items-center justify-content-center rounded-2 px-2 py-1"
-                                      style="background: {{ yr.color }}; color: white; font-weight: 800; font-size: 1.1rem; font-family: var(--font-mono);">
-                                    {{ yr.year }}
-                                </span>
-                                {% if yr.year == 2026 %}
-                                <span class="badge bg-primary text-white font-monospace" style="font-size:0.6rem;">TAHUN AKTIF</span>
-                                {% endif %}
-                                <i class="bi {{ yr.icon }} fs-4" style="color: {{ yr.color }};"></i>
-                            </div>
-                            <!-- Label Fase -->
-                            <div class="fw-bold text-dark mb-2" style="font-size: 0.78rem; line-height: 1.3;">
-                                {{ yr.label }}
-                            </div>
-                            <!-- Stats -->
-                            {% if yr.has_data %}
-                            <div class="d-flex align-items-center gap-2 mb-2">
-                                <span class="fw-bold" style="font-size: 1.4rem; color: {{ yr.color }}; font-family: var(--font-mono);">
-                                    {{ yr.avg_capaian }}%
-                                </span>
-                                <span class="text-muted" style="font-size: 0.68rem;">Rata-rata<br>Capaian</span>
-                            </div>
-                            <div class="progress mb-2" style="height: 5px; border-radius: 5px; background: {{ yr.color }}15;">
-                                <div class="progress-bar" role="progressbar"
-                                     style="width: {{ yr.avg_capaian|unlocalize }}%; background: {{ yr.color }}; border-radius: 5px;"></div>
-                            </div>
-                            <div class="d-flex justify-content-between" style="font-size: 0.65rem;">
-                                <span class="text-muted">{{ yr.total_catatan }} data capaian</span>
-                                <span class="fw-bold" style="color: {{ yr.color }};">{{ yr.tercapai }} tercapai</span>
-                            </div>
-                            {% else %}
-                            <div class="text-center py-2">
-                                <i class="bi bi-calendar-plus text-muted fs-4 d-block mb-1"></i>
-                                <span class="text-muted" style="font-size: 0.7rem;">Belum ada data capaian</span>
-                            </div>
-                            {% endif %}
-                        </div>
+                <li class="year-cell{% if yr.year == 2026 %} is-current{% endif %}">
+                    <a href="{% url 'akreditasi:indikator_dashboard' %}?tahun={{ yr.year }}">
+                        <span class="year-label font-mono">{{ yr.year }}</span>
+                        {% if yr.year == 2026 %}<span class="badge">Tahun berjalan</span>{% endif %}
+                        <span class="year-phase">{{ yr.label }}</span>
+                        {% if yr.has_data %}
+                        <span class="year-value font-mono">{{ yr.avg_capaian }}%</span>
+                        <span class="year-note">{{ yr.tercapai }} dari {{ yr.total_catatan }} pengukuran tercapai</span>
+                        {% else %}
+                        <span class="year-value font-mono text-muted">Belum ada data</span>
+                        <span class="year-note">Belum ada pengukuran pada tahun ini.</span>
+                        {% endif %}
                     </a>
-                </div>
+                </li>
                 {% endfor %}
-            </div>
+            </ul>
         </div>
-    </div>
+    </section>
     {% endif %}
 
-    <!-- 2. MIDDLE ROW: PIE CHART STATUS KEPATUHAN & AKTIVITAS TERKINI -->
-    <div class="row g-3 mb-4">
-        <!-- GRAFIK INTI: PIE CHART STATUS KEPATUHAN EP -->
-        <div class="col-12 col-lg-5">
-            <div class="card h-100 shadow-sm border">
-                <div class="card-header bg-white d-flex justify-content-between align-items-center py-3">
-                    <span class="fw-bold text-dark"><i class="bi bi-pie-chart-fill text-primary me-2"></i>Status Kepatuhan EP</span>
-                    <span class="badge bg-light text-dark font-mono">{{ total_ep }} Total EP</span>
-                </div>
-                <div class="card-body d-flex flex-column justify-content-center">
-                    <div class="chart-container">
-                        <canvas id="kepatuhanChart" role="img" aria-label="Diagram status kepatuhan Elemen Penilaian"></canvas>
+    <!-- =====================================================================
+         4. Pokja dan aktivitas
+         ===================================================================== -->
+    <div class="row g-3 mb-3">
+        {% if not unit_dashboard %}
+        <div class="col-12 col-xl-7">
+            <section class="panel h-100" aria-labelledby="pokjaTitle">
+                <div class="panel-head">
+                    <div>
+                        <h2 id="pokjaTitle">Capaian per pokja</h2>
+                        <span class="small text-muted">Diurutkan dari capaian terendah, supaya yang perlu ditangani lebih dulu ada di atas.</span>
                     </div>
-                    <!-- Legend Details -->
-                    <div class="row text-center mt-3 g-2 pt-2 border-top">
-                        <div class="col-4">
-                            <span class="d-block text-success fw-bold font-mono fs-6">{{ count_tercapai }} EP</span>
-                            <span class="d-inline-flex align-items-center gap-1 small text-muted" style="font-size:0.7rem;">
-                                <span style="width:8px;height:8px;background:var(--success);border-radius:50%;display:inline-block;"></span>
-                                Tercapai ({{ pct_tercapai }}%)
-                            </span>
-                        </div>
-                        <div class="col-4">
-                            <span class="d-block text-warning fw-bold font-mono fs-6">{{ count_proses }} EP</span>
-                            <span class="d-inline-flex align-items-center gap-1 small text-muted" style="font-size:0.7rem;">
-                                <span style="width:8px;height:8px;background:var(--warning);border-radius:50%;display:inline-block;"></span>
-                                Proses ({{ pct_proses }}%)
-                            </span>
-                        </div>
-                        <div class="col-4">
-                            <span class="d-block text-danger fw-bold font-mono fs-6">{{ count_belum }} EP</span>
-                            <span class="d-inline-flex align-items-center gap-1 small text-muted" style="font-size:0.7rem;">
-                                <span style="width:8px;height:8px;background:#EF4444;border-radius:50%;display:inline-block;"></span>
-                                Belum ({{ pct_belum }}%)
-                            </span>
-                        </div>
-                    </div>
+                    {% if not unit_dashboard %}
+                    <a href="{% url 'akreditasi:matriks_pdca' %}" class="btn btn-sm btn-outline-primary">Matriks PDCA</a>
+                    {% endif %}
                 </div>
-            </div>
-        </div>
-
-        <!-- TABEL AKTIVITAS TERKINI (5 LOG TERBARU) -->
-        <div class="col-12 col-lg-7">
-            <div class="card h-100 shadow-sm border">
-                <div class="card-header bg-white d-flex justify-content-between align-items-center py-3">
-                    <span class="fw-bold text-dark"><i class="bi bi-clock-history text-primary me-2"></i>Aktivitas &amp; Dokumen Terkini</span>
-                    <a href="{% url 'akreditasi:audit_log' %}" class="small text-decoration-none">Lihat Semua Log &rarr;</a>
-                </div>
-                <div class="card-body p-0">
-                    <div class="table-responsive">
-                        <table class="table table-hover align-middle mb-0" style="font-size:0.78rem;">
-                            <thead class="table-light">
+                <div class="panel-body p-0">
+                    {% if categories %}
+                    <div class="table-responsive border-0">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead>
                                 <tr>
-                                    <th>Waktu</th>
-                                    <th>Pengguna</th>
-                                    <th>Aksi</th>
-                                    <th>Objek / Dokumen</th>
-                                    <th>Keterangan</th>
+                                    <th>Pokja</th>
+                                    <th class="text-end">Skor</th>
+                                    <th style="width:32%;">Capaian</th>
+                                    <th class="text-end">Status</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                {% for log in aktivitas_terkini %}
+                                {% for cat in categories|dictsort:"percentage" %}
                                 <tr>
-                                    <td class="font-mono text-muted text-nowrap" style="font-size:0.7rem;">
-                                        {{ log.timestamp|date:"d/m/y H:i" }}
-                                    </td>
-                                    <td class="fw-bold text-dark">
-                                        <i class="bi bi-person-circle text-secondary me-1"></i>
-                                        {{ log.user.username|default:"System" }}
-                                    </td>
                                     <td>
-                                        {% if log.aksi == 'CREATE' %}
-                                            <span class="badge bg-success-subtle text-success border border-success">Tambah</span>
-                                        {% elif log.aksi == 'UPDATE' or log.aksi == 'SCORE' %}
-                                            <span class="badge bg-warning-subtle text-warning border border-warning">Ubah</span>
-                                        {% elif log.aksi == 'UPLOAD' %}
-                                            <span class="badge bg-primary-subtle text-primary border border-primary">Unggah</span>
-                                        {% elif log.aksi == 'DELETE' %}
-                                            <span class="badge bg-danger-subtle text-danger border border-danger">Hapus</span>
-                                        {% else %}
-                                            <span class="badge bg-secondary">{{ log.aksi }}</span>
-                                        {% endif %}
+                                        <a href="{% url 'akreditasi:matriks_pdca' %}?cat={{ cat.id }}" class="fw-semibold">{{ cat.code }}</a>
+                                        <span class="d-block small text-muted">{{ cat.name|truncatechars:52 }}</span>
                                     </td>
-                                    <td class="fw-semibold text-truncate" style="max-width:140px;" title="{{ log.object_repr }}">
-                                        {{ log.object_repr }}
+                                    <td class="text-end font-mono text-nowrap">{{ cat.total_score }}/{{ cat.max_possible_score }}</td>
+                                    <td>
+                                        <div class="d-flex align-items-center gap-2">
+                                            <div class="progress flex-fill" role="img" aria-label="{{ cat.code }} mencapai {{ cat.percentage }} persen">
+                                                <div class="progress-bar bg-{% if cat.percentage >= 80 %}success{% elif cat.percentage >= 60 %}warning{% else %}danger{% endif %}"
+                                                     style="width: {{ cat.percentage|unlocalize }}%;"></div>
+                                            </div>
+                                            <span class="font-mono small text-nowrap">{{ cat.percentage }}%</span>
+                                        </div>
+                                        <span class="small text-muted">{{ cat.ep_total }} EP</span>
                                     </td>
-                                    <td class="text-muted text-truncate" style="max-width:180px;" title="{{ log.detail }}">
-                                        {{ log.detail|default:"-" }}
-                                    </td>
-                                </tr>
-                                {% empty %}
-                                <tr>
-                                    <td colspan="5" class="text-center py-4 text-muted">
-                                        <i class="bi bi-inbox fs-3 d-block mb-1 text-secondary"></i>
-                                        Belum ada aktivitas tercatat di sistem.
+                                    <td class="text-end">
+                                        <span class="badge bg-{% if cat.status_level.badge == 'primary' %}primary{% elif cat.status_level.badge == 'success' %}success{% elif cat.status_level.badge == 'warning' %}warning{% else %}danger{% endif %}">
+                                            {{ cat.status_level.label }}
+                                        </span>
                                     </td>
                                 </tr>
                                 {% endfor %}
                             </tbody>
                         </table>
                     </div>
+                    {% else %}
+                    <div class="state">
+                        <i class="bi bi-folder2-open state-icon" aria-hidden="true"></i>
+                        <span class="state-title">Belum ada pokja pada katalog aktif</span>
+                        <span class="state-text">Katalog STARKES belum dimuat. Jalankan seed data atau pilih edisi katalog pada halaman Pokja dan Standar.</span>
+                        <a href="{% url 'akreditasi:pokja_manage' %}" class="btn btn-sm btn-outline-primary state-action">Buka Pokja dan Standar</a>
+                    </div>
+                    {% endif %}
                 </div>
-            </div>
+            </section>
         </div>
-    </div>
+        {% endif %}
 
-    <!-- 2.5. STRUKTUR ORGANISASI RS MONSISKAMI (OVERVIEW POHON UNIT KERJA) -->
-    <div class="card shadow-sm border mb-4">
-        <div class="card-header bg-white d-flex justify-content-between align-items-center py-3">
-            <div>
-                <span class="fw-bold text-dark"><i class="bi bi-diagram-3-fill text-primary me-2"></i>Struktur Organisasi RS MonsisKami Tipe B</span>
-                <span class="badge bg-light text-dark ms-2 font-mono">{{ total_units_count }} Unit Kerja</span>
-            </div>
-            <a href="{% url 'akreditasi:unit_tree' %}" class="btn btn-sm btn-outline-primary d-inline-flex align-items-center gap-1">
-                Lihat Pohon Lengkap <i class="bi bi-arrow-right"></i>
-            </a>
-        </div>
-        <div class="card-body p-3">
-            <div class="row g-3">
-                {% for root in root_units %}
-                <div class="col-12 col-md-6 col-xl-3">
-                    <div class="border rounded p-3 h-100" style="background:var(--body-bg);">
-                        <div class="d-flex align-items-center gap-2 mb-2">
-                            <span class="d-inline-flex align-items-center justify-content-center rounded" style="width:32px; height:32px; background:var(--primary-strong); color:white; font-size:0.7rem; font-weight:700;">L1</span>
-                            <div>
-                                <div class="fw-bold" style="font-size:0.8rem; color:var(--text-primary);">{{ root.name|truncatechars:40 }}</div>
-                                <div class="text-muted" style="font-size:0.65rem;">{{ root.code }} — {{ root.pic_name|default:"-" }}</div>
-                            </div>
-                        </div>
-                        {% for child in root.children.all %}
-                        <div class="ms-3 ps-2 border-start mb-1" style="border-color:var(--primary-light) !important;">
-                            <div class="d-flex align-items-center gap-1">
-                                <span class="badge font-mono" style="background:var(--primary-light); color:var(--primary-strong); font-size:0.55rem;">L2</span>
-                                <span class="fw-semibold" style="font-size:0.72rem; color:var(--text-primary);">{{ child.name|truncatechars:35 }}</span>
-                            </div>
-                            {% for sub in child.children.all %}
-                            <div class="ms-3 d-flex align-items-center gap-1 py-0" style="font-size:0.65rem;">
-                                <i class="bi bi-dash text-muted" style="font-size:0.5rem;"></i>
-                                <span class="text-muted">{{ sub.name|truncatechars:30 }}</span>
-                            </div>
-                            {% endfor %}
-                        </div>
+        <div class="col-12 {% if unit_dashboard %}col-xl-12{% else %}col-xl-5{% endif %}">
+            <section class="panel h-100" aria-labelledby="activityTitle">
+                <div class="panel-head">
+                    <h2 id="activityTitle">Aktivitas terakhir</h2>
+                    <a href="{% url 'akreditasi:audit_log' %}" class="small">Log lengkap</a>
+                </div>
+                <div class="panel-body p-0">
+                    {% if aktivitas_terkini %}
+                    <ul class="activity-list">
+                        {% for log in aktivitas_terkini %}
+                        <li>
+                            <span class="activity-time font-mono">{{ log.timestamp|date:"d/m H:i" }}</span>
+                            <span class="activity-body">
+                                <span class="activity-title">
+                                    {{ log.object_repr|default:log.get_aksi_display|default:log.aksi }}
+                                </span>
+                                <span class="activity-meta">
+                                    {{ log.user.username|default:"Sistem" }}
+                                    {% if log.aksi == 'CREATE' %}menambah{% elif log.aksi == 'UPDATE' or log.aksi == 'SCORE' %}mengubah{% elif log.aksi == 'UPLOAD' %}mengunggah{% elif log.aksi == 'DELETE' %}menghapus{% else %}{{ log.aksi|lower }}{% endif %}
+                                    {% if log.detail %}· {{ log.detail|truncatechars:60 }}{% endif %}
+                                </span>
+                            </span>
+                        </li>
                         {% endfor %}
+                    </ul>
+                    {% else %}
+                    <div class="state">
+                        <i class="bi bi-clock-history state-icon" aria-hidden="true"></i>
+                        <span class="state-title">Belum ada aktivitas tercatat</span>
+                        <span class="state-text">Log akan terisi begitu ada perubahan skor, unggahan bukti, atau perubahan status risiko.</span>
                     </div>
+                    {% endif %}
                 </div>
-                {% endfor %}
-            </div>
+            </section>
         </div>
     </div>
 
-    <!-- 3. RINGKASAN CAPAIAN PER POKJA (AKSES CEPAT KE MATRIKS) -->
-    <div class="card shadow-sm border mb-4">
-        <div class="card-header bg-white d-flex justify-content-between align-items-center py-3">
-            <div>
-                <span class="fw-bold text-dark"><i class="bi bi-grid-fill text-primary me-2"></i>Status Kepatuhan per Kelompok Kerja (Pokja)</span>
-                <span class="text-muted small ms-2 d-none d-md-inline">Klik pada Pokja untuk membuka Matriks PDCA 7 Kolom</span>
-            </div>
-            <a href="{% url 'akreditasi:matriks_pdca' %}" class="btn btn-sm btn-primary d-inline-flex align-items-center gap-1">
-                Buka Matriks PDCA <i class="bi bi-arrow-right"></i>
-            </a>
-        </div>
-        <div class="card-body p-3">
-            <div class="row g-3">
-                {% for cat in categories %}
-                <div class="col-12 col-md-6 col-xl-4">
-                    <div class="card h-100 border p-3 d-flex flex-column justify-content-between transition-all" style="border-radius: var(--radius-lg); background: #ffffff; box-shadow: var(--shadow-xs);">
-                        <div>
-                            <div class="d-flex justify-content-between align-items-center mb-2">
-                                <div class="d-flex align-items-center gap-1.5">
-                                    <span class="badge bg-teal font-mono fw-bold px-2 py-1" style="font-size:0.75rem;">{{ cat.code }}</span>
-                                    <span class="badge bg-slate-100 text-slate-600 border border-slate-200 font-mono" style="font-size:0.6rem;">{{ cat.get_kelompok_display }}</span>
-                                </div>
-                                <span class="badge bg-{{ cat.status_level.badge }}-subtle text-{{ cat.status_level.badge }} border border-{{ cat.status_level.badge }}-subtle" style="font-size:0.65rem; font-weight:700;">{{ cat.status_level.label }}</span>
-                            </div>
-                            <h6 class="fw-bold mb-1 text-slate-800" style="font-size:0.86rem; line-height:1.35;">{{ cat.name }}</h6>
-                            <p class="text-muted small mb-3" style="font-size:0.72rem; line-height:1.45;">
-                                {{ cat.description|truncatechars:85 }}
-                            </p>
-                        </div>
-                        <div class="pt-2 border-top border-slate-100">
-                            <div class="d-flex justify-content-between small font-mono mb-1.5" style="font-size:0.72rem;">
-                                <span class="text-muted">Skor: <strong class="text-dark">{{ cat.total_score }}/{{ cat.max_possible_score }}</strong></span>
-                                <span class="fw-bold text-{{ cat.status_level.badge }}">{{ cat.percentage }}%</span>
-                            </div>
-                            <div class="progress" style="height: 6px; border-radius: 6px; background: var(--surface-hover);">
-                                <div class="progress-bar bg-{{ cat.status_level.badge }}" role="progressbar" style="width: {{ cat.percentage|unlocalize }}%;"></div>
-                            </div>
-                            <div class="mt-2.5 d-flex justify-content-between align-items-center">
-                                <span class="text-muted font-mono" style="font-size:0.68rem;">{{ cat.ep_total }} EP</span>
-                                <a href="{% url 'akreditasi:matriks_pdca' %}?cat={{ cat.id }}" class="btn btn-sm btn-outline-teal py-0.5 px-2.5" style="font-size:0.72rem;">
-                                    Buka Matriks &rarr;
-                                </a>
-                            </div>
-                        </div>
-                    </div>
+    <!-- =====================================================================
+         5. Profil singkat RS dan struktur unit
+         ===================================================================== -->
+    <div class="row g-3">
+        <div class="col-12 {% if unit_dashboard %}col-xl-12{% else %}col-xl-7{% endif %}">
+            <section class="panel h-100" aria-labelledby="profileTitle">
+                <div class="panel-head">
+                    <h2 id="profileTitle">Visi dan misi RS</h2>
+                    <a href="{% url 'akreditasi:profil_rs' %}" class="small">Ubah profil</a>
                 </div>
-                {% endfor %}
-            </div>
+                <div class="panel-body">
+                    <p class="mb-3">{{ rs_profile.visi|default:"Visi rumah sakit belum diisi." }}</p>
+                    {% if rs_profile.motto %}
+                    <p class="motto mb-3">{{ rs_profile.motto }}</p>
+                    {% endif %}
+                    {% if rs_profile.misi_list %}
+                    <ol class="misi-list">
+                        {% for m in rs_profile.misi_list %}
+                        <li>{{ m }}</li>
+                        {% endfor %}
+                    </ol>
+                    {% endif %}
+                    {% if rs_profile.tujuan %}
+                    <p class="small text-muted mb-0"><strong>Tujuan strategis:</strong> {{ rs_profile.tujuan }}</p>
+                    {% endif %}
+                </div>
+            </section>
         </div>
+
+        {% if not unit_dashboard %}
+        <div class="col-12 col-xl-5">
+            <section class="panel h-100" aria-labelledby="unitTitle">
+                <div class="panel-head">
+                    <h2 id="unitTitle">Struktur unit kerja</h2>
+                    <a href="{% url 'akreditasi:unit_tree' %}" class="small">Pohon lengkap</a>
+                </div>
+                <div class="panel-body">
+                    {% if root_units %}
+                    <p class="small text-muted">{{ total_units_count }} unit kerja terdaftar. Unit tingkat satu:</p>
+                    <ul class="unit-list">
+                        {% for root in root_units %}
+                        <li>
+                            <span class="unit-code font-mono">{{ root.code }}</span>
+                            <span class="unit-name">{{ root.name }}</span>
+                            <span class="unit-count">{{ root.children.all|length }} unit turunan</span>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                    {% else %}
+                    <div class="state">
+                        <i class="bi bi-diagram-3 state-icon" aria-hidden="true"></i>
+                        <span class="state-title">Belum ada unit kerja</span>
+                        <span class="state-text">Tambahkan unit lebih dulu supaya EP bisa ditugaskan ke penanggung jawab.</span>
+                        <a href="{% url 'akreditasi:unit_list' %}" class="btn btn-sm btn-outline-primary state-action">Tambah unit kerja</a>
+                    </div>
+                    {% endif %}
+                </div>
+            </section>
+        </div>
+        {% endif %}
     </div>
 
 </div>
 
-<!-- DRILL-DOWN MODAL: bulan → Analisis Masalah & Form PDCA -->
+<!-- DRILL-DOWN: bulan ke analisis masalah dan form PDCA -->
 <div class="modal fade" id="modalDrilldownMutu" tabindex="-1" aria-labelledby="dd-modal-title" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
-            <div class="modal-header py-2">
-                <h6 class="modal-title fw-bold" id="dd-modal-title">
-                    <i class="bi bi-graph-up-arrow text-primary me-1"></i>Detail Capaian <span id="dd-bulan-label"></span>
-                </h6>
+            <div class="modal-header">
+                <h2 class="modal-title" id="dd-modal-title">Detail capaian <span id="dd-bulan-label"></span></h2>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tutup"></button>
             </div>
             <div class="modal-body">
-                <div id="dd-indikator-nama" class="small text-muted mb-2"></div>
+                <p class="small text-muted mb-2" id="dd-indikator-nama"></p>
                 <div class="d-flex justify-content-between align-items-center mb-2">
-                    <span class="fw-bold fs-4 font-monospace" id="dd-nilai"></span>
+                    <span class="metric-value" style="font-size:26px;" id="dd-nilai"></span>
                     <span class="badge" id="dd-status"></span>
                 </div>
-                <div class="small text-muted mb-3">
-                    Target: <strong id="dd-target"></strong>% &middot; Selisih: <strong id="dd-gap"></strong>
+                <p class="small text-muted mb-3">
+                    Target <strong id="dd-target"></strong>% · Selisih <strong id="dd-gap"></strong>
+                </p>
+                <div class="alert alert-warning mb-2 d-none" id="dd-hint-null">
+                    Pilih satu indikator pada filter di atas untuk membuka analisis masalah dan form PDCA.
                 </div>
-                <div class="alert alert-warning py-2 small mb-2 d-none" id="dd-hint-null">
-                    Pilih satu indikator spesifik pada filter di atas untuk membuka Analisis Masalah &amp; Form PDCA.
-                </div>
-                <a href="#" id="dd-btn-pdca" class="btn btn-sm btn-danger w-100 d-none">
-                    <i class="bi bi-clipboard2-pulse me-1"></i>Buka Analisis Masalah &amp; Form PDCA
+                <a href="#" id="dd-btn-pdca" class="btn btn-primary w-100 d-none">
+                    Buka analisis masalah dan form PDCA
                 </a>
             </div>
         </div>
@@ -968,434 +590,161 @@
 </div>
 {% endblock %}
 
+{% block extra_css %}
+<style>
+    /* Readiness: one stacked bar carries the whole distribution. */
+    .readiness-bar {
+        display: flex;
+        height: 12px;
+        border-radius: 3px;
+        overflow: hidden;
+        background: var(--neutral-light);
+    }
+    .readiness-bar .seg { display: block; height: 100%; }
+    .readiness-bar .seg-success { background: var(--success); }
+    .readiness-bar .seg-warning { background: var(--warning); }
+    .readiness-bar .seg-danger { background: var(--danger); }
+
+    .readiness-legend {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 12px;
+        margin: 12px 0 0;
+    }
+    .readiness-legend dt {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 12px;
+        font-weight: 500;
+        color: var(--ink-700);
+    }
+    .readiness-legend dd {
+        margin: 2px 0 0;
+        font-family: var(--font-mono);
+        font-size: 13px;
+        color: var(--ink-900);
+    }
+    .dot { width: 8px; height: 8px; border-radius: 2px; flex: 0 0 8px; }
+    .dot-success { background: var(--success); }
+    .dot-warning { background: var(--warning); }
+    .dot-danger { background: var(--danger); }
+
+    /* Supporting facts: a definition list, not four equal cards. */
+    .fact-list { margin: 0; }
+    .fact-row {
+        display: grid;
+        grid-template-columns: 40% minmax(0, 1fr);
+        gap: 12px;
+        padding: 12px 16px;
+        border-bottom: 1px solid var(--line-soft);
+    }
+    .fact-row:last-child { border-bottom: 0; }
+    .fact-row dt {
+        font-size: 12px;
+        font-weight: 500;
+        color: var(--ink-500);
+    }
+    .fact-row dd { margin: 0; min-width: 0; }
+    .fact-value {
+        display: block;
+        font-family: var(--font-mono);
+        font-size: 22px;
+        font-weight: 500;
+        line-height: 1.2;
+        color: var(--ink-900);
+    }
+    .fact-value .unit { font-size: 14px; color: var(--ink-500); }
+    .fact-of { font-size: 14px; color: var(--ink-500); }
+    .fact-note {
+        display: block;
+        margin-top: 4px;
+        font-size: 12px;
+        color: var(--ink-700);
+    }
+
+    .chart-frame { position: relative; height: 260px; width: 100%; }
+
+    /* Renstra years: a strip of five, not five coloured cards. */
+    .year-strip {
+        display: grid;
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+        margin: 0;
+        padding: 0;
+        list-style: none;
+    }
+    .year-cell { border-right: 1px solid var(--line-soft); }
+    .year-cell:last-child { border-right: 0; }
+    .year-cell > a {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        padding: 12px 14px;
+        height: 100%;
+        color: var(--ink-700);
+        text-decoration: none;
+    }
+    .year-cell > a:hover { background: var(--surface-hover); text-decoration: none; }
+    .year-cell.is-current > a { box-shadow: inset 0 2px 0 var(--accent); }
+    .year-label { font-size: 13px; font-weight: 600; color: var(--ink-900); }
+    .year-phase { font-size: 12px; color: var(--ink-700); line-height: 1.35; }
+    .year-value { font-size: 18px; font-weight: 500; color: var(--ink-900); }
+    .year-note { font-size: 11px; color: var(--ink-500); }
+
+    /* Activity: time column, then the event. */
+    .activity-list { margin: 0; padding: 0; list-style: none; }
+    .activity-list li {
+        display: flex;
+        gap: 12px;
+        padding: 10px 16px;
+        border-bottom: 1px solid var(--line-soft);
+    }
+    .activity-list li:last-child { border-bottom: 0; }
+    .activity-time { flex: 0 0 68px; font-size: 11px; color: var(--ink-500); padding-top: 2px; }
+    .activity-body { min-width: 0; }
+    .activity-title { display: block; font-size: 13px; color: var(--ink-900); }
+    .activity-meta { display: block; font-size: 12px; color: var(--ink-500); }
+
+    .motto {
+        padding-left: 12px;
+        border-left: 2px solid var(--accent);
+        font-size: 14px;
+        color: var(--ink-700);
+    }
+    .misi-list { margin: 0; padding-left: 20px; }
+    .misi-list li { margin-bottom: 4px; font-size: 13px; color: var(--ink-700); }
+
+    .unit-list { margin: 0; padding: 0; list-style: none; }
+    .unit-list li {
+        display: grid;
+        grid-template-columns: 88px minmax(0, 1fr) auto;
+        gap: 8px;
+        align-items: baseline;
+        padding: 7px 0;
+        border-bottom: 1px solid var(--line-soft);
+        font-size: 13px;
+    }
+    .unit-list li:last-child { border-bottom: 0; }
+    .unit-code { font-size: 12px; color: var(--ink-500); }
+    .unit-name { color: var(--ink-900); }
+    .unit-count { font-size: 11px; color: var(--ink-500); white-space: nowrap; }
+
+    @media (max-width: 991.98px) {
+        .readiness-legend { grid-template-columns: minmax(0, 1fr); }
+        .fact-row { grid-template-columns: minmax(0, 1fr); gap: 4px; }
+        .year-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        .year-cell:nth-child(2n) { border-right: 0; }
+        .year-cell { border-bottom: 1px solid var(--line-soft); }
+        .year-cell:last-child { border-bottom: 0; }
+    }
+    @media (max-width: 575.98px) {
+        .year-strip { grid-template-columns: minmax(0, 1fr); }
+        .year-cell { border-right: 0; }
+        .unit-list li { grid-template-columns: minmax(0, 1fr); }
+    }
+</style>
+{% endblock %}
+
 {% block extra_js %}
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script>
-// Changing category/unit/year invalidates the indicator selection: clear it before
-// the GET submit so the URL never carries an id from the previous filter set.
-window.arimaMutuFilterChange = function (el) {
-    const form = el.form;
-    const ind = form ? form.querySelector('[name="mutu_indikator"]') : null;
-    if (ind) { ind.value = ''; }
-    if (form) { form.submit(); }
-};
-document.addEventListener('DOMContentLoaded', function() {
-    // Kategori / tahun berubah → muat ulang daftar indikator, kosongkan
-    // pilihan indikator (indikator lama milik kategori lain), lalu submit
-    // supaya grafik langsung menampilkan rata-rata kategori baru.
-    function reloadIndikator(andSubmit) {
-        const jenis = document.getElementById('filterMutuJenis');
-        const tahun = document.getElementById('filterMutuTahun');
-        const ind = document.getElementById('filterMutuIndikator');
-        if (!jenis || !tahun || !ind) return;
-        const url = "{% url 'akreditasi:api_mutu_indikator' %}?jenis="
-            + encodeURIComponent(jenis.value) + "&tahun=" + encodeURIComponent(tahun.value);
-        fetch(url).then(r => r.json()).then(data => {
-            ind.innerHTML = '<option value="">Semua Indikator (Rata-rata)</option>';
-            (data.indikator || []).forEach(function (i) {
-                const o = document.createElement('option');
-                o.value = i.id;
-                o.textContent = '[' + i.kode + '] ' + i.nama + (i.punya_data ? '' : ' — belum ada data');
-                ind.appendChild(o);
-            });
-            if (andSubmit) ind.form.submit();
-        });
-    }
-    document.getElementById('filterMutuJenis')?.addEventListener('change', function () { reloadIndikator(true); });
-    document.getElementById('filterMutuTahun')?.addEventListener('change', function () { reloadIndikator(true); });
-
-    // Validasi form: "Semua Indikator" = rata-rata, bukan error. Kontrol
-    // dinonaktifkan agar URL bersih (tanpa mutu_indikator=).
-    document.querySelector('form[method="GET"]')?.addEventListener('submit', function (e) {
-        const ind = document.getElementById('filterMutuIndikator');
-        if (ind && ind.value === '') ind.disabled = true;
-    });
-
-    // ── Shared chart helpers: value labels + drill-down ──────────────────
-    const MUTU_IND_ID   = "{{ filter_mutu_indikator|default:'' }}";
-    const MUTU_IND_NAMA = "{{ mutu_indikator_terpilih.nama_indikator|escapejs|default:'' }}";
-    const MUTU_IND_KODE = "{{ mutu_indikator_terpilih.kode_indikator|escapejs|default:'' }}";
-    const MUTU_TAHUN    = {{ filter_mutu_tahun }};
-    const MUTU_ARAH     = "{{ mutu_arah_target }}";
-    const MUTU_TARGET   = {{ chart_mutu_target_val_json|safe }};
-    const PDCA_URL_BASE = "{% url 'akreditasi:risiko_input' %}";
-    const NAMA_BULAN = ['Januari','Februari','Maret','April','Mei','Juni',
-                        'Juli','Agustus','September','Oktober','November','Desember'];
-
-    // Inline plugin: draws "74.2%" above every non-null bar (dataset index 1)
-    const valueLabelsPlugin = {
-        id: 'valueLabels',
-        afterDatasetsDraw(chart) {
-            const ctx = chart.ctx;
-            const meta = chart.getDatasetMeta(1);
-            const data = chart.data.datasets[1].data;
-            ctx.save();
-            ctx.font = "600 10px 'JetBrains Mono', monospace";
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'bottom';
-            meta.data.forEach(function (bar, i) {
-                const v = data[i];
-                if (v === null || v === undefined) return;
-                ctx.fillStyle = '#18233D';
-                ctx.fillText(v.toFixed(1) + '%', bar.x, bar.y - 3);
-            });
-            ctx.restore();
-        }
-    };
-
-    function openDrilldown(idx, val) {
-        const modalEl = document.getElementById('modalDrilldownMutu');
-        if (!modalEl) return;
-        const below = (MUTU_ARAH === 'MAX') ? (val > MUTU_TARGET) : (val < MUTU_TARGET);
-        document.getElementById('dd-bulan-label').textContent = NAMA_BULAN[idx] + ' ' + MUTU_TAHUN;
-        document.getElementById('dd-indikator-nama').textContent = MUTU_IND_ID
-            ? '[' + MUTU_IND_KODE + '] ' + MUTU_IND_NAMA
-            : 'Rata-rata semua indikator terfilter';
-        document.getElementById('dd-nilai').textContent = val.toFixed(1) + '%';
-        document.getElementById('dd-target').textContent = MUTU_TARGET;
-        const gap = val - MUTU_TARGET;
-        document.getElementById('dd-gap').textContent = (gap >= 0 ? '+' : '') + gap.toFixed(1) + '%';
-        const st = document.getElementById('dd-status');
-        st.textContent = below ? 'Di bawah Target' : 'Tercapai';
-        st.className = 'badge ' + (below
-            ? 'bg-danger-subtle text-danger border border-danger-subtle'
-            : 'bg-success-subtle text-success border border-success-subtle');
-        const btn = document.getElementById('dd-btn-pdca');
-        const hint = document.getElementById('dd-hint-null');
-        if (MUTU_IND_ID) {
-            btn.href = PDCA_URL_BASE + '?indikator=' + MUTU_IND_ID +
-                       '&bulan=' + (idx + 1) + '&tahun=' + MUTU_TAHUN;
-            btn.classList.remove('d-none');
-            hint.classList.add('d-none');
-        } else {
-            btn.classList.add('d-none');
-            hint.classList.remove('d-none');
-        }
-        new bootstrap.Modal(modalEl).show();
-    }
-
-    // 1. Chart Kepatuhan EP (Doughnut)
-    const kepatuhanEl = document.getElementById('kepatuhanChart');
-    if (kepatuhanEl) {
-        new Chart(kepatuhanEl.getContext('2d'), {
-            type: 'doughnut',
-            data: {
-                labels: ['Tercapai (Skor 10)', 'Dalam Proses (Skor 5)', 'Belum Ada Bukti (Skor 0)'],
-                datasets: [{
-                    data: [{{ count_tercapai }}, {{ count_proses }}, {{ count_belum }}],
-                    backgroundColor: ['#15803D', '#B45309', '#EF4444'],
-                    borderWidth: 2,
-                    borderColor: '#FFFFFF',
-                    hoverOffset: 4
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                cutout: '70%',
-                plugins: {
-                    legend: { display: false },
-                    tooltip: {
-                        callbacks: {
-                            label: function(context) {
-                                let total = {{ total_ep }};
-                                let val = context.raw;
-                                let pct = total > 0 ? Math.round((val / total) * 100) : 0;
-                                return `${context.label}: ${val} EP (${pct}%)`;
-                            }
-                        }
-                    }
-                }
-            }
-        });
-    }
-
-    // 2. Chart Capaian Mutu Bulanan (Combo Bar + Target Line)
-    let chartMutu = null;
-    const mutuEl = document.getElementById('chartMutuBulanan');
-    if (mutuEl) {
-        const mutuLabels = {{ chart_mutu_labels_json|safe }};
-        const mutuData = {{ chart_mutu_data_json|safe }};
-        const mutuColors = {{ chart_mutu_colors_json|safe }};
-        const targetLine = {{ chart_mutu_target_line_json|safe }};
-        const targetVal = {{ chart_mutu_target_val_json|safe }};
-        const hasMutuData = {{ has_monthly_data|yesno:"true,false" }};
-        const mutuMeta  = {{ chart_mutu_meta_json|safe }};
-        const mutuNama  = {{ chart_mutu_nama_json|safe }};
-        const mutuRumus = {{ chart_mutu_rumus_json|safe }};
-
-        if (!hasMutuData) {
-            // Tidak ada catatan bulanan: ganti canvas dengan penjelasan sebabnya.
-            const empty = document.getElementById('mutuEmpty');
-            mutuEl.classList.add('d-none');
-            if (empty) { empty.classList.remove('d-none'); empty.classList.add('d-flex'); }
-        } else {
-        chartMutu = new Chart(mutuEl.getContext('2d'), {
-            type: 'bar',
-            plugins: [valueLabelsPlugin],
-            data: {
-                labels: mutuLabels,
-                datasets: [
-                    {
-                        type: 'line',
-                        label: `Batas Target (${targetVal}%)`,
-                        data: targetLine,
-                        borderColor: '#DC2626',
-                        borderWidth: 2,
-                        borderDash: [6, 4],
-                        pointRadius: 0,
-                        pointHoverRadius: 0,
-                        fill: false,
-                        order: 1
-                    },
-                    {
-                        type: 'bar',
-                        label: 'Realisasi Capaian (%)',
-                        data: mutuData,
-                        backgroundColor: mutuColors,
-                        borderRadius: 5,
-                        maxBarThickness: 38,
-                        order: 2
-                    }
-                ]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                interaction: { mode: 'index', intersect: false },
-                onClick: function (evt, elements) {
-                    if (!elements.length) return;
-                    const el = elements[0];
-                    if (el.datasetIndex !== 1) return;
-                    const val = mutuData[el.index];
-                    if (val === null || val === undefined) return;
-                    openDrilldown(el.index, val);
-                },
-                onHover: function (evt, elements) {
-                    evt.native.target.style.cursor = elements.length ? 'pointer' : 'default';
-                },
-                plugins: {
-                    legend: {
-                        position: 'top',
-                        labels: {
-                            boxWidth: 14,
-                            usePointStyle: true,
-                            font: { family: "Inter, sans-serif", size: 11 }
-                        }
-                    },
-                    tooltip: {
-                        // ponytail: selalu di atas bar — tooltip tebal (rumus + 
-                        // rincian PDCA) tidak boleh menutup label bulan di sumbu X.
-                        position: 'top',
-                        backgroundColor: 'rgba(20, 33, 61, 0.96)',
-                        titleFont: { family: "Inter, sans-serif", size: 12, weight: '700' },
-                        bodyFont: { family: "ui-monospace, Menlo, Consolas, monospace", size: 11 },
-                        bodySpacing: 4,
-                        padding: 12,
-                        boxPadding: 4,
-                        callbacks: {
-                            title: function(items) {
-                                return NAMA_BULAN[items[0].dataIndex] + ' ' + MUTU_TAHUN;
-                            },
-                            label: function(ctx) {
-                                if (ctx.datasetIndex === 0) {
-                                    return ` Batas target: ${targetVal}%`;
-                                }
-                                const meta = mutuMeta[ctx.dataIndex];
-                                if (ctx.raw === null || ctx.raw === undefined) {
-                                    return ' Belum ada pengukuran bulan ini';
-                                }
-                                const lines = [
-                                    ` Capaian      : ${ctx.raw.toFixed(2)}%`,
-                                    ` Target       : ${targetVal}% (${MUTU_ARAH === 'MAX' ? '≤ target, makin kecil makin baik' : '≥ target, makin besar makin baik'})`,
-                                    ` Selisih      : ${(ctx.raw - targetVal >= 0 ? '+' : '')}${(ctx.raw - targetVal).toFixed(2)} poin`,
-                                ];
-                                if (meta) {
-                                    lines.push(` Basis        : ${meta.n} pengukuran (${meta.ok} tercapai, ${meta.n - meta.ok} di bawah target)`);
-                                    if (meta.miss.length) {
-                                        lines.push(` Di bawah target: ${meta.miss.join(', ')}${meta.miss_more ? ` +${meta.miss_more} lainnya` : ''}`);
-                                    }
-                                }
-                                return lines;
-                            },
-                            afterBody: function() {
-                                const parts = ['', mutuNama];
-                                if (mutuRumus) parts.push(`Rumus: ${mutuRumus}`);
-                                parts.push('Klik bar untuk buka rincian PDCA bulan ini.');
-                                return parts;
-                            }
-                        }
-                    }
-                },
-                scales: {
-                    y: {
-                        beginAtZero: true,
-                        max: 105,
-                        ticks: {
-                            stepSize: 20,
-                            callback: v => v + '%'
-                        },
-                        grid: { color: 'rgba(230, 234, 242, 0.9)' }
-                    },
-                    x: {
-                        grid: { display: false }
-                    }
-                }
-            }
-        });
-        }
-    }
-
-    // 2b. Chart Tren Tahunan (Multi-Year Bar + Target Line)
-    let chartTahunan = null;
-    const tahunanEl = document.getElementById('chartTahunanMulti');
-    if (tahunanEl) {
-        const thYears  = {{ chart_tahunan_years_json|safe }};
-        const thData   = {{ chart_tahunan_data_json|safe }};
-        const thColors = {{ chart_tahunan_colors_json|safe }};
-
-        chartTahunan = new Chart(tahunanEl.getContext('2d'), {
-            type: 'bar',
-            plugins: [valueLabelsPlugin],
-            data: {
-                labels: thYears.map(y => `Tahun ${y}`),
-                datasets: [
-                    {
-                        type: 'line',
-                        label: `Batas Target (${MUTU_TARGET}%)`,
-                        data: thYears.map(() => MUTU_TARGET),
-                        borderColor: '#DC2626',
-                        borderWidth: 2,
-                        borderDash: [6, 4],
-                        pointRadius: 0,
-                        fill: false,
-                        order: 1
-                    },
-                    {
-                        type: 'bar',
-                        label: 'Rata-rata Capaian Tahunan (%)',
-                        data: thData,
-                        backgroundColor: thColors,
-                        borderRadius: 5,
-                        maxBarThickness: 46,
-                        order: 2
-                    }
-                ]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        position: 'top',
-                        labels: {
-                            boxWidth: 14,
-                            usePointStyle: true,
-                            font: { family: "Inter, sans-serif", size: 11 }
-                        }
-                    },
-                    tooltip: {
-                        callbacks: {
-                            label: function (ctx) {
-                                if (ctx.raw === null || ctx.raw === undefined) {
-                                    return `${ctx.dataset.label}: Belum ada data`;
-                                }
-                                return `${ctx.dataset.label}: ${ctx.raw}%`;
-                            }
-                        }
-                    }
-                },
-                scales: {
-                    y: {
-                        beginAtZero: true,
-                        max: 105,
-                        ticks: { stepSize: 20, callback: v => v + '%' },
-                        grid: { color: 'rgba(230, 234, 242, 0.9)' }
-                    },
-                    x: { grid: { display: false } }
-                }
-            }
-        });
-    }
-
-    // 3. Chart Tren Renstra 2026-2030 (Grouped Bar Target vs Realisasi)
-    let chartRenstra = null;
-    const renstraEl = document.getElementById('chartRenstraTahunan');
-    if (renstraEl) {
-        const renstraYears = {{ chart_renstra_years_json|safe }};
-        const renstraTargets = {{ chart_renstra_targets_json|safe }};
-        const renstraActuals = {{ chart_renstra_actuals_json|safe }};
-
-        chartRenstra = new Chart(renstraEl.getContext('2d'), {
-            type: 'bar',
-            data: {
-                labels: renstraYears.map(y => `Tahun ${y}`),
-                datasets: [
-                    {
-                        label: 'Target Renstra (%)',
-                        data: renstraTargets,
-                        backgroundColor: '#4F5BD5',
-                        borderRadius: 5,
-                        maxBarThickness: 34
-                    },
-                    {
-                        label: 'Realisasi Aktual (%)',
-                        data: renstraActuals,
-                        backgroundColor: '#15803D',
-                        borderRadius: 5,
-                        maxBarThickness: 34
-                    }
-                ]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        position: 'top',
-                        labels: {
-                            boxWidth: 14,
-                            usePointStyle: true,
-                            font: { family: "Inter, sans-serif", size: 11 }
-                        }
-                    },
-                    tooltip: {
-                        callbacks: {
-                            label: function(ctx) {
-                                if (ctx.raw === null || ctx.raw === undefined) {
-                                    return `${ctx.dataset.label}: Belum ada realisasi`;
-                                }
-                                return `${ctx.dataset.label}: ${ctx.raw}%`;
-                            }
-                        }
-                    }
-                },
-                scales: {
-                    y: {
-                        beginAtZero: true,
-                        max: 105,
-                        ticks: {
-                            stepSize: 20,
-                            callback: v => v + '%'
-                        },
-                        grid: { color: 'rgba(230, 234, 242, 0.9)' }
-                    },
-                    x: {
-                        grid: { display: false }
-                    }
-                }
-            }
-        });
-    }
-
-    // Resize listener when switching tab pills
-    document.querySelectorAll('#pills-mutu-tab button[data-bs-toggle="pill"]').forEach(function(pill) {
-        pill.addEventListener('shown.bs.tab', function() {
-            if (chartMutu) chartMutu.resize();
-            if (chartRenstra) chartRenstra.resize();
-            if (chartTahunan) chartTahunan.resize();
-        });
-    });
-});
-</script>
+{% include "akreditasi/_dashboard_charts_js.html" %}
 {% endblock %}

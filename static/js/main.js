@@ -42,78 +42,24 @@ function getCookie(name) {
     return c ? c.pop() : '';
 }
 
-/* ============================================================
-   SIDEBAR COLLAPSE / EXPAND (DESKTOP)
-   ============================================================ */
-(function () {
-    const STORAGE_KEY = 'arima.sidebar.collapsed';
-    const root = document.documentElement;
-
-    function syncControls(collapsed) {
-        document.querySelectorAll('.sidebar-desktop [data-sidebar-toggle]').forEach(function (el) {
-            el.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
-            const label = collapsed ? 'Perbesar sidebar' : 'Perkecil sidebar';
-            el.setAttribute('title', label);
-            if (el.classList.contains('sidebar-toggle-btn')) {
-                el.setAttribute('aria-label', label);
-                const icon = el.querySelector('i');
-                if (icon) {
-                    icon.classList.toggle('bi-chevron-double-left', !collapsed);
-                    icon.classList.toggle('bi-chevron-double-right', collapsed);
-                }
-            }
-        });
-
-        // Saat rail mode, teks hilang — pasang tooltip dari judul menu.
-        document.querySelectorAll('.sidebar-desktop .nav-link').forEach(function (link) {
-            const titleEl = link.querySelector('.nav-title');
-            if (!titleEl) return;
-            if (collapsed) {
-                if (!link.dataset.fullTitle) link.dataset.fullTitle = titleEl.textContent.trim();
-                link.setAttribute('title', link.dataset.fullTitle);
-            } else if (link.dataset.fullTitle) {
-                link.removeAttribute('title');
-            }
-        });
-    }
-
-    function setCollapsed(collapsed, persist) {
-        root.classList.toggle('sidebar-collapsed', collapsed);
-        syncControls(collapsed);
-        if (persist) {
-            try { localStorage.setItem(STORAGE_KEY, collapsed ? '1' : '0'); } catch (e) {}
-        }
-    }
-
-    // Sinkronkan ikon/aria dengan state yang sudah dipasang inline di <head>.
-    syncControls(root.classList.contains('sidebar-collapsed'));
-
-    document.addEventListener('click', function (e) {
-        const btn = e.target.closest('.sidebar-desktop [data-sidebar-toggle]');
-        if (!btn) return;
-        e.preventDefault();
-        setCollapsed(!root.classList.contains('sidebar-collapsed'), true);
-    });
-
-    // Ctrl/Cmd + B sebagai shortcut, sama seperti editor.
-    // Jangan bajak saat fokus di field teks / editor (Ctrl+B = bold di sana).
-    document.addEventListener('keydown', function (e) {
-        if (!(e.ctrlKey || e.metaKey) || (e.key !== 'b' && e.key !== 'B')) return;
-        const t = e.target;
-        if (t && (t.isContentEditable ||
-                  /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName))) return;
-        e.preventDefault();
-        setCollapsed(!root.classList.contains('sidebar-collapsed'), true);
-    });
-})();
-
 function showToast(msg, type) {
     const t = document.getElementById('appToast');
     const m = document.getElementById('toastMessage');
     if (!t || !m) return;
-    t.className = 'toast align-items-center text-white border-0 shadow bg-' + (type || 'dark');
-    m.innerHTML = '<i class="bi bi-' + (type === 'success' ? 'check-circle' : type === 'danger' ? 'exclamation-triangle' : 'info-circle') + '"></i> ' + msg;
-    const toast = bootstrap.Toast.getOrCreateInstance(t, { delay: 3000 });
+    const icon = type === 'success' ? 'check-circle'
+        : type === 'danger' ? 'exclamation-triangle'
+        : type === 'warning' ? 'exclamation-circle'
+        : 'info-circle';
+    m.replaceChildren();
+    const i = document.createElement('i');
+    i.className = 'bi bi-' + icon;
+    i.setAttribute('aria-hidden', 'true');
+    const span = document.createElement('span');
+    span.textContent = msg;
+    m.append(i, span);
+    t.classList.toggle('toast-success', type === 'success');
+    t.classList.toggle('toast-danger', type === 'danger');
+    const toast = bootstrap.Toast.getOrCreateInstance(t, { delay: 3200 });
     toast.show();
 }
 
@@ -141,7 +87,7 @@ document.addEventListener('click', function(e) {
             const badge = group.closest('td').querySelector('.score-badge');
             if (badge) {
                 badge.className = 'score-badge score-' + score;
-                const labels = { 10: '10 — Lengkap', 5: '5 — Sebagian', 0: '0 — Belum' };
+                const labels = { 10: '10 Lengkap', 5: '5 Sebagian', 0: '0 Belum' };
                 badge.textContent = labels[score] || score;
             }
 

@@ -4,127 +4,111 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}ARIMA — Aplikasi Terpadu Manajemen Risiko dan Tata Kelola Dokumen Akreditasi{% endblock %}</title>
+    <title>{% block title %}ARIMA: Aplikasi Terpadu Manajemen Risiko dan Tata Kelola Dokumen Akreditasi{% endblock %}</title>
+    <link rel="preload" href="{% static 'fonts/ibmplexsans-latin.woff2' %}" as="font" type="font/woff2" crossorigin>
+    <link rel="preload" href="{% static 'fonts/ibmplexmono-latin-400.woff2' %}" as="font" type="font/woff2" crossorigin>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
-    <link rel="preload" href="{% static 'fonts/inter-latin.woff2' %}" as="font" type="font/woff2" crossorigin>
-    <link rel="preload" href="{% static 'fonts/manrope-latin.woff2' %}" as="font" type="font/woff2" crossorigin>
     <link rel="stylesheet" href="{% static 'css/style.css' %}">
-    <link rel="stylesheet" href="{% static 'css/v3-tokens.css' %}">
-
     {% block extra_css %}{% endblock %}
 </head>
-<body data-theme="{{ sys_config.theme_color|default:'teal' }}">
+<body>
 
     <a class="v3-skip-link" href="#main-content">Lompat ke konten utama</a>
 
     <!-- MOBILE TOPBAR -->
-    <nav class="d-md-none mobile-topbar d-flex justify-content-between align-items-center">
-        <button class="btn btn-sm border-0 p-0" type="button" data-bs-toggle="offcanvas" data-bs-target="#mobileSidebar">
-            <i class="bi bi-list fs-4 text-dark"></i>
+    <nav class="mobile-topbar d-md-none" aria-label="Navigasi utama">
+        <button class="btn-menu" type="button" data-bs-toggle="offcanvas" data-bs-target="#mobileSidebar"
+                aria-controls="mobileSidebar" aria-label="Buka menu navigasi">
+            <i class="bi bi-list" aria-hidden="true"></i>
         </button>
-        <div class="d-flex align-items-center gap-2">
-            <div class="brand-icon-sm">
-                <i class="bi bi-building-fill text-white"></i>
-            </div>
-            <div>
-                <span class="fw-bold d-block" style="font-size:0.82rem; line-height:1.2; letter-spacing:-0.01em;">ARIMA</span>
-                <span style="font-size:0.62rem; opacity:0.55;">RS MonsisKami</span>
-            </div>
+        <div class="mobile-brand">
+            <span class="brand-icon-sm" aria-hidden="true"><i class="bi bi-building"></i></span>
+            <span>
+                <span class="name">ARIMA</span>
+                <span class="sub">{{ rs_profile.nama_rs|default:"RS MonsisKami" }}</span>
+            </span>
         </div>
-        <div class="user-avatar-sm">
-            {{ request.user.username|first|upper }}
-        </div>
+        <span class="user-avatar-sm" aria-hidden="true">{{ request.user.username|first|upper }}</span>
     </nav>
 
     <!-- MOBILE OFFCANVAS SIDEBAR -->
-    <div class="offcanvas offcanvas-start offcanvas-sidebar d-md-none" id="mobileSidebar" tabindex="-1">
-        <div class="offcanvas-header border-bottom bg-white text-dark">
+    <div class="offcanvas offcanvas-start offcanvas-sidebar d-md-none" id="mobileSidebar" tabindex="-1"
+         aria-labelledby="mobileSidebarLabel">
+        <div class="offcanvas-header">
             <div class="d-flex align-items-center gap-2">
-                <div class="brand-icon">
-                    <i class="bi bi-building-fill text-white"></i>
-                </div>
+                <span class="brand-icon-sm" aria-hidden="true"><i class="bi bi-building"></i></span>
                 <div>
-                    <h6 class="mb-0 fw-bold" style="font-size:0.85rem; letter-spacing:-0.02em;">ARIMA</h6>
-                    <small style="font-size:0.62rem; line-height:1.2; display:block; opacity:0.55;">RS MonsisKami &bull; Risiko &amp; Akreditasi</small>
+                    <span class="brand-name" id="mobileSidebarLabel">ARIMA</span>
+                    <small>{{ rs_profile.nama_rs|default:"RS MonsisKami" }}</small>
                 </div>
             </div>
-            <button type="button" class="btn-close text-reset" data-bs-dismiss="offcanvas"></button>
+            <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Tutup menu"></button>
         </div>
-        <div class="offcanvas-body p-0">
+        <div class="offcanvas-body">
             {% with sidebar_uid="mobile" %}{% include "includes/sidebar.html" %}{% endwith %}
         </div>
     </div>
 
-    <!-- DESKTOP SIDEBAR -->
-    <aside class="sidebar-desktop d-none d-md-flex flex-column">
+    <!-- DESKTOP RAIL -->
+    <aside class="sidebar-desktop d-none d-md-flex flex-column" aria-label="Navigasi aplikasi">
         <div class="sidebar-brand">
-            <button type="button" class="brand-icon" data-sidebar-toggle
-                    title="Perkecil sidebar" aria-label="Perkecil atau perbesar sidebar" aria-expanded="true">
-                <i class="bi bi-building-fill"></i>
-            </button>
+            <a class="brand-mark" href="{% url 'akreditasi:dashboard' %}" aria-label="ARIMA, ke dashboard">
+                <i class="bi bi-building" aria-hidden="true"></i>
+            </a>
             <div class="sidebar-brand-text">
-                <div class="brand-title-row">
-                    <h6>ARIMA</h6>
-                    <span class="sidebar-status-dot" title="Sistem aktif"></span>
-                </div>
-                <small>Akreditasi &amp; Manajemen Risiko</small>
+                <span class="brand-name">ARIMA</span>
+                <small>{{ rs_profile.nama_rs|default:"RS MonsisKami" }}</small>
             </div>
-
         </div>
         {% with sidebar_uid="desktop" %}{% include "includes/sidebar.html" %}{% endwith %}
     </aside>
 
-    <!-- MAIN CONTENT -->
+    <!-- MAIN COLUMN -->
     <div class="main-content">
-        <!-- TOP NAVBAR -->
+
         <header class="d-none d-md-flex top-bar">
-            <div class="page-heading flex-fill text-start">
+            <div class="page-heading">
                 <nav aria-label="Navigasi halaman">
                     <ol class="v3-breadcrumb">
                         <li><a href="{% url 'akreditasi:dashboard' %}">ARIMA</a></li>
                         {% block breadcrumb %}<li class="current" aria-current="page">Dashboard</li>{% endblock %}
                     </ol>
                 </nav>
-                <div class="d-flex align-items-center gap-2">
-                    <h5>{% block page_title %}Dashboard{% endblock %}</h5>
-                    <span class="badge bg-slate-100 text-slate-700 border border-slate-200 px-2 py-0.5">
-                        <i class="bi bi-hospital me-1 text-teal"></i>{{ rs_profile.nama_rs|default:"RS MonsisKami" }}
-                    </span>
+                <div class="page-title-row">
+                    <h1 class="page-title">{% block page_title %}Dashboard{% endblock %}</h1>
                 </div>
-                <small class="text-muted">{% block page_subtitle %}Aplikasi Terpadu Manajemen Risiko dan Tata Kelola Dokumen Akreditasi{% endblock %}</small>
+                <small>{% block page_subtitle %}Status kesiapan akreditasi rumah sakit{% endblock %}</small>
             </div>
-            <form class="v3-topsearch d-none d-md-flex" role="search" method="get"
-                  action="{% url 'akreditasi:pencarian' %}">
+
+            <form class="v3-topsearch" role="search" method="get" action="{% url 'akreditasi:pencarian' %}">
                 <label class="visually-hidden" for="topbarSearch">Cari di ARIMA</label>
                 <i class="bi bi-search" aria-hidden="true"></i>
                 <input type="search" id="topbarSearch" name="q" value="{{ request.GET.q|default:'' }}"
-                       placeholder="Cari EP, dokumen, risiko, unit, temuan…"
-                       autocomplete="off" minlength="2">
+                       placeholder="Cari EP, dokumen, risiko, unit" autocomplete="off" minlength="2">
                 <kbd aria-hidden="true">/</kbd>
             </form>
-            <div class="user-pill d-flex align-items-center gap-2">
+
+            <div class="user-pill">
                 <div class="user-info">
-                    <div class="user-avatar">
-                        {{ request.user.username|first|upper }}
-                    </div>
-                    <div class="user-text">
+                    <span class="user-avatar" aria-hidden="true">{{ request.user.username|first|upper }}</span>
+                    <span class="user-text">
                         <span class="user-name">{{ request.user.profile.full_name|default:request.user.get_full_name|default:request.user.username }}</span>
                         <span class="user-role">
                             {% if request.user.profile %}
-                                <span class="badge bg-{{ request.user.profile.role_badge_class }}" style="font-size:0.6rem; padding: 1px 5px;">{{ request.user.profile.get_role_display }}</span>
+                                <span class="badge bg-light">{{ request.user.profile.get_role_display }}</span>
                             {% elif request.user.is_superuser %}
-                                <span class="badge bg-danger" style="font-size:0.6rem; padding: 1px 5px;">Super Admin</span>
+                                <span class="badge bg-light">Super Admin</span>
                             {% else %}
-                                <span class="badge bg-secondary" style="font-size:0.6rem; padding: 1px 5px;">User</span>
+                                <span class="badge bg-light">Pengguna</span>
                             {% endif %}
                         </span>
-                    </div>
+                    </span>
                 </div>
-                <form method="post" action="{% url 'accounts:logout' %}" class="d-inline m-0">
+                <form method="post" action="{% url 'accounts:logout' %}" class="m-0">
                     {% csrf_token %}
-                    <button type="submit" class="btn-logout" title="Keluar dari akun">
-                        <i class="bi bi-box-arrow-right"></i>
+                    <button type="submit" class="btn-logout" title="Keluar dari akun" aria-label="Keluar dari akun">
+                        <i class="bi bi-box-arrow-right" aria-hidden="true"></i>
                     </button>
                 </form>
             </div>
@@ -133,13 +117,15 @@
         <main class="content-area" id="main-content" tabindex="-1">
             {% if messages %}
                 {% for message in messages %}
-                    <div class="alert alert-{{ message.tags }} alert-dismissible fade show py-2 mb-3 shadow-xs d-flex align-items-center justify-content-between" role="alert">
-                        <div>
-                            {% if message.tags == 'success' %}<i class="bi bi-check-circle-fill me-1.5 text-success"></i>{% endif %}
-                            {% if message.tags == 'danger' or message.tags == 'error' %}<i class="bi bi-exclamation-triangle-fill me-1.5 text-danger"></i>{% endif %}
-                            {{ message }}
+                    <div class="alert alert-{{ message.tags }} d-flex align-items-start justify-content-between gap-2 mb-3" role="alert">
+                        <div class="d-flex align-items-start gap-2">
+                            {% if message.tags == 'success' %}<i class="bi bi-check-circle" aria-hidden="true"></i>{% endif %}
+                            {% if message.tags == 'danger' or message.tags == 'error' %}<i class="bi bi-exclamation-triangle" aria-hidden="true"></i>{% endif %}
+                            {% if message.tags == 'warning' %}<i class="bi bi-exclamation-circle" aria-hidden="true"></i>{% endif %}
+                            {% if message.tags == 'info' %}<i class="bi bi-info-circle" aria-hidden="true"></i>{% endif %}
+                            <span>{{ message }}</span>
                         </div>
-                        <button type="button" class="btn-close p-2" data-bs-dismiss="alert" style="font-size:0.65rem;"></button>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Tutup pesan" style="font-size:11px;"></button>
                     </div>
                 {% endfor %}
             {% endif %}
@@ -148,20 +134,19 @@
         </main>
     </div>
 
-    <!-- TOAST CONTAINER -->
-    <div class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index: 1090;">
-        <div id="appToast" class="toast align-items-center text-white bg-dark border-0 shadow" role="alert" aria-live="assertive" aria-atomic="true">
+    <!-- TOAST -->
+    <div class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index:1090;">
+        <div id="appToast" class="toast align-items-center border-0" role="status" aria-live="polite" aria-atomic="true">
             <div class="d-flex">
                 <div class="toast-body d-flex align-items-center gap-2" id="toastMessage">
-                    <i class="bi bi-info-circle"></i> Info
+                    <i class="bi bi-info-circle" aria-hidden="true"></i> <span>Info</span>
                 </div>
-                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Tutup"></button>
             </div>
         </div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="{% static 'js/v3-shell.js' %}"></script>
     <script src="{% static 'js/main.js' %}"></script>
     {% block extra_js %}{% endblock %}
 </body>

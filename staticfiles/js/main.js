@@ -46,9 +46,20 @@ function showToast(msg, type) {
     const t = document.getElementById('appToast');
     const m = document.getElementById('toastMessage');
     if (!t || !m) return;
-    t.className = 'toast align-items-center text-white border-0 shadow bg-' + (type || 'dark');
-    m.innerHTML = '<i class="bi bi-' + (type === 'success' ? 'check-circle' : type === 'danger' ? 'exclamation-triangle' : 'info-circle') + '"></i> ' + msg;
-    const toast = bootstrap.Toast.getOrCreateInstance(t, { delay: 3000 });
+    const icon = type === 'success' ? 'check-circle'
+        : type === 'danger' ? 'exclamation-triangle'
+        : type === 'warning' ? 'exclamation-circle'
+        : 'info-circle';
+    m.replaceChildren();
+    const i = document.createElement('i');
+    i.className = 'bi bi-' + icon;
+    i.setAttribute('aria-hidden', 'true');
+    const span = document.createElement('span');
+    span.textContent = msg;
+    m.append(i, span);
+    t.classList.toggle('toast-success', type === 'success');
+    t.classList.toggle('toast-danger', type === 'danger');
+    const toast = bootstrap.Toast.getOrCreateInstance(t, { delay: 3200 });
     toast.show();
 }
 
@@ -76,7 +87,7 @@ document.addEventListener('click', function(e) {
             const badge = group.closest('td').querySelector('.score-badge');
             if (badge) {
                 badge.className = 'score-badge score-' + score;
-                const labels = { 10: '10 — Lengkap', 5: '5 — Sebagian', 0: '0 — Belum' };
+                const labels = { 10: '10 Lengkap', 5: '5 Sebagian', 0: '0 Belum' };
                 badge.textContent = labels[score] || score;
             }
 

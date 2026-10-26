@@ -57,6 +57,7 @@ Setiap rilis wajib ditambahkan sebagai satu baris/blok di tabel berikut:
 | v2.0 | 2026-09-25 | `8ab3579` | **Fase 1–5 Besar:** Branding RS MonsisKami, Pohon 65 Unit, Manajemen Risiko 5×5, Lapor Insiden Anonim, Auto-Scoring KARS, Cetak PDF native | 01, 02, 03, 04, 05 |
 | v2.1 | 2026-09-25 | `42b5b4f` | Fix: Login page branded, Profil RS data migration, A11y labels (14 input) | 01 |
 | v2.6.1 | 2026-10-25 | `cache-fingerprint` | Fix konsistensi sidebar expanded dan layout Integrated Control compact melalui URL aset statis ber-fingerprint; cache lama browser tidak lagi menahan CSS/JS deploy sebelumnya | 06 |
+| v3.0 | 2026-10-26 | `uiux-remake` | Remake UI/UX inti akreditasi: DESIGN.md, IBM Plex, satu sistem token di `style.css`, rail navigasi bertema tugas, dashboard berfokus kesiapan, matriks PDCA dengan sel yang bisa dioperasikan keyboard, halaman EP, dokumen bukti, dan login | 01, 05, 06 |
 
 ---
 

@@ -5,7 +5,7 @@
 
 ## 1. Struktur Organisasi RS MonsisKami (Visualisasi Pohon)
 
-Di **Dashboard** utama, Anda dapat melihat **Pohon Struktur Organisasi** yang menampilkan hierarki 4 level seluruh unit kerja RS MonsisKami Tipe B:
+Buka menu **Hierarki unit** (Data induk, Hierarki unit) untuk melihat **Pohon Struktur Organisasi** dengan hierarki seluruh unit kerja RS MonsisKami Tipe B. Dashboard utama hanya menampilkan ringkasan jumlah unit dan unit tingkat satu; pohon lengkap dipisah supaya dashboard tetap fokus pada kesiapan akreditasi.
 
 ### Hierarki Organisasi:
 
