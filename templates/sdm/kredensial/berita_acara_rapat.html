@@ -35,6 +35,7 @@
     <dt>Unit Kerja</dt><dd>{{ credential_request.unit_kerja.code }} — {{ credential_request.unit_kerja.name }}</dd>
     <dt>Tanggal Rapat</dt><dd>{% if tanggal_rapat %}{{ tanggal_rapat|date:"d F Y" }}{% else %}—{% endif %}</dd>
     <dt>Jenis Pengajuan</dt><dd>{{ credential_request.get_jenis_display }}</dd>
+    {% if credential_request.spesialisasi_teks %}<dt>Spesialisasi</dt><dd>{{ credential_request.spesialisasi_teks }}</dd>{% endif %}
     <dt>Status</dt><dd>{{ credential_request.get_status_display }}</dd>
 </dl>
 

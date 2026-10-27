@@ -18,9 +18,16 @@ from sdm.models import (
     PesertaDiklat,
     SertifikatDiklat,
     SumberKebutuhanPelatihan,
+    TahapPenilaian,
 )
 
 TNA_RULE_VERSION = 'tna-rules-v1'
+IDP_RULE_VERSION = 'idp-arima-v1'
+
+# Tahap yang wajib tercatat sebelum finalisasi (TERKUNCI bukan syarat —
+# finalisasi itulah yang mencatatnya).
+TAHAP_WAJIB_FINAL = ['DATA_TERKUMPUL', 'SELF_ASSESSMENT', 'REVIEW_ATASAN',
+                     'KALIBRASI_MUTU', 'FEEDBACK']
 
 
 def finalize_appraisal(appraisal, *, actor):
@@ -40,10 +47,26 @@ def finalize_appraisal(appraisal, *, actor):
             })
         if locked.reviewer_id is None:
             raise ValidationError({'reviewer': 'Penilai wajib ditetapkan.'})
+        tercatat = set(
+            TahapPenilaian.objects.filter(appraisal=locked)
+            .values_list('tahap', flat=True)
+        )
+        belum = [tahap for tahap in TAHAP_WAJIB_FINAL if tahap not in tercatat]
+        if belum:
+            raise ValidationError({
+                'tahap': 'Tahap belum lengkap: ' + ', '.join(belum)
+            })
 
         locked.status = 'FINAL'
         locked.finalized_at = timezone.now()
-        locked.save(update_fields=['status', 'finalized_at'])
+        locked.kategori_akhir = locked.hitung_kategori()
+        locked.save(update_fields=['status', 'finalized_at', 'kategori_akhir'])
+        TahapPenilaian.objects.create(
+            appraisal=locked,
+            tahap='TERKUNCI',
+            aktor=actor,
+            catatan=f'Finalisasi; kategori={locked.kategori_akhir or "-"}',
+        )
         PeristiwaSDM.objects.create(
             actor=actor,
             jenis_peristiwa='appraisal_finalized',
@@ -51,9 +74,53 @@ def finalize_appraisal(appraisal, *, actor):
             target_id=str(locked.pk),
             status_sebelum='DRAFT',
             status_sesudah='FINAL',
-            alasan=f'weighted_score={locked.weighted_score}',
+            alasan=f'weighted_score={locked.weighted_score} kategori={locked.kategori_akhir}',
         )
+        _usulkan_idp_dari_butir(locked)
     return locked
+
+
+def _usulkan_idp_dari_butir(appraisal):
+    """IDP otomatis: butir berskor < 3.00 menjadi KebutuhanPelatihan.
+
+    Melengkapi (bukan menggantikan) ``propose_training_needs`` agregat.
+    Idempoten lewat unik ``(employee, topik, rule_version)``.
+    """
+    dibuat = 0
+    for item in appraisal.items.filter(score__lt=Decimal('3.00')):
+        topik = f"Perbaikan: {item.nama[:188]}"
+        need, created = KebutuhanPelatihan.objects.get_or_create(
+            employee=appraisal.employee,
+            topik=topik,
+            rule_version=IDP_RULE_VERSION,
+            defaults={
+                'unit_kerja_id': (
+                    appraisal.employee.penempatan
+                    .order_by('-tanggal_mulai', '-pk')
+                    .values_list('unit_kerja_id', flat=True)
+                    .first()
+                ),
+                'alasan_agregat': (
+                    f"Butir '{item.nama}' terskor {item.score} < 3.00 "
+                    f"pada penilaian {appraisal.periode.nama}."
+                ),
+                'source_refs': [{
+                    'type': 'butir_penilaian',
+                    'id': str(item.pk),
+                    'skor': float(item.score),
+                    'periode': str(appraisal.periode_id),
+                }],
+            },
+        )
+        if created:
+            SumberKebutuhanPelatihan.objects.create(
+                need=need,
+                source_type='butir_penilaian',
+                source_id=str(item.pk)[:64],
+                note=f'Skor {item.score} — {appraisal.periode.nama}',
+            )
+            dibuat += 1
+    return dibuat
 
 
 def acknowledge_appraisal(appraisal, *, actor):

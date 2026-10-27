@@ -236,6 +236,18 @@ urlpatterns = [
         name='orientasi_detail',
     ),
     path('kinerja/', views.kinerja_list, name='kinerja_list'),
+    path('kinerja/periode/baru/', views.kinerja_periode_baru, name='kinerja_periode_baru'),
+    path('kinerja/baru/', views.kinerja_buat, name='kinerja_buat'),
+    path(
+        'kinerja/<uuid:appraisal_id>/',
+        views.kinerja_detail,
+        name='kinerja_detail',
+    ),
+    path(
+        'kinerja/<uuid:appraisal_id>/sinkron/',
+        views.kinerja_sinkron,
+        name='kinerja_sinkron',
+    ),
     path(
         'kinerja/<uuid:appraisal_id>/finalkan/',
         views.kinerja_finalize,

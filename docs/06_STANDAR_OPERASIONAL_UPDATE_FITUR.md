@@ -137,3 +137,27 @@ pengingat.
 
 > 💡 **Batasan:** daftar tindakan RKK dokter sengaja kosong sampai SK komite;
 > reminder hanya in-app (email/WhatsApp menyusul bila dibutuhkan).
+
+---
+
+## Kaskade Pemilihan Nakes & Katalog Tindakan Tertutup — 2026-10-27
+
+### Apa Tujuannya?
+Melengkapi katalog RKK dokter dari dokumen "Katalog tindakan klinis" (RS Tipe B),
+menambah 105 butir nakes lain per level, dan menghidupkan alur kaskade
+Level → Spesialisasi → Tindakan pada detail kredensial.
+
+### Cara Menggunakan:
+1. **Seed** (idempoten, sudah dijalankan di DB lokal):
+   `manage.py seed_katalog_rkk --apply` → +34 jenjang spesialisasi/subspesialisasi,
+   +226 butir (dokter 121 + nakes 105), total katalog 499.
+2. **Kaskade di detail kredensial**: dropdown "Jenjang / Spesialisasi" muncul di
+   atas katalog. Bawaan = jenjang pegawai; pilih lain untuk menyaring;
+   "— semua jenjang profesi —" melepas saringan.
+3. **Spesialisasi bebas**: pengaju berjenjang `SP-*`/`SUBSP-*`/`DU-SP`/`DU-KONS`
+   mendapat kolom "Spesialisasi / Subspesialisasi" di portal pengajuan mandiri;
+   tercetak di berita acara rapat.
+4. Status M/S butir nakes lain mengikuti dokumen; yang baku berstatus 'S'
+   + catatan "Status baku belum ditetapkan; tinjau komite."
+
+> 💡 DOKTER_SP kini punya jenjang; daftar subspesialisasi memakai urutan 3.

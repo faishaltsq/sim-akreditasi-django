@@ -230,3 +230,88 @@ class OrientasiFlowTests(JenjangBase):
         resp = self.client.get(reverse('sdm:orientasi_rekap_pdf'))
         self.assertEqual(resp.status_code, 200)
         self.assertEqual(resp['Content-Type'], 'application/pdf')
+
+
+class KaskadeKatalogTests(JenjangBase):
+    """Plan katalog-tindakan-kaskade: K2 kaskade detail + K4 spesialisasi_teks."""
+
+    @classmethod
+    def setUpTestData(cls):
+        super().setUpTestData()
+        from sdm.models import KatalogTindakan
+        cls.k1 = KatalogTindakan.objects.create(
+            kode='KAS-A', nama='Tindakan J1', jenjang=cls.j1,
+        )
+        cls.k3 = KatalogTindakan.objects.create(
+            kode='KAS-B', nama='Tindakan J3', jenjang=cls.j3,
+        )
+
+    def _hc_user(self):
+        user = get_user_model().objects.create_user('kas-hc')
+        from accounts.models import RolePermissionConfig
+        config = RolePermissionConfig.get_config_for_role('ADMIN_RS')
+        config.can_view_hc = True
+        config.save(update_fields=['can_view_hc', 'updated_at'])
+        HcGrant.objects.create(
+            user=user, capability='can_review_hc_credentials',
+            unit_kerja=self.unit,
+        )
+        HcGrant.objects.create(
+            user=user, capability='can_view_hc', unit_kerja=self.unit,
+        )
+        return user
+
+    def test_detail_kaskade_menyaring_katalog(self):
+        user = self._hc_user()
+        pegawai = self._pegawai('Ners Kas', jenjang=self.j1)
+        pegawai.profesi_master = self.profesi
+        pegawai.save(update_fields=['profesi_master'])
+        from sdm.models import PengajuanKredensial
+        req = PengajuanKredensial.objects.create(
+            employee=pegawai, unit_kerja=self.unit, submitted_by=user,
+        )
+        self.client.force_login(user)
+
+        # Tanpa parameter → terkunci ke jenjang pegawai (R1).
+        semua = self.client.get(
+            reverse('sdm:kredensial_detail', args=[req.pk]))
+        self.assertContains(semua, 'KAS-A')
+        self.assertNotContains(semua, 'KAS-B')
+
+        # Kaskade eksplisit → hanya jenjang terpilih.
+        saring = self.client.get(
+            reverse('sdm:kredensial_detail', args=[req.pk]),
+            {'jenjang': self.j3.pk},
+        )
+        self.assertContains(saring, 'KAS-B')
+        self.assertNotContains(saring, 'KAS-A')
+
+        # Lepas batasan: operator memilih "semua jenjang".
+        bebas = self.client.get(
+            reverse('sdm:kredensial_detail', args=[req.pk]),
+            {'jenjang': ''},
+        )
+        self.assertContains(bebas, 'KAS-A')
+        self.assertContains(bebas, 'KAS-B')
+
+    def test_portal_spesialisasi_field_hanya_untuk_sp(self):
+        from sdm.forms.kredensial_portal import PengajuanPortalForm
+
+        sp_jenjang = MasterJenjangProfesi.objects.create(
+            profesi=MasterProfesiPegawai.objects.get_or_create(
+                code='DOKTER_SP',
+                defaults={'nama': 'Dokter Spesialis', 'keluarga': 'MEDIS'},
+            )[0], kode='SP-X', nama='Dokter Spesialis X', urutan=2,
+        )
+        dokter_user = get_user_model().objects.create_user('kas-dok')
+        DokterPegawai = self._pegawai(
+            'dr. Kas Sp', jenjang=sp_jenjang, akun=dokter_user,
+        )
+        ners = self._pegawai('Ners Tanpa Sp', jenjang=self.j1)
+
+        form_sp = PengajuanPortalForm(user=dokter_user)
+        self.assertIn('spesialisasi_teks', form_sp.fields)
+        form_ners = PengajuanPortalForm(
+            user=get_user_model().objects.create_user('kas-ners'),
+        )
+        self.assertNotIn('spesialisasi_teks', form_ners.fields)

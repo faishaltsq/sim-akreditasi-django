@@ -80,6 +80,7 @@ HC_PERMISSION_LABELS = [
     ('hc_approve_credentials', 'Pengesahan Kredensial (Direktur)'),
     ('can_manage_hc_orientation', 'Kelola Orientasi'),
     ('can_manage_hc_appraisals', 'Kelola Penilaian Kinerja'),
+    ('hc_calibrate_appraisals', 'Kalibrasi Penilaian Kinerja'),
     ('can_manage_hc_training', 'Kelola Diklat'),
     ('can_view_hc_analytics', 'Lihat Analitik SDM'),
     ('can_manage_hc_talent', 'Kelola Talent'),
@@ -484,6 +485,7 @@ class RolePermissionConfig(models.Model):
     hc_approve_credentials = models.BooleanField('Pengesahan Kredensial (Direktur)', default=False)
     can_manage_hc_orientation = models.BooleanField('Kelola Orientasi Human Capital', default=False)
     can_manage_hc_appraisals = models.BooleanField('Kelola Penilaian Kinerja Human Capital', default=False)
+    hc_calibrate_appraisals = models.BooleanField('Kalibrasi Penilaian Kinerja (Komite Mutu/BPP)', default=False)
     can_manage_hc_training = models.BooleanField('Kelola Diklat Human Capital', default=False)
     can_view_hc_analytics = models.BooleanField('Lihat Analitik SDM', default=False)
     can_manage_hc_talent = models.BooleanField('Kelola Talent Human Capital', default=False)

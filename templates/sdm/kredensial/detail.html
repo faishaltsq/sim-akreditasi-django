@@ -125,6 +125,18 @@
                         Profesi: {{ profesi_label }}
                         {% if jenjang_labels %}· Jenjang: {{ jenjang_labels|join:", " }}{% endif %}
                     </p>
+                    {% if jenjang_options %}
+                    <form method="get" class="mb-2">
+                        <label class="form-label small fw-semibold" for="priv-jenjang">Jenjang / Spesialisasi</label>
+                        <select id="priv-jenjang" name="jenjang" class="form-select form-select-sm" onchange="this.form.submit()">
+                            <option value="">— semua jenjang profesi —</option>
+                            {% for j in jenjang_options %}
+                            <option value="{{ j.pk }}" {% if jenjang_aktif == j.pk %}selected{% endif %}>{{ j.nama }}</option>
+                            {% endfor %}
+                        </select>
+                        <noscript><button class="btn btn-outline-secondary btn-sm mt-1" type="submit">Terapkan</button></noscript>
+                    </form>
+                    {% endif %}
                     {% if katalog_error %}<div class="alert alert-warning py-2 small mb-2">{{ katalog_error }}</div>{% endif %}
                     <form method="post" action="{% url 'sdm:kredensial_add_privilege' credential_request.pk %}" class="row g-2">
                         {% csrf_token %}

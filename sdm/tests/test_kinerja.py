@@ -76,6 +76,25 @@ class LevelThreeBase(TestCase):
         )
         return appraisal
 
+    def _lengkapi_tahap(self, appraisal, sampai='FEEDBACK'):
+        """Catat tahapan siklus ARIMA sampai sebelum TERKUNCI."""
+        from sdm.models import TahapPenilaian
+
+        urutan = ['DATA_TERKUMPUL', 'SELF_ASSESSMENT', 'REVIEW_ATASAN',
+                  'KALIBRASI_MUTU', 'FEEDBACK']
+        dipilih = urutan[:urutan.index(sampai) + 1]
+        for tahap in dipilih:
+            TahapPenilaian.objects.create(
+                appraisal=appraisal, tahap=tahap, aktor=self.user,
+            )
+
+    def _finalkan(self, appraisal, *, score=Decimal('2.00')):
+        """Butir terskor + tahapan lengkap, lalu finalkan."""
+        from sdm.services.kinerja import finalize_appraisal
+
+        self._lengkapi_tahap(appraisal)
+        return finalize_appraisal(appraisal, actor=self.user)
+
 
 class AppraisalTests(LevelThreeBase):
     def test_duplicate_period_for_same_employee_is_rejected(self):
@@ -116,7 +135,7 @@ class AppraisalTests(LevelThreeBase):
 
     def test_finalized_appraisal_cannot_be_edited(self):
         appraisal = self._appraisal()
-        finalize_appraisal(appraisal, actor=self.user)
+        self._finalkan(appraisal)
         appraisal.status = 'DRAFT'
 
         with self.assertRaises(ValidationError):
@@ -124,7 +143,7 @@ class AppraisalTests(LevelThreeBase):
 
     def test_acknowledgment_requires_the_employee_account(self):
         appraisal = self._appraisal()
-        finalize_appraisal(appraisal, actor=self.user)
+        self._finalkan(appraisal)
 
         with self.assertRaises(PermissionDenied):
             acknowledge_appraisal(appraisal, actor=self.user)
@@ -134,7 +153,7 @@ class AppraisalTests(LevelThreeBase):
         self.employee.akun = owner
         self.employee.save(update_fields=['akun', 'updated_at'])
         appraisal = self._appraisal()
-        finalize_appraisal(appraisal, actor=self.user)
+        self._finalkan(appraisal)
         appraisal.refresh_from_db()
 
         acknowledge_appraisal(appraisal, actor=owner)
@@ -148,7 +167,7 @@ class AppraisalTests(LevelThreeBase):
 class TrainingNeedsTests(LevelThreeBase):
     def test_low_final_score_creates_one_proposal_with_provenance(self):
         appraisal = self._appraisal(score=Decimal('2.00'))
-        finalize_appraisal(appraisal, actor=self.user)
+        self._finalkan(appraisal)
 
         created = propose_training_needs(
             unit=self.unit, actor=self.user, period=self.period
@@ -161,7 +180,7 @@ class TrainingNeedsTests(LevelThreeBase):
 
     def test_high_score_creates_no_automatic_proposal(self):
         appraisal = self._appraisal(score=Decimal('4.00'))
-        finalize_appraisal(appraisal, actor=self.user)
+        self._finalkan(appraisal)
 
         created = propose_training_needs(
             unit=self.unit, actor=self.user, period=self.period
@@ -171,7 +190,7 @@ class TrainingNeedsTests(LevelThreeBase):
 
     def test_repeated_runs_do_not_duplicate_proposals(self):
         appraisal = self._appraisal(score=Decimal('1.00'))
-        finalize_appraisal(appraisal, actor=self.user)
+        self._finalkan(appraisal)
 
         propose_training_needs(unit=self.unit, actor=self.user, period=self.period)
         second = propose_training_needs(
@@ -179,7 +198,17 @@ class TrainingNeedsTests(LevelThreeBase):
         )
 
         self.assertEqual(second, [])
-        self.assertEqual(KebutuhanPelatihan.objects.count(), 1)
+        # Satu IDP per-butir (skor < 3,00) + satu usulan agregat.
+        self.assertEqual(
+            KebutuhanPelatihan.objects.filter(
+                topik='Peningkatan kinerja klinis'
+            ).count(), 1,
+        )
+        self.assertEqual(
+            KebutuhanPelatihan.objects.filter(
+                topik__startswith='Perbaikan:'
+            ).count(), 1,
+        )
 
     def test_manual_need_requires_hr_approval_before_use(self):
         created = propose_training_needs(

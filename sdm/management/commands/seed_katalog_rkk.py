@@ -4,6 +4,12 @@ from django.core.management.base import BaseCommand
 from django.db import transaction
 
 from sdm.management.commands._data_katalog_rkk import (
+    KATALOG_DOKTER_UMUM,
+    KATALOG_NAKES_TAMBAHAN,
+    KATALOG_SPESIALIS,
+    KATALOG_SUBSPESIALIS,
+    CATATAN_STATUS_BAKU,
+    DEFAULT_STATUS_UNSET,
     DOKTER_JENJANG,
     FOKUS_KOMPETENSI,
     PROFESI,
@@ -63,6 +69,37 @@ def plan_missing():
         if kode not in existing_katalog:
             katalog_baru += 1
 
+    # Katalog dokter tertutup + nakes tambahan (K1/K3 plan kaskade).
+    if ('DOKTER_UMUM', 'DU-UMUM') not in existing_jenjang:
+        jenjang_baru += 1
+    for counter in range(1, len(KATALOG_DOKTER_UMUM) + 1):
+        if f'K-DOKUM-{counter:03d}' not in existing_katalog:
+            katalog_baru += 1
+    doksp_ada = 'DOKTER_SP' in existing_profesi
+    for jkode, _, butir in KATALOG_SPESIALIS:
+        if ('DOKTER_SP', jkode) not in existing_jenjang:
+            jenjang_baru += 1
+    for jkode, _, butir in KATALOG_SUBSPESIALIS:
+        if ('DOKTER_SP', jkode) not in existing_jenjang:
+            jenjang_baru += 1
+    # butir spesialis/subsp memakai counter berurutan K-DOKSP/K-DOKSUB;
+    # hitung yang belum ada dengan menjawab: berapa kode pertama yang kosong
+    # tidak bisa presisi — pakai pendekatan hitung total kode > existing.
+    sp_len = sum(len(b) for _, _, b in KATALOG_SPESIALIS)
+    sub_len = sum(len(b) for _, _, b in KATALOG_SUBSPESIALIS)
+    for prefix, total in (('K-DOKSP-', sp_len), ('K-DOKSUB-', sub_len)):
+        sudah = sum(
+            1 for k in existing_katalog if k.startswith(prefix)
+        )
+        katalog_baru += max(0, total - sudah)
+
+    for pcode, jenjang_map in KATALOG_NAKES_TAMBAHAN.items():
+        sudah_p = sum(
+            1 for k in existing_katalog if k.startswith(f'T-{pcode}-')
+        )
+        butir_p = sum(len(v) for v in jenjang_map.values())
+        katalog_baru += max(0, butir_p - sudah_p)
+
     return profesi_baru, jenjang_baru, katalog_baru
 
 
@@ -102,20 +139,103 @@ def apply_seed():
                 profesi__code=pcode, kode=jkode, fokus_kompetensi='',
             ).update(fokus_kompetensi=fokus)
 
+        # Katalog dokter tertutup: Umum (DU-UMUM) + 16 spesialisasi +
+        # 16 subspesialisasi di bawah DOKTER_SP.
+        dokum_prof, _ = MasterProfesiPegawai.objects.get_or_create(
+            code='DOKTER_UMUM',
+            defaults={'nama': 'Dokter Umum', 'keluarga': 'MEDIS'},
+        )
+        du_jenjang, was_created = MasterJenjangProfesi.objects.get_or_create(
+            profesi=dokum_prof, kode='DU-UMUM', defaults={
+                'nama': 'Dokter Umum', 'urutan': 1,
+            },
+        )
+        jenjang_baru += int(was_created)
+        for counter, nama_tindakan in enumerate(KATALOG_DOKTER_UMUM, start=1):
+            _, was_created = KatalogTindakan.objects.get_or_create(
+                kode=f'K-DOKUM-{counter:03d}',
+                defaults={
+                    'nama': nama_tindakan, 'jenjang': du_jenjang,
+                    'tingkat_supervisi': 'M',
+                },
+            )
+            katalog_baru += int(was_created)
+
+        doksp_prof, _ = MasterProfesiPegawai.objects.get_or_create(
+            code='DOKTER_SP',
+            defaults={'nama': 'Dokter Spesialis', 'keluarga': 'MEDIS'},
+        )
+        counter = 0
+        for jkode, jnama, butir in KATALOG_SPESIALIS:
+            jen_obj, was_created = MasterJenjangProfesi.objects.get_or_create(
+                profesi=doksp_prof, kode=jkode, defaults={
+                    'nama': jnama, 'urutan': 2,
+                },
+            )
+            jenjang_baru += int(was_created)
+            for nama_tindakan in butir:
+                counter += 1
+                _, was_created = KatalogTindakan.objects.get_or_create(
+                    kode=f'K-DOKSP-{counter:03d}',
+                    defaults={
+                        'nama': nama_tindakan, 'jenjang': jen_obj,
+                        'tingkat_supervisi': 'M',
+                    },
+                )
+                katalog_baru += int(was_created)
+        for jkode, jnama, butir in KATALOG_SUBSPESIALIS:
+            jen_obj, was_created = MasterJenjangProfesi.objects.get_or_create(
+                profesi=doksp_prof, kode=jkode, defaults={
+                    'nama': jnama, 'urutan': 3,
+                },
+            )
+            jenjang_baru += int(was_created)
+            for nama_tindakan in butir:
+                counter += 1
+                _, was_created = KatalogTindakan.objects.get_or_create(
+                    kode=f'K-DOKSUB-{counter:03d}',
+                    defaults={
+                        'nama': nama_tindakan, 'jenjang': jen_obj,
+                        'tingkat_supervisi': 'M',
+                    },
+                )
+                katalog_baru += int(was_created)
+
         for code, (nama, keluarga, jenjang) in PROFESI.items():
             profesi, was_created = MasterProfesiPegawai.objects.get_or_create(
                 code=code, defaults={'nama': nama, 'keluarga': keluarga},
             )
             profesi_baru += int(was_created)
-            for jk in JENJANG_ORDER:
-                if jk not in jenjang:
-                    continue
-                jnama, items = jenjang[jk]
+            for jk, (jnama_j, items_j) in jenjang.items():
+                urutan = URUTAN_MAP.get(jk, len(JENJANG_ORDER) + 1)
                 jenjang_obj, was_created = MasterJenjangProfesi.objects.get_or_create(
                     profesi=profesi, kode=jk,
-                    defaults={'nama': jnama, 'urutan': URUTAN_MAP[jk]},
+                    defaults={'nama': jnama_j, 'urutan': urutan},
                 )
                 jenjang_baru += int(was_created)
+
+        # Katalog nakes tambahan (dokumen level Pelaksana/Ahli), digabung
+        # ke jenjang yang sudah ada; butir lama tidak disentuh. Kodebutir
+        # deterministik: urutan butir di data, per profesi.
+        for pcode, jenjang_map in KATALOG_NAKES_TAMBAHAN.items():
+            prof = MasterProfesiPegawai.objects.get(code=pcode)
+            pcounter = 0
+            for jkode, items in jenjang_map.items():
+                jen_obj = MasterJenjangProfesi.objects.get(
+                    profesi=prof, kode=jkode,
+                )
+                for nama_tindakan, status in items:
+                    pcounter += 1
+                    _, was_created = KatalogTindakan.objects.get_or_create(
+                        kode=f'T-{pcode}-{pcounter:03d}',
+                        defaults={
+                            'nama': nama_tindakan, 'jenjang': jen_obj,
+                            'tingkat_supervisi': status,
+                            'catatan': CATATAN_STATUS_BAKU
+                            if status == DEFAULT_STATUS_UNSET else '',
+                        },
+                    )
+                    katalog_baru += int(was_created)
 
         for kode, nama, jk, status in _iter_katalog_rows():
             profesi_code = kode.split('-')[1]

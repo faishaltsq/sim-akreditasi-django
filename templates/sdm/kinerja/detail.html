@@ -1,0 +1,147 @@
+{% extends "base.html" %}
+{% block page_title %}Detail Penilaian — {{ appraisal.employee.nama_lengkap }}{% endblock %}
+{% block content %}
+<div class="container-fluid p-0">
+    <div class="page-header-box mb-3">
+        <div>
+            <h5 class="page-title mb-0">Penilaian Kinerja — {{ appraisal.employee.nama_lengkap }}</h5>
+            <span class="small text-muted">{{ appraisal.periode.nama }} · Status: {{ appraisal.get_status_display }}{% if appraisal.kategori_akhir %} · Kategori: {{ appraisal.get_kategori_akhir_display }}{% endif %}</span>
+        </div>
+        <a href="{% url 'sdm:kinerja_list' %}" class="btn btn-outline-secondary btn-sm">Kembali</a>
+    </div>
+
+    {# ── Stepper tahapan ─────────────────────────────────────────────── #}
+    <div class="card border shadow-sm mb-3">
+        <div class="card-body py-2">
+            <div class="d-flex flex-wrap gap-2 small">
+                {% for row in tahapan_rows %}
+                <span class="badge {% if row.current %}text-bg-primary{% elif row.done %}text-bg-success{% else %}text-bg-light text-dark{% endif %}">
+                    {{ row.label }}
+                </span>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    {% if messages %}{% for message in messages %}<div class="alert alert-{{ message.tags|default:'info' }} py-2">{{ message }}</div>{% endfor %}{% endif %}
+
+    <div class="row g-3">
+        <div class="col-lg-8">
+            {# ── Butir & skor ─────────────────────────────────────────── #}
+            <div class="card border shadow-sm mb-3">
+                <div class="card-header bg-light py-2 d-flex justify-content-between align-items-center">
+                    <strong class="small">Butir Penilaian (Skor 0–5)</strong>
+                    <span class="small text-muted">Skor akhir: {% if appraisal.weighted_score is not None %}{{ appraisal.weighted_score }}{% else %}—{% endif %}</span>
+                </div>
+                <div class="card-body p-0">
+                    <form method="post">
+                        {% csrf_token %}
+                        <input type="hidden" name="aksi" value="skor">
+                        <div class="table-responsive">
+                            <table class="table table-sm align-middle mb-0">
+                                <thead><tr><th>Butir</th><th style="width:12%">Target</th><th style="width:12%">Realisasi</th><th style="width:9%">Bobot</th><th style="width:12%">Skor</th></tr></thead>
+                                <tbody>
+                                    {% for item in items %}
+                                    <tr>
+                                        <td>
+                                            <span class="badge text-bg-light text-dark me-1">{{ item.get_kategori_display }}</span>
+                                            {{ item.nama }}
+                                        </td>
+                                        <td class="small">{{ item.target|default:"—" }}</td>
+                                        <td class="small">{{ item.realisasi|default:"—" }}</td>
+                                        <td class="small">{{ item.weight }}%</td>
+                                        <td>
+                                            <input type="number" step="0.01" min="0" max="5" name="skor_{{ item.pk }}" value="{{ item.score|default:'' }}" class="form-control form-control-sm">
+                                        </td>
+                                    </tr>
+                                    {% empty %}<tr><td colspan="5" class="text-center text-muted py-3">Belum ada butir — jalankan sinkronisasi.</td></tr>{% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        {% if appraisal.status == 'DRAFT' %}
+                        <div class="card-footer bg-light d-flex justify-content-end py-2">
+                            <button class="btn btn-primary btn-sm" type="submit">Simpan Skor</button>
+                        </div>
+                        {% endif %}
+                    </form>
+                </div>
+            </div>
+            {% if appraisal.status == 'DRAFT' and boleh_sinkron %}
+            <form method="post" action="{% url 'sdm:kinerja_sinkron' appraisal.pk %}" class="mb-3 text-end">
+                {% csrf_token %}
+                <button class="btn btn-outline-secondary btn-sm" type="submit">⟳ Sinkronkan Data Mutu & Risiko</button>
+            </form>
+            {% endif %}
+
+            {# ── Self assessment / kalibrasi / feedback ────────────────── #}
+            {% if eval_saya %}
+            <div class="card border shadow-sm mb-3">
+                <div class="card-header bg-light py-2"><strong class="small">Evaluasi Mandiri</strong></div>
+                <div class="card-body">
+                    {% if appraisal.self_assessed_at %}<p class="small text-muted mb-1">Dikirim {{ appraisal.self_assessed_at|date:"d M Y H:i" }}</p>{% endif %}
+                    <form method="post">
+                        {% csrf_token %}
+                        <input type="hidden" name="aksi" value="self_assessment">
+                        <textarea name="self_assessment" class="form-control form-control-sm mb-2" rows="3" placeholder="Capaian, hambatan, portofolio...">{{ appraisal.self_assessment }}</textarea>
+                        <button class="btn btn-outline-primary btn-sm" type="submit">Kirim Evaluasi Mandiri</button>
+                    </form>
+                </div>
+            </div>
+            {% endif %}
+
+            <div class="card border shadow-sm mb-3">
+                <div class="card-header bg-light py-2"><strong class="small">Kalibrasi Komite Mutu/BPP</strong></div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        <input type="hidden" name="aksi" value="kalibrasi">
+                        <textarea name="kalibrasi_catatan" class="form-control form-control-sm mb-2" rows="2" placeholder="Catatan kalibrasi antar unit...">{{ appraisal.kalibrasi_catatan }}</textarea>
+                        <button class="btn btn-outline-primary btn-sm" type="submit">Catat Kalibrasi</button>
+                    </form>
+                </div>
+            </div>
+
+            <div class="card border shadow-sm mb-3">
+                <div class="card-header bg-light py-2"><strong class="small">Feedback Meeting</strong></div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        <input type="hidden" name="aksi" value="feedback">
+                        <textarea name="feedback_notes" class="form-control form-control-sm mb-2" rows="2" placeholder="Apresiasi, hambatan, kesepakatan...">{{ appraisal.feedback_notes }}</textarea>
+                        <button class="btn btn-outline-primary btn-sm" type="submit">Catat Feedback</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            {# ── Riwayat tahapan ──────────────────────────────────────── #}
+            <div class="card border shadow-sm mb-3">
+                <div class="card-header bg-light py-2"><strong class="small">Riwayat Tahapan</strong></div>
+                <div class="card-body py-2">
+                    {% for row in riwayat %}
+                    <div class="border-bottom py-1 small">
+                        <strong>{{ row.get_tahap_display }}</strong>
+                        <span class="d-block text-muted">{{ row.created_at|date:"d M Y H:i" }}{% if row.aktor %} · oleh {{ row.aktor.username }}{% endif %}</span>
+                        {% if row.catatan %}<span class="d-block">{{ row.catatan }}</span>{% endif %}
+                    </div>
+                    {% empty %}<span class="small text-muted">Belum ada tahap — jalankan sinkronisasi.</span>{% endfor %}
+                </div>
+            </div>
+
+            {% if appraisal.status == 'DRAFT' %}
+            <div class="card border shadow-sm">
+                <div class="card-body">
+                    <strong class="small d-block mb-2">Finalisasi</strong>
+                    <p class="small text-muted">Semua butir terskor + kelima tahap tercatat.</p>
+                    <form method="post" action="{% url 'sdm:kinerja_finalize' appraisal.pk %}">
+                        {% csrf_token %}
+                        <button class="btn btn-success btn-sm" type="submit">Finalkan (Kunci Nilai)</button>
+                    </form>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

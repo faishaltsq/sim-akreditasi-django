@@ -63,6 +63,9 @@ from sdm.models import (
     PengajuanKredensial,
     PenilaianTindakan,
     PenilaianKinerja,
+    PeriodeKinerja,
+    ButirPenilaian,
+    TahapPenilaian,
     PenilaianTalent,
     PenugasanKlinis,
     PenugasanOrientasi,
@@ -916,7 +919,7 @@ def _missing_requirement_labels(credential_request):
     ]
 
 
-def _detail_context(credential_request):
+def _detail_context(credential_request, *, jenjang_filter=None):
     """Shared detail-page context (page render and blocked decision re-render)."""
     employee = credential_request.employee
     profesi = employee.profesi_master
@@ -936,10 +939,22 @@ def _detail_context(credential_request):
         ).exclude(tingkat_supervisi='T').select_related('jenjang').order_by(
             'jenjang__urutan', 'kode'
         )
+        # K2 kaskade: pilih jenjang/spesialisasi dulu, katalog menyusut.
+        if jenjang_filter == '':
+            pass  # operator memilih "semua jenjang profesi"
+        elif jenjang_filter:
+            try:
+                katalog_qs = katalog_qs.filter(jenjang_id=jenjang_filter)
+            except (TypeError, ValueError, ValidationError):
+                katalog_qs = KatalogTindakan.objects.none()
+        elif employee.jenjang_master_id:
+            katalog_qs = katalog_qs.filter(
+                jenjang_id=employee.jenjang_master_id,
+            )
         if not katalog_qs.exists():
             katalog_error = (
-                f'Katalog RKK untuk profesi {profesi.nama} belum tersedia; '
-                'isi kewenangan secara manual.'
+                f'Katalog RKK untuk profesi {profesi.nama} pada jenjang ini '
+                'belum tersedia; pilih jenjang lain atau isi kewenangan manual.'
             )
     return {
         'credential_request': credential_request,
@@ -950,6 +965,10 @@ def _detail_context(credential_request):
         'katalog_error': katalog_error,
         'profesi_label': profesi.nama if profesi else '—',
         'jenjang_labels': [j.nama for j in jenjang_qs],
+        'jenjang_options': jenjang_qs,
+        'jenjang_aktif': jenjang_filter or getattr(
+            employee, 'jenjang_master_id', None,
+        ),
         'psv_records': credential_request.employee.psv_records.select_related('version')[:20],
         'spk_list': credential_request.employee.clinical_assignments.select_related('decision'),
         'logbook_recap': logbook_recap(credential_request.employee),
@@ -972,7 +991,20 @@ def kredensial_detail(request, request_id):
         request.user, 'can_review_hc_credentials',
         unit=credential_request.unit_kerja_id,
     )
-    return render(request, 'sdm/kredensial/detail.html', _detail_context(credential_request))
+    raw_jenjang = request.GET.get('jenjang')
+    if raw_jenjang is None:
+        jenjang_filter = None  # param tak dikirim: default terkunci jenjang pegawai
+    elif raw_jenjang.strip() == '':
+        jenjang_filter = ''  # '— semua jenjang profesi —'
+    else:
+        raw_jenjang = raw_jenjang.strip()
+        jenjang_filter = raw_jenjang if MasterJenjangProfesi.objects.filter(
+            pk=raw_jenjang,
+            profesi=credential_request.employee.profesi_master,
+        ).exists() else None
+    return render(request, 'sdm/kredensial/detail.html', _detail_context(
+        credential_request, jenjang_filter=jenjang_filter,
+    ))
 
 
 @login_required
@@ -1629,6 +1661,171 @@ def kinerja_list(request):
         employee__penempatan__unit_kerja__in=units
     ).distinct().select_related('employee', 'periode')
     return render(request, 'sdm/kinerja/daftar.html', {'appraisals': appraisals})
+
+
+@login_required
+def kinerja_periode_baru(request):
+    """Buat periode penilaian (DRAFT); FINAL diatur admin."""
+    require_hc_capability(request.user, 'can_manage_hc_appraisals')
+    error = None
+    if request.method == 'POST':
+        nama = (request.POST.get('nama') or '').strip()
+        mulai = request.POST.get('tanggal_mulai') or None
+        selesai = request.POST.get('tanggal_selesai') or None
+        if not nama or not mulai or not selesai:
+            error = 'Nama dan rentang tanggal wajib diisi.'
+        else:
+            periode = PeriodeKinerja.objects.create(
+                nama=nama, tanggal_mulai=mulai, tanggal_selesai=selesai,
+            )
+            messages.success(request, f'Periode "{periode.nama}" dibuat.')
+            return redirect('sdm:kinerja_list')
+    return render(request, 'sdm/kinerja/form_periode.html', {'error': error})
+
+
+@login_required
+def kinerja_buat(request):
+    """Buat (atau pakai existing) penilaian untuk pegawai + periode."""
+    require_hc_capability(request.user, 'can_manage_hc_appraisals')
+    employee_options = visible_employees(request.user).order_by('nama_lengkap')
+    periode_options = PeriodeKinerja.objects.order_by('-tanggal_mulai')
+    if request.method == 'POST':
+        employee = employee_options.filter(
+            pk=request.POST.get('employee')
+        ).first()
+        periode = periode_options.filter(pk=request.POST.get('periode')).first()
+        if employee is None or periode is None:
+            messages.error(request, 'Pegawai dan periode wajib dipilih.')
+        else:
+            appraisal, created = PenilaianKinerja.objects.get_or_create(
+                periode=periode, employee=employee,
+            )
+            if created:
+                from sdm.services.workflow_kinerja import resolve_reviewer
+                reviewer_pk = resolve_reviewer(employee)
+                if reviewer_pk:
+                    appraisal.reviewer_id = reviewer_pk
+                    appraisal.save(update_fields=['reviewer'])
+                messages.success(request, 'Penilaian dibuat.')
+            else:
+                messages.info(request, 'Penilaian sudah ada.')
+            return redirect('sdm:kinerja_detail', appraisal_id=appraisal.pk)
+    return render(request, 'sdm/kinerja/form_buat.html', {
+        'employee_options': employee_options,
+        'periode_options': periode_options,
+    })
+
+
+def _appraisal_or_404(request, appraisal_id):
+    return get_object_or_404(
+        PenilaianKinerja.objects.filter(
+            employee__penempatan__unit_kerja__in=visible_units(
+                request.user, capability='can_manage_hc_appraisals'
+            )
+        ).distinct(),
+        pk=appraisal_id,
+    )
+
+
+@login_required
+def kinerja_detail(request, appraisal_id):
+    require_hc_capability(request.user, 'can_manage_hc_appraisals')
+    appraisal = _appraisal_or_404(request, appraisal_id)
+    from sdm.services.workflow_kinerja import (
+        current_stage, stepper_rows,
+    )
+
+    eval_saya = request.user.pk == appraisal.employee.akun_id
+    if request.method == 'POST':
+        aksi = request.POST.get('aksi')
+        if aksi == 'self_assessment':
+            if appraisal.employee.akun_id != request.user.pk:
+                raise PermissionDenied('Hanya pegawai yang dinilai dapat mengisi evaluasi mandiri.')
+            appraisal.self_assessment = (request.POST.get('self_assessment') or '')[:5000]
+            appraisal.self_assessed_at = timezone.now()
+            appraisal.save(update_fields=['self_assessment', 'self_assessed_at'])
+            from sdm.services.workflow_kinerja import advance_stage
+            try:
+                advance_stage(
+                    appraisal, actor=request.user, tahap='SELF_ASSESSMENT',
+                    catatan='Evaluasi mandiri diisi',
+                )
+            except ValidationError as exc:
+                pass  # tahap sudah pernah dicatat — isi tetap tersimpan
+            messages.success(request, 'Evaluasi mandiri tersimpan.')
+        elif aksi == 'kalibrasi':
+            require_hc_capability(request.user, 'hc_calibrate_appraisals',
+                                  employee=appraisal.employee)
+            appraisal.kalibrasi_catatan = (request.POST.get('kalibrasi_catatan') or '')[:5000]
+            appraisal.calibrated_at = timezone.now()
+            appraisal.save(update_fields=['kalibrasi_catatan', 'calibrated_at'])
+            from sdm.services.workflow_kinerja import advance_stage
+            advance_stage(
+                appraisal, actor=request.user, tahap='KALIBRASI_MUTU',
+                catatan=appraisal.kalibrasi_catatan[:200],
+            )
+            messages.success(request, 'Kalibrasi dicatat.')
+        elif aksi == 'feedback':
+            appraisal.feedback_notes = (request.POST.get('feedback_notes') or '')[:5000]
+            appraisal.feedback_at = timezone.now()
+            appraisal.save(update_fields=['feedback_notes', 'feedback_at'])
+            from sdm.services.workflow_kinerja import advance_stage
+            advance_stage(
+                appraisal, actor=request.user, tahap='FEEDBACK',
+                catatan=appraisal.feedback_notes[:200],
+            )
+            messages.success(request, 'Feedback dicatat.')
+        elif aksi == 'skor':
+            from sdm.services.workflow_kinerja import simpan_skor, advance_stage
+            skor_map = {
+                key[len('skor_'):]: value
+                for key, value in request.POST.items()
+                if key.startswith('skor_')
+            }
+            try:
+                simpan_skor(appraisal, skor_map, actor=request.user)
+                advance_stage(
+                    appraisal, actor=request.user, tahap='REVIEW_ATASAN',
+                    catatan='Skor atas direview',
+                )
+            except (PermissionDenied, ValidationError) as exc:
+                msgs = getattr(exc, 'messages', None)
+                messages.error(request, '; '.join(msgs) if msgs else str(exc))
+            else:
+                messages.success(request, 'Skor tersimpan.')
+        return redirect('sdm:kinerja_detail', appraisal_id=appraisal.pk)
+
+    items = appraisal.items.select_related('indikator').order_by('kategori', 'pk')
+    tahapan_rows = stepper_rows(appraisal)
+    riwayat = appraisal.tahapan.select_related('aktor').order_by('-created_at', '-pk')
+    return render(request, 'sdm/kinerja/detail.html', {
+        'appraisal': appraisal,
+        'items': items,
+        'tahapan_rows': tahapan_rows,
+        'tahap_kini': current_stage(appraisal),
+        'riwayat': riwayat,
+        'eval_saya': eval_saya,
+        'boleh_sinkron': appraisal.status != 'FINAL',
+    })
+
+
+@login_required
+@require_POST
+def kinerja_sinkron(request, appraisal_id):
+    from sdm.services.sinkron_kinerja import sinkronkan_data
+
+    require_hc_capability(request.user, 'can_manage_hc_appraisals')
+    appraisal = _appraisal_or_404(request, appraisal_id)
+    try:
+        dibuat, diperbarui = sinkronkan_data(appraisal, actor=request.user)
+    except (PermissionDenied, ValidationError, ValueError) as exc:
+        msgs = getattr(exc, 'messages', None)
+        messages.error(request, '; '.join(msgs) if msgs else str(exc))
+    else:
+        messages.success(
+            request, f'Sinkronisasi selesai: {dibuat} butir baru, {diperbarui} diperbarui.'
+        )
+    return redirect('sdm:kinerja_detail', appraisal_id=appraisal.pk)
 
 
 @login_required

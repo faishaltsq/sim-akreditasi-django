@@ -34,6 +34,7 @@ from .kinerja import (
     PenilaianKinerja,
     PeriodeKinerja,
     SumberKebutuhanPelatihan,
+    TahapPenilaian,
 )
 from .k3 import (
     AksesDaruratK3,
@@ -102,6 +103,7 @@ __all__ = [
     'AktivitasOrientasi',
     'AturanDokumen',
     'ButirPenilaian',
+    'TahapPenilaian',
     'DokumenPegawai',
     'EvaluasiDiklat',
     'KehadiranDiklat',

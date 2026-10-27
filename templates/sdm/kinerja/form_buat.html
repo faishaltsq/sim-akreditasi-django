@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block page_title %}Buat Penilaian Kinerja{% endblock %}
+{% block content %}
+<div class="container-fluid p-0" style="max-width: 640px;">
+    <div class="card border shadow-sm">
+        <div class="card-body">
+            <h1 class="page-title h5 mb-3">Buat Penilaian Kinerja</h1>
+            <form method="post">
+                {% csrf_token %}
+                <div class="mb-3">
+                    <label class="form-label">Pegawai</label>
+                    <select name="employee" class="form-select form-select-sm" required>
+                        <option value="">— pilih pegawai —</option>
+                        {% for pegawai in employee_options %}
+                        <option value="{{ pegawai.pk }}">{{ pegawai.nama_lengkap }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Periode</label>
+                    <select name="periode" class="form-select form-select-sm" required>
+                        <option value="">— pilih periode —</option>
+                        {% for periode in periode_options %}
+                        <option value="{{ periode.pk }}">{{ periode.nama }} ({{ periode.tanggal_mulai }} s.d. {{ periode.tanggal_selesai }})</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <p class="small text-muted mb-3">Periode belum ada? <a href="{% url 'sdm:kinerja_periode_baru' %}">Buat periode baru</a>.</p>
+                <div class="d-flex justify-content-end gap-2">
+                    <a href="{% url 'sdm:kinerja_list' %}" class="btn btn-outline-secondary btn-sm">Batal</a>
+                    <button type="submit" class="btn btn-primary btn-sm">Buat Penilaian</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

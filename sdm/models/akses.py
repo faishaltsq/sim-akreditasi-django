@@ -21,6 +21,7 @@ HC_CAPABILITY_CHOICES = [
     ('hc_approve_credentials', 'Pengesahan Kredensial (Direktur)'),
     ('can_manage_hc_orientation', 'Kelola orientasi'),
     ('can_manage_hc_appraisals', 'Kelola penilaian kinerja'),
+    ('hc_calibrate_appraisals', 'Kalibrasi penilaian kinerja (Komite Mutu/BPP)'),
     ('can_manage_hc_training', 'Kelola pelatihan'),
     ('can_view_hc_analytics', 'Lihat analitik SDM'),
     ('can_manage_hc_talent', 'Kelola talent dan suksesi'),

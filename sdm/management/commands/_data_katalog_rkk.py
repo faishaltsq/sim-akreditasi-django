@@ -15,7 +15,6 @@ PROFESI_TANPA_JENJANG = {
     'DOKTER_SP': ('Dokter Spesialis', 'MEDIS'),
     'DOKTER_UMUM': ('Dokter Umum', 'MEDIS'),
     'DOKTER_GIGI': ('Dokter Gigi', 'MEDIS'),
-    'APOTEKER': ('Apoteker', 'NAKES_LAIN'),
 }
 
 # Fokus kompetensi jenjang dokter dari "master RKK Kewenangan klinis.docx";
@@ -47,6 +46,10 @@ CATATAN_STATUS_BAKU = 'Status baku belum ditetapkan; tinjau komite.'
 
 PROFESI = {
     # ── NAKES_LAIN ──────────────────────────────────────────────────────
+    'APOTEKER': ('Apoteker', 'NAKES_LAIN', {
+        'AP-PRA': ('Apoteker Pratama / Pelaksana', []),
+        'AP-MADYA': ('Apoteker Madya / Spesialis', []),
+    }),
     'ELMD': ('Tenaga Elektromedis', 'NAKES_LAIN', {
         'PRATAMA': ('Elektromedis Pratama (Pelaksana)', [
             ('Pemeliharaan rutin alat non-invasif (tensimeter digital, TENS, nebulizer, bed pasien elektrik)', 'M'),
@@ -551,4 +554,440 @@ FOKUS_KOMPETENSI = {
     ('BID', 'BK-III'): 'Mengelola kasus penyulit/risiko tinggi, deteksi dini komplikasi obstetri, preseptor.',
     ('BID', 'BK-IV'): 'Kegawatdaruratan obstetri kompleks, audit Maternal Perinatal (AMP).',
     ('BID', 'BK-V'): 'Konsultan maternitas, penentu kebijakan pelayanan KIA, pengembang standar praktik.',
+}
+
+# ── Katalog dokter tertutup ("Katalog tindakan klinis.docx", RS Tipe B) ──
+# Dokter Umum: 10 butir, status M (SKDI 4A), jenjang DU-UMUM.
+KATALOG_DOKTER_UMUM = [
+    'Anamnesis dan Pemeriksaan Fisik Komprehensif',
+    'Pemasangan & Pelepasan Infus / Jalur Intravena Perifer',
+    'Pemasangan & Pelepasan Kateter Urin',
+    'Pemasangan & Pelepasan NGT (Nasogastric Tube)',
+    'Terapi Oksigenasi & Resusitasi Jantung Paru (RJP / BCLS)',
+    'Interpretasi Perekaman EKG Dasar',
+    'Penjahitan Luka Sederhana (Hecting) & Debridement Ringan',
+    'Pengambilan Darah Vena / Arteri (Analisa Gas Darah)',
+    'Pungsi Pleura / Thoracocentesis Sederhana (dengan supervisi/indikasi darurat)',
+    'Edukasi & Informed Consent Pasien Rawat Inap',
+]
+
+# (kode_sp, nama_spesialisasi, [butir]) — 16 spesialisasi.
+KATALOG_SPESIALIS = [
+    ('SP-PD', 'Spesialis Penyakit Dalam (Sp.PD)', [
+        'Visite dan manajemen kasus metabolik/infeksi kompleks',
+        'Pemasangan CVC (Central Venous Catheter)',
+        'Pungsi asites dan torakosentesis diagnostik/terapeutik',
+        'Biopsi sumsum tulang (bone marrow puncture)',
+    ]),
+    ('SP-B', 'Spesialis Bedah (Sp.B)', [
+        'Operasi bedah digestif dasar (appendektomi, herniotomi)',
+        'Debridement luka infeksi/gangren luas',
+        'Eksisi tumor jinak/ganas superfisial',
+        'Sirkumsisi dan penanganan trauma bedah minor',
+    ]),
+    ('SP-A', 'Spesialis Anak (Sp.A)', [
+        'Resusitasi neonatus dan stabilisasi bayi baru lahir',
+        'Pemasangan infus dan injeksi pediatrik khusus',
+        'Imunisasi dasar dan lanjutan',
+        'Penanganan kasus kegawatdaruratan anak (infeksi berat, dehidrasi)',
+    ]),
+    ('SP-OG', 'Spesialis Obstetri dan Ginekologi (Sp.OG)', [
+        'Pertolongan persalinan normal dan sectio caesarea (SC)',
+        'Kuretase dan penanganan perdarahan obstetri',
+        'Pemasangan/pencabutan kontrasepsi jangka panjang (IUD/Implan)',
+        'Pemeriksaan USG obstetri dan ginekologi',
+    ]),
+    ('SP-JP', 'Spesialis Jantung dan Pembuluh Darah (Sp.JP)', [
+        'Elektrokardiografi (EKG) dan Uji Latih Jantung (Treadmill)',
+        'Ekokardiografi transtorakal (TTE)',
+        'Pemasangan Holter monitor / ABPM',
+        'Kardioversi elektrik darurat',
+    ]),
+    ('SP-S', 'Spesialis Saraf (Neurologi) (Sp.S / Sp.N)', [
+        'Pemeriksaan neurologis komprehensif',
+        'Pungsi lumbal (LP)',
+        'Interpretasi EEG (Electroencephalography)',
+        'Tatalaksana stroke akut dan tata laksana nyeri kepala/neuropati',
+    ]),
+    ('SP-AN', 'Spesialis Anestesiologi dan Terapi Intensif (Sp.An)', [
+        'Manajemen anestesi umum, regional, dan spinal untuk operasi',
+        'Manajemen jalan napas lanjut dan intubasi endotrakeal',
+        'Perawatan pasien kritis di ICU dan pemantauan hemodinamik invasif',
+        'Manajemen nyeri akut dan kronis',
+    ]),
+    ('SP-RAD', 'Spesialis Radiologi (Sp.Rad)', [
+        'Pembacaan dan interpretasi foto Rontgen konvensional',
+        'Pemeriksaan USG diagnostik multisistem',
+        'Interpretasi CT-Scan dan MRI',
+        'Pemeriksaan fluoroskopi khusus (Barium enema/meal, HSG)',
+    ]),
+    ('SP-PK', 'Spesialis Patologi Klinik (Sp.PK)', [
+        'Validasi dan interpretasi hasil laboratorium klinik (hematologi, kimia darah, imunologi)',
+        'Konsultasi klinis hasil pemeriksaan laboratorium kritis',
+        'Pengendalian mutu internal dan eksternal laboratorium',
+    ]),
+    ('SP-PA', 'Spesialis Patologi Anatomi (Sp.PA)', [
+        'Pemeriksaan sitologi (FNAB/Aspirasi Jarum Halus)',
+        'Histopatologi jaringan biopsi/operasi',
+        'Interpretasi sediaan frozen section (pembedahan darurat)',
+    ]),
+    ('SP-OT', 'Spesialis Bedah Orthopedi dan Traumatologi (Sp.OT)', [
+        'Reduksi tertutup dan fiksasi fraktur tulang',
+        'Operasi pemasangan fiksasi internal (ORIF/Closed Reduction)',
+        'Artroskopi sendi dasar',
+        'Penanganan cedera olahraga dan rekonstruksi ortopedi',
+    ]),
+    ('SP-THT', 'Spesialis THT-KL (Sp.THT-KL)', [
+        'Ekstraksi korpus alienum (benda asing) di THT',
+        'Tindakan miringotomi dan timpanoplasti dasar',
+        'Tonsilektomi dan adenoidektomi',
+        'Endoskopi diagnostik hidung/tenggorokan',
+    ]),
+    ('SP-M', 'Spesialis Mata (Sp.M)', [
+        'Operasi katarak (Phacoemulsification / SICS)',
+        'Ekstraksi benda asing kornea/konjungtiva',
+        'Tonometri dan pemeriksaan lapang pandang',
+        'Pemeriksaan funduskopi dan refraksi mata',
+    ]),
+    ('SP-KK', 'Spesialis Kulit dan Kelamin (Sp.KK / Sp.DV)', [
+        'Electrocauterization / Kauterisasi lesi kulit',
+        'Eksterpasi / eksisi lesi jinak kulit',
+        'Patch test (uji tempel) alergi',
+        'Terapi sinar/laser dermatologi dasar',
+    ]),
+    ('SP-KJ', 'Spesialis Kedokteran Jiwa (Psikiatri) (Sp.KJ)', [
+        'Psikoterapi suportif dan perilaku kognitif',
+        'Wawancara psikiatrik dan asesmen psikopatologi',
+        'Penatalaksanaan farmakoterapi gangguan jiwa',
+        'Penilaian visum et repertum psikiatrik',
+    ]),
+    ('SP-P', 'Spesialis Pulmonologi dan Kedokteran Respirasi (Sp.P)', [
+        'Spirometri dan uji fungsi paru',
+        'Pungsi pleura dan pemasangan WSD (Water Seal Drainage)',
+        'Bronkoskopi diagnostik',
+        'Penatalaksanaan tuberkulosis resistan obat (TB-RO) dan asma berat',
+    ]),
+]
+
+# (kode_subsp, nama_subspesialisasi, [butir]) — 16 subspesialisasi,
+# menggantung di profesi DOKTER_SP dengan urutan 3.
+KATALOG_SUBSPESIALIS = [
+    ('SUBSP-PD-GINJAL', 'Subspesialis Penyakit Dalam - Ginjal Hipertensi', [
+        'Tindakan Hemodialisis darurat dan pemeliharaan',
+        'Pemasangan kateter vakuum / kateter hemofiltrasi akut',
+        'Biopsi ginjal perkutan bimbingan USG',
+        'Peritoneal dialysis (CAPD) tatalaksana dan evaluasi',
+    ]),
+    ('SUBSP-PD-KARDIO', 'Subspesialis Penyakit Dalam - Kardiologi', [
+        'Ekokardiografi lanjut dan pemantauan hemodinamik non-invasif',
+        'Tatalaksana gagal jantung lanjut dan aritmia kompleks',
+        'Kardioversi medikamentosa dan elektrik terarah',
+    ]),
+    ('SUBSP-B-KBD', 'Subspesialis Bedah - Digestif (Sp.B-KBD)', [
+        'Bedah laparoskopi tingkat lanjut (kolektomi, gastrektomi, reseksi usus)',
+        'Operasi saluran empedu kompleks dan pankreas',
+        'Penanganan bedah onkologi saluran cerna kompleks',
+    ]),
+    ('SUBSP-B-ONK', 'Subspesialis Bedah - Onkologi (Sp.B(K)Onk)', [
+        'Operasi radikal kanker payudara (Modified Radical Mastectomy / Breast Conserving Surgery)',
+        'Eksisi luas dan diseksen kelenjar getah bening regional',
+        'Biopsi eksisional tumor ganas jaringan lunak/kulit',
+    ]),
+    ('SUBSP-A-PERINATO', 'Subspesialis Anak - Perinatologi / Neonatologi', [
+        'Pemasangan akses vaskular sentral pada neonatus (UVC/UAC)',
+        'Perawatan intensif neonatus (NICU) dengan ventilasi mekanik lanjut',
+        'Transfusi tukar pada bayi baru lahir dengan hiperbilirubinemia berat',
+    ]),
+    ('SUBSP-A-RESPI', 'Subspesialis Anak - Respirologi / Infeksi', [
+        'Bronkoskopi diagnostik pediatrik',
+        'Pungsi pleura dan pemasangan WSD anak',
+        'Tatalaksana kasus infeksi paru berat/pneumonia berulang',
+    ]),
+    ('SUBSP-OG-FETOM', 'Subspesialis Obstetri & Ginekologi - Fetomaternal', [
+        'USG fetomaternal tingkat lanjut (Anomaly scan / USG 4D diagnostik)',
+        'Amniosentesis dan prosedur prenatal invasif',
+        'Penanganan kehamilan risiko tinggi dengan komplikasi maternal-fetal kompleks',
+    ]),
+    ('SUBSP-OG-ONK', 'Subspesialis Obstetri & Ginekologi - Onkologi', [
+        'Operasi radikal kanker serviks, ovarium, dan endometrium',
+        'Histerektomi radikal dan limfadenektomi pelvik',
+        'Kolposkopi dan biopsi lesi prakanker ginekologi',
+    ]),
+    ('SUBSP-JP-FIHA', 'Subspesialis Jantung - Kardiologi Intervensi (FIHA)', [
+        'Kateterisasi jantung diagnostik (Coronary Angiography)',
+        'Intervensi Koroner Perkutan (PCI / Pasang Ring Jantung primer maupun elektif)',
+        'Pemasangan Alat Pacu Jantung Permanen (PPM) dan pericardiocentesis terapeutik',
+    ]),
+    ('SUBSP-S-NEUROVASK', 'Subspesialis Saraf - Neurovaskular / Stroke', [
+        'Tatalaksana trombolisis intravena pada stroke iskemik akut',
+        'USG Doppler pembacaan vaskular ekstrakranial/transcranial',
+        'Manajemen intervensi neurovaskular dasar bersama tim terkait',
+    ]),
+    ('SUBSP-BS-NEURONK', 'Subspesialis Bedah Saraf - Neuro-Onkologi', [
+        'Craniotomy pengangkatan tumor otak kompleks',
+        'Bedah mikroskopik saraf tulang belakang (Spine surgery / laminektomi & fiksasi)',
+        'Evakuasi perdarahan intrakranial kompleks',
+    ]),
+    ('SUBSP-AN-ICU', 'Subspesialis Anestesiologi - Intensive Care', [
+        'Manajemen ventilasi mekanik lanjut dan titrasi hemodinamik invasif di ICU',
+        'Pemasangan kateter vena sentral (CVC) dan kateter arteri radialis',
+        'Penanganan kegagalan multi-organ (MODS) di ruang intensif',
+    ]),
+    ('SUBSP-OT-TRAUMA', 'Subspesialis Orthopedi - Traumatologi / Hip & Knee', [
+        'Artroskopi rekonstruksi ligamen lutut lanjut (ACL/PCL reconstruction)',
+        'Penggantian sendi panggul dan lutut total (Total Hip / Knee Replacement)',
+        'Fiksasi fraktur kompleks pelvis dan acetabulum',
+    ]),
+    ('SUBSP-THT-OTO', 'Subspesialis THT - Otologi / Rinologi', [
+        'Operasi timpanoplasti dan mastoidektomi radikal (Bedah mikro telinga)',
+        'Bedah Sinus Endoskopi Fungsional (BSEF / FESS)',
+        'Operasi rekonstruksi jalan napas dan bedah kepala leher lanjut',
+    ]),
+    ('SUBSP-M-RETINA', 'Subspesialis Mata - Vitreoretina / Glaukoma', [
+        'Operasi vitrektomi pars plana (kasus retina dan ablasi retina)',
+        'Operasi trabekulektomi dan penanganan bedah glaukoma lanjut',
+        'Injeksi intravitreal obat anti-VEGF',
+    ]),
+    ('SUBSP-P-TORAKS', 'Subspesialis Pulmonologi - Onkologi Toraks', [
+        'Bronkoskopi terapeutik intervensi (pengambilan benda asing, stenting saluran napas)',
+        'Pleurodesis dan torakosentesis lanjutan',
+        'Evaluasi uji fungsi paru komprehensif lanjutan',
+    ]),
+]
+
+# ── Katalog nakes lain per level ("Katalog tindakan klinis.docx") ──
+# {profesi_code: {jenjang_kode: [(butir, status)]}}; profesi & jenjang
+# harus sudah ada di PROFESI di atas. Status: 'M' bila dokumen eksplisit
+# menyebut mandiri; selain itu DEFAULT_STATUS_UNSET ('S').
+KATALOG_NAKES_TAMBAHAN = {
+    'KPR': {
+        'PK-I': [
+            ('Pengukuran tanda-tanda vital komprehensif & asesmen risiko jatuh', 'S'),
+            ('Pemasangan infus (IV line) dan pengambilan darah vena', 'S'),
+            ('Pemberian obat oral, injeksi (IM, IV, SC, IC), dan topikal', 'S'),
+            ('Perawatan luka bersih / ganti balutan dasar', 'S'),
+            ('Pemasangan kateter urin & NGT (Nasogastric Tube)', 'S'),
+        ],
+        'PK-II': [
+            ('Manajemen pemantauan hemodinamik dasar & balance cairan ketat', 'S'),
+            ('Perawatan luka stadium lanjut / dekubitus / luka diabetes (modern dressing)', 'M'),
+            ('Resusitasi Jantung Paru (RJP/BCLS) & manajemen oksigenasi kompleks', 'S'),
+            ('Fasilitasi mobilisasi pasien dengan traksi / tirah baring lama', 'M'),
+        ],
+        'PK-III': [
+            ('Manajemen asuhan keperawatan pasien kritis di ICU/ICCU/ICU Neonatus', 'M'),
+            ('Manajemen nyeri komprehensif (termasuk perawatan pasien paliatif)', 'M'),
+        ],
+        'PK-IV': [
+            ('Supervisi klinis, preseptorship, & audit dokumentasi asuhan keperawatan', 'M'),
+            ('Koordinasi evakuasi pasien gawat darurat / bencana (Triage disaster)', 'M'),
+        ],
+    },
+    'BID': {
+        'BK-I': [
+            ('Pemeriksaan ANC (Antenatal Care) rutin & pemantauan denyut jantung janin (DJJ)', 'M'),
+            ('Pertolongan persalinan normal (Asuhan Persalinan Normal / APN)', 'M'),
+            ('Perawatan nifas & konseling laktasi dasar', 'M'),
+            ('Imunisasi dasar pada bayi & ibu hamil', 'M'),
+        ],
+        'BK-II': [
+            ('Manajemen penanganan komplikasi kebidanan awal (rujukan darurat kasus preeklamsia/atonia uteri)', 'M'),
+            ('Pemasangan dan pelepasan alat kontrasepsi (IUD / Implant)', 'M'),
+            ('Asuhan bayi baru lahir dengan penyulit ringan (asfiksia ringan)', 'M'),
+        ],
+        'BK-III': [
+            ('Manajemen pelayanan obstetri neonatal emergensi komprehensif (PONEK)', 'M'),
+            ('Konseling kesehatan reproduksi dan keluarga berencana tingkat lanjut', 'M'),
+        ],
+        'BK-IV': [
+            ('Supervisi fasilitas pelayanan kebidanan dan audit Maternal Perinatal (AMP)', 'M'),
+        ],
+    },
+    'APOTEKER': {
+        'AP-PRA': [
+            ('Skrining resep administratif, farmasetik, dan klinis harian', 'M'),
+            ('Pelayanan Informasi Obat (PIO) kepada pasien dan tenaga medis', 'M'),
+            ('Rekonsiliasi obat pasien rawat inap (masuk, pindah ruang, pulang)', 'M'),
+            ('Pemantauan Terapi Obat (PTO) dasar', 'M'),
+        ],
+        'AP-MADYA': [
+            ('Monitoring Efek Samping Obat (MESO) dan pelaporan IFRS', 'M'),
+            ('Evaluasi Penggunaan Obat (EPO) & farmakoekonomi bangsal', 'M'),
+            ('Visite klinis mandiri / kolaboratif bersama dokter spesialis (ICU/Onkologi)', 'M'),
+            ('Manajemen pencampuran obat steril (Aseptic Dispensing / Sitostatika)', 'M'),
+        ],
+    },
+    'ELMD': {
+        'PRATAMA': [
+            ('Kalibrasi dan pemeliharaan preventif alat elektromedik ringan (suction pump, infusion pump)', 'M'),
+            ('Perbaikan kerusakan ringan perangkat medis non-life supporting', 'M'),
+            ('Inventarisasi dan inspeksi keselamatan kerja alat elektromedik harian', 'M'),
+        ],
+        'MADYA': [
+            ('Kalibrasi dan pemeliharaan alat medis kompleks (Ventilator, Mesin Anestesi, Defibrilator, Mesin USG)', 'M'),
+            ('Uji fungsi dan kelaikan alat medis baru (Commissioning test) sebelum dioperasikan', 'M'),
+            ('Analisis risiko kegagalan alat medis (Risk assessment maintenance) berbasis standar ISO/STARKES', 'M'),
+        ],
+    },
+    'SANI': {
+        'PRATAMA': [
+            ('Pengambilan sampel kualitas air bersih dan air limbah rumah sakit', 'M'),
+            ('Pemantauan kebersihan lingkungan fisik ruangan (lantai, dinding, udara ruang steril)', 'M'),
+            ('Pengelolaan dan pengangkutan limbah medis/non-medis sementara (TPS B3)', 'M'),
+        ],
+        'MADYA': [
+            ('Pengendalian vektor dan binatang pembawa penyakit (pest control monitoring)', 'M'),
+            ('Audit Instalasi Pengolahan Air Limbah (IPAL) dan insinerator rumah sakit', 'M'),
+            ('Evaluasi analisis dampak lingkungan (AMDAL/UKL-UPL) fasilitas kesehatan', 'M'),
+        ],
+    },
+}
+KATALOG_NAKES_TAMBAHAN['DIET'] = {
+    'MADYA': [
+        ('Asesmen gizi mendalam untuk pasien dengan kondisi khusus (DM, Gagal Ginjal, Stroke, Kanker)', 'M'),
+        ('Perhitungan kebutuhan zat gizi makro dan mikro serta penyusunan preskripsi diet khusus', 'M'),
+        ('Konseling gizi klinik individual bagi pasien rawat inap maupun rawat jalan', 'M'),
+        ('Evaluasi intervensi asuhan gizi terintegrasi bersama tim medis', 'M'),
+    ],
+}
+KATALOG_NAKES_TAMBAHAN['NUTR'] = {
+    'PRATAMA': [
+        ('Pengukuran antropometri pasien (berat badan, tinggi badan, LILA, IMT)', 'M'),
+        ('Distribusi makanan pasien sesuai diet dan penyusunan porsi harian', 'M'),
+        ('Skrining gizi awal pasien rawat inap', 'M'),
+    ],
+}
+KATALOG_NAKES_TAMBAHAN['TTK'] = {
+    'PRATAMA': [
+        ('Penyiapan, peracikan, dan pengemasan sediaan farmasi (puyer, kapsul, salep)', 'M'),
+        ('Pengelolaan persediaan obat di depo farmasi / floor stock', 'M'),
+        ('Distribusi perbekalan kesehatan dan obat ke ruang perawatan', 'M'),
+    ],
+    'MADYA': [
+        ('Pengelolaan logistik rantai dingin (cold chain) vaksin dan obat termolabil', 'M'),
+        ('Pemeriksaan stok opname berkala dan pemantauan tanggal kadaluarsa obat', 'M'),
+        ('Pengawasan penyimpanan obat High Alert dan LASA di instalasi farmasi', 'M'),
+    ],
+}
+KATALOG_NAKES_TAMBAHAN['ANES'] = {
+    'PRATAMA': [
+        ('Persiapan mesin anestesi, alat intubasi, dan obat-obatan anestesi sebelum tindakan', 'S'),
+        ('Asistensi dokter spesialis anestesiologi selama induksi, pemeliharaan, hingga pemulihan', 'S'),
+        ('Pemantauan tanda vital dan kedalaman sedasi/anestesi intra-operatif', 'S'),
+    ],
+    'MADYA': [
+        ('Manajemen jalan napas lanjutan (advanced airway management) mandiri/kolaborasi', 'M'),
+        ('Manajemen pemulihan pasien di Ruang Pulih Sadar (Recovery Room / PACU)', 'M'),
+        ('Pengelolaan asesmen pra-anestesi dan edukasi risiko anestesi bersama tim', 'M'),
+    ],
+}
+KATALOG_NAKES_TAMBAHAN['PMIK'] = {
+    'PRATAMA': [
+        ('Pengumpulan, perakitan (assembling), dan penataan dokumen rekam medis (RM)', 'M'),
+        ('Pendataan registrasi pasien rawat jalan, gawat darurat, dan rawat inap', 'M'),
+        ('Distribusi berkas rekam medis ke poliklinik/bangsal', 'M'),
+    ],
+    'MADYA': [
+        ('Koding diagnosis dan tindakan medis menggunakan ICD-10 dan ICD-9-CM (untuk klaim BPJS/asuransi)', 'M'),
+        ('Audit kelengkapan pengisian rekam medis (Quantitative & Qualitative Analysis)', 'M'),
+        ('Manajemen kerahasiaan, retensi, dan pemusnahan arsip rekam medis sesuai regulasi', 'M'),
+    ],
+}
+KATALOG_NAKES_TAMBAHAN['WICARA'] = {
+    'PRATAMA': [
+        ('Skrining gangguan komunikasi, bahasa, dan bicara pada anak atau dewasa', 'S'),
+    ],
+    'MADYA': [
+        ('Terapi rehabilitasi gangguan artikulasi, bahasa ekspresif/reseptif, dan gagap', 'M'),
+        ('Terapi gangguan menelan (dysphagia therapy) pada pasien stroke atau pasca-bedah', 'M'),
+        ('Penyusunan program latihan wicara mandiri untuk keluarga pasien di rumah', 'M'),
+    ],
+}
+KATALOG_NAKES_TAMBAHAN['OKT'] = {
+    'PRATAMA': [
+        ('Identifikasi hambatan aktivitas sehari-hari (Activities of Daily Living / ADL) pasien', 'S'),
+    ],
+    'MADYA': [
+        ('Rehabilitasi okupasional fisik/mental (latihan fungsi motorik halus tangan, kognitif, persepsi)', 'M'),
+        ('Modifikasi lingkungan rumah dan alat bantu kerja/hidup mandiri bagi penyandang disabilitas', 'M'),
+        ('Evaluasi kesiapan kembali bekerja (return to work assessment) bagi pasien pasca trauma/stroke', 'M'),
+    ],
+}
+KATALOG_NAKES_TAMBAHAN['ORPRO'] = {
+    'PRATAMA': [
+        ('Pengukuran dimensi tubuh pasien untuk pembuatan alat bantu ortosis atau prostesis', 'S'),
+    ],
+    'MADYA': [
+        ('Desain, pembuatan, dan fitting alat bantu gerak (kaki/tangan palsu, korset koreksi skoliosis, brace)', 'M'),
+        ('Evaluasi biomekanik dan pelatihan penyesuaian penggunaan alat bagi pasien amputasi/kelainan muskuloskeletal', 'M'),
+    ],
+}
+KATALOG_NAKES_TAMBAHAN['FISIO'] = {
+    'PRATAMA': [
+        ('Pelaksanaan modalitas fisioterapi standar (terapi panas/dingin, TENS, US fisioterapi)', 'M'),
+        ('Latihan rentang gerak (Range of Motion / ROM) dasar pada pasien tirah baring', 'M'),
+    ],
+    'MADYA': [
+        ('Pemeriksaan neuromuskuloskeletal dan cardiorespiratory lanjutan', 'M'),
+        ('Fisioterapi dada (chest physiotherapy) untuk pembersihan jalan napas', 'M'),
+        ('Rehabilitasi jantung, paru, stroke, dan pasca cedera olahraga secara komprehensif', 'M'),
+    ],
+}
+KATALOG_NAKES_TAMBAHAN['PSIK'] = {
+    'MUDA': [
+        ('Pelaksanaan asesmen psikologis awal dan observasi perilaku klinis', 'S'),
+    ],
+    'MADYA': [
+        ('Pemeriksaan psikodiagnostik lanjut (tes proyektif, inteligensi, kepribadian)', 'M'),
+        ('Psikoterapi klinis individual/keluarga (terapi kognitif perilaku / CBT, konseling trauma)', 'M'),
+        ('Penanganan kasus kesehatan mental berat dan asesmen kelayakan psikologis pasien khusus', 'M'),
+    ],
+}
+KATALOG_NAKES_TAMBAHAN['RADG'] = {
+    'PRATAMA': [
+        ('Pembuatan citra radiografi konvensional (X-ray dada, ekstremitas, abdomen)', 'M'),
+        ('Persiapan pasien dan pengaturan proteksi radiasi dasar', 'M'),
+    ],
+    'MADYA': [
+        ('Pengoperasian pencitraan tingkat lanjut (CT-Scan, MRI, USG, Mammografi, Fluoroskopi)', 'M'),
+        ('Quality Control (QC) harian alat pencitraan diagnostik dan pemantauan dosis radiasi pekerja', 'M'),
+    ],
+}
+KATALOG_NAKES_TAMBAHAN['FMA'] = {
+    'NUTR_FALLBACK_PLACEHOLDER': [],
+}
+# Fisikawan Medis: jenjang seed lama tidak membagi Pratama/Madya + katalog lama
+# sudah 11 butir (FMA). Dokumen menambah 2 level — tulis ke jenjang MUDA-MADYA
+# gabungan hanya bila ada; kalau tidak, letakkan di jenjang pertama.
+KATALOG_NAKES_TAMBAHAN.pop('NUTR_FALLBACK_PLACEHOLDER', None)
+KATALOG_NAKES_TAMBAHAN['FMA'] = {
+    'PRATAMA': [
+        ('Pengukuran dosis radiasi harian dan survei radiasi lingkungan sekitar instalasi radioterapi/radiologi', 'S'),
+    ],
+    'MADYA': [
+        ('Perencanaan dosis radiasi (treatment planning) untuk pasien radioterapi kanker', 'M'),
+        ('Kalibrasi dosimetri berkala pada mesin linac, telekobalt, dan peralatan kedokteran nuklir', 'M'),
+        ('Evaluasi audit keselamatan proteksi radiasi fasilitas medis secara menyeluruh', 'M'),
+    ],
+}
+KATALOG_NAKES_TAMBAHAN['ATLM'] = {
+    'PRATAMA': [
+        ('Pengambilan spesimen darah (vena, kapiler, arteri) dan penyiapan sampel laboratorium', 'S'),
+    ],
+    'MADYA': [
+        ('Pengoperasian instrumen analisis hematologi, kimia klinik, dan mikrobiologi otomatis/manual', 'M'),
+        ('Pemelihapan kontrol kualitas internal (QC) laboratorium harian', 'M'),
+        ('Validasi teknis hasil pemeriksaan laboratorium sebelum diverifikasi oleh dokter spesialis Patologi Klinik', 'M'),
+    ],
+}
+KATALOG_NAKES_TAMBAHAN['K3RS'] = {
+    'PRATAMA': [
+        ('Inspeksi harian alat pelindung diri (APD) dan potensi bahaya area kerja rumah sakit', 'M'),
+        ('Pencatatan insiden kecelakaan kerja atau nyaris cedera (near miss)', 'M'),
+    ],
+    'MADYA': [
+        ('Perencanaan dan evaluasi manajemen tanggap darurat bencana internal rumah sakit (Hospital Disaster Plan)', 'M'),
+        ('Investigasi kecelakaan kerja dan audit keselamatan lingkungan kerja (K3RS)', 'M'),
+        ('Pelaksanaan program mitigasi risiko bahaya kebakaran, paparan B3, dan ergonomi tenaga kesehatan', 'M'),
+    ],
 }

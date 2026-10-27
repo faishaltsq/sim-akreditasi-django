@@ -18,15 +18,24 @@ class PengajuanPortalForm(forms.ModelForm):
 
     class Meta:
         model = PengajuanKredensial
-        fields = ['jenis']
+        fields = ['jenis', 'spesialisasi_teks']
         widgets = {
             'jenis': forms.Select(attrs={'class': SELECT_CLASS}),
+            'spesialisasi_teks': forms.TextInput(attrs={
+                'class': SELECT_CLASS, 'maxlength': 150,
+                'placeholder': 'mis. Spesialis Jantung & Pembuluh Darah (Sp.JP)',
+            }),
         }
 
     def __init__(self, *args, user, **kwargs):
         super().__init__(*args, **kwargs)
         self.user = user
         self.employee = getattr(user, 'pegawai_hc', None)
+        kode_jenjang = getattr(
+            getattr(self.employee, 'jenjang_master', None), 'kode', ''
+        ) or ''
+        if not kode_jenjang.startswith(('SP-', 'SUBSP-', 'DU-SP', 'DU-KONS')):
+            del self.fields['spesialisasi_teks']
         self.fields['unit_kerja'] = forms.ModelChoiceField(
             queryset=UnitKerja.objects.none(),
             label='Unit Kerja',

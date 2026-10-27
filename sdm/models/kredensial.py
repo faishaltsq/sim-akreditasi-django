@@ -88,6 +88,11 @@ class PengajuanKredensial(models.Model):
     jenis = models.CharField(
         'Jenis Pengajuan', max_length=20, choices=JENIS_CHOICES, default='AWAL'
     )
+    spesialisasi_teks = models.CharField(
+        'Spesialisasi / Subspesialisasi', max_length=150, blank=True, default='',
+        help_text='Ditulis bebas oleh pengaju berjenjang spesialis; label final '
+                  'ditetapkan komite saat verifikasi sumber.',
+    )
     logbook = models.ForeignKey(
         'sdm.VersiDokumen', on_delete=models.SET_NULL,
         null=True, blank=True, related_name='credential_logbook',

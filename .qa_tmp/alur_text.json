@@ -1,0 +1,48 @@
+{
+  "body": [
+    "Alur pemilihan nakes dan Tindakan klinis sesuai level/ jenjang",
+    "Berikut adalah rancangan alur pemilihan (workflow/hierarchy) beserta referensi data untuk modul tindakan klinis dokter pada aplikasi ARIMA:",
+    "A. Alur Hierarki Pemilihan (Workflow / Cascading Dropdown)",
+    "Alur pemilihan ini dirancang secara berjenjang (hierarkis) dari tingkat level dokter hingga spesifik tindakan klinis:",
+    "Plaintext",
+    "[1. Pilih Level Dokter]",
+    " ├── Dokter Umum",
+    " ├── Dokter Spesialis ──> [2. Pilih Spesialisasi] ──> [3. Pilih Jenis Tindakan Klinis Spesialis]",
+    " └── Dokter Subspesialis -> [2. Pilih Subspesialisasi] -> [3. Pilih Jenis Tindakan Klinis Subspesialis]",
+    "B. Contoh Struktur Data & Pilihan dalam Modul ARIMA",
+    "1. Level: Dokter Spesialis",
+    "Contoh Spesialisasi 1: Spesialis Jantung dan Pembuluh Darah (Sp.JP)",
+    "Perekaman dan Interpretasi Elektrokardiogram (EKG) Lanjut",
+    "Uji Latih Jantung Beban (Treadmill Test)",
+    "Ekokardiografi (Echocardiography) Transtorakal",
+    "Pemasangan Holter Monitor (Monitoring Irama Jantung 24 Jam)",
+    "Kardioversi Elektrik / Defibrilasi Darurat",
+    "Pemasangan Temporary Pacemaker (TPM) Bedside",
+    "Contoh Spesialisasi 2: Spesialis Bedah (Sp.B)",
+    "Operasi Appendektomi Konvensional / Laparoskopik Sederhana",
+    "Herniorrhaphy (Operasi Hernia)",
+    "Eksisi Tumor Jinak Kulit / Jaringan Lunak (Lipoma, Ateroma)",
+    "Debridement Luka Luas / Gangren",
+    "Sirkumsisi Medis Kompleks",
+    "2. Level: Dokter Subspesialis",
+    "Contoh Subspesialisasi 1: Subspesialis Jantung Intervensi (Sp.JP-FIHA / Konsultan Kardiologi Intervensi)",
+    "Tindakan Intervensi Koroner Perkutan Primer (Primary PCI / Pasang Ring Darurat)",
+    "Kateterisasi Jantung Diagnostik (Coronary Angiography)",
+    "Pemasangan Alat Pacu Jantung Permanen (Permanent Pacemaker / PPM)",
+    "Pericardiocentesis Terapeutik Bimbingan USG",
+    "Tindakan Intervensi Penyakit Jantung Kongenital Non-Bedah (ASD/VSD Closure)",
+    "Contoh Subspesialisasi 2: Subspesialis Bedah Digestif (Sp.B-KBD)",
+    "Bedah Laparoskopi Lanjut (Laparoscopic Kolektomi / Reseksi Usus)",
+    "Operasi Saluran Empedu Kompleks (Cholecystectomy & Eksplorasi CBD)",
+    "Operasi Hati (Liver Resection) & Pankreas",
+    "Penanganan Kasus Trauma Abdomen Kompleks",
+    ""
+  ],
+  "tables": [],
+  "headers": [
+    ""
+  ],
+  "footers": [
+    ""
+  ]
+}

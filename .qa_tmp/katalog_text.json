@@ -1,0 +1,415 @@
+{
+  "body": [
+    "",
+    "Katalog tindakan klinis ",
+    "Berikut adalah struktur modul/daftar referensi tindakan klinis berdasarkan jenjang/level dokter (Dokter Umum, Spesialis, dan Subspesialis) yang dapat digunakan untuk mengisi sistem logbook tindakan klinis:",
+    "Daftar Tindakan Klinis Berdasarkan Level Dokter",
+    "",
+    "Berikut adalah katalog jenis dokter subspesialis beserta contoh jenis tindakan klinis yang umumnya tersedia di Rumah Sakit Tipe B:",
+    "",
+    "Berikut adalah katalog jenis dokter spesialis beserta contoh jenis tindakan klinis yang umumnya tersedia di Rumah Sakit Tipe B, disusun dalam bentuk tabel:",
+    "",
+    "Berikut adalah rancangan daftar jenis tindakan klinis atau pelayanan profesional untuk masing-masing tenaga kesehatan (nakes) lain yang disesuaikan dengan jenjang level keprofesiannya untuk diintegrasikan ke dalam sistem ARIMA:",
+    "1. Perawat",
+    "Level Ahli Pertama / Perawat Klinis I (PK I):",
+    "Pengukuran tanda-tanda vital komprehensif & asesmen risiko jatuh",
+    "Pemasangan infus (IV line) dan pengambilan darah vena",
+    "Pemberian obat oral, injeksi (IM, IV, SC, IC), dan topikal",
+    "Perawatan luka bersih / ganti balutan dasar",
+    "Pemasangan kateter urin & NGT (Nasogastric Tube)",
+    "Level Ahli Muda / Perawat Klinis II (PK II):",
+    "Manajemen pemantauan hemodinamik dasar & balance cairan ketat",
+    "Perawatan luka stadium lanjut / dekubitus / luka diabetes (modern dressing)",
+    "Resusitasi Jantung Paru (RJP/BCLS) & manajemen oksigenasi kompleks",
+    "Fasilitasi mobilisasi pasien dengan traksi / tirah baring lama",
+    "Level Ahli Madya & Utama / Perawat Klinis III - IV (PK III - IV):",
+    "Manajemen asuhan keperawatan pasien kritis di ICU/ICCU/ICU Neonatus",
+    "Manajemen nyeri komprehensif (termasuk perawatan pasien paliatif)",
+    "Supervisi klinis, preseptorship, & audit dokumentasi asuhan keperawatan",
+    "Koordinasi evakuasi pasien gawat darurat / bencana (Triage disaster)",
+    "2. Bidan",
+    "Level Bidan Terampil / Klinis I:",
+    "Pemeriksaan ANC (Antenatal Care) rutin & pemantauan denyut jantung janin (DJJ)",
+    "Pertolongan persalinan normal (Asuhan Persalinan Normal / APN)",
+    "Perawatan nifas & konseling laktasi dasar",
+    "Imunisasi dasar pada bayi & ibu hamil",
+    "Level Bidan Ahli Pertama / Klinis II:",
+    "Manajemen penanganan komplikasi kebidanan awal (rujukan darurat kasus preeklamsia/atonia uteri)",
+    "Pemasangan dan pelepasan alat kontrasepsi (IUD / Implant)",
+    "Asuhan bayi baru lahir dengan penyulit ringan (asfiksia ringan)",
+    "Level Bidan Ahli Muda hingga Madya / Klinis III - IV:",
+    "Manajemen pelayanan obstetri neonatal emergensi komprehensif (PONEK)",
+    "Konseling kesehatan reproduksi dan keluarga berencana tingkat lanjut",
+    "Supervisi fasilitas pelayanan kebidanan dan audit Maternal Perinatal (AMP)",
+    "3. Apoteker",
+    "Level Apoteker Pratama / Pelaksana:",
+    "Skrining resep administratif, farmasetik, dan klinis harian",
+    "Pelayanan Informasi Obat (PIO) kepada pasien dan tenaga medis",
+    "Rekonsiliasi obat pasien rawat inap (masuk, pindah ruang, pulang)",
+    "Pemantauan Terapi Obat (PTO) dasar",
+    "Level Apoteker Madya / Spesialis:",
+    "Monitoring Efek Samping Obat (MESO) dan pelaporan IFRS",
+    "Evaluasi Penggunaan Obat (EPO) & farmakoekonomi bangsal",
+    "Visite klinis mandiri / kolaboratif bersama dokter spesialis (ICU/Onkologi)",
+    "Manajemen pencampuran obat steril (Aseptic Dispensing / Sitostatika)",
+    "4. Elektromedis",
+    "Level Elektromedis Pelaksana / Terampil:",
+    "Kalibrasi dan pemeliharaan preventif alat elektromedik ringan (suction pump, infusion pump)",
+    "Perbaikan kerusakan ringan perangkat medis non-life supporting",
+    "Inventarisasi dan inspeksi keselamatan kerja alat elektromedik harian",
+    "Level Elektromedis Penyelia / Ahli:",
+    "Kalibrasi dan pemeliharaan alat medis kompleks (Ventilator, Mesin Anestesi, Defibrilator, Mesin USG)",
+    "Uji fungsi dan kelaikan alat medis baru (Commissioning test) sebelum dioperasikan",
+    "Analisis risiko kegagalan alat medis (Risk assessment maintenance) berbasis standar ISO/STARKES",
+    "5. Sanitarian (Tenaga Sanitasi Lingkungan)",
+    "Level Sanitarian Pelaksana:",
+    "Pengambilan sampel kualitas air bersih dan air limbah rumah sakit",
+    "Pemantauan kebersihan lingkungan fisik ruangan (lantai, dinding, udara ruang steril)",
+    "Pengelolaan dan pengangkutan limbah medis/non-medis sementara (TPS B3)",
+    "Level Sanitarian Ahli:",
+    "Pengendalian vektor dan binatang pembawa penyakit (pest control monitoring)",
+    "Audit Instalasi Pengolahan Air Limbah (IPAL) dan insinerator rumah sakit",
+    "Evaluasi analisis dampak lingkungan (AMDAL/UKL-UPL) fasilitas kesehatan",
+    "6. Dietisien & Nutrisionis",
+    "Level Nutrisionis Pelaksana:",
+    "Pengukuran antropometri pasien (berat badan, tinggi badan, LILA, IMT)",
+    "Distribusi makanan pasien sesuai diet dan penyusunan porsi harian",
+    "Skrining gizi awal pasien rawat inap",
+    "Level Dietisien Klinis / Ahli:",
+    "Asesmen gizi mendalam untuk pasien dengan kondisi khusus (DM, Gagal Ginjal, Stroke, Kanker)",
+    "Perhitungan kebutuhan zat gizi makro dan mikro serta penyusunan preskripsi diet khusus",
+    "Konseling gizi klinik individual bagi pasien rawat inap maupun rawat jalan",
+    "Evaluasi intervensi asuhan gizi terintegrasi bersama tim medis",
+    "7. Tenaga Teknis Kefarmasian (TTK)",
+    "Level TTK Pelaksana:",
+    "Penyiapan, peracikan, dan pengemasan sediaan farmasi (puyer, kapsul, salep)",
+    "Pengelolaan persediaan obat di depo farmasi / floor stock",
+    "Distribusi perbekalan kesehatan dan obat ke ruang perawatan",
+    "Level TTK Mahir / Penyelia:",
+    "Pengelolaan logistik rantai dingin (cold chain) vaksin dan obat termolabil",
+    "Pemeriksaan stok opname berkala dan pemantauan tanggal kadaluarsa obat",
+    "Pengawasan penyimpanan obat High Alert dan LASA di instalasi farmasi",
+    "8. Perawat Anestesi",
+    "Level Perawat Anestesi Pelaksana / Terampil:",
+    "Persiapan mesin anestesi, alat intubasi, dan obat-obatan anestesi sebelum tindakan",
+    "Asistensi dokter spesialis anestesiologi selama induksi, pemeliharaan, hingga pemulihan",
+    "Pemantauan tanda vital dan kedalaman sedasi/anestesi intra-operatif",
+    "Level Perawat Anestesi Ahli / Mahir:",
+    "Manajemen jalan napas lanjutan (advanced airway management) mandiri/kolaborasi",
+    "Manajemen pemulihan pasien di Ruang Pulih Sadar (Recovery Room / PACU)",
+    "Pengelolaan asesmen pra-anestesi dan edukasi risiko anestesi bersama tim",
+    "9. Perekam Medis & Informasi Kesehatan (PMIK)",
+    "Level Perekam Medis Pelaksana:",
+    "Pengumpulan, perakitan (assembling), dan penataan dokumen rekam medis (RM)",
+    "Pendataan registrasi pasien rawat jalan, gawat darurat, dan rawat inap",
+    "Distribusi berkas rekam medis ke poliklinik/bangsal",
+    "Level Perekam Medis Ahli:",
+    "Koding diagnosis dan tindakan medis menggunakan ICD-10 dan ICD-9-CM (untuk klaim BPJS/asuransi)",
+    "Audit kelengkapan pengisian rekam medis (Quantitative & Qualitative Analysis)",
+    "Manajemen kerahasiaan, retensi, dan pemusnahan arsip rekam medis sesuai regulasi",
+    "10. Terapi Wicara",
+    "Level Terapi Wicara Pelaksana:",
+    "Skrining gangguan komunikasi, bahasa, dan bicara pada anak atau dewasa",
+    "Level Terapi Wicara Ahli:",
+    "Terapi rehabilitasi gangguan artikulasi, bahasa ekspresif/reseptif, dan gagap",
+    "Terapi gangguan menelan (dysphagia therapy) pada pasien stroke atau pasca-bedah",
+    "Penyusunan program latihan wicara mandiri untuk keluarga pasien di rumah",
+    "11. Okupasi Terapis",
+    "Level Okupasi Terapis Pelaksana:",
+    "Identifikasi hambatan aktivitas sehari-hari (Activities of Daily Living / ADL) pasien",
+    "Level Okupasi Terapis Ahli:",
+    "Rehabilitasi okupasional fisik/mental (latihan fungsi motorik halus tangan, kognitif, persepsi)",
+    "Modifikasi lingkungan rumah dan alat bantu kerja/hidup mandiri bagi penyandang disabilitas",
+    "Evaluasi kesiapan kembali bekerja (return to work assessment) bagi pasien pasca trauma/stroke",
+    "12. Ortotik Prostetik",
+    "Level Ortotik Prostetik Pelaksana:",
+    "Pengukuran dimensi tubuh pasien untuk pembuatan alat bantu ortosis atau prostesis",
+    "Level Ortotik Prostetik Ahli:",
+    "Desain, pembuatan, dan fitting alat bantu gerak (kaki/tangan palsu, korset koreksi skoliosis, brace)",
+    "Evaluasi biomekanik dan pelatihan penyesuaian penggunaan alat bagi pasien amputasi/kelainan muskuloskeletal",
+    "13. Fisioterapis",
+    "Level Fisioterapis Pelaksana:",
+    "Pelaksanaan modalitas fisioterapi standar (terapi panas/dingin, TENS, US fisioterapi)",
+    "Latihan rentang gerak (Range of Motion / ROM) dasar pada pasien tirah baring",
+    "Level Fisioterapis Ahli:",
+    "Pemeriksaan neuromuskuloskeletal dan cardiorespiratory lanjutan",
+    "Fisioterapi dada (chest physiotherapy) untuk pembersihan jalan napas",
+    "Rehabilitasi jantung, paru, stroke, dan pasca cedera olahraga secara komprehensif",
+    "14. Psikolog Klinis",
+    "Level Psikolog Klinis Muda / Pratama:",
+    "Pelaksanaan asesmen psikologis awal dan observasi perilaku klinis",
+    "Level Psikolog Klinis Madya / Utama:",
+    "Pemeriksaan psikodiagnostik lanjut (tes proyektif, inteligensi, kepribadian)",
+    "Psikoterapi klinis individual/keluarga (terapi kognitif perilaku / CBT, konseling trauma)",
+    "Penanganan kasus kesehatan mental berat dan asesmen kelayakan psikologis pasien khusus",
+    "15. Radiografer (Radiologi)",
+    "Level Radiografer Pelaksana:",
+    "Pembuatan citra radiografi konvensional (X-ray dada, ekstremitas, abdomen)",
+    "Persiapan pasien dan pengaturan proteksi radiasi dasar",
+    "Level Radiografer Ahli / Spesifik:",
+    "Pengoperasian pencitraan tingkat lanjut (CT-Scan, MRI, USG, Mammografi, Fluoroskopi)",
+    "Quality Control (QC) harian alat pencitraan diagnostik dan pemantauan dosis radiasi pekerja",
+    "16. Fisikawan Medis",
+    "Level Fisikawan Medis Pratama:",
+    "Pengukuran dosis radiasi harian dan survei radiasi lingkungan sekitar instalasi radioterapi/radiologi",
+    "Level Fisikawan Medis Madya / Ahli:",
+    "Perencanaan dosis radiasi (treatment planning) untuk pasien radioterapi kanker",
+    "Kalibrasi dosimetri berkala pada mesin linac, telekobalt, dan peralatan kedokteran nuklir",
+    "Evaluasi audit keselamatan proteksi radiasi fasilitas medis secara menyeluruh",
+    "17. ATLM (Ahli Teknologi Laboratorium Medik)",
+    "Level ATLM Pelaksana:",
+    "Pengambilan spesimen darah (vena, kapiler, arteri) dan penyiapan sampel laboratorium",
+    "Level ATLM Ahli:",
+    "Pengoperasian instrumen analisis hematologi, kimia klinik, dan mikrobiologi otomatis/manual",
+    "Pemelihapan kontrol kualitas internal (QC) laboratorium harian",
+    "Validasi teknis hasil pemeriksaan laboratorium sebelum diverifikasi oleh dokter spesialis Patologi Klinik",
+    "18. Ahli K3 (Keselamatan dan Kesehatan Kerja / K3RS)",
+    "Level Ahli K3 Pelaksana:",
+    "Inspeksi harian alat pelindung diri (APD) dan potensi bahaya area kerja rumah sakit",
+    "Pencatatan insiden kecelakaan kerja atau nyaris cedera (near miss)",
+    "Level Ahli K3 Madya / Utama:",
+    "Perencanaan dan evaluasi manajemen tanggap darurat bencana internal rumah sakit (Hospital Disaster Plan)",
+    "Investigasi kecelakaan kerja dan audit keselamatan lingkungan kerja (K3RS)",
+    "Pelaksanaan program mitigasi risiko bahaya kebakaran, paparan B3, dan ergonomi tenaga kesehatan",
+    ""
+  ],
+  "tables": [
+    [
+      [
+        "No",
+        "Level Dokter",
+        "Tindakan Klinis"
+      ],
+      [
+        "1",
+        "Dokter Umum",
+        "* Anamnesis dan Pemeriksaan Fisik Komprehensif"
+      ],
+      [
+        "",
+        "",
+        "* Pemasangan & Pelepasan Infus / Jalur Intravena Perifer"
+      ],
+      [
+        "",
+        "",
+        "* Pemasangan & Pelepasan Kateter Urin"
+      ],
+      [
+        "",
+        "",
+        "* Pemasangan & Pelepasan NGT (Nasogastric Tube)"
+      ],
+      [
+        "",
+        "",
+        "* Terapi Oksigenasi & Resusitasi Jantung Paru (RJP / BCLS)"
+      ],
+      [
+        "",
+        "",
+        "* Interpretasi Perekaman EKG Dasar"
+      ],
+      [
+        "",
+        "",
+        "* Penjahitan Luka Sederhana (Hecting) & Debridement Ringan"
+      ],
+      [
+        "",
+        "",
+        "* Pengambilan Darah Vena / Arteri (Analisa Gas Darah)"
+      ],
+      [
+        "",
+        "",
+        "* Pungsi Pleura / Thoracocentesis Sederhana (dengan supervisi/indikasi darurat)"
+      ],
+      [
+        "",
+        "",
+        "* Edukasi & Informed Consent Pasien Rawat Inap"
+      ]
+    ],
+    [
+      [
+        "No",
+        "Dokter Subspesialis",
+        "Jenis Tindakan Klinis"
+      ],
+      [
+        "1",
+        "Subspesialis Penyakit Dalam - Ginjal Hipertensi (Sp.PD-KGH)",
+        "* Tindakan Hemodialisis darurat dan pemeliharaan\n* Pemasangan kateter vakuum / kateter hemofiltrasi akut\n* Biopsi ginjal perkutan bimbingan USG\n* Peritoneal dialysis (CAPD) tatalaksana dan evaluasi"
+      ],
+      [
+        "2",
+        "Subspesialis Penyakit Dalam - Kardiologi / Kardiovaskular (Sp.PD-KKV)",
+        "* Ekokardiografi lanjut dan pemantauan hemodinamik non-invasif\n* Tatalaksana gagal jantung lanjut dan aritmia kompleks\n* Kardioversi medikamentosa dan elektrik terarah"
+      ],
+      [
+        "3",
+        "Subspesialis Bedah - Digestif (Sp.B-KBD)",
+        "* Bedah laparoskopi tingkat lanjut (kolektomi, gastrektomi, reksi usus)\n* Operasi saluran empedu kompleks dan pankreas\n* Penanganan bedah onkologi saluran cerna kompleks"
+      ],
+      [
+        "4",
+        "Subspesialis Bedah - Onkologi (Sp.B(K)Onk)",
+        "* Operasi radikal kanker payudara (Modified Radical Mastectomy / Breast Conserving Surgery)\n* Eksisi luas dan diseksen kelenjar getah bening regional\n* Biopsi eksisional tumor ganas jaringan lunak/kulit"
+      ],
+      [
+        "5",
+        "Subspesialis Anak - Perinatologi / Neonatologi (Sp.A(K))",
+        "* Pemasangan akses vaskular sentral pada neonatus (UVC/UAC)\n* Perawatan intensif neonatus (NICU) dengan ventilasi mekanik lanjut\n* Transfusi tukar pada bayi baru lahir dengan hiperbilirubinemia berat"
+      ],
+      [
+        "6",
+        "Subspesialis Anak - Respirologi / Infeksi Anak",
+        "* Bronkoskopi diagnostik pediatrik\n* Pungsi pleura dan pemasangan WSD anak\n* Tatalaksana kasus infeksi paru berat/pneumonia berulang"
+      ],
+      [
+        "7",
+        "Subspesialis Obstetri & Ginekologi - Fetomaternal (Sp.OG-KFM)",
+        "* USGfetomaternal tingkat lanjut (Anomaly scan / USG 4D diagnostik)\n* Amniosentesis dan prosedur prenatalinvasif\n* Penanganan kehamilan risiko tinggi dengan komplikasi maternal-fetal kompleks"
+      ],
+      [
+        "8",
+        "Subspesialis Obstetri & Ginekologi - Onkologi Ginekologi (Sp.OG-K.Onk)",
+        "* Operasi radikal kanker serviks, ovarium, dan endometrium\n* Histerektomi radikal dan limfadenektomi pelvik\n* Kolposkopi dan biopsi lesi prakanker ginekologi"
+      ],
+      [
+        "9",
+        "Subspesialis Jantung - Kardiologi Intervensi (Sp.JP-FIHA / Konsultan)",
+        "* Kateterisasi jantung diagnostik (Coronary Angiography)\n* Intervensi Koroner Perkutan (PCI / Pasang Ring Jantung primer maupun elektif)\n* Pemasangan Alat Pacu Jantung Permanen (PPM) dan pericardiocentesis terapeutik"
+      ],
+      [
+        "10",
+        "Subspesialis Saraf - Neurovaskular / Stroke (Sp.S-K / Sp.N)",
+        "* Tatalaksana trombolisis intravena pada stroke iskemik akut\n* USG Doppler pembacaan vaskular ekstrakranial/transcranial\n* Manajemen intervensi neurovaskular dasar bersama tim terkait"
+      ],
+      [
+        "11",
+        "Subspesialis Bedah Saraf - Neuro-Onkologi / Spine",
+        "* Craniotomy pengangkatan tumor otak kompleks\n* Bedah mikroskopik saraf tulang belakang (Spine surgery / laminektomi & fiksasi)\n* Evakuasi perdarahan intrakranial kompleks"
+      ],
+      [
+        "12",
+        "Subspesialis Anestesiologi - Intensive Care (KIC)",
+        "* Manajemen ventilasi mekanik lanjut dan titrasi hemodinamik invasif di ICU\n* Pemasangan kateter vena sentral (CVC) dan kateter arteri radialis\n* Penanganan kegagalan multi-organ (MODS) di ruang intensif"
+      ],
+      [
+        "13",
+        "Subspesialis Orthopedi - Traumatologi / Hip & Knee",
+        "* Artroskopi rekonstruksi ligamen lutut lanjut (ACL/PCL reconstruction)\n* Penggantian sendi panggul dan lutut total (Total Hip / Knee Replacement)\n* Fiksasi fraktur kompleks pelvis dan acetabulum"
+      ],
+      [
+        "14",
+        "Subspesialis THT - Otologi / Rinologi",
+        "* Operasi timpanoplasti dan mastoidektomi radikal (Bedah mikro telinga)\n* Bedah Sinus Endoskopi Fungsional (BSEF / FESS)\n* Operasi rekonstruksi jalan napas dan bedah kepala leher lanjut"
+      ],
+      [
+        "15",
+        "Subspesialis Mata - Vitreoretina / Glaukoma",
+        "* Operasi vitrektomi pars plana (kasus retina dan ablasi retina)\n* Operasi trabekulektomi dan penanganan bedah glaukoma lanjut\n* Injeksi intravitreal obat anti-VEGF"
+      ],
+      [
+        "16",
+        "Subspesialis Pulmonologi - Onkologi Toraks / Asma PPOK",
+        "* Bronkoskopi terapeutik intervensi (pengambilan benda asing, stenting saluran napas)\n* Pleurodesis dan torakosentesis lanjutan\n* Evaluasi uji fungsi paru komprehensif lanjutan"
+      ]
+    ],
+    [
+      [
+        "No",
+        "Dokter Spesialis",
+        "Jenis Tindakan Klinis"
+      ],
+      [
+        "1",
+        "Spesialis Penyakit Dalam (Sp.PD)",
+        "* Visite dan manajemen kasus metabolik/infeksi kompleks\n* Pemasangan CVC (Central Venous Catheter)\n* Pungsi asites dan torakosentesis diagnostik/terapeutik\n* Biopsi sumsum tulang (bone marrow puncture)"
+      ],
+      [
+        "2",
+        "Spesialis Bedah (Sp.B)",
+        "* Operasi bedah digestif dasar (appendektomi, herniotomi)\n* Debridement luka infeksi/gangren luas\n* Eksisi tumor jinak/ganas superfisial\n* Sirkumsisi dan penanganan trauma bedah minor"
+      ],
+      [
+        "3",
+        "Spesialis Anak (Sp.A)",
+        "* Resusitasi neonatus dan stabilisasi bayi baru lahir\n* Pemasangan infus dan injeksi pediatrik khusus\n* Imunisasi dasar dan lanjutan\n* Penanganan kasus kegawatdaruratan anak (infeksi berat, dehidrasi)"
+      ],
+      [
+        "4",
+        "Spesialis Obstetri dan Ginekologi (Sp.OG)",
+        "* Pertolongan persalinan normal dan sectio caesarea (SC)\n* Kuretase dan penanganan perdarahan obstetri\n* Pemasangan/pencabutan kontrasepsi jangka panjang (IUD/Implan)\n* Pemeriksaan USG obstetri dan ginekologi"
+      ],
+      [
+        "5",
+        "Spesialis Jantung dan Pembuluh Darah (Sp.JP)",
+        "* Elektrokardiografi (EKG) dan Uji Latih Jantung (Treadmill)\n* Ekokardiografi transtorakal (TTE)\n* Pemasangan Holter monitor / ABPM\n* Kardioversi elektrik darurat"
+      ],
+      [
+        "6",
+        "Spesialis Saraf (Neurologi) (Sp.S / Sp.N)",
+        "* Pemeriksaan neurologis komprehensif\n* Pungsi lumbal (LP)\n* Interpretasi EEG (Electroencephalography)\n* Tatalaksana stroke akut dan tata laksana nyeri kepala/neuropati"
+      ],
+      [
+        "7",
+        "Spesialis Anestesiologi dan Terapi Intensif (Sp.An-TI)",
+        "* Manajemen anestesi umum, regional, dan spinal untuk operasi\n* Manajemen jalan napas lanjut dan intubasi endotrakeal\n* Perawatan pasien kritis di ICU dan pemantauan hemodinamik invasif\n* Manajemen nyeri akut dan kronis"
+      ],
+      [
+        "8",
+        "Spesialis Radiologi (Sp.Rad)",
+        "* Pembacaan dan interpretasi foto Rontgen konvensional\n* Pemeriksaan USG diagnostik multisistem\n* Interpretasi CT-Scan dan MRI\n* Pemeriksaan fluoroskopi khusus (Barium enema/meal, HSG)"
+      ],
+      [
+        "9",
+        "Spesialis Patologi Klinik (Sp.PK)",
+        "* Validasi dan interpretasi hasil laboratorium klinik (hematologi, kimia darah, imunologi)\n* Konsultasi klinis hasil pemeriksaan laboratorium kritis\n* Pengendalian mutu internal dan eksternal laboratorium"
+      ],
+      [
+        "10",
+        "Spesialis Patologi Anatomi (Sp.PA)",
+        "* Pemeriksaan sitologi (FNAB/Aspirasi Jarum Halus)\n* Histopatologi jaringan biopsi/operasi\n* Interpretasi sediaan frozen section (pembedahan darurat)"
+      ],
+      [
+        "11",
+        "Spesialis Bedah Orthopedi dan Traumatologi (Sp.OT)",
+        "* Reduksi tertutup dan fiksasi fraktur tulang\n* Operasi pemasangan fiksasi internal (ORIF/Closed Reduction)\n* Artroskopi sendi dasar\n* Penanganan cedera olahraga dan rekonstruksi ortopedi"
+      ],
+      [
+        "12",
+        "Spesialis THT-KL (Telinga Hidung Tenggorokan - Bedah Kepala Leher)",
+        "* Ekstraksi korpus alienum (benda asing) di THT\n* Tindakan miringotomi dan timpanoplasti dasar\n* Tonsilektomi dan adenoidektomi\n* Endoskopi diagnostik hidung/tenggorokan"
+      ],
+      [
+        "13",
+        "Spesialis Mata (Sp.M)",
+        "* Operasi katarak (Phacoemulsification / SICS)\n* Ekstraksi benda asing kornea/konjungtiva\n* Tonometri dan pemeriksaan lapang pandang\n* Pemeriksaan funduskopi dan refraksi mata"
+      ],
+      [
+        "14",
+        "Spesialis Kulit dan Kelamin (Sp.KK / Sp.DV)",
+        "* Electrocauterization / Kauterisasi lesi kulit\n* Eksterpasi / eksisi lesi jinak kulit\n* Patch test (uji tempel) alergi\n* Terapi sinar/laser dermatologi dasar"
+      ],
+      [
+        "15",
+        "Spesialis Kedokteran Jiwa (Psikiatri) (Sp.KJ)",
+        "* Psikoterapi suportif dan perilaku kognitif\n* Wawancara psikiatrik dan asesmen psikopatologi\n* Penatalaksanaan farmakoterapi gangguan jiwa\n* Penilaian visum et repertum psikiatrik"
+      ],
+      [
+        "16",
+        "Spesialis Pulmonologi dan Kedokteran Respirasi (Paru) (Sp.P / Sp.Pulmo)",
+        "* Spirometri dan uji fungsi paru\n* Pungsi pleura dan pemasangan WSD (Water Seal Drainage)\n* Bronkoskopi diagnostik\n* Penatalaksanaan tuberkulosis resistan obat (TB-RO) dan asma berat"
+      ]
+    ]
+  ],
+  "headers": [
+    ""
+  ],
+  "footers": [
+    ""
+  ]
+}
