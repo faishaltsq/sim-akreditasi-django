@@ -26,7 +26,13 @@ class DokumenForm(forms.ModelForm):
 
     class Meta:
         model = DokumenPegawai
-        fields = ['document_type', 'jenis_berkas', 'title', 'sensitivity']
+        # Spec order ("Masalah unggah dokumen ganda"): Jenis Berkas, Judul,
+        # Tanggal Terbit, Berlaku Sampai, Pilih Berkas; model-required
+        # classification fields stay last.
+        fields = [
+            'jenis_berkas', 'title', 'issued_date', 'valid_until', 'file',
+            'document_type', 'sensitivity',
+        ]
         widgets = {
             'document_type': forms.Select(attrs={'class': SELECT_CLASS}),
             'jenis_berkas': forms.Select(attrs={'class': SELECT_CLASS}),
