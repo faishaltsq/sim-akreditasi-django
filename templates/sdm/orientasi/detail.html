@@ -36,5 +36,42 @@
             </table>
         </div>
     </div>
+
+    <div class="card border shadow-sm mt-3">
+        <div class="card-body">
+            <h2 class="h6 mb-2">Asesmen / Post-Test (lulus &ge; 80)</h2>
+            {% for asesmen in assignment.assessments.all %}
+                <div class="small">Percobaan {{ asesmen.percobaan }} — nilai <strong>{{ asesmen.nilai }}</strong>
+                    {% if asesmen.lulus %}<span class="badge text-bg-success">Lulus</span>{% else %}<span class="badge text-bg-warning">Remedi</span>{% endif %}
+                    · {{ asesmen.created_at|date:"d M Y H:i" }}</div>
+            {% empty %}<p class="small text-muted mb-2">Belum ada asesmen.</p>{% endfor %}
+            {% if assignment.status == 'BERJALAN' %}
+            <form method="post" action="{% url 'sdm:orientasi_asesmen' assignment.pk %}" class="d-flex gap-2 mt-2">
+                {% csrf_token %}
+                <input name="nilai" class="form-control form-control-sm" style="max-width:8rem" inputmode="decimal" placeholder="Nilai (0–100)" aria-label="Nilai post-test">
+                <input name="catatan" class="form-control form-control-sm" placeholder="Catatan (opsional)" aria-label="Catatan asesmen">
+                <button class="btn btn-primary btn-sm" type="submit">Simpan Nilai</button>
+            </form>
+            {% endif %}
+            {% if assignment.status == 'SELESAI' %}
+            <a class="btn btn-outline-success btn-sm mt-2" href="{% url 'sdm:orientasi_sertifikat' assignment.pk %}">
+                <i class="bi bi-download me-1"></i>Unduh Sertifikat
+            </a>
+            {% endif %}
+        </div>
+    </div>
+
+    {% if ringkasan_logbook is not None %}
+    <div class="card border shadow-sm mt-3">
+        <div class="card-body">
+            <h2 class="h6 mb-2">Logbook Masa Orientasi</h2>
+            <p class="small mb-0">
+                {{ ringkasan_logbook.total }} entri · mandiri {{ ringkasan_logbook.mandiri }} ·
+                supervisi {{ ringkasan_logbook.supervisi }} · kolaborasi {{ ringkasan_logbook.kolaborasi }} ·
+                terverifikasi {{ ringkasan_logbook.terverifikasi }}
+            </p>
+        </div>
+    </div>
+    {% endif %}
 </div>
 {% endblock %}

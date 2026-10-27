@@ -5,8 +5,34 @@
 <div class="container-fluid p-0">
     <div class="page-header-box mb-3 d-flex justify-content-between align-items-center">
         <h1 class="page-title h5 mb-0">Orientasi</h1>
-        <a class="btn btn-primary btn-sm" href="{% url 'sdm:orientasi_create' %}">Program / Penugasan</a>
+        <div class="d-flex gap-2">
+            <a class="btn btn-outline-secondary btn-sm" href="{% url 'sdm:orientasi_rekap_pdf' %}{% if unit_filter or status_filter %}?{% endif %}{% if unit_filter %}unit={{ unit_filter }}{% endif %}{% if unit_filter and status_filter %}&{% endif %}{% if status_filter %}status={{ status_filter }}{% endif %}">
+                <i class="bi bi-file-earmark-pdf me-1"></i>Rekap PDF
+            </a>
+            <a class="btn btn-primary btn-sm" href="{% url 'sdm:orientasi_create' %}">Program / Penugasan</a>
+        </div>
     </div>
+    <form method="get" class="row g-2 mb-3">
+        <div class="col-auto">
+            <label class="visually-hidden" for="f-unit">Unit</label>
+            <select id="f-unit" name="unit" class="form-select form-select-sm">
+                <option value="">Semua Unit</option>
+                {% for u in unit_options %}<option value="{{ u.pk }}" {% if unit_filter == u.pk|stringformat:"s" %}selected{% endif %}>{{ u.name }}</option>{% endfor %}
+            </select>
+        </div>
+        <div class="col-auto">
+            <label class="visually-hidden" for="f-status">Status</label>
+            <select id="f-status" name="status" class="form-select form-select-sm">
+                <option value="">Semua Status</option>
+                <option value="BERJALAN" {% if status_filter == 'BERJALAN' %}selected{% endif %}>Berjalan</option>
+                <option value="SELESAI" {% if status_filter == 'SELESAI' %}selected{% endif %}>Selesai</option>
+                <option value="WARNING" {% if status_filter == 'WARNING' %}selected{% endif %}>Lewat tenggat</option>
+            </select>
+        </div>
+        <div class="col-auto">
+            <button class="btn btn-outline-primary btn-sm" type="submit">Filter</button>
+        </div>
+    </form>
     {% include "sdm/_navigasi.html" %}
     <div class="card border shadow-sm">
         <div class="table-responsive">

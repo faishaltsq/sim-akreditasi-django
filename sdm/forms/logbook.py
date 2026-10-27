@@ -80,10 +80,15 @@ class EntriLogbookForm(forms.ModelForm):
             tingkat_supervisi='T'
         ).filter(self._privilege_catalog_filter(employee))
         profesi_id = getattr(employee, 'profesi_master_id', None)
+        if profesi_id is None and getattr(employee, 'jenjang_master', None) is not None:
+            profesi_id = employee.jenjang_master.profesi_id
         if profesi_id:
             catalog = catalog.filter(jenjang__profesi_id=profesi_id)
         else:
             catalog = catalog.none()
+        jenjang_id = getattr(employee, 'jenjang_master_id', None)
+        if jenjang_id:
+            catalog = catalog.filter(jenjang_id=jenjang_id)
         self.fields['katalog_tindakan'].queryset = catalog.select_related(
             'jenjang'
         ).order_by('jenjang__urutan', 'kode')

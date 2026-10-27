@@ -93,7 +93,7 @@ class SeedKatalogTests(TestCase):
             MasterJenjangProfesi.objects.count(),
             KatalogTindakan.objects.count(),
         )
-        self.assertEqual(first, (23, 78, 273))
+        self.assertEqual(first, (23, 81, 273))
         self.assertEqual(first, second)
         self.assertEqual(
             KatalogTindakan.objects.filter(

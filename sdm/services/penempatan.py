@@ -65,6 +65,19 @@ def save_assignment(assignment):
         assignment.full_clean()
         overlaps = _overlapping_assignments(assignment)
         _validate_peak_allocation([*overlaps, assignment])
+        is_new = assignment.pk is None
         assignment.save()
+
+    if is_new:
+        # Mutasi/penempatan baru: pastikan orientasi khusus unit berjalan
+        # (idempoten; tidak menggagalkan penempatan bila program belum ada).
+        from sdm.services.orientasi import auto_assign_orientation
+        try:
+            auto_assign_orientation(
+                assignment.pegawai, actor=assignment.pegawai.akun or None,
+                unit_kerja=assignment.unit_kerja,
+            )
+        except ValidationError:
+            pass
 
     return assignment

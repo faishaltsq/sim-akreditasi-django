@@ -215,6 +215,22 @@ urlpatterns = [
         name='orientasi_complete',
     ),
     path(
+        'orientasi/<uuid:assignment_id>/asesmen/',
+        views.orientasi_asesmen,
+        name='orientasi_asesmen',
+    ),
+    path(
+        'orientasi/<uuid:assignment_id>/sertifikat/',
+        views.orientasi_sertifikat,
+        name='orientasi_sertifikat',
+    ),
+    path(
+        'orientasi/program/<uuid:program_id>/tor/',
+        views.orientasi_tor_pdf,
+        name='orientasi_tor_pdf',
+    ),
+    path('orientasi/rekap.pdf', views.orientasi_rekap_pdf, name='orientasi_rekap_pdf'),
+    path(
         'orientasi/<uuid:assignment_id>/',
         views.orientasi_detail,
         name='orientasi_detail',

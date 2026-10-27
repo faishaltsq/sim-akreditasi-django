@@ -62,6 +62,51 @@
                     </div>
                     {% endfor %}
                 </div>
+
+                <!-- Hak Akses Human Capital -->
+                <div class="col-12">
+                    <h6 class="fw-bold small text-uppercase text-muted border-bottom pb-2 mb-3">
+                        <i class="bi bi-person-check-fill me-1"></i>Hak Akses Human Capital (opsional)
+                    </h6>
+                    <input type="hidden" name="hc_akses_diisi" value="1">
+                    <div class="row g-2">
+                        <div class="col-md-4">
+                            <label class="form-label small fw-bold" for="id_hc_lingkup">Lingkup</label>
+                            <select name="hc_lingkup" id="id_hc_lingkup" class="form-select form-select-sm">
+                                <option value="RS" {% if hc_lingkup_terpilih == 'RS' %}selected{% endif %}>Seluruh RS (semua unit)</option>
+                                <option value="UNIT" {% if hc_lingkup_terpilih == 'UNIT' %}selected{% endif %}>Satu unit kerja</option>
+                            </select>
+                        </div>
+                        <div class="col-md-8">
+                            <label class="form-label small fw-bold" for="id_hc_unit">Unit kerja</label>
+                            <select name="hc_unit" id="id_hc_unit" class="form-select form-select-sm">
+                                <option value="">&mdash; pilih unit (hanya untuk lingkup satu unit) &mdash;</option>
+                                {% for u in hc_units %}
+                                <option value="{{ u.pk }}" {% if hc_unit_terpilih|stringformat:"s" == u.pk|stringformat:"s" %}selected{% endif %}>[{{ u.code }}] {{ u.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-check small fw-bold">
+                                <input type="checkbox" name="hc_include_descendants" class="form-check-input" {% if hc_include_descendants %}checked{% endif %}>
+                                Sertakan unit turunan
+                            </label>
+                        </div>
+                        <div class="col-12">
+                            <div class="row g-1">
+                                {% for code, label in hc_capabilities %}
+                                <div class="col-md-4">
+                                    <label class="form-check small">
+                                        <input type="checkbox" name="hc_capability" value="{{ code }}" class="form-check-input"
+                                               {% if code in hc_terpilih %}checked{% endif %}>
+                                        {{ label }} <code class="text-muted" style="font-size:0.65rem;">{{ code }}</code>
+                                    </label>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
         <div class="card-footer bg-light d-flex justify-content-end gap-2 py-2">

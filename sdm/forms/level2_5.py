@@ -103,11 +103,19 @@ class RincianKewenanganForm(forms.ModelForm):
         profesi_id = getattr(
             getattr(pengajuan, 'employee', None), 'profesi_master_id', None
         )
+        employee_emp = getattr(pengajuan, 'employee', None)
+        if profesi_id is None and getattr(employee_emp, 'jenjang_master', None) is not None:
+            profesi_id = employee_emp.jenjang_master.profesi_id
         if profesi_id:
             # Auto-load: only the profession's own RKK catalog is selectable.
             catalog = catalog.filter(jenjang__profesi_id=profesi_id)
         else:
             catalog = catalog.none()
+        jenjang_id = getattr(
+            getattr(pengajuan, 'employee', None), 'jenjang_master_id', None
+        )
+        if jenjang_id:
+            catalog = catalog.filter(jenjang_id=jenjang_id)
         self.fields['catalog_item'].queryset = catalog.select_related(
             'jenjang'
         ).order_by('jenjang__urutan', 'kode')

@@ -386,3 +386,40 @@ class HospitalScopeCacheKeyTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         cache.clear()
+
+
+class HospitalWideGrantNavigationTests(TestCase):
+    """A grant with unit_kerja=None covers the whole hospital and must open the menu."""
+
+    def _user(self, username):
+        user = get_user_model().objects.create_user(username=username)
+        UserProfile.objects.create(user=user, role='ADMIN_RS', unit_kerja=None)
+        config = RolePermissionConfig.get_config_for_role('ADMIN_RS')
+        config.can_review_hc_credentials = True
+        config.save(update_fields=['can_review_hc_credentials', 'updated_at'])
+        return user
+
+    def test_hospital_wide_grant_grants_navigation_capability(self):
+        from sdm.context_processors import granted_capabilities, hc_navigation
+
+        user = self._user('nav-hs-grant')
+        HcGrant.objects.create(user=user, capability='can_review_hc_credentials', unit_kerja=None)
+
+        self.assertIn('can_review_hc_credentials', granted_capabilities(user))
+        request = type('Req', (), {'user': user})()
+        self.assertTrue(hc_navigation(request)['nav_kredensial'])
+
+    def test_without_grant_navigation_is_closed(self):
+        from sdm.context_processors import granted_capabilities
+
+        user = self._user('nav-hs-none')
+        self.assertEqual(granted_capabilities(user), set())
+
+    def test_inactive_unit_grant_is_ignored(self):
+        from sdm.context_processors import granted_capabilities
+
+        user = self._user('nav-hs-inactive')
+        unit = UnitKerja.objects.create(name='Unit Nonaktif', code='HC-NAV-OFF', is_active=False)
+        HcGrant.objects.create(user=user, capability='can_review_hc_credentials', unit_kerja=unit)
+
+        self.assertEqual(granted_capabilities(user), set())

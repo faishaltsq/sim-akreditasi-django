@@ -42,7 +42,10 @@
                         <td>{{ entry.tanggal|date:"d M Y" }}</td>
                         <td>{{ entry.employee.nama_lengkap }}</td>
                         <td>{{ entry.unit_kerja.name }}</td>
-                        <td>{% if entry.katalog_tindakan %}{{ entry.katalog_tindakan.nama }}{% else %}{{ entry.tindakan }}{% endif %}</td>
+                        <td>
+                            {% if entry.katalog_tindakan %}{{ entry.katalog_tindakan.nama }}{% else %}{{ entry.tindakan }}{% endif %}
+                            {% if preseptor_names %}<small class="text-muted d-block">Preseptor: {{ preseptor_names }}</small>{% endif %}
+                        </td>
                         <td class="text-center">{{ entry.jumlah_mandiri }}</td>
                         <td class="text-center">{{ entry.jumlah_supervisi }}</td>
                         <td class="text-center">{{ entry.jumlah_kolaborasi }}</td>

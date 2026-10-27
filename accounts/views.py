@@ -10,7 +10,10 @@ from django.db.models import Q
 
 from .models import UserProfile
 from .forms import UserCreateForm, UserEditForm, UserProfileForm
-from akreditasi.models import AuditLog
+from akreditasi.models import AuditLog, UnitKerja
+from sdm.models import HcGrant
+from sdm.models.akses import HC_CAPABILITY_CHOICES
+from sdm.services.akses_hc import aktifkan_role_untuk, pemberi_akses, sinkronkan_grant
 from akreditasi.input_parsing import json_body, parse_int
 from akreditasi.security_utils import rate_limit
 
@@ -65,6 +68,61 @@ def user_list(request):
     })
 
 
+def _capability_grid():
+    """Pasangan (kode, label) untuk seluruh kapabilitas HC."""
+    return list(HC_CAPABILITY_CHOICES)
+
+
+def _hc_context(user=None):
+    """Nilai awal bagian Hak Akses HC pada form pengguna."""
+    selected, scope, unit_id, descendants = set(), 'RS', '', False
+    if user is not None:
+        grants = list(HcGrant.objects.filter(user=user, is_active=True).select_related('unit_kerja'))
+        selected = {g.capability for g in grants}
+        scoped = [g for g in grants if g.unit_kerja_id]
+        if scoped:
+            scope = 'UNIT'
+            unit_id = scoped[0].unit_kerja_id
+            descendants = scoped[0].include_descendants
+    return {
+        'hc_capabilities': _capability_grid(),
+        'hc_units': UnitKerja.objects.filter(is_active=True).order_by('level', 'order', 'code'),
+        'hc_terpilih': selected,
+        'hc_lingkup_terpilih': scope,
+        'hc_unit_terpilih': unit_id,
+        'hc_include_descendants': descendants,
+    }
+
+
+def _simpan_grant_dari_form(request, target_user):
+    """Terapkan pilihan grant dari POST; return (added, removed)."""
+    if request.POST.get('hc_akses_diisi') != '1':
+        return 0, 0
+    if pemberi_akses(request.user) is None:
+        return 0, 0
+
+    valid = dict(HC_CAPABILITY_CHOICES)
+    selected = {c for c in request.POST.getlist('hc_capability') if c in valid}
+
+    unit = None
+    if request.POST.get('hc_lingkup') == 'UNIT':
+        raw = request.POST.get('hc_unit') or ''
+        unit = UnitKerja.objects.filter(pk=int(raw)).first() if raw.isdigit() else None
+        if unit is None:
+            messages.error(request, 'Unit lingkup hak akses Human Capital tidak valid.')
+            return 0, 0
+
+    aktifkan_role_untuk(target_user, selected)
+    return sinkronkan_grant(
+        target_user,
+        capabilities=selected,
+        unit=unit,
+        include_descendants=request.POST.get('hc_include_descendants') == 'on',
+        valid_until=None,
+        actor=request.user,
+    )
+
+
 @login_required
 @user_passes_test(admin_only)
 def user_create(request):
@@ -87,12 +145,14 @@ def user_create(request):
                     user.is_staff = True
                     user.save()
 
+                hc_added, hc_removed = _simpan_grant_dari_form(request, user)
+
                 AuditLog.objects.create(
                     user=request.user,
                     aksi='CREATE',
                     model_name='User',
                     object_repr=f"{user.username} [{profile.role}]",
-                    detail=f"Pengguna baru dibuat: {profile.full_name or user.username} ({profile.get_role_display()})"
+                    detail=f"Pengguna baru dibuat: {profile.full_name or user.username} ({profile.get_role_display()}); grant HC +{hc_added}"
                 )
 
                 messages.success(request, f"Pengguna '{user.username}' berhasil ditambahkan!")
@@ -105,6 +165,7 @@ def user_create(request):
         'user_form': user_form,
         'profile_form': profile_form,
         'title': 'Tambah Pengguna Baru',
+        **_hc_context(),
     })
 
 
@@ -137,12 +198,14 @@ def user_edit(request, user_id):
                     target_user.is_superuser = False
                     target_user.save()
 
+                hc_added, hc_removed = _simpan_grant_dari_form(request, target_user)
+
                 AuditLog.objects.create(
                     user=request.user,
                     aksi='UPDATE',
                     model_name='User',
                     object_repr=f"{target_user.username} [{profile.role}]",
-                    detail=f"Profil pengguna diperbarui: {profile.get_role_display()}"
+                    detail=f"Profil pengguna diperbarui: {profile.get_role_display()}; grant HC +{hc_added} -{hc_removed}"
                 )
 
                 messages.success(request, f"Data pengguna '{target_user.username}' berhasil diperbarui!")
@@ -156,6 +219,7 @@ def user_edit(request, user_id):
         'profile_form': profile_form,
         'target_user': target_user,
         'title': f'Edit Pengguna: {target_user.username}',
+        **_hc_context(target_user),
     })
 
 

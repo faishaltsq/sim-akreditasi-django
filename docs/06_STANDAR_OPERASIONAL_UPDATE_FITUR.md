@@ -103,3 +103,37 @@ Kemudian daftarkan di tabel `docs/README.md`.
 | **Direktur IT / SIMRS** | Persetujuan deploy ke production |
 
 > 📧 Issues teknis: buat laporan di **[GitHub Repository](https://github.com/faishaltsq/sim-akreditasi-django/issues)**
+
+---
+
+## Jenjang Karir RKK & Modul Orientasi Staf (KPS 4 & KPS 8) — 2026-10-27
+
+### Apa Tujuannya?
+Menyaring katalog RKK per jenjang karir pegawai, membuka verifikasi logbook
+oleh preseptor berbasis jenjang, serta melengkapi modul orientasi: jenis
+umum/khusus, auto-assign, post-test, sertifikat & TOR PDF, dashboard, dan
+pengingat.
+
+### Cara Menggunakan:
+1. **Set jenjang pegawai**: HC edit pegawai → kolom "Jenjang Karir (Master)".
+   Katalog logbook & pengajuan kredensial otomatis tersaring ke jenjang itu
+   (tanpa jenjang = perilaku lama per profesi).
+2. **Preseptor**: jenjang dengan urutan ≥ ambang (default 3: Madya/PK III/BK III)
+   boleh memverifikasi logbook unitnya tanpa grant HC; kandidat tampil di
+   antrean verifikasi.
+3. **Seed program baku**: `manage.py shell` →
+   `from sdm.services.orientasi import seed_program_baku; seed_program_baku()`
+   (idempoten; sudah dijalankan di DB lokal).
+4. **Auto-assign**: finalisasi input pegawai baru atau penempatan baru otomatis
+   menugaskan Orientasi Umum + Khusus sesuai kelompok staf (matriks durasi:
+   ners 90 hari, medis/nakes lain 28, non-klinis 14, umum 3).
+5. **Post-test**: pada detail penugasan, input nilai 0–100. Lulus ≥ 80 →
+   status berubah SELESAI bila semua aktivitas wajib selesai. Remedi → tenggat
+   diperpanjang satu siklus.
+6. **Unduh**: sertifikat PDF per penugasan lulus; TOR PDF per program dari
+   daftar orientasi; rekap dashboard PDF (menghormati filter unit/status).
+7. **Reminder**: `manage.py hc_reminders` kini juga mengingatkan preseptor
+   unit untuk penugasan yang mendekati/lewat tenggat (tipe PRESEPTOR).
+
+> 💡 **Batasan:** daftar tindakan RKK dokter sengaja kosong sampai SK komite;
+> reminder hanya in-app (email/WhatsApp menyusul bila dibutuhkan).

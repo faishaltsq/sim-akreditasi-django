@@ -353,7 +353,9 @@ def start_orientation(employee, program, *, actor, unit_kerja=None):
         raise ValidationError({'program': 'Program belum memiliki aktivitas.'})
     from datetime import timedelta
 
-    tenggat = timezone.localdate() + timedelta(days=program.berlaku_hari)
+    tenggat = timezone.localdate() + timedelta(
+        days=program.durasi_hari or program.berlaku_hari
+    )
     assignment = PenugasanOrientasi.objects.create(
         employee=employee,
         program=program,

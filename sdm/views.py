@@ -1573,7 +1573,21 @@ def orientasi_list(request):
     assignments = PenugasanOrientasi.objects.filter(
         unit_kerja__in=units
     ).select_related('employee', 'program', 'unit_kerja').prefetch_related('completions')
-    return render(request, 'sdm/orientasi/daftar.html', {'assignments': assignments})
+    # O5.1: filter unit & status (dashboard KPS 4 & 8).
+    unit_filter = (request.GET.get('unit') or '').strip()
+    status_filter = (request.GET.get('status') or '').strip()
+    if unit_filter.isdigit():
+        assignments = assignments.filter(unit_kerja_id=int(unit_filter))
+    if status_filter == 'WARNING':
+        assignments = assignments.filter(status='BERJALAN', tenggat__lt=timezone.localdate())
+    elif status_filter:
+        assignments = assignments.filter(status=status_filter)
+    return render(request, 'sdm/orientasi/daftar.html', {
+        'assignments': assignments,
+        'unit_options': units,
+        'unit_filter': unit_filter,
+        'status_filter': status_filter,
+    })
 
 
 @login_required
@@ -1585,10 +1599,25 @@ def orientasi_detail(request, assignment_id):
     require_hc_capability(
         request.user, 'can_manage_hc_orientation', unit=assignment.unit_kerja_id
     )
+    # O5.4: ringkasan logbook milik pegawai selama masa orientasi.
+    from sdm.models import EntriLogbookKlinis
+    entri = EntriLogbookKlinis.objects.filter(
+        employee_id=assignment.employee_id,
+        tanggal__gte=assignment.tanggal_mulai,
+        tanggal__lte=assignment.tenggat,
+    )
+    ringkasan_logbook = {
+        'total': entri.count(),
+        'mandiri': sum(entri.values_list('jumlah_mandiri', flat=True) or [0]),
+        'supervisi': sum(entri.values_list('jumlah_supervisi', flat=True) or [0]),
+        'kolaborasi': sum(entri.values_list('jumlah_kolaborasi', flat=True) or [0]),
+        'terverifikasi': entri.filter(sudah_diverifikasi=True).count(),
+    }
     return render(request, 'sdm/orientasi/detail.html', {
         'assignment': assignment,
         'completions': assignment.completions.select_related('activity'),
         'progress': assignment.progress_pct,
+        'ringkasan_logbook': ringkasan_logbook,
     })
 
 
@@ -2199,6 +2228,18 @@ def kredensial_add_privilege(request, request_id):
     privilege = form.save(commit=False)
     privilege.pengajuan = credential_request
     if privilege.catalog_item_id:
+        jenjang_id = getattr(
+            credential_request.employee, 'jenjang_master_id', None
+        )
+        if (
+            jenjang_id
+            and privilege.catalog_item.jenjang_id != jenjang_id
+        ):
+            messages.error(
+                request,
+                'Tindakan katalog bukan milik jenjang karir pegawai.',
+            )
+            return redirect('sdm:kredensial_detail', request_id=credential_request.pk)
         if not privilege.kewenangan:
             privilege.kewenangan = privilege.catalog_item.nama
         # Requested level follows the catalog's default supervision level.
@@ -2554,18 +2595,61 @@ def logbook_cepat(request):
     return redirect(back)
 
 
+def _preseptor_units(pegawai):
+    """Units where this pegawai qualifies as preseptor (jenjang rule or grant)."""
+    from sdm.models import PenempatanPegawai
+    from sdm.services.preseptor import eligible_preceptors
+
+    unit_ids = PenempatanPegawai.objects.filter(
+        pegawai=pegawai, tanggal_selesai__isnull=True,
+    ).values_list('unit_kerja_id', flat=True)
+    return {
+        unit_id
+        for unit_id in unit_ids
+        if eligible_preceptors(unit_id).filter(pk=pegawai.pk).exists()
+    }
+
+
 @login_required
 def logbook_verifikasi(request):
     """Preseptor queue: entries with no decision or a rejected latest one."""
-    if not HcGrant.objects.filter(
+    try:
+        pegawai_sendiri = request.user.pegawai_hc
+    except AttributeError:
+        pegawai_sendiri = None
+    is_preseptor = (
+        pegawai_sendiri is not None
+        and pegawai_sendiri.status == 'AKTIF'
+        and _preseptor_units(pegawai_sendiri).exists()
+    )
+    has_grant = HcGrant.objects.filter(
         user=request.user, capability='can_review_hc_credentials',
-    ).exists():
+    ).exists()
+    if not has_grant and not is_preseptor:
         raise PermissionDenied('Hak verifikasi logbook tidak tersedia.')
     page_obj = Paginator(
         entries_to_verify(request.user).order_by('-tanggal', '-created_at'),
         PAGE_SIZE,
     ).get_page(request.GET.get('page'))
-    return render(request, 'sdm/logbook/verifikasi.html', {'page_obj': page_obj})
+    preseptor_map = _preseptor_map(page_obj)
+    for entry in page_obj.object_list:
+        entry.preseptor_names = ', '.join(preseptor_map.get(entry.unit_kerja_id, []))
+    return render(request, 'sdm/logbook/verifikasi.html', {
+        'page_obj': page_obj,
+    })
+
+
+def _preseptor_map(page_obj):
+    """entry.pk -> list of eligible preseptor names for that entry's unit."""
+    unit_ids = {e.unit_kerja_id for e in page_obj.object_list}
+    from sdm.services.preseptor import eligible_preceptors
+    hasil = {}
+    for unit_id in unit_ids:
+        if unit_id is None:
+            continue
+        for p in eligible_preceptors(unit_id):
+            hasil.setdefault(unit_id, []).append(p.nama_lengkap)
+    return hasil
 
 
 @login_required
@@ -2855,3 +2939,150 @@ def kredensial_pengajuan_ubah(request, request_id):
         'credential_request': credential_request,
         'profile': credential_profile(pegawai),
     })
+
+
+@login_required
+@require_POST
+def orientasi_asesmen(request, assignment_id):
+    """O3.2: record one post-test score (>= 80 passes; failure extends deadline)."""
+    from decimal import Decimal, InvalidOperation
+    from sdm.models import PenugasanOrientasi
+    from sdm.services.orientasi import record_assessment
+
+    assignment = get_object_or_404(
+        PenugasanOrientasi.objects.select_related('program', 'employee'),
+        pk=assignment_id,
+        unit_kerja__in=visible_units(
+            request.user, capability='can_manage_hc_orientation'
+        ),
+    )
+    raw = (request.POST.get('nilai') or '').strip()
+    try:
+        nilai = Decimal(raw)
+    except (InvalidOperation, ValueError):
+        messages.error(request, 'Nilai tidak valid.')
+        return redirect('sdm:orientasi_detail', assignment_id=assignment.pk)
+    try:
+        record_assessment(
+            assignment, nilai=nilai, penguji=request.user,
+            catatan=(request.POST.get('catatan') or '')[:500],
+        )
+    except (PermissionDenied, ValidationError) as exc:
+        message = getattr(exc, 'messages', None)
+        messages.error(request, '; '.join(message) if message else str(exc))
+    else:
+        terakhir = assignment.assessments.order_by('-percobaan').first()
+        messages.success(
+            request,
+            'Asesmen tercatat: ' + ('LULUS.' if terakhir.lulus else
+                                    'REMEDI; tenggat diperpanjang.'),
+        )
+    return redirect('sdm:orientasi_detail', assignment_id=assignment.pk)
+
+
+@login_required
+def orientasi_sertifikat(request, assignment_id):
+    """O4.4: download the certificate PDF for a completed assignment."""
+    from django.http import HttpResponse
+    from sdm.models import PenugasanOrientasi
+    from sdm.services.orientasi import render_sertifikat_pdf
+
+    assignment = get_object_or_404(
+        PenugasanOrientasi.objects.select_related('program', 'employee'),
+        pk=assignment_id,
+    )
+    milik_sendiri = getattr(request.user, 'pegawai_hc', None) == assignment.employee
+    if not milik_sendiri:
+        require_hc_capability(request.user, 'can_manage_hc_orientation')
+    pdf = render_sertifikat_pdf(assignment)
+    response = HttpResponse(pdf, content_type='application/pdf')
+    nama = f"Sertifikat Orientasi {assignment.employee.nama_lengkap}.pdf"
+    for bad in ('"', '\\', '\r', '\n'):
+        nama = nama.replace(bad, ' ')
+    response['Content-Disposition'] = f'attachment; filename="{nama}"'
+    response['Cache-Control'] = 'private, no-store'
+    return response
+
+
+@login_required
+def orientasi_tor_pdf(request, program_id):
+    """O4.4: download the TOR/KAK PDF rendered from program data."""
+    from django.http import HttpResponse
+    from sdm.models import ProgramOrientasi
+    from sdm.services.orientasi import render_tor_pdf
+
+    program = get_object_or_404(ProgramOrientasi, pk=program_id)
+    require_hc_capability(request.user, 'can_manage_hc_orientation')
+    pdf = render_tor_pdf(program)
+    response = HttpResponse(pdf, content_type='application/pdf')
+    nama = f"TOR {program.nama}.pdf"
+    for bad in ('"', '\\', '\r', '\n'):
+        nama = nama.replace(bad, ' ')
+    response['Content-Disposition'] = f'attachment; filename="{nama}"'
+    response['Cache-Control'] = 'private, no-store'
+    return response
+
+
+@login_required
+def orientasi_rekap_pdf(request):
+    """O5.2: PDF recap of the orientation dashboard, honoring filters."""
+    from django.http import HttpResponse
+    from io import BytesIO
+    from reportlab.lib.pagesizes import A4
+    from reportlab.lib.units import mm
+    from reportlab.platypus import (
+        Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle,
+    )
+    from reportlab.lib import colors
+    from sdm.services.orientasi import _pdf_styles, _pdf_kop
+
+    require_hc_capability(request.user, 'can_manage_hc_orientation')
+    units = visible_units(request.user, capability='can_manage_hc_orientation')
+    assignments = PenugasanOrientasi.objects.filter(
+        unit_kerja__in=units,
+    ).select_related('employee', 'program', 'unit_kerja')
+    unit_filter = (request.GET.get('unit') or '').strip()
+    status_filter = (request.GET.get('status') or '').strip()
+    if unit_filter.isdigit():
+        assignments = assignments.filter(unit_kerja_id=int(unit_filter))
+    if status_filter == 'WARNING':
+        assignments = assignments.filter(status='BERJALAN', tenggat__lt=timezone.localdate())
+    elif status_filter:
+        assignments = assignments.filter(status=status_filter)
+
+    styles = _pdf_styles()
+    story = []
+    _pdf_kop(story, styles)
+    story.append(Paragraph('REKAPITULASI ORIENTASI STAF', styles['title']))
+    story.append(Paragraph(
+        f'Dicetak {timezone.localdate()} · status={status_filter or "SEMUA"}, '
+        f'unit={unit_filter or "SEMUA"}', styles['footnote'],
+    ))
+    story.append(Spacer(1, 4 * mm))
+    rows = [[
+        'Nama', 'Program', 'Unit', 'Mulai', 'Tenggat', 'Status',
+    ]]
+    for a in assignments.order_by('-tanggal_mulai')[:300]:
+        rows.append([
+            a.employee.nama_lengkap[:28], a.program.nama[:30],
+            (a.unit_kerja.name if a.unit_kerja else '')[:18],
+            str(a.tanggal_mulai), str(a.tenggat), a.status,
+        ])
+    table = Table(rows, repeatRows=1)
+    table.setStyle(TableStyle([
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (-1, -1), 7.5),
+        ('GRID', (0, 0), (-1, -1), 0.4, colors.HexColor('#cbd5e1')),
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#e2e8f0')),
+        ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+    ]))
+    story.append(table)
+    buf = BytesIO()
+    SimpleDocTemplate(buf, pagesize=A4, topMargin=14 * mm,
+                      bottomMargin=14 * mm).build(story)
+    response = HttpResponse(buf.getvalue(), content_type='application/pdf')
+    response['Content-Disposition'] = (
+        'attachment; filename="rekap-orientasi.pdf"'
+    )
+    response['Cache-Control'] = 'private, no-store'
+    return response

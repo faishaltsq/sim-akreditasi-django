@@ -3,7 +3,12 @@ BAB KREDENSIAL spec. Dry-run by default; idempotent via get_or_create on codes."
 from django.core.management.base import BaseCommand
 from django.db import transaction
 
-from sdm.management.commands._data_katalog_rkk import PROFESI, PROFESI_TANPA_JENJANG
+from sdm.management.commands._data_katalog_rkk import (
+    DOKTER_JENJANG,
+    FOKUS_KOMPETENSI,
+    PROFESI,
+    PROFESI_TANPA_JENJANG,
+)
 from sdm.models import KatalogTindakan, MasterJenjangProfesi, MasterProfesiPegawai
 
 
@@ -71,6 +76,31 @@ def apply_seed():
                 code=code, defaults={'nama': nama, 'keluarga': keluarga},
             )
             profesi_baru += int(was_created)
+
+        # Dokter: jenjang + fokus kompetensi dari master RKK; katalog butir
+        # sengaja kosong sampai SK komite menetapkannya.
+        for code, (profesi_nama, jenjang_list) in DOKTER_JENJANG.items():
+            profesi, was_created = MasterProfesiPegawai.objects.get_or_create(
+                code=code,
+                defaults={'nama': profesi_nama, 'keluarga': 'MEDIS'},
+            )
+            profesi_baru += int(was_created)
+            for jkode, jnama, urutan, fokus, preceptor_min in jenjang_list:
+                jen_obj, was_created = MasterJenjangProfesi.objects.get_or_create(
+                    profesi=profesi, kode=jkode,
+                    defaults={
+                        'nama': jnama, 'urutan': urutan,
+                        'fokus_kompetensi': fokus,
+                        'preceptor_min_urutan': preceptor_min,
+                    },
+                )
+                jenjang_baru += int(was_created)
+
+        # Fill empty fokus_kompetensi on existing jenjang rows (idempotent).
+        for (pcode, jkode), fokus in FOKUS_KOMPETENSI.items():
+            MasterJenjangProfesi.objects.filter(
+                profesi__code=pcode, kode=jkode, fokus_kompetensi='',
+            ).update(fokus_kompetensi=fokus)
 
         for code, (nama, keluarga, jenjang) in PROFESI.items():
             profesi, was_created = MasterProfesiPegawai.objects.get_or_create(

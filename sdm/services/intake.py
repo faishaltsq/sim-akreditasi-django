@@ -368,6 +368,14 @@ def finalize_staff_intake(*, actor, draft_id, expected_version, idempotency_key)
             alasan='Dibuat melalui wizard input lima langkah.',
         )
 
+        from sdm.services.orientasi import auto_assign_orientation
+        try:
+            auto_assign_orientation(employee, actor=actor, unit_kerja=placement.unit_kerja)
+        except ValidationError:
+            # Orientasi tidak boleh menggagalkan pembuatan pegawai; HC
+            # dapat menugaskan manual dari menu orientasi.
+            pass
+
     return employee
 
 INTAKE_ARTIFACT_EXTENSIONS = {

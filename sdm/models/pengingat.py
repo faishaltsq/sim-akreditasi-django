@@ -22,6 +22,7 @@ class PengingatSDM(models.Model):
     TARGET_CHOICES = [
         ('DOCUMENT', 'Dokumen'),
         ('ORIENTATION', 'Orientasi'),
+        ('PRESEPTOR', 'Pengingat Preseptor'),
         ('APPRAISAL', 'Penilaian Kinerja'),
         ('TRAINING', 'Diklat'),
         ('SPK', 'SPK / RKK'),
@@ -164,6 +165,42 @@ def sync_task_reminders(*, as_of=None):
             },
         )
         created += int(was_created)
+
+    # Reminder ke preseptor unit (plan O5.3): idempoten per (preseptor,
+    # penugasan, band). Email terpisah dikirim oleh command terjadwal.
+    from sdm.services.preseptor import eligible_preceptors
+    unit_ids = set(
+        orientations.exclude(unit_kerja=None).values_list('unit_kerja_id', flat=True)
+    )
+    for unit_id in unit_ids:
+        kandidat_unit = orientations.filter(
+            unit_kerja_id=unit_id,
+            tenggat__lte=soon,
+        )
+        if not kandidat_unit.exists():
+            continue
+        for preseptor in eligible_preceptors(unit_id):
+            if preseptor.akun_id is None:
+                continue
+            for assignment in kandidat_unit:
+                band = 'TASK_OVERDUE' if assignment.tenggat < as_of else 'TASK_DUE'
+                key = PengingatSDM.build_key(
+                    employee_id=preseptor.pk,
+                    version_id=assignment.pk,
+                    band=band,
+                    target_type='PRESEPTOR',
+                )
+                _, was_created = PengingatSDM.objects.get_or_create(
+                    idempotency_key=key,
+                    defaults={
+                        'employee': preseptor,
+                        'band': band,
+                        'target_type': 'PRESEPTOR',
+                        'recipient': preseptor.akun,
+                        'due_date': assignment.tenggat,
+                    },
+                )
+                created += int(was_created)
 
     appraisals = PenilaianKinerja.objects.filter(
         status='DRAFT'

@@ -13,17 +13,21 @@ def granted_capabilities(user, *, today=None):
         return set()
 
     today = today or timezone.localdate()
-    grants = HcGrant.objects.filter(
+    rows = HcGrant.objects.filter(
         user_id=user.pk,
         is_active=True,
         valid_from__lte=today,
-        unit_kerja__isnull=False,
-        unit_kerja__is_active=True,
     ).filter(
         Q(valid_until__isnull=True) | Q(valid_until__gte=today)
-    ).values_list('capability', flat=True)
+    ).values_list('capability', 'unit_kerja__is_active')
 
-    capabilities = set(grants)
+    # A grant without a unit is hospital-wide; a unit grant only counts while
+    # that unit is active.
+    capabilities = {
+        capability
+        for capability, unit_active in rows
+        if unit_active is None or unit_active
+    }
     if not capabilities:
         return capabilities
 

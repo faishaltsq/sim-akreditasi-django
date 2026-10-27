@@ -18,6 +18,29 @@ PROFESI_TANPA_JENJANG = {
     'APOTEKER': ('Apoteker', 'NAKES_LAIN'),
 }
 
+# Fokus kompetensi jenjang dokter dari "master RKK Kewenangan klinis.docx";
+# katalog butir menunggu SK komite (jangan mengarang daftar tindakan).
+DOKTER_JENJANG = {
+    'DOKTER_UMUM': (
+        'Dokter Umum', [
+            ('DU-UMUM', 'Dokter Umum (General Practitioner)', 1,
+             'Pelayanan medis dasar, diagnosis, tatalaksana kasus gawat darurat awal, '
+             'serta rujukan kasus medis umum di IGD dan rawat jalan. Mandiri (M) untuk '
+             'kasus kompetensi 4A SKDI; Supervisi (S)/konsultasi untuk kasus di luar kompetensi dasar.',
+             3),
+            ('DU-SP', 'Dokter Spesialis (Clinical Specialist)', 2,
+             'Pelayanan medis spesialistik mandiri, pengelolaan kasus tingkat sedang hingga '
+             'berat, tindakan operatif/medis spesifik sesuai bidang ilmu. Mandiri Penuh (M) '
+             'dalam lingkup spesialisasi + Anggota Komite Medis / Mitra Bestari.',
+             3),
+            ('DU-KONS', 'Dokter Subspesialis / Konsultan', 3,
+             'Pelayanan medis subspesifik tingkat tinggi/lanjut, penanganan kasus rujukan '
+             'tersier kompleks dan langka, riset klinis lanjutan. Mandiri Penuh (M) dengan '
+             'hak prerogatif klinis tertinggi dan Tim Mitra Bestari Utama.',
+             3),
+        ]),
+}
+
 # Fisikawan Medis & Ahli K3RS: spec gives no per-action status -> seed 'S'.
 DEFAULT_STATUS_UNSET = 'S'
 CATATAN_STATUS_BAKU = 'Status baku belum ditetapkan; tinjau komite.'
@@ -492,4 +515,40 @@ PROFESI = {
             ('Validasi asesmen kredensial bidang kebidanan', 'M'),
         ]),
     }),
+}
+
+# Fokus kompetensi singkat per (profesi_code, jenjang_kode), dari
+# "master RKK Kewenangan klinis.docx". Dipakai seed untuk mengisi kolom
+# fokus_kompetensi yang masih kosong; tidak mengubah butir katalog.
+FOKUS_KOMPETENSI = {
+    ('ELMD', 'PRATAMA'): 'Pengoperasian, pemeliharaan preventif dasar, dan inspeksi fisik elektromedis risiko rendah.',
+    ('ELMD', 'MUDA'): 'Pemeliharaan, perbaikan tingkat menengah, dan uji fungsi alat kesehatan risiko sedang.',
+    ('ELMD', 'MADYA'): 'Kalibrasi, perbaikan alat medis risiko tinggi/kritikal (OK & ICU), uji kelaikan instrumen canggih.',
+    ('ELMD', 'UTAMA'): 'Ahli/konsultan teknologi elektromedis RS; uji kelaikan fasilitas medis baru; penyusun SPO pemeliharaan alat.',
+    ('SANI', 'PRATAMA'): 'Pengambilan sampel lingkungan, inspeksi sarana, dan pemantauan dasar kesehatan lingkungan.',
+    ('SANI', 'MUDA'): 'Pengawasan IPAL, uji baku mutu, dan pemantauan mikrobiologi ruang kritikal.',
+    ('SANI', 'MADYA'): 'Perencanaan program kesehatan lingkungan dan audit keselamatan lingkungan RS.',
+    ('SANI', 'UTAMA'): 'Konsultan kesehatan lingkungan; kebijakan manajemen limbah & kualitas lingkungan rumah sakit.',
+    ('ANES', 'PRATAMA'): 'Persiapan alat & obat anestesi di bawah delegasi/supervisi langsung Dokter Sp.An.',
+    ('ANES', 'MUDA'): 'Asuhan kepenataan anestesi pra-intra-pasca pada pasien ASA 1 & 2.',
+    ('ANES', 'MADYA'): 'Kepenataan anestesi kasus bedah kompleks (ASA 3), manajemen jalan napas sulit, resusitasi.',
+    ('ANES', 'UTAMA'): 'Konsultan kepenataan anestesi; penyusun SPO pelayanan anestesi bersama Komite Medis.',
+    ('PSIK', 'PRATAMA'): 'Asesmen psikologis dasar dengan supervisi psikolog klinis senior.',
+    ('PSIK', 'MUDA'): 'Pelaksanaan tes psikologi & intervensi dasar secara mandiri terbatas.',
+    ('PSIK', 'MADYA'): 'Diagnosis klinis, psikoterapi, dan supervisi praktik psikologi.',
+    ('PSIK', 'UTAMA'): 'Konsultan psikologi klinis; kebijakan layanan psikologi & Mitra Bestari.',
+    ('FISIO', 'PRATAMA'): 'Penilaian dan tindakan terapi fisik dasar dengan pendampingan.',
+    ('FISIO', 'MUDA'): 'Terapi fisik mandiri untuk kasus muskuloskeletal & neuro dasar.',
+    ('FISIO', 'MADYA'): 'Pengelolaan kasus kompleks, preseptor keterapian fisik.',
+    ('FISIO', 'UTAMA'): 'Konsultan fisioterapi; pengembang SPO rehabilitasi & Mitra Bestari.',
+    ('KPR', 'PK-I'): 'Asuhan keperawatan dasar dengan bimbingan dan supervisi berkala.',
+    ('KPR', 'PK-II'): 'Asuhan keperawatan mandiri untuk pasien kompleksitas rendah-sedang di rawat inap.',
+    ('KPR', 'PK-III'): 'Mengelola kasus kompleks/kritis, clinical preceptor, tugas di unit khusus.',
+    ('KPR', 'PK-IV'): 'Kasus subspesialis lanjut, audit mutu keperawatan, pengembang SPO asuhan.',
+    ('KPR', 'PK-V'): 'Konsultan keperawatan klinik, peneliti klinis, penentu kebijakan asuhan keperawatan RS.',
+    ('BID', 'BK-I'): 'Asuhan kebidanan fisiologis dasar dengan supervisi bidan senior.',
+    ('BID', 'BK-II'): 'Asuhan kebidanan fisiologis mandiri di kamar bersalin & poliklinik.',
+    ('BID', 'BK-III'): 'Mengelola kasus penyulit/risiko tinggi, deteksi dini komplikasi obstetri, preseptor.',
+    ('BID', 'BK-IV'): 'Kegawatdaruratan obstetri kompleks, audit Maternal Perinatal (AMP).',
+    ('BID', 'BK-V'): 'Konsultan maternitas, penentu kebijakan pelayanan KIA, pengembang standar praktik.',
 }

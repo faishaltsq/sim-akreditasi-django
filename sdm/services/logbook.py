@@ -74,7 +74,16 @@ def entries_to_verify(user):
 
 
 def require_verifikator(user, entry):
-    """Raise PermissionDenied unless an HC review grant covers the entry's unit."""
+    """Raise PermissionDenied unless an HC review grant covers entry's unit
+    or the user's own pegawai row is a jenjang-qualified preseptor there."""
+    try:
+        pegawai = user.pegawai_hc
+    except AttributeError:
+        pegawai = None
+    if pegawai is not None and pegawai.status == 'AKTIF':
+        from sdm.services.preseptor import eligible_preceptors
+        if eligible_preceptors(entry.unit_kerja).filter(pk=pegawai.pk).exists():
+            return
     require_hc_capability(user, CAPABILITY_VERIFIKASI, unit=entry.unit_kerja)
 
 

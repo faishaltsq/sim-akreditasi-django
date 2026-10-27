@@ -49,6 +49,15 @@ class Pegawai(models.Model):
         verbose_name='Profesi (Master)',
         help_text='Tautan ke master profesi yang ditinjau; teks bebas lama tetap disimpan di kolom profesi.',
     )
+    jenjang_master = models.ForeignKey(
+        'sdm.MasterJenjangProfesi',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='pegawai_jenjang',
+        verbose_name='Jenjang Karir (Master)',
+        help_text='Jenjang karir aktif; menyaring katalog RKK dan kewenangan.',
+    )
     jabatan = models.CharField('Jabatan', max_length=150, blank=True)
     status = models.CharField(
         'Status Kepegawaian', max_length=10, choices=STATUS_CHOICES, default='AKTIF'

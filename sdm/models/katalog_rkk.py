@@ -17,6 +17,14 @@ class MasterJenjangProfesi(models.Model):
     kode = models.CharField('Kode Jenjang', max_length=30)
     nama = models.CharField('Nama Jenjang', max_length=100)
     urutan = models.PositiveIntegerField('Urutan')
+    fokus_kompetensi = models.TextField(
+        'Fokus Kompetensi', blank=True, default='',
+        help_text='Ringkasan fokus kompetensi jenjang dari SK/komite.',
+    )
+    preceptor_min_urutan = models.PositiveIntegerField(
+        'Ambang Urutan Preseptor', default=3,
+        help_text='Jenjang dengan urutan >= ambang ini pada profesinya boleh memverifikasi logbook.',
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

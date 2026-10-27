@@ -58,6 +58,7 @@ from .katalog_rkk import KatalogTindakan, MasterJenjangProfesi
 from .logbook import EntriLogbookKlinis, VerifikasiLogbook
 from .orientasi import (
     AktivitasOrientasi,
+    AsesmenOrientasi,
     PenugasanOrientasi,
     PenyelesaianOrientasi,
     ProgramOrientasi,
@@ -159,6 +160,7 @@ __all__ = [
     'PenugasanKlinis',
     'PenugasanOrientasi',
     'PenyelesaianOrientasi',
+    'AsesmenOrientasi',
     'PengingatSDM',
     'PemetaanStandarSDM',
     'PenempatanPegawai',
