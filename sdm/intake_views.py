@@ -13,6 +13,7 @@ from django.utils import timezone
 
 from sdm.akses import require_hc_capability, visible_units
 from sdm.forms import PegawaiCreateForm
+from sdm.storage import get_private_storage
 from sdm.forms.intake import (
     SipFormSet,
     optional_formset,
@@ -30,6 +31,7 @@ from sdm.services.intake import (
     remove_intake_attachment,
     stage_intake_attachment,
 )
+from sdm.services.ktp_ocr import extract_ktp_fields
 
 
 STEP_FORMS = {
@@ -47,6 +49,57 @@ STEP_LABELS = {
     5: 'Dokumen Pendukung',
 }
 DRAFT_TTL_DAYS = 7
+
+KTP_OCR_DRAFT_KEYS = (
+    'nik', 'nama_lengkap', 'tanggal_lahir', 'gender', 'alamat',
+)
+
+
+def _run_ktp_ocr(request, draft, storage_key):
+    """Fetch the staged KTP object and pre-fill empty draft step-1 fields.
+
+    Runs AFTER the draft-save transaction commits: the DeepSeek call can take
+    seconds, and holding the draft's select_for_update lock across it would
+    stall concurrent editors. Best-effort by contract — a failed read leaves
+    the staged file intact and the operator fills step 1 manually.
+    """
+    try:
+        data = get_private_storage().fetch_object(storage_key)
+        fields = extract_ktp_fields(data, actor=request.user)
+    except Exception:
+        messages.warning(
+            request,
+            'KTP tersimpan, namun pembacaan otomatis (OCR) tidak berhasil. '
+            'Lengkapi data identitas secara manual.',
+        )
+        return
+    with transaction.atomic():
+        # Re-guard on the live version: another save between our commit and
+        # this read must not be clobbered by a stale draft_data write.
+        locked = DrafInputPegawai.objects.select_for_update().filter(
+            pk=draft.pk, version=draft.version
+        ).first()
+        if locked is None:
+            return
+        merged = dict(locked.draft_data or {})
+        step1 = dict(merged.get('1') or {})
+        filled = False
+        for key in KTP_OCR_DRAFT_KEYS:
+            value = (fields.get(key) or '').strip()
+            target = 'nama_depan' if key == 'nama_lengkap' else key
+            if value and not (step1.get(target) or '').strip():
+                step1[target] = value
+                filled = True
+        if filled:
+            merged['1'] = step1
+            locked.draft_data = merged
+            locked.save(update_fields=['draft_data', 'updated_at'])
+    if not filled:
+        messages.warning(
+            request,
+            'KTP tersimpan, namun pembacaan otomatis (OCR) tidak mengenali '
+            'data apa pun. Lengkapi data identitas secara manual.',
+        )
 
 
 def _draft_queryset(user):
@@ -109,7 +162,7 @@ def intake_wizard(request, step=1, draft_id=None):
                 }, status=409)
         if form.is_valid():
             cleaned = dict(form.cleaned_data)
-            for field in ('foto_profil', 'scan_ktp', 'dokumen_berkas'):
+            for field in ('foto_profil', 'berkas'):
                 cleaned.pop(field, None)
             if step == 3 and sip_formset is not None:
                 # An unbound formset (no management fields in POST) means the
@@ -145,15 +198,17 @@ def intake_wizard(request, step=1, draft_id=None):
                         version_conflict = True
                     else:
                         staged = []
-                        uploads = [
-                            ('foto_profil', 'FOTO_PROFIL'),
-                            ('scan_ktp', 'KTP'),
-                        ]
-                        if form.cleaned_data.get('dokumen_berkas'):
-                            uploads.append((
-                                'dokumen_berkas',
-                                form.cleaned_data.get('dokumen_jenis_berkas') or 'OTHER',
-                            ))
+                        uploads = [('foto_profil', 'FOTO_PROFIL')]
+                        selected_kind = (cleaned.get('jenis_berkas') or '').strip()
+                        if form.cleaned_data.get('berkas'):
+                            kind = (
+                                selected_kind
+                                if selected_kind in dict(
+                                    IntakeStep5Form.JENIS_PENDUKUNG_CHOICES
+                                )
+                                else 'OTHER'
+                            )
+                            uploads.append(('berkas', kind))
                         for field, kind in uploads:
                             uploaded = form.cleaned_data.get(field)
                             if not uploaded:
@@ -168,6 +223,13 @@ def intake_wizard(request, step=1, draft_id=None):
                                 ))
                             except ValidationError as exc:
                                 form.add_error(field, _message_of(exc))
+                        staged_ktp = next(
+                            (a for a in staged if a.artifact_kind == 'KTP'), None
+                        )
+                        ktp_ocr_needed = staged_ktp is not None and not form.errors
+                        staged_ktp_key = (
+                            staged_ktp.storage_key if staged_ktp else ''
+                        )
                         if form.errors:
                             # A request that stages photo successfully but rejects
                             # KTP must not leave the photo behind and duplicate it
@@ -235,7 +297,14 @@ def intake_wizard(request, step=1, draft_id=None):
                     expires_at=expires_at,
                 )
             if step < 5:
+                if ktp_ocr_needed:
+                    _run_ktp_ocr(request, draft, staged_ktp_key)
+                    return redirect(
+                        'sdm:pegawai_wizard_resume', step=1, draft_id=draft.pk
+                    )
                 return redirect('sdm:pegawai_wizard_resume', step=step + 1, draft_id=draft.pk)
+            if ktp_ocr_needed:
+                _run_ktp_ocr(request, draft, staged_ktp_key)
             return redirect('sdm:pegawai_intake_finalize', draft_id=draft.pk)
     else:
         form_class = STEP_FORMS[step]

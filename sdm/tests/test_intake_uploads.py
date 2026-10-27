@@ -280,3 +280,133 @@ class IntakeUploadTests(TestCase):
         self.assertEqual(response.status_code, 302)
         attachment.refresh_from_db()
         self.assertEqual(attachment.state, 'STAGED')
+
+
+class KtpOcrAutoFillTests(TestCase):
+    """Step-5 KTP upload runs OCR and pre-fills draft step 1."""
+
+    def setUp(self):
+        self.root = UnitKerja.objects.create(name='Direktorat OCR', code='UP-OCR')
+        self.manager = self._user('ocr-manager')
+        self.draft = DrafInputPegawai.objects.create(
+            owner=self.manager, current_step=5, version=2,
+            expires_at=timezone.now() + timedelta(days=1),
+            draft_data={
+                '1': {'nama_depan': 'Budi'},
+                '2': {'unit_kerja': self.root.pk},
+            },
+        )
+        self.session = FakeSession(FakeResponse(200))
+        self.storage = SupabasePrivateStorage(
+            base_url='https://project.supabase.co', api_key='service-key',
+            bucket='hc-private', session=self.session,
+        )
+        from akreditasi.system_models import SystemConfig
+        config = SystemConfig.get_solo()
+        config.ai_enabled = True
+        config.ai_api_key = 'test-key-sk-12345'
+        config.save()
+
+    def _user(self, username):
+        user = get_user_model().objects.create_user(username=username)
+        UserProfile.objects.create(user=user, role='ADMIN_RS', unit_kerja=self.root)
+        config = RolePermissionConfig.get_config_for_role('ADMIN_RS')
+        config.can_view_hc = True
+        config.can_manage_hc_employees = True
+        config.can_manage_hc_documents = True
+        config.save(update_fields=[
+            'can_view_hc', 'can_manage_hc_employees',
+            'can_manage_hc_documents', 'updated_at',
+        ])
+        for capability in (
+            'can_view_hc', 'can_manage_hc_employees', 'can_manage_hc_documents',
+        ):
+            HcGrant.objects.create(
+                user=user, capability=capability, unit_kerja=self.root
+            )
+        return user
+
+    def _post_step5(self, *, jenis='KTP'):
+        self.client.force_login(self.manager)
+        return self.client.post(
+            reverse('sdm:pegawai_wizard_resume',
+                    kwargs={'step': 5, 'draft_id': self.draft.pk}),
+            {
+                'expected_version': str(self.draft.version),
+                'jenis_berkas': jenis,
+                'judul': 'KTP Pegawai',
+                'berkas': SimpleUploadedFile(
+                    'ktp.jpg', JPEG, 'image/jpeg'
+                ),
+            },
+        )
+
+    def _patched(self, ocr_return=None, ocr_side_effect=None):
+        return (
+            patch('sdm.intake_views.get_private_storage',
+                  return_value=self.storage),
+            patch('sdm.intake_views.extract_ktp_fields',
+                  return_value=ocr_return, side_effect=ocr_side_effect),
+        )
+
+    def test_ktp_upload_writes_ocr_fields_into_draft_step1(self):
+        faked = {'nik': '3204012509880003', 'nama_lengkap': 'Rina Kartika',
+                 'tempat_lahir': 'Bandung', 'tanggal_lahir': '1988-09-25',
+                 'gender': 'PEREMPUAN', 'alamat': 'Jl. Melati No. 3'}
+        storage_patch, ocr_patch = self._patched(ocr_return=faked)
+        with storage_patch, ocr_patch:
+            response = self._post_step5()
+        self.assertEqual(response.status_code, 302)
+        self.draft.refresh_from_db()
+        step1 = self.draft.draft_data.get('1') or {}
+        self.assertEqual(step1.get('nik'), '3204012509880003')
+        self.assertEqual(step1.get('alamat'), 'Jl. Melati No. 3')
+        self.assertEqual(step1.get('gender'), 'PEREMPUAN')
+        # Existing operator value is never clobbered by OCR (fill-empty-only).
+        self.assertEqual(step1.get('nama_depan'), 'Budi')
+        self.assertEqual(
+            self.draft.attachments.filter(
+                artifact_kind='KTP', state='STAGED'
+            ).count(),
+            1,
+        )
+
+    def test_ocr_prefills_empty_operator_name(self):
+        faked = {'nik': '', 'nama_lengkap': 'Rina Kartika',
+                 'tempat_lahir': '', 'tanggal_lahir': '',
+                 'gender': '', 'alamat': ''}
+        self.draft.draft_data['1'] = {}
+        self.draft.save(update_fields=['draft_data', 'updated_at'])
+        storage_patch, ocr_patch = self._patched(ocr_return=faked)
+        with storage_patch, ocr_patch:
+            response = self._post_step5()
+        self.assertEqual(response.status_code, 302)
+        self.draft.refresh_from_db()
+        self.assertEqual(
+            self.draft.draft_data['1'].get('nama_depan'), 'Rina Kartika'
+        )
+
+    def test_ocr_empty_fields_leave_draft_untouched(self):
+        from sdm.services import ktp_ocr
+        blank = {key: '' for key in ktp_ocr.KTP_OCR_FIELDS}
+        storage_patch, ocr_patch = self._patched(ocr_return=blank)
+        with storage_patch, ocr_patch:
+            response = self._post_step5()
+        self.assertEqual(response.status_code, 302)
+        self.draft.refresh_from_db()
+        self.assertEqual(self.draft.draft_data['1'].get('nama_depan'), 'Budi')
+        self.assertNotIn('nik', self.draft.draft_data['1'])
+
+    def test_ocr_failure_still_stages_file(self):
+        storage_patch, ocr_patch = self._patched(
+            ocr_side_effect=ValueError('boom')
+        )
+        with storage_patch, ocr_patch:
+            response = self._post_step5()
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(
+            self.draft.attachments.filter(
+                artifact_kind='KTP', state='STAGED'
+            ).count(),
+            1,
+        )

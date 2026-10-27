@@ -319,40 +319,44 @@ class IntakeStep4Form(forms.Form):
 
 
 class IntakeStep5Form(forms.Form):
-    """Dokumen Pendukung — real files, staged against the draft."""
+    """Dokumen Pendukung — one vertical flow ("Masalah unggah dokumen ganda")."""
 
+    JENIS_PENDUKUNG_CHOICES = [
+        ('KTP', 'KTP'), ('FOTO', 'Foto'), ('IJAZAH', 'Ijazah'),
+        ('TRANSKRIP', 'Transkrip Nilai'), ('STR', 'STR'), ('SIP', 'SIP'),
+        ('SIPA', 'SIPA'), ('KONTRAK', 'Kontrak Kerja'),
+        ('SK_PENGANGKATAN', 'SK Pengangkatan'), ('SPK_RKK', 'SPK RKK'),
+        ('URAIAN_TUGAS', 'Uraian Tugas'), ('SERTIFIKAT', 'Sertifikat'),
+        ('OTHER', 'Lainnya'),
+    ]
+
+    jenis_berkas = forms.ChoiceField(
+        label='Jenis Dokumen', choices=JENIS_PENDUKUNG_CHOICES, required=False,
+        widget=forms.Select(attrs={'class': SELECT_CLASS}),
+    )
+    judul = forms.CharField(
+        label='Judul Dokumen', max_length=250, required=False,
+        widget=forms.TextInput(attrs={'class': FIELD_CLASS}),
+    )
+    tanggal_terbit = forms.DateField(
+        label='Tanggal Terbit', required=False,
+        widget=forms.DateInput(attrs={'class': FIELD_CLASS, 'type': 'date'}),
+    )
+    berlaku_sampai = forms.DateField(
+        label='Berlaku Sampai', required=False,
+        widget=forms.DateInput(attrs={'class': FIELD_CLASS, 'type': 'date'}),
+    )
     foto_profil = forms.FileField(
         label='Pas Foto Resmi', required=False,
         help_text='JPG/JPEG, minimal 200×200 piksel. Dipakai sebagai avatar direktori.',
         widget=forms.ClearableFileInput(attrs={'class': FIELD_CLASS, 'accept': 'image/jpeg'}),
     )
-    scan_ktp = forms.FileField(
-        label='Scan / Foto KTP', required=False,
+    berkas = forms.FileField(
+        label='Pilih Berkas', required=False,
         help_text='PDF atau JPG, maksimal 5 MiB.',
         widget=forms.ClearableFileInput(
             attrs={'class': FIELD_CLASS, 'accept': '.pdf,image/jpeg'}
         ),
-    )
-    dokumen_berkas = forms.FileField(
-        label='Berkas Pendukung Lain', required=False,
-        help_text='PDF atau JPG, maksimal 5 MiB.',
-        widget=forms.ClearableFileInput(
-            attrs={'class': FIELD_CLASS, 'accept': '.pdf,image/jpeg'}
-        ),
-    )
-    dokumen_judul = forms.CharField(
-        label='Judul Dokumen Pendukung Lain', max_length=250, required=False,
-        widget=forms.TextInput(attrs={'class': FIELD_CLASS}),
-    )
-    dokumen_jenis_berkas = forms.ChoiceField(
-        label='Jenis Berkas', choices=(
-            ('IJAZAH', 'Ijazah'), ('TRANSKRIP', 'Transkrip Nilai'),
-            ('STR', 'STR'), ('SIP', 'SIP'), ('SIPA', 'SIPA'),
-            ('KONTRAK', 'Kontrak Kerja'), ('SK_PENGANGKATAN', 'SK Pengangkatan'),
-            ('SPK_RKK', 'SPK RKK'), ('URAIAN_TUGAS', 'Uraian Tugas'),
-            ('SERTIFIKAT', 'Sertifikat'), ('OTHER', 'Lainnya'),
-        ), required=False,
-        widget=forms.Select(attrs={'class': SELECT_CLASS}),
     )
 
 

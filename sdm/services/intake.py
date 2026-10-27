@@ -605,11 +605,12 @@ def bind_intake_attachments(*, draft, employee, actor):
     versions = []
     attachments = draft.attachments.select_for_update().filter(state='STAGED')
     step5 = (draft.draft_data or {}).get('5') or {}
+    step5_title = (step5.get('judul') or '').strip()
     for attachment in attachments:
         document_type, kind, default_title = INTAKE_DOCUMENT_META[attachment.artifact_kind]
         title = default_title
         if attachment.artifact_kind not in ('FOTO_PROFIL', 'KTP'):
-            title = (step5.get('dokumen_judul') or '').strip() or default_title
+            title = step5_title or default_title
         document = DokumenPegawai(
             employee=employee,
             document_type=document_type,
@@ -629,6 +630,8 @@ def bind_intake_attachments(*, draft, employee, actor):
             size_bytes=attachment.size_bytes,
             content_type=attachment.content_type,
             status='PENDING',
+            issued_date=_as_date(step5.get('tanggal_terbit')),
+            valid_until=_as_date(step5.get('berlaku_sampai')),
             created_by=actor,
         )
         version.full_clean()

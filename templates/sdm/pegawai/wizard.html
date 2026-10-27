@@ -72,9 +72,12 @@
             {% if form.non_field_errors %}
             <div class="alert alert-danger" role="alert">{{ form.non_field_errors }}</div>
             {% endif %}
+            {% if step == 5 %}
+            <div class="form-text small mb-2">Pilih <strong>KTP</strong> pada Jenis Dokumen untuk pengisian otomatis NIK, nama, dan alamat via OCR.</div>
+            {% endif %}
             <div class="row g-3">
                 {% for field in form %}
-                <div class="col-12 col-md-6">
+                <div class="col-12 {% if step != 5 %}col-md-6{% endif %}">
                     <label class="form-label small fw-semibold" for="{{ field.id_for_label }}">{{ field.label }}</label>
                     {% if field.field.widget.input_type == 'file' %}
                     <div class="border border-2 border-dashed rounded p-2" data-hc-drop-zone>
