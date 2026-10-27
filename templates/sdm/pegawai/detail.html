@@ -10,7 +10,10 @@
         <div>
             <a class="small text-decoration-none" href="{% url 'sdm:pegawai_list' %}"><i class="bi bi-arrow-left me-1"></i>Kembali ke direktori</a>
             <h1 class="page-title h4 mt-2 mb-1">{{ employee.nama_lengkap }}</h1>
-            <p class="page-subtitle text-muted mb-0">{{ employee.get_kategori_display }} · {{ employee.profesi|default:"Profesi belum dicatat" }}</p>
+            <p class="page-subtitle text-muted mb-0">
+                {{ employee.get_kategori_display }} · {{ employee.profesi|default:"Profesi belum dicatat" }}
+                {% if current_placement %} · {{ current_placement.unit_kerja.name }}{% endif %}
+            </p>
         </div>
         {% if can_manage %}<a class="btn btn-outline-primary btn-sm" href="{% url 'sdm:pegawai_edit' employee.pk %}"><i class="bi bi-pencil-square me-1"></i>Edit Data</a>{% endif %}
     </div>
@@ -35,6 +38,25 @@
                     <dt class="col-sm-4">Kategori</dt><dd class="col-sm-8">{{ employee.get_kategori_display }}</dd>
                     <dt class="col-sm-4">Profesi</dt><dd class="col-sm-8">{{ employee.profesi|default:"Belum dicatat" }}</dd>
                     <dt class="col-sm-4">Jabatan</dt><dd class="col-sm-8">{{ employee.jabatan|default:"Belum dicatat" }}</dd>
+                    <dt class="col-sm-4">Unit kerja</dt>
+                    <dd class="col-sm-8">
+                        {% if current_placement %}
+                        <span class="fw-semibold">{{ current_placement.unit_kerja.name }}</span>
+                        <span class="text-muted">({{ current_placement.unit_kerja.code }})</span>
+                        {% if current_placement.unit_induk %}
+                        <span class="d-block small text-muted">Unit induk: {{ current_placement.unit_induk.name }} ({{ current_placement.unit_induk.code }})</span>
+                        {% endif %}
+                        <span class="d-block small text-muted">
+                            Penempatan sejak {{ current_placement.tanggal_mulai|date:"d M Y" }}
+                            {% if current_placement.tanggal_selesai %}, berakhir {{ current_placement.tanggal_selesai|date:"d M Y" }}{% else %}, masih berjalan{% endif %}
+                            · {{ current_placement.alokasi_fte }} FTE
+                        </span>
+                        {% elif assignments %}
+                        <span class="text-muted">Tidak ada penempatan aktif. Lihat tab Riwayat Penempatan.</span>
+                        {% else %}
+                        <span class="text-muted">Belum ada data penempatan unit.</span>
+                        {% endif %}
+                    </dd>
                     <dt class="col-sm-4">Status</dt><dd class="col-sm-8">{{ employee.get_status_display }}</dd>
                 </dl>
             </section>

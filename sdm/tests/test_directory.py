@@ -63,6 +63,42 @@ class PegawaiDirectoryViewTests(TestCase):
         )
         return employee
 
+    def test_detail_profile_shows_current_unit(self):
+        """Profil pegawai harus menyebut unit kerja, bukan hanya jabatan."""
+        self.client.force_login(self.reader)
+
+        response = self.client.get(
+            reverse('sdm:pegawai_detail', kwargs={'employee_id': self.visible.pk})
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context['current_placement'].unit_kerja, self.root)
+        self.assertContains(response, 'Unit kerja')
+        self.assertContains(response, self.root.name)
+        self.assertContains(response, self.root.code)
+
+    def test_detail_profile_uses_open_placement_not_latest_history_row(self):
+        """Riwayat terbaru belum tentu yang berjalan: penempatan mendatang
+        bertanggal mulai lebih besar, dan profil harus tetap menunjuk unit
+        yang aktif hari ini."""
+        future = UnitKerja.objects.create(name='Unit Mendatang', code='DIR-NEXT')
+        HcGrant.objects.create(user=self.reader, capability='can_view_hc', unit_kerja=future)
+        HcGrant.objects.create(user=self.manager, capability='can_manage_hc_employees', unit_kerja=future)
+        PenempatanPegawai.objects.create(
+            pegawai=self.visible, unit_kerja=future,
+            tanggal_mulai=self.today + timedelta(days=30),
+            alokasi_fte=Decimal('1.00'),
+        )
+        self.client.force_login(self.reader)
+
+        response = self.client.get(
+            reverse('sdm:pegawai_detail', kwargs={'employee_id': self.visible.pk})
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context['current_placement'].unit_kerja, self.root)
+        self.assertContains(response, self.root.name)
+
     def test_directory_search_and_pagination_stay_inside_grant_scope(self):
         for index in range(26):
             self._employee(f'Directory Staff {index:02}', f'DIR-{index:03}', self.root)

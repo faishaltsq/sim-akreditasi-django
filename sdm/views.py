@@ -318,7 +318,14 @@ def pegawai_detail(request, employee_id):
     units = visible_units(request.user)
     assignments = employee.penempatan.filter(
         unit_kerja__in=units
-    ).select_related('unit_kerja').order_by('-tanggal_mulai', '-pk')
+    ).select_related('unit_kerja', 'unit_induk').order_by('-tanggal_mulai', '-pk')
+    # Penempatan yang sedang berjalan adalah yang menentukan unit profil; riwayat
+    # diurutkan dari yang terbaru, jadi ambil yang tanggal mulainya <= hari ini.
+    today = timezone.localdate()
+    current_placement = next(
+        (a for a in assignments if a.is_current and a.tanggal_mulai <= today),
+        assignments.first() if assignments else None,
+    )
     documents = documents_for_employee(employee).prefetch_related('versions')
     compliance = evaluate_employee_compliance(employee)
     events = PeristiwaSDM.objects.filter(
@@ -348,6 +355,7 @@ def pegawai_detail(request, employee_id):
         'employee': employee,
         'profile': build_staff_profile(employee, viewer=request.user),
         'assignments': assignments,
+        'current_placement': current_placement,
         'documents': documents,
         'compliance': compliance,
         'events': events,
@@ -402,6 +410,24 @@ def dokumen_upload(request, employee_id):
     )
     form = DokumenForm(request.POST or None, request.FILES or None)
     if request.method == 'POST' and form.is_valid():
+        if form.cleaned_data['sensitivity'] == 'health':
+            # Health documents need a separate capability; check it here so the
+            # user sees a form error instead of a bare 403 mid-save.
+            try:
+                require_hc_capability(
+                    request.user, 'hc_health_write', employee=employee,
+                )
+            except PermissionDenied:
+                form.add_error(
+                    'sensitivity',
+                    'Dokumen kesehatan kerja memerlukan hak akses Kesehatan Kerja '
+                    '(hc_health_write); minta pemberian akses kepada admin SDM.',
+                )
+                return render(request, 'sdm/dokumen/form.html', {
+                    'form': form,
+                    'employee': employee,
+                    'title': 'Unggah Dokumen Kepegawaian',
+                })
         try:
             store_private_document(
                 form.cleaned_data['file'],
@@ -1898,6 +1924,7 @@ def kredensial_pengajuan_sendiri(request):
         row = current_stage_row(item)
         item.stage_label = row.get_tahap_display() if row else ''
         item.stage_kekurangan = row.kekurangan if row else ''
+        item.editable = item.status in EDITABLE_STATUS
     today = timezone.localdate()
     spk_ews = PenugasanKlinis.objects.filter(
         employee=pegawai, is_active=True, berlaku_sampai__isnull=False,
@@ -2432,6 +2459,10 @@ def logbook_delete(request, entry_id):
 
 # Kinds a portal user may upload into their own vault. Health and legal-risk
 # documents stay with HC staff (owner decision #3).
+# A request may still be edited by its owner while it is a draft or has been
+# returned for correction; once the committee has it, editing is closed.
+EDITABLE_STATUS = {'DRAFT', 'DIAJUKAN'}
+
 PORTAL_UPLOAD_KINDS = {
     'CV': ('personnel', 'CREDENTIAL'),
     'SERTIFIKAT_KOMPETENSI': ('personnel', 'CREDENTIAL'),
@@ -2526,4 +2557,42 @@ def kredensial_bukti_starkes(request):
     return render(request, 'sdm/kredensial/bukti_starkes.html', {
         'rows': rows,
         'unmatched_total': sum(len(row['unmatched']) for row in rows),
+    })
+
+
+@login_required
+def kredensial_pengajuan_ubah(request, request_id):
+    """Edit one's own request while it is still editable (draft or returned)."""
+    pegawai = _portal_pegawai_or_none(request.user)
+    if pegawai is None:
+        raise PermissionDenied('Akun Anda tidak terhubung dengan data pegawai.')
+    credential_request = get_object_or_404(
+        PengajuanKredensial, pk=request_id, employee=pegawai,
+    )
+    if credential_request.status not in EDITABLE_STATUS:
+        raise PermissionDenied(
+            'Pengajuan sudah diproses dan tidak dapat diubah.'
+        )
+    form = PengajuanPortalForm(
+        request.POST or None, user=request.user, instance=credential_request,
+    )
+    if request.method == 'POST' and form.is_valid():
+        updated = form.save(commit=False)
+        updated.employee = pegawai
+        updated.unit_kerja = credential_request.unit_kerja
+        updated.save()
+        PeristiwaSDM.objects.create(
+            actor=request.user,
+            jenis_peristiwa='credential_request_edited',
+            target_tipe='credential_request',
+            target_id=str(updated.pk),
+            status_sesudah=updated.status,
+            alasan=f'portal edit; jenis={updated.jenis}',
+        )
+        messages.success(request, 'Pengajuan kredensial diperbarui.')
+        return redirect('sdm:kredensial_pengajuan_sendiri')
+    return render(request, 'sdm/kredensial/pengajuan_ubah.html', {
+        'form': form,
+        'credential_request': credential_request,
+        'profile': credential_profile(pegawai),
     })
