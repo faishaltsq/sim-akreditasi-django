@@ -21,3 +21,4 @@ qa/reports/*.json
 
 # Local reports/artifacts
 var/
+.worktrees/
