@@ -491,3 +491,150 @@ class DocumentVocabularyTests(TestCase):
         summary = evaluate_employee_compliance(self.employee, as_of=self.today, ruleset=[rule])
         self.assertEqual(summary.results[0].state, 'VALID')
         self.assertEqual(summary.results[0].version.pk, version.pk)
+
+
+class DocumentUploadAuthorizationTests(TestCase):
+    """A save must fail loudly in the form, never as a bare 403 mid-request."""
+
+    def setUp(self):
+        self.today = timezone.localdate()
+        self.unit = UnitKerja.objects.create(name='Unit Unggah', code='DOC-UP')
+        self.user = self._hc_user('upload-admin', can_health=False)
+        self.employee = Pegawai.objects.create(
+            nama_lengkap='Pegawai Unggah', kategori='PPA', profesi='Perawat',
+        )
+        PenempatanPegawai.objects.create(
+            pegawai=self.employee, unit_kerja=self.unit,
+            tanggal_mulai=self.today - timedelta(days=30),
+            alokasi_fte=Decimal('1.00'),
+        )
+
+    def _hc_user(self, username, *, can_health):
+        user = get_user_model().objects.create_user(username=username)
+        UserProfile.objects.create(user=user, role='ADMIN_RS', unit_kerja=self.unit)
+        config = RolePermissionConfig.get_config_for_role('ADMIN_RS')
+        config.can_view_hc = True
+        config.can_manage_hc_documents = True
+        if can_health:
+            config.hc_health_write = True
+        config.save()
+        HcGrant.objects.create(user=user, capability='can_view_hc', unit_kerja=self.unit)
+        HcGrant.objects.create(
+            user=user, capability='can_manage_hc_documents', unit_kerja=self.unit,
+        )
+        if can_health:
+            HcGrant.objects.create(
+                user=user, capability='hc_health_write', unit_kerja=self.unit,
+            )
+        return user
+
+    def _post(self, *, sensitivity, document_type):
+        from django.core.files.uploadedfile import SimpleUploadedFile
+        upload = SimpleUploadedFile(
+            'berkas.pdf', b'%PDF-1.4 data', content_type='application/pdf',
+        )
+        return self.client.post(
+            reverse('sdm:dokumen_upload', args=[self.employee.pk]),
+            {
+                'file': upload, 'title': 'Uji', 'document_type': document_type,
+                'sensitivity': sensitivity, 'jenis_berkas': 'STR',
+            },
+        )
+
+    def test_health_document_without_health_capability_is_a_form_error(self):
+        self.client.force_login(self.user)
+        response = self._post(sensitivity='health', document_type='HEALTH')
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(
+            'kesehatan', response.content.decode('utf-8').lower()
+        )
+        self.assertFalse(
+            DokumenPegawai.objects.filter(employee=self.employee).exists()
+        )
+
+    def test_health_document_with_health_capability_is_saved(self):
+        grantor = self._hc_user('health-writer', can_health=True)
+        self.client.force_login(grantor)
+        response = self._post(sensitivity='health', document_type='HEALTH')
+        self.assertEqual(response.status_code, 302)
+        self.assertTrue(
+            DokumenPegawai.objects.filter(
+                employee=self.employee, sensitivity='health'
+            ).exists()
+        )
+
+    def test_personnel_document_still_saves(self):
+        self.client.force_login(self.user)
+        response = self._post(sensitivity='personnel', document_type='CREDENTIAL')
+        self.assertEqual(response.status_code, 302)
+        self.assertTrue(
+            DokumenPegawai.objects.filter(employee=self.employee).exists()
+        )
+
+
+class DocumentKindFieldTests(TestCase):
+    """The upload form must record which kind of document it stored."""
+
+    def setUp(self):
+        self.today = timezone.localdate()
+        self.unit = UnitKerja.objects.create(name='Unit Jenis', code='DOC-KIND')
+        self.user = get_user_model().objects.create_user(username='kind-admin')
+        UserProfile.objects.create(user=self.user, role='ADMIN_RS', unit_kerja=self.unit)
+        config = RolePermissionConfig.get_config_for_role('ADMIN_RS')
+        config.can_view_hc = True
+        config.can_manage_hc_documents = True
+        config.save()
+        HcGrant.objects.create(
+            user=self.user, capability='can_view_hc', unit_kerja=self.unit,
+        )
+        HcGrant.objects.create(
+            user=self.user, capability='can_manage_hc_documents', unit_kerja=self.unit,
+        )
+        self.employee = Pegawai.objects.create(
+            nama_lengkap='Pegawai Jenis', kategori='PPA',
+        )
+        PenempatanPegawai.objects.create(
+            pegawai=self.employee, unit_kerja=self.unit,
+            tanggal_mulai=self.today - timedelta(days=30),
+            alokasi_fte=Decimal('1.00'),
+        )
+
+    def test_form_offers_a_kind_field(self):
+        from sdm.forms import DokumenForm
+        form = DokumenForm()
+        self.assertIn('jenis_berkas', form.fields)
+
+    def test_upload_records_the_chosen_kind(self):
+        from django.core.files.uploadedfile import SimpleUploadedFile
+        upload = SimpleUploadedFile(
+            'str.pdf', b'%PDF-1.4 x', content_type='application/pdf',
+        )
+        self.client.force_login(self.user)
+        response = self.client.post(
+            reverse('sdm:dokumen_upload', args=[self.employee.pk]),
+            {
+                'file': upload, 'title': 'STR Uji', 'document_type': 'CREDENTIAL',
+                'sensitivity': 'personnel', 'jenis_berkas': 'STR',
+            },
+        )
+        self.assertEqual(response.status_code, 302)
+        document = DokumenPegawai.objects.get(employee=self.employee)
+        self.assertEqual(document.jenis_berkas, 'STR')
+
+    def test_kind_is_required(self):
+        from django.core.files.uploadedfile import SimpleUploadedFile
+        upload = SimpleUploadedFile(
+            'x.pdf', b'%PDF-1.4 x', content_type='application/pdf',
+        )
+        self.client.force_login(self.user)
+        response = self.client.post(
+            reverse('sdm:dokumen_upload', args=[self.employee.pk]),
+            {
+                'file': upload, 'title': 'Tanpa Jenis',
+                'document_type': 'CREDENTIAL', 'sensitivity': 'personnel',
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(
+            DokumenPegawai.objects.filter(employee=self.employee).exists()
+        )

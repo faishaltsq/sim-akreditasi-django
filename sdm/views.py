@@ -429,7 +429,7 @@ def dokumen_upload(request, employee_id):
                     'title': 'Unggah Dokumen Kepegawaian',
                 })
         try:
-            store_private_document(
+            document, _version = store_private_document(
                 form.cleaned_data['file'],
                 employee=employee,
                 sensitivity=form.cleaned_data['sensitivity'],
@@ -445,6 +445,10 @@ def dokumen_upload(request, employee_id):
                 'Dokumen gagal disimpan ke penyimpanan privat. Tidak ada data yang dicatat.',
             )
         else:
+            # store_private_document has no kind parameter; record it on the
+            # document it just returned so the requirement checklist can match.
+            document.jenis_berkas = form.cleaned_data['jenis_berkas']
+            document.save(update_fields=['jenis_berkas'])
             return redirect('sdm:pegawai_detail', employee_id=employee.pk)
     return render(request, 'sdm/dokumen/form.html', {
         'form': form,

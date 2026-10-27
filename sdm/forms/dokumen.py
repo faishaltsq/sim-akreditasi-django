@@ -26,11 +26,18 @@ class DokumenForm(forms.ModelForm):
 
     class Meta:
         model = DokumenPegawai
-        fields = ['document_type', 'title', 'sensitivity']
+        fields = ['document_type', 'jenis_berkas', 'title', 'sensitivity']
         widgets = {
             'document_type': forms.Select(attrs={'class': SELECT_CLASS}),
+            'jenis_berkas': forms.Select(attrs={'class': SELECT_CLASS}),
             'title': forms.TextInput(attrs={'class': FIELD_CLASS, 'maxlength': 250}),
             'sensitivity': forms.Select(attrs={'class': SELECT_CLASS}),
+        }
+        help_texts = {
+            'sensitivity': (
+                'Dokumen kesehatan kerja hanya dapat disimpan oleh pemegang '
+                'hak akses Kesehatan Kerja.'
+            ),
         }
 
     def clean(self):
