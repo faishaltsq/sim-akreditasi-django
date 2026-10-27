@@ -220,6 +220,11 @@ urlpatterns = [
     path('k3/insiden/<uuid:incident_id>/tindak-lanjut/', views.k3_tindak_lanjut_tambah, name='k3_tindak_lanjut_tambah'),
     path('saya/', portal_views.portal_index, name='portal_index'),
     path(
+        'saya/pengajuan/<uuid:request_id>/ubah/',
+        views.kredensial_pengajuan_ubah,
+        name='kredensial_pengajuan_ubah',
+    ),
+    path(
         'saya/dokumen/unggah/',
         views.portal_dokumen_upload,
         name='portal_dokumen_upload',

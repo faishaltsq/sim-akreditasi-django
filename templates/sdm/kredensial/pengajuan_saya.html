@@ -202,7 +202,7 @@
                 <div class="card-header bg-white"><h2 class="h6 mb-0">Pengajuan Saya</h2></div>
                 <div class="table-responsive">
                     <table class="table table-sm align-middle mb-0">
-                        <thead><tr><th scope="col">Unit</th><th scope="col">Jenis</th><th scope="col">Status</th><th scope="col">Tahap</th><th scope="col">Diajukan</th></tr></thead>
+                        <thead><tr><th scope="col">Unit</th><th scope="col">Jenis</th><th scope="col">Status</th><th scope="col">Tahap</th><th scope="col">Diajukan</th><th scope="col" class="text-end">Aksi</th></tr></thead>
                         <tbody>
                             {% for item in my_requests %}
                             <tr>
@@ -211,8 +211,13 @@
                                 <td><span class="badge text-bg-light text-dark">{{ item.get_status_display }}</span></td>
                                 <td class="small">{% if item.stage_label %}{{ item.stage_label }}{% if item.stage_kekurangan %}<div class="text-danger">{{ item.stage_kekurangan }}</div>{% endif %}{% else %}—{% endif %}</td>
                                 <td class="small">{{ item.created_at|date:"d M Y" }}</td>
+                                <td class="text-end">
+                                    {% if item.editable %}
+                                    <a class="btn btn-outline-primary btn-sm" href="{% url 'sdm:kredensial_pengajuan_ubah' item.pk %}">Ubah</a>
+                                    {% else %}<span class="text-muted small">—</span>{% endif %}
+                                </td>
                             </tr>
-                            {% empty %}<tr><td colspan="5" class="text-center text-muted py-4">Belum ada pengajuan.</td></tr>{% endfor %}
+                            {% empty %}<tr><td colspan="6" class="text-center text-muted py-4">Belum ada pengajuan.</td></tr>{% endfor %}
                         </tbody>
                     </table>
                 </div>

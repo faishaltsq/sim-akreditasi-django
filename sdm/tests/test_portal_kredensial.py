@@ -335,3 +335,95 @@ class PortalChecklistD2Tests(PortalBase):
             reverse('sdm:kredensial_pengajuan_sendiri'), {'jenis': 'AWAL'}
         )
         self.assertIn('Aktif', response.content.decode('utf-8'))
+
+
+class PortalFormVisibleAndEditTests(PortalBase):
+    """User request: the submit form must be visible, and requests editable."""
+
+    def setUp(self):
+        super().setUp()
+        self._portal_user(username='c5-staff', employee=self.employee)
+
+    def test_submit_form_is_rendered_on_the_page(self):
+        self.client.force_login(self.user)
+        response = self.client.get(reverse('sdm:kredensial_pengajuan_sendiri'))
+        content = response.content.decode('utf-8')
+        self.assertIn('Ajukan Kredensial', content)
+        self.assertIn('name="jenis"', content)
+        self.assertIn('Kirim Pengajuan', content)
+
+    def test_edit_link_appears_for_draft_or_returned_requests(self):
+        from sdm.models import PengajuanKredensial
+        draft = PengajuanKredensial.objects.create(
+            employee=self.employee, unit_kerja=self.unit,
+            jenis='AWAL', status='DRAFT', submitted_by=self.user,
+        )
+        self.client.force_login(self.user)
+        response = self.client.get(reverse('sdm:kredensial_pengajuan_sendiri'))
+        self.assertIn(
+            reverse('sdm:kredensial_pengajuan_ubah', args=[draft.pk]),
+            response.content.decode('utf-8'),
+        )
+
+    def test_owner_can_edit_a_draft_request(self):
+        from sdm.models import PengajuanKredensial
+        draft = PengajuanKredensial.objects.create(
+            employee=self.employee, unit_kerja=self.unit,
+            jenis='AWAL', status='DRAFT', submitted_by=self.user,
+        )
+        self.client.force_login(self.user)
+        response = self.client.post(
+            reverse('sdm:kredensial_pengajuan_ubah', args=[draft.pk]),
+            {'jenis': 'REKREDENSIAL'},
+        )
+        self.assertEqual(response.status_code, 302)
+        draft.refresh_from_db()
+        self.assertEqual(draft.jenis, 'REKREDENSIAL')
+        self.assertEqual(draft.employee, self.employee)
+
+    def test_owner_cannot_edit_a_decided_request(self):
+        from sdm.models import PengajuanKredensial
+        decided = PengajuanKredensial.objects.create(
+            employee=self.employee, unit_kerja=self.unit,
+            jenis='AWAL', status='DISETUJUI', submitted_by=self.user,
+        )
+        self.client.force_login(self.user)
+        response = self.client.post(
+            reverse('sdm:kredensial_pengajuan_ubah', args=[decided.pk]),
+            {'jenis': 'REKREDENSIAL'},
+        )
+        self.assertEqual(response.status_code, 403)
+        decided.refresh_from_db()
+        self.assertEqual(decided.jenis, 'AWAL')
+
+    def test_other_employee_cannot_edit_someone_elses_request(self):
+        from sdm.models import PengajuanKredensial
+        foreign = self._employee('Pegawai C5 Lain Kredensial', unit=self.other_unit)
+        other_request = PengajuanKredensial.objects.create(
+            employee=foreign, unit_kerja=self.other_unit,
+            jenis='AWAL', status='DRAFT',
+        )
+        self.client.force_login(self.user)
+        response = self.client.post(
+            reverse('sdm:kredensial_pengajuan_ubah', args=[other_request.pk]),
+            {'jenis': 'REKREDENSIAL'},
+        )
+        self.assertEqual(response.status_code, 404)
+        other_request.refresh_from_db()
+        self.assertEqual(other_request.jenis, 'AWAL')
+
+    def test_edit_form_is_prefilled_and_unit_is_read_only(self):
+        from sdm.models import PengajuanKredensial
+        draft = PengajuanKredensial.objects.create(
+            employee=self.employee, unit_kerja=self.unit,
+            jenis='REKREDENSIAL', status='DRAFT', submitted_by=self.user,
+        )
+        self.client.force_login(self.user)
+        response = self.client.get(
+            reverse('sdm:kredensial_pengajuan_ubah', args=[draft.pk])
+        )
+        content = response.content.decode('utf-8')
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('Ubah Pengajuan Kredensial', content)
+        self.assertIn('value="REKREDENSIAL" selected', content)
+        self.assertNotIn('name="employee"', content)

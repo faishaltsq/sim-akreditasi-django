@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block page_title %}Ubah Pengajuan Kredensial{% endblock %}
+{% block page_subtitle %}Portal pengajuan mandiri RKK{% endblock %}
+{% block content %}
+<div class="container-fluid p-0">
+    <a class="small text-decoration-none" href="{% url 'sdm:kredensial_pengajuan_sendiri' %}"><i class="bi bi-arrow-left me-1"></i>Kembali</a>
+    <h1 class="page-title h4 mt-2 mb-3">Ubah Pengajuan Kredensial</h1>
+
+    {% include "sdm/kredensial/_profil_kartu.html" %}
+
+    {% if messages %}
+        {% for message in messages %}
+        <div class="alert alert-warning alert-dismissible fade show" role="alert">{{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Tutup"></button>
+        </div>
+        {% endfor %}
+    {% endif %}
+
+    <div class="card border shadow-sm">
+        <div class="card-header bg-white"><h2 class="h6 mb-0">Data Pengajuan</h2></div>
+        <div class="card-body">
+            <p class="small text-muted mb-3">
+                Unit kerja mengikuti penempatan Anda:
+                <strong>{{ credential_request.unit_kerja.code }} — {{ credential_request.unit_kerja.name }}</strong>
+            </p>
+            <form method="post">
+                {% csrf_token %}
+                {% for field in form %}
+                <div class="mb-2">
+                    <label class="form-label small fw-semibold" for="{{ field.id_for_label }}">{{ field.label }}</label>
+                    {{ field }}
+                    {% for error in field.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+                </div>
+                {% endfor %}
+                <div class="d-flex gap-2 mt-3">
+                    <button class="btn btn-primary btn-sm" type="submit">Simpan Perubahan</button>
+                    <a class="btn btn-outline-secondary btn-sm" href="{% url 'sdm:kredensial_pengajuan_sendiri' %}">Batal</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
