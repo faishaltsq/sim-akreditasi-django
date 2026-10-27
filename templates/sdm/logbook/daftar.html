@@ -39,6 +39,48 @@
     </form>
     {% endif %}
 
+    {% if quick_form %}
+    <form method="post" action="{% url 'sdm:logbook_cepat' %}" class="card border shadow-sm mb-3" aria-label="Catat cepat satu tindakan">
+        {% csrf_token %}
+        {% if selected_employee %}<input type="hidden" name="employee" value="{{ selected_employee.pk }}">{% endif %}
+        {% if selected_employee %}<input type="hidden" name="pegawai" value="{{ selected_employee.pk }}">{% endif %}
+        <input type="hidden" name="modus" value="katalog">
+        <div class="card-body row g-2 align-items-end">
+            <div class="col-6 col-md-2">
+                <label class="form-label small fw-semibold" for="cepat-tanggal">Tanggal</label>
+                {{ quick_form.tanggal }}
+            </div>
+            <div class="col-6 col-md-3">
+                <label class="form-label small fw-semibold" for="cepat-katalog">Tindakan</label>
+                {{ quick_form.katalog_tindakan }}
+            </div>
+            <div class="col-6 col-md-2">
+                <label class="form-label small fw-semibold" for="cepat-unit">Unit</label>
+                {{ quick_form.unit_kerja }}
+            </div>
+            <div class="col-6 col-md-1">
+                <label class="form-label small fw-semibold" for="cepat-kategori">Kategori</label>
+                {{ quick_form.kategori }}
+            </div>
+            <div class="col-4 col-md-1">
+                <label class="form-label small fw-semibold" for="cepat-jumlah">Jumlah</label>
+                {{ quick_form.jumlah_mandiri }}
+            </div>
+            <div class="col-4 col-md-1">
+                <label class="form-label small fw-semibold" for="cepat-pasien">Inisial / RM</label>
+                {{ quick_form.pasien_ref }}
+            </div>
+            <div class="col-4 col-md-2">
+                <button class="btn btn-primary btn-sm w-100" type="submit">Catat</button>
+            </div>
+        </div>
+        <div class="card-footer small text-muted py-2">
+            Jumlah di atas dicatat sebagai tindakan mandiri. Untuk supervisi, kolaborasi, atau teks bebas gunakan
+            <a href="{% url 'sdm:logbook_create' %}" class="text-decoration-none">form lengkap</a>.
+        </div>
+    </form>
+    {% endif %}
+
     {% if page_obj.object_list %}
     <div class="card border shadow-sm">
         <div class="table-responsive">
@@ -46,12 +88,18 @@
                 <thead class="table-light">
                     <tr>
                         <th scope="col">Tanggal</th>
+                        <th scope="col">Waktu Tindakan</th>
+                        <th scope="col">Shift</th>
                         <th scope="col">Pegawai</th>
                         <th scope="col">Unit</th>
                         <th scope="col">Tindakan</th>
+                        <th scope="col">Inisial / No. RM Pasien</th>
+                        <th scope="col">Kategori</th>
                         <th scope="col" class="text-center">Mandiri</th>
                         <th scope="col" class="text-center">Supervisi</th>
+                        <th scope="col" class="text-center">Kolaborasi</th>
                         <th scope="col">Catatan</th>
+                        <th scope="col">Verifikasi</th>
                         <th scope="col" class="text-end">Aksi</th>
                     </tr>
                 </thead>
@@ -59,14 +107,29 @@
                     {% for entry in page_obj.object_list %}
                     <tr>
                         <td>{{ entry.tanggal|date:"d M Y" }}</td>
+                        <td>{% if entry.waktu %}{{ entry.waktu|date:"d M Y H:i" }}{% else %}Belum dicatat{% endif %}</td>
+                        <td>{{ entry.get_shift_display|default:"-" }}</td>
                         <td>{{ entry.employee.nama_lengkap }}</td>
                         <td>{{ entry.unit_kerja.name }}</td>
                         <td>{% if entry.katalog_tindakan %}{{ entry.katalog_tindakan.nama }}{% else %}{{ entry.tindakan }}{% endif %}</td>
+                        <td>{{ entry.pasien_ref|default:"-" }}</td>
+                        <td>{{ entry.get_kategori_display }}</td>
                         <td class="text-center">{{ entry.jumlah_mandiri }}</td>
                         <td class="text-center">{{ entry.jumlah_supervisi }}</td>
-                        <td class="small">{{ entry.catatan|default:"—" }}</td>
+                        <td class="text-center">{{ entry.jumlah_kolaborasi }}</td>
+                        <td class="small">{{ entry.catatan|default:"-" }}</td>
+                        <td class="small">
+                            {% if entry.sudah_diverifikasi %}
+                            <span class="badge bg-success-subtle text-success-emphasis">Terverifikasi</span>
+                            <span class="d-block text-muted">Terkunci, tidak dapat diubah</span>
+                            {% elif entry.verifikasi_terakhir %}
+                            <span class="badge bg-warning-subtle text-warning-emphasis">Ditolak</span>
+                            {% else %}
+                            <span class="badge bg-secondary-subtle text-secondary-emphasis">Menunggu</span>
+                            {% endif %}
+                        </td>
                         <td class="text-end">
-                            {% if can_manage %}
+                            {% if can_manage and not entry.sudah_diverifikasi %}
                             <form method="post" action="{% url 'sdm:logbook_delete' entry.pk %}" class="d-inline" onsubmit="return confirm('Hapus entri ini?');">
                                 {% csrf_token %}
                                 <button type="submit" class="btn btn-outline-danger btn-sm" aria-label="Hapus entri logbook">Hapus</button>

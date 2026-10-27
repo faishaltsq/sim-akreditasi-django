@@ -354,6 +354,18 @@
     {% endif %}
     {% endif %}
 
+    {% if nav_kredensial_pribadi %}
+    <div class="nav-section">Kredensial saya</div>
+    <a href="{% url 'sdm:kredensial_pengajuan_sendiri' %}" class="nav-link{% if u == 'kredensial_pengajuan_sendiri' %} active{% endif %}" title="Pengajuan kredensial atas nama sendiri">
+        <span class="nav-icon"><i class="bi bi-file-earmark-medical nav-icon-teal" aria-hidden="true"></i></span>
+        <span class="nav-text"><span class="nav-title">Pengajuan kredensial</span></span>
+    </a>
+    <a href="{% url 'sdm:logbook_list' %}" class="nav-link{% if u|slice:':7' == 'logbook' %} active{% endif %}" title="Catatan tindakan klinis pribadi">
+        <span class="nav-icon"><i class="bi bi-journal-text nav-icon-green" aria-hidden="true"></i></span>
+        <span class="nav-text"><span class="nav-title">Logbook saya</span></span>
+    </a>
+    {% endif %}
+
     {% if request.user.is_superuser or request.user.profile.role == 'SUPER_ADMIN' or request.user.profile.role == 'ADMIN_RS' %}
     <div class="nav-section">Administrasi</div>
     <a href="{% url 'accounts:admin_control_center' %}" class="nav-link{% if u == 'admin_control_center' %} active{% endif %}" title="Hierarki, hak akses, dan konfigurasi sistem">

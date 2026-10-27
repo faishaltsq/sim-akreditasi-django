@@ -10,6 +10,7 @@ from django.db import transaction
 from django.views.decorators.http import require_POST
 from django.core.paginator import Paginator
 from django.db.models import Count, Q, Sum, F, Avg, Exists, OuterRef
+from django.db.models.deletion import ProtectedError
 from openpyxl import Workbook
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 
@@ -21,6 +22,7 @@ from .models import (
 from .forms import StandardItemForm, QualityRecordForm, UnitKerjaForm, EvidenceFileUploadForm
 from .supabase_storage import upload_to_supabase_storage
 from .file_security import validate_uploaded_file, sanitize_filename
+from .input_parsing import bad_request_json, json_body, parse_int
 from .instrumen_2024 import sort_standards
 
 logger = logging.getLogger(__name__)
@@ -795,9 +797,13 @@ def quick_score(request, record_id):
     # K-1 IDOR guard: cek hak akses unit terhadap EP ini
     if not _can_modify_ep(request.user, record.standard_item):
         return JsonResponse({'success': False, 'error': 'Akses ditolak: EP di luar cakupan unit Anda.'}, status=403)
+    data = json_body(request)
+    if data is None:
+        return bad_request_json('Payload request tidak valid (bukan JSON).')
+    new_score = parse_int(data.get('score'))
+    if new_score is None:
+        return bad_request_json('Skor harus berupa angka 0, 5, atau 10.')
     try:
-        data = json.loads(request.body)
-        new_score = int(data.get('score', 0))
         if new_score in [10, 5, 0]:
             old_score = record.score
             record.score = new_score
@@ -835,26 +841,33 @@ def inline_edit_pdca(request, record_id):
     # K-1 IDOR guard
     if not _can_modify_ep(request.user, record.standard_item):
         return JsonResponse({'success': False, 'error': 'Akses ditolak: EP di luar cakupan unit Anda.'}, status=403)
+    data = json_body(request)
+    if data is None:
+        return bad_request_json('Payload request tidak valid (bukan JSON).')
     try:
-        data = json.loads(request.body)
         field = data.get('field')  # 'baseline_data', 'quality_target', 'risk_mitigation', 'eval_notes', 'action_plan'
-        value = data.get('value', '').strip()
+        value = (data.get('value') or '').strip()
+        is_text = not isinstance(value, str)
 
         allowed_fields = ['baseline_data', 'quality_target', 'risk_mitigation', 'eval_notes', 'action_plan', 'pic', 'target_date', 'est_cost', 'budget_source', 'budget_status']
         if field in allowed_fields:
             if field == 'est_cost':
                 from decimal import Decimal, InvalidOperation
                 try:
-                    value = Decimal(value.replace('.', '').replace(',', '.')) if value else Decimal('0')
+                    value = Decimal(str(value).replace('.', '').replace(',', '.')) if value else Decimal('0')
                 except (InvalidOperation, ValueError):
                     value = Decimal('0')
+            elif is_text:
+                return bad_request_json('Nilai sel harus berupa teks.')
             setattr(record, field, value)
 
             # Jika action_plan dikirim bersama pic + est_cost (batch save dari modal)
             extra_pic = data.get('pic')
             extra_cost = data.get('est_cost')
             if extra_pic is not None:
-                record.pic = extra_pic.strip()
+                # `pic` bisa datang sebagai angka (kolom input numerik) —
+                # `.strip()` mentah di sini dulu memicu AttributeError 500.
+                record.pic = str(extra_pic).strip()
             if extra_cost is not None:
                 from decimal import Decimal, InvalidOperation
                 try:
@@ -870,7 +883,8 @@ def inline_edit_pdca(request, record_id):
                 aksi='UPDATE',
                 model_name='QualityRecord',
                 object_repr=f"{record.standard_item.code} ({field})",
-                detail=f"Update isi sel {field}: {value[:80]}"
+                # `value` berisi Decimal untuk est_cost → slice langsung 500.
+                detail=f"Update isi sel {field}: {str(value)[:80]}"
             )
             return JsonResponse({'success': True, 'field': field, 'value': value})
         return JsonResponse({'success': False, 'error': 'Field tidak diizinkan'}, status=400)
@@ -976,14 +990,25 @@ def upload_bukti_ajax(request, req_id):
 @login_required
 @require_POST
 def link_existing_doc(request):
+    data = json_body(request)
+    if data is None:
+        return bad_request_json('Payload request tidak valid (bukan JSON).')
+
+    target_req_id = parse_int(data.get('req_id'))
+    source_file_id = parse_int(data.get('file_id'))
+    if target_req_id is None or source_file_id is None:
+        return JsonResponse({'success': False, 'error': 'ID berkas atau kebutuhan bukti tidak valid.'}, status=400)
+
+    target_req = EvidenceReq.objects.filter(id=target_req_id).first()
+    source_file = EvidenceFile.objects.filter(id=source_file_id).first()
+    if target_req is None or source_file is None:
+        return JsonResponse({'success': False, 'error': 'Berkas atau kebutuhan bukti tidak ditemukan.'}, status=404)
+
+    # Guard IDOR: sejajar dengan upload_bukti_ajax / unlink_doc / quick_score.
+    if not _can_modify_ep(request.user, target_req.standard_item):
+        return JsonResponse({'success': False, 'error': 'Akses ditolak: EP di luar cakupan unit Anda.'}, status=403)
+
     try:
-        data = json.loads(request.body)
-        target_req_id = data.get('req_id')
-        source_file_id = data.get('file_id')
-
-        target_req = get_object_or_404(EvidenceReq, id=target_req_id)
-        source_file = get_object_or_404(EvidenceFile, id=source_file_id)
-
         # Clone record EvidenceFile ke target requirement
         new_file = EvidenceFile.objects.create(
             requirement=target_req,
@@ -1003,7 +1028,7 @@ def link_existing_doc(request):
             detail=f"Menautkan dokumen dari repositori ({source_file.file_name})"
         )
         return JsonResponse({'success': True, 'file_id': new_file.id, 'file_name': new_file.file_name})
-    except Exception as e:
+    except Exception:
         logger.exception("link_existing_doc error")
         return JsonResponse({'success': False, 'error': 'Gagal menautkan berkas bukti.'}, status=500)
 
@@ -1469,7 +1494,20 @@ def unit_delete(request, unit_id):
         messages.error(request, f"Unit '{name}' masih terhubung ke Record PDCA. Pindahkan record terlebih dahulu.")
         return redirect('akreditasi:unit_tree')
 
-    unit.delete()
+    try:
+        unit.delete()
+    except ProtectedError as exc:
+        # FK PROTECT (mis. HcGrant, Risiko, Logbook) tidak bisa dihapus berantai.
+        # Tanpa tangkapan ini Django melempar 500 dan unit tetap ada tanpa pesan.
+        refs = ', '.join(sorted({
+            str(obj._meta.verbose_name) for obj in exc.protected_objects
+        })) or 'data lain'
+        messages.error(
+            request,
+            f"Unit '{name}' tidak dapat dihapus karena masih dipakai oleh: {refs}. "
+            f"Pindahkan atau hapus data tersebut lebih dahulu.",
+        )
+        return redirect('akreditasi:unit_tree')
     AuditLog.objects.create(
         user=request.user,
         aksi='DELETE',
@@ -1505,7 +1543,12 @@ def profil_rs_view(request):
         profile.website = request.POST.get('website', profile.website).strip()
         profile.direktur = request.POST.get('direktur', profile.direktur).strip()
         profile.tipe = request.POST.get('tipe', profile.tipe).strip()
-        profile.akreditasi_tahun = int(request.POST.get('akreditasi_tahun', profile.akreditasi_tahun) or 2026)
+        tahun_raw = request.POST.get('akreditasi_tahun', profile.akreditasi_tahun)
+        tahun = parse_int(tahun_raw, default=None)
+        if tahun_raw not in (None, '') and tahun is None:
+            messages.error(request, 'Tahun akreditasi harus berupa angka.')
+            return redirect('akreditasi:profil_rs')
+        profile.akreditasi_tahun = tahun or 2026
         profile.logo_url = request.POST.get('logo_url', profile.logo_url).strip()
         profile.visi = request.POST.get('visi', profile.visi).strip()
         profile.misi = request.POST.get('misi', profile.misi).strip()

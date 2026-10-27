@@ -58,6 +58,7 @@ Setiap rilis wajib ditambahkan sebagai satu baris/blok di tabel berikut:
 | v2.1 | 2026-09-25 | `42b5b4f` | Fix: Login page branded, Profil RS data migration, A11y labels (14 input) | 01 |
 | v2.6.1 | 2026-10-25 | `cache-fingerprint` | Fix konsistensi sidebar expanded dan layout Integrated Control compact melalui URL aset statis ber-fingerprint; cache lama browser tidak lagi menahan CSS/JS deploy sebelumnya | 06 |
 | v3.0 | 2026-10-26 | `uiux-remake` | Remake UI/UX inti akreditasi: DESIGN.md, IBM Plex, satu sistem token di `style.css`, rail navigasi bertema tugas, dashboard berfokus kesiapan, matriks PDCA dengan sel yang bisa dioperasikan keyboard, halaman EP, dokumen bukti, dan login | 01, 05, 06 |
+| v3.1 | 2026-10-27 | `crud-hardening` | Hasil audit CRUD 5 modul: RBAC tulis modul Risiko (`can_manage_risiko` + lingkup unit), `unit_delete` menangani `ProtectedError` dengan pesan yang bisa dibaca, migrasi `sdm.0043`/`0044` diterapkan. Laporan lengkap: `docs/qa/crud-0{1..5}-*.md` | 04, 06, QA |
 
 ---
 

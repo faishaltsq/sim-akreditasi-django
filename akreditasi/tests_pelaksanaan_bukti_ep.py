@@ -18,6 +18,15 @@ from django.test import TestCase, Client
 from django.urls import reverse
 
 from akreditasi.models import Category, Framework, StandardItem, UnitKerja
+
+
+def _grant_risk_manager(user):
+    """Beri peran yang berwenang mengubah risiko (ganti fixture lama)."""
+    from accounts.models import UserProfile
+    profile, _ = UserProfile.objects.get_or_create(user=user)
+    profile.role = 'ADMIN_RS'
+    profile.save()
+
 from akreditasi.risiko_models import RisikoUnit, TindakLanjutRisiko
 from akreditasi.models import IndikatorMutu
 
@@ -128,6 +137,13 @@ class RisikoDetailFormTest(TestCase):
     def setUp(self):
         from django.contrib.auth.models import User
         self.user = User.objects.create_user('pel-f', 'p@x.id', 'x')
+        # POST detail risiko digerbangi can_manage_risiko (QA 2026-10-27).
+        _grant_risk_manager(self.user)
+        # POST detail risiko digerbangi can_manage_risiko (QA 2026-10-27).
+        from accounts.models import UserProfile
+        profile, _ = UserProfile.objects.get_or_create(user=self.user)
+        profile.role = 'ADMIN_RS'
+        profile.save()
         self.client = Client()
         self.client.force_login(self.user)
         self.cat1 = _mk_category()
@@ -214,6 +230,8 @@ class RisikoDaftarEPTest(TestCase):
     def setUp(self):
         from django.contrib.auth.models import User
         self.user = User.objects.create_user('pel-h', 'h@x.id', 'x')
+        # POST detail risiko digerbangi can_manage_risiko (QA 2026-10-27).
+        _grant_risk_manager(self.user)
         self.client = Client()
         self.client.force_login(self.user)
         self.cat = _mk_category()
@@ -248,6 +266,8 @@ class StepMaterializationLinkTest(TestCase):
     def setUp(self):
         from django.contrib.auth.models import User
         self.user = User.objects.create_user('pel-i', 'i@x.id', 'x')
+        # POST detail risiko digerbangi can_manage_risiko (QA 2026-10-27).
+        _grant_risk_manager(self.user)
         self.client = Client()
         self.client.force_login(self.user)
         self.cat = _mk_category()
@@ -293,6 +313,8 @@ class BuktiWajibTidakMengubahBarisLama(TestCase):
     def setUp(self):
         from django.contrib.auth.models import User
         self.user = User.objects.create_user('pel-j', 'j@x.id', 'x')
+        # POST detail risiko digerbangi can_manage_risiko (QA 2026-10-27).
+        _grant_risk_manager(self.user)
         self.client = Client()
         self.client.force_login(self.user)
         self.cat = _mk_category()
@@ -332,6 +354,8 @@ class SurfaceLinkPropagationTest(TestCase):
     def setUp(self):
         from django.contrib.auth.models import User
         self.user = User.objects.create_user('pel-k', 'k@x.id', 'x')
+        # POST detail risiko digerbangi can_manage_risiko (QA 2026-10-27).
+        _grant_risk_manager(self.user)
         self.client = Client()
         self.client.force_login(self.user)
         self.cat = _mk_category()
@@ -425,6 +449,8 @@ class StepEpPickerTest(TestCase):
     def setUp(self):
         from django.contrib.auth.models import User
         self.user = User.objects.create_user('pel-m', 'm@x.id', 'x')
+        # POST detail risiko digerbangi can_manage_risiko (QA 2026-10-27).
+        _grant_risk_manager(self.user)
         self.client = Client()
         self.client.force_login(self.user)
         self.cat = _mk_category()
@@ -487,6 +513,8 @@ class EpEvidenceDeepLinkTest(TestCase):
     def setUp(self):
         from django.contrib.auth.models import User
         self.user = User.objects.create_user('pel-n', 'n@x.id', 'x')
+        # POST detail risiko digerbangi can_manage_risiko (QA 2026-10-27).
+        _grant_risk_manager(self.user)
         self.client = Client()
         self.client.force_login(self.user)
         self.cat = _mk_category()

@@ -15,7 +15,12 @@ from django.utils import timezone
 from django.views.decorators.http import require_POST
 
 from sdm.akses import require_hc_capability, visible_employees, visible_units
-from sdm.services.logbook import logbook_recap
+from sdm.services.logbook import entries_to_verify, logbook_recap, verify_entry
+from sdm.services.dokumen_kredensial import (
+    REGISTRY as DOKUMEN_KREDENSIAL_REGISTRY,
+    finalize as finalize_dokumen_kredensial,
+    generate_draft as generate_dokumen_kredensial,
+)
 from sdm.forms.kredensial_portal import PengajuanPortalForm
 from sdm.forms import (
     AktivitasBebanKerjaForm,
@@ -44,6 +49,7 @@ from django.http import HttpResponse
 from sdm.models import (
     AktivitasBebanKerja,
     EntriLogbookKlinis,
+    VerifikasiLogbook,
     InsidenK3Pegawai,
     KebutuhanPelatihan,
     Lamaran,
@@ -52,6 +58,7 @@ from sdm.models import (
     PenempatanPegawai,
     DokumenSyaratKredensial,
     DokumenPegawai,
+    DrafDokumenKredensial,
     TahapKredensial,
     PengajuanKredensial,
     PenilaianTindakan,
@@ -1892,11 +1899,13 @@ def kredensial_pengajuan_sendiri(request):
     """
     pegawai = getattr(request.user, 'pegawai_hc', None)
     if pegawai is None:
-        messages.error(
+        messages.warning(
             request,
-            'Akun Anda belum terhubung dengan data pegawai; hubungi SDM.',
+            'Akun Anda belum terhubung dengan data pegawai, sehingga pengajuan '
+            'kredensial mandiri dan logbook belum dapat dibuka. Hubungi bagian '
+            'SDM untuk menautkan akun Anda ke data pegawai.',
         )
-        return redirect('sdm:kredensial_list')
+        return redirect('akreditasi:dashboard')
 
     form = PengajuanPortalForm(request.POST or None, user=request.user)
     if request.method == 'POST' and form.is_valid():
@@ -1945,15 +1954,23 @@ def kredensial_pengajuan_sendiri(request):
             'jenis_berkas', flat=True
         )
     )
-    supporting_documents = [
-        {
+    draft_by_jenis = {
+        draft.jenis: draft
+        for draft in DrafDokumenKredensial.objects.filter(pegawai=pegawai)
+    }
+    supporting_documents = []
+    for row in DEFAULT_ROWS:
+        if not row['kind']:
+            continue
+        draft = draft_by_jenis.get(row['jenis'])
+        supporting_documents.append({
             'jenis': row['jenis'],
             'label': dict(DokumenSyaratKredensial.JENIS_CHOICES).get(row['jenis']),
-            'ada': row['kind'] in owned_kinds if row['kind'] else False,
-        }
-        for row in DEFAULT_ROWS
-        if row['kind']
-    ]
+            'ada': row['kind'] in owned_kinds,
+            'can_generate': row['jenis'] in DOKUMEN_KREDENSIAL_REGISTRY,
+            'has_draft': draft is not None,
+            'has_final': draft is not None and draft.versi_dokumen_id is not None,
+        })
     return render(request, 'sdm/kredensial/pengajuan_saya.html', {
         'form': form,
         'profile': credential_profile(pegawai),
@@ -1970,6 +1987,135 @@ def kredensial_pengajuan_sendiri(request):
         'logbook_recap': logbook_recap(pegawai),
         'supporting_documents': supporting_documents,
     })
+
+
+def _dokumen_kredensial_pegawai(request):
+    """Caller's own employee row, or a guidance redirect. Takes no employee id."""
+    pegawai = getattr(request.user, 'pegawai_hc', None)
+    if pegawai is None:
+        messages.warning(
+            request,
+            'Akun Anda belum terhubung dengan data pegawai, sehingga pengajuan '
+            'kredensial mandiri dan logbook belum dapat dibuka. Hubungi bagian '
+            'SDM untuk menautkan akun Anda ke data pegawai.',
+        )
+        return None, redirect('akreditasi:dashboard')
+    return pegawai, None
+
+
+def _dokumen_kredensial_title(jenis):
+    return DOKUMEN_KREDENSIAL_REGISTRY[jenis]['title']
+
+
+@login_required
+@require_POST
+def dokumen_kredensial_generate(request, jenis):
+    """Create or refresh the caller's draft for one generatable document."""
+    pegawai, response = _dokumen_kredensial_pegawai(request)
+    if response is not None:
+        return response
+    if jenis not in DOKUMEN_KREDENSIAL_REGISTRY:
+        raise Http404('Jenis dokumen tidak dapat digenerate.')
+    generate_dokumen_kredensial(pegawai, jenis, user=request.user)
+    messages.success(request, f'Draf {_dokumen_kredensial_title(jenis)} siap diisi.')
+    return redirect('sdm:kredensial_pengajuan_sendiri')
+
+
+@login_required
+def dokumen_kredensial_edit(request, jenis):
+    """Fill only the manual fields of the caller's own draft."""
+    pegawai, response = _dokumen_kredensial_pegawai(request)
+    if response is not None:
+        return response
+    if jenis not in DOKUMEN_KREDENSIAL_REGISTRY:
+        raise Http404('Jenis dokumen tidak dapat digenerate.')
+    draf = get_object_or_404(DrafDokumenKredensial, pegawai=pegawai, jenis=jenis)
+
+    if request.method == 'POST':
+        isian = dict(draf.isian or {})
+        for key, _hint in DOKUMEN_KREDENSIAL_REGISTRY[jenis]['manual_fields']:
+            nilai = (request.POST.get(key) or '').strip()
+            if nilai:
+                isian[key] = nilai
+            else:
+                isian.pop(key, None)
+        draf.isian = isian
+        draf.save(update_fields=['isian', 'updated_at'])
+        messages.success(request, 'Isian dokumen disimpan. Tinjau lalu finalkan.')
+        return redirect('sdm:dokumen_kredensial_edit', jenis=jenis)
+
+    existing = draf.isian or {}
+    manual_fields = [
+        {
+            'key': key,
+            'label': hint,
+            'value': existing.get(key) if isinstance(existing.get(key), str) else '',
+        }
+        for key, hint in DOKUMEN_KREDENSIAL_REGISTRY[jenis]['manual_fields']
+    ]
+    return render(request, 'sdm/kredensial/dokumen_edit.html', {
+        'draf': draf,
+        'jenis': jenis,
+        'title': _dokumen_kredensial_title(jenis),
+        'manual_fields': manual_fields,
+        'has_final': draf.versi_dokumen_id is not None,
+    })
+
+
+@login_required
+@require_POST
+def dokumen_kredensial_finalize(request, jenis):
+    """Render the draft and store it as the document's next PDF version."""
+    pegawai, response = _dokumen_kredensial_pegawai(request)
+    if response is not None:
+        return response
+    if jenis not in DOKUMEN_KREDENSIAL_REGISTRY:
+        raise Http404('Jenis dokumen tidak dapat digenerate.')
+    draf = get_object_or_404(DrafDokumenKredensial, pegawai=pegawai, jenis=jenis)
+    finalize_dokumen_kredensial(draf, user=request.user)
+    messages.success(request, 'Dokumen difinalkan dan siap diunduh.')
+    return redirect('sdm:dokumen_kredensial_download', jenis=jenis)
+
+
+@login_required
+def dokumen_kredensial_download(request, jenis):
+    """Serve the caller's own finalized PDF from private storage."""
+    pegawai, response = _dokumen_kredensial_pegawai(request)
+    if response is not None:
+        return response
+    if jenis not in DOKUMEN_KREDENSIAL_REGISTRY:
+        raise Http404('Jenis dokumen tidak dapat digenerate.')
+    draf = get_object_or_404(DrafDokumenKredensial, pegawai=pegawai, jenis=jenis)
+    version = draf.versi_dokumen
+    if version is None:
+        messages.error(
+            request,
+            'Dokumen belum difinalkan sehingga belum ada PDF untuk diunduh.',
+        )
+        return redirect('sdm:dokumen_kredensial_edit', jenis=jenis)
+
+    storage = get_private_storage()
+    try:
+        data = storage.fetch_object(version.storage_key)
+    except PrivateStorageError:
+        raise Http404('Berkas PDF tidak dapat dibaca.') from None
+    if (
+        len(data) != version.size_bytes
+        or hashlib.sha256(data).hexdigest() != version.sha256
+        or not data.startswith(b'%PDF')
+    ):
+        raise Http404('Berkas PDF tidak dapat dibaca.')
+
+    filename = (
+        f'{pegawai.nama_lengkap} - {_dokumen_kredensial_title(jenis)} '
+        f'v{version.version_number}.pdf'
+    )
+    for bad in ('"', '\\', '\r', '\n'):
+        filename = filename.replace(bad, ' ')
+    response = HttpResponse(data, content_type='application/pdf')
+    response['Content-Disposition'] = f'attachment; filename="{filename}"'
+    response['Cache-Control'] = 'private, no-store'
+    return response
 
 
 @login_required
@@ -2287,6 +2433,15 @@ def _portal_pegawai_or_none(user):
     return getattr(user, 'pegawai_hc', None)
 
 
+def _resolve_post_pegawai(request):
+    """Pegawai from POST 'employee' (or 'pegawai' filter name); malformed UUID counts as absent."""
+    raw = (request.POST.get('employee') or request.POST.get('pegawai') or '').strip()
+    try:
+        return Pegawai.objects.filter(pk=raw).first()
+    except (ValueError, TypeError, ValidationError):
+        return None
+
+
 def _logbook_context(user, *, pegawai_filter=None):
     """Shared logbook list context: scope rows to own employee or HC units."""
     base = EntriLogbookKlinis.objects.select_related(
@@ -2329,11 +2484,107 @@ def logbook_list(request):
         employees = visible_employees(
             request.user, capability='can_review_hc_credentials'
         ).order_by('nama_lengkap')
+    target = employee or _portal_pegawai_or_none(request.user)
+    can_manage = target is not None and _logbook_target_allowed(request.user, target)
+    quick_form = None
+    if can_manage:
+        # Newest action of that employee preselects the quick-entry row.
+        latest = EntriLogbookKlinis.objects.filter(
+            employee=target, katalog_tindakan__isnull=False,
+        ).order_by('-tanggal', '-created_at').values(
+            'katalog_tindakan_id', 'unit_kerja_id'
+        ).first() or {}
+        quick_form = EntriLogbookForm(
+            employee=target,
+            user=request.user,
+            initial={
+                'tanggal': timezone.localdate(),
+                'katalog_tindakan': latest.get('katalog_tindakan_id'),
+                'unit_kerja': latest.get('unit_kerja_id'),
+                'modus': 'katalog',
+            },
+        )
     return render(request, 'sdm/logbook/daftar.html', {
         'page_obj': page_obj,
         'selected_employee': employee,
         'employees': employees,
+        'can_manage': can_manage,
+        'quick_form': quick_form,
+        'quick_target': target,
     })
+
+
+@login_required
+@require_POST
+def logbook_cepat(request):
+    """One-row quick entry; reuses EntriLogbookForm so validation never forks."""
+    pegawai = _portal_pegawai_or_none(request.user)
+    posted_employee = _resolve_post_pegawai(request)
+    if pegawai is not None and (
+        posted_employee is None or posted_employee.pk == pegawai.pk
+    ):
+        target = pegawai
+    else:
+        target = posted_employee
+    if target is None:
+        messages.error(request, 'Akun belum terhubung data pegawai.')
+        return redirect('sdm:logbook_list')
+    if not _logbook_target_allowed(request.user, target):
+        raise PermissionDenied('Pegawai di luar lingkup.')
+    form = EntriLogbookForm(request.POST, employee=target, user=request.user)
+    if form.is_valid():
+        entry = form.save(commit=False)
+        entry.employee = target
+        entry.created_by = request.user
+        entry.save()
+        PeristiwaSDM.objects.create(
+            actor=request.user,
+            jenis_peristiwa='logbook_entry_created',
+            target_tipe='logbook_entry',
+            target_id=str(entry.pk),
+            status_sesudah='CREATED',
+            alasan='logbook quick entry recorded',
+        )
+        messages.success(request, 'Entri logbook dicatat.')
+    else:
+        messages.error(request, 'Data tidak valid; periksa kembali.')
+    back = reverse('sdm:logbook_list')
+    if request.POST.get('pegawai'):
+        back = f'{back}?pegawai={request.POST["pegawai"]}'
+    return redirect(back)
+
+
+@login_required
+def logbook_verifikasi(request):
+    """Preseptor queue: entries with no decision or a rejected latest one."""
+    if not HcGrant.objects.filter(
+        user=request.user, capability='can_review_hc_credentials',
+    ).exists():
+        raise PermissionDenied('Hak verifikasi logbook tidak tersedia.')
+    page_obj = Paginator(
+        entries_to_verify(request.user).order_by('-tanggal', '-created_at'),
+        PAGE_SIZE,
+    ).get_page(request.GET.get('page'))
+    return render(request, 'sdm/logbook/verifikasi.html', {'page_obj': page_obj})
+
+
+@login_required
+@require_POST
+def logbook_verifikasi_aksi(request, entry_id):
+    status = {'approve': VerifikasiLogbook.VERIFIED, 'reject': VerifikasiLogbook.REJECTED}.get(
+        request.POST.get('aksi')
+    )
+    if status is None:
+        raise Http404('Aksi verifikasi tidak dikenal.')
+    entry = get_object_or_404(
+        EntriLogbookKlinis.objects.select_related('unit_kerja'), pk=entry_id,
+    )
+    verify_entry(
+        user=request.user, entry=entry, status=status,
+        catatan=request.POST.get('catatan', '').strip(),
+    )
+    messages.success(request, 'Keputusan verifikasi dicatat.')
+    return redirect('sdm:logbook_verifikasi')
 
 
 @login_required
@@ -2342,9 +2593,7 @@ def logbook_create(request):
     may only create for their own employee record."""
     if request.method == 'POST':
         pegawai = _portal_pegawai_or_none(request.user)
-        posted_employee = Pegawai.objects.filter(
-            pk=request.POST.get('employee') or ''
-        ).first()
+        posted_employee = _resolve_post_pegawai(request)
         if pegawai is not None and (
             posted_employee is None or posted_employee.pk == pegawai.pk
         ):
@@ -2401,6 +2650,9 @@ def logbook_edit(request, entry_id):
         require_hc_capability(
             request.user, 'can_review_hc_credentials', employee=entry.employee,
         )
+    if entry.sudah_diverifikasi:
+        messages.error(request, 'Entri sudah diverifikasi preseptor dan tidak dapat diubah.')
+        return redirect('sdm:logbook_list')
     form = EntriLogbookForm(
         request.POST,
         instance=entry,
@@ -2445,6 +2697,9 @@ def logbook_delete(request, entry_id):
             raise PermissionDenied(
                 'Hanya pembuat entri atau pemilik yang dapat menghapus.'
             ) if not hc_creator_grant else None
+    if entry.sudah_diverifikasi:
+        messages.error(request, 'Entri sudah diverifikasi preseptor dan tidak dapat dihapus.')
+        return redirect('sdm:logbook_list')
     entry.delete()
     PeristiwaSDM.objects.create(
         actor=request.user,

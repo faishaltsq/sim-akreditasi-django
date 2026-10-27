@@ -100,9 +100,28 @@
                     <p class="small text-muted">Status keberadaan berkas, tanpa isi dokumen.</p>
                     <ul class="list-unstyled small mb-3">
                         {% for item in supporting_documents %}
-                        <li class="d-flex justify-content-between border-bottom py-1">
-                            <span>{{ item.label }}</span>
-                            {% if item.ada %}<span class="badge bg-success">Terpenuhi</span>{% else %}<span class="badge bg-secondary">Belum ada</span>{% endif %}
+                        <li class="border-bottom py-2">
+                            <div class="d-flex justify-content-between align-items-start gap-2">
+                                <span>{{ item.label }}</span>
+                                {% if item.ada %}<span class="badge bg-success">Terpenuhi</span>{% else %}<span class="badge bg-secondary">Belum ada</span>{% endif %}
+                            </div>
+                            {% if item.can_generate %}
+                            <div class="d-flex flex-wrap align-items-center gap-1 mt-1">
+                                <form method="post" action="{% url 'sdm:dokumen_kredensial_generate' item.jenis %}" class="d-inline">
+                                    {% csrf_token %}
+                                    <button class="btn btn-outline-primary btn-sm" type="submit">{% if item.has_draft %}Generate{% else %}Auto-Generate{% endif %}</button>
+                                </form>
+                                {% if item.has_draft %}
+                                <a class="btn btn-outline-secondary btn-sm" href="{% url 'sdm:dokumen_kredensial_edit' item.jenis %}">Edit</a>
+                                {% endif %}
+                                {% if item.has_final %}
+                                <a class="btn btn-outline-success btn-sm" href="{% url 'sdm:dokumen_kredensial_download' item.jenis %}">Unduh PDF</a>
+                                {% endif %}
+                            </div>
+                            <p class="text-muted small mb-0 mt-1">Dokumen ini dibuat sistem dari data Anda, lalu diisi manual dan difinalkan.</p>
+                            {% else %}
+                            <p class="text-muted small mb-0 mt-1">Hanya dapat diunggah sebagai berkas.</p>
+                            {% endif %}
                         </li>
                         {% endfor %}
                     </ul>

@@ -10,6 +10,7 @@ from django.http import JsonResponse
 
 from .risiko_models import IndikatorMutu, CatatanIndikator, InmUnitMapping
 from .models import UnitKerja, AuditLog, StandardItem
+from .input_parsing import invalid_query_int, query_int
 
 # ── DEFINISI RESMI RENSTRA 5 TAHUN (2026–2030) RS MONSISKAMI ─────────────
 RENSTRA_ANNUAL_FOCUS = {
@@ -869,8 +870,18 @@ def api_indikator_tren(request, indikator_id):
 def api_indikator_komparasi_unit(request):
     """Cross-unit comparison for a given indicator jenis (INM/IMRS/IMU) and month/year."""
     jenis = request.GET.get('jenis', 'INM')
-    bulan = int(request.GET.get('bulan', 1))
-    tahun = int(request.GET.get('tahun', 2026))
+    bulan = query_int(request, 'bulan', 1)
+    tahun = query_int(request, 'tahun', 2026)
+    if invalid_query_int(request, 'bulan') or invalid_query_int(request, 'tahun'):
+        return JsonResponse(
+            {'success': False, 'error': 'Parameter bulan dan tahun harus berupa angka.'},
+            status=400,
+        )
+    if not 1 <= bulan <= 12:
+        return JsonResponse(
+            {'success': False, 'error': 'Parameter bulan harus di antara 1 dan 12.'},
+            status=400,
+        )
 
     # Map legacy jenis codes to canonical
     jenis_map = {'NASIONAL': 'INM', 'IMP_RS': 'IMRS', 'IMP_UNIT': 'IMU'}

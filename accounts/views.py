@@ -11,6 +11,7 @@ from django.db.models import Q
 from .models import UserProfile
 from .forms import UserCreateForm, UserEditForm, UserProfileForm
 from akreditasi.models import AuditLog
+from akreditasi.input_parsing import json_body, parse_int
 from akreditasi.security_utils import rate_limit
 
 
@@ -277,7 +278,11 @@ def update_unit_hierarchy(request, unit_id):
     # Reparenting
     new_parent = None
     if parent_id and parent_id != '' and parent_id != '0':
-        new_parent = get_object_or_404(UnitKerja, id=int(parent_id))
+        parent_pk = parse_int(parent_id)
+        if parent_pk is None:
+            from django.http import JsonResponse
+            return JsonResponse({'error': 'ID induk unit tidak valid.'}, status=400)
+        new_parent = get_object_or_404(UnitKerja, id=parent_pk)
         # Anti-circular: cek apakah new_parent adalah descendant dari unit ini
         curr = new_parent
         while curr:
@@ -288,7 +293,7 @@ def update_unit_hierarchy(request, unit_id):
 
     with transaction.atomic():
         unit.parent = new_parent
-        unit.order = int(order_val) if order_val.isdigit() else 0
+        unit.order = parse_int(order_val, 0)
         unit.tipe_unit = tipe_unit
         unit.is_active = is_active.lower() in ('true', '1', 'on', 'yes')
         unit.save()
@@ -310,12 +315,26 @@ def update_unit_hierarchy(request, unit_id):
 @require_POST
 def update_role_permissions(request):
     from .models import RolePermissionConfig, LOCKOUT_SAFE_PERMS
-    import json
 
-    try:
-        data = json.loads(request.body)
-    except json.JSONDecodeError:
-        data = request.POST
+    data = json_body(request)
+    if data is None:
+        # Form-encoded fallback: satu role = satu dict; nilai lain (mis. body
+        # teks mentah) bukan payload matriks izin dan harus ditolak, bukan 500.
+        data = {}
+        for role_code, _ in UserProfile.ROLE_CHOICES:
+            fields = {
+                key.split('.', 1)[1]: value
+                for key, value in request.POST.items()
+                if key.startswith(f'{role_code}.')
+            }
+            if fields:
+                data[role_code] = fields
+        if not data:
+            from django.http import JsonResponse
+            return JsonResponse(
+                {'success': False, 'error': 'Payload matriks izin tidak valid.'},
+                status=400,
+            )
 
     changes = []
     for role_code, _ in UserProfile.ROLE_CHOICES:
@@ -375,12 +394,28 @@ def update_user_custom_permissions(request, user_id):
         defaults={'role': 'ASESOR'}
     )
 
-    try:
-        data = json.loads(request.body)
-    except json.JSONDecodeError:
-        data = request.POST
+    data = json_body(request)
+    if data is None:
+        custom_perms = {
+            key: value for key, value in request.POST.items()
+            if key.startswith('custom_permissions.')
+        }
+        if custom_perms:
+            data = {'custom_permissions': custom_perms}
+        else:
+            from django.http import JsonResponse
+            return JsonResponse(
+                {'success': False, 'error': 'Payload hak akses tidak valid.'},
+                status=400,
+            )
 
     custom_perms = data.get('custom_permissions', {})
+    if not isinstance(custom_perms, dict):
+        from django.http import JsonResponse
+        return JsonResponse(
+            {'success': False, 'error': 'custom_permissions harus berupa objek.'},
+            status=400,
+        )
     profile.custom_permissions = custom_perms
     profile.save(update_fields=['custom_permissions', 'updated_at'])
 

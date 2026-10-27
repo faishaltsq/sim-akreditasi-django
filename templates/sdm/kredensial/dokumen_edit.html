@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block page_title %}Isi {{ title }}{% endblock %}
+{% block page_subtitle %}Dokumen pendukung kredensial{% endblock %}
+{% block content %}
+<div class="container-fluid p-0">
+    <a class="small text-decoration-none" href="{% url 'sdm:kredensial_pengajuan_sendiri' %}"><i class="bi bi-arrow-left me-1"></i>Kembali</a>
+    <h1 class="page-title h4 mt-2 mb-3">Isi {{ title }}</h1>
+
+    <div class="card border shadow-sm">
+        <div class="card-header bg-white"><h2 class="h6 mb-0">Isian Manual</h2></div>
+        <div class="card-body">
+            <p class="small text-muted mb-3">
+                Data identitas pegawai diambil sistem dari profil Anda. Isian di bawah ini
+                wajib diisi manusia dan tidak pernah dikarang sistem.
+            </p>
+            <form method="post">
+                {% csrf_token %}
+                {% for field in manual_fields %}
+                <div class="mb-2">
+                    <label class="form-label small fw-semibold" for="df-{{ field.key }}">{{ field.key|title }}</label>
+                    <textarea id="df-{{ field.key }}" name="{{ field.key }}" class="form-control form-control-sm" rows="3">{{ field.value }}</textarea>
+                    <div class="form-text">{{ field.label }}</div>
+                </div>
+                {% empty %}
+                <p class="small text-muted">Dokumen ini tidak memerlukan isian manual.</p>
+                {% endfor %}
+                <div class="d-flex flex-wrap gap-2 mt-3">
+                    <button class="btn btn-primary btn-sm" type="submit">Simpan Isian</button>
+                    <button class="btn btn-outline-success btn-sm" type="submit" formaction="{% url 'sdm:dokumen_kredensial_finalize' jenis %}">Finalkan Dokumen</button>
+                    {% if has_final %}
+                    <a class="btn btn-outline-secondary btn-sm" href="{% url 'sdm:dokumen_kredensial_download' jenis %}">Unduh PDF</a>
+                    {% endif %}
+                    <a class="btn btn-outline-secondary btn-sm" href="{% url 'sdm:kredensial_pengajuan_sendiri' %}">Batal</a>
+                </div>
+            </form>
+            <p class="small text-muted mt-2 mb-0">
+                Menekan Finalkan Dokumen akan menyimpan isian sekaligus membuat PDF versi baru
+                yang menggantikan versi sebelumnya.
+            </p>
+        </div>
+    </div>
+</div>
+{% endblock %}

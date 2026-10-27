@@ -108,6 +108,26 @@ urlpatterns = [
     ),
     path('kredensial/baru/', views.kredensial_create, name='kredensial_create'),
     path(
+        'kredensial/dokumen/<str:jenis>/generate/',
+        views.dokumen_kredensial_generate,
+        name='dokumen_kredensial_generate',
+    ),
+    path(
+        'kredensial/dokumen/<str:jenis>/ubah/',
+        views.dokumen_kredensial_edit,
+        name='dokumen_kredensial_edit',
+    ),
+    path(
+        'kredensial/dokumen/<str:jenis>/finalkan/',
+        views.dokumen_kredensial_finalize,
+        name='dokumen_kredensial_finalize',
+    ),
+    path(
+        'kredensial/dokumen/<str:jenis>/unduh/',
+        views.dokumen_kredensial_download,
+        name='dokumen_kredensial_download',
+    ),
+    path(
         'kredensial/<uuid:request_id>/kewenangan/',
         views.kredensial_add_privilege,
         name='kredensial_add_privilege',
@@ -231,6 +251,17 @@ urlpatterns = [
     ),
     path('logbook/', views.logbook_list, name='logbook_list'),
     path('logbook/baru/', views.logbook_create, name='logbook_create'),
+    path('logbook/cepat/', views.logbook_cepat, name='logbook_cepat'),
+    path(
+        'logbook/verifikasi/',
+        views.logbook_verifikasi,
+        name='logbook_verifikasi',
+    ),
+    path(
+        'logbook/<uuid:entry_id>/verifikasi/',
+        views.logbook_verifikasi_aksi,
+        name='logbook_verifikasi_aksi',
+    ),
     path(
         'logbook/<uuid:entry_id>/ubah/',
         views.logbook_edit,

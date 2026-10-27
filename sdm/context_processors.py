@@ -4,7 +4,7 @@ from django.db.models import Q
 from django.utils import timezone
 
 from accounts.models import UserProfile
-from sdm.models import HcGrant
+from sdm.models import HcGrant, Pegawai
 
 
 def granted_capabilities(user, *, today=None):
@@ -37,6 +37,26 @@ def granted_capabilities(user, *, today=None):
     }
 
 
+def _has_linked_pegawai(user):
+    """True when the account is bound to an sdm.Pegawai row.
+
+    ``request.user`` is a ``SimpleLazyObject``; a plain ``getattr`` there goes
+    through ``__getattr__`` and can miss the reverse ``akun`` descriptor. The
+    explicit query is unambiguous and also avoids ``RelatedObjectDoesNotExist``
+    (an ``AttributeError`` subclass) leaking out of the descriptor.
+    """
+    if not getattr(user, 'pk', None):
+        return False
+    return Pegawai.objects.filter(akun_id=user.pk).exists()
+
+
+def _is_nakes(user):
+    if not getattr(user, 'is_authenticated', False):
+        return False
+    profile = UserProfile.objects.filter(user_id=user.pk).only('role').first()
+    return profile is not None and profile.is_nakes
+
+
 def hc_navigation(request):
     user = getattr(request, 'user', None)
     if user is None or not getattr(user, 'is_authenticated', False):
@@ -45,12 +65,15 @@ def hc_navigation(request):
     if not hasattr(request, '_hc_navigation_cache'):
         try:
             capabilities = granted_capabilities(user)
+            pribadi = _has_linked_pegawai(user) or _is_nakes(user)
         except DatabaseError:
             # This processor runs on every page. During a deploy the new code can
             # serve before migrations finish; a missing sdm table must degrade to
             # "no Human Capital menu", never to a 500 on unrelated pages.
             capabilities = set()
+            pribadi = False
         request._hc_navigation_cache = {
+            'nav_kredensial_pribadi': pribadi,
             'nav_pegawai': 'can_view_hc' in capabilities,
             'nav_formasi': 'can_plan_hc_workforce' in capabilities,
             'nav_rekrutmen': 'can_manage_hc_recruitment' in capabilities,

@@ -386,6 +386,57 @@ class DokumenSyaratKredensial(models.Model):
         return f'{self.get_domain_display()} — {self.get_jenis_display()} ({self.get_status_display()})'
 
 
+class DrafDokumenKredensial(models.Model):
+    """Editable draft of one generatable credential document.
+
+    Holds only fields a human must supply or confirm; identity data is
+    rendered from the employee profile at generate time. The finished PDF
+    lands in ``versi_dokumen`` so the existing checklist can find it.
+    """
+
+    STATUS_CHOICES = [
+        ('DRAF', 'Draf'),
+        ('FINAL', 'Final'),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    pegawai = models.ForeignKey(
+        'sdm.Pegawai', on_delete=models.PROTECT,
+        related_name='draf_dokumen_kredensial', verbose_name='Pegawai',
+    )
+    jenis = models.CharField(
+        'Jenis Dokumen', max_length=30, choices=DokumenSyaratKredensial.JENIS_CHOICES,
+    )
+    isian = models.JSONField('Isian Manual', default=dict, blank=True)
+    status = models.CharField(
+        'Status', max_length=6, choices=STATUS_CHOICES, default='DRAF',
+    )
+    versi_dokumen = models.ForeignKey(
+        'sdm.VersiDokumen', on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='draf_dokumen_kredensial', verbose_name='Versi Hasil PDF',
+    )
+    nomor_surat = models.CharField('Nomor Surat', max_length=100, blank=True, default='')
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='sdm_draf_dokumen_created', verbose_name='Dibuat Oleh',
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = 'Draf Dokumen Kredensial'
+        verbose_name_plural = 'Draf Dokumen Kredensial'
+        ordering = ['pegawai', 'jenis']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['pegawai', 'jenis'],
+                name='sdm_draf_dok_pegawai_jenis_uniq',
+            ),
+        ]
+
+    def __str__(self):
+        return f'{self.pegawai_id} : {self.get_jenis_display()} ({self.get_status_display()})'
+
 class TahapKredensial(models.Model):
     """D-3: append-only stage transition for a credential request.
 

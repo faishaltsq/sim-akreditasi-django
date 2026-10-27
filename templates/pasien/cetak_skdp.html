@@ -53,7 +53,7 @@
             <tr><td class="label" style="width:140px;">Tanggal Kontrol</td><td class="sep">:</td><td><strong style="font-size:12pt; color:#414CB8;">{{ discharge.jadwal_kontrol|date:"d F Y"|default:"Belum ditentukan" }}</strong></td></tr>
             <tr><td class="label">Poliklinik Tujuan</td><td class="sep">:</td><td>{{ k.poliklinik|default:"Poli Spesialis" }}</td></tr>
             <tr><td class="label">Dokter (DPJP)</td><td class="sep">:</td><td>dr. {{ k.dpjp|default:"Spesialis Terkait" }}</td></tr>
-            <tr><td class="label">Terapi Lanjutan</td><td class="sep">:</td><td>{{ discharge.skdp_terapi|default:discharge.obat_pulang|default:"Melanjutkan terapi tertera pada resep obat pulang." }}</td></tr>
+            <tr><td class="label">Terapi Lanjutan</td><td class="sep">:</td><td>{% if discharge %}{{ discharge.skdp_terapi|default:discharge.obat_pulang|default:"Melanjutkan terapi tertera pada resep obat pulang." }}{% else %}Melanjutkan terapi tertera pada resep obat pulang.{% endif %}</td></tr>
         </table>
     </div>
 

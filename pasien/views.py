@@ -7,6 +7,7 @@ from django.db import transaction
 from django.db.models import Count, Avg, Sum, Q
 from django.http import HttpResponse, JsonResponse
 from .decorators import require_patient_module
+from akreditasi.input_parsing import parse_int
 from django.utils import timezone
 from datetime import timedelta
 
@@ -1503,7 +1504,7 @@ def general_consent_simpan(request, kunjungan_id):
 def cetak_general_consent(request, pk):
     """Cetak Dokumen Akreditasi Standar STARKES HPK: Formulir General Consent Rawat Inap (A4)."""
     k = get_object_or_404(
-        KunjunganPasien.objects.select_related('pasien', 'bed__ruangan', 'dpjp'),
+        KunjunganPasien.objects.select_related('pasien', 'bed__ruangan'),
         pk=pk
     )
     consent = getattr(k, 'general_consent_doc', None)
@@ -1576,7 +1577,14 @@ def fast_track_igd(request):
 
     nama = request.POST.get('nama_pasien', '').strip() or 'Mr./Mrs. X'
     jk = request.POST.get('jenis_kelamin', 'L')
-    usia = int(request.POST.get('estimasi_usia', 30) or 30)
+    usia_raw = request.POST.get('estimasi_usia')
+    usia = parse_int(usia_raw, 30)
+    if usia_raw and usia is None:
+        messages.error(request, 'Estimasi usia harus berupa angka.')
+        return redirect('pasien:pendaftaran_dashboard')
+    if usia is None or not 0 <= usia <= 150:
+        messages.error(request, 'Estimasi usia harus di antara 0 dan 150 tahun.')
+        return redirect('pasien:pendaftaran_dashboard')
     triage_val = request.POST.get('triage', 'MERAH')
     keluhan = request.POST.get('keluhan', '').strip() or 'Observasi IGD'
 

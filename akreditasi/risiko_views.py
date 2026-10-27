@@ -15,6 +15,8 @@ from decimal import Decimal
 
 from .risiko_models import RisikoUnit, TindakLanjutRisiko, InsidenKeselamatan, IndikatorMutu, CatatanIndikator
 from .models import UnitKerja, AuditLog, Category, StandardItem
+from .akses_indikator import HOSPITAL_WIDE_ROLES, unit_scope_ids
+from .input_parsing import invalid_query_int, parse_int, query_int
 # Peran pengelola dipakai template evaluasi (tombol Input Capaian/Edit Indikator).
 from .indikator_views import _is_manager
 
@@ -40,6 +42,44 @@ def _risk_matrix_summary(qs):
     for r in qs.values('dampak', 'probabilitas').annotate(n=Count('id')):
         matrix[(r['dampak'], r['probabilitas'])] = r['n']
     return matrix
+
+
+# ── Izin kelola risiko ───────────────────────────────────────────────────
+# Satu gerbang untuk kelima view tulis/ubah risiko. Sebelumnya view-view ini
+# hanya @login_required sehingga ASESOR (read-only) bisa mengedit dan menghapus
+# register risiko unit mana pun.
+
+def _boleh_kelola_risiko(user):
+    """True bila ``user`` boleh menginput/mengubah/menghapus risiko."""
+    if not user.is_authenticated:
+        return False
+    if user.is_superuser:
+        return True
+    profile = getattr(user, 'profile', None)
+    return bool(profile and profile.has_permission('can_manage_risiko'))
+
+def _tolak_kelola_risiko(request):
+    messages.error(
+        request,
+        'Anda tidak memiliki hak untuk mengubah data risiko. '
+        'Hubungi Admin RS bila akses ini dibutuhkan.',
+    )
+    return redirect('akreditasi:risiko_daftar')
+
+def _risiko_dalam_lingkup(risiko, profile):
+    """True bila ``risiko`` berada dalam lingkup unit ``profile``.
+
+    Lingkup memakai ``unit_scope_ids`` (unit sendiri + 2 level turunan +
+    2 level leluhur) agar konsisten dengan modul Indikator Mutu dan Logbook.
+    """
+    if profile is None or not getattr(profile, 'is_unit_scoped', False):
+        return True
+    if getattr(profile, 'role', None) in HOSPITAL_WIDE_ROLES:
+        return True
+    unit = getattr(profile, 'unit_kerja', None)
+    if unit is None:
+        return True
+    return risiko.unit_id in unit_scope_ids(unit)
 
 
 def _skor_color(skor):
@@ -329,6 +369,8 @@ def risiko_daftar(request):
 
 @login_required
 def risiko_input(request):
+    if not _boleh_kelola_risiko(request.user):
+        return _tolak_kelola_risiko(request)
     profile = getattr(request.user, 'profile', None)
     # Unit-scoped user: hanya unitnya sendiri + child units
     if profile and profile.is_unit_scoped and profile.unit_kerja:
@@ -516,6 +558,10 @@ def risiko_input(request):
 @login_required
 def risiko_detail(request, risiko_id):
     risiko = get_object_or_404(RisikoUnit.objects.select_related('unit', 'indikator_mutu_terkait', 'created_by'), pk=risiko_id)
+    profile = getattr(request.user, 'profile', None)
+    boleh_kelola = _boleh_kelola_risiko(request.user) and _risiko_dalam_lingkup(risiko, profile)
+    if request.method == 'POST' and not boleh_kelola:
+        return _tolak_kelola_risiko(request)
     # Ringkasan kebutuhan bukti EP per baris. Sekali per EP, bukan sekali per
     # baris — beberapa aksi boleh menunjuk EP yang sama.
     from .ep_sync import bukti_ringkas
@@ -594,6 +640,8 @@ def risiko_edit(request, risiko_id):
     risiko = get_object_or_404(RisikoUnit, pk=risiko_id)
 
     profile = getattr(request.user, 'profile', None)
+    if not _boleh_kelola_risiko(request.user) or not _risiko_dalam_lingkup(risiko, profile):
+        return _tolak_kelola_risiko(request)
     if profile and profile.is_unit_scoped and profile.unit_kerja:
         user_unit = profile.unit_kerja
         unit_ids = [user_unit.id] + list(UnitKerja.objects.filter(parent=user_unit).values_list('id', flat=True))
@@ -734,6 +782,9 @@ def risiko_edit(request, risiko_id):
 @login_required
 def risiko_hapus(request, risiko_id):
     risiko = get_object_or_404(RisikoUnit, pk=risiko_id)
+    profile = getattr(request.user, 'profile', None)
+    if not _boleh_kelola_risiko(request.user) or not _risiko_dalam_lingkup(risiko, profile):
+        return _tolak_kelola_risiko(request)
     if request.method == 'POST':
         unit_name = str(risiko.unit)
         jenis = risiko.jenis_risiko[:60]
@@ -808,6 +859,14 @@ def _indikator_rencana(risiko):
 @login_required
 def risiko_evaluasi(request, risiko_id):
     risiko = get_object_or_404(RisikoUnit.objects.select_related('unit', 'indikator_mutu_terkait', 'created_by'), pk=risiko_id)
+    profile = getattr(request.user, 'profile', None)
+    # Halaman evaluasi tetap boleh DIBACA siapa pun yang login (template
+    # menyembunyikan tombol aksi dari non-manager). Hanya POST yang digerbangi.
+    if request.method == 'POST' and (
+        not _boleh_kelola_risiko(request.user)
+        or not _risiko_dalam_lingkup(risiko, profile)
+    ):
+        return _tolak_kelola_risiko(request)
 
     if request.method == 'POST':
         try:
@@ -1117,7 +1176,10 @@ def risiko_monev_export_csv(request):
         allowed_ids = [user_unit.id] + list(UnitKerja.objects.filter(parent=user_unit).values_list('id', flat=True))
         qs = qs.filter(unit_id__in=allowed_ids)
 
-    unit_id = request.GET.get('unit')
+    unit_id = query_int(request, 'unit')
+    if invalid_query_int(request, 'unit'):
+        messages.error(request, 'Parameter unit tidak valid.')
+        return redirect('akreditasi:risiko_monev')
     if unit_id:
         qs = qs.filter(unit_id=unit_id)
 
@@ -1269,7 +1331,10 @@ def risiko_laporan(request, unit_id=None):
         except (UnitKerja.DoesNotExist, ValueError):
             sel_unit = None
 
-    tahun   = request.GET.get('tahun', '2026')
+    tahun   = request.GET.get('tahun', '2026') or '2026'
+    if parse_int(tahun) is None:
+        messages.error(request, 'Parameter tahun tidak valid.')
+        tahun = '2026'
     periode = request.GET.get('periode', '')
 
     qs = RisikoUnit.objects.select_related('unit', 'indikator_mutu_terkait', 'indikator_mutu_terkait__ep_terkait', 'created_by').prefetch_related('tindak_lanjut').all()
@@ -1546,25 +1611,29 @@ def risiko_fmea_rca(request):
 
         unit_ids = _collect_ids(user_unit)
         units = UnitKerja.objects.filter(id__in=unit_ids)
-        unit_id = request.GET.get('unit')
+        unit_id = query_int(request, 'unit')
         if not unit_id:
             qs = qs.filter(unit_id__in=unit_ids)
             default_filter_unit = str(user_unit.id)
         else:
             qs = qs.filter(unit_id=unit_id)
-            default_filter_unit = unit_id
+            default_filter_unit = str(unit_id)
     else:
         units = UnitKerja.objects.all()
-        unit_id = request.GET.get('unit')
+        unit_id = query_int(request, 'unit')
         if unit_id:
             qs = qs.filter(unit_id=unit_id)
-        default_filter_unit = unit_id or ''
+        default_filter_unit = str(unit_id) if unit_id else ''
 
     # ── Filters ──────────────────────────────────────────────────────────
     tahun = request.GET.get('tahun')
     status = request.GET.get('status')
     if tahun:
-        qs = qs.filter(tahun=tahun)
+        tahun_int = parse_int(tahun)
+        if tahun_int is None:
+            messages.error(request, 'Parameter tahun tidak valid.')
+        else:
+            qs = qs.filter(tahun=tahun_int)
     if status:
         qs = qs.filter(status=status)
 
@@ -1770,8 +1839,14 @@ def risiko_perencanaan_unit(request, unit_id=None):
 def risiko_perencanaan_export_csv(request):
     """Ekspor Tabel Perencanaan Risiko (Indikator & Rencana Aksi) ke format CSV UTF-8 BOM."""
     import csv
-    unit_id = request.GET.get('unit')
+    unit_id = query_int(request, 'unit')
     tahun_raw = request.GET.get('tahun')
+    if invalid_query_int(request, 'unit'):
+        messages.error(request, 'Parameter unit tidak valid.')
+        return redirect('akreditasi:risiko_perencanaan')
+    if tahun_raw and parse_int(tahun_raw) is None:
+        messages.error(request, 'Parameter tahun tidak valid.')
+        return redirect('akreditasi:risiko_perencanaan')
 
     profile = getattr(request.user, 'profile', None)
     if profile and profile.is_unit_scoped and profile.unit_kerja:
@@ -1781,7 +1856,7 @@ def risiko_perencanaan_export_csv(request):
     else:
         target_unit = UnitKerja.objects.first()
 
-    tahun = int(tahun_raw) if tahun_raw and tahun_raw.isdigit() else 2026
+    tahun = parse_int(tahun_raw, 2026)
 
     risiko_qs = RisikoUnit.objects.filter(unit=target_unit, tahun=tahun).select_related(
         'unit', 'indikator_mutu_terkait'
@@ -1927,8 +2002,14 @@ def risiko_pelaksanaan_unit(request, unit_id=None):
 def risiko_pelaksanaan_export_csv(request):
     """Ekspor Dokumen Pelaksanaan Risiko (Siklus DO) ke CSV UTF-8 BOM."""
     import csv
-    unit_id = request.GET.get('unit')
+    unit_id = query_int(request, 'unit')
     tahun_raw = request.GET.get('tahun')
+    if invalid_query_int(request, 'unit'):
+        messages.error(request, 'Parameter unit tidak valid.')
+        return redirect('akreditasi:risiko_pelaksanaan')
+    if tahun_raw and parse_int(tahun_raw) is None:
+        messages.error(request, 'Parameter tahun tidak valid.')
+        return redirect('akreditasi:risiko_pelaksanaan')
 
     profile = getattr(request.user, 'profile', None)
     if profile and profile.is_unit_scoped and profile.unit_kerja:
@@ -1938,7 +2019,7 @@ def risiko_pelaksanaan_export_csv(request):
     else:
         target_unit = UnitKerja.objects.first()
 
-    tahun = int(tahun_raw) if tahun_raw and tahun_raw.isdigit() else 2026
+    tahun = parse_int(tahun_raw, 2026)
 
     risiko_qs = RisikoUnit.objects.filter(unit=target_unit, tahun=tahun).select_related(
         'unit', 'indikator_mutu_terkait', 'indikator_mutu_terkait__ep_terkait'

@@ -94,6 +94,12 @@ class FmeaRcaFormPostTest(TestCase):
     def setUpTestData(cls):
         cls.unit = UnitKerja.objects.create(code='TEST-IGD2', name='Test IGD 2')
         cls.user = User.objects.create_user('tester_form', password='x')
+        # View tulis risiko digerbangi can_manage_risiko (QA 2026-10-27):
+        # user tanpa profil berperan STAF_NAKES yang tidak berwenang menginput.
+        from accounts.models import UserProfile
+        profile, _ = UserProfile.objects.get_or_create(user=cls.user)
+        profile.role = 'ADMIN_RS'
+        profile.save()
 
     def setUp(self):
         self.client = Client()
@@ -181,6 +187,10 @@ class FmeaRcaViewTest(TestCase):
     def setUpTestData(cls):
         cls.unit = UnitKerja.objects.create(code='TEST-IGD3', name='Test IGD 3')
         cls.user = User.objects.create_user('tester_view', password='x')
+        from accounts.models import UserProfile
+        profile, _ = UserProfile.objects.get_or_create(user=cls.user)
+        profile.role = 'ADMIN_RS'
+        profile.save()
         cls.fmea = RisikoUnit.objects.create(
             unit=cls.unit, tahun=2026, periode='TAHUNAN',
             kategori_risiko='KLINIS', jenis_risiko='Risiko FMEA UJI',

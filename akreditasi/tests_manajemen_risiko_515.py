@@ -11,12 +11,19 @@ from django.contrib.auth.models import User
 from akreditasi.models import UnitKerja
 from akreditasi.risiko_models import RisikoUnit
 from akreditasi.tests_utils import reset_rate_limit
+from accounts.models import UserProfile
 
 
 class Standar515KategoriDanFieldsTest(TestCase):
     def setUp(self):
         reset_rate_limit()
+        # View tulis risiko kini digerbangi can_manage_risiko (QA 2026-10-27):
+        # user tanpa profil/default ADMIN_RS adalah STAF_NAKES yang tidak
+        # berwenang menginput. Uji ini menguji penyimpanan field, bukan peran.
         self.user = User.objects.create_user(username='risk.officer', password='password123')
+        profile, _ = UserProfile.objects.get_or_create(user=self.user)
+        profile.role = 'ADMIN_RS'
+        profile.save()
         self.unit = UnitKerja.objects.create(name='Instalasi Farmasi Test', code='FARM-TEST-515', level=2)
         self.client = Client()
         self.client.login(username='risk.officer', password='password123')
