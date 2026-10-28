@@ -1,3 +1,4 @@
+import base64
 import datetime
 import hashlib
 from datetime import timedelta
@@ -91,6 +92,7 @@ from sdm.models import (
     VersiDokumen,
     calculate_formasi,
 )
+from akreditasi.models import EvidenceReq
 from sdm.services.kepatuhan import (
     documents_for_employee,
     evaluate_employee_compliance,
@@ -2126,6 +2128,11 @@ def kps_report(request):
         'employee_count': artifact['employee_count'],
         'workbook_hash': artifact['workbook_hash'],
     }
+    # Byte workbook ikut disimpan di session (base64) supaya publikasi menerbitkan
+    # berkas nyata, bukan turunan kosong; hanya turunan tersanitasi yang disimpan.
+    request.session['kps_pack_bytes'] = base64.b64encode(
+        artifact['workbook_bytes']
+    ).decode('ascii')
     return redirect('sdm:kps_pack_preview')
 
 
@@ -2135,7 +2142,15 @@ def kps_pack_preview(request):
     if not artifact:
         messages.error(request, 'Tidak ada paket KPS yang tersedia.')
         return redirect('sdm:analitik_dashboard')
-    return render(request, 'sdm/kps/pack_preview.html', {'artifact': artifact})
+    requirement_options = EvidenceReq.objects.filter(
+        standard_item__category__code='KPS',
+        standard_item__sdm_mappings__framework_id=artifact['framework_id'],
+        standard_item__sdm_mappings__is_active=True,
+    ).select_related('standard_item').distinct().order_by('standard_item__code')
+    return render(request, 'sdm/kps/pack_preview.html', {
+        'artifact': artifact,
+        'requirement_options': requirement_options,
+    })
 
 
 @login_required
@@ -2146,10 +2161,12 @@ def kps_pack_publish(request):
     if not artifact:
         raise PermissionDenied('Paket tidak tersedia.')
     requirement_id = (request.POST.get('requirement') or '').strip()
+    raw = request.session.pop('kps_pack_bytes', '') or ''
+    workbook_bytes = base64.b64decode(raw) if raw else b''
     try:
         publish_kps_artifact(
             actor=request.user,
-            artifact={**artifact, 'workbook_bytes': b''},
+            artifact={**artifact, 'workbook_bytes': workbook_bytes},
             requirement_id=requirement_id,
         )
     except (PermissionDenied, ValidationError) as exc:

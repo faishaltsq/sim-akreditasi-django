@@ -107,34 +107,58 @@ def build_kps_pack(*, actor, employee_ids, framework_id, as_of=None):
 
 def publish_kps_artifact(*, actor, artifact, requirement_id):
     """Publish the artifact as a sanitized EvidenceFile only after review.
+    The private original remains in the HC vault; the published copy is stored
+    through the default storage and starts at REVIEW, never auto-approved.
 
-    The private original remains in the HC vault. Returns the EvidenceFile.
+    Two independent authorities are required: a scoped HC export grant
+    (``can_export_hc``) and the platform-level KPS verification permission
+    (``RolePermissionConfig.can_verify_kps``). The latter is deliberately an
+    account-role permission, not an HC grant: an ordinary export permission
+    must not imply publication authority.
     """
     require_hc_capability(actor, 'can_export_hc')
-    require_hc_capability(actor, 'can_verify_kps')
-
-    from akreditasi.models import EvidenceReq
-
+    _require_kps_verify_permission(actor)
+    from django.core.files.base import ContentFile
     requirement = EvidenceReq.objects.filter(pk=requirement_id).first()
     if requirement is None:
         raise ValidationError({'requirement': 'Elemen penilaian tidak ditemukan.'})
-
-    # Never auto-approve: target review starts REVIEW, requiring owner approval.
+    workbook_bytes = artifact.get('workbook_bytes') or b''
+    if not workbook_bytes:
+        raise ValidationError({
+            'workbook': (
+                'Paket KPS belum berisi berkas; buat ulang paket sebelum menerbitkan.'
+            )
+        })
+    file_name = f"pack-kps-{requirement.standard_item.code.replace(' ', '-')}.xlsx"
     with transaction.atomic():
-        evidence_file = EvidenceFile.objects.create(
+        evidence_file = EvidenceFile(
             requirement=requirement,
-            original_filename=f'pack-kps-{requirement.title[:40]}.xlsx',
-            storage_key=f'kps-pack/{requirement_id}/{timezone.now().strftime("%Y%m%d%H%M%S")}.xlsx',
-            sha256=artifact['workbook_hash'],
-            size_bytes=len(artifact['workbook_bytes']),
-            content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            file_name=file_name,
+            file_size=f'{len(workbook_bytes) / 1024:.1f} KB',
             status='REVIEW',
         )
+        evidence_file.file.save(file_name, ContentFile(workbook_bytes), save=True)
         PeristiwaSDM.objects.create(
             actor=actor,
             jenis_peristiwa='kps_artifact_published',
             target_tipe='requirement',
             target_id=str(requirement_id),
-            alasan=f'framework={artifact["framework_name"]}; as_of={artifact["as_of"]}; employees={artifact["employee_count"]}',
+            alasan=(
+                f"framework={artifact['framework_name']}; as_of={artifact['as_of']}; "
+                f"employees={artifact['employee_count']}; sha256={artifact['workbook_hash']}"
+            ),
         )
     return evidence_file
+
+
+def _require_kps_verify_permission(actor):
+    """Platform-level KPS verification permission (account role), not an HC grant."""
+    from accounts.models import RolePermissionConfig, UserProfile
+    profile = UserProfile.objects.filter(user=actor).select_related().first()
+    if profile is None:
+        raise PermissionDenied('Verifikasi KPS memerlukan akun terhubung.')
+    if getattr(actor, 'is_superuser', False):
+        return
+    config = RolePermissionConfig.get_config_for_role(profile.role)
+    if not config.can_verify_kps:
+        raise PermissionDenied('Hak verifikasi KPS tidak tersedia.')
