@@ -49,7 +49,9 @@ class CategoryEpGapTests(TestCase):
 
     def test_sidebar_marks_categories_with_missing_ep(self):
         from django.contrib.auth import get_user_model
+        from django.core.cache import cache
         from accounts.models import UserProfile
+        cache.clear()
 
         category = Category.objects.create(
             framework=self.framework, code='KPS', name='Kualifikasi & Pendidikan Staf',
