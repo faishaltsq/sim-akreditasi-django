@@ -161,6 +161,8 @@ def intake_wizard(request, step=1, draft_id=None):
                     'title': f'Input Pegawai — Langkah {step}: {STEP_LABELS[step]}',
                 }, status=409)
         if form.is_valid():
+            ktp_ocr_needed = False
+            staged_ktp_key = ''
             cleaned = dict(form.cleaned_data)
             for field in ('foto_profil', 'berkas'):
                 cleaned.pop(field, None)
