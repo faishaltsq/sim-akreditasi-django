@@ -66,6 +66,19 @@ def save_assignment(assignment):
         overlaps = _overlapping_assignments(assignment)
         _validate_peak_allocation([*overlaps, assignment])
         is_new = assignment.pk is None
+        # Validasi silang Level 2: penempatan baru di unit apa pun wajib punya
+        # legalitas (STR/SIP/SPK) yang masih berlaku. Penempatan yang sudah ada
+        # hanya boleh diperbarui atribut non-penempatan tanpa gate baru.
+        if is_new:
+            from sdm.services.legalitas import placement_legal_blockers
+            blockers = placement_legal_blockers(
+                assignment.pegawai, unit_kerja=assignment.unit_kerja
+            )
+            if blockers:
+                raise ValidationError({
+                    'legalitas': 'Penempatan ditolak: '
+                    + '; '.join(b['alasan'] for b in blockers)
+                })
         assignment.save()
 
     if is_new:

@@ -153,6 +153,33 @@ def _spk_band(sk, as_of):
     return VALID
 
 
+BLOCKING_BANDS = {EXPIRED, ZERO_SEVEN, EIGHT_THIRTY, THIRTY_NINETY}
+
+
+def placement_legal_blockers(employee, *, unit_kerja=None, as_of=None):
+    """Blockers for placing/keeping an employee in a unit: only expired or
+    expiring licenses (STR/SIP/SIPA) and revoked SPK count. A license with no
+    recorded expiry is unknown, not a violation, and never blocks.
+    """
+    status = legal_status(employee, as_of=as_of)
+    blockers = []
+    for item in status.items:
+        if item['source'] == 'none':
+            continue
+        if item.get('revoked') or item['band'] not in BLOCKING_BANDS:
+            continue
+        blockers.append({
+            'subtype': item['subtype'],
+            'nomor': item['nomor_izin'],
+            'label': item['label'],
+            'alasan': (
+                f"{item['subtype']} {item['nomor_izin'] or ''}".strip()
+                + f" berstatus {item['label'].lower()}"
+            ),
+        })
+    return blockers
+
+
 def sync_legal_reminders(*, employee, actor, as_of=None):
     """Create/refresh idempotent legal reminders for expired/urgent licenses and SPK.
 
