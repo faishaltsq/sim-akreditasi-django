@@ -1,6 +1,7 @@
 """Legal EWS: license/SPK status and urgent reminders (Task A3)."""
 
 from dataclasses import dataclass
+from datetime import date
 
 from django.core.exceptions import ValidationError
 from django.db.models import Q
@@ -183,54 +184,60 @@ def placement_legal_blockers(employee, *, unit_kerja=None, as_of=None):
 def sync_legal_reminders(*, employee, actor, as_of=None):
     """Create/refresh idempotent legal reminders for expired/urgent licenses and SPK.
 
-    Idempotency key covers recipient + target UUID/version + policy/band so
-    replacement/revocation is resolved without duplication. Stale unread
-    reminders for a target that is no longer urgent are archived (read_at set).
+    Band legal dipetakan ke band PengingatSDM yang sah; pegawai tanpa akun
+    dilewati (tidak ada penerima in-app) tanpa menggagalkan pemanggil.
+    Pengarsipan hanya menyentuh pengingat legalitas milik pegawai ini, sehingga
+    pengingat dokumen/SPK/orientasi lain tidak ikut tertandai sudah dibaca.
     """
+    from sdm.models.pengingat import LEGAL_BAND_MAP
     as_of = as_of or timezone.localdate()
     status = legal_status(employee, as_of=as_of)
     recipient = getattr(employee, 'akun', None)
-    created = updated = archived = 0
-
+    if recipient is None:
+        return {'created': 0, 'updated': 0, 'archived': 0}
+    created = updated = 0
     urgent_keys = set()
     for item in status.items:
-        if item['band'] not in LEGAL_BANDS or item['state'] == VALID:
+        if item['source'] == 'none' or item['state'] == VALID:
             continue
+        band = LEGAL_BAND_MAP.get(item['band'])
+        if band is None:
+            continue
+        alasan = f"{item['label']}: {item['nomor_izin'] or item['subtype']}"
         key = PengingatSDM.build_key(
             employee_id=employee.pk,
             version_id=f"legal:{item['source']}:{item['nomor_izin'] or item['subtype']}",
-            band=item['band'],
+            band=band,
             target_type='DOCUMENT',
         )
         urgent_keys.add(key)
+        due_date = (
+            date.fromisoformat(item['tanggal_berakhir'])
+            if item['tanggal_berakhir'] else as_of
+        )
         obj, was_created = PengingatSDM.objects.get_or_create(
             idempotency_key=key,
             defaults={
                 'employee': employee,
                 'version': None,
-                'band': item['band'],
+                'band': band,
                 'target_type': 'DOCUMENT',
                 'recipient': recipient,
-                'due_date': as_of,
-                'alasan': f"{item['label']}: {item['nomor_izin'] or item['subtype']}",
+                'due_date': due_date,
+                'alasan': alasan,
             },
         )
         if was_created:
             created += 1
-        else:
-            # Refresh band/alasan if the legal state changed.
-            if obj.band != item['band'] or obj.alasan != f"{item['label']}: {item['nomor_izin'] or item['subtype']}":
-                obj.band = item['band']
-                obj.alasan = f"{item['label']}: {item['nomor_izin'] or item['subtype']}"
-                obj.save(update_fields=['band', 'alasan', 'updated_at'])
-                updated += 1
-
-    # Archive stale unread reminders no longer urgent for this employee.
-    PengingatSDM.objects.filter(
-        employee=employee, recipient=recipient, read_at__isnull=True,
-    ).exclude(idempotency_key__in=urgent_keys).update(read_at=as_of)
+        elif obj.band != band or obj.alasan != alasan or obj.due_date != due_date:
+            obj.band = band
+            obj.alasan = alasan
+            obj.due_date = due_date
+            obj.save(update_fields=['band', 'alasan', 'due_date'])
+            updated += 1
+    # Arsipkan hanya pengingat legalitas milik pegawai ini yang tak lagi urgen.
     archived = PengingatSDM.objects.filter(
-        employee=employee, recipient=recipient, read_at=as_of,
-    ).exclude(idempotency_key__in=urgent_keys).count()
-
+        employee=employee, recipient=recipient, read_at__isnull=True,
+        idempotency_key__startswith='DOCUMENT:',
+    ).exclude(idempotency_key__in=urgent_keys).update(read_at=as_of)
     return {'created': created, 'updated': updated, 'archived': archived}

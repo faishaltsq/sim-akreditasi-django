@@ -125,20 +125,32 @@
                 {% endif %}
             </section>
             <section class="tab-pane fade" id="legal-pane" role="tabpanel" aria-labelledby="legal-tab" tabindex="0">
+                {% if legal.expired_or_urgent %}
+                <div class="alert alert-warning py-2 small" role="alert">
+                    <i class="bi bi-exclamation-triangle me-1"></i>
+                    Legalitas memerlukan tindakan:
+                    {% for item in legal.expired_or_urgent %}<span class="badge text-bg-warning ms-1">{{ item.subtype|default:"Dokumen" }} · {{ item.label }}</span>{% endfor %}
+                </div>
+                {% endif %}
                 <h2 class="h6 mb-2">Izin &amp; legalitas</h2>
                 <div class="table-responsive mb-4">
                     <table class="table table-sm align-middle">
                         <caption class="visually-hidden">Daftar izin profesi pegawai</caption>
-                        <thead><tr><th scope="col">Jenis</th><th scope="col">Nomor</th><th scope="col">Masa berlaku</th><th scope="col">Lokasi praktik</th></tr></thead>
+                        <thead><tr><th scope="col">Jenis</th><th scope="col">Nomor</th><th scope="col">Masa berlaku</th><th scope="col">Status</th><th scope="col">Lokasi praktik</th></tr></thead>
                         <tbody>
                             {% for permit in profile.permits %}
                             <tr>
                                 <td>{{ permit.get_subtype_display }}</td>
                                 <td>{{ permit.nomor_izin|default:"Belum dicatat" }}</td>
                                 <td>{% if permit.validity_mode == 'LIFETIME' %}Seumur hidup{% elif permit.tanggal_berakhir %}{{ permit.tanggal_berakhir|date:"d M Y" }}{% else %}Belum dicatat{% endif %}</td>
+                                <td>
+                                    {% for item in legal.items %}{% if item.source == 'izin_profesi' and item.nomor_izin == permit.nomor_izin %}
+                                    <span class="badge {% if item.band == 'expired' or item.band == '0-7' %}text-bg-danger{% elif item.band == '8-30' or item.band == '31-90' %}text-bg-warning{% elif item.band == 'unknown' %}text-bg-secondary{% else %}text-bg-success{% endif %}">{{ item.label }}</span>
+                                    {% endif %}{% endfor %}
+                                </td>
                                 <td>{{ permit.lokasi_praktik|default:"—" }}{% if permit.is_local_rs %} <span class="badge text-bg-info">RS ini</span>{% endif %}</td>
                             </tr>
-                            {% empty %}<tr><td colspan="4" class="text-muted text-center py-4">Belum ada izin profesi.</td></tr>{% endfor %}
+                            {% empty %}<tr><td colspan="5" class="text-muted text-center py-4">Belum ada izin profesi.</td></tr>{% endfor %}
                         </tbody>
                     </table>
                 </div>

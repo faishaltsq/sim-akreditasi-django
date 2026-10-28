@@ -464,6 +464,8 @@ def pegawai_detail(request, employee_id):
             )
         except PermissionDenied:
             can_manage_documents = False
+    from sdm.services.legalitas import legal_status
+    legal = legal_status(employee)
     return render(request, 'sdm/pegawai/detail.html', {
         'employee': employee,
         'profile': build_staff_profile(employee, viewer=request.user),
@@ -475,6 +477,7 @@ def pegawai_detail(request, employee_id):
         'can_manage': can_manage,
         'can_manage_documents': can_manage_documents,
         'riwayat_list': employee.riwayat_kepegawaian.order_by('-tanggal_tmt', '-pk'),
+        'legal': legal,
     })
 
 

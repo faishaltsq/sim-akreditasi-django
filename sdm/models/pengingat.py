@@ -9,6 +9,14 @@ from django.utils import timezone
 
 BANDS = ('LT_30', 'LT_60', 'LT_90', 'EXPIRED')
 
+# Band legalitas (sdm.services.legalitas) dipetakan ke band PengingatSDM yang sah.
+LEGAL_BAND_MAP = {
+    '0-7': 'LT_30',
+    '8-30': 'LT_30',
+    '31-90': 'LT_90',
+    'expired': 'EXPIRED',
+}
+
 
 class PengingatSDM(models.Model):
     BAND_CHOICES = [
