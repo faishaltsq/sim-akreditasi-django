@@ -17,6 +17,8 @@ Dokumentasi ini disusun secara terpisah per sub-sistem agar mudah dipelajari ole
 | **06** | [**06. SOP Update Fitur & Dokumentasi**](06_STANDAR_OPERASIONAL_UPDATE_FITUR.md) | Developer & Tim IT SIMRS | Tata cara wajib menambah section dokumentasi saat rilis fitur baru |
 | **WEB** | [**Portal Dokumentasi Interaktif (HTML)**](PANDUAN_LENGKAP_RS_MONSISKAMI.html) | Pembaca Browser / Offline | Single-page UI teal-white dengan pencarian real-time & menu responsif |
 
+- **HC & Akreditasi (28 Okt 2026):** Profil pegawai menampilkan seluruh riwayat kepegawaian (tambah/ubah/hapus, tercatat di `PeristiwaSDM`), banner status STR/SIP (expired / ≤7 / ≤30 / ≤90 hari), penempatan unit ditolak bila legalitas kedaluwarsa, publikasi paket KPS menulis berkas bukti nyata ke EP terpetakan, dan sidebar menandai pokja yang EP terpasangnya di bawah target instrumen STARKES 2024.
+
 ---
 
 ## 🌐 Informasi Lingkungan Sistem

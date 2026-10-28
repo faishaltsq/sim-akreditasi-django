@@ -81,35 +81,76 @@
                 {% endif %}
             </section>
             <section class="tab-pane fade" id="employment-pane" role="tabpanel" aria-labelledby="employment-tab" tabindex="0">
-                {% if profile.employment %}
-                <dl class="row mb-0">
-                    <dt class="col-sm-4">Kategori pegawai</dt><dd class="col-sm-8">{{ profile.employment.get_kategori_pegawai_display|default:"Belum dicatat" }}</dd>
-                    <dt class="col-sm-4">TMT</dt><dd class="col-sm-8">{{ profile.employment.tanggal_tmt|date:"d M Y"|default:"Belum dicatat" }}</dd>
-                    <dt class="col-sm-4">Masa kerja</dt><dd class="col-sm-8">{% if profile.tenure_days is not None %}{{ profile.tenure_days }} hari{% else %}Belum dapat dihitung{% endif %}</dd>
-                    <dt class="col-sm-4">Nomor kontrak</dt><dd class="col-sm-8">{{ profile.employment.nomor_kontrak|default:"Belum dicatat" }}</dd>
-                    <dt class="col-sm-4">Jam kontrak / minggu</dt><dd class="col-sm-8">{{ profile.employment.jam_kontrak_per_minggu|default:"Belum dicatat" }}</dd>
-                    <dt class="col-sm-4">Jam fulltime referensi</dt><dd class="col-sm-8">{{ profile.employment.jam_fulltime_referensi|default:"Belum dikonfigurasi" }}</dd>
-                    <dt class="col-sm-4">Status tinjauan</dt><dd class="col-sm-8">{{ profile.employment.get_review_status_display|default:"Belum dicatat" }}</dd>
-                </dl>
+                <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+                    <div>
+                        <h2 class="h6 mb-1">Riwayat Kepegawaian</h2>
+                        <p class="small text-muted mb-0">Setiap perubahan status/kategori kepegawaian beserta SK dan TMT-nya.</p>
+                    </div>
+                    {% if can_manage %}
+                    <a class="btn btn-outline-primary btn-sm" href="{% url 'sdm:riwayat_create' employee.pk %}"><i class="bi bi-plus-lg me-1"></i>Tambah Riwayat</a>
+                    {% endif %}
+                </div>
+                {% if riwayat_list %}
+                <div class="table-responsive">
+                    <table class="table table-sm align-middle">
+                        <caption class="visually-hidden">Riwayat kepegawaian pegawai</caption>
+                        <thead><tr><th scope="col">TMT</th><th scope="col">Kategori</th><th scope="col">Jabatan Struktural</th><th scope="col">Kontrak</th><th scope="col">Status Tinjauan</th><th scope="col">Aksi</th></tr></thead>
+                        <tbody>
+                            {% for item in riwayat_list %}
+                            <tr>
+                                <td>{% if item.tanggal_tmt %}{{ item.tanggal_tmt|date:"d M Y" }}{% if item.tanggal_akhir %} – {{ item.tanggal_akhir|date:"d M Y" }}{% endif %}{% else %}Belum dicatat{% endif %}</td>
+                                <td>{{ item.get_kategori_pegawai_display }}</td>
+                                <td>{{ item.jabatan_struktural|default:"—" }}</td>
+                                <td class="small">{{ item.nomor_kontrak|default:"—" }}{% if item.tanggal_selesai_kontrak %}<div class="text-muted">s/d {{ item.tanggal_selesai_kontrak|date:"d M Y" }}</div>{% endif %}</td>
+                                <td>{{ item.get_review_status_display }}</td>
+                                <td class="text-nowrap">
+                                    {% if can_manage %}
+                                    <a class="small" href="{% url 'sdm:riwayat_edit' employee.pk item.pk %}">Ubah</a>
+                                    <form method="post" action="{% url 'sdm:riwayat_delete' employee.pk item.pk %}" class="d-inline">
+                                        {% csrf_token %}
+                                        <button type="submit" class="btn btn-link btn-sm small p-0 ms-2 text-danger text-decoration-none">Hapus</button>
+                                    </form>
+                                    {% else %}<span class="small text-muted">—</span>{% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
                 {% else %}
-                <p class="text-muted mb-0">Riwayat kepegawaian belum dicatat.</p>
+                <p class="text-muted mb-0">Riwayat kepegawaian belum dicatat.{% if can_manage %} <a href="{% url 'sdm:riwayat_create' employee.pk %}">Tambahkan riwayat pertama</a>.{% endif %}</p>
+                {% endif %}
+                {% if profile.employment %}
+                <p class="small text-muted mt-3 mb-0">Masa kerja dihitung dari TMT {{ profile.employment.tanggal_tmt|date:"d M Y"|default:"belum dicatat" }}: {% if profile.tenure_days is not None %}{{ profile.tenure_days }} hari{% else %}belum dapat dihitung{% endif %}.</p>
                 {% endif %}
             </section>
             <section class="tab-pane fade" id="legal-pane" role="tabpanel" aria-labelledby="legal-tab" tabindex="0">
+                {% if legal.expired_or_urgent %}
+                <div class="alert alert-warning py-2 small" role="alert">
+                    <i class="bi bi-exclamation-triangle me-1"></i>
+                    Legalitas memerlukan tindakan:
+                    {% for item in legal.expired_or_urgent %}<span class="badge text-bg-warning ms-1">{{ item.subtype|default:"Dokumen" }} · {{ item.label }}</span>{% endfor %}
+                </div>
+                {% endif %}
                 <h2 class="h6 mb-2">Izin &amp; legalitas</h2>
                 <div class="table-responsive mb-4">
                     <table class="table table-sm align-middle">
                         <caption class="visually-hidden">Daftar izin profesi pegawai</caption>
-                        <thead><tr><th scope="col">Jenis</th><th scope="col">Nomor</th><th scope="col">Masa berlaku</th><th scope="col">Lokasi praktik</th></tr></thead>
+                        <thead><tr><th scope="col">Jenis</th><th scope="col">Nomor</th><th scope="col">Masa berlaku</th><th scope="col">Status</th><th scope="col">Lokasi praktik</th></tr></thead>
                         <tbody>
                             {% for permit in profile.permits %}
                             <tr>
                                 <td>{{ permit.get_subtype_display }}</td>
                                 <td>{{ permit.nomor_izin|default:"Belum dicatat" }}</td>
                                 <td>{% if permit.validity_mode == 'LIFETIME' %}Seumur hidup{% elif permit.tanggal_berakhir %}{{ permit.tanggal_berakhir|date:"d M Y" }}{% else %}Belum dicatat{% endif %}</td>
+                                <td>
+                                    {% for item in legal.items %}{% if item.source == 'izin_profesi' and item.nomor_izin == permit.nomor_izin %}
+                                    <span class="badge {% if item.band == 'expired' or item.band == '0-7' %}text-bg-danger{% elif item.band == '8-30' or item.band == '31-90' %}text-bg-warning{% elif item.band == 'unknown' %}text-bg-secondary{% else %}text-bg-success{% endif %}">{{ item.label }}</span>
+                                    {% endif %}{% endfor %}
+                                </td>
                                 <td>{{ permit.lokasi_praktik|default:"—" }}{% if permit.is_local_rs %} <span class="badge text-bg-info">RS ini</span>{% endif %}</td>
                             </tr>
-                            {% empty %}<tr><td colspan="4" class="text-muted text-center py-4">Belum ada izin profesi.</td></tr>{% endfor %}
+                            {% empty %}<tr><td colspan="5" class="text-muted text-center py-4">Belum ada izin profesi.</td></tr>{% endfor %}
                         </tbody>
                     </table>
                 </div>

@@ -51,6 +51,7 @@
             carrier.items.add(files[0]);
             input.files = carrier.files;
             announce(zone, files[0]);
+            document.dispatchEvent(new CustomEvent('hc-attachment-picked', {detail: {name: files[0].name}}));
             input.dispatchEvent(new Event('change', { bubbles: true }));
         });
 

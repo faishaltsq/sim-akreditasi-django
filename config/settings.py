@@ -56,6 +56,13 @@ ALLOWED_HOSTS += [
     'sim-akreditasi-web-production.up.railway.app',
     'testserver',
 ]
+# Domain tambahan (alias/domain kustom Vercel) lewat env, dipisah koma.
+# Django menolak Host yang tidak terdaftar dengan 400 DisallowedHost, jadi
+# domain kustom baru wajib masuk sini; tanpa wildcard host-header tetap aman.
+for _host in os.environ.get('DJANGO_EXTRA_ALLOWED_HOSTS', '').split(','):
+    _host = _host.strip().replace('https://', '').replace('http://', '').strip('/')
+    if _host and _host not in ALLOWED_HOSTS:
+        ALLOWED_HOSTS.append(_host)
 # Preview deployment Vercel memakai hostname acak per build. Tambahkan host
 # deployment yang sedang berjalan dari env (satu host spesifik, tetap bukan
 # wildcard) supaya preview tidak kena DisallowedHost 400.
@@ -76,6 +83,14 @@ CSRF_TRUSTED_ORIGINS += [
     'https://sim-akreditasi-django.vercel.app',
     'https://sim-akreditasi-web-production.up.railway.app',
 ]
+# Setiap domain di ALLOWED_HOSTS juga harus dipercaya untuk POST/CSRF; login
+# dan form akan gagal (403) kalau hanya satu daftar yang diisi.
+for _host in os.environ.get('DJANGO_EXTRA_ALLOWED_HOSTS', '').split(','):
+    _host = _host.strip().replace('https://', '').replace('http://', '').strip('/')
+    if _host:
+        _origin = f'https://{_host}'
+        if _origin not in CSRF_TRUSTED_ORIGINS:
+            CSRF_TRUSTED_ORIGINS.append(_origin)
 for _host_var in ('VERCEL_URL', 'VERCEL_BRANCH_URL',
                   'VERCEL_PROJECT_PRODUCTION_URL'):
     _host = (os.environ.get(_host_var) or '').strip()

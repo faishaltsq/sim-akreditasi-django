@@ -1,3 +1,4 @@
+import base64
 import datetime
 import hashlib
 from datetime import timedelta
@@ -37,6 +38,7 @@ from sdm.forms import (
     ProgramOrientasiForm,
     RencanaFormasiForm,
     ReviewDokumenForm,
+    RiwayatKepegawaianForm,
     RincianKewenanganForm,
     VerifikasiSumberForm,
     ImunisasiPegawaiForm,
@@ -78,6 +80,7 @@ from sdm.models import (
     ProgramOrientasi,
     RincianKewenangan,
     RencanaFormasi,
+    RiwayatKepegawaian,
     ImunisasiPegawai,
     InsidenK3Pegawai,
     PemeriksaanKesehatanKerja,
@@ -89,6 +92,7 @@ from sdm.models import (
     VersiDokumen,
     calculate_formasi,
 )
+from akreditasi.models import EvidenceReq
 from sdm.services.kepatuhan import (
     documents_for_employee,
     evaluate_employee_compliance,
@@ -320,6 +324,107 @@ def pegawai_edit(request, employee_id):
 
 
 @login_required
+def riwayat_create(request, employee_id):
+    employee = get_object_or_404(
+        visible_employees(request.user), pk=employee_id
+    )
+    require_hc_capability(request.user, 'can_manage_hc_employees', employee=employee)
+    form = RiwayatKepegawaianForm(request.POST or None, employee=employee)
+    if request.method == 'POST' and form.is_valid():
+        try:
+            with transaction.atomic():
+                history = form.save()
+                PeristiwaSDM.objects.create(
+                    actor=request.user,
+                    jenis_peristiwa='riwayat_kepegawaian_created',
+                    target_tipe='employee',
+                    target_id=str(employee.pk),
+                    status_sesudah=history.kategori_pegawai,
+                    alasan=f'Riwayat kepegawaian ditambahkan (TMT {history.tanggal_tmt or "belum dicatat"}).',
+                )
+        except ValidationError as exc:
+            form.add_error(None, '; '.join(exc.messages))
+        else:
+            return redirect('sdm:pegawai_detail', employee_id=employee.pk)
+    return _form_context(
+        request,
+        form,
+        f'Tambah Riwayat Kepegawaian — {employee.nama_lengkap}',
+        employee=employee,
+    )
+
+
+@login_required
+def riwayat_edit(request, employee_id, riwayat_id):
+    history = get_object_or_404(
+        RiwayatKepegawaian.objects.filter(pegawai__in=visible_employees(request.user)),
+        pk=riwayat_id,
+    )
+    if history.pegawai_id != employee_id:
+        raise Http404('Riwayat kepegawaian tidak ditemukan.')
+    require_hc_capability(request.user, 'can_manage_hc_employees', employee=history.pegawai)
+    form = RiwayatKepegawaianForm(
+        request.POST or None, instance=history, employee=history.pegawai
+    )
+    if request.method == 'POST' and form.is_valid():
+        before = history.kategori_pegawai
+        try:
+            with transaction.atomic():
+                updated = form.save()
+                PeristiwaSDM.objects.create(
+                    actor=request.user,
+                    jenis_peristiwa='riwayat_kepegawaian_updated',
+                    target_tipe='employee',
+                    target_id=str(updated.pegawai_id),
+                    status_sebelum=before,
+                    status_sesudah=updated.kategori_pegawai,
+                    alasan='Riwayat kepegawaian diperbarui.',
+                )
+        except ValidationError as exc:
+            form.add_error(None, '; '.join(exc.messages))
+        else:
+            return redirect('sdm:pegawai_detail', employee_id=history.pegawai_id)
+    return _form_context(
+        request,
+        form,
+        f'Ubah Riwayat Kepegawaian — {history.pegawai.nama_lengkap}',
+        employee=history.pegawai,
+    )
+
+
+@login_required
+def riwayat_delete(request, employee_id, riwayat_id):
+    history = get_object_or_404(
+        RiwayatKepegawaian.objects.filter(pegawai__in=visible_employees(request.user)),
+        pk=riwayat_id,
+    )
+    if history.pegawai_id != employee_id:
+        raise Http404('Riwayat kepegawaian tidak ditemukan.')
+    require_hc_capability(request.user, 'can_manage_hc_employees', employee=history.pegawai)
+    if request.method == 'POST':
+        siblings = RiwayatKepegawaian.objects.filter(
+            pegawai=history.pegawai
+        ).exclude(pk=history.pk).count()
+        if siblings == 0:
+            messages.error(
+                request,
+                'Riwayat terakhir tidak dapat dihapus; pegawai wajib memiliki minimal satu riwayat kepegawaian.',
+            )
+            return redirect('sdm:pegawai_detail', employee_id=history.pegawai_id)
+        with transaction.atomic():
+            RiwayatKepegawaian.objects.filter(pk=history.pk).delete()
+            PeristiwaSDM.objects.create(
+                actor=request.user,
+                jenis_peristiwa='riwayat_kepegawaian_deleted',
+                target_tipe='employee',
+                target_id=str(history.pegawai_id),
+                status_sebelum=history.kategori_pegawai,
+                alasan=f'Riwayat dihapus (TMT {history.tanggal_tmt or "belum dicatat"}).',
+            )
+    return redirect('sdm:pegawai_detail', employee_id=history.pegawai_id)
+
+
+@login_required
 def pegawai_detail(request, employee_id):
     employee = get_object_or_404(
         visible_employees(request.user), pk=employee_id
@@ -361,6 +466,8 @@ def pegawai_detail(request, employee_id):
             )
         except PermissionDenied:
             can_manage_documents = False
+    from sdm.services.legalitas import legal_status
+    legal = legal_status(employee)
     return render(request, 'sdm/pegawai/detail.html', {
         'employee': employee,
         'profile': build_staff_profile(employee, viewer=request.user),
@@ -371,6 +478,8 @@ def pegawai_detail(request, employee_id):
         'events': events,
         'can_manage': can_manage,
         'can_manage_documents': can_manage_documents,
+        'riwayat_list': employee.riwayat_kepegawaian.order_by('-tanggal_tmt', '-pk'),
+        'legal': legal,
     })
 
 
@@ -2019,6 +2128,11 @@ def kps_report(request):
         'employee_count': artifact['employee_count'],
         'workbook_hash': artifact['workbook_hash'],
     }
+    # Byte workbook ikut disimpan di session (base64) supaya publikasi menerbitkan
+    # berkas nyata, bukan turunan kosong; hanya turunan tersanitasi yang disimpan.
+    request.session['kps_pack_bytes'] = base64.b64encode(
+        artifact['workbook_bytes']
+    ).decode('ascii')
     return redirect('sdm:kps_pack_preview')
 
 
@@ -2028,7 +2142,15 @@ def kps_pack_preview(request):
     if not artifact:
         messages.error(request, 'Tidak ada paket KPS yang tersedia.')
         return redirect('sdm:analitik_dashboard')
-    return render(request, 'sdm/kps/pack_preview.html', {'artifact': artifact})
+    requirement_options = EvidenceReq.objects.filter(
+        standard_item__category__code='KPS',
+        standard_item__sdm_mappings__framework_id=artifact['framework_id'],
+        standard_item__sdm_mappings__is_active=True,
+    ).select_related('standard_item').distinct().order_by('standard_item__code')
+    return render(request, 'sdm/kps/pack_preview.html', {
+        'artifact': artifact,
+        'requirement_options': requirement_options,
+    })
 
 
 @login_required
@@ -2039,10 +2161,12 @@ def kps_pack_publish(request):
     if not artifact:
         raise PermissionDenied('Paket tidak tersedia.')
     requirement_id = (request.POST.get('requirement') or '').strip()
+    raw = request.session.pop('kps_pack_bytes', '') or ''
+    workbook_bytes = base64.b64decode(raw) if raw else b''
     try:
         publish_kps_artifact(
             actor=request.user,
-            artifact={**artifact, 'workbook_bytes': b''},
+            artifact={**artifact, 'workbook_bytes': workbook_bytes},
             requirement_id=requirement_id,
         )
     except (PermissionDenied, ValidationError) as exc:

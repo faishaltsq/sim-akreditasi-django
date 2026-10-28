@@ -20,6 +20,7 @@ from .level2_5 import (
 )
 from .logbook import EntriLogbookForm
 from .pegawai import PegawaiCreateForm, PegawaiEditForm
+from .riwayat import RiwayatKepegawaianForm
 
 __all__ = [
     'AktivitasBebanKerjaForm',
@@ -37,6 +38,7 @@ __all__ = [
     'ProgramOrientasiForm',
     'RencanaFormasiForm',
     'ReviewDokumenForm',
+    'RiwayatKepegawaianForm',
     'RincianKewenanganForm',
     'VerifikasiSumberForm',
     'ImunisasiPegawaiForm',

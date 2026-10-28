@@ -16,7 +16,13 @@
             <label class="form-label small fw-semibold mb-2 d-block">Publikasikan ke elemen penilaian</label>
             <select name="requirement" class="form-select form-select-sm" required>
                 <option value="">— pilih elemen —</option>
+                {% for req in requirement_options %}
+                <option value="{{ req.pk }}">{{ req.standard_item.code }} — {{ req.title }}</option>
+                {% endfor %}
             </select>
+            {% if not requirement_options %}
+            <p class="small text-warning mt-2 mb-0">Belum ada elemen KPS yang dipetakan dari persyaratan SDM. Petakan terlebih dahulu melalui Pemetaan Standar SDM.</p>
+            {% endif %}
             <div class="mt-2 d-flex gap-2">
                 <button class="btn btn-primary btn-sm" type="submit"><i class="bi bi-cloud-upload me-1"></i>Terbitkan untuk ditinjau</button>
                 <a class="btn btn-outline-secondary btn-sm" href="{% url 'sdm:analitik_dashboard' %}">Batal</a>

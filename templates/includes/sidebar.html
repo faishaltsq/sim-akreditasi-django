@@ -88,6 +88,7 @@
                     <span class="nav-text">
                         <span class="nav-title font-mono">{{ cat.code }}</span>
                         <span class="nav-desc">{{ cat.ep_selesai|default:0 }}/{{ cat.ep_total|default:0 }} EP, {{ cat.percentage }}%</span>
+                        {% if cat.ep_gap %}<span class="badge text-bg-warning ms-1" title="EP target instrumen belum terpasang">{{ cat.ep_gap }} EP belum terpasang</span>{% endif %}
                     </span>
                 </a>
                 {% endfor %}
@@ -102,6 +103,7 @@
         <span class="nav-text">
             <span class="nav-title font-mono">{{ cat.code }}</span>
             <span class="nav-desc">{{ cat.ep_selesai|default:0 }}/{{ cat.ep_total|default:0 }} EP, {{ cat.percentage }}%</span>
+            {% if cat.ep_gap %}<span class="badge text-bg-warning ms-1" title="EP target instrumen belum terpasang">{{ cat.ep_gap }} EP belum terpasang</span>{% endif %}
         </span>
     </a>
     {% endfor %}

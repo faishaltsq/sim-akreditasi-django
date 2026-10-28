@@ -6,6 +6,7 @@ from .models import (
     HcGrant,
     HasilFormasi,
     InsidenK3Pegawai,
+    IzinProfesiPegawai,
     JamKerjaEfektif,
     KatalogTindakan,
     Lowongan,
@@ -18,6 +19,7 @@ from .models import (
     ProgramDiklat,
     ProgramOrientasi,
     RencanaFormasi,
+    RiwayatKepegawaian,
     SnapshotAnalitikSDM,
     StandarKetenagaan,
 )
@@ -274,3 +276,25 @@ class SnapshotAnalitikSDMAdmin(admin.ModelAdmin):
 
     def has_delete_permission(self, request, obj=None):
         return False
+
+
+@admin.register(RiwayatKepegawaian)
+class RiwayatKepegawaianAdmin(admin.ModelAdmin):
+    list_display = (
+        'pegawai', 'kategori_pegawai', 'tanggal_tmt', 'tanggal_akhir',
+        'review_status',
+    )
+    list_filter = ('kategori_pegawai', 'review_status')
+    search_fields = ('pegawai__nama_lengkap', 'nomor_kontrak', 'jabatan_struktural')
+    raw_id_fields = ('pegawai',)
+
+
+@admin.register(IzinProfesiPegawai)
+class IzinProfesiPegawaiAdmin(admin.ModelAdmin):
+    list_display = (
+        'pegawai', 'subtype', 'nomor_izin', 'validity_mode',
+        'tanggal_berakhir', 'is_local_rs',
+    )
+    list_filter = ('subtype', 'validity_mode', 'is_local_rs')
+    search_fields = ('pegawai__nama_lengkap', 'nomor_izin')
+    raw_id_fields = ('pegawai',)

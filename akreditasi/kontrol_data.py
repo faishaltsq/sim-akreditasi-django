@@ -443,21 +443,22 @@ def sample_units(max_items=12):
     from .models import UnitKerja
 
     key = f'kontrol:units:v1:{max_items}'
-    pks = cache.get(key)
-    if pks is None:
+    # Cache the resolved UnitKerja instances, not just their PKs. Caching PKs
+    # alone still forced a `filter(pk__in=...)` round-trip on every call, and
+    # this helper runs twice per kontrol request (once via _resolve_unit with
+    # max_items=1, once via _common_context with max_items=12).
+    units = cache.get(key)
+    if units is None:
         risk_units = set(RisikoUnit.objects.values_list('unit_id', flat=True))
         ind_units = set(IndikatorMutu.objects.values_list('unit_id', flat=True))
         ep_units = set(QualityRecord.objects.values_list('unit_id', flat=True))
         populated = risk_units | ind_units | ep_units
 
-        units = list(
+        all_units = list(
             UnitKerja.objects.filter(is_active=True).order_by('level', 'order', 'code')
         )
-        with_data = [u for u in units if u.id in populated][:max_items]
-        pks = [u.pk for u in (with_data or units[:max_items])]
-        cache.set(key, pks, SNAPSHOT_CACHE_SECONDS)
+        with_data = [u for u in all_units if u.id in populated][:max_items]
+        units = with_data or all_units[:max_items]
+        cache.set(key, units, SNAPSHOT_CACHE_SECONDS)
 
-    if not pks:
-        return []
-    by_pk = {u.pk: u for u in UnitKerja.objects.filter(pk__in=pks)}
-    return [by_pk[pk] for pk in pks if pk in by_pk]
+    return list(units)
