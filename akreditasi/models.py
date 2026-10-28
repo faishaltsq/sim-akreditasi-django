@@ -270,6 +270,26 @@ class Category(models.Model):
         if not target:
             return 0
         return round((self.ep_total / target) * 100)
+    @property
+    def ep_gap(self):
+        """EP target instrumen yang belum terpasang; 0 bila kategori tanpa target."""
+        if not self.target_ep_count:
+            return 0
+        return max(self.target_ep_count - self.ep_total, 0)
+
+
+    @property
+    def ep_gap(self):
+        """EP target yang belum terpasang; 0 bila tanpa target atau sudah penuh.
+
+        Dipakai sidebar untuk membedakan "belum dinilai" dari "katalog belum
+        terpasang": angka EP rendah dengan target tinggi berarti impun instrumen
+        belum lengkap, bukan penilaian yang tertinggal.
+        """
+        target = self.target_ep_count
+        if not target:
+            return 0
+        return max(target - self.ep_total, 0)
 
     @property
     def percentage(self):
