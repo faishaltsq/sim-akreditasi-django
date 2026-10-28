@@ -33,6 +33,21 @@ urlpatterns = [
         name='pegawai_edit',
     ),
     path(
+        'pegawai/<uuid:employee_id>/riwayat/baru/',
+        views.riwayat_create,
+        name='riwayat_create',
+    ),
+    path(
+        'pegawai/<uuid:employee_id>/riwayat/<int:riwayat_id>/ubah/',
+        views.riwayat_edit,
+        name='riwayat_edit',
+    ),
+    path(
+        'pegawai/<uuid:employee_id>/riwayat/<int:riwayat_id>/hapus/',
+        views.riwayat_delete,
+        name='riwayat_delete',
+    ),
+    path(
         'pegawai/<uuid:employee_id>/dokumen/baru/',
         views.dokumen_upload,
         name='dokumen_upload',

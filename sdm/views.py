@@ -37,6 +37,7 @@ from sdm.forms import (
     ProgramOrientasiForm,
     RencanaFormasiForm,
     ReviewDokumenForm,
+    RiwayatKepegawaianForm,
     RincianKewenanganForm,
     VerifikasiSumberForm,
     ImunisasiPegawaiForm,
@@ -78,6 +79,7 @@ from sdm.models import (
     ProgramOrientasi,
     RincianKewenangan,
     RencanaFormasi,
+    RiwayatKepegawaian,
     ImunisasiPegawai,
     InsidenK3Pegawai,
     PemeriksaanKesehatanKerja,
@@ -320,6 +322,107 @@ def pegawai_edit(request, employee_id):
 
 
 @login_required
+def riwayat_create(request, employee_id):
+    employee = get_object_or_404(
+        visible_employees(request.user), pk=employee_id
+    )
+    require_hc_capability(request.user, 'can_manage_hc_employees', employee=employee)
+    form = RiwayatKepegawaianForm(request.POST or None, employee=employee)
+    if request.method == 'POST' and form.is_valid():
+        try:
+            with transaction.atomic():
+                history = form.save()
+                PeristiwaSDM.objects.create(
+                    actor=request.user,
+                    jenis_peristiwa='riwayat_kepegawaian_created',
+                    target_tipe='employee',
+                    target_id=str(employee.pk),
+                    status_sesudah=history.kategori_pegawai,
+                    alasan=f'Riwayat kepegawaian ditambahkan (TMT {history.tanggal_tmt or "belum dicatat"}).',
+                )
+        except ValidationError as exc:
+            form.add_error(None, '; '.join(exc.messages))
+        else:
+            return redirect('sdm:pegawai_detail', employee_id=employee.pk)
+    return _form_context(
+        request,
+        form,
+        f'Tambah Riwayat Kepegawaian — {employee.nama_lengkap}',
+        employee=employee,
+    )
+
+
+@login_required
+def riwayat_edit(request, employee_id, riwayat_id):
+    history = get_object_or_404(
+        RiwayatKepegawaian.objects.filter(pegawai__in=visible_employees(request.user)),
+        pk=riwayat_id,
+    )
+    if history.pegawai_id != employee_id:
+        raise Http404('Riwayat kepegawaian tidak ditemukan.')
+    require_hc_capability(request.user, 'can_manage_hc_employees', employee=history.pegawai)
+    form = RiwayatKepegawaianForm(
+        request.POST or None, instance=history, employee=history.pegawai
+    )
+    if request.method == 'POST' and form.is_valid():
+        before = history.kategori_pegawai
+        try:
+            with transaction.atomic():
+                updated = form.save()
+                PeristiwaSDM.objects.create(
+                    actor=request.user,
+                    jenis_peristiwa='riwayat_kepegawaian_updated',
+                    target_tipe='employee',
+                    target_id=str(updated.pegawai_id),
+                    status_sebelum=before,
+                    status_sesudah=updated.kategori_pegawai,
+                    alasan='Riwayat kepegawaian diperbarui.',
+                )
+        except ValidationError as exc:
+            form.add_error(None, '; '.join(exc.messages))
+        else:
+            return redirect('sdm:pegawai_detail', employee_id=history.pegawai_id)
+    return _form_context(
+        request,
+        form,
+        f'Ubah Riwayat Kepegawaian — {history.pegawai.nama_lengkap}',
+        employee=history.pegawai,
+    )
+
+
+@login_required
+def riwayat_delete(request, employee_id, riwayat_id):
+    history = get_object_or_404(
+        RiwayatKepegawaian.objects.filter(pegawai__in=visible_employees(request.user)),
+        pk=riwayat_id,
+    )
+    if history.pegawai_id != employee_id:
+        raise Http404('Riwayat kepegawaian tidak ditemukan.')
+    require_hc_capability(request.user, 'can_manage_hc_employees', employee=history.pegawai)
+    if request.method == 'POST':
+        siblings = RiwayatKepegawaian.objects.filter(
+            pegawai=history.pegawai
+        ).exclude(pk=history.pk).count()
+        if siblings == 0:
+            messages.error(
+                request,
+                'Riwayat terakhir tidak dapat dihapus; pegawai wajib memiliki minimal satu riwayat kepegawaian.',
+            )
+            return redirect('sdm:pegawai_detail', employee_id=history.pegawai_id)
+        with transaction.atomic():
+            RiwayatKepegawaian.objects.filter(pk=history.pk).delete()
+            PeristiwaSDM.objects.create(
+                actor=request.user,
+                jenis_peristiwa='riwayat_kepegawaian_deleted',
+                target_tipe='employee',
+                target_id=str(history.pegawai_id),
+                status_sebelum=history.kategori_pegawai,
+                alasan=f'Riwayat dihapus (TMT {history.tanggal_tmt or "belum dicatat"}).',
+            )
+    return redirect('sdm:pegawai_detail', employee_id=history.pegawai_id)
+
+
+@login_required
 def pegawai_detail(request, employee_id):
     employee = get_object_or_404(
         visible_employees(request.user), pk=employee_id
@@ -371,6 +474,7 @@ def pegawai_detail(request, employee_id):
         'events': events,
         'can_manage': can_manage,
         'can_manage_documents': can_manage_documents,
+        'riwayat_list': employee.riwayat_kepegawaian.order_by('-tanggal_tmt', '-pk'),
     })
 
 
