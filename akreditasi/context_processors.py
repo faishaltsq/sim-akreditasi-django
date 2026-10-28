@@ -24,7 +24,15 @@ def invalidate_catalogue_caches():
     activation rewrites `lifecycle`/`is_active` in place, so a sidebar keyed only
     on the pk would keep serving the previous edition for the whole TTL.
     """
+    # The per-pokja aggregates are keyed on the catalogue identity, so dropping
+    # the identity alone is not enough: the stale stats would still be served
+    # from their own key until their 5-minute TTL expires.
+    identity = cache.get(_CATALOGUE_IDENTITY_KEY)
     cache.delete(_CATALOGUE_IDENTITY_KEY)
+    if identity is not None:
+        cache.delete(f'sidebar_stats:{identity}')
+    cache.delete('sidebar_rs_profile')
+    cache.delete('sidebar_sys_config')
 
 
 def _catalogue_identity():
@@ -90,25 +98,34 @@ def sidebar_context(request):
         from django.db.models import Count, Sum
         from .models import QualityRecord, StandardItem
         cat_ids = [c.id for c in categories]
-        sums = {
-            row['standard_item__category']: (row['s'] or 0)
-            for row in QualityRecord.objects
-            .filter(standard_item__category_id__in=cat_ids)
-            .values('standard_item__category').annotate(s=Sum('score'))
-        }
-        counts = {
-            row['category']: row['n']
-            for row in StandardItem.objects
-            .filter(category_id__in=cat_ids)
-            .values('category').annotate(n=Count('id'))
-        }
-        # EP yang sudah dinilai: record dengan skor > 0 (skor 0 = belum terpenuhi).
-        done = {
-            row['standard_item__category']: row['n']
-            for row in QualityRecord.objects
-            .filter(standard_item__category_id__in=cat_ids, score__gt=0)
-            .values('standard_item__category').annotate(n=Count('id'))
-        }
+        # The three aggregates are global (they do not depend on the user), so
+        # they belong in the same 5-minute cache as the category list itself.
+        # Recomputing them per request added 3 queries to every warm page.
+        stats_key = f'sidebar_stats:{version_key}'
+        stats = cache.get(stats_key)
+        if stats is None:
+            sums = {
+                row['standard_item__category']: (row['s'] or 0)
+                for row in QualityRecord.objects
+                .filter(standard_item__category_id__in=cat_ids)
+                .values('standard_item__category').annotate(s=Sum('score'))
+            }
+            counts = {
+                row['category']: row['n']
+                for row in StandardItem.objects
+                .filter(category_id__in=cat_ids)
+                .values('category').annotate(n=Count('id'))
+            }
+            # EP yang sudah dinilai: record dengan skor > 0 (skor 0 = belum terpenuhi).
+            done = {
+                row['standard_item__category']: row['n']
+                for row in QualityRecord.objects
+                .filter(standard_item__category_id__in=cat_ids, score__gt=0)
+                .values('standard_item__category').annotate(n=Count('id'))
+            }
+            stats = (sums, counts, done)
+            cache.set(stats_key, stats, _SIDEBAR_CACHE_TTL)
+        sums, counts, done = stats
         for c in categories:
             c._pre_total = sums.get(c.id, 0)
             c._pre_max = counts.get(c.id, 0) * 10
