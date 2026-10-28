@@ -21,6 +21,7 @@ from sdm.models import (
     VersiDokumen,
 )
 from sdm.models.kredensial import DokumenSyaratKredensial
+from sdm.services import dokumen_kredensial as dk
 from sdm.services.dokumen_kredensial import (
     REGISTRY,
     auto_fields,
@@ -120,7 +121,12 @@ class AutoFieldsTests(DokumenKredensialBase):
         self.assertEqual(data['profesi'], 'Perawat')
         self.assertEqual(data['unit_kerja'], 'Ruang Anak')
         self.assertEqual(data['unit_kerja_kode'], 'HC-ANK')
-        self.assertEqual(data['tanggal_cetak'], '27 Oktober 2026')
+        # Format kontrak: "<hari> <Bulan> <tahun>" — dihitung dari tanggal
+        # sistem, bukan string literal yang basi setiap pergantian hari.
+        self.assertEqual(
+            data['tanggal_cetak'],
+            f"{self.today.day} {dk.BULAN[self.today.month - 1]} {self.today.year}",
+        )
 
 
 class FinalizeTests(DokumenKredensialBase):
