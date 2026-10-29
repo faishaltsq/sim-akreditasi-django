@@ -1,5 +1,19 @@
 # Plan: Modul Rekrutmen, Auto-Fill Kredensial, dan Master RKK Kewenangan Klinis
 
+## Status pelaksanaan
+
+| Bagian | Status | Bukti |
+|---|---|---|
+| **B — Auto-fill form kredensial** | ✅ **Selesai** | Endpoint `kredensial_pegawai_profil` (JSON), validasi STR/SIP di `PengajuanKredensialForm.clean()`, JS `hc-kredensial-autofill.js` + `hc-kredensial-portal-autofill.js`, badge & panel di form HC dan portal. Smoke test: endpoint 200, form render hook lengkap, AWAL/REKREDENSIAL diblokir saat SIP kosong, PENAMBAHAN lolos, portal 200. |
+| **A — Master RKK audit & penambalan** | ✅ **Selesai** | `DOKTER_GIGI` 3 jenjang ditambahkan ke `DOKTER_JENJANG`; command `audit_katalog_rkk` (laporan + `--strict`); seed idempoten (23 profesi / 118 jenjang / 499 tindakan); test `SeedKatalogTests` + `AuditKatalogRkkTests`. |
+| **C — Modul Rekrutmen 7 sub-menu** | ⏳ **Belum dikerjakan** | Masih 3 model tipis (`Lowongan`, `Lamaran`, `RiwayatSeleksi`). Lihat Fase C0–C8 di bawah. |
+
+**Gap RKK yang tersisa** (butuh keputusan komite, bukan kode):
+- Katalog butir **Dokter Gigi** dan **Dokter Spesialis** menunggu SK komite — sengaja kosong, sesuai batasan §3.
+- **Apoteker** hanya 2 jenjang; dokumen master tidak merinci lebih.
+
+---
+
 Sumber (2026-10-29):
 1. `~/Downloads/modul REKRUTMEN.docx` — spesifikasi Modul Rekrutmen & Seleksi Pegawai ARIMA, 7 sub-menu end-to-end (Manajer Lowongan → Portal Pelamar → Screening → CBT → Wawancara → MCU & Offering → Orientasi/e-File), plus dasbor pemantauan HR dan 4 fitur unggulan (audit trail KPS, talent pool, notifikasi WA/Email, transparansi).
 2. `~/Downloads/Masalah pengajuan kredensial baru.docx` — permintaan perbaikan form `/human-capital/kredensial/baru/`: auto-fill Unit Kerja & Jabatan saat pegawai dipilih, auto-fetch STR/SIP dari E-File, manual override, katalog RKK dinamis per profesi/jenjang.

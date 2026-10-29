@@ -93,13 +93,26 @@ class SeedKatalogTests(TestCase):
             MasterJenjangProfesi.objects.count(),
             KatalogTindakan.objects.count(),
         )
-        self.assertEqual(first, (23, 115, 499))
+        self.assertEqual(first, (23, 118, 499))
         self.assertEqual(first, second)
         self.assertEqual(
             KatalogTindakan.objects.filter(
                 jenjang__profesi__code='KPR', jenjang__kode='PK-II'
             ).count(),
             9,
+        )
+        # Dokter Gigi: jenjang dari master RKK, katalog butir menunggu SK komite.
+        self.assertEqual(
+            MasterJenjangProfesi.objects.filter(
+                profesi__code='DOKTER_GIGI'
+            ).count(),
+            3,
+        )
+        self.assertEqual(
+            KatalogTindakan.objects.filter(
+                jenjang__profesi__code='DOKTER_GIGI'
+            ).count(),
+            0,
         )
 
 
@@ -587,3 +600,28 @@ class BeritaAcaraRapatTests(KredensialBABBase):
             reverse('sdm:kredensial_berita_acara_rapat', args=[self.application.pk])
         )
         self.assertEqual(response.status_code, 404)
+
+
+class AuditKatalogRkkTests(TestCase):
+    """Command audit_katalog_rkk: melaporkan gap tanpa mengarang baris."""
+
+    def test_audit_reports_no_gap_after_seed(self):
+        call_command('seed_katalog_rkk', '--apply', stdout=StringIO())
+        out = StringIO()
+        call_command('audit_katalog_rkk', stdout=out)
+        text = out.getvalue()
+        self.assertIn('Tidak ada gap', text)
+        self.assertIn('DOKTER_GIGI', text)
+
+    def test_audit_reports_missing_profession(self):
+        # Tanpa seed, semua profesi dokumen dilaporkan hilang.
+        out = StringIO()
+        call_command('audit_katalog_rkk', stdout=out)
+        text = out.getvalue()
+        self.assertIn('gap ditemukan', text)
+        self.assertIn('profesi tidak ada', text)
+
+    def test_audit_strict_exits_nonzero_on_gap(self):
+        with self.assertRaises(SystemExit) as ctx:
+            call_command('audit_katalog_rkk', '--strict', stdout=StringIO())
+        self.assertEqual(ctx.exception.code, 1)

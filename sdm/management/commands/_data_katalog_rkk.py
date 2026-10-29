@@ -14,7 +14,6 @@ unique; #26 Utama for Penata Anestesi.
 PROFESI_TANPA_JENJANG = {
     'DOKTER_SP': ('Dokter Spesialis', 'MEDIS'),
     'DOKTER_UMUM': ('Dokter Umum', 'MEDIS'),
-    'DOKTER_GIGI': ('Dokter Gigi', 'MEDIS'),
 }
 
 # Fokus kompetensi jenjang dokter dari "master RKK Kewenangan klinis.docx";
@@ -35,6 +34,24 @@ DOKTER_JENJANG = {
             ('DU-KONS', 'Dokter Subspesialis / Konsultan', 3,
              'Pelayanan medis subspesifik tingkat tinggi/lanjut, penanganan kasus rujukan '
              'tersier kompleks dan langka, riset klinis lanjutan. Mandiri Penuh (M) dengan '
+             'hak prerogatif klinis tertinggi dan Tim Mitra Bestari Utama.',
+             3),
+        ]),
+    'DOKTER_GIGI': (
+        'Dokter Gigi', [
+            ('DG-UMUM', 'Dokter Gigi (General Dentist)', 1,
+             'Pelayanan kesehatan gigi dan mulut dasar: pemeriksaan, diagnosis, '
+             'tatalaksana kasus gigi dasar, serta rujukan kasus di luar kompetensi. '
+             'Mandiri (M) untuk kompetensi 4A SKDI; Supervisi (S) untuk tindakan di luar kompetensi dasar.',
+             3),
+            ('DG-SP', 'Dokter Gigi Spesialis (Clinical Specialist)', 2,
+             'Pelayanan spesialistik mandiri sesuai bidang (Sp.KG, Sp.Ort, Sp.BM, Sp.Pros, '
+             'Sp.Perio, Sp.An, Sp.Rad, Sp.PM). Mandiri Penuh (M) dalam lingkup spesialisasi '
+             '+ Anggota Komite Medis / Mitra Bestari.',
+             3),
+            ('DG-KONS', 'Dokter Gigi Subspesialis / Konsultan', 3,
+             'Pelayanan subspesifik tingkat tinggi, penanganan kasus rujukan kompleks, '
+             'penyusunan PPK & Clinical Pathway kedokteran gigi. Mandiri Penuh (M) dengan '
              'hak prerogatif klinis tertinggi dan Tim Mitra Bestari Utama.',
              3),
         ]),

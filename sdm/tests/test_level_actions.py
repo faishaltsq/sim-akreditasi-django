@@ -16,6 +16,7 @@ from sdm.models import (
     Lowongan,
     Pegawai,
     PenempatanPegawai,
+    IzinProfesiPegawai,
     PengajuanKredensial,
     ProgramOrientasi,
 )
@@ -51,6 +52,22 @@ class CreateFlowBase(TestCase):
             pegawai=self.employee, unit_kerja=self.unit,
             tanggal_mulai=self.today - timedelta(days=10),
             alokasi_fte=Decimal('1.00'),
+        )
+        # STR & SIP aktif: pengajuan AWAL/REKREDENSIAL mensyaratkan legalitas
+        # yang berlaku, jadi fixture harus menyediakannya.
+        IzinProfesiPegawai.objects.create(
+            pegawai=self.employee, subtype='STR', nomor_izin='STR-TEST-001',
+            profesi='Perawat', pemberi_izin='Kemenkes', validity_mode='DATED',
+            tanggal_terbit=self.today,
+            tanggal_berakhir=self.today + timedelta(days=365),
+            is_local_rs=True,
+        )
+        IzinProfesiPegawai.objects.create(
+            pegawai=self.employee, subtype='SIP', nomor_izin='SIP-TEST-001',
+            profesi='Perawat', pemberi_izin='Dinkes', validity_mode='DATED',
+            tanggal_terbit=self.today,
+            tanggal_berakhir=self.today + timedelta(days=365),
+            is_local_rs=True,
         )
 
     def _user(self, username):

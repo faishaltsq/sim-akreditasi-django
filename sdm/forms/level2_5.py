@@ -81,19 +81,21 @@ class PengajuanKredensialForm(forms.ModelForm):
         units = visible_units(user, capability='can_review_hc_credentials')
         self.fields['unit_kerja'].queryset = units.order_by('level', 'order', 'code')
         self.fields['employee'].queryset = visible_employees(
-            user
+            user, capability='can_review_hc_credentials'
         ).order_by('nama_lengkap')
-
-
 
     def clean(self):
         """Block submission when the employee's mandatory licences are unusable.
 
         Kredensial Awal and Re-Kredensial both assert a current right to
         practise, so an absent or expired STR/SIP makes the request unverifiable
-        at source. The failure is attached to ``employee`` so the operator sees
-        which fact is missing instead of a silent redirect.
+        at source. Penambahan Kewenangan only adds RKK lines to an existing
+        credential, so it is exempt. The failure is attached to ``employee`` so
+        the operator sees which fact is missing instead of a silent redirect.
         """
+
+
+
         cleaned = super().clean()
         employee = cleaned.get('employee')
         jenis = cleaned.get('jenis')
@@ -110,9 +112,11 @@ class PengajuanKredensialForm(forms.ModelForm):
                 'Dokumen legalitas belum layak untuk pengajuan '
                 f'{" / ".join(unusable)}: statusnya bukan "Berlaku". '
                 'Perbarui STR/SIP di E-File pegawai terlebih dahulu, atau '
-                'pilih jenis pengajuan lain.',
+                'pilih jenis pengajuan Penambahan Kewenangan (yang memerlukan RKK).',
             )
         return cleaned
+
+
 class RincianKewenanganForm(forms.ModelForm):
     class Meta:
         model = RincianKewenangan
