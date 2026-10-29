@@ -86,6 +86,7 @@ class RecruitmentCreateTests(CreateFlowBase):
             'judul': 'Perawat IGD',
             'jumlah_kebutuhan': '2',
             'status': 'DIBUKA',
+            'jalur': 'EKSTERNAL',
         })
 
         self.assertEqual(response.status_code, 302)
@@ -207,3 +208,54 @@ class MalformedInputTests(CreateFlowBase):
 
         self.assertEqual(response.status_code, 302)
         self.assertEqual(InsidenK3Pegawai.objects.count(), 0)
+
+
+class LowonganKriteriaTests(CreateFlowBase):
+    """Fase C1: kriteria lowongan & jendela pendaftaran."""
+
+    def test_tanggal_tutup_sebelum_buka_ditolak(self):
+        from sdm.forms.level2_5 import LowonganForm
+        form = LowonganForm(data={
+            'unit_kerja': str(self.unit.pk), 'profesi': 'Perawat',
+            'judul': 'Terbalik', 'jumlah_kebutuhan': '1', 'status': 'DIBUKA',
+            'jalur': 'EKSTERNAL',
+            'tanggal_buka': '2026-11-01', 'tanggal_tutup': '2026-10-01',
+        }, user=self.user)
+        self.assertFalse(form.is_valid())
+        self.assertIn('tanggal_tutup', form.errors)
+
+    def test_ipk_di_luar_rentang_ditolak(self):
+        from sdm.forms.level2_5 import LowonganForm
+        form = LowonganForm(data={
+            'unit_kerja': str(self.unit.pk), 'profesi': 'Perawat',
+            'judul': 'IPK Salah', 'jumlah_kebutuhan': '1', 'status': 'DRAFT',
+            'jalur': 'INTERNAL', 'ipk_minimal': '5.00',
+        }, user=self.user)
+        self.assertFalse(form.is_valid())
+        self.assertIn('ipk_minimal', form.errors)
+
+    def test_pendaftaran_terbuka_hanya_dalam_jendela_dan_status_dibuka(self):
+        today = timezone.localdate()
+        vacancy = Lowongan.objects.create(
+            unit_kerja=self.unit, profesi='Perawat', judul='Perawat IGD',
+            jumlah_kebutuhan=2, status='DIBUKA', jalur='EKSTERNAL',
+            tanggal_buka=today - timedelta(days=1),
+            tanggal_tutup=today + timedelta(days=30),
+        )
+        self.assertTrue(vacancy.is_pendaftaran_terbuka)
+
+        vacancy.status = 'DITUTUP'
+        self.assertFalse(vacancy.is_pendaftaran_terbuka)
+
+        vacancy.status = 'DIBUKA'
+        vacancy.tanggal_buka = today + timedelta(days=5)
+        self.assertFalse(vacancy.is_pendaftaran_terbuka)
+
+    def test_status_draft_tidak_membuka_pendaftaran(self):
+        today = timezone.localdate()
+        vacancy = Lowongan.objects.create(
+            unit_kerja=self.unit, profesi='Perawat', judul='Draf Perawat',
+            jumlah_kebutuhan=1, status='DRAFT', jalur='INTERNAL',
+            tanggal_buka=today, tanggal_tutup=today + timedelta(days=10),
+        )
+        self.assertFalse(vacancy.is_pendaftaran_terbuka)

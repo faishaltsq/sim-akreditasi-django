@@ -29,7 +29,11 @@ class LowonganForm(forms.ModelForm):
 
     class Meta:
         model = Lowongan
-        fields = ['unit_kerja', 'profesi', 'judul', 'jumlah_kebutuhan', 'status']
+        fields = [
+            'unit_kerja', 'profesi', 'judul', 'jumlah_kebutuhan', 'status',
+            'jalur', 'kualifikasi_pendidikan', 'ipk_minimal', 'batas_usia',
+            'pengalaman_minimal_bulan', 'tanggal_buka', 'tanggal_tutup',
+        ]
         widgets = {
             'profesi': forms.TextInput(attrs={'class': FIELD_CLASS, 'maxlength': 120}),
             'judul': forms.TextInput(attrs={'class': FIELD_CLASS, 'maxlength': 200}),
@@ -37,6 +41,25 @@ class LowonganForm(forms.ModelForm):
                 attrs={'class': FIELD_CLASS, 'min': '1'}
             ),
             'status': forms.Select(attrs={'class': SELECT_CLASS}),
+            'jalur': forms.Select(attrs={'class': SELECT_CLASS}),
+            'kualifikasi_pendidikan': forms.TextInput(
+                attrs={'class': FIELD_CLASS, 'maxlength': 200}
+            ),
+            'ipk_minimal': forms.NumberInput(
+                attrs={'class': FIELD_CLASS, 'min': '0', 'max': '4', 'step': '0.01'}
+            ),
+            'batas_usia': forms.NumberInput(
+                attrs={'class': FIELD_CLASS, 'min': '15', 'max': '70'}
+            ),
+            'pengalaman_minimal_bulan': forms.NumberInput(
+                attrs={'class': FIELD_CLASS, 'min': '0'}
+            ),
+            'tanggal_buka': forms.DateInput(
+                attrs={'class': FIELD_CLASS, 'type': 'date'}
+            ),
+            'tanggal_tutup': forms.DateInput(
+                attrs={'class': FIELD_CLASS, 'type': 'date'}
+            ),
         }
 
     def __init__(self, *args, user, **kwargs):
