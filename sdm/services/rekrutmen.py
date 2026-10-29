@@ -1,5 +1,8 @@
 """Level 2 transactional workflows (recruitment, PSV, privileging, orientation)."""
+import logging
+
 from django.core.exceptions import PermissionDenied, ValidationError
+from django.core.mail import send_mail
 from django.db import transaction
 from django.utils import timezone
 
@@ -21,6 +24,9 @@ from sdm.models import (
     RiwayatSeleksi,
     VerifikasiSumber,
 )
+
+
+logger = logging.getLogger(__name__)
 
 
 def move_application(application, *, target, actor, notes=''):
@@ -60,7 +66,44 @@ def move_application(application, *, target, actor, notes=''):
             status_sesudah=target,
             alasan='recruitment workflow transition',
         )
+        if target == 'DITOLAK':
+            _notify_penolakan(locked, notes)
     return locked
+
+
+def _notify_penolakan(application, notes):
+    """Email the candidate their application was not progressed.
+
+    Only portal applicants carry an address; a directly recorded application
+    is contacted by SDM through its own channel. A mail failure is swallowed
+    because it must never undo a stage change already committed.
+    """
+    pelamar = getattr(application, 'pelamar', None)
+    email = (getattr(pelamar, 'email', '') or '').strip()
+    if not email:
+        return
+    subject = f'Lamaran Anda — {application.lowongan.judul}'
+    message = (
+        f'Yth. {application.nama_pelamar},\n\n'
+        f'Terima kasih atas lamaran Anda untuk posisi '
+        f'{application.lowongan.judul}.\n\n'
+        'Setelah seleksi administrasi, kami belum dapat melanjutkan lamaran '
+        'Anda pada tahap ini.\n\n'
+    )
+    if notes:
+        message += f'Catatan tim: {notes}\n\n'
+    message += (
+        'Kami menghargai waktu dan minat Anda, dan mendorong Anda untuk '
+        'mengikuti lowongan lain yang sesuai.\n\n'
+        'Hormat kami,\nTim Rekrutmen'
+    )
+    try:
+        send_mail(subject, message, None, [email], fail_silently=True)
+    except Exception:
+        logger.warning(
+            'gagal mengirim email penolakan lamaran %s', application.pk,
+            exc_info=True,
+        )
 
 
 def hire_application(application, *, actor, idempotency_key):

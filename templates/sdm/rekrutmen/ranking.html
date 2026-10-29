@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block page_title %}Peringkat Ujian — {{ vacancy.judul }}{% endblock %}
+{% block page_subtitle %}Auto-scoring CBT{% endblock %}
+{% block content %}
+<div class="container-fluid p-0">
+    <a class="small text-decoration-none" href="{% url 'sdm:rekrutmen_detail' vacancy.pk %}"><i class="bi bi-arrow-left me-1"></i>Kembali ke pipeline</a>
+    <h1 class="page-title h4 mt-2 mb-3">Peringkat Ujian — {{ vacancy.judul }}</h1>
+    <div class="card border shadow-sm">
+        <div class="table-responsive">
+            <table class="table table-sm align-middle mb-0">
+                <caption class="visually-hidden">Peringkat nilai ujian kompetensi</caption>
+                <thead><tr><th scope="col">#</th><th scope="col">Pelamar</th><th scope="col">Nilai</th><th scope="col">Hasil</th><th scope="col">Pindah Fokus</th><th scope="col">Status</th></tr></thead>
+                <tbody>
+                    {% for sesi in ranking %}
+                    <tr>
+                        <td>{{ forloop.counter }}</td>
+                        <td>{{ sesi.lamaran.nama_pelamar }}</td>
+                        <td class="fw-semibold">{{ sesi.nilai }}</td>
+                        <td>
+                            {% if sesi.lulus %}<span class="badge bg-success">Lulus</span>
+                            {% else %}<span class="badge bg-danger">Tidak lulus</span>{% endif %}
+                        </td>
+                        <td class="small">{{ sesi.pindah_fokus }}</td>
+                        <td><span class="badge text-bg-light text-dark">{{ sesi.get_status_display }}</span></td>
+                    </tr>
+                    {% empty %}<tr><td colspan="6" class="text-center text-muted py-4">Belum ada ujian selesai.</td></tr>{% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

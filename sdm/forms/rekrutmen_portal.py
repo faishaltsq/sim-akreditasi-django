@@ -2,6 +2,7 @@
 from django import forms
 from django.core.exceptions import ValidationError
 
+from sdm.models import Pelamar
 from sdm.services.rekrutmen_portal import (
     BERKAS_EXTENSI,
     BERKAS_MAKS_BYTE,
@@ -10,6 +11,7 @@ from sdm.services.rekrutmen_portal import (
 
 FIELD_CLASS = 'form-control form-control-sm'
 SELECT_CLASS = 'form-select form-control-sm'
+JENIS_PENDIDIKAN = Pelamar.PENDIDIKAN_CHOICES
 
 
 def validate_berkas_field(file_obj):
@@ -49,6 +51,25 @@ class LamaranPortalForm(forms.Form):
     telepon = forms.CharField(
         label='Telepon / WhatsApp', max_length=40,
         widget=forms.TextInput(attrs={'class': FIELD_CLASS, 'maxlength': 40}),
+    )
+    pendidikan_terakhir = forms.ChoiceField(
+        label='Pendidikan Terakhir', choices=JENIS_PENDIDIKAN,
+        widget=forms.Select(attrs={'class': SELECT_CLASS}),
+    )
+    ipk = forms.DecimalField(
+        label='IPK', max_digits=3, decimal_places=2, required=False,
+        min_value=0, max_value=4,
+        widget=forms.NumberInput(
+            attrs={'class': FIELD_CLASS, 'min': '0', 'max': '4', 'step': '0.01'}
+        ),
+    )
+    tanggal_lahir = forms.DateField(
+        label='Tanggal Lahir', required=False,
+        widget=forms.DateInput(attrs={'class': FIELD_CLASS, 'type': 'date'}),
+    )
+    pengalaman_bulan = forms.IntegerField(
+        label='Pengalaman Kerja (bulan)', required=False, min_value=0,
+        widget=forms.NumberInput(attrs={'class': FIELD_CLASS, 'min': '0'}),
     )
 
     def __init__(self, *args, vacancy=None, **kwargs):

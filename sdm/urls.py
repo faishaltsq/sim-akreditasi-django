@@ -111,6 +111,26 @@ urlpatterns = [
         name='formasi_approve',
     ),
     path('rekrutmen/', views.rekrutmen_list, name='rekrutmen_list'),
+    path(
+        'rekrutmen/<uuid:vacancy_id>/screening/',
+        views.rekrutmen_screening,
+        name='rekrutmen_screening',
+    ),
+    path(
+        'rekrutmen/<uuid:vacancy_id>/ranking/',
+        views.rekrutmen_ranking,
+        name='rekrutmen_ranking',
+    ),
+    path(
+        'rekrutmen/lamaran/<uuid:application_id>/sesi-ujian/',
+        views.rekrutmen_buat_sesi_ujian,
+        name='rekrutmen_buat_sesi_ujian',
+    ),
+    path(
+        'rekrutmen/lamaran/<uuid:application_id>/berkas/<uuid:berkas_id>/verifikasi/',
+        views.rekrutmen_berkas_verifikasi,
+        name='rekrutmen_berkas_verifikasi',
+    ),
     # ── Portal pelamar publik (tanpa login; akses via token) ──
     path('rekrutmen/portal/', rekrutmen_portal_views.portal_lowongan,
          name='portal_lowongan'),
@@ -118,6 +138,21 @@ urlpatterns = [
          name='portal_daftar'),
     path('rekrutmen/portal/lamaran/<str:token>/', rekrutmen_portal_views.portal_lamaran_status,
          name='portal_lamaran_status'),
+    path(
+        'rekrutmen/portal/ujian/<str:token>/<uuid:sesi_id>/',
+        rekrutmen_portal_views.portal_ujian,
+        name='portal_ujian',
+    ),
+    path(
+        'rekrutmen/portal/ujian/<str:token>/<uuid:sesi_id>/jawab/',
+        rekrutmen_portal_views.portal_ujian_jawab,
+        name='portal_ujian_jawab',
+    ),
+    path(
+        'rekrutmen/portal/ujian/<str:token>/<uuid:sesi_id>/fokus/',
+        rekrutmen_portal_views.portal_ujian_fokus,
+        name='portal_ujian_fokus',
+    ),
     path('rekrutmen/baru/', views.rekrutmen_create, name='rekrutmen_create'),
     path(
         'rekrutmen/<uuid:vacancy_id>/lamaran/',

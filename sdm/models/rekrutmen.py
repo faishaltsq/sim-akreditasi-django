@@ -106,6 +106,17 @@ class Pelamar(models.Model):
     one, which is why it is stored rather than hashed.
     """
 
+    PENDIDIKAN_CHOICES = [
+        ('SMA_SMK', 'SMA / SMK'),
+        ('D3', 'Diploma III (D3)'),
+        ('S1', 'Sarjana (S1)'),
+        ('S2', 'Magister (S2)'),
+        ('S3', 'Doktor (S3)'),
+    ]
+    URUTAN_PENDIDIKAN = {
+        'SMA_SMK': 1, 'D3': 2, 'S1': 3, 'S2': 4, 'S3': 5,
+    }
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     token = models.CharField(
         'Token Akses', max_length=64, unique=True,
@@ -115,6 +126,19 @@ class Pelamar(models.Model):
     nama_lengkap = models.CharField('Nama Lengkap', max_length=200)
     email = models.EmailField('Email', blank=True)
     telepon = models.CharField('Telepon', max_length=40, blank=True)
+    # ── Data penyaringan (diisi pelamar saat mendaftar) ──
+    pendidikan_terakhir = models.CharField(
+        'Pendidikan Terakhir', max_length=10, choices=PENDIDIKAN_CHOICES,
+        blank=True, default='',
+    )
+    ipk = models.DecimalField(
+        'IPK', max_digits=3, decimal_places=2, null=True, blank=True,
+        validators=[MinValueValidator(Decimal('0.00')), MaxValueValidator(Decimal('4.00'))],
+    )
+    tanggal_lahir = models.DateField('Tanggal Lahir', null=True, blank=True)
+    pengalaman_bulan = models.PositiveSmallIntegerField(
+        'Pengalaman Kerja (bulan)', null=True, blank=True,
+    )
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

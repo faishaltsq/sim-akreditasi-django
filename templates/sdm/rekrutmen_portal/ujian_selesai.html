@@ -1,0 +1,20 @@
+{% extends "sdm/rekrutmen_portal/_base_publik.html" %}
+{% block title %}Ujian Selesai{% endblock %}
+{% block content %}
+<div class="card border shadow-sm">
+    <div class="card-body">
+        <h2 class="h6 mb-2">Ujian telah berakhir</h2>
+        <p class="small mb-2">Status: <span class="badge text-bg-light text-dark">{{ sesi.get_status_display }}</span></p>
+        {% if sesi.nilai is not None %}
+        <p class="mb-1">Nilai Anda: <strong>{{ sesi.nilai }}</strong> (passing grade {{ sesi.paket.passing_grade }})</p>
+        <p class="mb-0">
+            {% if sesi.lulus %}<span class="badge bg-success">Lulus</span>
+            {% else %}<span class="badge bg-danger">Tidak lulus</span>{% endif %}
+        </p>
+        {% else %}
+        <p class="small text-muted mb-0">Nilai akan ditampilkan setelah dinilai.</p>
+        {% endif %}
+    </div>
+</div>
+<a class="btn btn-outline-secondary btn-sm mt-3" href="{% url 'sdm:portal_lamaran_status' token %}">Kembali ke status lamaran</a>
+{% endblock %}

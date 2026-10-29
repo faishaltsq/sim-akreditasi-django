@@ -3,11 +3,14 @@ import io
 from datetime import timedelta
 
 from django.core.files.uploadedfile import SimpleUploadedFile
+from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
 
+from accounts.models import RolePermissionConfig, UserProfile
 from akreditasi.models import UnitKerja
+from sdm.akses import HcGrant
 from sdm.models import BerkasPelamar, Lamaran, Lowongan, Pelamar
 
 
@@ -44,6 +47,8 @@ class PortalPelamarBase(TestCase):
     def _lamar(self, vacancy, **extra):
         data = {
             'nama_lengkap': 'Pelamar Uji', 'telepon': '0812',
+            'pendidikan_terakhir': 'S1', 'ipk': '3.00',
+            'tanggal_lahir': '1995-05-17', 'pengalaman_bulan': '24',
             'berkas_ktp': _pdf(), 'berkas_ijazah': _pdf(), 'berkas_cv': _pdf(),
             'berkas_str': _pdf(), 'berkas_sip': _pdf(),
         }
@@ -152,3 +157,207 @@ class AksesTokenTests(PortalPelamarBase):
         self.assertEqual(response.status_code, 200)
         self.assertIn('Perawat IGD', response.content.decode())
         self.assertIn('KTP', response.content.decode())
+
+
+class ScreeningTests(PortalPelamarBase):
+    """Fase C3: matriks penapisan administrasi."""
+
+    def setUp(self):
+        super().setUp()
+        self.vacancy = Lowongan.objects.create(
+            unit_kerja=self.unit, profesi='Perawat', judul='Perawat IGD',
+            jumlah_kebutuhan=2, status='DIBUKA', jalur='EKSTERNAL',
+            kualifikasi_pendidikan='D3 Keperawatan', ipk_minimal='2.75',
+            batas_usia=35, pengalaman_minimal_bulan=12,
+        )
+        self.user = get_user_model().objects.create_user(username='screener')
+        UserProfile.objects.create(
+            user=self.user, role='ADMIN_RS', unit_kerja=self.unit
+        )
+        # Grant saja tidak cukup: RolePermissionConfig untuk peran harus aktif.
+        config = RolePermissionConfig.get_config_for_role('ADMIN_RS')
+        config.can_view_hc = True
+        config.can_manage_hc_recruitment = True
+        config.save()
+        HcGrant.objects.create(
+            user=self.user, unit_kerja=self.unit,
+            capability='can_view_hc',
+        )
+        HcGrant.objects.create(
+            user=self.user, unit_kerja=self.unit,
+            capability='can_manage_hc_recruitment',
+        )
+        self.client.force_login(self.user)
+
+    def _lamaran(self, nama, **profil):
+        pelamar = Pelamar.objects.create(
+            nama_lengkap=nama, telepon='0812', **profil
+        )
+        lamaran = Lamaran.objects.create(
+            lowongan=self.vacancy, pelamar=pelamar, nama_pelamar=nama
+        )
+        for jenis in ('KTP', 'IJAZAH', 'CV', 'STR', 'SIP'):
+            BerkasPelamar.objects.create(
+                lamaran=lamaran, jenis=jenis, berkas=_pdf(f'{jenis.lower()}.pdf')
+            )
+        return lamaran
+
+    def test_kandidat_memenuhi_semua_kriteria_layak(self):
+        from sdm.services.screening_rekrutmen import screen_application
+        lamaran = self._lamaran(
+            'Sempurna', pendidikan_terakhir='S1', ipk='3.50',
+            tanggal_lahir=self.today - timedelta(days=25 * 365),
+            pengalaman_bulan=24,
+        )
+        verdict = screen_application(lamaran)
+        self.assertTrue(verdict['layak'])
+        self.assertEqual(verdict['masalah'], [])
+
+    def test_kriteria_tidak_terpenuhi_dilaporkan_bukan_dibuang(self):
+        from sdm.services.screening_rekrutmen import screen_application
+        lamaran = self._lamaran(
+            'Kurang', pendidikan_terakhir='SMA_SMK', ipk='2.10',
+            tanggal_lahir=self.today - timedelta(days=45 * 365),
+            pengalaman_bulan=3,
+        )
+        verdict = screen_application(lamaran)
+        self.assertFalse(verdict['layak'])
+        self.assertEqual(len(verdict['masalah']), 4)
+        # Baris tetap ada supaya jejak audit per tahap utuh.
+        self.assertTrue(Lamaran.objects.filter(pk=lamaran.pk).exists())
+
+    def test_data_kosong_dilaporkan_perlu_dilengkapi(self):
+        from sdm.services.screening_rekrutmen import screen_application
+        lamaran = self._lamaran('Kosong')
+        verdict = screen_application(lamaran)
+        self.assertFalse(verdict['layak'])
+        self.assertTrue(verdict['perlu_dilengkapi'])
+
+    def test_berkas_belum_diunggah_terhitung_masalah(self):
+        from sdm.services.screening_rekrutmen import screen_application
+        lamaran = self._lamaran(
+            'Tanpa Berkas', pendidikan_terakhir='S1', ipk='3.50',
+            tanggal_lahir=self.today - timedelta(days=25 * 365),
+            pengalaman_bulan=24,
+        )
+        lamaran.berkas.update(berkas='')
+        verdict = screen_application(lamaran)
+        self.assertFalse(verdict['layak'])
+        # Semua berkas wajib kosong, jadi kelimanya dilaporkan.
+        self.assertEqual(len(verdict['masalah']), 5)
+
+    def test_matriks_tampil_dengan_usulan_per_pelamar(self):
+        self._lamaran('Sempurna', pendidikan_terakhir='S1', ipk='3.50',
+                      tanggal_lahir=self.today - timedelta(days=25 * 365),
+                      pengalaman_bulan=24)
+        self._lamaran('Kosong')
+        response = self.client.get(
+            reverse('sdm:rekrutmen_screening', args=[self.vacancy.pk])
+        )
+        self.assertEqual(response.status_code, 200)
+        html = response.content.decode()
+        self.assertIn('Sempurna', html)
+        self.assertIn('Kosong', html)
+        self.assertIn('Layak', html)
+        self.assertIn('Perlu dilengkapi', html)
+
+    def test_verifikasi_berkas_per_item(self):
+        lamaran = self._lamaran('Satu', pendidikan_terakhir='S1', ipk='3.50')
+        berkas = lamaran.berkas.first()
+        response = self.client.post(
+            reverse('sdm:rekrutmen_berkas_verifikasi',
+                    args=[lamaran.pk, berkas.pk]),
+            {'status': 'VALID', 'catatan': 'Sudah dicek'},
+        )
+        self.assertEqual(response.status_code, 302)
+        berkas.refresh_from_db()
+        self.assertEqual(berkas.status, 'VALID')
+        self.assertEqual(berkas.diverifikasi_oleh, self.user)
+        self.assertIsNotNone(berkas.diverifikasi_at)
+
+    def test_status_verifikasi_tidak_dikenal_ditolak(self):
+        lamaran = self._lamaran('Dua', pendidikan_terakhir='S1', ipk='3.50')
+        berkas = lamaran.berkas.first()
+        self.client.post(
+            reverse('sdm:rekrutmen_berkas_verifikasi',
+                    args=[lamaran.pk, berkas.pk]),
+            {'status': 'NGAWUR'},
+        )
+        berkas.refresh_from_db()
+        self.assertEqual(berkas.status, 'MENUNGGU')
+
+
+class NotifikasiPenolakanTests(PortalPelamarBase):
+    """C3.5: email penolakan otomatis saat lamaran ditolak."""
+
+    def setUp(self):
+        super().setUp()
+        from accounts.models import RolePermissionConfig
+        config = RolePermissionConfig.get_config_for_role('ADMIN_RS')
+        config.can_view_hc = True
+        config.can_manage_hc_recruitment = True
+        config.save()
+        self.user = get_user_model().objects.create_user(username='rejector')
+        UserProfile.objects.create(
+            user=self.user, role='ADMIN_RS', unit_kerja=self.unit
+        )
+        HcGrant.objects.create(
+            user=self.user, unit_kerja=self.unit, capability='can_view_hc'
+        )
+        HcGrant.objects.create(
+            user=self.user, unit_kerja=self.unit,
+            capability='can_manage_hc_recruitment',
+        )
+        self.vacancy = Lowongan.objects.create(
+            unit_kerja=self.unit, profesi='Perawat', judul='Perawat IGD',
+            jumlah_kebutuhan=1, status='DIBUKA', jalur='EKSTERNAL',
+        )
+        self.pelamar = Pelamar.objects.create(
+            nama_lengkap='Kandidat Email', email='kandidat@x.id',
+            telepon='0812',
+        )
+        self.application = Lamaran.objects.create(
+            lowongan=self.vacancy, pelamar=self.pelamar,
+            nama_pelamar='Kandidat Email',
+        )
+        self.client.force_login(self.user)
+
+    def test_penolakan_mengirim_email_ke_pelamar(self):
+        from django.core import mail
+        from sdm.services.rekrutmen import move_application
+        with self.settings(EMAIL_BACKEND='django.core.mail.backends.locmem.EmailBackend'):
+            move_application(
+                self.application, target='DITOLAK', actor=self.user,
+                notes='IPK di bawah syarat',
+            )
+        self.assertEqual(len(mail.outbox), 1)
+        sent = mail.outbox[0]
+        self.assertEqual(sent.to, ['kandidat@x.id'])
+        self.assertIn('Perawat IGD', sent.subject)
+        self.assertIn('IPK di bawah syarat', sent.body)
+        self.assertIn('Kandidat Email', sent.body)
+
+    def test_penolakan_tanpa_email_tidak_error(self):
+        from django.core import mail
+        from sdm.services.rekrutmen import move_application
+        self.pelamar.email = ''
+        self.pelamar.save()
+        with self.settings(EMAIL_BACKEND='django.core.mail.backends.locmem.EmailBackend'):
+            move_application(self.application, target='DITOLAK', actor=self.user)
+        self.assertEqual(len(mail.outbox), 0)
+        self.application.refresh_from_db()
+        self.assertEqual(self.application.status, 'DITOLAK')
+
+    def test_kegagalan_email_tidak_membatalkan_perpindahan_tahap(self):
+        """Mail server mati tidak boleh mengembalikan tahap yang sudah berubah."""
+        from django.core import mail
+        from sdm.services.rekrutmen import move_application
+
+        def _boom(*args, **kwargs):
+            raise OSError('mail server down')
+
+        with self.settings(EMAIL_BACKEND='django.core.mail.backends.locmem.EmailBackend'):
+            mail.send_mail = _boom
+            move_application(self.application, target='DITOLAK', actor=self.user)
+        self.application.refresh_from_db()
+        self.assertEqual(self.application.status, 'DITOLAK')

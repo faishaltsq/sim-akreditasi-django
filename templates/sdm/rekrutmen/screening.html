@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+{% block page_title %}Seleksi Administrasi — {{ vacancy.judul }}{% endblock %}
+{% block page_subtitle %}Matriks penapisan berkas & kriteria{% endblock %}
+{% block content %}
+<div class="container-fluid p-0">
+    <a class="small text-decoration-none" href="{% url 'sdm:rekrutmen_detail' vacancy.pk %}"><i class="bi bi-arrow-left me-1"></i>Kembali ke pipeline</a>
+    <h1 class="page-title h4 mt-2 mb-3">Seleksi Administrasi — {{ vacancy.judul }}</h1>
+    <p class="small text-muted mb-3">
+        Kriteria lowongan: pendidikan minimum
+        {% if vacancy.kualifikasi_pendidikan %}{{ vacancy.kualifikasi_pendidikan }}{% else %}tidak ditetapkan{% endif %}
+        {% if vacancy.ipk_minimal %}&middot; IPK &ge; {{ vacancy.ipk_minimal }}{% endif %}
+        {% if vacancy.batas_usia %}&middot; usia &le; {{ vacancy.batas_usia }} tahun{% endif %}
+        {% if vacancy.pengalaman_minimal_bulan %}&middot; pengalaman &ge; {{ vacancy.pengalaman_minimal_bulan }} bulan{% endif %}
+    </p>
+    <div class="card border shadow-sm">
+        <div class="table-responsive">
+            <table class="table table-sm align-middle mb-0">
+                <caption class="visually-hidden">Matriks penapisan lamaran</caption>
+                <thead>
+                    <tr>
+                        <th scope="col">Pelamar</th>
+                        <th scope="col">Pendidikan / IPK</th>
+                        <th scope="col">Usia</th>
+                        <th scope="col">Pengalaman</th>
+                        <th scope="col">Berkas</th>
+                        <th scope="col">Usulan</th>
+                        <th scope="col">Tahap</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for application, verdict in matrix %}
+                    <tr>
+                        <td>
+                            <span class="fw-semibold d-block">{{ application.nama_pelamar }}</span>
+                            {% if application.pelamar %}
+                            <span class="small text-muted">{{ application.pelamar.email|default:application.pelamar.telepon }}</span>
+                            {% endif %}
+                        </td>
+                        <td class="small">
+                            {% if application.pelamar %}
+                            {{ application.pelamar.get_pendidikan_terakhir_display|default:"—" }}
+                            {% if application.pelamar.ipk %}&middot; IPK {{ application.pelamar.ipk }}{% endif %}
+                            {% else %}<span class="text-muted">Profil belum ada</span>{% endif %}
+                        </td>
+                        <td class="small">
+                            {% if application.pelamar.tanggal_lahir %}{{ application.pelamar.tanggal_lahir|date:"d M Y" }}{% else %}<span class="text-muted">—</span>{% endif %}
+                        </td>
+                        <td class="small">
+                            {% if application.pelamar.pengalaman_bulan is not None %}{{ application.pelamar.pengalaman_bulan }} bulan{% else %}<span class="text-muted">—</span>{% endif %}
+                        </td>
+                        <td>
+                            <ul class="list-unstyled small mb-0">
+                                {% for b in verdict.berkas %}
+                                <li class="d-flex align-items-center gap-1 mb-1">
+                                    <span class="badge {% if b.status == 'VALID' %}bg-success{% elif b.status == 'MENUNGGU' %}bg-secondary{% else %}bg-warning text-dark{% endif %}">
+                                        {{ b.get_jenis_display }}: {{ b.get_status_display }}
+                                    </span>
+                                    <form method="post" action="{% url 'sdm:rekrutmen_berkas_verifikasi' application.pk b.pk %}" class="d-inline-flex gap-1">
+                                        {% csrf_token %}
+                                        <label class="visually-hidden" for="st-{{ b.pk }}">Status {{ b.get_jenis_display }}</label>
+                                        <select id="st-{{ b.pk }}" name="status" class="form-select form-select-sm" style="width:auto;">
+                                            {% for value, label in b.STATUS_CHOICES %}<option value="{{ value }}" {% if value == b.status %}selected{% endif %}>{{ label }}</option>{% endfor %}
+                                        </select>
+                                        <button class="btn btn-outline-secondary btn-sm" type="submit">Simpan</button>
+                                    </form>
+                                </li>
+                                {% empty %}
+                                <li class="text-muted">Belum ada berkas</li>
+                                {% endfor %}
+                            </ul>
+                        </td>
+                        <td>
+                            {% if verdict.layak %}
+                            <span class="badge bg-success">Layak</span>
+                            {% elif verdict.perlu_dilengkapi %}
+                            <span class="badge bg-warning text-dark">Perlu dilengkapi</span>
+                            {% else %}
+                            <span class="badge bg-danger">Tidak layak</span>
+                            {% endif %}
+                            {% if verdict.masalah %}
+                            <ul class="small text-danger mb-0 mt-1 ps-3">
+                                {% for m in verdict.masalah %}<li>{{ m }}</li>{% endfor %}
+                            </ul>
+                            {% endif %}
+                        </td>
+                        <td><span class="badge text-bg-light text-dark">{{ application.get_status_display }}</span></td>
+                    </tr>
+                    {% empty %}<tr><td colspan="7" class="text-center text-muted py-4">Belum ada lamaran.</td></tr>{% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

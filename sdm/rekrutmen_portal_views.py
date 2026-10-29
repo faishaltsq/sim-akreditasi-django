@@ -1,10 +1,11 @@
 """Fase C2: halaman publik portal pelamar — tanpa login, akses lewat token."""
 from django.contrib import messages
+from django.http import JsonResponse
 from django.core.exceptions import ValidationError
 from django.shortcuts import get_object_or_404, redirect, render
 
 from sdm.forms.rekrutmen_portal import LamaranPortalForm
-from sdm.models import Lamaran, Pelamar
+from sdm.models import Lamaran, Pelamar, SesiUjian
 from sdm.services.rekrutmen_portal import (
     application_status,
     create_application,
@@ -38,6 +39,10 @@ def portal_daftar(request, vacancy_id):
                 nama=form.cleaned_data['nama_lengkap'],
                 email=form.cleaned_data['email'],
                 telepon=form.cleaned_data['telepon'],
+                pendidikan_terakhir=form.cleaned_data['pendidikan_terakhir'],
+                ipk=form.cleaned_data['ipk'],
+                tanggal_lahir=form.cleaned_data['tanggal_lahir'],
+                pengalaman_bulan=form.cleaned_data['pengalaman_bulan'],
                 files=form.files_by_jenis(),
             )
         except ValidationError as exc:
@@ -85,3 +90,87 @@ def portal_lamaran_status(request, token):
         'token': token,
         'title': 'Status Lamaran',
     })
+
+
+# ── Fase C4: pengerjaan ujian kompetensi (CBT) ───────────────────────────
+def portal_ujian(request, token, sesi_id):
+    """Exam paper for one session, reached by the candidate's own token."""
+    pelamar = get_object_or_404(Pelamar, token=token)
+    sesi = get_object_or_404(
+        SesiUjian.objects.select_related('paket', 'lamaran'),
+        pk=sesi_id,
+        lamaran__pelamar=pelamar,
+    )
+    if sesi.is_kedaluwarsa():
+        selesaikan_sesi(sesi, paksa=True)
+
+    if sesi.status != 'BERLANGSUNG':
+        return render(request, 'sdm/rekrutmen_portal/ujian_selesai.html', {
+            'sesi': sesi, 'token': token, 'title': 'Ujian Selesai',
+        })
+
+    from sdm.services.ujian_rekrutmen import soal_untuk_sesi
+    terjawab = {
+        str(j.soal_id): j.jawaban for j in sesi.jawaban.all()
+    }
+    return render(request, 'sdm/rekrutmen_portal/ujian.html', {
+        'sesi': sesi,
+        'soal': soal_untuk_sesi(sesi),
+        'terjawab': terjawab,
+        'sisa_detik': sesi.sisa_detik(),
+        'token': token,
+        'title': 'Ujian Kompetensi',
+    })
+
+
+def portal_ujian_jawab(request, token, sesi_id):
+    """Record one answer (POST) or submit the whole paper (POST submit=1)."""
+    pelamar = get_object_or_404(Pelamar, token=token)
+    sesi = get_object_or_404(
+        SesiUjian.objects.select_related('paket'),
+        pk=sesi_id,
+        lamaran__pelamar=pelamar,
+    )
+    if request.method != 'POST':
+        return redirect(
+            'sdm:portal_ujian', token=token, sesi_id=sesi.pk
+        )
+
+    from sdm.services.ujian_rekrutmen import catat_jawaban, selesaikan_sesi
+
+    if request.POST.get('submit'):
+        try:
+            selesaikan_sesi(sesi, paksa=True)
+        except PermissionError:
+            messages.error(request, 'Waktu ujian sudah habis.')
+        else:
+            messages.success(request, 'Jawaban terkirim.')
+        return redirect(
+            'sdm:portal_ujian', token=token, sesi_id=sesi.pk
+        )
+
+    try:
+        catat_jawaban(
+            sesi,
+            request.POST.get('soal_id', ''),
+            request.POST.get('jawaban', ''),
+        )
+    except (PermissionError, ValueError) as exc:
+        messages.error(request, str(exc))
+
+    if sesi.is_kedaluwarsa():
+        selesaikan_sesi(sesi, paksa=True)
+        return redirect('sdm:portal_ujian', token=token, sesi_id=sesi.pk)
+    return redirect('sdm:portal_ujian', token=token, sesi_id=sesi.pk)
+
+
+def portal_ujian_fokus(request, token, sesi_id):
+    """Anti-cheating ping: the candidate left the exam page."""
+    pelamar = get_object_or_404(Pelamar, token=token)
+    sesi = get_object_or_404(
+        SesiUjian, pk=sesi_id, lamaran__pelamar=pelamar
+    )
+    if request.method != 'POST':
+        return JsonResponse({'ok': False}, status=405)
+    from sdm.services.ujian_rekrutmen import catat_pindah_fokus
+    return JsonResponse({'pindah_fokus': catat_pindah_fokus(sesi)})

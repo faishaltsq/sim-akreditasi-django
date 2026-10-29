@@ -5,15 +5,22 @@
 <div class="container-fluid p-0">
     <a class="small text-decoration-none" href="{% url 'sdm:rekrutmen_list' %}"><i class="bi bi-arrow-left me-1"></i>Kembali</a>
     <h1 class="page-title h4 mt-2 mb-3">{{ vacancy.judul }} — {{ vacancy.profesi }}</h1>
+    <a class="btn btn-outline-secondary btn-sm mb-3" href="{% url 'sdm:rekrutmen_screening' vacancy.pk %}"><i class="bi bi-funnel me-1"></i>Matriks Seleksi Administrasi</a>
+    <a class="btn btn-outline-secondary btn-sm mb-3" href="{% url 'sdm:rekrutmen_ranking' vacancy.pk %}"><i class="bi bi-trophy me-1"></i>Peringkat Ujian</a>
     <div class="card border shadow-sm">
         <div class="table-responsive">
             <table class="table table-sm align-middle mb-0">
                 <caption class="visually-hidden">Lamaran dan tahap seleksi</caption>
                 <thead><tr><th scope="col">Pelamar</th><th scope="col">Tahap</th><th scope="col">Riwayat</th><th scope="col">Pindahkan</th></tr></thead>
                 <tbody>
-                    {% for application in applications %}
+                    {% for application, verdict in matrix %}
                     <tr>
-                        <td>{{ application.nama_pelamar }}</td>
+                        <td>
+                            <span class="fw-semibold d-block">{{ application.nama_pelamar }}</span>
+                            {% if verdict.layak %}<span class="badge bg-success">Layak admin</span>
+                            {% elif verdict.perlu_dilengkapi %}<span class="badge bg-warning text-dark">Perlu dilengkapi</span>
+                            {% else %}<span class="badge bg-danger">Tidak layak</span>{% endif %}
+                        </td>
                         <td><span class="badge text-bg-light text-dark">{{ application.get_status_display }}</span></td>
                         <td class="small text-muted">{{ application.history.count }} perubahan</td>
                         <td>
@@ -24,6 +31,10 @@
                                     {% for value, label in stage_choices %}<option value="{{ value }}">{{ label }}</option>{% endfor %}
                                 </select>
                                 <button class="btn btn-outline-primary btn-sm" type="submit">Simpan</button>
+                            </form>
+                            <form method="post" action="{% url 'sdm:rekrutmen_buat_sesi_ujian' application.pk %}" class="d-inline mt-1">
+                                {% csrf_token %}
+                                <button class="btn btn-outline-secondary btn-sm" type="submit">Buka sesi ujian</button>
                             </form>
                         </td>
                     </tr>

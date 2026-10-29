@@ -67,7 +67,9 @@ def validate_berkas(file_obj):
         )
 
 
-def create_application(*, vacancy, nama, email, telepon, files):
+def create_application(*, vacancy, nama, email, telepon, files,
+                       pendidikan_terakhir='', ipk=None, tanggal_lahir=None,
+                       pengalaman_bulan=None):
     """Register a candidate and their application in one transaction.
 
     ``files`` maps document kind -> UploadedFile. Missing required documents
@@ -98,6 +100,9 @@ def create_application(*, vacancy, nama, email, telepon, files):
     with transaction.atomic():
         pelamar = Pelamar.objects.create(
             nama_lengkap=nama.strip(), email=email.strip(), telepon=telepon.strip(),
+            pendidikan_terakhir=pendidikan_terakhir or '',
+            ipk=ipk, tanggal_lahir=tanggal_lahir,
+            pengalaman_bulan=pengalaman_bulan,
         )
         lamaran = Lamaran.objects.create(
             lowongan=vacancy,

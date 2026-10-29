@@ -61,6 +61,7 @@ from django.http import HttpResponse
 
 from sdm.models import (
     AktivitasBebanKerja,
+    BerkasPelamar,
     EntriLogbookKlinis,
     VerifikasiLogbook,
     InsidenK3Pegawai,
@@ -1211,12 +1212,122 @@ def rekrutmen_detail(request, vacancy_id):
     require_hc_capability(
         request.user, 'can_manage_hc_recruitment', unit=vacancy.unit_kerja_id
     )
+    from sdm.services.screening_rekrutmen import (
+        screening_queue, screen_application,
+    )
+    applications = screening_queue(vacancy).select_related('employee')
+    # Usulan saringan dihitung sekali per baris; operator tetap pemutus akhir.
+    matrix = [(app, screen_application(app)) for app in applications]
     return render(request, 'sdm/rekrutmen/detail.html', {
         'vacancy': vacancy,
-        'applications': vacancy.applications.select_related('employee').prefetch_related('history'),
+        'matrix': matrix,
         'stage_choices': Lamaran.STATUS_CHOICES,
     })
 
+
+@login_required
+def rekrutmen_screening(request, vacancy_id):
+    """C3: matriks penapisan administrasi untuk satu lowongan."""
+    vacancy = _scoped_or_404(
+        Lowongan, request.user, vacancy_id,
+        capability='can_manage_hc_recruitment',
+    )
+    require_hc_capability(
+        request.user, 'can_manage_hc_recruitment', unit=vacancy.unit_kerja_id
+    )
+    from sdm.services.screening_rekrutmen import (
+        screening_queue, screen_application,
+    )
+    matrix = [
+        (app, screen_application(app)) for app in screening_queue(vacancy)
+    ]
+    return render(request, 'sdm/rekrutmen/screening.html', {
+        'vacancy': vacancy,
+        'matrix': matrix,
+    })
+
+
+@login_required
+@require_POST
+def rekrutmen_berkas_verifikasi(request, application_id, berkas_id):
+    """C3.3: tetapkan status verifikasi satu berkas pelamar."""
+    application = get_object_or_404(
+        Lamaran.objects.select_related('lowongan'),
+        pk=application_id,
+        lowongan__unit_kerja__in=visible_units(
+            request.user, capability='can_manage_hc_recruitment'
+        ),
+    )
+    berkas = get_object_or_404(
+        BerkasPelamar.objects.filter(lamaran=application), pk=berkas_id
+    )
+    status = request.POST.get('status', '')
+    if status not in dict(BerkasPelamar.STATUS_CHOICES):
+        messages.error(request, 'Status verifikasi tidak dikenal.')
+        return redirect(
+            'sdm:rekrutmen_screening', vacancy_id=application.lowongan_id
+        )
+    berkas.status = status
+    berkas.catatan = (request.POST.get('catatan') or '')[:500]
+    berkas.diverifikasi_oleh = request.user
+    berkas.diverifikasi_at = timezone.now()
+    berkas.save(update_fields=[
+        'status', 'catatan', 'diverifikasi_oleh', 'diverifikasi_at',
+    ])
+    messages.success(request, f'Status {berkas.get_jenis_display()} diperbarui.')
+    return redirect(
+        'sdm:rekrutmen_screening', vacancy_id=application.lowongan_id
+    )
+
+
+@login_required
+@require_POST
+def rekrutmen_buat_sesi_ujian(request, application_id):
+    """C4: buka sesi ujian CBT untuk satu lamaran."""
+    application = get_object_or_404(
+        Lamaran.objects.select_related('lowongan'),
+        pk=application_id,
+        lowongan__unit_kerja__in=visible_units(
+            request.user, capability='can_manage_hc_recruitment'
+        ),
+    )
+    from sdm.models import PaketSoal
+    from sdm.services.ujian_rekrutmen import buat_sesi
+    paket = PaketSoal.objects.filter(
+        lowongan=application.lowongan, is_active=True
+    ).first()
+    if paket is None:
+        messages.error(request, 'Lowongan ini belum punya paket soal aktif.')
+        return redirect(
+            'sdm:rekrutmen_detail', vacancy_id=application.lowongan_id
+        )
+    if not paket.soal.exists():
+        messages.error(request, 'Paket soal belum memiliki soal.')
+        return redirect(
+            'sdm:rekrutmen_detail', vacancy_id=application.lowongan_id
+        )
+    buat_sesi(application, paket=paket)
+    messages.success(request, 'Sesi ujian dibuka.')
+    return redirect(
+        'sdm:rekrutmen_detail', vacancy_id=application.lowongan_id
+    )
+
+
+@login_required
+def rekrutmen_ranking(request, vacancy_id):
+    """C4: peringkat kandidat satu lowongan berdasarkan nilai ujian."""
+    vacancy = _scoped_or_404(
+        Lowongan, request.user, vacancy_id,
+        capability='can_manage_hc_recruitment',
+    )
+    require_hc_capability(
+        request.user, 'can_manage_hc_recruitment', unit=vacancy.unit_kerja_id
+    )
+    from sdm.services.ujian_rekrutmen import ranking_lowongan
+    return render(request, 'sdm/rekrutmen/ranking.html', {
+        'vacancy': vacancy,
+        'ranking': ranking_lowongan(vacancy),
+    })
 
 @login_required
 @require_POST
