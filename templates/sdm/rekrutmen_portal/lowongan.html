@@ -1,0 +1,28 @@
+{% extends "sdm/rekrutmen_portal/_base_publik.html" %}
+{% block title %}Lowongan Tersedia — Portal Karir{% endblock %}
+{% block intro %}<p class="text-muted small mb-0">Berikut lowongan yang pendaftarannya sedang dibuka. Pilih lowongan untuk mengisi formulir dan mengunggah berkas.</p>{% endblock %}
+{% block content %}
+{% if vacancies %}
+<div class="list-group">
+    {% for vacancy in vacancies %}
+    <a class="list-group-item list-group-item-action d-flex flex-wrap gap-2 justify-content-between align-items-start"
+       href="{% url 'sdm:portal_daftar' vacancy.pk %}">
+        <span>
+            <span class="fw-semibold d-block">{{ vacancy.judul }}</span>
+            <span class="small text-muted">
+                {{ vacancy.unit_kerja.code }} — {{ vacancy.unit_kerja.name }}
+                &middot; {{ vacancy.get_jalur_display }}
+                &middot; Kuota {{ vacancy.jumlah_kebutuhan }}
+            </span>
+            {% if vacancy.kualifikasi_pendidikan %}
+            <span class="small d-block mt-1">Pendidikan minimum: {{ vacancy.kualifikasi_pendidikan }}</span>
+            {% endif %}
+        </span>
+        <span class="badge bg-success align-self-center">Dibuka</span>
+    </a>
+    {% endfor %}
+</div>
+{% else %}
+<div class="alert alert-light border small">Saat ini belum ada lowongan yang dibuka.</div>
+{% endif %}
+{% endblock %}

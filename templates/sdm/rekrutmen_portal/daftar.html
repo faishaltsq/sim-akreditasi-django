@@ -1,0 +1,55 @@
+{% extends "sdm/rekrutmen_portal/_base_publik.html" %}
+{% block title %}{{ title }}{% endblock %}
+{% block intro %}
+<p class="text-muted small mb-0">
+    {{ vacancy.unit_kerja.code }} — {{ vacancy.unit_kerja.name }}
+    &middot; {{ vacancy.get_jalur_display }} &middot; Kuota {{ vacancy.jumlah_kebutuhan }}
+</p>
+{% endblock %}
+{% block content %}
+<div class="card border shadow-sm">
+    <div class="card-body">
+        <form method="post" enctype="multipart/form-data" novalidate>
+            {% csrf_token %}
+            {% if form.non_field_errors %}
+            <div class="alert alert-danger small py-2" role="alert">{{ form.non_field_errors }}</div>
+            {% endif %}
+            <fieldset class="mb-3">
+                <legend class="h6 small fw-semibold">Data diri</legend>
+                {% for field in form %}
+                    {% if not field.name|slice:':7' == 'berkas_' %}
+                    <div class="mb-2">
+                        <label class="form-label small fw-semibold" for="{{ field.id_for_label }}">
+                            {{ field.label }}{% if field.field.required %} <span class="text-danger" aria-hidden="true">*</span>{% endif %}
+                        </label>
+                        {{ field }}
+                        {% for error in field.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+                    </div>
+                    {% endif %}
+                {% endfor %}
+            </fieldset>
+            <fieldset class="mb-3">
+                <legend class="h6 small fw-semibold">Berkas pendukung</legend>
+                <p class="small text-muted">
+                    Format {{ form.ekstensi_diizinkan }}, maksimum {{ form.maks_ukuran_mb }} MB per berkas.
+                </p>
+                {% for field in form %}
+                    {% if field.name|slice:':7' == 'berkas_' %}
+                    <div class="mb-2">
+                        <label class="form-label small fw-semibold" for="{{ field.id_for_label }}">
+                            {{ field.label }}{% if field.field.required %} <span class="text-danger" aria-hidden="true">*</span>{% endif %}
+                        </label>
+                        {{ field }}
+                        {% for error in field.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+                    </div>
+                    {% endif %}
+                {% endfor %}
+            </fieldset>
+            <div class="d-flex gap-2">
+                <button type="submit" class="btn btn-primary btn-sm">Kirim Lamaran</button>
+                <a class="btn btn-outline-secondary btn-sm" href="{% url 'sdm:portal_lowongan' %}">Batal</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

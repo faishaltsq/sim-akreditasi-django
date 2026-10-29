@@ -6,7 +6,7 @@
 |---|---|---|
 | **B — Auto-fill form kredensial** | ✅ **Selesai** | Endpoint `kredensial_pegawai_profil` (JSON), validasi STR/SIP di `PengajuanKredensialForm.clean()`, JS `hc-kredensial-autofill.js` + `hc-kredensial-portal-autofill.js`, badge & panel di form HC dan portal. Smoke test: endpoint 200, form render hook lengkap, AWAL/REKREDENSIAL diblokir saat SIP kosong, PENAMBAHAN lolos, portal 200. |
 | **A — Master RKK audit & penambalan** | ✅ **Selesai** | `DOKTER_GIGI` 3 jenjang ditambahkan ke `DOKTER_JENJANG`; command `audit_katalog_rkk` (laporan + `--strict`); seed idempoten (23 profesi / 118 jenjang / 499 tindakan); test `SeedKatalogTests` + `AuditKatalogRkkTests`. |
-| **C — Modul Rekrutmen 7 sub-menu** | ⏳ **Sebagian** | Fase C1 (Manajer Lowongan) selesai: kriteria, jalur, jendela pendaftaran. Fase C2–C8 belum dikerjakan. |
+| **C — Modul Rekrutmen 7 sub-menu** | ⏳ **Sebagian** | C1 (kriteria lowongan) & C2 (portal pelamar publik) selesai. C3–C8 belum. |
 
 **Gap RKK yang tersisa** (butuh keputusan komite, bukan kode):
 - Katalog butir **Dokter Gigi** dan **Dokter Spesialis** menunggu SK komite — sengaja kosong, sesuai batasan §3.

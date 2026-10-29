@@ -97,6 +97,35 @@ class Lowongan(models.Model):
         return f'{self.judul} — {self.profesi}'
 
 
+class Pelamar(models.Model):
+    """A candidate who applied without an account, reached by access token.
+
+    The public portal never exposes a login wall and never enumerates ids:
+    every candidate row carries a ``token`` that acts as the capability to read
+    and amend that one application. Losing the token means SDM must re-issue
+    one, which is why it is stored rather than hashed.
+    """
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    token = models.CharField(
+        'Token Akses', max_length=64, unique=True,
+        default=uuid.uuid4,
+        help_text='Capability URL untuk pelamar mengakses lamaran sendiri.',
+    )
+    nama_lengkap = models.CharField('Nama Lengkap', max_length=200)
+    email = models.EmailField('Email', blank=True)
+    telepon = models.CharField('Telepon', max_length=40, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = 'Pelamar'
+        verbose_name_plural = 'Pelamar'
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return self.nama_lengkap
+
+
 class Lamaran(models.Model):
     STATUS_CHOICES = [
         ('MASUK', 'Lamaran Masuk'),
@@ -128,6 +157,12 @@ class Lamaran(models.Model):
     lowongan = models.ForeignKey(
         Lowongan, on_delete=models.PROTECT, related_name='applications',
         verbose_name='Lowongan',
+    )
+    pelamar = models.ForeignKey(
+        Pelamar, on_delete=models.PROTECT, related_name='lamaran',
+        null=True, blank=True, verbose_name='Pelamar (Portal Publik)',
+        help_text='Terisi bila lamaran masuk lewat portal publik; kosong untuk '
+                  'lamaran yang dicatat langsung oleh SDM.',
     )
     nama_pelamar = models.CharField('Nama Pelamar', max_length=200)
     kontak = models.CharField('Kontak', max_length=200, blank=True)
@@ -242,6 +277,16 @@ class BerkasPelamar(models.Model):
         ('PERLU_KLARIFIKASI', 'Perlu Klarifikasi'),
         ('TIDAK_LENGKAP', 'Tidak Lengkap'),
     ]
+    JENIS_CHOICES = [
+        ('KTP', 'KTP'),
+        ('IJAZAH', 'Ijazah'),
+        ('TRANSKRIP', 'Transkrip Nilai'),
+        ('STR', 'STR (Surat Tanda Registrasi)'),
+        ('SIP', 'SIP (Surat Izin Praktik)'),
+        ('SERTIFIKAT', 'Sertifikat Pelatihan / BTCLS / PPI / K3RS'),
+        ('CV', 'Curriculum Vitae'),
+        ('LAINNYA', 'Lainnya'),
+    ]
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     lamaran = models.ForeignKey(
@@ -249,8 +294,8 @@ class BerkasPelamar(models.Model):
         verbose_name='Lamaran',
     )
     jenis = models.CharField(
-        'Jenis Dokumen', max_length=60,
-        help_text='Mis. IJAZAH, TRANSKRIP, STR, SIP, SERTIFIKAT, KTP.',
+        'Jenis Dokumen', max_length=60, choices=JENIS_CHOICES,
+        help_text='Jenis berkas pendukung yang diunggah pelamar.',
     )
     berkas = models.FileField(
         'Berkas', upload_to='rekrutmen/berkas/', null=True, blank=True,

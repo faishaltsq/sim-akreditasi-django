@@ -1,0 +1,43 @@
+{% extends "sdm/rekrutmen_portal/_base_publik.html" %}
+{% block title %}{{ title }}{% endblock %}
+{% block intro %}<p class="text-muted small mb-0">Pantau perkembangan lamaran Anda pada setiap tahapan seleksi.</p>{% endblock %}
+{% block content %}
+<div class="card border shadow-sm mb-3">
+    <div class="card-body">
+        <div class="row g-2 small">
+            <div class="col-12 col-md-6">
+                <div class="text-muted">Lowongan</div>
+                <div class="fw-semibold">{{ data.lamaran.lowongan.judul }}</div>
+            </div>
+            <div class="col-12 col-md-6">
+                <div class="text-muted">Unit Kerja</div>
+                <div class="fw-semibold">{{ data.lamaran.lowongan.unit_kerja.code }} — {{ data.lamaran.lowongan.unit_kerja.name }}</div>
+            </div>
+            <div class="col-12 col-md-6">
+                <div class="text-muted">Tahap Saat Ini</div>
+                <div><span class="badge bg-primary">{{ data.status }}</span></div>
+            </div>
+            <div class="col-12 col-md-6">
+                <div class="text-muted">Tanggal Mendaftar</div>
+                <div class="fw-semibold">{{ data.lamaran.created_at|date:"d M Y" }}</div>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="card border shadow-sm">
+    <div class="card-header bg-white"><h2 class="h6 mb-0">Berkas Anda</h2></div>
+    <ul class="list-group list-group-flush small">
+        {% for jenis, state in data.berkas.items %}
+        <li class="list-group-item d-flex justify-content-between align-items-center">
+            {{ jenis }}
+            <span class="badge {% if state == 'Valid' %}bg-success{% elif state == 'Menunggu Verifikasi' %}bg-secondary{% else %}bg-warning text-dark{% endif %}">{{ state }}</span>
+        </li>
+        {% empty %}
+        <li class="list-group-item text-muted">Belum ada berkas tercatat.</li>
+        {% endfor %}
+    </ul>
+</div>
+<p class="small text-muted mt-3 mb-0">
+    Simpan tautan halaman ini untuk memantau lamaran Anda kembali.
+</p>
+{% endblock %}

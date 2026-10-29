@@ -4,6 +4,7 @@ from sdm import views
 from sdm import import_views
 from sdm import intake_views
 from sdm import portal_views
+from sdm import rekrutmen_portal_views
 
 
 app_name = 'sdm'
@@ -110,6 +111,13 @@ urlpatterns = [
         name='formasi_approve',
     ),
     path('rekrutmen/', views.rekrutmen_list, name='rekrutmen_list'),
+    # ── Portal pelamar publik (tanpa login; akses via token) ──
+    path('rekrutmen/portal/', rekrutmen_portal_views.portal_lowongan,
+         name='portal_lowongan'),
+    path('rekrutmen/portal/<uuid:vacancy_id>/daftar/', rekrutmen_portal_views.portal_daftar,
+         name='portal_daftar'),
+    path('rekrutmen/portal/lamaran/<str:token>/', rekrutmen_portal_views.portal_lamaran_status,
+         name='portal_lamaran_status'),
     path('rekrutmen/baru/', views.rekrutmen_create, name='rekrutmen_create'),
     path(
         'rekrutmen/<uuid:vacancy_id>/lamaran/',

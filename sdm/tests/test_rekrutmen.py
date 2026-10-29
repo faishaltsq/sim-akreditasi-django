@@ -82,6 +82,28 @@ class RecruitmentWorkflowTests(LevelTwoBase):
         with self.assertRaises(ValidationError):
             move_application(application, target='DITERIMA', actor=self.recruiter)
 
+    def test_wawancara_tidak_bisa_lompat_ke_diterima_tanpa_mcu(self):
+        """Alur dokumen: MCU (KPS 3) wajib sebelum penawaran kerja."""
+        application = self._application()
+        for stage in ('SELEKSI_ADMIN', 'TES_KOMPETENSI', 'WAWANCARA'):
+            application = move_application(
+                application, target=stage, actor=self.recruiter
+            )
+        with self.assertRaises(ValidationError):
+            move_application(application, target='DITERIMA', actor=self.recruiter)
+
+    def test_mcu_dan_offering_menjadi_jalur_wajib(self):
+        application = self._application()
+        for stage in (
+            'SELEKSI_ADMIN', 'TES_KOMPETENSI', 'WAWANCARA', 'MCU', 'OFFERING',
+        ):
+            application = move_application(
+                application, target=stage, actor=self.recruiter
+            )
+        application.refresh_from_db()
+        self.assertEqual(application.status, 'OFFERING')
+        self.assertEqual(application.history.count(), 5)
+
     def test_each_stage_records_history(self):
         application = self._application()
 
@@ -93,7 +115,10 @@ class RecruitmentWorkflowTests(LevelTwoBase):
 
     def test_hiring_is_idempotent_and_creates_one_employee(self):
         application = self._application()
-        for stage in ('SELEKSI_ADMIN', 'TES_KOMPETENSI', 'WAWANCARA', 'DITERIMA'):
+        for stage in (
+            'SELEKSI_ADMIN', 'TES_KOMPETENSI', 'WAWANCARA', 'MCU',
+            'OFFERING', 'DITERIMA',
+        ):
             application = move_application(
                 application, target=stage, actor=self.recruiter
             )
