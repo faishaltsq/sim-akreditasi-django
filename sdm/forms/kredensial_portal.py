@@ -40,7 +40,7 @@ class PengajuanPortalForm(forms.ModelForm):
             queryset=UnitKerja.objects.none(),
             label='Unit Kerja',
             required=False,
-            widget=forms.Select(attrs={'class': SELECT_CLASS}),
+            widget=forms.Select(attrs={'class': SELECT_CLASS, 'data-kredensial-portal-unit': '1'}),
         )
         if self.employee is None:
             return

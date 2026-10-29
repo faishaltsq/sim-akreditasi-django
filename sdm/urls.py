@@ -151,6 +151,11 @@ urlpatterns = [
     ),
     path('kredensial/baru/', views.kredensial_create, name='kredensial_create'),
     path(
+        'kredensial/pegawai/<uuid:employee_id>/profil.json',
+        views.kredensial_pegawai_profil,
+        name='kredensial_pegawai_profil',
+    ),
+    path(
         'kredensial/dokumen/<str:jenis>/generate/',
         views.dokumen_kredensial_generate,
         name='dokumen_kredensial_generate',

@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load static %}
 {% block page_title %}{{ title }}{% endblock %}
 {% block page_subtitle %}Pengajuan RKK{% endblock %}
 {% block content %}
@@ -6,8 +7,14 @@
     <a class="small text-decoration-none" href="{% url 'sdm:kredensial_list' %}"><i class="bi bi-arrow-left me-1"></i>Kembali</a>
     <h1 class="page-title h4 mt-2 mb-3">{{ title }}</h1>
     {% include "sdm/kredensial/_profil_kartu.html" %}
-    <form method="post">
+    <form method="post"
+          data-kredensial-autofill
+          data-profile-url="{% url 'sdm:kredensial_pegawai_profil' employee_id='00000000-0000-0000-0000-000000000000' %}">
         {% csrf_token %}
+        <div class="d-flex align-items-center gap-2 mb-2">
+            <span class="badge bg-secondary" data-kredensial-badge hidden></span>
+        </div>
+        <div class="alert alert-light border small mb-3" data-kredensial-panel hidden></div>
         {% include "sdm/_form_card.html" %}
         <div class="mt-3 d-flex gap-2">
             <button type="submit" class="btn btn-primary btn-sm">Simpan</button>
@@ -15,4 +22,7 @@
         </div>
     </form>
 </div>
+{% endblock %}
+{% block extra_js %}
+<script src="{% static 'js/hc-kredensial-autofill.js' %}" defer></script>
 {% endblock %}

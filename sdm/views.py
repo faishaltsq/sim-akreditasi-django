@@ -12,7 +12,12 @@ from django.core.exceptions import PermissionDenied, ValidationError
 from django.core.paginator import Paginator
 from django.db import IntegrityError, transaction
 from django.db.models import Q
-from django.http import Http404, HttpResponse, HttpResponseBadRequest
+from django.http import (
+    Http404,
+    HttpResponse,
+    HttpResponseBadRequest,
+    JsonResponse,
+)
 from django.shortcuts import get_object_or_404, redirect, render, reverse
 from django.utils import timezone
 from django.views.decorators.http import require_POST
@@ -2550,6 +2555,40 @@ def kredensial_create(request):
     return render(request, 'sdm/kredensial/form.html', {
         'form': form, 'title': 'Pengajuan Kredensial Baru',
         'profile': profile,
+    })
+
+
+@login_required
+def kredensial_pegawai_profil(request, employee_id):
+    """B-1: auto-fill payload for the HC credential form.
+
+    Returns the same facts the read-only profile card shows, as JSON, so the
+    form can populate Unit Kerja and surface STR/SIP state without a reload.
+    Scoped by ``visible_employees`` under the same capability the form itself
+    requires: an employee outside the caller's grant is a 404, not a leak.
+    """
+    require_hc_capability(request.user, 'can_review_hc_credentials')
+    employee = get_object_or_404(
+        visible_employees(request.user, capability='can_review_hc_credentials'),
+        pk=employee_id,
+    )
+    profile = credential_profile(employee)
+    unit = profile['unit_kerja']
+    return JsonResponse({
+        'employee_id': str(employee.pk),
+        'nama': profile['nama'],
+        'nomor_pegawai': profile['nomor_pegawai'],
+        'profesi': profile['profesi'],
+        'jabatan': profile['jabatan'],
+        'jenjang': (
+            employee.jenjang_master.nama if employee.jenjang_master else ''
+        ),
+        'masa_kerja': profile['masa_kerja'],
+        'unit_kerja': (
+            {'id': str(unit.pk), 'code': unit.code, 'name': unit.name}
+            if unit else None
+        ),
+        'licenses': profile['licenses'],
     })
 
 

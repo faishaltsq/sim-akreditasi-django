@@ -2,6 +2,7 @@ from django import forms
 from django.forms import inlineformset_factory
 
 from sdm.akses import visible_employees, visible_units
+from sdm.services.profil_kredensial import credential_profile
 from sdm.models import (
     AktivitasOrientasi,
     KatalogTindakan,
@@ -60,14 +61,18 @@ class LamaranForm(forms.ModelForm):
 class PengajuanKredensialForm(forms.ModelForm):
     employee = forms.ModelChoiceField(
         queryset=None, label='Pegawai',
-        widget=forms.Select(attrs={'class': SELECT_CLASS}),
+        widget=forms.Select(attrs={
+            'class': SELECT_CLASS, 'data-kredensial-employee': '1',
+        }),
     )
 
     class Meta:
         model = PengajuanKredensial
         fields = ['employee', 'unit_kerja', 'jenis']
         widgets = {
-            'unit_kerja': forms.Select(attrs={'class': SELECT_CLASS}),
+            'unit_kerja': forms.Select(attrs={
+                'class': SELECT_CLASS, 'data-kredensial-unit': '1',
+            }),
             'jenis': forms.Select(attrs={'class': SELECT_CLASS}),
         }
 
@@ -80,6 +85,34 @@ class PengajuanKredensialForm(forms.ModelForm):
         ).order_by('nama_lengkap')
 
 
+
+    def clean(self):
+        """Block submission when the employee's mandatory licences are unusable.
+
+        Kredensial Awal and Re-Kredensial both assert a current right to
+        practise, so an absent or expired STR/SIP makes the request unverifiable
+        at source. The failure is attached to ``employee`` so the operator sees
+        which fact is missing instead of a silent redirect.
+        """
+        cleaned = super().clean()
+        employee = cleaned.get('employee')
+        jenis = cleaned.get('jenis')
+        if employee is None or jenis not in ('AWAL', 'REKREDENSIAL'):
+            return cleaned
+        profile = credential_profile(employee)
+        unusable = [
+            lic['subtype'] for lic in profile['licenses']
+            if lic['label'] != 'Berlaku'
+        ]
+        if unusable:
+            self.add_error(
+                'employee',
+                'Dokumen legalitas belum layak untuk pengajuan '
+                f'{" / ".join(unusable)}: statusnya bukan "Berlaku". '
+                'Perbarui STR/SIP di E-File pegawai terlebih dahulu, atau '
+                'pilih jenis pengajuan lain.',
+            )
+        return cleaned
 class RincianKewenanganForm(forms.ModelForm):
     class Meta:
         model = RincianKewenangan
