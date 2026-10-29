@@ -103,17 +103,26 @@ class Lamaran(models.Model):
         ('SELEKSI_ADMIN', 'Seleksi Administrasi'),
         ('TES_KOMPETENSI', 'Tes Kompetensi'),
         ('WAWANCARA', 'Wawancara'),
+        ('MCU', 'Pemeriksaan Kesehatan (MCU)'),
+        ('OFFERING', 'Penawaran Kerja'),
         ('DITERIMA', 'Diterima'),
         ('DITOLAK', 'Ditolak'),
     ]
+    # Alur dokumen: MASUK → SELEKSI_ADMIN → TES_KOMPETENSI → WAWANCARA → MCU
+    # → OFFERING → DITERIMA. Setiap tahap boleh langsung DITOLAK; tidak ada
+    # lompatan ke depan supaya bukti audit per tahap (KPS) tetap lengkap.
     ALLOWED_TRANSITIONS = {
         'MASUK': {'SELEKSI_ADMIN', 'DITOLAK'},
         'SELEKSI_ADMIN': {'TES_KOMPETENSI', 'DITOLAK'},
         'TES_KOMPETENSI': {'WAWANCARA', 'DITOLAK'},
-        'WAWANCARA': {'DITERIMA', 'DITOLAK'},
+        'WAWANCARA': {'MCU', 'DITOLAK'},
+        'MCU': {'OFFERING', 'DITOLAK'},
+        'OFFERING': {'DITERIMA', 'DITOLAK'},
         'DITERIMA': set(),
         'DITOLAK': set(),
     }
+    # Tahapan yang menuntut penilaian tercatat sebelum boleh dilanjutkan.
+    TAHAP_BER_NILAI = {'SELEKSI_ADMIN', 'TES_KOMPETENSI', 'WAWANCARA', 'MCU'}
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     lowongan = models.ForeignKey(
@@ -165,3 +174,111 @@ class RiwayatSeleksi(models.Model):
 
     def __str__(self):
         return f'{self.lamaran_id}: {self.status_sebelum} → {self.status_sesudah}'
+
+
+class PenilaianTahap(models.Model):
+    """Append-only verdict for one selection stage of one application.
+
+    Every stage that gates progress (administrasi, CBT, wawancara, MCU) writes
+    a row here rather than overwriting a single status field, so the audit trail
+    the accreditation standard asks for survives re-scoring and appeals.
+    """
+
+    TAHAP_CHOICES = [
+        ('SELEKSI_ADMIN', 'Seleksi Administrasi'),
+        ('TES_KOMPETENSI', 'Tes Kompetensi'),
+        ('WAWANCARA', 'Wawancara'),
+        ('MCU', 'Pemeriksaan Kesehatan (MCU)'),
+    ]
+    HASIL_CHOICES = [
+        ('LULUS', 'Lulus'),
+        ('TIDAK_LULUS', 'Tidak Lulus'),
+        ('DIPERTIMBANGKAN', 'Dipertimbangkan'),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    lamaran = models.ForeignKey(
+        Lamaran, on_delete=models.CASCADE, related_name='penilaian',
+        verbose_name='Lamaran',
+    )
+    tahap = models.CharField('Tahap', max_length=20, choices=TAHAP_CHOICES)
+    hasil = models.CharField('Hasil', max_length=20, choices=HASIL_CHOICES)
+    skor = models.DecimalField(
+        'Skor', max_digits=6, decimal_places=2, null=True, blank=True,
+        validators=[MinValueValidator(Decimal('0.00'))],
+        help_text='Skor mentah tahap ini; bobot gabungan dihitung di service.',
+    )
+    catatan = models.TextField('Catatan Penguji', blank=True)
+    penguji = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='sdm_stage_assessments', verbose_name='Penguji',
+    )
+    dinilai_at = models.DateTimeField('Waktu Penilaian', default=timezone.now)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = 'Penilaian Tahap'
+        verbose_name_plural = 'Penilaian Tahap'
+        ordering = ['-dinilai_at', '-created_at']
+        indexes = [
+            models.Index(fields=['lamaran', 'tahap'], name='sdm_penilaian_tahap_idx'),
+        ]
+
+    def __str__(self):
+        return f'{self.lamaran_id} — {self.get_tahap_display()}: {self.get_hasil_display()}'
+
+
+class BerkasPelamar(models.Model):
+    """One uploaded supporting document for an application.
+
+    Verification state is per document, not per application: the screening
+    matrix needs to say "ijazah valid, STR perlu klarifikasi" rather than a
+    single pass/fail for the whole submission.
+    """
+
+    STATUS_CHOICES = [
+        ('MENUNGGU', 'Menunggu Verifikasi'),
+        ('VALID', 'Valid'),
+        ('PERLU_KLARIFIKASI', 'Perlu Klarifikasi'),
+        ('TIDAK_LENGKAP', 'Tidak Lengkap'),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    lamaran = models.ForeignKey(
+        Lamaran, on_delete=models.CASCADE, related_name='berkas',
+        verbose_name='Lamaran',
+    )
+    jenis = models.CharField(
+        'Jenis Dokumen', max_length=60,
+        help_text='Mis. IJAZAH, TRANSKRIP, STR, SIP, SERTIFIKAT, KTP.',
+    )
+    berkas = models.FileField(
+        'Berkas', upload_to='rekrutmen/berkas/', null=True, blank=True,
+    )
+    status = models.CharField(
+        'Status Verifikasi', max_length=20, choices=STATUS_CHOICES,
+        default='MENUNGGU',
+    )
+    catatan = models.TextField('Catatan Verifikator', blank=True)
+    diverifikasi_oleh = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='sdm_berkas_verified', verbose_name='Diverifikasi Oleh',
+    )
+    diverifikasi_at = models.DateTimeField(
+        'Waktu Verifikasi', null=True, blank=True,
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = 'Berkas Pelamar'
+        verbose_name_plural = 'Berkas Pelamar'
+        ordering = ['lamaran', 'jenis']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['lamaran', 'jenis'],
+                name='sdm_berkas_pelamar_jenis_uniq',
+            ),
+        ]
+
+    def __str__(self):
+        return f'{self.lamaran_id} — {self.jenis}: {self.get_status_display()}'

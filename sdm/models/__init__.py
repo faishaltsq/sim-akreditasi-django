@@ -95,7 +95,13 @@ from .intake import (
     RiwayatPendidikanPegawai,
     UrutanNomorPegawai,
 )
-from .rekrutmen import Lamaran, Lowongan, RiwayatSeleksi
+from .rekrutmen import (
+    BerkasPelamar,
+    Lamaran,
+    Lowongan,
+    PenilaianTahap,
+    RiwayatSeleksi,
+)
 from .pengingat import PengingatSDM
 
 __all__ = [
@@ -115,6 +121,7 @@ __all__ = [
     'ImunisasiPegawai',
     'InsidenK3Pegawai',
     'KeputusanKredensial',
+    'BerkasPelamar',
     'Lamaran',
     'Lowongan',
     'BebanKerja',
@@ -176,6 +183,7 @@ __all__ = [
     'RencanaSuksesi',
     'RincianKewenangan',
     'RisikoK3Pegawai',
+    'PenilaianTahap',
     'RiwayatSeleksi',
     'SkenarioSDM',
     'SnapshotAnalitikSDM',
