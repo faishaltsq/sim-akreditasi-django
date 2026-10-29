@@ -25,7 +25,7 @@ def save_plan(plan, *, user):
     require_hc_capability(
         user, 'can_plan_hc_workforce', unit=plan.unit_kerja_id
     )
-    if plan.pk:
+    if not plan._state.adding:
         existing = RencanaFormasi.objects.filter(pk=plan.pk).values_list(
             'status', flat=True
         ).first()

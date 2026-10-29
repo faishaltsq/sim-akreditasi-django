@@ -81,6 +81,19 @@ def validate_personal_data(data: dict) -> dict:
     if alamat_sama and not alamat_domisili:
         cleaned['alamat_domisili'] = alamat_ktp
 
+    golongan_darah = (data.get('golongan_darah') or '').strip().upper()
+    if golongan_darah and golongan_darah not in ('A', 'B', 'AB', 'O'):
+        errors['golongan_darah'] = 'Golongan darah harus A, B, AB, atau O.'
+    else:
+        cleaned['golongan_darah'] = golongan_darah
+    for field in ('rt_rw', 'kelurahan', 'kecamatan', 'kabupaten_kota', 'provinsi'):
+        cleaned[field] = (data.get(field) or '').strip()
+    kode_pos = (data.get('kode_pos') or '').strip()
+    if kode_pos and not re.fullmatch(r'\d{5}', kode_pos):
+        errors['kode_pos'] = 'Kode pos harus berupa 5 digit angka.'
+    else:
+        cleaned['kode_pos'] = kode_pos
+
     if errors:
         raise ValidationError(errors)
 
@@ -675,6 +688,9 @@ def build_staff_profile(employee, *, viewer):
     # Never pass the restricted model instance to a template that may render it
     # for a view-only sibling. The presence flag supports an honest empty state.
     personal = personal_record if can_view_personal else None
+    bpjs_record = getattr(employee, 'data_bpjs', None)
+    bpjs_kesehatan = bpjs_record if can_view_personal else None
+    bpjs_tk = bpjs_record if can_view_personal else None
     employment = employee.riwayat_kepegawaian.order_by('-tanggal_tmt', '-pk').first()
     education = list(
         employee.riwayat_pendidikan.select_related(
@@ -706,6 +722,8 @@ def build_staff_profile(employee, *, viewer):
         'invitation': invitation if can_view_personal else None,
         'can_view_personal': can_view_personal,
         'has_personal_record': personal_record is not None,
+        'bpjs_kesehatan': bpjs_kesehatan,
+        'bpjs_tk': bpjs_tk,
         'masked_nik': masked_nik,
         'tenure_days': tenure_days,
     }

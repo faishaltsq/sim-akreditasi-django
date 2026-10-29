@@ -1,0 +1,182 @@
+{% extends "base.html" %}
+{% block page_title %}Aktivitas Pegawai{% endblock %}
+{% block page_subtitle %}Jejak audit perubahan data, unggahan berkas, dan verifikasi{% endblock %}
+{% block extra_css %}{% include "sdm/_responsive.html" %}{% endblock %}
+{% block content %}
+<div class="container-fluid p-0">
+    <div class="page-header-box mb-3">
+        <div>
+            <a class="small text-decoration-none" href="{% url 'sdm:pegawai_detail' employee.pk %}"><i class="bi bi-arrow-left me-1"></i>Kembali ke profil</a>
+            <h1 class="page-title h4 mt-2 mb-1">Aktivitas — {{ employee.nama_lengkap }}</h1>
+            <p class="page-subtitle text-muted mb-0">Setiap baris bersifat immutable; pencatatan manual menambah baris, tidak mengubah yang lama.</p>
+        </div>
+        <div class="d-flex flex-wrap gap-2">
+            <a class="btn btn-outline-secondary btn-sm" href="{% url 'sdm:pegawai_aktivitas_export' employee.pk %}"><i class="bi bi-download me-1"></i>Ekspor CSV</a>
+            {% if can_manage %}
+            <button class="btn btn-primary btn-sm" type="button" data-bs-toggle="modal" data-bs-target="#modal-aktivitas-baru"><i class="bi bi-plus-lg me-1"></i>Catat Aktivitas Baru</button>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="row g-2 mb-3">
+        <div class="col-6 col-md-3">
+            <div class="card border shadow-sm h-100"><div class="card-body py-2">
+                <div class="small text-muted">Total aktivitas</div>
+                <div class="h5 mb-0">{{ metrics.total }}</div>
+            </div></div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="card border shadow-sm h-100"><div class="card-body py-2">
+                <div class="small text-muted">Perubahan data</div>
+                <div class="h5 mb-0">{{ metrics.perubahan_data }}</div>
+            </div></div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="card border shadow-sm h-100"><div class="card-body py-2">
+                <div class="small text-muted">Unggah berkas</div>
+                <div class="h5 mb-0">{{ metrics.unggah_berkas }}</div>
+            </div></div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="card border shadow-sm h-100"><div class="card-body py-2">
+                <div class="small text-muted">Verifikasi</div>
+                <div class="h5 mb-0">{{ metrics.verifikasi }}</div>
+            </div></div>
+        </div>
+    </div>
+
+    <div class="card border shadow-sm mb-3">
+        <div class="card-body py-2">
+            <div class="row g-2 align-items-end">
+                <div class="col-12 col-md-4">
+                    <div class="small text-muted">Sesi terakhir</div>
+                    {% if metrics.sesi_terakhir %}
+                    <div class="small">{{ metrics.sesi_terakhir.ip_address|default:"IP tidak dicatat" }} · {{ metrics.sesi_terakhir.user_agent|default:"Peranti tidak dicatat"|truncatechars:60 }}</div>
+                    {% else %}
+                    <div class="small text-muted">Belum dicatat</div>
+                    {% endif %}
+                </div>
+                <div class="col-12 col-md-8">
+                    <form method="get" class="row g-2">
+                        <div class="col-auto">
+                            <label class="visually-hidden" for="filter-kategori">Kategori</label>
+                            <select id="filter-kategori" name="kategori" class="form-select form-select-sm">
+                                <option value="">Semua kategori</option>
+                                {% for value, label in kategori_choices %}
+                                <option value="{{ value }}" {% if kategori == value %}selected{% endif %}>{{ label }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col">
+                            <label class="visually-hidden" for="filter-q">Cari</label>
+                            <input id="filter-q" type="search" name="q" value="{{ q }}" class="form-control form-control-sm" placeholder="Cari judul, deskripsi, pelaku…">
+                        </div>
+                        <div class="col-auto">
+                            <button class="btn btn-outline-primary btn-sm" type="submit">Terapkan</button>
+                            <a class="btn btn-outline-secondary btn-sm" href="{% url 'sdm:pegawai_aktivitas' employee.pk %}">Reset</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card border shadow-sm">
+        <div class="table-responsive">
+            <table class="table table-sm align-middle mb-0">
+                <caption class="visually-hidden">Riwayat aktivitas pegawai</caption>
+                <thead>
+                    <tr>
+                        <th scope="col">Waktu</th>
+                        <th scope="col">Kategori</th>
+                        <th scope="col">Judul</th>
+                        <th scope="col">Pelaku</th>
+                        <th scope="col">Status</th>
+                        <th scope="col">IP</th>
+                        <th scope="col">Diff</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in rows %}
+                    <tr>
+                        <td class="text-nowrap">{{ row.created_at|date:"d M Y H:i" }}</td>
+                        <td><span class="badge {% if row.kategori == 'UPDATE_PROFILE' %}text-bg-primary{% elif row.kategori == 'UPLOAD_DOC' %}text-bg-info{% elif row.kategori == 'VERIFIKASI' %}text-bg-success{% elif row.kategori == 'LOGIN' %}text-bg-secondary{% else %}text-bg-dark{% endif %}">{{ row.get_kategori_display|default:row.kategori }}</span></td>
+                        <td>{{ row.judul|default:row.jenis_peristiwa }}</td>
+                        <td>{{ row.actor.username|default:"Sistem" }}</td>
+                        <td>{% if row.status %}<span class="badge {% if row.status == 'SUCCESS' %}text-bg-success{% elif row.status == 'WARNING' %}text-bg-warning{% else %}text-bg-danger{% endif %}">{{ row.get_status_display }}</span>{% else %}<span class="text-muted">—</span>{% endif %}</td>
+                        <td class="small">{{ row.ip_address|default:"—" }}</td>
+                        <td>
+                            {% if row.data_sebelum or row.data_sesudah %}
+                            <button class="btn btn-outline-secondary btn-sm" type="button" data-bs-toggle="modal" data-bs-target="#modal-diff-{{ row.pk }}">Lihat</button>
+                            {% else %}
+                            <span class="text-muted small">Tidak ada data pembanding</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="7" class="text-muted text-center py-4">Belum ada aktivitas yang dicatat.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+{% for row in rows %}
+{% if row.data_sebelum or row.data_sesudah %}
+<div class="modal fade" id="modal-diff-{{ row.pk }}" tabindex="-1" aria-labelledby="modal-diff-label-{{ row.pk }}" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title h6" id="modal-diff-label-{{ row.pk }}">Perbandingan — {{ row.judul|default:row.jenis_peristiwa }}</h2>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tutup"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <h3 class="h6">Sebelum</h3>
+                        <pre class="bg-body-tertiary border rounded p-2 small mb-0" style="white-space:pre-wrap;">{{ row.data_sebelum|default:"—" }}</pre>
+                    </div>
+                    <div class="col-md-6">
+                        <h3 class="h6">Sesudah</h3>
+                        <pre class="bg-body-tertiary border rounded p-2 small mb-0" style="white-space:pre-wrap;">{{ row.data_sesudah|default:"—" }}</pre>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Tutup</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endfor %}
+
+{% if can_manage %}
+<div class="modal fade" id="modal-aktivitas-baru" tabindex="-1" aria-labelledby="modal-aktivitas-label" aria-hidden="true">
+    <div class="modal-dialog">
+        <form method="post" action="{% url 'sdm:aktivitas_manual' employee.pk %}" class="modal-content">
+            {% csrf_token %}
+            <div class="modal-header">
+                <h2 class="modal-title h6" id="modal-aktivitas-label">Catat Aktivitas Baru</h2>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tutup"></button>
+            </div>
+            <div class="modal-body">
+                {% if form.non_field_errors %}<div class="alert alert-danger py-2 small" role="alert">{{ form.non_field_errors }}</div>{% endif %}
+                {% for field in form %}
+                <div class="mb-3">
+                    <label class="form-label small fw-semibold" for="{{ field.id_for_label }}">{{ field.label }}</label>
+                    {{ field }}
+                    {% for error in field.errors %}<div class="invalid-feedback d-block small">{{ error }}</div>{% endfor %}
+                </div>
+                {% endfor %}
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Batal</button>
+                <button type="submit" class="btn btn-primary btn-sm">Simpan</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

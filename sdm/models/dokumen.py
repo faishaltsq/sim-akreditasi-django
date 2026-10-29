@@ -32,6 +32,8 @@ class DokumenPegawai(models.Model):
         ('PENGANTAR_KSM', 'Surat Pengantar KSM/KBM'),
         ('BERITA_ACARA_RAPAT', 'Berita Acara Rapat'),
         ('REKOMENDASI_KOMITE', 'Rekomendasi Komite'),
+        ('BPJS_KESEHATAN', 'Kartu BPJS Kesehatan'),
+        ('BPJS_TK', 'Kartu BPJS Ketenagakerjaan'),
         ('OTHER', 'Lainnya'),
     ]
     DOCUMENT_TYPE_CHOICES = [

@@ -1,0 +1,149 @@
+{% extends "base.html" %}
+{% block page_title %}Kalkulator FTE{% endblock %}
+{% block page_subtitle %}Hitung kebutuhan FTE dari beban kerja sebelum membuat rencana formasi{% endblock %}
+{% block extra_css %}{% include "sdm/_responsive.html" %}{% endblock %}
+{% block content %}
+<div class="container-fluid p-0">
+    <div class="page-header-box mb-3">
+        <div>
+            <a class="small text-decoration-none" href="{% url 'sdm:formasi_peta' %}"><i class="bi bi-arrow-left me-1"></i>Kembali</a>
+            <h1 class="page-title h4 mt-2 mb-1">Kalkulator FTE</h1>
+            <p class="page-subtitle text-muted mb-0">Pratinjau langsung; simpan menghasilkan draf rencana formasi, bukan rencana yang sudah disetujui.</p>
+        </div>
+    </div>
+
+    {% if error %}<div class="alert alert-danger py-2 small" role="alert">{{ error }}</div>{% endif %}
+
+    <form method="post" id="kalkulator-form">
+        {% csrf_token %}
+        <div class="row g-3">
+            <div class="col-12 col-xl-7">
+                <div class="card border shadow-sm mb-3">
+                    <div class="card-header bg-white">
+                        <h2 class="h6 mb-0">Parameter Jam Kerja Efektif</h2>
+                    </div>
+                    <div class="card-body">
+                        {% if form.non_field_errors %}<div class="alert alert-danger py-2 small" role="alert">{{ form.non_field_errors }}</div>{% endif %}
+                        <div class="row g-3">
+                            {% for field in form %}
+                            {% if field.name != 'activities' %}
+                            <div class="col-12 col-sm-6">
+                                <label class="form-label small fw-semibold" for="{{ field.id_for_label }}">{{ field.label }}{% if field.field.required %} <span class="text-danger" aria-hidden="true">*</span>{% endif %}</label>
+                                {{ field }}
+                                {% if field.help_text %}<div class="form-text small">{{ field.help_text }}</div>{% endif %}
+                                {% for error in field.errors %}<div class="invalid-feedback d-block small">{{ error }}</div>{% endfor %}
+                            </div>
+                            {% endif %}
+                            {% endfor %}
+                        </div>
+                        <p class="small text-muted mt-3 mb-0">Rumus: <code>menit efektif = (hari kerja − cuti − sakit − libur) × jam/hari − (pelatihan hari × jam/hari)</code>, dikali 60.</p>
+                    </div>
+                </div>
+
+                <div class="card border shadow-sm">
+                    <div class="card-header bg-white d-flex flex-wrap justify-content-between align-items-center gap-2">
+                        <h2 class="h6 mb-0">Beban Kerja</h2>
+                        <div class="dropdown">
+                            <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">Preset Unit RS</button>
+                            <ul class="dropdown-menu dropdown-menu-end">
+                                {% for key, preset in presets.items %}
+                                <li><button class="dropdown-item" type="button" data-preset="{{ key }}">{{ preset.label }}</button></li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <label class="form-label small fw-semibold" for="{{ form.activities.id_for_label }}">{{ form.activities.label }}</label>
+                        {{ form.activities }}
+                        {% if form.activities.help_text %}<div class="form-text small">{{ form.activities.help_text }}</div>{% endif %}
+                        {% for error in form.activities.errors %}<div class="invalid-feedback d-block small">{{ error }}</div>{% endfor %}
+                        <div class="d-flex flex-wrap gap-2 mt-3">
+                            <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-calculator me-1"></i>Hitung</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-12 col-xl-5">
+                {% if result %}
+                <div class="card border shadow-sm mb-3">
+                    <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                        <h2 class="h6 mb-0">Hasil Perhitungan</h2>
+                        {% if band == 'UNDERSTAFFED' %}<span class="badge text-bg-danger">UNDERSTAFFED</span>
+                        {% elif band == 'OVERSTAFFED' %}<span class="badge text-bg-warning">OVERSTAFFED</span>
+                        {% else %}<span class="badge text-bg-success">OPTIMAL</span>{% endif %}
+                    </div>
+                    <div class="card-body">
+                        <dl class="row mb-0 small">
+                            <dt class="col-7">Total menit beban kerja</dt><dd class="col-5 text-end">{{ result.total_minutes }}</dd>
+                            <dt class="col-7">Menit efektif per pegawai</dt><dd class="col-5 text-end">{{ effective_minutes|default:"—" }}</dd>
+                            <dt class="col-7">FTE dibutuhkan</dt><dd class="col-5 text-end fw-semibold">{{ result.required_fte }}</dd>
+                            <dt class="col-7">Headcount dibutuhkan</dt><dd class="col-5 text-end">{{ result.required_headcount }}</dd>
+                            <dt class="col-7">FTE eksisting</dt><dd class="col-5 text-end">{{ result.actual_fte }}</dd>
+                            <dt class="col-7">Gap FTE</dt><dd class="col-5 text-end fw-semibold">{{ result.gap_fte }}</dd>
+                            <dt class="col-7">Kecukupan</dt><dd class="col-5 text-end">{% if result.sufficiency_pct %}{{ result.sufficiency_pct }}%{% else %}—{% endif %}</dd>
+                        </dl>
+                    </div>
+                    <div class="card-footer bg-white d-flex flex-wrap gap-2">
+                        <a class="btn btn-outline-secondary btn-sm" href="?{% for key, value in request.POST.items %}{% if key != 'csrfmiddlewaretoken' %}{{ key }}={{ value|urlencode }}&{% endif %}{% endfor %}"><i class="bi bi-download me-1"></i>Ekspor CSV</a>
+                        <button type="submit" form="kalkulator-simpan-form" class="btn btn-primary btn-sm"><i class="bi bi-save me-1"></i>Simpan sebagai Rencana</button>
+                    </div>
+                </div>
+                {% else %}
+                <div class="card border shadow-sm mb-3">
+                    <div class="card-body text-center text-muted py-5">
+                        <i class="bi bi-calculator fs-1 d-block mb-2"></i>
+                        Isi parameter dan beban kerja, lalu tekan <strong>Hitung</strong> untuk melihat pratinjau FTE.
+                    </div>
+                </div>
+                {% endif %}
+
+                <div class="card border-0 bg-light">
+                    <div class="card-body small text-muted">
+                        <h3 class="h6 text-body">Catatan</h3>
+                        <ul class="mb-0 ps-3">
+                            <li>Rencana hasil simpan berstatus <strong>DRAFT</strong> dan belum muncul di Peta Formasi sampai melewati rantai persetujuan.</li>
+                            <li>FTE eksisting dihitung dari penempatan aktif unit dan profesi yang sama.</li>
+                            <li>Angka preset bersifat ilustratif dan dapat diedit bebas.</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </form>
+
+    {% if result %}
+    <form method="post" action="{% url 'sdm:kalkulator_fte_simpan' %}" id="kalkulator-simpan-form" class="d-none">
+        {% csrf_token %}
+        {% for key, value in request.POST.items %}
+        {% if key != 'csrfmiddlewaretoken' %}
+        <input type="hidden" name="{{ key }}" value="{{ value }}">
+        {% endif %}
+        {% endfor %}
+    </form>
+    {% endif %}
+</div>
+
+{{ presets|json_script:"kalkulator-preset-data" }}
+<script>
+(function () {
+    var raw = document.getElementById('kalkulator-preset-data');
+    var presets = raw ? JSON.parse(raw.textContent) : {};
+    document.querySelectorAll('[data-preset]').forEach(function (button) {
+        button.addEventListener('click', function () {
+            var key = button.getAttribute('data-preset');
+            var data = presets[key];
+            if (!data) { return; }
+            var textarea = document.getElementById('{{ form.activities.id_for_label }}');
+            if (!textarea) { return; }
+            var lines = (data.activities || []).map(function (row) {
+                return row[0] + ' | ' + row[1] + ' | ' + row[2];
+            });
+            textarea.value = lines.join('\n');
+            var profesi = document.getElementById('{{ form.profesi.id_for_label }}');
+            if (profesi && data.profesi) { profesi.value = data.profesi; }
+        });
+    });
+})();
+</script>
+{% endblock %}

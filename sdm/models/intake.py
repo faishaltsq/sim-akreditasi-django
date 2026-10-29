@@ -88,6 +88,16 @@ class ProfilPribadiPegawai(models.Model):
     alamat_ktp = models.TextField('Alamat KTP', blank=True)
     alamat_domisili = models.TextField('Alamat Domisili', blank=True)
     alamat_sama_dengan_ktp = models.BooleanField('Domisili Sama dengan KTP', default=True)
+    golongan_darah = models.CharField(
+        'Golongan Darah', max_length=3,
+        choices=[('A', 'A'), ('B', 'B'), ('AB', 'AB'), ('O', 'O')], blank=True,
+    )
+    rt_rw = models.CharField('RT/RW', max_length=10, blank=True)
+    kelurahan = models.CharField('Kelurahan/Desa', max_length=100, blank=True)
+    kecamatan = models.CharField('Kecamatan', max_length=100, blank=True)
+    kabupaten_kota = models.CharField('Kabupaten/Kota', max_length=100, blank=True)
+    provinsi = models.CharField('Provinsi', max_length=100, blank=True)
+    kode_pos = models.CharField('Kode Pos', max_length=10, blank=True)
     foto_profil_versi = models.ForeignKey(
         'sdm.VersiDokumen',
         on_delete=models.SET_NULL,
@@ -112,6 +122,56 @@ class ProfilPribadiPegawai(models.Model):
 
     def __str__(self):
         return f'Profil {self.employee}'
+
+
+class DataBpjsPegawai(models.Model):
+    """Kepesertaan BPJS Kesehatan & Ketenagakerjaan; berkas mengikuti
+    repositori DokumenPegawai, bukan kolom berkas mentah."""
+    STATUS_KESEHATAN = [
+        ('AKTIF', 'Aktif'), ('NONAKTIF', 'Non-Aktif'), ('TANGGUNGAN', 'Tanggungan'),
+    ]
+    KELAS_CHOICES = [
+        ('KELAS_1', 'Kelas 1'), ('KELAS_2', 'Kelas 2'),
+        ('KELAS_3', 'Kelas 3'), ('VIP', 'VIP'),
+    ]
+    STATUS_TK = [('AKTIF', 'Aktif'), ('NONAKTIF', 'Non-Aktif')]
+    employee = models.OneToOneField(
+        'sdm.Pegawai', on_delete=models.CASCADE,
+        related_name='data_bpjs', verbose_name='Pegawai',
+    )
+    no_bpjs_kesehatan = models.CharField('No. BPJS Kesehatan', max_length=20, blank=True)
+    status_bpjs_kesehatan = models.CharField(
+        'Status BPJS Kesehatan', max_length=12, choices=STATUS_KESEHATAN, blank=True,
+    )
+    faskes_1 = models.CharField('Faskes Tingkat 1', max_length=150, blank=True)
+    kelas_rawat = models.CharField('Kelas Rawat', max_length=10, choices=KELAS_CHOICES, blank=True)
+    tanggungan_keluarga = models.PositiveIntegerField('Jumlah Tanggungan', default=0)
+    no_bpjs_tk = models.CharField('No. BPJS Ketenagakerjaan (KPJ)', max_length=20, blank=True)
+    status_bpjs_tk = models.CharField(
+        'Status BPJS TK', max_length=12, choices=STATUS_TK, blank=True,
+    )
+    tmt_bpjs_tk = models.DateField('TMT Kepesertaan BPJS TK', null=True, blank=True)
+    program_jkm = models.BooleanField('Program JKM', default=True)
+    program_jkk = models.BooleanField('Program JKK', default=True)
+    program_jht = models.BooleanField('Program JHT', default=True)
+    program_jp = models.BooleanField('Program JP', default=False)
+    kartu_kesehatan_versi = models.ForeignKey(
+        'sdm.VersiDokumen', on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='bpjs_kesehatan_kartu', verbose_name='Kartu BPJS Kesehatan',
+    )
+    kartu_tk_versi = models.ForeignKey(
+        'sdm.VersiDokumen', on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='bpjs_tk_kartu', verbose_name='Kartu BPJS TK',
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = 'Data BPJS Pegawai'
+        verbose_name_plural = 'Data BPJS Pegawai'
+
+    def __str__(self):
+        return f'BPJS {self.employee}'
 
 
 class RiwayatKepegawaian(models.Model):

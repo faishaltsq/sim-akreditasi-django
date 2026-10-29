@@ -69,11 +69,97 @@
                     <dt class="col-sm-4">Jenis kelamin</dt><dd class="col-sm-8">{{ profile.personal.get_gender_display|default:"Belum dicatat" }}</dd>
                     <dt class="col-sm-4">Agama</dt><dd class="col-sm-8">{{ profile.personal.get_agama_display|default:"Belum dicatat" }}</dd>
                     <dt class="col-sm-4">Status pernikahan</dt><dd class="col-sm-8">{{ profile.personal.get_status_pernikahan_display|default:"Belum dicatat" }}</dd>
-                    <dt class="col-sm-4">Telepon</dt><dd class="col-sm-8">{{ profile.personal.telepon|default:"Belum dicatat" }}</dd>
+                    <dt class="col-sm-4">Telepon</dt><dd class="col-sm-8">{% if profile.personal.telepon %}<a href="https://wa.me/62{% with tel=profile.personal.telepon %}{% for ch in tel %}{% if ch in "0123456789" %}{{ ch }}{% endif %}{% endfor %}{% endwith %}" class="text-decoration-none" target="_blank" rel="noopener">{{ profile.personal.telepon }} <i class="bi bi-whatsapp text-success"></i></a>{% else %}Belum dicatat{% endif %}</dd>
                     <dt class="col-sm-4">Email</dt><dd class="col-sm-8">{{ profile.personal.email_terverifikasi|default:"Belum dicatat" }}</dd>
+                    <dt class="col-sm-4">Golongan darah</dt><dd class="col-sm-8">{{ profile.personal.get_golongan_darah_display|default:"Belum dicatat" }}</dd>
                     <dt class="col-sm-4">Alamat KTP</dt><dd class="col-sm-8">{{ profile.personal.alamat_ktp|default:"Belum dicatat" }}</dd>
+                    <dt class="col-sm-4">RT/RW</dt><dd class="col-sm-8">{{ profile.personal.rt_rw|default:"Belum dicatat" }}</dd>
+                    <dt class="col-sm-4">Kelurahan/Desa</dt><dd class="col-sm-8">{{ profile.personal.kelurahan|default:"Belum dicatat" }}</dd>
+                    <dt class="col-sm-4">Kecamatan</dt><dd class="col-sm-8">{{ profile.personal.kecamatan|default:"Belum dicatat" }}</dd>
+                    <dt class="col-sm-4">Kabupaten/Kota</dt><dd class="col-sm-8">{{ profile.personal.kabupaten_kota|default:"Belum dicatat" }}</dd>
+                    <dt class="col-sm-4">Provinsi</dt><dd class="col-sm-8">{{ profile.personal.provinsi|default:"Belum dicatat" }}</dd>
+                    <dt class="col-sm-4">Kode Pos</dt><dd class="col-sm-8">{{ profile.personal.kode_pos|default:"Belum dicatat" }}</dd>
                     <dt class="col-sm-4">Alamat domisili</dt><dd class="col-sm-8">{{ profile.personal.alamat_domisili|default:"Belum dicatat" }}</dd>
                 </dl>
+                {% if profile.bpjs_kesehatan %}
+                <div class="row g-3 mt-3">
+                    <div class="col-lg-6">
+                        <div class="card border-0 shadow-sm h-100">
+                            <div class="card-header bg-transparent d-flex justify-content-between align-items-center">
+                                <h3 class="h6 mb-0">BPJS Kesehatan</h3>
+                                {% if profile.bpjs_kesehatan.status_bpjs_kesehatan %}<span class="badge {% if profile.bpjs_kesehatan.status_bpjs_kesehatan == 'AKTIF' %}text-bg-success{% elif profile.bpjs_kesehatan.status_bpjs_kesehatan == 'TANGGUNGAN' %}text-bg-info{% else %}text-bg-secondary{% endif %}">{{ profile.bpjs_kesehatan.get_status_bpjs_kesehatan_display }}</span>{% endif %}
+                            </div>
+                            <div class="card-body">
+                                <dl class="row mb-0 small">
+                                    <dt class="col-5">Nomor BPJS</dt><dd class="col-7">{{ profile.bpjs_kesehatan.no_bpjs_kesehatan|default:"—" }}</dd>
+                                    <dt class="col-5">Faskes Tingkat 1</dt><dd class="col-7">{{ profile.bpjs_kesehatan.faskes_1|default:"—" }}</dd>
+                                    <dt class="col-5">Kelas Rawat</dt><dd class="col-7">{{ profile.bpjs_kesehatan.get_kelas_rawat_display|default:"—" }}</dd>
+                                    <dt class="col-5">Jumlah Tanggungan</dt><dd class="col-7">{{ profile.bpjs_kesehatan.tanggungan_keluarga }}</dd>
+                                </dl>
+                                {% if profile.bpjs_kesehatan.kartu_kesehatan_versi %}
+                                <a class="btn btn-outline-secondary btn-sm mt-2" href="{% url 'sdm:dokumen_download' profile.bpjs_kesehatan.kartu_kesehatan_versi.pk %}"><i class="bi bi-download me-1"></i>Unduh Kartu</a>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-lg-6">
+                        <div class="card border-0 shadow-sm h-100">
+                            <div class="card-header bg-transparent d-flex justify-content-between align-items-center">
+                                <h3 class="h6 mb-0">BPJS Ketenagakerjaan</h3>
+                                {% if profile.bpjs_tk.status_bpjs_tk %}<span class="badge {% if profile.bpjs_tk.status_bpjs_tk == 'AKTIF' %}text-bg-success{% else %}text-bg-secondary{% endif %}">{{ profile.bpjs_tk.get_status_bpjs_tk_display }}</span>{% endif %}
+                            </div>
+                            <div class="card-body">
+                                <dl class="row mb-0 small">
+                                    <dt class="col-5">Nomor KPJ</dt><dd class="col-7">{{ profile.bpjs_tk.no_bpjs_tk|default:"—" }}</dd>
+                                    <dt class="col-5">TMT Kepesertaan</dt><dd class="col-7">{% if profile.bpjs_tk.tmt_bpjs_tk %}{{ profile.bpjs_tk.tmt_bpjs_tk|date:"d M Y" }}{% else %}—{% endif %}</dd>
+                                </dl>
+                                <div class="mt-2">
+                                    {% if profile.bpjs_tk.program_jkm %}<span class="badge text-bg-success me-1">JKM</span>{% else %}<span class="badge text-bg-secondary me-1">JKM</span>{% endif %}
+                                    {% if profile.bpjs_tk.program_jkk %}<span class="badge text-bg-success me-1">JKK</span>{% else %}<span class="badge text-bg-secondary me-1">JKK</span>{% endif %}
+                                    {% if profile.bpjs_tk.program_jht %}<span class="badge text-bg-success me-1">JHT</span>{% else %}<span class="badge text-bg-secondary me-1">JHT</span>{% endif %}
+                                    {% if profile.bpjs_tk.program_jp %}<span class="badge text-bg-success me-1">JP</span>{% else %}<span class="badge text-bg-secondary me-1">JP</span>{% endif %}
+                                </div>
+                                {% if profile.bpjs_tk.kartu_tk_versi %}
+                                <a class="btn btn-outline-secondary btn-sm mt-2" href="{% url 'sdm:dokumen_download' profile.bpjs_tk.kartu_tk_versi.pk %}"><i class="bi bi-download me-1"></i>Unduh Kartu</a>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+                {% if can_manage %}
+                <div class="d-flex flex-wrap gap-2 mt-3">
+                    <a class="btn btn-outline-primary btn-sm" href="{% url 'sdm:profil_pribadi_edit' employee.pk %}"><i class="bi bi-pencil-square me-1"></i>Edit Identitas &amp; BPJS</a>
+                </div>
+                {% endif %}
+                {% if can_manage %}
+                <div class="row g-3 mt-2">
+                    <div class="col-lg-6">
+                        <form method="post" action="{% url 'sdm:bpjs_kartu_upload' employee.pk 'BPJS_KESEHATAN' %}" enctype="multipart/form-data" class="card border-0 shadow-sm">
+                            {% csrf_token %}
+                            <div class="card-body">
+                                <h4 class="h6 mb-2">Unggah Kartu BPJS Kesehatan</h4>
+                                <input type="file" name="file" class="form-control form-control-sm" accept=".pdf,.png,.jpg,.jpeg" aria-label="Berkas kartu BPJS Kesehatan">
+                            </div>
+                            <div class="card-footer bg-transparent d-flex justify-content-end">
+                                <button class="btn btn-outline-primary btn-sm" type="submit"><i class="bi bi-upload me-1"></i>Unggah</button>
+                            </div>
+                        </form>
+                    </div>
+                    <div class="col-lg-6">
+                        <form method="post" action="{% url 'sdm:bpjs_kartu_upload' employee.pk 'BPJS_TK' %}" enctype="multipart/form-data" class="card border-0 shadow-sm">
+                            {% csrf_token %}
+                            <div class="card-body">
+                                <h4 class="h6 mb-2">Unggah Kartu BPJS Ketenagakerjaan</h4>
+                                <input type="file" name="file" class="form-control form-control-sm" accept=".pdf,.png,.jpg,.jpeg" aria-label="Berkas kartu BPJS Ketenagakerjaan">
+                            </div>
+                            <div class="card-footer bg-transparent d-flex justify-content-end">
+                                <button class="btn btn-outline-primary btn-sm" type="submit"><i class="bi bi-upload me-1"></i>Unggah</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+                {% endif %}
                 {% elif profile.has_personal_record %}
                 <p class="text-muted mb-0">Tersembunyi — data identitas pribadi hanya dapat dilihat oleh pemilik profil atau pengguna dengan kewenangan pengelolaan.</p>
                 {% else %}
@@ -259,13 +345,20 @@
                 <p class="small text-muted mt-3 mb-0">Informasi kesehatan kerja tidak ditampilkan pada profil kepegawaian umum.</p>
             </section>
             <section class="tab-pane fade" id="activity-pane" role="tabpanel" aria-labelledby="activity-tab" tabindex="0">
+                <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+                    <div>
+                        <h2 class="h6 mb-1">Aktivitas Pegawai</h2>
+                        <p class="small text-muted mb-0">Jejak audit perubahan data, unggahan berkas, verifikasi, dan sesi login.</p>
+                    </div>
+                    <a class="btn btn-outline-primary btn-sm" href="{% url 'sdm:pegawai_aktivitas' employee.pk %}">Lihat semua &amp; filter</a>
+                </div>
                 <div class="table-responsive">
                     <table class="table table-sm align-middle">
                         <caption class="visually-hidden">Riwayat aktivitas kepegawaian</caption>
-                        <thead><tr><th scope="col">Waktu</th><th scope="col">Peristiwa</th><th scope="col">Pelaku</th><th scope="col">Status</th></tr></thead>
+                        <thead><tr><th scope="col">Waktu</th><th scope="col">Kategori</th><th scope="col">Judul</th><th scope="col">Pelaku</th><th scope="col">Status</th></tr></thead>
                         <tbody>
-                            {% for event in events %}<tr><td>{{ event.created_at|date:"d M Y H:i" }}</td><td>{{ event.jenis_peristiwa }}</td><td>{{ event.actor.username|default:"Sistem" }}</td><td>{{ event.status_sesudah|default:"—" }}</td></tr>
-                            {% empty %}<tr><td colspan="4" class="text-muted text-center py-4">Belum ada aktivitas kepegawaian.</td></tr>{% endfor %}
+                            {% for event in events %}<tr><td>{{ event.created_at|date:"d M Y H:i" }}</td><td>{% if event.kategori %}<span class="badge {% if event.kategori == 'UPDATE_PROFILE' %}text-bg-primary{% elif event.kategori == 'UPLOAD_DOC' %}text-bg-info{% elif event.kategori == 'VERIFIKASI' %}text-bg-success{% elif event.kategori == 'LOGIN' %}text-bg-secondary{% else %}text-bg-dark{% endif %}">{{ event.get_kategori_display }}</span>{% else %}<span class="text-muted">—</span>{% endif %}</td><td>{{ event.judul|default:event.jenis_peristiwa }}</td><td>{{ event.actor.username|default:"Sistem" }}</td><td>{% if event.status %}{{ event.get_status_display }}{% else %}{{ event.status_sesudah|default:"—" }}{% endif %}</td></tr>
+                            {% empty %}<tr><td colspan="5" class="text-muted text-center py-4">Belum ada aktivitas kepegawaian.</td></tr>{% endfor %}
                         </tbody>
                     </table>
                 </div>

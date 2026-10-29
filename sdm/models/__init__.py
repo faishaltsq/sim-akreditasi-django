@@ -86,6 +86,7 @@ from .presensi import (
 )
 from .intake import (
     BatchImporPegawai,
+    DataBpjsPegawai,
     DrafInputPegawai,
     IzinProfesiPegawai,
     LampiranDrafPegawai,
@@ -146,7 +147,7 @@ __all__ = [
     'PenempatanPegawai',
     'PenilaianTalent',
     'PeristiwaSDM',
-    'ProfilPribadiPegawai',
+    'DataBpjsPegawai',
     'RiwayatKepegawaian',
     'RiwayatPendidikanPegawai',
     'UrutanNomorPegawai',

@@ -33,6 +33,16 @@ urlpatterns = [
         name='pegawai_edit',
     ),
     path(
+        'pegawai/<uuid:employee_id>/identitas-pribadi/',
+        views.profil_pribadi_edit,
+        name='profil_pribadi_edit',
+    ),
+    path(
+        'pegawai/<uuid:employee_id>/bpjs/<str:jenis>/',
+        views.bpjs_kartu_upload,
+        name='bpjs_kartu_upload',
+    ),
+    path(
         'pegawai/<uuid:employee_id>/riwayat/baru/',
         views.riwayat_create,
         name='riwayat_create',
@@ -53,6 +63,21 @@ urlpatterns = [
         name='dokumen_upload',
     ),
     path(
+        'pegawai/<uuid:employee_id>/aktivitas/',
+        views.pegawai_aktivitas,
+        name='pegawai_aktivitas',
+    ),
+    path(
+        'pegawai/<uuid:employee_id>/aktivitas/ekspor-csv/',
+        views.pegawai_aktivitas_export,
+        name='pegawai_aktivitas_export',
+    ),
+    path(
+        'pegawai/<uuid:employee_id>/aktivitas/baru/',
+        views.aktivitas_manual,
+        name='aktivitas_manual',
+    ),
+    path(
         'dokumen/<int:version_id>/tinjau/',
         views.dokumen_review,
         name='dokumen_review',
@@ -64,6 +89,9 @@ urlpatterns = [
     ),
     path('formasi/', views.formasi_list, name='formasi_list'),
     path('formasi/peta/', views.formasi_peta, name='formasi_peta'),
+    path('kalkulator-fte/', views.kalkulator_fte, name='kalkulator_fte'),
+    path('kalkulator-fte/ekspor-csv/', views.kalkulator_fte_export, name='kalkulator_fte_export'),
+    path('kalkulator-fte/simpan/', views.kalkulator_fte_simpan, name='kalkulator_fte_simpan'),
     path('formasi/baru/', views.formasi_create, name='formasi_create'),
     path('formasi/<uuid:plan_id>/', views.formasi_detail, name='formasi_detail'),
     path(

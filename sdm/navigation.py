@@ -113,9 +113,19 @@ def navigation_tree(user, *, unit=None, employee=None):
             label='Perencanaan & Formasi',
             icon=GROUP_ICONS['perencanaan'],
             items=[
-                item('perencanaan_beban_kerja', 'Beban Kerja, Kalkulator FTE, Peta & Gap',
-                     url_name='formasi_peta',
-                     capability='can_plan_hc_workforce'),
+                NavItem(
+                    key='perencanaan_beban_kerja',
+                    label='Beban Kerja, Kalkulator FTE, Peta & Gap',
+                    url_name='formasi_peta',
+                    capability='can_plan_hc_workforce',
+                    unit=unit,
+                    employee=employee,
+                    children=[
+                        item('perencanaan_kalkulator_fte', 'Kalkulator FTE',
+                             url_name='kalkulator_fte',
+                             capability='can_plan_hc_workforce'),
+                    ],
+                ),
                 item('perencanaan_formasi', 'Usulan Formasi, Rekrutmen & Seleksi',
                      url_name='formasi_list',
                      capability='can_plan_hc_workforce'),

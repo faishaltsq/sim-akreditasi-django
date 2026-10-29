@@ -1,7 +1,9 @@
 import base64
+import csv
 import datetime
 import hashlib
 from datetime import timedelta
+from decimal import InvalidOperation
 
 from django.contrib import messages
 from django.core.cache import cache
@@ -10,7 +12,7 @@ from django.core.exceptions import PermissionDenied, ValidationError
 from django.core.paginator import Paginator
 from django.db import IntegrityError, transaction
 from django.db.models import Q
-from django.http import Http404, HttpResponse
+from django.http import Http404, HttpResponse, HttpResponseBadRequest
 from django.shortcuts import get_object_or_404, redirect, render, reverse
 from django.utils import timezone
 from django.views.decorators.http import require_POST
@@ -39,6 +41,10 @@ from sdm.forms import (
     RencanaFormasiForm,
     ReviewDokumenForm,
     RiwayatKepegawaianForm,
+    DataBpjsForm,
+    ProfilPribadiForm,
+    KalkulatorFteForm,
+    AktivitasManualForm,
     RincianKewenanganForm,
     VerifikasiSumberForm,
     ImunisasiPegawaiForm,
@@ -81,6 +87,8 @@ from sdm.models import (
     RincianKewenangan,
     RencanaFormasi,
     RiwayatKepegawaian,
+    ProfilPribadiPegawai,
+    DataBpjsPegawai,
     ImunisasiPegawai,
     InsidenK3Pegawai,
     PemeriksaanKesehatanKerja,
@@ -145,6 +153,15 @@ from sdm.services.syarat_kredensial import (
     evaluate_employee_requirements,
     evaluate_requirements,
     populate_requirements,
+)
+from akreditasi.security_utils import extract_client_ip
+from sdm.services.aktivitas import activity_metrics, activity_rows
+from sdm.services.fte_kalkulator import (
+    PRESET_UNIT,
+    band_gap,
+    compute_fte,
+    existing_fte_for,
+    jke_minutes,
 )
 from sdm.storage_backend import PrivateStorageError
 
@@ -321,6 +338,91 @@ def pegawai_edit(request, employee_id):
         f'Edit Pegawai — {employee.nama_lengkap}',
         employee=employee,
     )
+@login_required
+def profil_pribadi_edit(request, employee_id):
+    employee = get_object_or_404(
+        visible_employees(request.user), pk=employee_id
+    )
+    require_hc_capability(
+        request.user, 'can_manage_hc_employees', employee=employee
+    )
+    personal = getattr(employee, 'profil_pribadi', None)
+    bpjs = getattr(employee, 'data_bpjs', None)
+    form = ProfilPribadiForm(
+        request.POST or None, instance=personal, employee=employee
+    )
+    bpjs_form = DataBpjsForm(request.POST or None, instance=bpjs)
+    if request.method == 'POST' and form.is_valid() and bpjs_form.is_valid():
+        try:
+            with transaction.atomic():
+                updated = form.save(commit=False)
+                updated.employee = employee
+                updated.save()
+                bpjs_row = bpjs_form.save(commit=False)
+                bpjs_row.employee = employee
+                bpjs_row.save()
+                PeristiwaSDM.objects.create(
+                    actor=request.user,
+                    jenis_peristiwa='employee_updated',
+                    kategori='UPDATE_PROFILE',
+                    judul='Identitas pribadi & BPJS diperbarui',
+                    target_tipe='employee',
+                    target_id=str(updated.employee_id),
+                    status='SUCCESS',
+                    ip_address=extract_client_ip(request),
+                    user_agent=request.META.get('HTTP_USER_AGENT', '')[:500],
+                )
+        except ValidationError as exc:
+            form.add_error(None, '; '.join(exc.messages))
+        else:
+            return redirect('sdm:pegawai_detail', employee_id=employee.pk)
+    return render(request, 'sdm/pegawai/profil_pribadi.html', {
+        'form': form,
+        'bpjs_form': bpjs_form,
+        'employee': employee,
+        'title': f'Identitas Pribadi & BPJS — {employee.nama_lengkap}',
+    })
+
+
+@login_required
+@require_POST
+def bpjs_kartu_upload(request, employee_id, jenis):
+    employee = get_object_or_404(
+        visible_employees(request.user), pk=employee_id
+    )
+    require_hc_capability(
+        request.user, 'can_manage_hc_documents', employee=employee
+    )
+    if jenis not in ('BPJS_KESEHATAN', 'BPJS_TK'):
+        raise Http404('Jenis kartu tidak dikenali.')
+    upload = request.FILES.get('file')
+    if upload is None:
+        messages.error(request, 'Berkas kartu wajib dipilih.')
+        return redirect('sdm:pegawai_detail', employee_id=employee.pk)
+    try:
+        document, version = store_private_document(
+            upload,
+            employee=employee,
+            sensitivity='personnel',
+            document_type='IDENTITY',
+            title=f'Kartu {jenis}',
+            uploaded_by=request.user,
+        )
+    except (ValidationError, PrivateStorageError):
+        messages.error(request, 'Berkas kartu gagal disimpan.')
+        return redirect('sdm:pegawai_detail', employee_id=employee.pk)
+    # store_private_document has no kind parameter; record it on the
+    # document it just returned so the BPJS cards stay distinguishable.
+    document.jenis_berkas = jenis
+    document.save(update_fields=['jenis_berkas'])
+    bpjs, _ = DataBpjsPegawai.objects.get_or_create(employee=employee)
+    if jenis == 'BPJS_KESEHATAN':
+        bpjs.kartu_kesehatan_versi = version
+    else:
+        bpjs.kartu_tk_versi = version
+    bpjs.save(update_fields=['kartu_kesehatan_versi', 'kartu_tk_versi', 'updated_at'])
+    messages.success(request, 'Kartu BPJS berhasil diunggah.')
+    return redirect('sdm:pegawai_detail', employee_id=employee.pk)
 
 
 @login_required
@@ -517,6 +619,94 @@ def pegawai_avatar(request, employee_id):
     response['Cache-Control'] = 'private, max-age=300'
     response['Content-Disposition'] = 'inline'
     return response
+@login_required
+def pegawai_aktivitas(request, employee_id):
+    employee = get_object_or_404(
+        visible_employees(request.user), pk=employee_id
+    )
+    require_hc_capability(request.user, 'can_view_hc', employee=employee)
+    kategori = (request.GET.get('kategori') or '').strip()[:20]
+    q = (request.GET.get('q') or '').strip()[:120]
+    rows = activity_rows(
+        request.user, employee=employee, kategori=kategori, q=q
+    )
+    return render(request, 'sdm/pegawai/aktivitas.html', {
+        'employee': employee,
+        'rows': rows,
+        'metrics': activity_metrics(rows),
+        'kategori': kategori,
+        'q': q,
+        'kategori_choices': PeristiwaSDM.KATEGORI_CHOICES,
+        'can_manage': visible_units(
+            request.user, capability='can_manage_hc_employees'
+        ).exists(),
+        'form': AktivitasManualForm(),
+    })
+
+
+@login_required
+@require_POST
+def aktivitas_manual(request, employee_id):
+    employee = get_object_or_404(
+        visible_employees(request.user), pk=employee_id
+    )
+    require_hc_capability(
+        request.user, 'can_manage_hc_employees', employee=employee
+    )
+    form = AktivitasManualForm(request.POST)
+    if form.is_valid():
+        data = form.cleaned_data
+        PeristiwaSDM.objects.create(
+            actor=request.user,
+            jenis_peristiwa='aktivitas_manual',
+            kategori=data['kategori'],
+            judul=data['judul'],
+            deskripsi=data['deskripsi'],
+            modul=data['modul'] or 'Human Capital',
+            status=data['status'],
+            ip_address=extract_client_ip(request),
+            user_agent=request.META.get('HTTP_USER_AGENT', '')[:2000],
+            target_tipe='employee',
+            target_id=str(employee.pk),
+        )
+        messages.success(request, 'Aktivitas dicatat.')
+    else:
+        messages.error(request, 'Form aktivitas tidak valid.')
+    return redirect('sdm:pegawai_aktivitas', employee_id=employee.pk)
+
+
+@login_required
+def pegawai_aktivitas_export(request, employee_id):
+    employee = get_object_or_404(
+        visible_employees(request.user), pk=employee_id
+    )
+    require_hc_capability(request.user, 'can_view_hc', employee=employee)
+    rows = activity_rows(request.user, employee=employee)
+    response = HttpResponse(content_type='text/csv; charset=utf-8')
+    response['Content-Disposition'] = (
+        f'attachment; filename="Aktivitas_{employee.pk}_{timezone.now().strftime("%Y%m%d_%H%M")}.csv"'
+    )
+    response.write('\ufeff'.encode('utf8'))
+    writer = csv.writer(response)
+    writer.writerow([
+        'Waktu', 'Kategori', 'Judul', 'Jenis Peristiwa', 'Pelaku',
+        'Status', 'Modul', 'IP', 'Peranti',
+    ])
+    for row in rows:
+        writer.writerow([
+            row.created_at.strftime('%Y-%m-%d %H:%M'),
+            row.get_kategori_display() or row.kategori,
+            row.judul or row.jenis_peristiwa,
+            row.jenis_peristiwa,
+            row.actor.username if row.actor else 'Sistem',
+            row.get_status_display() or row.status,
+            row.modul,
+            row.ip_address,
+            row.user_agent,
+        ])
+    return response
+
+
 
 
 @login_required
@@ -652,6 +842,129 @@ def formasi_create(request):
         'form': form,
         'title': 'Rencana Formasi Baru',
     })
+
+
+@login_required
+def kalkulator_fte(request):
+    require_hc_capability(request.user, 'can_plan_hc_workforce')
+    form = KalkulatorFteForm(request.POST or None, user=request.user)
+    result = None
+    minutes = None
+    band = None
+    error = None
+    if request.method == 'POST' and form.is_valid():
+        data = form.cleaned_data
+        try:
+            minutes = jke_minutes(
+                data['hari_kerja'], data['cuti_tahunan'], data['hari_sakit_rata2'],
+                data['libur_nasional'], data['pendidikan_pelatihan'],
+                data['jam_kerja_per_hari'],
+            )
+            existing = existing_fte_for(
+                data['unit_kerja'].pk, data['profesi'], timezone.localdate()
+            )
+            result = compute_fte(
+                data['activities'], minutes, data['support_allowance_pct'],
+                existing_fte=existing,
+            )
+            band = band_gap(result['gap_fte'])
+        except (ValidationError, ZeroDivisionError, InvalidOperation) as exc:
+            error = '; '.join(getattr(exc, 'messages', None) or [str(exc)])
+    return render(request, 'sdm/kalkulator_fte.html', {
+        'form': form, 'result': result, 'band': band, 'error': error,
+        'presets': PRESET_UNIT, 'effective_minutes': minutes,
+    })
+
+
+@login_required
+@require_POST
+def kalkulator_fte_simpan(request):
+    require_hc_capability(request.user, 'can_plan_hc_workforce')
+    form = KalkulatorFteForm(request.POST, user=request.user)
+    if not form.is_valid():
+        messages.error(request, 'Data kalkulator tidak valid.')
+        return redirect('sdm:kalkulator_fte')
+    data = form.cleaned_data
+    plan = RencanaFormasi(
+        unit_kerja=data['unit_kerja'],
+        profesi=data['profesi'],
+        periode_mulai=timezone.localdate(),
+        periode_selesai=timezone.localdate() + timedelta(days=365),
+        metode='ACTIVITY_FTE',
+        effective_minutes_per_employee=jke_minutes(
+            data['hari_kerja'], data['cuti_tahunan'], data['hari_sakit_rata2'],
+            data['libur_nasional'], data['pendidikan_pelatihan'],
+            data['jam_kerja_per_hari'],
+        ),
+        support_allowance_pct=data['support_allowance_pct'],
+        override_alasan='Disimpan dari Kalkulator FTE; menit efektif dihitung dari parameter halaman.',
+        alasan='DEFISIT_FTE',
+        created_by=request.user,
+    )
+    try:
+        save_plan(plan, user=request.user)
+        for nama, volume, standard_minutes in data['activities']:
+            AktivitasBebanKerja.objects.create(
+                rencana=plan, nama=nama, volume=volume,
+                standard_minutes=standard_minutes,
+            )
+    except ValidationError as exc:
+        messages.error(request, '; '.join(exc.messages))
+        return redirect('sdm:kalkulator_fte')
+    return redirect('sdm:formasi_detail', plan_id=plan.pk)
+
+
+@login_required
+def kalkulator_fte_export(request):
+    require_hc_capability(request.user, 'can_plan_hc_workforce')
+    form = KalkulatorFteForm(request.GET, user=request.user)
+    if not form.is_valid():
+        return HttpResponseBadRequest('Parameter kalkulator tidak valid.')
+    data = form.cleaned_data
+    minutes = jke_minutes(
+        data['hari_kerja'], data['cuti_tahunan'], data['hari_sakit_rata2'],
+        data['libur_nasional'], data['pendidikan_pelatihan'],
+        data['jam_kerja_per_hari'],
+    )
+    existing = existing_fte_for(
+        data['unit_kerja'].pk, data['profesi'], timezone.localdate()
+    )
+    result = compute_fte(
+        data['activities'], minutes, data['support_allowance_pct'],
+        existing_fte=existing,
+    )
+    band = band_gap(result['gap_fte'])
+    response = HttpResponse(content_type='text/csv; charset=utf-8')
+    response['Content-Disposition'] = (
+        f'attachment; filename="Kalkulator_FTE_{timezone.now().strftime("%Y%m%d_%H%M")}.csv"'
+    )
+    response.write('\ufeff'.encode('utf8'))
+    writer = csv.writer(response)
+    writer.writerow(['Parameter JKE', 'Nilai'])
+    writer.writerow(['Hari kerja per tahun', data['hari_kerja']])
+    writer.writerow(['Cuti tahunan (hari)', data['cuti_tahunan']])
+    writer.writerow(['Rata-rata sakit (hari)', data['hari_sakit_rata2']])
+    writer.writerow(['Libur nasional (hari)', data['libur_nasional']])
+    writer.writerow(['Pendidikan & pelatihan (hari)', data['pendidikan_pelatihan']])
+    writer.writerow(['Jam kerja per hari', data['jam_kerja_per_hari']])
+    writer.writerow(['Menit efektif per pegawai', minutes])
+    writer.writerow([])
+    writer.writerow(['Aktivitas', 'Volume', 'Standar Menit', 'Subtotal Menit'])
+    for nama, volume, standard_minutes in data['activities']:
+        writer.writerow([
+            nama, volume, standard_minutes, volume * standard_minutes,
+        ])
+    writer.writerow([])
+    writer.writerow(['Ringkasan', 'Nilai'])
+    writer.writerow(['total_menit', result['total_minutes']])
+    writer.writerow(['allowance_pct', data['support_allowance_pct']])
+    writer.writerow(['required_fte', result['required_fte']])
+    writer.writerow(['required_headcount', result['required_headcount']])
+    writer.writerow(['actual_fte', result['actual_fte']])
+    writer.writerow(['gap_fte', result['gap_fte']])
+    writer.writerow(['sufficiency_pct', result['sufficiency_pct']])
+    writer.writerow(['band', band])
+    return response
 
 
 @login_required
