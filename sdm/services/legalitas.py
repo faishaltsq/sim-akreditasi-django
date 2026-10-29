@@ -7,7 +7,13 @@ from django.core.exceptions import ValidationError
 from django.db.models import Q
 from django.utils import timezone
 
-from sdm.models import IzinProfesiPegawai, PenugasanKlinis, PengingatSDM, VersiDokumen
+from sdm.models import (
+    IzinProfesiPegawai,
+    Pegawai,
+    PenugasanKlinis,
+    PengingatSDM,
+    VersiDokumen,
+)
 
 EXPIRED = 'expired'
 ZERO_SEVEN = '0-7'
@@ -236,8 +242,30 @@ def sync_legal_reminders(*, employee, actor, as_of=None):
             obj.save(update_fields=['band', 'alasan', 'due_date'])
             updated += 1
     # Arsipkan hanya pengingat legalitas milik pegawai ini yang tak lagi urgen.
+    # Filter ':legal:' (bukan 'DOCUMENT:') agar pengingat dokumen biasa milik
+    # pegawai yang sama tidak ikut tertandai sudah dibaca.
     archived = PengingatSDM.objects.filter(
         employee=employee, recipient=recipient, read_at__isnull=True,
-        idempotency_key__startswith='DOCUMENT:',
+        idempotency_key__contains=':legal:',
     ).exclude(idempotency_key__in=urgent_keys).update(read_at=as_of)
     return {'created': created, 'updated': updated, 'archived': archived}
+
+
+def sync_legal_reminders_all(*, as_of=None):
+    """Bulk entry point: refresh legal reminders for every employee with an account.
+
+    Mirrors the other bulk sync helpers in sdm.models.pengingat: one queryset
+    plus per-employee delegation, returning an aggregate dict.
+    """
+    as_of = as_of or timezone.localdate()
+    totals = {'created': 0, 'updated': 0, 'archived': 0}
+    employees = Pegawai.objects.filter(
+        akun__isnull=False, akun__is_active=True
+    ).select_related('akun')
+    for employee in employees:
+        result = sync_legal_reminders(
+            employee=employee, actor=None, as_of=as_of
+        )
+        for key in totals:
+            totals[key] += result.get(key, 0)
+    return totals

@@ -293,8 +293,13 @@ def sync_spk_reminders(*, as_of=None):
 
 
 def sync_all_reminders(*, as_of=None):
-    return (
+    created = (
         sync_expiry_reminders(as_of=as_of)
         + sync_task_reminders(as_of=as_of)
         + sync_spk_reminders(as_of=as_of)
     )
+    # Legalitas (STR/SIP/SPK) dipindai per pegawai oleh service legalitas;
+    # import ditunda di dalam fungsi karena modul itu mengimpor modul ini.
+    from sdm.services.legalitas import sync_legal_reminders_all
+    created += sum(sync_legal_reminders_all(as_of=as_of).values())
+    return created
