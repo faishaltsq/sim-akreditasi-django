@@ -1,0 +1,66 @@
+name: HC Reminders
+
+# Menjalankan sinkron pengingat Human Capital (STR/SIP kedaluwarsa & akan habis,
+# dokumen, SPK, orientasi, penilaian kinerja) secara berkala.
+# Aplikasi ini di-deploy sebagai web server tanpa scheduler (Procfile hanya
+# `web:`), sehingga pemanggilan `manage.py hc_reminders` perlu pihak eksternal.
+on:
+  schedule:
+    # 01:00 WIB = 18:00 UTC hari sebelumnya.
+    - cron: '0 18 * * *'
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Dry run (hanya lapor, tidak menulis)'
+        required: false
+        default: 'false'
+        type: choice
+        options:
+          - 'false'
+          - 'true'
+
+concurrency:
+  group: hc-reminders
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      # Web server menjalankan migrate saat startup, jadi DB produksi biasanya
+      # sudah terbaru. Langkah ini idempoten dan menjamin sinkron bila job
+      # berjalan di antara push kode dan restart web.
+      - name: Apply pending migrations
+        env:
+          DATABASE_URL: ${{ secrets.HC_REMINDERS_DATABASE_URL }}
+          DJANGO_SECRET_KEY: ${{ secrets.DJANGO_SECRET_KEY }}
+          DJANGO_DEBUG: 'False'
+        run: python manage.py migrate --no-input
+
+      - name: Run reminder sync
+        env:
+          # Ditulis ke database produksi; keduanya wajib ada sebagai repository
+          # secret. Tanpa DJANGO_SECRET_KEY, Django membuat kunci acak per run.
+          DATABASE_URL: ${{ secrets.HC_REMINDERS_DATABASE_URL }}
+          DJANGO_SECRET_KEY: ${{ secrets.DJANGO_SECRET_KEY }}
+          DJANGO_DEBUG: 'False'
+        run: |
+          set -euo pipefail
+          if [ "${{ inputs.dry_run || 'false' }}" = "true" ]; then
+            python manage.py hc_reminders --dry-run
+          else
+            python manage.py hc_reminders
+          fi
