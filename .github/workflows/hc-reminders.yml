@@ -40,22 +40,43 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
+      # `manage.py hc_reminders` tidak membuat HTTP request maupun login, jadi
+      # DJANGO_SECRET_KEY tidak diperlukan. Gagal cepat dengan pesan jelas
+      # menggantikan error psycopg2 yang membingungkan bila secret belum di-set.
+      - name: Check database secret is configured
+        env:
+          HC_REMINDERS_DATABASE_URL: ${{ secrets.HC_REMINDERS_DATABASE_URL }}
+        run: |
+          set -euo pipefail
+          if [ -z "${HC_REMINDERS_DATABASE_URL}" ]; then
+            echo "::error::Secret HC_REMINDERS_DATABASE_URL belum dikonfigurasi."
+            echo "Tambahkan di GitHub: Settings → Secrets and variables → Actions → New repository secret."
+            echo "Nilai: connection string Supabase Session pooler (port 5432),"
+            echo "bukan direct connection 'db.<ref>.supabase.co' karena host itu hanya IPv6"
+            echo "sedangkan runner GitHub Actions hanya IPv4."
+            exit 1
+          fi
+          case "${HC_REMINDERS_DATABASE_URL}" in
+            postgres://*|postgresql://*) ;;
+            *)
+              echo "::error::HC_REMINDERS_DATABASE_URL harus dimulai dengan postgres:// atau postgresql://"
+              exit 1
+              ;;
+          esac
+          echo "Secret terkonfigurasi."
+
       # Web server menjalankan migrate saat startup, jadi DB produksi biasanya
-      # sudah terbaru. Langkah ini idempoten dan menjamin sinkron bila job
+      # sudah terbaru. Langkah ini idempoten dan menjamin skema sesuai bila job
       # berjalan di antara push kode dan restart web.
       - name: Apply pending migrations
         env:
+          HC_REMINDERS_DATABASE_URL: ${{ secrets.HC_REMINDERS_DATABASE_URL }}
           DATABASE_URL: ${{ secrets.HC_REMINDERS_DATABASE_URL }}
-          DJANGO_SECRET_KEY: ${{ secrets.DJANGO_SECRET_KEY }}
-          DJANGO_DEBUG: 'False'
         run: python manage.py migrate --no-input
 
       - name: Run reminder sync
         env:
-          # Ditulis ke database produksi; keduanya wajib ada sebagai repository
-          # secret. Tanpa DJANGO_SECRET_KEY, Django membuat kunci acak per run.
           DATABASE_URL: ${{ secrets.HC_REMINDERS_DATABASE_URL }}
-          DJANGO_SECRET_KEY: ${{ secrets.DJANGO_SECRET_KEY }}
           DJANGO_DEBUG: 'False'
         run: |
           set -euo pipefail
