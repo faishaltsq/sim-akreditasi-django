@@ -27,6 +27,10 @@ jobs:
   sync:
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    # Secret HC_REMINDERS_DATABASE_URL terdaftar pada environment `production`
+    # (huruf kecil), bukan repository secret. Tanpa baris ini, job gagal dengan
+    # pesan "secret belum dikonfigurasi" walau secret sudah ditambahkan.
+    environment: production
     steps:
       - uses: actions/checkout@v4
 
