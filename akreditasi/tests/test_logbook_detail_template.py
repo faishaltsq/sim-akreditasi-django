@@ -35,3 +35,9 @@ class LogbookDetailTemplateTest(TestCase):
         self.assertIn('Mandiri', content)
         self.assertIn('Kolaborasi', content)
         self.assertIn('Supervisi', content)
+        self.assertIn('Pilih Pasien (No. RM)', content)
+        self.assertIn('No. RM: RM101', content)
+        self.assertIn('Pilih Tindakan Klinis (Master Database)', content)
+        self.assertIn('Pemasangan Infus', content)
+        # Ensure the select option for patient has NO patient name
+        self.assertNotIn('Tn. Anton (RM: RM101)', content)

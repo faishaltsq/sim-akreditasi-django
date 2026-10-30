@@ -231,6 +231,11 @@ def logbook_daftar(request):
             },
         )
 
+    sdm_recap = None
+    if sdm_target:
+        from sdm.services.logbook import logbook_recap
+        sdm_recap = logbook_recap(sdm_target, months=36)
+
     return render(request, 'akreditasi/logbook_daftar.html', {
         'active_tab': tab,
         # Harian
@@ -253,6 +258,7 @@ def logbook_daftar(request):
         'can_manage': sdm_can_manage,
         'quick_form': sdm_quick_form,
         'quick_target': sdm_target,
+        'logbook_recap': sdm_recap,
     })
 
 
@@ -346,7 +352,10 @@ def logbook_detail(request, pk):
         'employee', 'katalog_tindakan', 'logbook_pasien'
     ).order_by('-created_at')
     katalog_tindakan_pilihan = list(
-        KatalogTindakan.objects.filter(is_active=True).values('id', 'kode', 'nama').order_by('nama')[:500]
+        KatalogTindakan.objects.filter(is_active=True)
+        .select_related('jenjang__profesi')
+        .values('id', 'kode', 'nama', 'jenjang__profesi__nama')
+        .order_by('jenjang__profesi__nama', 'nama')
     )
 
     return render(request, 'akreditasi/logbook_detail.html', {
@@ -584,30 +593,28 @@ def logbook_simpan_tindakan(request, pk):
 
     pasien_id = request.POST.get('pasien_id')
     katalog_id = request.POST.get('katalog_id', '').strip()
-    tindakan_bebas = request.POST.get('tindakan_bebas', '').strip()[:200]
     kategori = request.POST.get('kategori', 'M').strip().upper()
     catatan = request.POST.get('catatan', '').strip()
 
     if kategori not in ('M', 'K', 'S'):
         kategori = 'M'
 
-    katalog = None
-    if katalog_id:
-        katalog = KatalogTindakan.objects.filter(pk=katalog_id).first()
-
-    if not katalog and not tindakan_bebas:
-        messages.error(request, 'Pilih tindakan klinis dari katalog atau isi tindakan bebas.')
+    if not katalog_id:
+        messages.error(request, 'Pilih tindakan klinis dari master database katalog tindakan.')
         return redirect('akreditasi:logbook_detail', pk=logbook.pk)
 
-    # Resolusi pasien baris jika dipilih
+    katalog = KatalogTindakan.objects.filter(pk=katalog_id, is_active=True).first()
+    if not katalog:
+        messages.error(request, 'Tindakan klinis yang dipilih tidak valid di master katalog database.')
+        return redirect('akreditasi:logbook_detail', pk=logbook.pk)
+
+    # Resolusi pasien baris jika dipilih (Hanya No. RM, privasi terjaga tanpa nama pasien)
     pasien_baris = None
     pasien_ref = ''
     if pasien_id:
         pasien_baris = logbook.pasien.filter(pk=pasien_id).first()
         if pasien_baris:
-            pasien_ref = f"{pasien_baris.no_rm} - {pasien_baris.nama_pasien}".strip(' -')[:60]
-            if not pasien_ref:
-                pasien_ref = pasien_baris.no_rm or pasien_baris.nama_pasien[:60]
+            pasien_ref = (pasien_baris.no_rm or (f"Bed {pasien_baris.no_bed}" if pasien_baris.no_bed else "RM: -")).strip()[:60]
 
     # Resolusi pegawai pelaksana: dari form pegawai_id atau request.user
     pegawai = None
@@ -632,7 +639,7 @@ def logbook_simpan_tindakan(request, pk):
     j_kolaborasi = 1 if kategori == 'K' else 0
     j_supervisi = 1 if kategori == 'S' else 0
 
-    nama_tindakan_log = katalog.nama if katalog else tindakan_bebas
+    nama_tindakan_log = katalog.nama
     entri = EntriLogbookKlinis.objects.create(
         employee=pegawai,
         tanggal=logbook.tanggal,
@@ -643,7 +650,7 @@ def logbook_simpan_tindakan(request, pk):
         logbook_pasien=pasien_baris,
         pasien_ref=pasien_ref,
         katalog_tindakan=katalog,
-        tindakan='' if katalog else tindakan_bebas,
+        tindakan='',
         kategori=kategori,
         jumlah_mandiri=j_mandiri,
         jumlah_kolaborasi=j_kolaborasi,

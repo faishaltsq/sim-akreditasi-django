@@ -182,25 +182,29 @@
                 {% csrf_token %}
                 <div class="row g-2">
                     <div class="col-12 col-md-3">
-                        <label class="form-label small fw-semibold mb-1">Pilih Pasien</label>
+                        <label class="form-label small fw-semibold mb-1">Pilih Pasien (No. RM)</label>
                         <select name="pasien_id" class="form-select form-select-sm">
-                            <option value="">— Pasien Umum / Tanpa Pasien —</option>
+                            <option value="">— Pasien Umum / Tanpa No. RM —</option>
                             {% for b in baris %}
-                            <option value="{{ b.pk }}">{{ b.nama_pasien }} (RM: {{ b.no_rm|default:"—" }})</option>
+                            <option value="{{ b.pk }}">No. RM: {{ b.no_rm|default:"(Tanpa RM)" }}{% if b.no_bed %} · Bed {{ b.no_bed }}{% endif %}</option>
                             {% endfor %}
                         </select>
+                        <div class="form-text" style="font-size: 0.72rem;">*Privasi medis: hanya mencatat No. RM.</div>
                     </div>
                     <div class="col-12 col-md-4">
-                        <label class="form-label small fw-semibold mb-1">Pilih Tindakan Klinis (Katalog)</label>
-                        <input class="form-control form-control-sm" list="katalog_shift_options" name="katalog_id" placeholder="Cari katalog tindakan klinis...">
-                        <datalist id="katalog_shift_options">
-                            {% for kat in katalog_tindakan_pilihan %}
-                            <option value="{{ kat.id }}">{{ kat.kode }} — {{ kat.nama }}</option>
+                        <label class="form-label small fw-semibold mb-1">Pilih Tindakan Klinis (Master Database)</label>
+                        <select name="katalog_id" class="form-select form-select-sm" required>
+                            <option value="">-- Pilih Tindakan (Master Database) --</option>
+                            {% regroup katalog_tindakan_pilihan by jenjang__profesi__nama as profesi_list %}
+                            {% for grp in profesi_list %}
+                            <optgroup label="{{ grp.grouper|default:'Tindakan Klinis' }}">
+                                {% for kat in grp.list %}
+                                <option value="{{ kat.id }}">{{ kat.kode }} — {{ kat.nama }}</option>
+                                {% endfor %}
+                            </optgroup>
                             {% endfor %}
-                        </datalist>
-                        <div class="mt-1">
-                            <input type="text" name="tindakan_bebas" class="form-control form-control-sm" placeholder="Atau ketik tindakan bebas jika tidak ada di katalog...">
-                        </div>
+                        </select>
+                        <div class="form-text" style="font-size: 0.72rem;">*Tindakan resmi dari master kewenangan klinis (RKK).</div>
                     </div>
                     <div class="col-12 col-md-3">
                         <label class="form-label small fw-semibold mb-1">Kategori Pelaksanaan</label>
@@ -236,7 +240,7 @@
                         <tr>
                             <th style="width: 45px;">#</th>
                             <th style="width: 140px;">Waktu</th>
-                            <th>Pasien</th>
+                            <th>No. RM</th>
                             <th>Tindakan Klinis</th>
                             <th style="width: 110px;">Kategori</th>
                             <th>Pelaksana</th>
@@ -251,10 +255,10 @@
                             <td><small class="text-muted">{{ tk.waktu|date:"d/m/Y H:i"|default:tk.created_at|date:"d/m/Y H:i" }}</small></td>
                             <td>
                                 {% if tk.logbook_pasien %}
-                                <span class="fw-semibold">{{ tk.logbook_pasien.nama_pasien }}</span>
-                                <small class="text-muted d-block">RM: {{ tk.logbook_pasien.no_rm|default:"—" }}</small>
+                                <span class="fw-semibold">No. RM: {{ tk.logbook_pasien.no_rm|default:"—" }}</span>
+                                {% if tk.logbook_pasien.no_bed %}<small class="text-muted d-block">Bed: {{ tk.logbook_pasien.no_bed }}</small>{% endif %}
                                 {% elif tk.pasien_ref %}
-                                <span>{{ tk.pasien_ref }}</span>
+                                <span>No. RM: {{ tk.pasien_ref }}</span>
                                 {% else %}
                                 <span class="text-muted">—</span>
                                 {% endif %}

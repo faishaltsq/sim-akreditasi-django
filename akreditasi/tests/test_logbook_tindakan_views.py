@@ -45,8 +45,20 @@ class LogbookTindakanViewTest(TestCase):
         self.assertEqual(entri.jumlah_mandiri, 1)
         self.assertEqual(entri.jumlah_kolaborasi, 0)
         self.assertEqual(entri.jumlah_supervisi, 0)
-        self.assertEqual(entri.pasien_ref, 'RM101 - Tn. Anton')
+        self.assertEqual(entri.pasien_ref, 'RM101')
+        self.assertNotIn('Tn. Anton', entri.pasien_ref)
         self.assertEqual(entri.katalog_tindakan, self.katalog)
+
+    def test_simpan_tindakan_tanpa_katalog_ditolak(self):
+        url = reverse('akreditasi:logbook_simpan_tindakan', args=[self.lb.pk])
+        resp = self.client.post(url, {
+            'pasien_id': self.pasien.pk,
+            'katalog_id': '',
+            'kategori': 'M',
+        })
+        self.assertEqual(resp.status_code, 302)
+        # Tidak membuat entri karena tindakan wajib dari master
+        self.assertFalse(EntriLogbookKlinis.objects.filter(logbook_harian=self.lb).exists())
 
     def test_simpan_tindakan_kolaborasi_and_supervisi_sets_correct_counts(self):
         url = reverse('akreditasi:logbook_simpan_tindakan', args=[self.lb.pk])

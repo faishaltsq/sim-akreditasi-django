@@ -41,3 +41,5 @@ class LogbookUnifiedViewTest(TestCase):
         content_saya = resp_saya.content.decode('utf-8')
         self.assertIn('Resusitasi Jantung Paru', content_saya)
         self.assertIn('Mandiri', content_saya)
+        self.assertIn('Rekapitulasi Portofolio Tindakan Klinis 36 Bulan', content_saya)
+        self.assertIn('Total Tindakan', content_saya)

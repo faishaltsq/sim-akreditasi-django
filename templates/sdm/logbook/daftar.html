@@ -54,6 +54,46 @@
     </form>
     {% endif %}
 
+    {% if logbook_recap %}
+    <div class="card border-0 shadow-sm bg-gradient mb-3" style="background: linear-gradient(135deg, #f8fafc 0%, #edf2f7 100%); border-left: 4px solid #0d6efd !important;">
+        <div class="card-body py-3">
+            <div class="d-flex flex-wrap justify-content-between align-items-center mb-2">
+                <div>
+                    <h6 class="fw-bold mb-0 text-primary">
+                        <i class="bi bi-graph-up-arrow me-1"></i> Rekapitulasi Portofolio Tindakan Klinis 36 Bulan
+                    </h6>
+                    <small class="text-muted">
+                        Periode: <strong>{{ logbook_recap.dari_tanggal|date:"d M Y" }}</strong> s/d <strong>Hari ini</strong> (Akumulasi otomatis dari shift logbook harian & entri mandiri)
+                    </small>
+                </div>
+                <div>
+                    <span class="badge bg-primary fs-6 px-3 py-2">Total Tindakan: {{ logbook_recap.total }}</span>
+                </div>
+            </div>
+            <div class="row g-2 text-center mt-1">
+                <div class="col-4">
+                    <div class="p-2 bg-white rounded border">
+                        <small class="text-muted d-block fw-semibold">Mandiri (M)</small>
+                        <span class="fs-5 fw-bold text-success">{{ logbook_recap.mandiri }}</span>
+                    </div>
+                </div>
+                <div class="col-4">
+                    <div class="p-2 bg-white rounded border">
+                        <small class="text-muted d-block fw-semibold">Kolaborasi (K)</small>
+                        <span class="fs-5 fw-bold text-primary">{{ logbook_recap.kolaborasi }}</span>
+                    </div>
+                </div>
+                <div class="col-4">
+                    <div class="p-2 bg-white rounded border">
+                        <small class="text-muted d-block fw-semibold">Supervisi (S)</small>
+                        <span class="fs-5 fw-bold text-warning text-dark">{{ logbook_recap.supervisi }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
     {% if quick_form %}
     <form method="post" action="{% url 'sdm:logbook_cepat' %}" class="card border shadow-sm mb-3" aria-label="Catat cepat satu tindakan">
         {% csrf_token %}
@@ -123,7 +163,14 @@
                     <tr>
                         <td>{{ entry.tanggal|date:"d M Y" }}</td>
                         <td>{% if entry.waktu %}{{ entry.waktu|date:"d M Y H:i" }}{% else %}Belum dicatat{% endif %}</td>
-                        <td>{{ entry.get_shift_display|default:"-" }}</td>
+                        <td>
+                            {{ entry.get_shift_display|default:"-" }}
+                            {% if entry.logbook_harian %}
+                            <a href="{% url 'akreditasi:logbook_detail' entry.logbook_harian.pk %}" class="badge bg-light text-dark border text-decoration-none d-block mt-1" title="Lihat logbook shift harian sumber">
+                                <i class="bi bi-box-arrow-up-right me-1"></i>Shift
+                            </a>
+                            {% endif %}
+                        </td>
                         <td>{{ entry.employee.nama_lengkap }}</td>
                         <td>{{ entry.unit_kerja.name }}</td>
                         <td>{% if entry.katalog_tindakan %}{{ entry.katalog_tindakan.nama }}{% else %}{{ entry.tindakan }}{% endif %}</td>

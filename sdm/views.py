@@ -3612,6 +3612,10 @@ def logbook_list(request):
                 'modus': 'katalog',
             },
         )
+    recap = None
+    if target:
+        from sdm.services.logbook import logbook_recap
+        recap = logbook_recap(target, months=36)
     return render(request, 'sdm/logbook/daftar.html', {
         'page_obj': page_obj,
         'selected_employee': employee,
@@ -3619,6 +3623,7 @@ def logbook_list(request):
         'can_manage': can_manage,
         'quick_form': quick_form,
         'quick_target': target,
+        'logbook_recap': recap,
     })
 
 
