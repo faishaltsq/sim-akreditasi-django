@@ -1,8 +1,8 @@
 {% extends "base.html" %}
 
-{% block title %}Logbook Harian IGD &amp; Rawat Inap — ARIMA{% endblock %}
-{% block page_title %}Logbook Harian IGD &amp; Rawat Inap{% endblock %}
-{% block page_subtitle %}Rekap shift dihitung dari EMR · checklist akreditasi · serah terima SBAR{% endblock %}
+{% block title %}Logbook Terpadu — ARIMA{% endblock %}
+{% block page_title %}Logbook Terpadu{% endblock %}
+{% block page_subtitle %}Logbook harian shift IGD &amp; rawat inap · Logbook tindakan klinis &amp; rekap kredensial personal{% endblock %}
 
 {% block extra_css %}
 <style>
@@ -10,14 +10,35 @@
     .tbl-logbook th, .tbl-logbook td { vertical-align: middle; }
     .tbl-logbook thead th { white-space: nowrap; }
     .tbl-logbook td.nama { max-width: 340px; }
+    .nav-tabs .nav-link { font-weight: 500; color: #495057; border: none; border-bottom: 2px solid transparent; padding: 0.6rem 1rem; }
+    .nav-tabs .nav-link.active { font-weight: 600; color: #0d6efd; border: none; border-bottom: 2px solid #0d6efd; background: transparent; }
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="container-fluid py-3">
 
+    {# Tab Navigasi Terpadu 1 Halaman #}
+    <ul class="nav nav-tabs mb-3" role="tablist">
+        <li class="nav-item">
+            <a class="nav-link {% if active_tab == 'harian' %}active{% endif %}" href="{% url 'akreditasi:logbook_daftar' %}?tab=harian">
+                <i class="bi bi-journal-medical me-1 text-primary"></i> Logbook Harian Shift
+                <span class="badge bg-secondary-subtle text-secondary-emphasis ms-1">{{ jumlah }}</span>
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link {% if active_tab == 'saya' %}active{% endif %}" href="{% url 'akreditasi:logbook_daftar' %}?tab=saya">
+                <i class="bi bi-heart-pulse me-1 text-danger"></i> Logbook Saya (Tindakan Klinis)
+                {% if quick_target %}<span class="badge bg-primary-subtle text-primary-emphasis ms-1">{{ quick_target.nama_lengkap }}</span>{% endif %}
+            </a>
+        </li>
+    </ul>
+
+    {% if active_tab == 'harian' %}
+    {# ── TAB 1: LOGBOOK HARIAN SHIFT ────────────────────────────────── #}
     <div class="d-flex flex-wrap gap-2 align-items-end justify-content-between mb-3">
         <form method="get" class="d-flex flex-wrap gap-2 align-items-end">
+            <input type="hidden" name="tab" value="harian">
             <div>
                 <label class="form-label small mb-1">Jenis</label>
                 <select name="jenis" class="form-select form-select-sm">
@@ -107,6 +128,178 @@
         </table>
     </div>
     <p class="text-muted small mb-0">{{ jumlah }} logbook ditampilkan.</p>
+    {% endif %}
+
+    {% else %}
+    {# ── TAB 2: LOGBOOK SAYA (TINDAKAN KLINIS & REKAP KREDENSIAL) ─────── #}
+    {% if employees %}
+    <form method="get" class="card border shadow-sm mb-3" role="search" aria-label="Filter pegawai">
+        <input type="hidden" name="tab" value="saya">
+        <div class="card-body row g-2 align-items-end">
+            <div class="col-8 col-md-4">
+                <label class="form-label small fw-semibold" for="pegawai-filter">Pegawai</label>
+                <select id="pegawai-filter" name="pegawai" class="form-select form-select-sm">
+                    <option value="">Semua pegawai dalam lingkup</option>
+                    {% for emp in employees %}
+                    <option value="{{ emp.pk }}" {% if selected_employee.pk == emp.pk %}selected{% endif %}>{{ emp.nama_lengkap }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-4 col-md-3 d-flex gap-2">
+                <button class="btn btn-outline-primary btn-sm" type="submit">Terapkan</button>
+                <a class="btn btn-outline-secondary btn-sm" href="{% url 'akreditasi:logbook_daftar' %}?tab=saya">Reset</a>
+            </div>
+        </div>
+    </form>
+    {% endif %}
+
+    {% if quick_form %}
+    <form method="post" action="{% url 'sdm:logbook_cepat' %}" class="card border shadow-sm mb-3" aria-label="Catat cepat satu tindakan">
+        {% csrf_token %}
+        {% if selected_employee %}<input type="hidden" name="employee" value="{{ selected_employee.pk }}">{% endif %}
+        {% if selected_employee %}<input type="hidden" name="pegawai" value="{{ selected_employee.pk }}">{% endif %}
+        <input type="hidden" name="modus" value="katalog">
+        <div class="card-body row g-2 align-items-end">
+            <div class="col-6 col-md-2">
+                <label class="form-label small fw-semibold" for="cepat-tanggal">Tanggal</label>
+                {{ quick_form.tanggal }}
+            </div>
+            <div class="col-6 col-md-3">
+                <label class="form-label small fw-semibold" for="cepat-katalog">Tindakan</label>
+                {{ quick_form.katalog_tindakan }}
+            </div>
+            <div class="col-6 col-md-2">
+                <label class="form-label small fw-semibold" for="cepat-unit">Unit</label>
+                {{ quick_form.unit_kerja }}
+            </div>
+            <div class="col-6 col-md-1">
+                <label class="form-label small fw-semibold" for="cepat-kategori">Kategori</label>
+                {{ quick_form.kategori }}
+            </div>
+            <div class="col-4 col-md-1">
+                <label class="form-label small fw-semibold" for="cepat-jumlah">Jumlah</label>
+                {{ quick_form.jumlah_mandiri }}
+            </div>
+            <div class="col-4 col-md-1">
+                <label class="form-label small fw-semibold" for="cepat-pasien">Inisial / RM</label>
+                {{ quick_form.pasien_ref }}
+            </div>
+            <div class="col-4 col-md-2">
+                <button class="btn btn-primary btn-sm w-100" type="submit">Catat Cepat</button>
+            </div>
+        </div>
+        <div class="card-footer small text-muted py-2 d-flex justify-content-between align-items-center">
+            <span>Jumlah default dicatat mandiri. Form lengkap untuk supervisi/kolaborasi:</span>
+            <a href="{% url 'sdm:logbook_create' %}" class="btn btn-outline-primary btn-sm py-0">
+                <i class="bi bi-plus-circle me-1"></i> Form Lengkap
+            </a>
+        </div>
+    </form>
+    {% endif %}
+
+    {% if page_obj.object_list %}
+    <div class="card border shadow-sm">
+        <div class="table-responsive">
+            <table class="table table-sm table-hover align-middle mb-0" style="font-size: .83rem;">
+                <thead class="table-light">
+                    <tr>
+                        <th scope="col">Tanggal &amp; Waktu</th>
+                        <th scope="col">Shift</th>
+                        <th scope="col">Pegawai</th>
+                        <th scope="col">Unit</th>
+                        <th scope="col">Tindakan</th>
+                        <th scope="col">Inisial / RM</th>
+                        <th scope="col">Kategori</th>
+                        <th scope="col" class="text-center">Mandiri</th>
+                        <th scope="col" class="text-center">Kolaborasi</th>
+                        <th scope="col" class="text-center">Supervisi</th>
+                        <th scope="col">Sumber</th>
+                        <th scope="col">Verifikasi</th>
+                        <th scope="col" class="text-end">Aksi</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for entry in page_obj.object_list %}
+                    <tr>
+                        <td>
+                            <span class="fw-semibold">{{ entry.tanggal|date:"d M Y" }}</span>
+                            {% if entry.waktu %}<small class="text-muted d-block">{{ entry.waktu|date:"H:i" }}</small>{% endif %}
+                        </td>
+                        <td>{{ entry.get_shift_display|default:"-" }}</td>
+                        <td>{{ entry.employee.nama_lengkap }}</td>
+                        <td>{{ entry.unit_kerja.name }}</td>
+                        <td>
+                            {% if entry.katalog_tindakan %}
+                            <span class="fw-semibold text-primary">{{ entry.katalog_tindakan.nama }}</span>
+                            <small class="text-muted d-block">{{ entry.katalog_tindakan.kode }}</small>
+                            {% else %}
+                            <span>{{ entry.tindakan }}</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ entry.pasien_ref|default:"-" }}</td>
+                        <td>
+                            {% if entry.kategori == 'M' %}
+                            <span class="badge bg-success">Mandiri</span>
+                            {% elif entry.kategori == 'K' %}
+                            <span class="badge bg-primary">Kolaborasi</span>
+                            {% elif entry.kategori == 'S' %}
+                            <span class="badge bg-warning text-dark">Supervisi</span>
+                            {% else %}
+                            <span class="badge bg-secondary">{{ entry.get_kategori_display|default:entry.kategori }}</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-center">{{ entry.jumlah_mandiri }}</td>
+                        <td class="text-center">{{ entry.jumlah_kolaborasi }}</td>
+                        <td class="text-center">{{ entry.jumlah_supervisi }}</td>
+                        <td>
+                            {% if entry.logbook_harian %}
+                            <a href="{% url 'akreditasi:logbook_detail' entry.logbook_harian.pk %}" class="badge bg-info-subtle text-info-emphasis text-decoration-none">
+                                <i class="bi bi-journal-medical me-1"></i> Shift {{ entry.logbook_harian.get_shift_display }}
+                            </a>
+                            {% else %}
+                            <span class="badge bg-light text-muted border">Mandiri</span>
+                            {% endif %}
+                        </td>
+                        <td class="small">
+                            {% if entry.sudah_diverifikasi %}
+                            <span class="badge bg-success-subtle text-success-emphasis">Terverifikasi</span>
+                            {% elif entry.verifikasi_terakhir %}
+                            <span class="badge bg-warning-subtle text-warning-emphasis">Ditolak</span>
+                            {% else %}
+                            <span class="badge bg-secondary-subtle text-secondary-emphasis">Menunggu</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-end">
+                            {% if can_manage and not entry.sudah_diverifikasi %}
+                            <form method="post" action="{% url 'sdm:logbook_delete' entry.pk %}" class="d-inline" onsubmit="return confirm('Hapus entri ini?');">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-outline-danger btn-sm p-1" title="Hapus"><i class="bi bi-trash"></i></button>
+                            </form>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% if page_obj.has_other_pages %}
+    <nav aria-label="Navigasi halaman" class="mt-2">
+        <ul class="pagination pagination-sm mb-0">
+            {% if page_obj.has_previous %}
+            <li class="page-item"><a class="page-link" href="?tab=saya&sdm_page={{ page_obj.previous_page_number }}{% if selected_employee %}&pegawai={{ selected_employee.pk }}{% endif %}">Sebelumnya</a></li>
+            {% endif %}
+            <li class="page-item disabled"><span class="page-link">Halaman {{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span></li>
+            {% if page_obj.has_next %}
+            <li class="page-item"><a class="page-link" href="?tab=saya&sdm_page={{ page_obj.next_page_number }}{% if selected_employee %}&pegawai={{ selected_employee.pk }}{% endif %}">Berikutnya</a></li>
+            {% endif %}
+        </ul>
+    </nav>
+    {% endif %}
+    {% else %}
+    <div class="card border shadow-sm"><div class="card-body text-muted">Belum ada entri logbook tindakan klinis.</div></div>
+    {% endif %}
+
     {% endif %}
 </div>
 {% endblock %}

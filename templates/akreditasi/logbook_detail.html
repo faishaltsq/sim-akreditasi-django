@@ -139,6 +139,15 @@
                                     <input type="text" name="baris_{{ b.pk }}_tindakan" value="{{ b.tindakan }}"
                                            class="form-control form-control-sm" placeholder="Tindakan / intervensi">
                                     {% else %}{{ b.tindakan|default:"—" }}{% endif %}
+                                    {% if b.tindakan_klinis.all %}
+                                    <div class="mt-1 d-flex flex-wrap gap-1">
+                                        {% for tk in b.tindakan_klinis.all %}
+                                        <span class="badge {% if tk.kategori == 'M' %}bg-success{% elif tk.kategori == 'K' %}bg-primary{% else %}bg-warning text-dark{% endif %}" style="font-size: 0.7rem;" title="{{ tk.employee.nama_lengkap }}">
+                                            {{ tk.kategori }}: {{ tk.katalog_tindakan.nama|default:tk.tindakan|truncatechars:22 }}
+                                        </span>
+                                        {% endfor %}
+                                    </div>
+                                    {% endif %}
                                 </td>
                                 <td>
                                     {% if boleh_isi %}
@@ -158,6 +167,141 @@
                 {% endif %}
             </form>
             {% endif %}
+        </div>
+    </div>
+
+    {# ── Tindakan Klinis Shift (Integrasi Logbook Saya & Kredensial) ──── #}
+    <div class="lb-seksi">
+        <div class="d-flex align-items-center justify-content-between mb-2">
+            <h6 class="mb-0"><i class="bi bi-heart-pulse text-danger me-1"></i> Tindakan Klinis Shift (Rekap Kredensial &amp; Logbook Saya)</h6>
+            <span class="badge bg-light text-dark border">{{ tindakan_shift|length }} tindakan tercatat</span>
+        </div>
+        <div class="isi">
+            {% if boleh_isi %}
+            <form method="post" action="{% url 'akreditasi:logbook_simpan_tindakan' logbook.pk %}" class="card card-body bg-light border-0 mb-3 p-3">
+                {% csrf_token %}
+                <div class="row g-2">
+                    <div class="col-12 col-md-3">
+                        <label class="form-label small fw-semibold mb-1">Pilih Pasien</label>
+                        <select name="pasien_id" class="form-select form-select-sm">
+                            <option value="">— Pasien Umum / Tanpa Pasien —</option>
+                            {% for b in baris %}
+                            <option value="{{ b.pk }}">{{ b.nama_pasien }} (RM: {{ b.no_rm|default:"—" }})</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-12 col-md-4">
+                        <label class="form-label small fw-semibold mb-1">Pilih Tindakan Klinis (Katalog)</label>
+                        <input class="form-control form-control-sm" list="katalog_shift_options" name="katalog_id" placeholder="Cari katalog tindakan klinis...">
+                        <datalist id="katalog_shift_options">
+                            {% for kat in katalog_tindakan_pilihan %}
+                            <option value="{{ kat.id }}">{{ kat.kode }} — {{ kat.nama }}</option>
+                            {% endfor %}
+                        </datalist>
+                        <div class="mt-1">
+                            <input type="text" name="tindakan_bebas" class="form-control form-control-sm" placeholder="Atau ketik tindakan bebas jika tidak ada di katalog...">
+                        </div>
+                    </div>
+                    <div class="col-12 col-md-3">
+                        <label class="form-label small fw-semibold mb-1">Kategori Pelaksanaan</label>
+                        <div class="d-flex gap-2 align-items-center mt-1">
+                            <div class="form-check form-check-inline m-0">
+                                <input class="form-check-input" type="radio" name="kategori" id="kat_m" value="M" checked>
+                                <label class="form-check-label small" for="kat_m"><span class="badge bg-success">Mandiri</span></label>
+                            </div>
+                            <div class="form-check form-check-inline m-0">
+                                <input class="form-check-input" type="radio" name="kategori" id="kat_k" value="K">
+                                <label class="form-check-label small" for="kat_k"><span class="badge bg-primary">Kolaborasi</span></label>
+                            </div>
+                            <div class="form-check form-check-inline m-0">
+                                <input class="form-check-input" type="radio" name="kategori" id="kat_s" value="S">
+                                <label class="form-check-label small" for="kat_s"><span class="badge bg-warning text-dark">Supervisi</span></label>
+                            </div>
+                        </div>
+                        <input type="text" name="catatan" class="form-control form-control-sm mt-2" placeholder="Catatan / indikasi klinis...">
+                    </div>
+                    <div class="col-12 col-md-2 d-flex align-items-end">
+                        <button type="submit" class="btn btn-sm btn-success w-100">
+                            <i class="bi bi-plus-circle me-1"></i> + Catat Tindakan
+                        </button>
+                    </div>
+                </div>
+            </form>
+            {% endif %}
+
+            {# Tabel Riwayat Tindakan Shift #}
+            <div class="table-responsive">
+                <table class="table table-sm table-hover align-middle mb-0" style="font-size: 0.85rem;">
+                    <thead class="table-light">
+                        <tr>
+                            <th style="width: 45px;">#</th>
+                            <th style="width: 140px;">Waktu</th>
+                            <th>Pasien</th>
+                            <th>Tindakan Klinis</th>
+                            <th style="width: 110px;">Kategori</th>
+                            <th>Pelaksana</th>
+                            <th>Catatan</th>
+                            {% if boleh_isi %}<th style="width: 60px;" class="text-center">Aksi</th>{% endif %}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for tk in tindakan_shift %}
+                        <tr>
+                            <td>{{ forloop.counter }}</td>
+                            <td><small class="text-muted">{{ tk.waktu|date:"d/m/Y H:i"|default:tk.created_at|date:"d/m/Y H:i" }}</small></td>
+                            <td>
+                                {% if tk.logbook_pasien %}
+                                <span class="fw-semibold">{{ tk.logbook_pasien.nama_pasien }}</span>
+                                <small class="text-muted d-block">RM: {{ tk.logbook_pasien.no_rm|default:"—" }}</small>
+                                {% elif tk.pasien_ref %}
+                                <span>{{ tk.pasien_ref }}</span>
+                                {% else %}
+                                <span class="text-muted">—</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if tk.katalog_tindakan %}
+                                <span class="fw-semibold text-primary">{{ tk.katalog_tindakan.nama }}</span>
+                                <small class="text-muted d-block">{{ tk.katalog_tindakan.kode }}</small>
+                                {% else %}
+                                <span>{{ tk.tindakan|default:"—" }}</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if tk.kategori == 'M' %}
+                                <span class="badge bg-success">Mandiri</span>
+                                {% elif tk.kategori == 'K' %}
+                                <span class="badge bg-primary">Kolaborasi</span>
+                                {% elif tk.kategori == 'S' %}
+                                <span class="badge bg-warning text-dark">Supervisi</span>
+                                {% else %}
+                                <span class="badge bg-secondary">{{ tk.get_kategori_display|default:tk.kategori }}</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <span class="fw-medium">{{ tk.employee.nama_lengkap|default:tk.created_by.get_full_name|default:tk.created_by.username }}</span>
+                                {% if tk.employee.profesi %}<small class="text-muted d-block">{{ tk.employee.profesi }}</small>{% endif %}
+                            </td>
+                            <td><small class="text-muted">{{ tk.catatan|default:"—" }}</small></td>
+                            {% if boleh_isi %}
+                            <td class="text-center">
+                                <form method="post" action="{% url 'akreditasi:logbook_hapus_tindakan' logbook.pk tk.pk %}" class="d-inline" onsubmit="return confirm('Hapus tindakan klinis ini?');">
+                                    {% csrf_token %}
+                                    <button class="btn btn-outline-danger btn-sm p-1" title="Hapus"><i class="bi bi-trash"></i></button>
+                                </form>
+                            </td>
+                            {% endif %}
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="{% if boleh_isi %}8{% else %}7{% endif %}" class="text-center text-muted py-3">
+                                <em>Belum ada tindakan klinis yang dicatat pada shift ini. Gunakan formulir di atas untuk mencatat.</em>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
         </div>
     </div>
 

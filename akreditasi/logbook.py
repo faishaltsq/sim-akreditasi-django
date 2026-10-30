@@ -164,7 +164,12 @@ def _label_shift(kode):
 
 @login_required
 def logbook_daftar(request):
-    """Daftar logbook dalam lingkup pengguna, dengan filter jenis/tanggal/status."""
+    """Daftar terpadu: Logbook Harian (Shift) & Logbook Saya (Tindakan Klinis & Kredensial)."""
+    tab = request.GET.get('tab', 'harian').strip().lower()
+    if tab not in ('harian', 'saya'):
+        tab = 'harian'
+
+    # 1. Konteks Logbook Harian (Shift)
     qs = _logbook_scoped(request.user)
 
     jenis = request.GET.get('jenis', '')
@@ -186,7 +191,49 @@ def logbook_daftar(request):
 
     daftar = list(qs.order_by('-tanggal', 'shift')[:200])
 
+    # 2. Konteks Logbook Saya (Tindakan Klinis Pegawai)
+    from django.core.paginator import Paginator
+    from sdm.views import _logbook_context, _portal_pegawai_or_none, _logbook_target_allowed
+    from sdm.models import HcGrant, EntriLogbookKlinis
+    from sdm.akses import visible_employees
+    from sdm.forms.logbook import EntriLogbookForm
+
+    sdm_employee, sdm_queryset = _logbook_context(
+        request.user, pegawai_filter=request.GET.get('pegawai') or None,
+    )
+    sdm_page_obj = Paginator(sdm_queryset.order_by('-tanggal', '-created_at'), 20).get_page(
+        request.GET.get('sdm_page') or request.GET.get('page')
+    )
+    sdm_employees = None
+    if HcGrant.objects.filter(
+        user=request.user, capability='can_review_hc_credentials'
+    ).exists():
+        sdm_employees = visible_employees(
+            request.user, capability='can_review_hc_credentials'
+        ).order_by('nama_lengkap')
+    sdm_target = sdm_employee or _portal_pegawai_or_none(request.user)
+    sdm_can_manage = sdm_target is not None and _logbook_target_allowed(request.user, sdm_target)
+    sdm_quick_form = None
+    if sdm_can_manage:
+        latest = EntriLogbookKlinis.objects.filter(
+            employee=sdm_target, katalog_tindakan__isnull=False,
+        ).order_by('-tanggal', '-created_at').values(
+            'katalog_tindakan_id', 'unit_kerja_id'
+        ).first() or {}
+        sdm_quick_form = EntriLogbookForm(
+            employee=sdm_target,
+            user=request.user,
+            initial={
+                'tanggal': timezone.localdate(),
+                'katalog_tindakan': latest.get('katalog_tindakan_id'),
+                'unit_kerja': latest.get('unit_kerja_id'),
+                'modus': 'katalog',
+            },
+        )
+
     return render(request, 'akreditasi/logbook_daftar.html', {
+        'active_tab': tab,
+        # Harian
         'daftar': daftar,
         'jumlah': len(daftar),
         'jenis_pilihan': JENIS_CHOICES,
@@ -199,6 +246,13 @@ def logbook_daftar(request):
         'boleh_buat': _profil(request.user) is not None
                       and (_profil(request.user).role in ROLE_BOLEH_ISI
                            or request.user.is_superuser),
+        # SDM / Logbook Saya
+        'page_obj': sdm_page_obj,
+        'selected_employee': sdm_employee,
+        'employees': sdm_employees,
+        'can_manage': sdm_can_manage,
+        'quick_form': sdm_quick_form,
+        'quick_target': sdm_target,
     })
 
 
@@ -287,6 +341,14 @@ def logbook_detail(request, pk):
         b.rt_menit = response_time_menit(k) if k else None
         b.los_menit = los_menit(k) if k else None
 
+    from sdm.models import KatalogTindakan
+    tindakan_shift = logbook.tindakan_klinis.select_related(
+        'employee', 'katalog_tindakan', 'logbook_pasien'
+    ).order_by('-created_at')
+    katalog_tindakan_pilihan = list(
+        KatalogTindakan.objects.filter(is_active=True).values('id', 'kode', 'nama').order_by('nama')[:500]
+    )
+
     return render(request, 'akreditasi/logbook_detail.html', {
         'logbook': logbook,
         'baris': baris,
@@ -294,6 +356,9 @@ def logbook_detail(request, pk):
         'checklist_seksi': checklist_seksi,
         'kejadian': logbook.kejadian.select_related('insiden').all(),
         'bukti': logbook.bukti.all(),
+        'tindakan_shift': tindakan_shift,
+        'katalog_tindakan_pilihan': katalog_tindakan_pilihan,
+        'kategori_tindakan_choices': [('M', 'Mandiri'), ('K', 'Kolaborasi'), ('S', 'Supervisi')],
         'disposisi_pilihan': list(DISPOSISI_LABEL.items()),
         'jenis_insiden': LogbookKejadian._meta.get_field('jenis_insiden').choices,
         'keparahan': LogbookKejadian._meta.get_field('tingkat_keparahan').choices,
@@ -503,6 +568,116 @@ def logbook_unggah_bukti(request, pk):
     buku.save(update_fields=['berkas'])
     _catat(request.user, 'UPLOAD', logbook, f'Bukti: {judul}')
     messages.success(request, 'Bukti shift diunggah.')
+    return redirect('akreditasi:logbook_detail', pk=logbook.pk)
+
+
+@login_required
+@require_POST
+def logbook_simpan_tindakan(request, pk):
+    """Catat tindakan klinis pada shift dan tautkan ke EntriLogbookKlinis staf."""
+    logbook = get_object_or_404(LogbookHarian, pk=pk)
+    _cek(request.user, logbook)
+    if not (_boleh_isi(request.user, logbook) and logbook.boleh_ubah):
+        raise PermissionDenied('Logbook ini sudah dikunci.')
+
+    from sdm.models import EntriLogbookKlinis, KatalogTindakan, Pegawai
+
+    pasien_id = request.POST.get('pasien_id')
+    katalog_id = request.POST.get('katalog_id', '').strip()
+    tindakan_bebas = request.POST.get('tindakan_bebas', '').strip()[:200]
+    kategori = request.POST.get('kategori', 'M').strip().upper()
+    catatan = request.POST.get('catatan', '').strip()
+
+    if kategori not in ('M', 'K', 'S'):
+        kategori = 'M'
+
+    katalog = None
+    if katalog_id:
+        katalog = KatalogTindakan.objects.filter(pk=katalog_id).first()
+
+    if not katalog and not tindakan_bebas:
+        messages.error(request, 'Pilih tindakan klinis dari katalog atau isi tindakan bebas.')
+        return redirect('akreditasi:logbook_detail', pk=logbook.pk)
+
+    # Resolusi pasien baris jika dipilih
+    pasien_baris = None
+    pasien_ref = ''
+    if pasien_id:
+        pasien_baris = logbook.pasien.filter(pk=pasien_id).first()
+        if pasien_baris:
+            pasien_ref = f"{pasien_baris.no_rm} - {pasien_baris.nama_pasien}".strip(' -')[:60]
+            if not pasien_ref:
+                pasien_ref = pasien_baris.no_rm or pasien_baris.nama_pasien[:60]
+
+    # Resolusi pegawai pelaksana: dari form pegawai_id atau request.user
+    pegawai = None
+    pegawai_id = request.POST.get('pegawai_id')
+    if pegawai_id:
+        pegawai = Pegawai.objects.filter(pk=pegawai_id).first()
+    if not pegawai:
+        pegawai = getattr(request.user, 'pegawai_hc', None)
+        if not pegawai:
+            pegawai = Pegawai.objects.filter(akun=request.user).first()
+
+    if not pegawai:
+        pegawai = Pegawai.objects.create(
+            nama_lengkap=request.user.get_full_name() or request.user.username,
+            akun=request.user,
+            kategori='PPA',
+            profesi='Nakes',
+        )
+
+    # Counter sesuai kategori
+    j_mandiri = 1 if kategori == 'M' else 0
+    j_kolaborasi = 1 if kategori == 'K' else 0
+    j_supervisi = 1 if kategori == 'S' else 0
+
+    nama_tindakan_log = katalog.nama if katalog else tindakan_bebas
+    entri = EntriLogbookKlinis.objects.create(
+        employee=pegawai,
+        tanggal=logbook.tanggal,
+        waktu=timezone.now(),
+        shift=logbook.shift if logbook.shift in ('PAGI', 'SIANG', 'MALAM') else '',
+        unit_kerja=logbook.unit,
+        logbook_harian=logbook,
+        logbook_pasien=pasien_baris,
+        pasien_ref=pasien_ref,
+        katalog_tindakan=katalog,
+        tindakan='' if katalog else tindakan_bebas,
+        kategori=kategori,
+        jumlah_mandiri=j_mandiri,
+        jumlah_kolaborasi=j_kolaborasi,
+        jumlah_supervisi=j_supervisi,
+        catatan=catatan,
+        created_by=request.user,
+    )
+
+    if pasien_baris and not pasien_baris.tindakan:
+        pasien_baris.tindakan = nama_tindakan_log[:300]
+        pasien_baris.save(update_fields=['tindakan'])
+
+    kategori_label = {'M': 'Mandiri', 'K': 'Kolaborasi', 'S': 'Supervisi'}.get(kategori, 'Mandiri')
+    _catat(request.user, 'CREATE', logbook, f'Tindakan klinis: {nama_tindakan_log} ({kategori_label})')
+    messages.success(request, f'Tindakan klinis "{nama_tindakan_log}" berhasil dicatat ({kategori_label}).')
+    return redirect('akreditasi:logbook_detail', pk=logbook.pk)
+
+
+@login_required
+@require_POST
+def logbook_hapus_tindakan(request, pk, tindakan_id):
+    """Hapus entri tindakan klinis pada logbook shift."""
+    logbook = get_object_or_404(LogbookHarian, pk=pk)
+    _cek(request.user, logbook)
+    if not (_boleh_isi(request.user, logbook) and logbook.boleh_ubah):
+        raise PermissionDenied('Logbook ini sudah dikunci.')
+
+    from sdm.models import EntriLogbookKlinis
+
+    entri = get_object_or_404(EntriLogbookKlinis, pk=tindakan_id, logbook_harian=logbook)
+    nama = entri.katalog_tindakan.nama if entri.katalog_tindakan else entri.tindakan
+    entri.delete()
+    _catat(request.user, 'DELETE', logbook, f'Hapus tindakan klinis: {nama}')
+    messages.success(request, 'Tindakan klinis berhasil dihapus.')
     return redirect('akreditasi:logbook_detail', pk=logbook.pk)
 
 

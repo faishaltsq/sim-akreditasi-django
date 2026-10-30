@@ -161,9 +161,9 @@
         <span class="nav-icon"><i class="bi bi-file-earmark-text nav-icon-green" aria-hidden="true"></i></span>
         <span class="nav-text"><span class="nav-title">Laporan Mutu</span></span>
     </a>
-    <a href="{% url 'akreditasi:logbook_daftar' %}" class="nav-link{% if u|slice:':7' == 'logbook' %} active{% endif %}" title="Logbook harian IGD dan rawat inap per shift">
+    <a href="{% url 'akreditasi:logbook_daftar' %}" class="nav-link{% if u|slice:':7' == 'logbook' and not app == 'sdm' %} active{% endif %}" title="Logbook shift harian IGD, rawat inap, &amp; tindakan klinis terpadu">
         <span class="nav-icon"><i class="bi bi-journal-medical nav-icon-green" aria-hidden="true"></i></span>
-        <span class="nav-text"><span class="nav-title">Logbook harian</span></span>
+        <span class="nav-text"><span class="nav-title">Logbook terpadu</span></span>
     </a>
 
     {% if not request.user.profile.is_unit_scoped %}

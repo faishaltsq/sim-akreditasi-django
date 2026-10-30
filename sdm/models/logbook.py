@@ -43,6 +43,14 @@ class EntriLogbookKlinis(models.Model):
         'sdm.KatalogTindakan', on_delete=models.PROTECT, null=True, blank=True,
         related_name='logbook_entries', verbose_name='Tindakan (Katalog)',
     )
+    logbook_harian = models.ForeignKey(
+        'akreditasi.LogbookHarian', on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='tindakan_klinis', verbose_name='Logbook Harian Shift',
+    )
+    logbook_pasien = models.ForeignKey(
+        'akreditasi.LogbookPasien', on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='tindakan_klinis', verbose_name='Baris Pasien Logbook',
+    )
     tindakan = models.CharField('Tindakan (Teks Bebas)', max_length=200, blank=True)
     jumlah_mandiri = models.PositiveIntegerField('Jumlah Mandiri', default=0)
     jumlah_supervisi = models.PositiveIntegerField('Jumlah Supervisi', default=0)
@@ -62,6 +70,7 @@ class EntriLogbookKlinis(models.Model):
         indexes = [
             models.Index(fields=['employee', '-tanggal'], name='sdm_log_emp_tgl_idx'),
             models.Index(fields=['employee', 'waktu'], name='sdm_log_emp_waktu_idx'),
+            models.Index(fields=['logbook_harian'], name='sdm_log_lbharian_idx'),
         ]
 
     def clean(self):

@@ -11,6 +11,21 @@
     </div>
     {% include "sdm/_navigasi.html" %}
 
+    {# Tab Navigasi Terpadu 1 Halaman #}
+    <ul class="nav nav-tabs mb-3 mt-2" role="tablist">
+        <li class="nav-item">
+            <a class="nav-link" href="{% url 'akreditasi:logbook_daftar' %}?tab=harian">
+                <i class="bi bi-journal-medical me-1 text-primary"></i> Logbook Harian Shift
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link active" href="{% url 'sdm:logbook_list' %}">
+                <i class="bi bi-heart-pulse me-1 text-danger"></i> Logbook Saya (Tindakan Klinis)
+                {% if quick_target %}<span class="badge bg-primary-subtle text-primary-emphasis ms-1">{{ quick_target.nama_lengkap }}</span>{% endif %}
+            </a>
+        </li>
+    </ul>
+
     {% if messages %}
         {% for message in messages %}
         <div class="alert alert-warning alert-dismissible fade show" role="alert">{{ message }}
