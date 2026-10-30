@@ -417,10 +417,39 @@ def logbook_simpan_kejadian(request, pk):
     keparahan = request.POST.get('tingkat_keparahan', '')
     lokasi = request.POST.get('lokasi_kejadian', '').strip()[:200]
     deskripsi = request.POST.get('deskripsi_kejadian', '').strip()
+    tindakan_segera = request.POST.get('tindakan_segera', '').strip()
     valid_jenis = dict(LogbookKejadian._meta.get_field('jenis_insiden').choices)
     valid_parah = dict(LogbookKejadian._meta.get_field('tingkat_keparahan').choices)
 
-    if jenis not in valid_jenis or keparahan not in valid_parah or not lokasi or not deskripsi:
+    if jenis not in valid_jenis:
+        messages.error(request, 'Jenis insiden tidak valid.')
+        return redirect('akreditasi:logbook_detail', pk=logbook.pk)
+
+    if jenis == 'KEJADIAN_LAIN':
+        # Shift nihil: tidak perlu validasi mandatory, isi default otomatis.
+        keparahan = 'TIDAK_CEDERA'
+        lokasi = lokasi or (getattr(logbook.unit, 'name', None) or 'IGD')
+        deskripsi = deskripsi or 'Tidak ada kejadian keselamatan pada shift ini (laporan nihil).'
+        tindakan_segera = tindakan_segera or '—'
+        pasien_terpapar = False
+        kejadian = LogbookKejadian.objects.create(
+            logbook=logbook,
+            jenis_insiden=jenis,
+            tingkat_keparahan=keparahan,
+            waktu_kejadian=parse_jam(request.POST.get('waktu_kejadian', '')),
+            lokasi_kejadian=lokasi,
+            deskripsi_kejadian=deskripsi,
+            tindakan_segera=tindakan_segera,
+            pasien_terpapar=pasien_terpapar,
+            dilaporkan_oleh=request.user,
+        )
+        # Sengaja TIDAK memanggil sync_ke_ikp() agar entri nihil tidak masuk IKP.
+        _catat(request.user, 'CREATE', logbook, 'Pernyataan shift nihil: Tidak ada kejadian keselamatan.')
+        messages.success(request, 'Pernyataan nihil tercatat: Tidak ada kejadian pada shift ini.')
+        return redirect('akreditasi:logbook_detail', pk=logbook.pk)
+
+    # Kejadian nyata: validasi mandatory + teruskan ke IKP.
+    if keparahan not in valid_parah or not lokasi or not deskripsi:
         messages.error(request, 'Jenis, keparahan, lokasi, dan deskripsi kejadian wajib diisi.')
         return redirect('akreditasi:logbook_detail', pk=logbook.pk)
 
@@ -431,7 +460,7 @@ def logbook_simpan_kejadian(request, pk):
         waktu_kejadian=parse_jam(request.POST.get('waktu_kejadian', '')),
         lokasi_kejadian=lokasi,
         deskripsi_kejadian=deskripsi,
-        tindakan_segera=request.POST.get('tindakan_segera', '').strip(),
+        tindakan_segera=tindakan_segera,
         pasien_terpapar=request.POST.get('pasien_terpapar') == 'on',
         dilaporkan_oleh=request.user,
     )

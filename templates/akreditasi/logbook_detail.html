@@ -333,7 +333,9 @@
                             <td>{{ k.deskripsi_kejadian|truncatechars:90 }}</td>
                             <td>{{ k.tindakan_segera|default:"—"|truncatechars:60 }}</td>
                             <td class="text-nowrap">
-                                {% if k.insiden %}<span class="badge bg-info-subtle text-info-emphasis">terhubung</span>
+                                {% if k.jenis_insiden == 'KEJADIAN_LAIN' %}
+                                <span class="badge bg-secondary-subtle text-secondary-emphasis">Nihil (Tidak Diteruskan)</span>
+                                {% elif k.insiden %}<span class="badge bg-info-subtle text-info-emphasis">terhubung</span>
                                 {% else %}<span class="text-muted small">—</span>{% endif %}
                             </td>
                         </tr>
@@ -350,13 +352,13 @@
                 {% csrf_token %}
                 <div class="col-6 col-md-3">
                     <label class="form-label small mb-1">Jenis Insiden</label>
-                    <select name="jenis_insiden" class="form-select form-select-sm" required>
+                    <select name="jenis_insiden" id="selectJenisInsiden" class="form-select form-select-sm" required>
                         {% for kode, label in jenis_insiden %}<option value="{{ kode }}">{{ label }}</option>{% endfor %}
                     </select>
                 </div>
                 <div class="col-6 col-md-3">
                     <label class="form-label small mb-1">Tingkat Keparahan</label>
-                    <select name="tingkat_keparahan" class="form-select form-select-sm" required>
+                    <select name="tingkat_keparahan" id="selectKeparahan" class="form-select form-select-sm" required>
                         {% for kode, label in keparahan %}<option value="{{ kode }}">{{ label }}</option>{% endfor %}
                     </select>
                 </div>
@@ -366,11 +368,11 @@
                 </div>
                 <div class="col-6 col-md-4">
                     <label class="form-label small mb-1">Lokasi</label>
-                    <input type="text" name="lokasi_kejadian" class="form-control form-control-sm" required>
+                    <input type="text" name="lokasi_kejadian" id="inputLokasi" class="form-control form-control-sm" required>
                 </div>
                 <div class="col-12 col-md-6">
                     <label class="form-label small mb-1">Deskripsi Kejadian</label>
-                    <textarea name="deskripsi_kejadian" rows="2" class="form-control form-control-sm" required></textarea>
+                    <textarea name="deskripsi_kejadian" id="inputDeskripsi" rows="2" class="form-control form-control-sm" required></textarea>
                 </div>
                 <div class="col-12 col-md-6">
                     <label class="form-label small mb-1">Tindakan Segera</label>
@@ -381,11 +383,43 @@
                         <input class="form-check-input" type="checkbox" name="pasien_terpapar" id="pasienTerpapar">
                         <label class="form-check-label small" for="pasienTerpapar">Pasien terpapar</label>
                     </div>
-                    <button class="btn btn-sm btn-outline-danger">
-                        <i class="bi bi-plus-circle me-1"></i> Catat &amp; Teruskan ke IKP
+                    <button id="btnCatatKejadian" class="btn btn-sm btn-outline-danger">
+                        <i class="bi bi-plus-circle me-1"></i> <span id="lblBtnCatat">Catat &amp; Teruskan ke IKP</span>
                     </button>
                 </div>
             </form>
+            <div id="infoNihil" class="d-none alert alert-secondary py-1 px-2 mt-2 small">
+                <i class="bi bi-info-circle me-1"></i>
+                Pernyataan nihil tidak akan membuat laporan insiden di IKP.
+            </div>
+            <script>
+            (function () {
+                var sel = document.getElementById('selectJenisInsiden');
+                if (!sel) return;
+                var inputLokasi    = document.getElementById('inputLokasi');
+                var inputDeskripsi = document.getElementById('inputDeskripsi');
+                var selKeparahan   = document.getElementById('selectKeparahan');
+                var lblBtn         = document.getElementById('lblBtnCatat');
+                var infoNihil      = document.getElementById('infoNihil');
+                function toggle() {
+                    var nihil = sel.value === 'KEJADIAN_LAIN';
+                    inputLokasi.required    = !nihil;
+                    inputDeskripsi.required = !nihil;
+                    selKeparahan.disabled   = nihil;
+                    if (nihil) {
+                        selKeparahan.value = 'TIDAK_CEDERA';
+                        lblBtn.textContent = 'Catat Shift Nihil';
+                        infoNihil.classList.remove('d-none');
+                    } else {
+                        selKeparahan.disabled = false;
+                        lblBtn.textContent = 'Catat \u0026 Teruskan ke IKP';
+                        infoNihil.classList.add('d-none');
+                    }
+                }
+                sel.addEventListener('change', toggle);
+                toggle();
+            })();
+            </script>
             {% endif %}
         </div>
     </div>

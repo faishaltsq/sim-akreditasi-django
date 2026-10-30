@@ -534,7 +534,7 @@ class InsidenKeselamatan(models.Model):
         ('KTC',           'KTC — Kejadian Tidak Cedera'),
         ('KPC',           'KPC — Kejadian Pasien Cedera'),
         ('SENTINEL',      'Kejadian Sentinel'),
-        ('KEJADIAN_LAIN', 'Kejadian Lain'),
+        ('KEJADIAN_LAIN', 'Tidak Ada Kejadian'),
     ]
 
     KEPARAHAN_CHOICES = [

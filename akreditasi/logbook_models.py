@@ -534,6 +534,8 @@ class LogbookKejadian(models.Model):
         sana akan hilang dari statistik rumah sakit. Idempoten — baris yang
         sudah tertaut tidak dibuat ulang.
         """
+        if self.jenis_insiden == 'KEJADIAN_LAIN':
+            return None
         if self.insiden_id:
             return self.insiden
         insiden = InsidenKeselamatan.objects.create(
