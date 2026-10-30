@@ -94,10 +94,11 @@ class DokumenKredensialBase(TestCase):
 
 
 class RegistryTests(DokumenKredensialBase):
-    def test_registry_covers_exactly_the_seven_generatable_types(self):
+    def test_registry_covers_exactly_the_eight_generatable_types(self):
         self.assertEqual(set(REGISTRY), {
-            'CV', 'LOGBOOK_36BULAN', 'PENGANTAR_KSM', 'KEANGGOTAAN',
-            'MALPRACTICE_RECORD', 'BEBAS_SANKSI', 'SEHAT_PSIKOLOGIS',
+            'CV', 'LOGBOOK_36BULAN', 'LOGBOOK_5TAHUN', 'PENGANTAR_KSM',
+            'KEANGGOTAAN', 'MALPRACTICE_RECORD', 'BEBAS_SANKSI',
+            'SEHAT_PSIKOLOGIS',
         })
         known_jenis = {value for value, _label in DokumenSyaratKredensial.JENIS_CHOICES}
         known_kinds = {value for value, _label in DokumenPegawai.DOCUMENT_KIND_CHOICES}

@@ -319,6 +319,7 @@ class DokumenSyaratKredensial(models.Model):
         ('CV', 'CV'),
         ('SERTIFIKAT_KOMPETENSI', 'Sertifikat Kompetensi'),
         ('LOGBOOK_36BULAN', 'Logbook 36 Bulan'),
+        ('LOGBOOK_5TAHUN', 'Buku Kinerja Elektronik (Logbook 5 Tahunan)'),
         ('SEHAT_JASMANI', 'Pemeriksaan Kesehatan Jasmani'),
         ('SEHAT_PSIKOLOGIS', 'Asesmen Psikologis'),
         ('BEBAS_SANKSI', 'Surat Bebas Sanksi'),

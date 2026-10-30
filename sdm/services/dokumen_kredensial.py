@@ -26,7 +26,7 @@ from akreditasi.system_models import SystemConfig
 from sdm.models import (
     DokumenPegawai, DrafDokumenKredensial, PenempatanPegawai, VersiDokumen,
 )
-from sdm.services.logbook import logbook_recap
+from sdm.services.logbook import logbook_recap, logbook_recap_5tahun
 from sdm.storage import store_document_version
 
 BULAN = [
@@ -82,6 +82,71 @@ REGISTRY = {
         'signatory_role': 'Kepala Instalasi/Unit',
         'sertifikat_jenis': 'LOGBOOK',
         'sworn_statement': False,
+    },
+    'LOGBOOK_5TAHUN': {
+        'title': 'Buku Kinerja Elektronik (Logbook 5 Tahunan)',
+        'auto_fields': IDENTITY_FIELDS + [
+            ('periode_siklus', 'diisi periode siklus 5 tahun'),
+            ('rekap_5tahun', 'logbook_recap_5tahun()'),
+        ],
+        'manual_fields': [
+            ('periode_siklus', 'diisi periode tahun (misal: 2021 s.d. 2026)'),
+            ('jenjang_klinis_usulan', 'jenjang klinis yang diusulkan 5 tahun ke depan'),
+            ('skp_pelayanan', 'Ranah 2: target & capaian SKP pelayanan langsung'),
+            ('skp_pelatihan', 'Ranah 2: target & capaian SKP pelatihan & fellowship'),
+            ('skp_seminar', 'Ranah 2: target & capaian SKP seminar/workshop/mentoring'),
+            ('skp_publikasi', 'Ranah 2: target & capaian SKP publikasi ilmiah & inovasi'),
+            ('target_skp_dirjen', 'Ranah 2: target total SKP Direktur Jenderal'),
+            ('total_skp_diperoleh', 'Ranah 2: total akumulasi perolehan SKP 5 tahun'),
+            ('etik_perundungan_t1', 'Ranah 3: Tahun 1 etik, disiplin & bebas perundungan'),
+            ('etik_perundungan_t2', 'Ranah 3: Tahun 2 etik, disiplin & bebas perundungan'),
+            ('etik_perundungan_t3', 'Ranah 3: Tahun 3 etik, disiplin & bebas perundungan'),
+            ('etik_perundungan_t4', 'Ranah 3: Tahun 4 etik, disiplin & bebas perundungan'),
+            ('etik_perundungan_t5', 'Ranah 3: Tahun 5 etik, disiplin & bebas perundungan'),
+            ('checklist_kualifikasi_str_sip', 'Pasal 180: kualifikasi pendidikan, STR & SIP (MS/TMS)'),
+            ('checklist_target_volume_pelayanan', 'Pasal 180: pemenuhan target volume pelayanan (MS/TMS)'),
+            ('checklist_kecukupan_skp', 'Pasal 180: kecukupan Satuan Kredit Profesi (MS/TMS)'),
+            ('checklist_kesehatan_fisik_mental', 'Pasal 180: kesehatan fisik dan mental (MS/TMS)'),
+            ('checklist_etik_disiplin_perundungan', 'Pasal 180: etik, disiplin & bebas perundungan (MS/TMS)'),
+            ('rekomendasi_tim_adhoc', 'Pasal 180: DIKABULKAN SEPENUHNYA / DIKABULKAN DENGAN PEMBATASAN / PENAMBAHAN KOMPETENSI'),
+            ('catatan_rekomendasi_adhoc', 'Pasal 180: catatan rincian rekomendasi Tim Ad Hoc'),
+            ('nama_ketua_tim_adhoc', 'diisi nama dan gelar Ketua Tim Ad Hoc Kredensial'),
+            ('nip_ketua_tim_adhoc', 'diisi NIP/NUTR Ketua Tim Ad Hoc Kredensial'),
+            ('nama_pimpinan_fasyankes', 'diisi nama dan gelar Direktur RS / Pimpinan Fasyankes'),
+        ],
+        'signatory_role': 'Tim Ad Hoc Kredensial & Direktur RS',
+        'sertifikat_jenis': 'LOGBOOK',
+        'sworn_statement': False,
+        # Pengelompokan isian manual mengikuti 4 bagian Buku Kinerja
+        # Elektronik PMK 13/2025, supaya editor tidak menyajikan 23 field
+        # sebagai satu daftar datar.
+        'field_groups': [
+            ('periode', 'Bagian I — Profil & Periode Siklus', [
+                'periode_siklus', 'jenjang_klinis_usulan',
+            ]),
+            ('skp', 'Bagian II Ranah 2 — Pengembangan Profesi Berkelanjutan', [
+                'skp_pelayanan', 'skp_pelatihan', 'skp_seminar',
+                'skp_publikasi', 'target_skp_dirjen', 'total_skp_diperoleh',
+            ]),
+            ('etik', 'Bagian II Ranah 3 — Etik, Disiplin & Bebas Perundungan', [
+                'etik_perundungan_t1', 'etik_perundungan_t2',
+                'etik_perundungan_t3', 'etik_perundungan_t4',
+                'etik_perundungan_t5',
+            ]),
+            ('adhoc', 'Bagian III — Rekapitulasi & Penilaian Rekredensial (Pasal 180)', [
+                'checklist_kualifikasi_str_sip',
+                'checklist_target_volume_pelayanan',
+                'checklist_kecukupan_skp',
+                'checklist_kesehatan_fisik_mental',
+                'checklist_etik_disiplin_perundungan',
+                'rekomendasi_tim_adhoc',
+                'catatan_rekomendasi_adhoc',
+            ]),
+            ('tanda_tangan', 'Bagian IV — Otentikasi & Tanda Tangan', [
+                'nama_ketua_tim_adhoc', 'nip_ketua_tim_adhoc',
+                'nama_pimpinan_fasyankes',
+            ]),
+        ],
     },
     'PENGANTAR_KSM': {
         'title': 'Surat Pengantar/Rekomendasi KSM',
@@ -323,6 +388,265 @@ def _manual_answers(draf):
     }
 
 
+# --- Buku Kinerja Elektronik (PMK 13/2025) -----------------------------------
+
+RANAH_2_LABELS = [
+    ('skp_pelayanan', 'Pelayanan Langsung / Kewenangan Klinis'),
+    ('skp_pelatihan', 'Pelatihan & Fellowship Terakreditasi'),
+    ('skp_seminar', 'Seminar / Workshop / Mentoring'),
+    ('skp_publikasi', 'Publikasi Ilmiah & Inovasi IPTEK'),
+]
+
+CHECKLIST_PASAL_180 = [
+    ('checklist_kualifikasi_str_sip', 'Kualifikasi pendidikan, STR & SIP'),
+    ('checklist_target_volume_pelayanan', 'Pemenuhan target volume pelayanan'),
+    ('checklist_kecukupan_skp', 'Kecukupan Satuan Kredit Profesi (SKP)'),
+    ('checklist_kesehatan_fisik_mental', 'Kesehatan fisik dan mental'),
+    ('checklist_etik_disiplin_perundungan', 'Etik, disiplin & bebas perundungan'),
+]
+
+REKOMENDASI_CHOICES = (
+    'DIKABULKAN SEPENUHNYA',
+    'DIKABULKAN DENGAN PEMBATASAN',
+    'PENAMBAHAN KOMPETENSI',
+)
+
+BELUM_DINILAI = 'BELUM DINILAI'
+
+
+def _boxed_table(rows, col_widths, styles, *, first_row_header=True):
+    table = Table(rows, colWidths=col_widths)
+    style = [
+        ('BOX', (0, 0), (-1, -1), 0.5, colors.HexColor('#64748b')),
+        ('INNERGRID', (0, 0), (-1, -1), 0.25, colors.HexColor('#e2e8f0')),
+        ('TOPPADDING', (0, 0), (-1, -1), 3),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 3),
+        ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+    ]
+    if first_row_header:
+        style.append(('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#f1f5f9')))
+    table.setStyle(TableStyle(style))
+    return table
+
+
+def _section_heading(number, title, styles):
+    return Paragraph(
+        f'<b>BAGIAN {number}. {title.upper()}</b>', styles['label'],
+    )
+
+
+def _ranah1_matrix(employee, styles, years=5):
+    """Ranah 1: volume tindakan per tahun T1..T5, mandiri vs pelimpahan."""
+    recap = logbook_recap_5tahun(employee, years=years)
+    labels = recap['tahun_labels']
+    header = [Paragraph('<b>Kompetensi / Tindakan</b>', styles['cell_title'])]
+    header += [Paragraph(f'<b>{label}</b>', styles['cell_title']) for label in labels]
+    header += [
+        Paragraph('<b>Mandiri</b>', styles['cell_title']),
+        Paragraph('<b>Pelimpahan</b>', styles['cell_title']),
+        Paragraph('<b>Total</b>', styles['cell_title']),
+    ]
+    rows = [header]
+    for item in recap['per_tindakan']:
+        pelimpahan = item['supervisi'] + item['kolaborasi']
+        row = [Paragraph(item['label'], styles['cell'])]
+        row += [Paragraph(str(v) or '0', styles['cell']) for v in item['tahunan']]
+        row += [
+            Paragraph(str(item['mandiri']), styles['cell']),
+            Paragraph(str(pelimpahan), styles['cell']),
+            Paragraph(str(item['total']), styles['cell']),
+        ]
+        rows.append(row)
+
+    total_row = [Paragraph('<b>Total Tindakan</b>', styles['cell_title'])]
+    total_row += [Paragraph(f'<b>{v}</b>', styles['cell_title']) for v in recap['tahunan']]
+    total_row += [
+        Paragraph(f"<b>{recap['mandiri']}</b>", styles['cell_title']),
+        Paragraph(f"<b>{recap['supervisi'] + recap['kolaborasi']}</b>", styles['cell_title']),
+        Paragraph(f"<b>{recap['total_5tahun']}</b>", styles['cell_title']),
+    ]
+    rows.append(total_row)
+
+    widths = [50 * mm] + [13 * mm] * years + [17 * mm] * 3
+    return _boxed_table(rows, widths, styles), recap
+
+
+def _ranah2_table(answers, styles):
+    """Ranah 2: kecukupan SKP 4 kategori pengembangan profesi berkelanjutan."""
+    rows = [[
+        Paragraph('<b>Kategori Pengembangan Profesi</b>', styles['cell_title']),
+        Paragraph('<b>Target &amp; Capaian SKP</b>', styles['cell_title']),
+    ]]
+    for key, label in RANAH_2_LABELS:
+        rows.append([
+            Paragraph(label, styles['cell']),
+            Paragraph(answers.get(key, BELUM_DINILAI), styles['cell']),
+        ])
+    rows.append([
+        Paragraph('<b>Target SKP Direktur Jenderal</b>', styles['cell_title']),
+        Paragraph(f"<b>{answers.get('target_skp_dirjen', BELUM_DINILAI)}</b>",
+                  styles['cell_title']),
+    ])
+    rows.append([
+        Paragraph('<b>Total SKP Diperoleh</b>', styles['cell_title']),
+        Paragraph(f"<b>{answers.get('total_skp_diperoleh', BELUM_DINILAI)}</b>",
+                  styles['cell_title']),
+    ])
+    return _boxed_table(rows, [70 * mm, 90 * mm], styles)
+
+
+def _ranah3_table(answers, styles):
+    """Ranah 3: disiplin, etik, dan rekam jejak bebas perundungan per tahun."""
+    rows = [[
+        Paragraph('<b>Tahun</b>', styles['cell_title']),
+        Paragraph('<b>Etik, Disiplin &amp; Bebas Perundungan</b>', styles['cell_title']),
+    ]]
+    for index in range(1, 6):
+        rows.append([
+            Paragraph(f'Tahun {index}', styles['cell']),
+            Paragraph(
+                answers.get(f'etik_perundungan_t{index}', BELUM_DINILAI),
+                styles['cell'],
+            ),
+        ])
+    return _boxed_table(rows, [25 * mm, 135 * mm], styles)
+
+
+def _pasal180_table(answers, styles):
+    """Pasal 180: checklist penilaian 5 aspek dan rekomendasi Tim Ad Hoc."""
+    rows = [[
+        Paragraph('<b>Aspek Penilaian Rekredensial</b>', styles['cell_title']),
+        Paragraph('<b>Hasil</b>', styles['cell_title']),
+    ]]
+    for key, label in CHECKLIST_PASAL_180:
+        rows.append([
+            Paragraph(label, styles['cell']),
+            Paragraph(answers.get(key, BELUM_DINILAI), styles['cell']),
+        ])
+    table = _boxed_table(rows, [115 * mm, 45 * mm], styles)
+
+    rekomendasi = answers.get('rekomendasi_tim_adhoc', '').strip().upper()
+    if not rekomendasi:
+        rekomendasi = BELUM_DINILAI
+    rows_rekomendasi = [[
+        Paragraph('<b>Rekomendasi Tim Ad Hoc</b>', styles['cell_title']),
+        Paragraph(f'<b>{rekomendasi}</b>', styles['cell_title']),
+    ]]
+    catatan = answers.get('catatan_rekomendasi_adhoc')
+    if catatan:
+        rows_rekomendasi.append([
+            Paragraph('Catatan rincian rekomendasi', styles['cell']),
+            Paragraph(catatan, styles['cell']),
+        ])
+    rekomendasi_table = _boxed_table(
+        rows_rekomendasi, [70 * mm, 90 * mm], styles,
+    )
+    return table, rekomendasi_table
+
+
+def _signature_three_parties(employee, answers, styles):
+    """Bagian IV: tanda tangan elektronik tiga pihak + segel digital SATUSEHAT."""
+    pemohon = employee.nama_lengkap
+    ketua = answers.get('nama_ketua_tim_adhoc') or '........................................................'
+    direktur = answers.get('nama_pimpinan_fasyankes') or '........................................................'
+    nip_ketua = answers.get('nip_ketua_tim_adhoc') or '-'
+    id_sdmk = auto_fields(employee).get('id_sdmk') or '-'
+    rows = [
+        [Paragraph('<b>SDMK Pemohon</b>', styles['cell_title']),
+         Paragraph('<b>Pendamping / Ketua Tim Ad Hoc</b>', styles['cell_title']),
+         Paragraph('<b>Direktur RS / Pimpinan Fasyankes</b>', styles['cell_title'])],
+        [Spacer(1, 14 * mm), Spacer(1, 14 * mm), Spacer(1, 14 * mm)],
+        [Paragraph(pemohon, styles['cell']),
+         Paragraph(ketua, styles['cell']),
+         Paragraph(direktur, styles['cell'])],
+        [Paragraph(f'NIP: {employee.nomor_pegawai or "-"}<br/>'
+                   f'ID SDMK: {id_sdmk}', styles['footnote']),
+         Paragraph(f'NIP/NUTR: {nip_ketua}', styles['footnote']),
+         Paragraph('Tanda Tangan Elektronik &amp; Cap RS', styles['footnote'])],
+    ]
+    table = Table(rows, colWidths=[53 * mm, 54 * mm, 53 * mm])
+    table.setStyle(TableStyle([
+        ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+        ('TOPPADDING', (0, 0), (-1, -1), 2),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 2),
+        ('LEFTPADDING', (0, 0), (-1, -1), 0),
+    ]))
+    return table
+
+
+def _build_logbook_5tahun_story(story, draf, employee, identity, answers, styles):
+    """4 bagian Buku Kinerja Elektronik: profil, capaian 3 ranah, penilaian, otentikasi."""
+    # Bagian I - Profil SDMK
+    extra_rows = [
+        ('ID SDMK / SATUSEHAT', identity.get('id_sdmk') or '-'),
+        ('Periode Siklus', answers.get('periode_siklus') or BELUM_DINILAI),
+        ('Jenjang Klinis Diusulkan', answers.get('jenjang_klinis_usulan') or BELUM_DINILAI),
+    ]
+    story.append(_section_heading('I', 'Profil SDMK', styles))
+    story.append(Spacer(1, 2 * mm))
+    story.append(_identity_table(identity, styles, extra_rows=extra_rows))
+    story.append(Spacer(1, 6 * mm))
+
+    # Bagian II - Rencana & Capaian 3 Ranah
+    story.append(_section_heading('II', 'Rencana & Capaian Tiga Ranah', styles))
+    story.append(Spacer(1, 2 * mm))
+    story.append(Paragraph(
+        '<b>Ranah 1 — Pelayanan / Kewenangan Klinis</b> '
+        '<font color="#64748b" size="7.5">(volume tindakan per tahun, mandiri vs pelimpahan)</font>',
+        styles['body'],
+    ))
+    story.append(Spacer(1, 2 * mm))
+    matrix, recap = _ranah1_matrix(employee, styles)
+    story.append(matrix)
+    story.append(Spacer(1, 2 * mm))
+    story.append(Paragraph(
+        f"Total {recap['total_5tahun']} tindakan dalam window 5 tahun "
+        f"({recap['terverifikasi']} terverifikasi).",
+        styles['footnote'],
+    ))
+    story.append(Spacer(1, 4 * mm))
+
+    story.append(Paragraph(
+        '<b>Ranah 2 — Pengembangan Profesi Berkelanjutan (SKP)</b>', styles['body'],
+    ))
+    story.append(Spacer(1, 2 * mm))
+    story.append(_ranah2_table(answers, styles))
+    story.append(Spacer(1, 4 * mm))
+
+    story.append(Paragraph(
+        '<b>Ranah 3 — Disiplin, Etik &amp; Bebas Perundungan</b>', styles['body'],
+    ))
+    story.append(Spacer(1, 2 * mm))
+    story.append(_ranah3_table(answers, styles))
+    story.append(Spacer(1, 6 * mm))
+
+    # Bagian III - Lembar Rekapitulasi & Penilaian Rekredensial
+    story.append(_section_heading('III', 'Rekapitulasi & Penilaian Rekredensial', styles))
+    story.append(Spacer(1, 2 * mm))
+    story.append(Paragraph(
+        '<font color="#64748b" size="7.5">Dasar: Pasal 180 — penilaian 5 aspek '
+        'dengan 3 kemungkinan rekomendasi.</font>',
+        styles['body'],
+    ))
+    story.append(Spacer(1, 2 * mm))
+    checklist_table, rekomendasi_table = _pasal180_table(answers, styles)
+    story.append(checklist_table)
+    story.append(Spacer(1, 3 * mm))
+    story.append(rekomendasi_table)
+    story.append(Spacer(1, 6 * mm))
+
+    # Bagian IV - Shield & Otentikasi Digital
+    story.append(_section_heading('IV', 'Otentikasi Digital & Pengesahan', styles))
+    story.append(Spacer(1, 2 * mm))
+    story.append(Paragraph(
+        'Dokumen ini disahkan melalui tanda tangan elektronik tiga pihak dan '
+        'diverifikasi terhadap <b>SATUSEHAT ID SDMK</b>.',
+        styles['body'],
+    ))
+    story.append(Spacer(1, 4 * mm))
+    story.append(_signature_three_parties(employee, answers, styles))
+
+
 def render_pdf(draf):
     """Render one draft to PDF bytes. Never fills a claim it cannot verify."""
     spec = REGISTRY.get(draf.jenis)
@@ -338,6 +662,12 @@ def render_pdf(draf):
     story.append(HRFlowable(width='100%', thickness=1, color=colors.HexColor('#64748b'),
                             spaceBefore=2, spaceAfter=6))
     story.append(Paragraph(spec['title'], styles['title']))
+    if draf.jenis == 'LOGBOOK_5TAHUN':
+        story.append(Paragraph(
+            'Peraturan Menteri Kesehatan Nomor 13 Tahun 2025 tentang '
+            'Pengelolaan Sumber Daya Manusia Kesehatan',
+            styles['footnote'],
+        ))
     story.append(Paragraph(
         f"Dicetak: {identity['tanggal_cetak']}", styles['footnote'],
     ))
@@ -433,6 +763,9 @@ def render_pdf(draf):
             ('LEFTPADDING', (0, 0), (-1, -1), 0),
         ]))
         story.append(sig_table)
+
+    elif draf.jenis == 'LOGBOOK_5TAHUN':
+        _build_logbook_5tahun_story(story, draf, employee, identity, answers, styles)
 
     elif spec['sworn_statement']:
         story.append(Paragraph(DECLARATION_NOTICE, styles['label']))

@@ -11,6 +11,9 @@ DEFAULT_ROWS = [
     {'domain': 'KOMP', 'jenis': 'SERTIFIKAT_KOMPETENSI',
      'kind': 'SERTIFIKAT_KOMPETENSI', 'health': False},
     {'domain': 'KOMP', 'jenis': 'LOGBOOK_36BULAN', 'kind': 'LOGBOOK', 'health': False},
+    # PMK 13/2025: siklus rekredensial 5 tahunan memakai Buku Kinerja
+    # Elektronik; keduanya berbagi kind LOGBOOK di dokumen pegawai.
+    {'domain': 'KOMP', 'jenis': 'LOGBOOK_5TAHUN', 'kind': 'LOGBOOK', 'health': False},
     {'domain': 'SEHAT', 'jenis': 'SEHAT_JASMANI', 'kind': 'MCU', 'health': True},
     {'domain': 'SEHAT', 'jenis': 'SEHAT_PSIKOLOGIS', 'kind': 'PSIKOLOGIS', 'health': True},
     {'domain': 'ETIK', 'jenis': 'BEBAS_SANKSI', 'kind': 'BEBAS_SANKSI', 'health': False},
@@ -64,11 +67,16 @@ def _latest_valid_version(employee, kind, *, health, today):
     ).first()
 
 
-def _logbook_satisfied(employee, *, today):
+def _logbook_satisfied(employee, *, today, years=3):
     return EntriLogbookKlinis.objects.filter(
         employee=employee,
-        tanggal__gte=today.replace(year=today.year - 3),
+        tanggal__gte=today.replace(year=today.year - years),
     ).exists()
+
+
+# Jendela minimal entri logbook per jenis dokumen: Pasal 180 PMK 13/2025
+# memakai siklus 5 tahunan, sementara jalur 36 bulan lama tetap 3 tahun.
+LOGBOOK_WINDOW_YEARS = {'LOGBOOK_36BULAN': 3, 'LOGBOOK_5TAHUN': 5}
 
 
 def evaluate_requirements(pengajuan):
@@ -83,8 +91,11 @@ def evaluate_requirements(pengajuan):
                 row.note = 'Rapat sudah diputuskan.'
             row.save(update_fields=['status', 'note'])
             continue
-        if row.jenis == 'LOGBOOK_36BULAN':
-            ok = _logbook_satisfied(pengajuan.employee, today=today)
+        if row.jenis in LOGBOOK_WINDOW_YEARS:
+            ok = _logbook_satisfied(
+                pengajuan.employee, today=today,
+                years=LOGBOOK_WINDOW_YEARS[row.jenis],
+            )
             if ok:
                 row.logbook_ok = True
                 row.status = 'TERPENUHI'

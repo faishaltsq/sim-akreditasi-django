@@ -15,6 +15,18 @@
             </p>
             <form method="post">
                 {% csrf_token %}
+                {% for group in field_groups %}
+                <fieldset class="mb-4">
+                    <legend class="h6 border-bottom pb-1 mb-3">{{ group.judul }}</legend>
+                    {% for field in group.fields %}
+                    <div class="mb-2">
+                        <label class="form-label small fw-semibold" for="df-{{ field.key }}">{{ field.name|default:field.key }}</label>
+                        <textarea id="df-{{ field.key }}" name="{{ field.key }}" class="form-control form-control-sm" rows="3">{{ field.value }}</textarea>
+                        <div class="form-text">{{ field.label }}</div>
+                    </div>
+                    {% endfor %}
+                </fieldset>
+                {% empty %}
                 {% for field in manual_fields %}
                 <div class="mb-2">
                     <label class="form-label small fw-semibold" for="df-{{ field.key }}">{{ field.name|default:field.key }}</label>
@@ -23,6 +35,7 @@
                 </div>
                 {% empty %}
                 <p class="small text-muted">Dokumen ini tidak memerlukan isian manual.</p>
+                {% endfor %}
                 {% endfor %}
                 <div class="d-flex flex-wrap gap-2 mt-3">
                     <button class="btn btn-primary btn-sm" type="submit">Simpan Isian</button>

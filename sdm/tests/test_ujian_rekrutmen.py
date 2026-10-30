@@ -82,7 +82,9 @@ class SesiUjianTests(CbtBase):
     def test_batas_waktu_dihitung_dari_durasi_paket(self):
         sesi = buat_sesi(self._lamaran('Budi'), paket=self.paket)
         selisih = (sesi.batas_waktu - sesi.mulai_at).total_seconds()
-        self.assertEqual(selisih, 60 * 60)
+        # Kedua kolom disimpan sebagai timestamptz: selisihnya tepat 1 jam,
+        # tapi pembulatan mikrodetik Postgres bisa menyisakan pecahan kecil.
+        self.assertAlmostEqual(selisih, 60 * 60, delta=0.01)
 
     def test_urutan_soal_teracak_dan_tetap_per_sesi(self):
         sesi_a = buat_sesi(self._lamaran('A'), paket=self.paket)

@@ -1,4 +1,6 @@
 """Logbook aggregation for the 3-year re-credential requirement (C-2)."""
+from datetime import timedelta
+
 from django.core.exceptions import PermissionDenied
 from django.db.models import OuterRef, Q, Subquery, Sum
 from django.utils import timezone
@@ -56,6 +58,80 @@ def logbook_recap(employee, *, months=36):
         'dari_tanggal': dari_tanggal,
         'per_tindakan': per_tindakan,
     }
+
+
+def logbook_recap_5tahun(employee, *, years=5, end_date=None):
+    """5-year trailing recap untuk PMK 13/2025.
+
+    Mengumpulkan entri logbook karyawan dalam window 5 tahun trailing.
+    Mengembalikan ``{'tahun_labels', 'total_5tahun', 'mandiri', 'supervisi',
+    'kolaborasi', 'per_tindakan', 'terverifikasi', 'tahunan'}``.
+
+    Bucket tahunan: T1 paling tua hingga T5 (terbaru); tiap bucket 365 hari
+    dihitung mundur dari tanggal akhir.
+    """
+    today = end_date or timezone.localdate()
+    start_date = today - timedelta(days=years * 365 + 5)
+    # Bucket terindeks tahun kalender relatif terhadap tahun terakhir (T5 = tahun
+    # berjalan). Perbedaan indeks 365 hari = 1 tahun, jadi T5 = tahun berjalan,
+    # T1 = empat tahun sebelumnya.
+    tahun_terakhir = today.year
+
+    recap = {
+        'tahun_labels': [f'T{i}' for i in range(1, years + 1)],
+        'total_5tahun': 0,
+        'mandiri': 0,
+        'supervisi': 0,
+        'kolaborasi': 0,
+        'per_tindakan': [],
+        'terverifikasi': 0,
+        'tahunan': [0] * years,
+    }
+
+    entries = (
+        EntriLogbookKlinis.objects.filter(
+            employee=employee, tanggal__gte=start_date
+        )
+        .select_related('katalog_tindakan')
+        .prefetch_related('verifikasi')
+        .order_by('tanggal')
+    )
+
+    for entry in entries:
+        idx = entry.tanggal.year - tahun_terakhir + (years - 1)
+        if not 0 <= idx < years:
+            continue
+        m = entry.jumlah_mandiri or 0
+        s = entry.jumlah_supervisi or 0
+        k = entry.jumlah_kolaborasi or 0
+        total = m + s + k
+
+        recap['mandiri'] += m
+        recap['supervisi'] += s
+        recap['kolaborasi'] += k
+        recap['total_5tahun'] += total
+        recap['tahunan'][idx] += total
+
+        label = entry.katalog_tindakan.nama if entry.katalog_tindakan else entry.tindakan
+        row = next(
+            (item for item in recap['per_tindakan'] if item['label'] == label), None,
+        )
+        if row is None:
+            row = {
+                'label': label, 'mandiri': 0, 'supervisi': 0, 'kolaborasi': 0,
+                'total': 0, 'tahunan': [0] * years,
+            }
+            recap['per_tindakan'].append(row)
+        row['mandiri'] += m
+        row['supervisi'] += s
+        row['kolaborasi'] += k
+        row['total'] += total
+        row['tahunan'][idx] += total
+
+        if any(v.status == VerifikasiLogbook.VERIFIED for v in entry.verifikasi.all()):
+            recap['terverifikasi'] += total
+
+    return recap
 
 
 def entries_to_verify(user):

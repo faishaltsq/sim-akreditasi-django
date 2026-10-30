@@ -3131,6 +3131,10 @@ def dokumen_kredensial_edit(request, jenis):
     if request.method == 'POST':
         isian = dict(draf.isian or {})
         for key, _hint in DOKUMEN_KREDENSIAL_REGISTRY[jenis]['manual_fields']:
+            if key not in request.POST:
+                # Field tidak dikirim form (mis. registry berubah setelah draf
+                # dibuat): pertahankan nilai lama alih-alih menghapusnya.
+                continue
             nilai = (request.POST.get(key) or '').strip()
             if nilai:
                 isian[key] = nilai
@@ -3151,11 +3155,23 @@ def dokumen_kredensial_edit(request, jenis):
         }
         for key, hint in DOKUMEN_KREDENSIAL_REGISTRY[jenis]['manual_fields']
     ]
+    by_key = {field['key']: field for field in manual_fields}
+    field_groups = [
+        {
+            'kode': kode,
+            'judul': judul,
+            'fields': [by_key[key] for key in keys if key in by_key],
+        }
+        for kode, judul, keys in DOKUMEN_KREDENSIAL_REGISTRY[jenis].get(
+            'field_groups', []
+        )
+    ]
     return render(request, 'sdm/kredensial/dokumen_edit.html', {
         'draf': draf,
         'jenis': jenis,
         'title': _dokumen_kredensial_title(jenis),
         'manual_fields': manual_fields,
+        'field_groups': field_groups,
         'has_final': draf.versi_dokumen_id is not None,
     })
 
