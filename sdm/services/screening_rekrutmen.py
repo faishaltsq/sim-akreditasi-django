@@ -10,6 +10,7 @@ Aturan yang dijaga:
 from django.utils import timezone
 
 from sdm.models import BerkasPelamar, Pelamar, PenilaianTahap
+from sdm.services.rekrutmen_portal import dokumen_wajib
 
 # Kualifikasi pendidikan minimum yang dapat dibaca dari teks bebas lowongan.
 PENDIDIKAN_MINIMUM_DARI_TEKS = [
@@ -109,9 +110,15 @@ def screen_application(lamaran, *, today=None):
     berkas = list(
         lamaran.berkas.all().order_by('jenis')
     )
+    dokumen = {b.jenis: b for b in berkas}
     belum_unggah = [
-        b.jenis for b in berkas if not b.berkas
+        jenis for jenis in dokumen_wajib(vacancy)
+        if jenis not in dokumen or not dokumen[jenis].berkas
     ]
+    belum_unggah.extend(
+        b.jenis for b in berkas
+        if not b.berkas and b.jenis not in belum_unggah
+    )
     for jenis in belum_unggah:
         masalah.append(f'Berkas {jenis} belum diunggah.')
 

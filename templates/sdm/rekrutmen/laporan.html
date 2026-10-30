@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block page_title %}Dasbor Rekrutmen{% endblock %}
+{% block page_subtitle %}Rekap lowongan dan bukti seleksi{% endblock %}
+{% block content %}
+<div class="container-fluid p-0">
+  <div class="page-header-box mb-3 d-flex justify-content-between align-items-center">
+    <h1 class="page-title h5 mb-0">Dasbor Rekrutmen</h1>
+    <a class="btn btn-outline-primary btn-sm" href="rekap.pdf">Unduh rekap PDF</a>
+  </div>
+  <p>Jumlah lulus berdasarkan penilaian terakhir setiap tahap per lamaran; belum dinilai tidak dihitung lulus. Kode adalah ID lowongan.</p>
+  <div class="table-responsive">
+    <table class="table table-sm align-middle">
+      <caption>Rekap lowongan dalam lingkup unit Anda</caption>
+      <thead><tr><th scope="col">Kode</th><th scope="col">Posisi</th><th scope="col">Unit</th><th scope="col">Kuota</th><th scope="col">Pelamar</th><th scope="col">Admin</th><th scope="col">CBT</th><th scope="col">Wawancara</th><th scope="col">MCU</th><th scope="col">Status</th></tr></thead>
+      <tbody>{% for row in rows %}<tr>{% for cell in row.cells %}<td>{{ cell }}</td>{% endfor %}</tr>{% empty %}<tr><td colspan="10">Belum ada lowongan dalam lingkup unit Anda.</td></tr>{% endfor %}</tbody>
+    </table>
+  </div>
+  <h2 class="h5 mt-4">Bukti seleksi per lamaran</h2>
+  <p>Paket memuat data kesehatan dan hanya tersedia bagi pengguna dengan hak rekrutmen, ekspor, dan baca kesehatan pada unit terkait.</p>
+  {% for row in rows %}<h3 class="h6">{{ row.vacancy.judul }} ({{ row.vacancy.unit_kerja.code }})</h3><ul>{% for application in row.applications %}<li>{{ application.nama_pelamar }} <a href="lamaran/{{ application.pk }}/bukti.zip">Unduh bukti</a></li>{% empty %}<li>Belum ada lamaran.</li>{% endfor %}</ul>{% endfor %}
+</div>
+{% endblock %}

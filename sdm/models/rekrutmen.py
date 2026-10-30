@@ -351,3 +351,96 @@ class BerkasPelamar(models.Model):
 
     def __str__(self):
         return f'{self.lamaran_id} — {self.jenis}: {self.get_status_display()}'
+
+class HasilMCU(models.Model):
+    """Pre-employment medical check-up result (STARKES KPS 3).
+
+    The outcome drives the MCU stage: only FIT and FIT_WITH_NOTE may proceed to
+    the offering stage. UNFIT is a terminal administrative state, so the row is
+    kept rather than deleted — it is part of the audit trail.
+    """
+
+    STATUS_CHOICES = [
+        ('FIT', 'Fit'),
+        ('FIT_NOTE', 'Fit with Note'),
+        ('UNFIT', 'Unfit'),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    lamaran = models.OneToOneField(
+        Lamaran, on_delete=models.CASCADE, related_name='hasil_mcu',
+        verbose_name='Lamaran',
+    )
+    status = models.CharField(
+        'Status MCU', max_length=10, choices=STATUS_CHOICES,
+    )
+    tanggal_periksa = models.DateField('Tanggal Pemeriksaan', null=True, blank=True)
+    penyelenggara = models.CharField(
+        'Laboratorium / K3RS', max_length=200, blank=True,
+    )
+    catatan = models.TextField('Catatan Medis', blank=True)
+    berkas = models.FileField(
+        'Berkas Hasil', upload_to='rekrutmen/mcu/', null=True, blank=True,
+    )
+    diperiksa_oleh = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='sdm_mcu_recorded', verbose_name='Dicatat Oleh',
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = 'Hasil MCU'
+        verbose_name_plural = 'Hasil MCU'
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f'MCU {self.lamaran_id} — {self.get_status_display()}'
+
+    @property
+    def boleh_lanjut(self):
+        """Only FIT and FIT WITH NOTE may continue to the offering stage."""
+        return self.status in ('FIT', 'FIT_NOTE')
+
+
+class KonfirmasiOffering(models.Model):
+    """Candidate's acceptance of the digital offering letter.
+
+    The token is the capability: the candidate never logs in, and the record
+    proves who accepted, when, and from where.
+    """
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    lamaran = models.OneToOneField(
+        Lamaran, on_delete=models.CASCADE, related_name='konfirmasi_offering',
+        verbose_name='Lamaran',
+    )
+    token = models.CharField(
+        'Token Konfirmasi', max_length=64, unique=True, default=uuid.uuid4,
+    )
+    nomor_surat = models.CharField(
+        'Nomor Surat', max_length=100, blank=True,
+        help_text='Dibuat dari pola yang dikelola admin; bukan dikarang sistem.',
+    )
+    berkas = models.FileField(
+        'Surat Penawaran', upload_to='rekrutmen/offering/', null=True, blank=True,
+    )
+    disetujui = models.BooleanField('Disetujui', null=True, blank=True)
+    disetujui_at = models.DateTimeField('Waktu Persetujuan', null=True, blank=True)
+    ip_pemersetujui = models.GenericIPAddressField(
+        'IP Penyetuju', null=True, blank=True,
+    )
+    catatan_kandidat = models.TextField('Catatan Kandidat', blank=True)
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='sdm_offering_created', verbose_name='Dibuat Oleh',
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = 'Konfirmasi Offering'
+        verbose_name_plural = 'Konfirmasi Offering'
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f'Offering {self.lamaran_id} — {self.nomor_surat or "(tanpa nomor)"}'

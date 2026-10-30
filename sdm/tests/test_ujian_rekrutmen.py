@@ -1,7 +1,9 @@
 """Fase C4: mesin CBT rekrutmen — pengacakan, timer, scoring, ranking."""
 from datetime import timedelta
 
-from django.test import TestCase
+import shutil
+import tempfile
+from django.test import TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
 
@@ -26,7 +28,14 @@ from sdm.services.ujian_rekrutmen import (
 
 
 class CbtBase(TestCase):
+    """Unggahan diarahkan ke MEDIA_ROOT sementara."""
+
     def setUp(self):
+        self._media_dir = tempfile.mkdtemp(prefix="cbt-test-")
+        self._media_override = override_settings(MEDIA_ROOT=self._media_dir)
+        self._media_override.enable()
+        super().setUp()
+
         self.unit = UnitKerja.objects.create(name='Unit CBT', code='HC-CBT')
         self.vacancy = Lowongan.objects.create(
             unit_kerja=self.unit, profesi='Perawat', judul='Perawat IGD',
@@ -43,6 +52,11 @@ class CbtBase(TestCase):
                 jawaban_benar='A', bobot='1.00',
             )
 
+
+    def tearDown(self):
+        super().tearDown()
+        self._media_override.disable()
+        shutil.rmtree(self._media_dir, ignore_errors=True)
     def _lamaran(self, nama):
         pelamar = Pelamar.objects.create(
             nama_lengkap=nama, email=f'{nama.lower()}@x.id', telepon='08'
@@ -103,6 +117,34 @@ class PenilaianUjianTests(CbtBase):
         self.assertFalse(sesi.lulus)
         self.assertEqual(sesi.nilai, 40.0)
 
+    def test_passing_grade_belum_ditetapkan_tidak_menghasilkan_keputusan(self):
+        self.paket.passing_grade = None
+        self.paket.save(update_fields=['passing_grade'])
+        sesi = buat_sesi(self._lamaran('Budi'), paket=self.paket)
+        self._jawab(sesi, 4)
+        selesaikan_sesi(sesi)
+        sesi.refresh_from_db()
+        self.assertEqual(sesi.nilai, 80)
+        self.assertIsNone(sesi.lulus)
+        response = self.client.get(reverse(
+            'sdm:portal_ujian', args=[sesi.lamaran.pelamar.token, sesi.pk]
+        ))
+        self.assertContains(response, 'Belum ditetapkan')
+        self.assertNotContains(response, 'Tidak lulus')
+
+    def test_passing_grade_nol_tetap_dihormati(self):
+        self.paket.passing_grade = 0
+        self.paket.save(update_fields=['passing_grade'])
+        sesi = buat_sesi(self._lamaran('Budi'), paket=self.paket)
+        selesaikan_sesi(sesi)
+        self.assertTrue(sesi.lulus)
+
+    def test_paket_baru_tidak_memiliki_passing_grade_bawaan(self):
+        paket = PaketSoal.objects.create(
+            lowongan=self.vacancy, nama='Tanpa ambang', durasi_menit=30
+        )
+        self.assertIsNone(paket.passing_grade)
+
     def test_waktu_habis_menandai_kedaluwarsa_dan_menghitung_nilai(self):
         sesi = buat_sesi(self._lamaran('Lambat'), paket=self.paket)
         self._jawab(sesi, 5)
@@ -147,6 +189,8 @@ class PenilaianUjianTests(CbtBase):
         sesi = buat_sesi(self._lamaran('Budi'), paket=self.paket)
         with self.assertRaises(ValueError):
             catat_jawaban(sesi, str(soal_lain.pk), 'A')
+        with self.assertRaises(ValueError):
+            catat_jawaban(sesi, 'not-a-uuid', 'A')
 
 
 class RankingTests(CbtBase):
@@ -206,3 +250,88 @@ class PortalUjianViewTests(CbtBase):
         )
         self.assertEqual(response.status_code, 200)
         self.assertIn('80', response.content.decode())
+
+    def test_simpan_lanjut_dan_kirim_jawaban_independen(self):
+        sesi = buat_sesi(self._lamaran('Budi'), paket=self.paket)
+        token = sesi.lamaran.pelamar.token
+        soal = list(self.paket.soal.order_by('nomor'))
+        page = reverse('sdm:portal_ujian', args=[token, sesi.pk])
+        jawab = reverse('sdm:portal_ujian_jawab', args=[token, sesi.pk])
+        status = reverse('sdm:portal_lamaran_status', args=[token])
+        response = self.client.get(status)
+        self.assertContains(response, page)
+        response = self.client.get(page)
+        for item in soal:
+            self.assertContains(response, f'name="jawaban_{item.pk}"', count=4)
+
+        payload = {f'jawaban_{soal[0].pk}': 'A', f'jawaban_{soal[1].pk}': 'B'}
+        self.client.post(jawab, {**payload, 'save': '1'})
+        response = self.client.get(page)
+        self.assertContains(response, f'name="jawaban_{soal[0].pk}" value="A" checked')
+        self.assertContains(response, f'name="jawaban_{soal[1].pk}" value="B" checked')
+        payload[f'jawaban_{soal[2].pk}'] = 'A'
+        self.client.post(jawab, {**payload, 'submit': '1'})
+        sesi.refresh_from_db()
+        self.assertEqual(sesi.status, 'SELESAI')
+        self.assertEqual(sesi.nilai, 40)
+        self.assertEqual(sesi.jawaban.count(), 3)
+        self.assertNotContains(self.client.get(status), page)
+
+    def test_token_lain_tidak_dapat_mengubah_atau_melihat_sesi(self):
+        sesi = buat_sesi(self._lamaran('Budi'), paket=self.paket)
+        lain = self._lamaran('Siti')
+        soal = self.paket.soal.first()
+        for name in ('portal_ujian', 'portal_ujian_jawab', 'portal_ujian_fokus'):
+            url = reverse(f'sdm:{name}', args=[lain.pelamar.token, sesi.pk])
+            self.assertEqual(self.client.post(url, {
+                f'jawaban_{soal.pk}': 'A', 'submit': '1'
+            }).status_code, 404)
+        self.assertFalse(sesi.jawaban.exists())
+        sesi.refresh_from_db()
+        self.assertEqual(sesi.status, 'BERLANGSUNG')
+        self.assertEqual(sesi.pindah_fokus, 0)
+        status = reverse('sdm:portal_lamaran_status', args=[lain.pelamar.token])
+        self.assertNotContains(self.client.get(status), str(sesi.pk))
+
+    def test_jawaban_asing_atau_tidak_valid_ditolak_tanpa_simpan(self):
+        sesi = buat_sesi(self._lamaran('Budi'), paket=self.paket)
+        url = reverse('sdm:portal_ujian_jawab', args=[sesi.lamaran.pelamar.token, sesi.pk])
+        soal = self.paket.soal.first()
+        paket_lain = PaketSoal.objects.create(
+            lowongan=self.vacancy, nama='Lain', durasi_menit=30
+        )
+        soal_lain = Soal.objects.create(
+            paket=paket_lain, nomor=1, pertanyaan='Lain',
+            pilihan_a='a', pilihan_b='b', pilihan_c='c', pilihan_d='d',
+            jawaban_benar='A',
+        )
+        for field, value in [
+            ('jawaban_not-a-uuid', 'A'), (f'jawaban_{soal.pk}', 'Z'),
+            (f'jawaban_{soal_lain.pk}', 'A'),
+        ]:
+            self.client.post(url, {field: value, 'submit': '1'})
+            sesi.refresh_from_db()
+            self.assertEqual(sesi.status, 'BERLANGSUNG')
+            self.assertFalse(sesi.jawaban.exists())
+
+    def test_sesi_kedaluwarsa_dinilai_tanpa_jawaban_terlambat(self):
+        sesi = buat_sesi(self._lamaran('Budi'), paket=self.paket)
+        soal = self.paket.soal.first()
+        SesiUjian.objects.filter(pk=sesi.pk).update(
+            batas_waktu=timezone.now() - timedelta(seconds=1)
+        )
+        url = reverse('sdm:portal_ujian_jawab', args=[sesi.lamaran.pelamar.token, sesi.pk])
+        self.client.post(url, {f'jawaban_{soal.pk}': 'A', 'submit': '1'})
+        sesi.refresh_from_db()
+        self.assertEqual(sesi.status, 'KEDALUWARSA')
+        self.assertFalse(sesi.jawaban.exists())
+
+    def test_halaman_kedaluwarsa_menyelesaikan_sesi(self):
+        sesi = buat_sesi(self._lamaran('Budi'), paket=self.paket)
+        SesiUjian.objects.filter(pk=sesi.pk).update(
+            batas_waktu=timezone.now() - timedelta(seconds=1)
+        )
+        url = reverse('sdm:portal_ujian', args=[sesi.lamaran.pelamar.token, sesi.pk])
+        self.assertEqual(self.client.get(url).status_code, 200)
+        sesi.refresh_from_db()
+        self.assertEqual(sesi.status, 'KEDALUWARSA')

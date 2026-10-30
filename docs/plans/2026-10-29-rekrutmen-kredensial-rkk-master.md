@@ -199,6 +199,8 @@ Catatan: portal self-service (`PengajuanPortalForm`, `sdm/forms/kredensial_porta
 | C3.5 | Notifikasi email penolakan otomatis (via `send_mail`) | service | Test: email terkirim sekali |
 | C3.6 | UI matriks penapisan: tabel pelamar × kriteria, aksi massal | template | Smoke: aksi massal bekerja |
 
+Catatan: screening menandai dokumen wajib yang belum memiliki baris maupun yang belum diunggah. Tanggal kedaluwarsa STR belum dikumpulkan dalam data pelamar dan pemeriksaan kedaluwarsanya belum tersedia.
+
 #### Fase C4 — CBT / Ujian Kompetensi
 
 | # | Langkah | Berkas | Bukti |
@@ -209,6 +211,8 @@ Catatan: portal self-service (`PengajuanPortalForm`, `sdm/forms/kredensial_porta
 | C4.4 | Auto-scoring + ranking per lowongan | service | Test: skor & peringkat cocok dengan jawaban |
 | C4.5 | UI pengerjaan ujian (satu soal per layar, navigasi, indikator waktu) | template | Smoke: selesaikan ujian, skor muncul |
 | C4.6 | Anti-cheating dasar: catat perpindahan fokus tab, satu sesi per kandidat | JS + model | Test: perpindahan fokus tercatat |
+Catatan implementasi: paket baru tanpa passing grade menghasilkan nilai tanpa keputusan lulus. Nilai 70 yang tersimpan sebelum perubahan memerlukan peninjauan komite karena tidak dapat dibedakan dari nilai default lama. Pengacakan pilihan dan tampilan satu soal per layar masih perlu diverifikasi terhadap implementasi.
+
 
 #### Fase C5 — Wawancara
 
@@ -219,6 +223,8 @@ Catatan: portal self-service (`PengajuanPortalForm`, `sdm/forms/kredensial_porta
 | C5.3 | `ScorecardWawancara` per penguji (indikator: kompetensi teknis, soft skill, ketahanan beban, integritas, AIK) | model + form | Test: skor di luar rentang ditolak |
 | C5.4 | Kalkulasi skor gabungan berbobot (berkas + CBT + HRD + user/komite) — bobot dari konstanta konfigurasi | service | Test: skor gabungan cocok dengan hitungan manual |
 | C5.5 | UI penguji: daftar wawancara + form scorecard | template | Smoke: penguji input skor |
+Catatan implementasi: hanya penguji yang ditugaskan dapat mengisi scorecard. Jenis HRD dan user/komite dicatat terpisah; scorecard lama yang belum diklasifikasikan tidak dihitung untuk komponen berbobot. Bobot membutuhkan keputusan komite.
+
 
 #### Fase C6 — MCU & Offering Letter
 
@@ -229,6 +235,8 @@ Catatan: portal self-service (`PengajuanPortalForm`, `sdm/forms/kredensial_porta
 | C6.3 | Generator offering letter PDF (ReportLab, kop dari `SystemConfig.kop_surat_text`, nomor dari counter) | service | Test: PDF berisi posisi, unit, komponen gaji |
 | C6.4 | E-signature / konfirmasi persetujuan kandidat via token | model + view | Test: konfirmasi tercatat dengan waktu & IP |
 | C6.5 | Notifikasi WA — **hanya bila C0.6 memutuskan ada gateway** | service | Test terkait |
+Catatan keamanan: hak akses view tidak melindungi berkas rekrutmen yang masih tersimpan di MEDIA publik. Migrasi penyimpanan privat dan pemeriksaan akses langsung wajib sebelum deployment. Format, nomor, komponen gaji dan ketentuan tanda tangan membutuhkan ketetapan pemilik proses.
+
 
 #### Fase C7 — Orientasi & Integrasi e-File
 
@@ -238,6 +246,8 @@ Catatan: portal self-service (`PengajuanPortalForm`, `sdm/forms/kredensial_porta
 | C7.2 | Auto-generate NIP dari pola yang dikonfigurasi admin (bukan dikarang) + buat akun pengguna | service | Test: NIP unik, akun tertaut ke `Pegawai` |
 | C7.3 | Auto-enroll orientasi: panggil `auto_assign_orientation` (plan 2026-10-27 Fase O2) saat pegawai baru dibuat | service | Test: pegawai baru langsung punya penugasan orientasi |
 | C7.4 | Isi jenjang awal pegawai baru dari profesi lowongan + katalog RKK terkait | service | Test: pegawai baru ber-jenjang sesuai lowongan |
+Catatan integrasi: NIP membutuhkan pola nomor aktif yang dikonfigurasi dan orientasi membutuhkan program yang sesuai. Aktivasi akun menggunakan undangan ke email kandidat; diperlukan PUBLIC_BASE_URL, layanan email dan hak akses sesuai. Jenjang awal belum dapat ditentukan tanpa kebijakan; riwayat pendidikan membutuhkan data institusi yang belum dikumpulkan pada portal. Berkas sumber tetap perlu dipindahkan ke penyimpanan privat tanpa menghapus data yang ada.
+
 
 #### Fase C8 — Dasbor, Talent Pool, Notifikasi
 
@@ -248,6 +258,8 @@ Catatan: portal self-service (`PengajuanPortalForm`, `sdm/forms/kredensial_porta
 | C8.3 | Talent Pool: simpan pelamar berkualifikasi yang tidak terpilih; pencarian cepat saat buka formasi baru | model + UI | Test: pelamar tersimpan & bisa dipanggil ulang |
 | C8.4 | Audit trail KPS: seluruh bukti seleksi (verifikasi STR/ijazah, hasil CBT, scorecard, MCU) dapat diunduh sebagai bukti audit | service + view | Test: paket bukti berisi semua dokumen tahap |
 | C8.5 | Pengingat tahap menggantung via `hc_reminders` | command | Test: pengingat dibuat sekali |
+Catatan: talent pool menunggu keputusan retensi serta mekanisme persetujuan dan pencabutan. Ekspor bukti tidak mengatasi paparan langsung berkas sumber di MEDIA.
+
 
 ---
 

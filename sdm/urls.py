@@ -1,4 +1,4 @@
-from django.urls import path
+from django.urls import include, path
 
 from sdm import views
 from sdm import import_views
@@ -10,6 +10,8 @@ from sdm import rekrutmen_portal_views
 app_name = 'sdm'
 
 urlpatterns = [
+    path('rekrutmen/laporan/', include('sdm.rekrutmen_laporan_urls')),
+    path('rekrutmen/', include('sdm.activation_urls')),
     path('', views.dashboard, name='dashboard'),
     path('pegawai/', views.pegawai_list, name='pegawai_list'),
     path('pegawai/impor/', import_views.import_upload, name='pegawai_import'),
@@ -122,9 +124,44 @@ urlpatterns = [
         name='rekrutmen_ranking',
     ),
     path(
+        'rekrutmen/<uuid:vacancy_id>/wawancara/',
+        views.rekrutmen_wawancara,
+        name='rekrutmen_wawancara',
+    ),
+    path(
+        'rekrutmen/lamaran/<uuid:application_id>/jadwal/',
+        views.rekrutmen_jadwal_buat,
+        name='rekrutmen_jadwal_buat',
+    ),
+    path(
+        'rekrutmen/jadwal/<uuid:jadwal_id>/undangan/',
+        views.rekrutmen_undangan_kirim,
+        name='rekrutmen_undangan_kirim',
+    ),
+    path(
+        'rekrutmen/jadwal/<uuid:jadwal_id>/scorecard/',
+        views.rekrutmen_scorecard_simpan,
+        name='rekrutmen_scorecard_simpan',
+    ),
+    path(
         'rekrutmen/lamaran/<uuid:application_id>/sesi-ujian/',
         views.rekrutmen_buat_sesi_ujian,
         name='rekrutmen_buat_sesi_ujian',
+    ),
+    path(
+        'rekrutmen/lamaran/<uuid:application_id>/mcu/',
+        views.rekrutmen_mcu_simpan,
+        name='rekrutmen_mcu_simpan',
+    ),
+    path(
+        'rekrutmen/lamaran/<uuid:application_id>/offering/',
+        views.rekrutmen_offering_buat,
+        name='rekrutmen_offering_buat',
+    ),
+    path(
+        'rekrutmen/offering/<str:token>/unduh/',
+        views.rekrutmen_offering_unduh,
+        name='rekrutmen_offering_unduh',
     ),
     path(
         'rekrutmen/lamaran/<uuid:application_id>/berkas/<uuid:berkas_id>/verifikasi/',
@@ -152,6 +189,16 @@ urlpatterns = [
         'rekrutmen/portal/ujian/<str:token>/<uuid:sesi_id>/fokus/',
         rekrutmen_portal_views.portal_ujian_fokus,
         name='portal_ujian_fokus',
+    ),
+    path(
+        'rekrutmen/portal/offering/<str:token>/',
+        rekrutmen_portal_views.portal_offering,
+        name='portal_offering',
+    ),
+    path(
+        'rekrutmen/portal/offering/<str:token>/unduh/',
+        rekrutmen_portal_views.portal_offering_unduh,
+        name='portal_offering_unduh',
     ),
     path('rekrutmen/baru/', views.rekrutmen_create, name='rekrutmen_create'),
     path(

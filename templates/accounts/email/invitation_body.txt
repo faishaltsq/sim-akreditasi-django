@@ -6,6 +6,9 @@ Buka tautan berikut untuk menentukan sandi Anda sendiri (berlaku {{ expiry_hours
 {{ activation_url }}
 
 Email tujuan: {{ email }}
+{% if employee.akun_id %}Nama pengguna untuk masuk: {{ employee.akun.username }}
+{% else %}Nama pengguna untuk masuk: {{ email }}
+{% endif %}
 Diajukan oleh: {{ actor.username }}
 
 Tautan ini hanya dapat dipakai satu kali. Jika Anda tidak meminta undangan ini, abaikan pesan ini.

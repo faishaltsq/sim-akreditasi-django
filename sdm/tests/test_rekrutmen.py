@@ -114,6 +114,14 @@ class RecruitmentWorkflowTests(LevelTwoBase):
         self.assertEqual(application.history.count(), 1)
 
     def test_hiring_is_idempotent_and_creates_one_employee(self):
+        from sdm.models import UrutanNomorPegawai
+
+        UrutanNomorPegawai.objects.create(
+            scope='rekrutmen', period_start=self.today,
+            format_pattern='EMP-{year}-{counter:04d}',
+        )
+        program = ProgramOrientasi.objects.create(nama='Orientasi Umum', jenis='UMUM')
+        AktivitasOrientasi.objects.create(program=program, nama='Pengenalan')
         application = self._application()
         for stage in (
             'SELEKSI_ADMIN', 'TES_KOMPETENSI', 'WAWANCARA', 'MCU',

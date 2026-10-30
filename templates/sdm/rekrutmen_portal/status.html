@@ -24,6 +24,12 @@
         </div>
     </div>
 </div>
+{% for sesi in sesi_aktif %}
+<div class="alert alert-info">
+    Ujian {{ sesi.paket.nama }} ({{ sesi.lamaran.lowongan.judul }}):
+    <a href="{% url 'sdm:portal_ujian' token sesi.pk %}">Lanjutkan ujian</a>
+</div>
+{% endfor %}
 <div class="card border shadow-sm">
     <div class="card-header bg-white"><h2 class="h6 mb-0">Berkas Anda</h2></div>
     <ul class="list-group list-group-flush small">

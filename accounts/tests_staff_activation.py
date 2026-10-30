@@ -118,6 +118,109 @@ class StaffActivationViewTests(TestCase):
         self.assertEqual(self.employee.akun_id, existing.pk)
         self.assertEqual(get_user_model().objects.count(), self.users_before + 1)
 
+    def test_linked_unusable_account_is_activated_without_replacing_it(self):
+        existing = get_user_model().objects.create_user(
+            username='EMP-100', email='aktivasi@example.com', password=None,
+        )
+        self.employee.akun = existing
+        self.employee.save(update_fields=['akun', 'updated_at'])
+        invitation = self._invitation()
+        response = self.client.post(
+            reverse('accounts:staff_activate', kwargs={'token': 'raw-token'}),
+            {'new_password1': 'StrongPass123!', 'new_password2': 'StrongPass123!'},
+        )
+        self.assertEqual(response.status_code, 302)
+        existing.refresh_from_db()
+        invitation.refresh_from_db()
+        self.assertTrue(existing.check_password('StrongPass123!'))
+        self.assertEqual(invitation.state, 'ACCEPTED')
+        self.assertEqual(existing.profile.role, 'STAF_NAKES')
+        self.assertEqual(existing.profile.unit_kerja, self.root)
+        self.assertEqual(get_user_model().objects.count(), self.users_before + 1)
+
+    def test_linked_account_with_usable_password_is_not_reset(self):
+        existing = get_user_model().objects.create_user(
+            username='EMP-101', email='aktivasi@example.com', password='OldPass123!',
+        )
+        self.employee.akun = existing
+        self.employee.save(update_fields=['akun', 'updated_at'])
+        invitation = self._invitation()
+        response = self.client.post(
+            reverse('accounts:staff_activate', kwargs={'token': 'raw-token'}),
+            {'new_password1': 'StrongPass123!', 'new_password2': 'StrongPass123!'},
+        )
+        existing.refresh_from_db()
+        invitation.refresh_from_db()
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(existing.check_password('OldPass123!'))
+        self.assertEqual(invitation.state, 'SENT')
+
+    def test_linked_account_with_other_email_cannot_be_claimed(self):
+        existing = get_user_model().objects.create_user(
+            username='EMP-102', email='other@example.com', password=None,
+        )
+        self.employee.akun = existing
+        self.employee.save(update_fields=['akun', 'updated_at'])
+        self._invitation()
+        response = self.client.post(
+            reverse('accounts:staff_activate', kwargs={'token': 'raw-token'}),
+            {'new_password1': 'StrongPass123!', 'new_password2': 'StrongPass123!'},
+        )
+        existing.refresh_from_db()
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(existing.has_usable_password())
+
+    def test_linked_privileged_unusable_account_cannot_be_claimed(self):
+        existing = get_user_model().objects.create_user(
+            username='EMP-103', email='aktivasi@example.com', password=None,
+            is_staff=True,
+        )
+        self.employee.akun = existing
+        self.employee.save(update_fields=['akun', 'updated_at'])
+        self._invitation()
+        response = self.client.post(
+            reverse('accounts:staff_activate', kwargs={'token': 'raw-token'}),
+            {'new_password1': 'StrongPass123!', 'new_password2': 'StrongPass123!'},
+        )
+        existing.refresh_from_db()
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(existing.has_usable_password())
+
+    def test_linked_account_is_not_activated_if_email_belongs_to_another_user(self):
+        existing = get_user_model().objects.create_user(
+            username='EMP-104', email='aktivasi@example.com', password=None,
+        )
+        get_user_model().objects.create_user(
+            username='other-user', email='AKTIVASI@example.com', password=None,
+        )
+        self.employee.akun = existing
+        self.employee.save(update_fields=['akun', 'updated_at'])
+        self._invitation()
+        response = self.client.post(
+            reverse('accounts:staff_activate', kwargs={'token': 'raw-token'}),
+            {'new_password1': 'StrongPass123!', 'new_password2': 'StrongPass123!'},
+        )
+        existing.refresh_from_db()
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(existing.has_usable_password())
+
+    def test_linked_account_with_existing_profile_is_not_claimed(self):
+        existing = get_user_model().objects.create_user(
+            username='EMP-105', email='aktivasi@example.com', password=None,
+        )
+        UserProfile.objects.create(user=existing, role='ADMIN_RS', unit_kerja=self.root)
+        self.employee.akun = existing
+        self.employee.save(update_fields=['akun', 'updated_at'])
+        self._invitation()
+        response = self.client.post(
+            reverse('accounts:staff_activate', kwargs={'token': 'raw-token'}),
+            {'new_password1': 'StrongPass123!', 'new_password2': 'StrongPass123!'},
+        )
+        existing.refresh_from_db()
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(existing.has_usable_password())
+        self.assertEqual(existing.profile.role, 'ADMIN_RS')
+
     def test_case_insensitive_email_collision_is_refused(self):
         get_user_model().objects.create_user(
             username='different-username', email='AKTIVASI@example.com'

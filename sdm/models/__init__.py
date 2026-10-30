@@ -95,8 +95,18 @@ from .intake import (
     RiwayatPendidikanPegawai,
     UrutanNomorPegawai,
 )
-from .ujian import JawabanUjian, PaketSoal, SesiUjian, Soal
+from .ujian import (
+    JadwalWawancara,
+    JawabanUjian,
+    PaketSoal,
+    ScorecardWawancara,
+    SesiUjian,
+    Soal,
+)
 from .rekrutmen import (
+    HasilMCU,
+    KonfirmasiOffering,
+
     Pelamar,
     BerkasPelamar,
     Lamaran,
@@ -124,7 +134,11 @@ __all__ = [
     'InsidenK3Pegawai',
     'KeputusanKredensial',
     'BerkasPelamar',
+    'HasilMCU',
+    'KonfirmasiOffering',
     'Lamaran',
+    'JadwalWawancara',
+    'ScorecardWawancara',
     'JawabanUjian',
     'PaketSoal',
     'SesiUjian',

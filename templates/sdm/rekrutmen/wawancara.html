@@ -1,0 +1,168 @@
+{% extends "base.html" %}
+{% load l10n %}
+{% block page_title %}Wawancara — {{ vacancy.judul }}{% endblock %}
+{% block page_subtitle %}Jadwal, undangan &amp; scorecard{% endblock %}
+{% block content %}
+<div class="container-fluid p-0">
+    {% if can_manage %}<a class="small text-decoration-none" href="{% url 'sdm:rekrutmen_detail' vacancy.pk %}"><i class="bi bi-arrow-left me-1"></i>Kembali ke pipeline</a>{% endif %}
+    <h1 class="page-title h4 mt-2 mb-3">Wawancara — {{ vacancy.judul }}</h1>
+    {% if not bobot_terkonfigurasi %}
+    <div class="alert alert-warning small">
+        Bobot skor gabungan belum ditetapkan komite, sehingga skor gabungan tidak
+        ditampilkan. Nilai per tahap tetap tercatat.
+    </div>
+    {% endif %}
+
+    {% if can_manage %}
+    <div class="card border shadow-sm mb-3">
+        <div class="card-header bg-white"><h2 class="h6 mb-0">Jadwalkan Wawancara</h2></div>
+        <div class="card-body">
+            {% if applications %}
+            <form method="post" action="{% url 'sdm:rekrutmen_jadwal_buat' applications.0.pk %}" class="row g-2" id="form-jadwal">
+                {% csrf_token %}
+                <div class="col-12 col-md-3">
+                    <label class="form-label small fw-semibold" for="jd-lamaran">Lamaran</label>
+                    <select id="jd-lamaran" name="lamaran_id" class="form-select form-select-sm" required>
+                        <option value="">— pilih lamaran —</option>
+                        {% for app in applications %}
+                        <option value="{{ app.pk }}">{{ app.nama_pelamar }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-12 col-md-3">
+                    <label class="form-label small fw-semibold" for="jd-waktu">Waktu</label>
+                    <input id="jd-waktu" name="waktu" type="datetime-local" class="form-control form-control-sm" required>
+                </div>
+                <div class="col-6 col-md-2">
+                    <label class="form-label small fw-semibold" for="jd-mode">Mode</label>
+                    <select id="jd-mode" name="mode" class="form-select form-select-sm">
+                        <option value="LURING">Luring</option>
+                        <option value="DARING">Daring</option>
+                    </select>
+                </div>
+                <div class="col-6 col-md-2">
+                    <label class="form-label small fw-semibold" for="jd-lokasi">Lokasi / Tautan</label>
+                    <input id="jd-lokasi" name="lokasi_tautan" class="form-control form-control-sm">
+                </div>
+                <div class="col-12 col-md-2">
+                    <label class="form-label small fw-semibold" for="jd-catatan">Catatan</label>
+                    <input id="jd-catatan" name="catatan" class="form-control form-control-sm">
+                </div>
+                <div class="col-12 col-md-4">
+                    <label class="form-label small fw-semibold" for="jd-penguji">Penguji</label>
+                    <select id="jd-penguji" name="penguji" class="form-select form-select-sm" multiple required>
+                        {% for user in interviewers %}
+                        <option value="{{ user.pk }}">{{ user.get_full_name|default:user.username }} ({{ user.username }})</option>
+                        {% endfor %}
+                    </select>
+                    <div class="form-text">Pilih satu atau lebih penguji.</div>
+                </div>
+                <div class="col-12 d-flex flex-wrap gap-3 align-items-end">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" name="kirim_undangan" id="jd-kirim" checked>
+                        <label class="form-check-label small" for="jd-kirim">Kirim undangan sekarang</label>
+                    </div>
+                    <button class="btn btn-primary btn-sm" type="submit">Buat Jadwal</button>
+                </div>
+            </form>
+            {% else %}
+            <p class="text-muted mb-0">Tidak ada lamaran yang belum dijadwalkan.</p>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="card border shadow-sm">
+        <div class="table-responsive">
+            <table class="table table-sm align-middle mb-0">
+                <caption class="visually-hidden">Jadwal wawancara dan scorecard</caption>
+                <thead>
+                    <tr>
+                        <th scope="col">Pelamar</th>
+                        <th scope="col">Waktu</th>
+                        <th scope="col">Mode</th>
+                        <th scope="col">Nilai HRD</th>
+                        <th scope="col">Nilai User / Komite</th>
+                        <th scope="col">Skor Gabungan</th>
+                        <th scope="col">Aksi</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in baris %}
+                    <tr>
+                        <td class="fw-semibold">{{ row.jadwal.lamaran.nama_pelamar }}</td>
+                        <td class="small">{{ row.jadwal.waktu|date:"d M Y H:i" }}</td>
+                        <td class="small">{{ row.jadwal.get_mode_display }}</td>
+                        <td>{% if row.nilai_hrd is not None %}{{ row.nilai_hrd }}{% else %}<span class="text-muted">—</span>{% endif %}</td>
+                        <td>{% if row.nilai_user is not None %}{{ row.nilai_user }}{% else %}<span class="text-muted">—</span>{% endif %}</td>
+                        <td>
+                            {% if row.skor_gabungan is not None %}<span class="fw-semibold">{{ row.skor_gabungan }}</span>
+                            {% else %}<span class="text-muted">—</span>{% endif %}
+                        </td>
+                        <td>
+                            {% if can_manage %}
+                            <form method="post" action="{% url 'sdm:rekrutmen_undangan_kirim' row.jadwal.pk %}" class="d-inline">
+                                {% csrf_token %}
+                                <button class="btn btn-outline-secondary btn-sm" type="submit">
+                                    {% if row.jadwal.undangan_terkirim_at %}Kirim ulang{% else %}Kirim undangan{% endif %}
+                                </button>
+                            </form>
+                            {% endif %}
+                            {% if row.can_score %}
+                            <details class="d-inline-block ms-1 align-top">
+                                <summary class="btn btn-outline-primary btn-sm" role="button">Scorecard</summary>
+                                <form method="post" action="{% url 'sdm:rekrutmen_scorecard_simpan' row.jadwal.pk %}"
+                                      class="mt-2 p-2 border rounded bg-white text-start" style="min-width: 24rem;">
+                                    {% csrf_token %}
+                                    <div class="row g-1">
+                                        <div class="col-12">
+                                            <label class="form-label small mb-0" for="sc-{{ row.jadwal.pk }}-jenis">Jenis Penguji</label>
+                                            <select id="sc-{{ row.jadwal.pk }}-jenis" name="jenis" class="form-select form-select-sm" required>
+                                                <option value="">Pilih jenis penguji</option>
+                                                <option value="HRD"{% if row.scorecard.jenis == 'HRD' %} selected{% endif %}>HRD</option>
+                                                <option value="USER"{% if row.scorecard.jenis == 'USER' %} selected{% endif %}>User / Komite</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-6">
+                                            <label class="form-label small mb-0" for="sc-{{ row.jadwal.pk }}-tek">Kompetensi Teknis</label>
+                                            <input id="sc-{{ row.jadwal.pk }}-tek" name="kompetensi_teknis" type="number" step="0.01" min="0" max="100" value="{{ row.scorecard.kompetensi_teknis|default_if_none:''|unlocalize }}" class="form-control form-control-sm">
+                                        </div>
+                                        <div class="col-6">
+                                            <label class="form-label small mb-0" for="sc-{{ row.jadwal.pk }}-soft">Soft Skill</label>
+                                            <input id="sc-{{ row.jadwal.pk }}-soft" name="soft_skill" type="number" step="0.01" min="0" max="100" value="{{ row.scorecard.soft_skill|default_if_none:''|unlocalize }}" class="form-control form-control-sm">
+                                        </div>
+                                        <div class="col-6">
+                                            <label class="form-label small mb-0" for="sc-{{ row.jadwal.pk }}-beban">Ketahanan Beban Kerja</label>
+                                            <input id="sc-{{ row.jadwal.pk }}-beban" name="ketahanan_beban_kerja" type="number" step="0.01" min="0" max="100" value="{{ row.scorecard.ketahanan_beban_kerja|default_if_none:''|unlocalize }}" class="form-control form-control-sm">
+                                        </div>
+                                        <div class="col-6">
+                                            <label class="form-label small mb-0" for="sc-{{ row.jadwal.pk }}-int">Sikap / Integritas</label>
+                                            <input id="sc-{{ row.jadwal.pk }}-int" name="integritas" type="number" step="0.01" min="0" max="100" value="{{ row.scorecard.integritas|default_if_none:''|unlocalize }}" class="form-control form-control-sm">
+                                        </div>
+                                        <div class="col-6">
+                                            <label class="form-label small mb-0" for="sc-{{ row.jadwal.pk }}-visi">Visi-Misi &amp; AIK</label>
+                                            <input id="sc-{{ row.jadwal.pk }}-visi" name="pemahaman_visi" type="number" step="0.01" min="0" max="100" value="{{ row.scorecard.pemahaman_visi|default_if_none:''|unlocalize }}" class="form-control form-control-sm">
+                                        </div>
+                                        <div class="col-12">
+                                            <label class="form-label small mb-0" for="sc-{{ row.jadwal.pk }}-cat">Catatan</label>
+                                            <input id="sc-{{ row.jadwal.pk }}-cat" name="catatan" value="{{ row.scorecard.catatan|default_if_none:'' }}" class="form-control form-control-sm">
+                                        </div>
+                                        <div class="col-12 mt-1">
+                                            <button class="btn btn-primary btn-sm" type="submit">Simpan</button>
+                                        </div>
+                                    </div>
+                                </form>
+                            </details>
+                            {% endif %}
+                            {% for s in row.jadwal.scorecard.all %}
+                            <div class="small text-muted mt-1">{{ s.penguji.username }} ({{ s.get_jenis_display|default:"Belum ditentukan" }}): {% if s.rata_rata is not None %}{{ s.rata_rata }}{% else %}—{% endif %}</div>
+                            {% endfor %}
+                        </td>
+                    </tr>
+                    {% empty %}<tr><td colspan="7" class="text-center text-muted py-4">Belum ada jadwal wawancara.</td></tr>{% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

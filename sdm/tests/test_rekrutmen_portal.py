@@ -2,9 +2,11 @@
 import io
 from datetime import timedelta
 
+import shutil
+import tempfile
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.contrib.auth import get_user_model
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
 
@@ -21,7 +23,15 @@ def _pdf(name='berkas.pdf'):
 
 
 class PortalPelamarBase(TestCase):
+    """Unggahan diarahkan ke MEDIA_ROOT sementara: test tidak pernah
+    menulis ke media nyata, dan tidak meninggalkan berkas untuk test lain."""
+
     def setUp(self):
+        self._media_dir = tempfile.mkdtemp(prefix="rekrutmen-test-")
+        self._media_override = override_settings(MEDIA_ROOT=self._media_dir)
+        self._media_override.enable()
+        super().setUp()
+
         self.unit = UnitKerja.objects.create(name='Unit Portal', code='HC-PTL')
         self.today = timezone.localdate()
         self.klinis = Lowongan.objects.create(
@@ -44,6 +54,11 @@ class PortalPelamarBase(TestCase):
             tanggal_buka=self.today + timedelta(days=5),
         )
 
+
+    def tearDown(self):
+        super().tearDown()
+        self._media_override.disable()
+        shutil.rmtree(self._media_dir, ignore_errors=True)
     def _lamar(self, vacancy, **extra):
         data = {
             'nama_lengkap': 'Pelamar Uji', 'telepon': '0812',
@@ -233,6 +248,22 @@ class ScreeningTests(PortalPelamarBase):
         self.assertFalse(verdict['layak'])
         self.assertTrue(verdict['perlu_dilengkapi'])
 
+    def test_berkas_wajib_tanpa_baris_tidak_dianggap_lengkap(self):
+        from sdm.services.screening_rekrutmen import screen_application
+        pelamar = Pelamar.objects.create(
+            nama_lengkap='Tanpa dokumen', telepon='0812',
+            pendidikan_terakhir='S1', ipk='3.50',
+            tanggal_lahir=self.today - timedelta(days=25 * 365),
+            pengalaman_bulan=24,
+        )
+        lamaran = Lamaran.objects.create(
+            lowongan=self.vacancy, pelamar=pelamar, nama_pelamar=pelamar.nama_lengkap,
+        )
+        verdict = screen_application(lamaran)
+        self.assertFalse(verdict['layak'])
+        self.assertIn('Berkas KTP belum diunggah.', verdict['masalah'])
+        self.assertIn('Berkas STR belum diunggah.', verdict['masalah'])
+
     def test_berkas_belum_diunggah_terhitung_masalah(self):
         from sdm.services.screening_rekrutmen import screen_application
         lamaran = self._lamaran(
@@ -350,14 +381,20 @@ class NotifikasiPenolakanTests(PortalPelamarBase):
 
     def test_kegagalan_email_tidak_membatalkan_perpindahan_tahap(self):
         """Mail server mati tidak boleh mengembalikan tahap yang sudah berubah."""
-        from django.core import mail
+        from unittest.mock import patch
         from sdm.services.rekrutmen import move_application
 
-        def _boom(*args, **kwargs):
-            raise OSError('mail server down')
-
-        with self.settings(EMAIL_BACKEND='django.core.mail.backends.locmem.EmailBackend'):
-            mail.send_mail = _boom
-            move_application(self.application, target='DITOLAK', actor=self.user)
+        with self.settings(
+            EMAIL_BACKEND='django.core.mail.backends.locmem.EmailBackend'
+        ):
+            # Patch modul service, bukan django.core.mail global: menimpa
+            # global akan bocor ke test lain dalam suite yang sama.
+            with patch(
+                'sdm.services.rekrutmen.send_mail',
+                side_effect=OSError('mail server down'),
+            ):
+                move_application(
+                    self.application, target='DITOLAK', actor=self.user
+                )
         self.application.refresh_from_db()
         self.assertEqual(self.application.status, 'DITOLAK')

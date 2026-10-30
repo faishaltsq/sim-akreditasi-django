@@ -17,7 +17,8 @@
                         <td>{{ sesi.lamaran.nama_pelamar }}</td>
                         <td class="fw-semibold">{{ sesi.nilai }}</td>
                         <td>
-                            {% if sesi.lulus %}<span class="badge bg-success">Lulus</span>
+                            {% if sesi.lulus is None %}<span class="badge bg-secondary">Belum ditetapkan</span>
+                            {% elif sesi.lulus %}<span class="badge bg-success">Lulus</span>
                             {% else %}<span class="badge bg-danger">Tidak lulus</span>{% endif %}
                         </td>
                         <td class="small">{{ sesi.pindah_fokus }}</td>

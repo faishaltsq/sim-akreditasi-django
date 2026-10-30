@@ -1,9 +1,13 @@
 """Level 2 transactional workflows (recruitment, PSV, privileging, orientation)."""
 import logging
+from string import Formatter
+
+from django.contrib.auth import get_user_model
 
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.core.mail import send_mail
 from django.db import transaction
+from django.db.models import Q
 from django.utils import timezone
 
 from sdm.akses import require_hc_capability, visible_units
@@ -13,6 +17,11 @@ from sdm.models import (
     Lamaran,
     Lowongan,
     Pegawai,
+    MasterProfesiPegawai,
+    DokumenPegawai,
+    ProfilPribadiPegawai,
+    UrutanNomorPegawai,
+    VersiDokumen,
     PengajuanKredensial,
     PrivilegeSnapshot,
     PenugasanKlinis,
@@ -24,6 +33,7 @@ from sdm.models import (
     RiwayatSeleksi,
     VerifikasiSumber,
 )
+from sdm.storage import get_private_storage, _cleanup_uploaded_object
 
 
 logger = logging.getLogger(__name__)
@@ -106,53 +116,146 @@ def _notify_penolakan(application, notes):
         )
 
 
+def _next_hire_number():
+    today = timezone.localdate()
+    sequences = list(UrutanNomorPegawai.objects.select_for_update().filter(
+        is_active=True, period_start__lte=today,
+    ).filter(Q(period_end__isnull=True) | Q(period_end__gte=today))[:2])
+    if len(sequences) != 1:
+        raise ValidationError({'nomor_pegawai': 'Konfigurasi nomor pegawai aktif harus tepat satu.'})
+    sequence = sequences[0]
+    try:
+        fields = list(Formatter().parse(sequence.format_pattern))
+        if not any(name == 'counter' for _, name, _, _ in fields):
+            raise ValueError
+        if any(name is not None and (
+            name not in {'year', 'month', 'counter'} or conversion or '{' in spec or '}' in spec
+        ) for _, name, spec, conversion in fields):
+            raise ValueError
+        number = sequence.format_pattern.format(
+            year=today.year, month=today.month, counter=sequence.next_counter,
+        )
+    except (ValueError, KeyError, IndexError, AttributeError):
+        raise ValidationError({'nomor_pegawai': 'Pola nomor pegawai tidak valid.'}) from None
+    if not number.strip() or len(number) > 50:
+        raise ValidationError({'nomor_pegawai': 'Hasil pola nomor pegawai tidak valid.'})
+    if Pegawai.objects.filter(nomor_pegawai=number).exists():
+        raise ValidationError({'nomor_pegawai': 'Nomor pegawai sudah digunakan; periksa counter.'})
+    sequence.next_counter += 1
+    sequence.save(update_fields=['next_counter', 'updated_at'])
+    return number
+
+
 def hire_application(application, *, actor, idempotency_key):
-    """Create exactly one employee for an accepted application."""
+    """Hire atomically; copied private objects are removed if the transaction fails."""
     require_hc_capability(
         actor, 'can_manage_hc_recruitment', unit=application.lowongan.unit_kerja_id
     )
-    if application.status != 'DITERIMA':
-        raise ValidationError({'status': 'Hanya lamaran diterima yang dapat direkrut.'})
     if not idempotency_key:
         raise ValidationError({'idempotency_key': 'Kunci idempotensi wajib diisi.'})
 
-    with transaction.atomic():
-        locked = Lamaran.objects.select_for_update().select_related(
-            'lowongan__unit_kerja'
-        ).get(pk=application.pk)
-        if locked.employee_id:
-            return locked.employee
-        if Lamaran.objects.filter(
-            idempotency_key=idempotency_key
-        ).exclude(pk=locked.pk).exists():
-            raise ValidationError({'idempotency_key': 'Permintaan rekrutmen duplikat.'})
+    uploaded = []
+    storage = None
+    try:
+        # A surrounding transaction could roll back after private objects were
+        # uploaded, with no rollback callback available to remove those copies.
+        with transaction.atomic(durable=True):
+            locked = Lamaran.objects.select_for_update().select_related(
+                'lowongan__unit_kerja', 'pelamar'
+            ).get(pk=application.pk)
+            require_hc_capability(actor, 'can_manage_hc_recruitment', unit=locked.lowongan.unit_kerja_id)
+            if locked.status != 'DITERIMA':
+                raise ValidationError({'status': 'Hanya lamaran diterima yang dapat direkrut.'})
+            if locked.employee_id:
+                return locked.employee
+            if Lamaran.objects.filter(idempotency_key=idempotency_key).exclude(pk=locked.pk).exists():
+                raise ValidationError({'idempotency_key': 'Permintaan rekrutmen duplikat.'})
 
-        employee = Pegawai.objects.create(
-            nama_lengkap=locked.nama_pelamar,
-            kategori='PPA' if locked.lowongan.profesi else 'NON_PPA',
-            profesi=locked.lowongan.profesi,
-            status='AKTIF',
-        )
-        from sdm.models import PenempatanPegawai
-        from sdm.services.penempatan import save_assignment
+            number = _next_hire_number()
+            candidate = locked.pelamar
+            if candidate and len(candidate.telepon) > 30:
+                raise ValidationError({'telepon': 'Nomor telepon terlalu panjang untuk profil pegawai.'})
+            User = get_user_model()
+            if User.objects.filter(username=number).exists():
+                raise ValidationError({'nomor_pegawai': 'Nama akun untuk nomor pegawai sudah digunakan.'})
+            account = User.objects.create_user(
+                username=number, email=candidate.email if candidate else '', password=None,
+            )
+            professions = list(MasterProfesiPegawai.objects.filter(
+                nama__iexact=locked.lowongan.profesi, is_active=True,
+            )[:2]) if locked.lowongan.profesi else []
+            employee = Pegawai.objects.create(
+                akun=account, nomor_pegawai=number, nama_lengkap=locked.nama_pelamar,
+                kategori='PPA' if locked.lowongan.profesi else 'NON_PPA',
+                profesi=locked.lowongan.profesi,
+                profesi_master=professions[0] if len(professions) == 1 else None,
+                status='AKTIF',
+            )
+            if candidate:
+                ProfilPribadiPegawai.objects.create(
+                    employee=employee, tanggal_lahir=candidate.tanggal_lahir,
+                    telepon=candidate.telepon,
+                )
 
-        save_assignment(PenempatanPegawai(
-            pegawai=employee,
-            unit_kerja=locked.lowongan.unit_kerja,
-            tanggal_mulai=timezone.localdate(),
-            alokasi_fte='1.00',
-        ))
-        locked.employee = employee
-        locked.idempotency_key = idempotency_key
-        locked.save(update_fields=['employee', 'idempotency_key', 'updated_at'])
-        PeristiwaSDM.objects.create(
-            actor=actor,
-            jenis_peristiwa='recruitment_hired',
-            target_tipe='application',
-            target_id=str(locked.pk),
-            status_sesudah='DITERIMA',
-            alasan=f'employee_created={employee.pk}',
-        )
+            kinds = {
+                'KTP': 'IDENTITY', 'IJAZAH': 'EDUCATION', 'TRANSKRIP': 'EDUCATION',
+                'STR': 'CREDENTIAL', 'SIP': 'CREDENTIAL', 'SERTIFIKAT': 'TRAINING',
+                'CV': 'PROFESSIONAL', 'LAINNYA': 'OTHER',
+            }
+            mimes = {'pdf': 'application/pdf', 'png': 'image/png',
+                     'jpg': 'image/jpeg', 'jpeg': 'image/jpeg'}
+            for source in locked.berkas.all():
+                if not source.berkas:
+                    continue
+                if not 0 < source.berkas.size <= 5 * 1024 * 1024:
+                    raise ValidationError({'berkas': 'Ukuran berkas pelamar tidak valid.'})
+                filename = source.berkas.name.replace('\\', '/').rsplit('/', 1)[-1]
+                extension = filename.rsplit('.', 1)[-1].lower()
+                if extension not in mimes or source.jenis not in kinds:
+                    raise ValidationError({'berkas': 'Jenis berkas pelamar tidak didukung.'})
+                if storage is None:
+                    storage = get_private_storage()
+                with source.berkas.open('rb') as file_obj:
+                    stored = storage.upload(
+                        file_obj, owner_id=str(employee.pk), sensitivity='personnel',
+                        filename=filename, content_type=mimes[extension], max_bytes=5 * 1024 * 1024,
+                    )
+                uploaded.append(stored.storage_key)
+                document = DokumenPegawai.objects.create(
+                    employee=employee, document_type=kinds[source.jenis],
+                    jenis_berkas='OTHER' if source.jenis == 'LAINNYA' else source.jenis,
+                    title=source.get_jenis_display(), sensitivity='personnel', created_by=actor,
+                )
+                VersiDokumen.objects.create(
+                    document=document, version_number=1, original_filename=filename[:255],
+                    storage_key=stored.storage_key, sha256=stored.sha256,
+                    size_bytes=stored.size_bytes, content_type=stored.content_type,
+                    created_by=actor,
+                )
+
+            from sdm.models import PenempatanPegawai
+            from sdm.services.orientasi import auto_assign_orientation
+            from sdm.services.penempatan import save_assignment
+
+            save_assignment(PenempatanPegawai(
+                pegawai=employee, unit_kerja=locked.lowongan.unit_kerja,
+                tanggal_mulai=timezone.localdate(), alokasi_fte='1.00',
+            ))
+            auto_assign_orientation(employee, actor=actor, unit_kerja=locked.lowongan.unit_kerja)
+            if not employee.orientations.exists():
+                raise ValidationError({'program': 'Program orientasi aktif belum dikonfigurasi.'})
+            locked.employee = employee
+            locked.idempotency_key = idempotency_key
+            locked.save(update_fields=['employee', 'idempotency_key', 'updated_at'])
+            PeristiwaSDM.objects.create(
+                actor=actor, jenis_peristiwa='recruitment_hired',
+                target_tipe='application', target_id=str(locked.pk),
+                status_sesudah='DITERIMA', alasan=f'employee_created={employee.pk}',
+            )
+    except Exception:
+        for key in uploaded:
+            _cleanup_uploaded_object(storage, key)
+        raise
     return employee
 
 

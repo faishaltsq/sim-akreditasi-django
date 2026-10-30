@@ -11,6 +11,7 @@ Aturan yang dijaga:
 import random
 from decimal import Decimal
 
+from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.utils import timezone
 
@@ -74,7 +75,10 @@ def catat_jawaban(sesi, soal_id, jawaban):
     if jawaban not in ('A', 'B', 'C', 'D'):
         raise ValueError('Jawaban tidak dikenal.')
 
-    soal = Soal.objects.filter(pk=soal_id, paket=sesi.paket).first()
+    try:
+        soal = Soal.objects.filter(pk=soal_id, paket=sesi.paket).first()
+    except (ValidationError, ValueError):
+        raise ValueError('Soal tidak ada di paket ini.') from None
     if soal is None:
         raise ValueError('Soal tidak ada di paket ini.')
 
@@ -120,8 +124,8 @@ def selesaikan_sesi(sesi, *, paksa=False):
         pass
 
     nilai = nilai_sesi(sesi)
-    passing = Decimal(str(sesi.paket.passing_grade or 0))
-    lulus = nilai >= passing
+    passing = sesi.paket.passing_grade
+    lulus = nilai >= Decimal(passing) if passing is not None else None
     sesi.status = 'KEDALUWARSA' if sesi.is_kedaluwarsa() else 'SELESAI'
     sesi.selesai_at = timezone.now()
     sesi.nilai = nilai

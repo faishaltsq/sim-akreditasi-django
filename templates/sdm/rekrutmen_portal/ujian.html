@@ -4,7 +4,7 @@
 {% block intro %}
 <p class="text-muted small mb-0">
     {{ sesi.paket.nama }} &middot; {{ soal|length }} soal
-    &middot; passing grade {{ sesi.paket.passing_grade }}
+    {% if sesi.paket.passing_grade is not None %}&middot; passing grade {{ sesi.paket.passing_grade }}{% endif %}
 </p>
 <div class="alert alert-info small py-2 mt-2" role="timer" aria-live="off">
     Sisa waktu: <strong id="ujian-sisa" data-batas="{{ sisa_detik }}">{{ sisa_detik }}</strong> detik
@@ -17,14 +17,11 @@
     <div class="card border shadow-sm mb-3">
         <div class="card-body">
             <p class="fw-semibold mb-2">{{ forloop.counter }}. {{ s.pertanyaan }}</p>
-            <input type="hidden" name="soal_id" value="{{ s.pk }}">
             <div class="list-group">
                 {% for label in "ABCD" %}
                 <label class="list-group-item list-group-item-action d-flex gap-2 align-items-start">
                     <input class="form-check-input flex-shrink-0 mt-1" type="radio"
-                           name="jawaban" value="{{ label }}"
-                           {% if terjawab|default:'' == s.pk|stringformat:"s" %}{% endif %}
-                           {% if s.pk|stringformat:"s" in terjawab %}checked{% endif %}>
+                           name="jawaban_{{ s.pk }}" value="{{ label }}"{% if s.jawaban_tersimpan == label %} checked{% endif %}>
                     <span><strong>{{ label }}.</strong>
                         {% if label == "A" %}{{ s.pilihan_a }}
                         {% elif label == "B" %}{{ s.pilihan_b }}

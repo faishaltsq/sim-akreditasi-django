@@ -177,30 +177,47 @@ def accept_staff_invitation(*, token, password):
                 pk=invitation.employee_id
             )
             canonical_email = User.objects.normalize_email(invitation.email)
-            candidate = User(username=canonical_email, email=canonical_email)
-            validate_password(password, user=candidate)
-
-            if employee.akun_id is not None:
-                error = 'Tautan aktivasi tidak valid atau sudah digunakan.'
-            elif User.objects.filter(
+            user = (
+                User.objects.select_for_update().get(pk=employee.akun_id)
+                if employee.akun_id else None
+            )
+            collisions = User.objects.filter(
                 Q(username__iexact=canonical_email)
                 | Q(email__iexact=canonical_email)
-            ).exists():
+            )
+            if user:
+                collisions = collisions.exclude(pk=user.pk)
+            if collisions.exists() or (
+                user and (
+                    user.email.strip().lower() != canonical_email.lower()
+                    or user.has_usable_password()
+                    or user.is_staff or user.is_superuser
+                    or user.groups.exists() or user.user_permissions.exists()
+                    or UserProfile.objects.filter(user=user).exists()
+                )
+            ):
                 error = 'Tautan aktivasi tidak valid atau sudah digunakan.'
             else:
-                user = User.objects.create_user(
-                    username=canonical_email,
-                    email=canonical_email,
-                    password=password,
-                    is_active=invitation.intended_is_active,
-                )
+                candidate = user or User(username=canonical_email, email=canonical_email)
+                validate_password(password, user=candidate)
+                if user:
+                    user.set_password(password)
+                    user.is_active = invitation.intended_is_active
+                    user.save(update_fields=['password', 'is_active'])
+                else:
+                    user = User.objects.create_user(
+                        username=canonical_email,
+                        email=canonical_email,
+                        password=password,
+                        is_active=invitation.intended_is_active,
+                    )
+                    employee.akun = user
+                    employee.save(update_fields=['akun', 'updated_at'])
                 UserProfile.objects.create(
                     user=user,
                     role=invitation.intended_role,
                     unit_kerja=_primary_unit(employee),
                 )
-                employee.akun = user
-                employee.save(update_fields=['akun', 'updated_at'])
                 invitation.state = 'ACCEPTED'
                 invitation.accepted_at = timezone.now()
                 invitation.attempt_count = F('attempt_count') + 1

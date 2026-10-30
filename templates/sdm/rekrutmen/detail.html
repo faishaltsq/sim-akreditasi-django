@@ -7,6 +7,7 @@
     <h1 class="page-title h4 mt-2 mb-3">{{ vacancy.judul }} — {{ vacancy.profesi }}</h1>
     <a class="btn btn-outline-secondary btn-sm mb-3" href="{% url 'sdm:rekrutmen_screening' vacancy.pk %}"><i class="bi bi-funnel me-1"></i>Matriks Seleksi Administrasi</a>
     <a class="btn btn-outline-secondary btn-sm mb-3" href="{% url 'sdm:rekrutmen_ranking' vacancy.pk %}"><i class="bi bi-trophy me-1"></i>Peringkat Ujian</a>
+    <a class="btn btn-outline-secondary btn-sm mb-3" href="{% url 'sdm:rekrutmen_wawancara' vacancy.pk %}"><i class="bi bi-people me-1"></i>Wawancara</a>
     <div class="card border shadow-sm">
         <div class="table-responsive">
             <table class="table table-sm align-middle mb-0">
@@ -36,11 +37,94 @@
                                 {% csrf_token %}
                                 <button class="btn btn-outline-secondary btn-sm" type="submit">Buka sesi ujian</button>
                             </form>
+                            {% if application.status == 'DITERIMA' and application.employee_id %}
+                            <form method="post" action="{% url 'sdm:hired_account_invite' application.pk %}" class="d-inline mt-1">
+                                {% csrf_token %}
+                                <button class="btn btn-outline-secondary btn-sm" type="submit">Kirim undangan aktivasi akun</button>
+                            </form>
+                            {% endif %}
                         </td>
                     </tr>
                     {% empty %}<tr><td colspan="4" class="text-center text-muted py-4">Belum ada lamaran.</td></tr>{% endfor %}
                 </tbody>
             </table>
+        </div>
+    </div>
+
+    <div class="row g-3 mt-1">
+        {% if can_read_mcu %}
+        <div class="col-12 col-lg-6">
+            <div class="card border shadow-sm h-100">
+                <div class="card-header bg-white"><h2 class="h6 mb-0">Hasil MCU Pra-Kerja</h2></div>
+                <div class="card-body">
+                    <p class="small text-muted">Hanya FIT dan Fit with Note yang dapat melanjutkan ke penawaran kerja.</p>
+                    {% for application, verdict in matrix %}
+                    <form method="post" action="{% url 'sdm:rekrutmen_mcu_simpan' application.pk %}"
+                          enctype="multipart/form-data" class="border rounded p-2 mb-2">
+                        {% csrf_token %}
+                        <div class="small fw-semibold mb-1">{{ application.nama_pelamar }}</div>
+                        <fieldset {% if not can_write_mcu %}disabled{% endif %}>
+                        <div class="row g-1">
+                            <div class="col-6">
+                                <label class="form-label small mb-0" for="mcu-st-{{ application.pk }}">Status</label>
+                                <select id="mcu-st-{{ application.pk }}" name="status" class="form-select form-select-sm" required>
+                                    <option value="" {% if not application.hasil_mcu %}selected{% endif %} disabled>Pilih hasil MCU</option>
+                                    {% for value, label in mcu_status_choices %}
+                                    <option value="{{ value }}" {% if application.hasil_mcu.status == value %}selected{% endif %}>{{ label }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label small mb-0" for="mcu-tg-{{ application.pk }}">Tanggal Periksa</label>
+                                <input id="mcu-tg-{{ application.pk }}" name="tanggal_periksa" type="date" class="form-control form-control-sm"
+                                       value="{{ application.hasil_mcu.tanggal_periksa|date:'Y-m-d' }}">
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label small mb-0" for="mcu-ps-{{ application.pk }}">Laboratorium / K3RS</label>
+                                <input id="mcu-ps-{{ application.pk }}" name="penyelenggara" class="form-control form-control-sm"
+                                       maxlength="200" value="{{ application.hasil_mcu.penyelenggara }}">
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label small mb-0" for="mcu-ct-{{ application.pk }}">Catatan</label>
+                                <input id="mcu-ct-{{ application.pk }}" name="catatan" class="form-control form-control-sm"
+                                       maxlength="1000" value="{{ application.hasil_mcu.catatan }}">
+                            </div>
+                            <div class="col-12">
+                                <button class="btn btn-outline-primary btn-sm" type="submit">Simpan MCU</button>
+                            </div>
+                        </div>
+                        </fieldset>
+                    </form>
+                    {% empty %}<p class="small text-muted mb-0">Belum ada lamaran.</p>{% endfor %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+        <div class="col-12 col-lg-6">
+            <div class="card border shadow-sm h-100">
+                <div class="card-header bg-white"><h2 class="h6 mb-0">Surat Penawaran Kerja</h2></div>
+                <div class="card-body">
+                    {% for application, verdict in matrix %}
+                    <form method="post" action="{% url 'sdm:rekrutmen_offering_buat' application.pk %}" class="border rounded p-2 mb-2">
+                        {% csrf_token %}
+                        <div class="small fw-semibold mb-1">{{ application.nama_pelamar }}</div>
+                        {% if application.konfirmasi_offering %}
+                        <a class="small d-block mb-1" href="{% url 'sdm:portal_offering' application.konfirmasi_offering.token %}">Tautan penawaran kandidat</a>
+                        {% endif %}
+                        <div class="row g-1">
+                            <div class="col-12">
+                                <label class="form-label small mb-0" for="of-ns-{{ application.pk }}">Nomor Surat</label>
+                                <input id="of-ns-{{ application.pk }}" name="nomor_surat" class="form-control form-control-sm"
+                                       maxlength="100" placeholder="mis. 123/HC-RS/2026">
+                            </div>
+                            <div class="col-12">
+                                <button class="btn btn-outline-primary btn-sm" type="submit">Terbitkan Surat</button>
+                            </div>
+                        </div>
+                    </form>
+                    {% empty %}<p class="small text-muted mb-0">Belum ada lamaran.</p>{% endfor %}
+                </div>
+            </div>
         </div>
     </div>
 

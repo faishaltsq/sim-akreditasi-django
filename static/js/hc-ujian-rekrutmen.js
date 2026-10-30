@@ -35,7 +35,11 @@
     var focusUrl = form.getAttribute('data-fokus-url');
     document.addEventListener('visibilitychange', function () {
         if (document.hidden && focusUrl) {
-            navigator.sendBeacon && navigator.sendBeacon(focusUrl);
+            if (navigator.sendBeacon) {
+                var data = new FormData();
+                data.append('csrfmiddlewaretoken', form.querySelector('[name=csrfmiddlewaretoken]').value);
+                navigator.sendBeacon(focusUrl, data);
+            }
         }
     });
 })();

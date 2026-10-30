@@ -1,0 +1,59 @@
+{% extends "sdm/rekrutmen_portal/_base_publik.html" %}
+{% block title %}{{ title }}{% endblock %}
+{% block intro %}
+<p class="text-muted small mb-0">
+    {{ lamaran.lowongan.judul }} &middot; {{ lamaran.lowongan.unit_kerja.code }} — {{ lamaran.lowongan.unit_kerja.name }}
+</p>
+{% endblock %}
+{% block content %}
+<div class="card border shadow-sm mb-3">
+    <div class="card-body">
+        <h2 class="h6 mb-2">Surat Penawaran Kerja</h2>
+        <p class="small text-muted mb-2">
+            Nomor: {{ offering.nomor_surat|default:"(tanpa nomor)" }}
+            &middot; Diterbitkan {{ offering.created_at|date:"d M Y" }}
+        </p>
+        <p class="small mb-3">
+            Silakan tinjau surat penawaran yang terlampir, lalu berikan
+            keputusan Anda di bawah ini.
+        </p>
+        <a class="btn btn-outline-secondary btn-sm"
+           href="{% url 'sdm:portal_offering_unduh' offering.token %}">
+            <i class="bi bi-download me-1"></i>Unduh surat (PDF)
+        </a>
+    </div>
+</div>
+
+<div class="card border shadow-sm">
+    <div class="card-body">
+        {% if offering.disetujui is None %}
+        <form method="post">
+            {% csrf_token %}
+            <div class="mb-2">
+                <label class="form-label small fw-semibold" for="of-catatan">Catatan (opsional)</label>
+                <textarea id="of-catatan" name="catatan" class="form-control form-control-sm" rows="2" maxlength="1000"></textarea>
+            </div>
+            <div class="d-flex gap-2">
+                <button class="btn btn-primary btn-sm" type="submit" name="keputusan" value="setuju">
+                    Saya menyetujui penawaran
+                </button>
+                <button class="btn btn-outline-secondary btn-sm" type="submit" name="keputusan" value="tolak">
+                    Saya tidak dapat menerima
+                </button>
+            </div>
+        </form>
+        {% else %}
+        <p class="mb-0">
+            {% if offering.disetujui %}
+            <span class="badge bg-success">Penawaran disetujui</span>
+            {% else %}
+            <span class="badge bg-secondary">Penawaran ditolak</span>
+            {% endif %}
+            <span class="small text-muted ms-2">
+                dicatat {{ offering.disetujui_at|date:"d M Y H:i" }}
+            </span>
+        </p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

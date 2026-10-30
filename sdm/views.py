@@ -3,7 +3,7 @@ import csv
 import datetime
 import hashlib
 from datetime import timedelta
-from decimal import InvalidOperation
+from decimal import Decimal, InvalidOperation
 
 from django.contrib import messages
 from django.core.cache import cache
@@ -13,6 +13,7 @@ from django.core.paginator import Paginator
 from django.db import IntegrityError, transaction
 from django.db.models import Q
 from django.http import (
+    FileResponse,
     Http404,
     HttpResponse,
     HttpResponseBadRequest,
@@ -162,6 +163,11 @@ from sdm.services.syarat_kredensial import (
 )
 from akreditasi.security_utils import extract_client_ip
 from sdm.services.aktivitas import activity_metrics, activity_rows
+from sdm.services.wawancara_rekrutmen import (
+    bobot_terkonfigurasi,
+    nilai_wawancara,
+    skor_gabungan,
+)
 from sdm.services.fte_kalkulator import (
     PRESET_UNIT,
     band_gap,
@@ -1218,10 +1224,20 @@ def rekrutmen_detail(request, vacancy_id):
     applications = screening_queue(vacancy).select_related('employee')
     # Usulan saringan dihitung sekali per baris; operator tetap pemutus akhir.
     matrix = [(app, screen_application(app)) for app in applications]
+    from sdm.models import HasilMCU
+    can_read_mcu = visible_units(request.user, capability='hc_health_read').filter(
+        pk=vacancy.unit_kerja_id
+    ).exists()
+    can_write_mcu = visible_units(request.user, capability='hc_health_write').filter(
+        pk=vacancy.unit_kerja_id
+    ).exists()
     return render(request, 'sdm/rekrutmen/detail.html', {
         'vacancy': vacancy,
         'matrix': matrix,
         'stage_choices': Lamaran.STATUS_CHOICES,
+        'mcu_status_choices': HasilMCU.STATUS_CHOICES,
+        'can_read_mcu': can_read_mcu,
+        'can_write_mcu': can_write_mcu,
     })
 
 
@@ -1310,6 +1326,273 @@ def rekrutmen_buat_sesi_ujian(request, application_id):
     messages.success(request, 'Sesi ujian dibuka.')
     return redirect(
         'sdm:rekrutmen_detail', vacancy_id=application.lowongan_id
+    )
+
+
+@login_required
+def rekrutmen_wawancara(request, vacancy_id):
+    """C5: daftar jadwal wawancara + scorecard satu lowongan."""
+    from django.contrib.auth import get_user_model
+    from sdm.models import JadwalWawancara
+
+    units = visible_units(request.user, capability='can_manage_hc_recruitment')
+    vacancy = get_object_or_404(
+        Lowongan.objects.filter(
+            Q(unit_kerja__in=units) |
+            Q(applications__jadwal_wawancara__penguji=request.user)
+        ).distinct(), pk=vacancy_id,
+    )
+    can_manage = units.filter(pk=vacancy.unit_kerja_id).exists()
+    jadwal = (
+        JadwalWawancara.objects.filter(lamaran__lowongan=vacancy)
+        .select_related('lamaran', 'lamaran__pelamar')
+        .prefetch_related('penguji', 'scorecard')
+        .order_by('waktu')
+    )
+    if not can_manage:
+        jadwal = jadwal.filter(penguji=request.user)
+    baris = []
+    for j in jadwal:
+        baris.append({
+            'jadwal': j,
+            'can_score': request.user in j.penguji.all(),
+            'scorecard': next((s for s in j.scorecard.all() if s.penguji_id == request.user.pk), None),
+            'nilai_hrd': nilai_wawancara(j.lamaran, 'HRD'),
+            'nilai_user': nilai_wawancara(j.lamaran, 'USER'),
+            'skor_gabungan': skor_gabungan(j.lamaran),
+        })
+    return render(request, 'sdm/rekrutmen/wawancara.html', {
+        'vacancy': vacancy,
+        'baris': baris,
+        'bobot_terkonfigurasi': bobot_terkonfigurasi(),
+        'can_manage': can_manage,
+        'applications': vacancy.applications.filter(jadwal_wawancara__isnull=True).order_by('created_at') if can_manage else [],
+        'interviewers': get_user_model().objects.filter(is_active=True).order_by('username') if can_manage else [],
+    })
+
+
+@login_required
+@require_POST
+def rekrutmen_jadwal_buat(request, application_id):
+    """C5.1: buat jadwal wawancara untuk satu lamaran."""
+    from sdm.models import JadwalWawancara
+    from sdm.services.wawancara_rekrutmen import buat_jadwal
+    from datetime import datetime as _dt
+
+    anchor = get_object_or_404(
+        Lamaran.objects.select_related('lowongan'), pk=application_id,
+        lowongan__unit_kerja__in=visible_units(
+            request.user, capability='can_manage_hc_recruitment'
+        ),
+    )
+    target_id = request.POST.get('lamaran_id')
+    if not target_id:
+        messages.error(request, 'Pilih lamaran.')
+        return redirect('sdm:rekrutmen_wawancara', vacancy_id=anchor.lowongan_id)
+    application = get_object_or_404(
+        Lamaran.objects.select_related('lowongan'), pk=target_id,
+        lowongan_id=anchor.lowongan_id,
+    )
+    waktu_raw = (request.POST.get('waktu') or '').strip()
+    try:
+        waktu = _dt.strptime(waktu_raw, '%Y-%m-%dT%H:%M')
+    except ValueError:
+        messages.error(request, 'Format waktu tidak valid.')
+        return redirect(
+            'sdm:rekrutmen_wawancara', vacancy_id=application.lowongan_id
+        )
+    if timezone.is_naive(waktu):
+        waktu = timezone.make_aware(waktu)
+
+    penguji_ids = request.POST.getlist('penguji')
+    from django.contrib.auth import get_user_model
+    penguji = get_user_model().objects.filter(pk__in=[v for v in penguji_ids if v.isdigit()], is_active=True)
+    if not penguji_ids or penguji.count() != len(set(penguji_ids)):
+        messages.error(request, 'Pilih penguji aktif yang valid.')
+        return redirect('sdm:rekrutmen_wawancara', vacancy_id=application.lowongan_id)
+    if JadwalWawancara.objects.filter(lamaran=application).exists():
+        messages.error(request, 'Lamaran sudah memiliki jadwal wawancara.')
+        return redirect('sdm:rekrutmen_wawancara', vacancy_id=application.lowongan_id)
+    if request.POST.get('mode', 'LURING') not in ('LURING', 'DARING'):
+        messages.error(request, 'Mode wawancara tidak valid.')
+        return redirect('sdm:rekrutmen_wawancara', vacancy_id=application.lowongan_id)
+
+    try:
+        jadwal = buat_jadwal(
+            lamaran=application, waktu=waktu,
+            mode=request.POST.get('mode', 'LURING'),
+            lokasi_tautan=(request.POST.get('lokasi_tautan') or '')[:300],
+            catatan=(request.POST.get('catatan') or '')[:1000],
+            penguji=penguji, actor=request.user,
+        )
+    except ValidationError as exc:
+        for field, errors in exc.message_dict.items():
+            messages.error(request, '; '.join(errors))
+        return redirect(
+            'sdm:rekrutmen_wawancara', vacancy_id=application.lowongan_id
+        )
+    if request.POST.get('kirim_undangan'):
+        from sdm.services.wawancara_rekrutmen import kirim_undangan
+        if kirim_undangan(jadwal, actor=request.user):
+            messages.success(request, 'Jadwal dibuat dan undangan terkirim.')
+        else:
+            messages.success(
+                request, 'Jadwal dibuat, tetapi undangan belum dapat dikirim '
+                         '(alamat email belum tersedia).'
+            )
+    else:
+        messages.success(request, 'Jadwal wawancara dibuat.')
+    return redirect(
+        'sdm:rekrutmen_wawancara', vacancy_id=application.lowongan_id
+    )
+
+
+@login_required
+@require_POST
+def rekrutmen_undangan_kirim(request, jadwal_id):
+    """C5.2: kirim ulang undangan wawancara."""
+    from sdm.models import JadwalWawancara
+    jadwal = get_object_or_404(
+        JadwalWawancara.objects.select_related('lamaran__lowongan'),
+        pk=jadwal_id,
+        lamaran__lowongan__unit_kerja__in=visible_units(
+            request.user, capability='can_manage_hc_recruitment'
+        ),
+    )
+    from sdm.services.wawancara_rekrutmen import kirim_undangan
+    if kirim_undangan(jadwal, actor=request.user):
+        messages.success(request, 'Undangan terkirim.')
+    else:
+        messages.error(
+            request, 'Undangan tidak dapat dikirim: alamat email belum ada.'
+        )
+    return redirect(
+        'sdm:rekrutmen_wawancara', vacancy_id=jadwal.lamaran.lowongan_id
+    )
+
+
+@login_required
+@require_POST
+def rekrutmen_mcu_simpan(request, application_id):
+    """C6.1: catat hasil MCU pra-kerja untuk satu lamaran."""
+    application = get_object_or_404(
+        Lamaran.objects.select_related('lowongan'),
+        pk=application_id,
+        lowongan__unit_kerja__in=visible_units(
+            request.user, capability='can_manage_hc_recruitment'
+        ),
+    )
+    require_hc_capability(
+        request.user, 'hc_health_write', unit=application.lowongan.unit_kerja_id
+    )
+    from sdm.services.mcu_offering_rekrutmen import catat_mcu
+    tanggal_raw = (request.POST.get('tanggal_periksa') or '').strip()
+    try:
+        from datetime import datetime as _dt
+        tanggal = _dt.strptime(tanggal_raw, '%Y-%m-%d').date() if tanggal_raw else None
+    except ValueError:
+        messages.error(request, 'Format tanggal pemeriksaan tidak valid.')
+        return redirect(
+            'sdm:rekrutmen_detail', vacancy_id=application.lowongan_id
+        )
+    try:
+        catat_mcu(
+            lamaran=application,
+            status=request.POST.get('status', ''),
+            tanggal_periksa=tanggal,
+            penyelenggara=(request.POST.get('penyelenggara') or '')[:200],
+            catatan=(request.POST.get('catatan') or '')[:1000],
+            berkas=request.FILES.get('berkas'),
+            actor=request.user,
+        )
+    except ValidationError as exc:
+        for errors in exc.message_dict.values():
+            messages.error(request, '; '.join(errors))
+        return redirect(
+            'sdm:rekrutmen_detail', vacancy_id=application.lowongan_id
+        )
+    messages.success(request, 'Hasil MCU tersimpan.')
+    return redirect('sdm:rekrutmen_detail', vacancy_id=application.lowongan_id)
+
+
+@login_required
+@require_POST
+def rekrutmen_offering_buat(request, application_id):
+    """C6.3: terbitkan surat penawaran kerja beserta PDF-nya."""
+    application = get_object_or_404(
+        Lamaran.objects.select_related('lowongan'),
+        pk=application_id,
+        lowongan__unit_kerja__in=visible_units(
+            request.user, capability='can_manage_hc_recruitment'
+        ),
+    )
+    from sdm.services.mcu_offering_rekrutmen import buat_offering
+    try:
+        offering = buat_offering(
+            lamaran=application,
+            nomor_surat=(request.POST.get('nomor_surat') or '')[:100],
+            actor=request.user,
+        )
+    except ValidationError as exc:
+        for errors in exc.message_dict.values():
+            messages.error(request, '; '.join(errors))
+        return redirect(
+            'sdm:rekrutmen_detail', vacancy_id=application.lowongan_id
+        )
+    messages.success(request, 'Surat penawaran kerja diterbitkan.')
+    return redirect(
+        'sdm:rekrutmen_detail', vacancy_id=application.lowongan_id
+    )
+
+
+@login_required
+def rekrutmen_offering_unduh(request, token):
+    """Unduh surat penawaran dengan hak rekrutmen pada unit terkait."""
+    from sdm.models import KonfirmasiOffering
+    offering = get_object_or_404(
+        KonfirmasiOffering.objects.select_related('lamaran__lowongan'),
+        token=token,
+    )
+    require_hc_capability(
+        request.user, 'can_manage_hc_recruitment',
+        unit=offering.lamaran.lowongan.unit_kerja_id,
+    )
+    if not offering.berkas:
+        messages.error(request, 'Berkas surat penawaran belum tersedia.')
+        return redirect(
+            'sdm:rekrutmen_detail', vacancy_id=offering.lamaran.lowongan_id
+        )
+    return FileResponse(
+        offering.berkas.open('rb'), content_type='application/pdf',
+    )
+
+
+@login_required
+@require_POST
+def rekrutmen_scorecard_simpan(request, jadwal_id):
+    """C5.3: simpan scorecard satu penguji untuk satu wawancara."""
+    from sdm.models import JadwalWawancara
+    jadwal = get_object_or_404(
+        JadwalWawancara.objects.select_related('lamaran__lowongan'),
+        pk=jadwal_id,
+    )
+    if not jadwal.penguji.filter(pk=request.user.pk).exists():
+        raise PermissionDenied('Hanya penguji yang ditugaskan dapat mengisi scorecard.')
+    from sdm.services.wawancara_rekrutmen import catat_scorecard
+    from sdm.models import ScorecardWawancara
+    nilai = {nama: (request.POST.get(nama) or '').strip()
+             for nama in ScorecardWawancara.INDIKATOR}
+    try:
+        catat_scorecard(
+            jadwal=jadwal, penguji=request.user, jenis=request.POST.get('jenis', ''),
+            catatan=(request.POST.get('catatan') or '')[:1000], **nilai,
+        )
+    except ValidationError as exc:
+        messages.error(request, '; '.join(exc.messages))
+        return redirect('sdm:rekrutmen_wawancara', vacancy_id=jadwal.lamaran.lowongan_id)
+    messages.success(request, 'Scorecard tersimpan.')
+    return redirect(
+        'sdm:rekrutmen_wawancara', vacancy_id=jadwal.lamaran.lowongan_id
     )
 
 
