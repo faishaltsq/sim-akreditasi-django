@@ -3059,10 +3059,11 @@ def kredensial_pengajuan_sendiri(request):
         if not row['kind']:
             continue
         draft = draft_by_jenis.get(row['jenis'])
+        ada = (row['kind'] in owned_kinds) or (draft is not None and draft.versi_dokumen_id is not None)
         supporting_documents.append({
             'jenis': row['jenis'],
             'label': dict(DokumenSyaratKredensial.JENIS_CHOICES).get(row['jenis']),
-            'ada': row['kind'] in owned_kinds,
+            'ada': ada,
             'can_generate': row['jenis'] in DOKUMEN_KREDENSIAL_REGISTRY,
             'has_draft': draft is not None,
             'has_final': draft is not None and draft.versi_dokumen_id is not None,
@@ -3144,6 +3145,7 @@ def dokumen_kredensial_edit(request, jenis):
     manual_fields = [
         {
             'key': key,
+            'name': key.replace('_', ' ').title(),
             'label': hint,
             'value': existing.get(key) if isinstance(existing.get(key), str) else '',
         }
@@ -3168,6 +3170,22 @@ def dokumen_kredensial_finalize(request, jenis):
     if jenis not in DOKUMEN_KREDENSIAL_REGISTRY:
         raise Http404('Jenis dokumen tidak dapat digenerate.')
     draf = get_object_or_404(DrafDokumenKredensial, pegawai=pegawai, jenis=jenis)
+
+    # Save any fields submitted directly with finalize action
+    isian = dict(draf.isian or {})
+    has_post_fields = False
+    for key, _hint in DOKUMEN_KREDENSIAL_REGISTRY[jenis]['manual_fields']:
+        if key in request.POST:
+            has_post_fields = True
+            nilai = (request.POST.get(key) or '').strip()
+            if nilai:
+                isian[key] = nilai
+            else:
+                isian.pop(key, None)
+    if has_post_fields:
+        draf.isian = isian
+        draf.save(update_fields=['isian', 'updated_at'])
+
     finalize_dokumen_kredensial(draf, user=request.user)
     messages.success(request, 'Dokumen difinalkan dan siap diunduh.')
     return redirect('sdm:dokumen_kredensial_download', jenis=jenis)

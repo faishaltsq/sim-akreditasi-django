@@ -71,7 +71,13 @@ REGISTRY = {
             ('dari_tanggal', 'logbook_recap().dari_tanggal'),
         ],
         'manual_fields': [
+            ('jenjang_klinis_diusulkan', 'diisi perawat/preseptor: jenjang klinis yang diajukan'),
+            ('evaluasi_tahun_1', 'diisi preseptor: evaluasi adaptasi & keterampilan dasar Tahun I'),
+            ('evaluasi_tahun_2', 'diisi preseptor: evaluasi kemandirian & kegawatdaruratan Tahun II'),
+            ('evaluasi_tahun_3', 'diisi preseptor: evaluasi EBP & bimbingan peer Tahun III'),
             ('catatan_penilaian', 'dinilai dan diisi preseptor/kepala instalasi'),
+            ('nama_preseptor', 'diisi nama dan gelar Clinical Preceptor / Mitra Bestari'),
+            ('nama_kepala_instalasi', 'diisi nama dan gelar Kepala Instalasi / Ketua KSM'),
         ],
         'signatory_role': 'Kepala Instalasi/Unit',
         'sertifikat_jenis': 'LOGBOOK',
@@ -213,7 +219,7 @@ def _styles():
     }
 
 
-def _identity_table(identity, styles):
+def _identity_table(identity, styles, extra_rows=None):
     rows = [
         ('Nama Lengkap', identity['nama_lengkap']),
         ('Nomor Pegawai', identity['nomor_pegawai'] or '-'),
@@ -225,6 +231,8 @@ def _identity_table(identity, styles):
         ])) or '-'),
         ('Rumah Sakit', identity['rumah_sakit'] or '-'),
     ]
+    if extra_rows:
+        rows.extend(extra_rows)
     data = [
         [Paragraph(label, styles['label']), Paragraph(f': {value}', styles['body'])]
         for label, value in rows
@@ -335,9 +343,14 @@ def render_pdf(draf):
     ))
     story.append(Spacer(1, 6 * mm))
 
+    answers = _manual_answers(draf)
+    extra_rows = []
+    if draf.jenis == 'LOGBOOK_36BULAN' and answers.get('jenjang_klinis_diusulkan'):
+        extra_rows.append(('Jenjang Klinis Diusulkan', answers['jenjang_klinis_diusulkan']))
+
     story.append(Paragraph('Identitas', styles['label']))
     story.append(Spacer(1, 2 * mm))
-    story.append(_identity_table(identity, styles))
+    story.append(_identity_table(identity, styles, extra_rows=extra_rows))
     story.append(Spacer(1, 6 * mm))
 
     if draf.jenis == 'LOGBOOK_36BULAN':
@@ -355,9 +368,73 @@ def render_pdf(draf):
             'sampai tanggal cetak.',
             styles['footnote'],
         ))
-        story.append(Spacer(1, 6 * mm))
+        story.append(Spacer(1, 4 * mm))
 
-    if spec['sworn_statement']:
+        # Evaluasi Siklus Berkala
+        eval_t1 = answers.get('evaluasi_tahun_1')
+        eval_t2 = answers.get('evaluasi_tahun_2')
+        eval_t3 = answers.get('evaluasi_tahun_3')
+        if eval_t1 or eval_t2 or eval_t3:
+            story.append(Paragraph('Catatan Evaluasi Siklus Berkala (36 Bulan)', styles['label']))
+            story.append(Spacer(1, 2 * mm))
+            eval_rows = []
+            if eval_t1:
+                eval_rows.append([
+                    Paragraph('<b>Tahun I (Bulan 1–12)</b><br/><font color="#64748b" size="7.5">Adaptasi & Dasar</font>', styles['cell']),
+                    Paragraph(eval_t1, styles['body']),
+                ])
+            if eval_t2:
+                eval_rows.append([
+                    Paragraph('<b>Tahun II (Bulan 13–24)</b><br/><font color="#64748b" size="7.5">Kemandirian & Kasus</font>', styles['cell']),
+                    Paragraph(eval_t2, styles['body']),
+                ])
+            if eval_t3:
+                eval_rows.append([
+                    Paragraph('<b>Tahun III (Bulan 25–36)</b><br/><font color="#64748b" size="7.5">EBP & Mutu</font>', styles['cell']),
+                    Paragraph(eval_t3, styles['body']),
+                ])
+            eval_table = Table(eval_rows, colWidths=[45 * mm, 115 * mm])
+            eval_table.setStyle(TableStyle([
+                ('BOX', (0, 0), (-1, -1), 0.5, colors.HexColor('#64748b')),
+                ('INNERGRID', (0, 0), (-1, -1), 0.25, colors.HexColor('#e2e8f0')),
+                ('BACKGROUND', (0, 0), (0, -1), colors.HexColor('#f8fafc')),
+                ('TOPPADDING', (0, 0), (-1, -1), 3),
+                ('BOTTOMPADDING', (0, 0), (-1, -1), 3),
+                ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+            ]))
+            story.append(eval_table)
+            story.append(Spacer(1, 4 * mm))
+
+        if 'catatan_penilaian' in answers:
+            story.append(Spacer(1, 2 * mm))
+            story.append(Paragraph(f'<b>Catatan Penilaian:</b> {answers["catatan_penilaian"]}', styles['body']))
+
+        # Tanda Tangan Validasi 3 Pihak
+        preseptor = answers.get('nama_preseptor') or '........................................................'
+        kepala = answers.get('nama_kepala_instalasi') or '........................................................'
+        story.append(Spacer(1, 6 * mm))
+        sig_data = [
+            [Paragraph('<b>Perawat Pemohon</b>', styles['cell_title']),
+             Paragraph('<b>Clinical Preceptor / Mitra Bestari</b>', styles['cell_title']),
+             Paragraph('<b>Kepala Instalasi / KSM</b>', styles['cell_title'])],
+            [Spacer(1, 12 * mm), Spacer(1, 12 * mm), Spacer(1, 12 * mm)],
+            [Paragraph(employee.nama_lengkap, styles['cell']),
+             Paragraph(preseptor, styles['cell']),
+             Paragraph(kepala, styles['cell'])],
+            [Paragraph(f'NIP: {employee.nomor_pegawai or "-"}', styles['footnote']),
+             Paragraph('Tanda Tangan & Cap', styles['footnote']),
+             Paragraph('Tanda Tangan & Cap', styles['footnote'])],
+        ]
+        sig_table = Table(sig_data, colWidths=[53 * mm, 54 * mm, 53 * mm])
+        sig_table.setStyle(TableStyle([
+            ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+            ('TOPPADDING', (0, 0), (-1, -1), 2),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 2),
+            ('LEFTPADDING', (0, 0), (-1, -1), 0),
+        ]))
+        story.append(sig_table)
+
+    elif spec['sworn_statement']:
         story.append(Paragraph(DECLARATION_NOTICE, styles['label']))
         story.append(Spacer(1, 2 * mm))
         story.append(Paragraph(STATEMENT_BODY, styles['body']))
@@ -370,15 +447,24 @@ def render_pdf(draf):
                 styles['body'],
             ))
 
-    answers = _manual_answers(draf)
-    for key, _source in spec['manual_fields']:
-        if key not in answers:
-            continue
-        story.append(Spacer(1, 3 * mm))
-        story.append(Paragraph(f'{key.replace("_", " ").title()}: {answers[key]}',
-                               styles['body']))
+        for key, _source in spec['manual_fields']:
+            if key not in answers:
+                continue
+            story.append(Spacer(1, 3 * mm))
+            story.append(Paragraph(f'{key.replace("_", " ").title()}: {answers[key]}',
+                                   styles['body']))
 
-    story.extend(_signature_block(spec['signatory_role'], styles))
+        story.extend(_signature_block(spec['signatory_role'], styles))
+
+    else:
+        for key, _source in spec['manual_fields']:
+            if key not in answers:
+                continue
+            story.append(Spacer(1, 3 * mm))
+            story.append(Paragraph(f'{key.replace("_", " ").title()}: {answers[key]}',
+                                   styles['body']))
+
+        story.extend(_signature_block(spec['signatory_role'], styles))
 
     buffer = BytesIO()
     document = SimpleDocTemplate(

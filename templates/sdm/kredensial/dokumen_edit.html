@@ -17,7 +17,7 @@
                 {% csrf_token %}
                 {% for field in manual_fields %}
                 <div class="mb-2">
-                    <label class="form-label small fw-semibold" for="df-{{ field.key }}">{{ field.key|title }}</label>
+                    <label class="form-label small fw-semibold" for="df-{{ field.key }}">{{ field.name|default:field.key }}</label>
                     <textarea id="df-{{ field.key }}" name="{{ field.key }}" class="form-control form-control-sm" rows="3">{{ field.value }}</textarea>
                     <div class="form-text">{{ field.label }}</div>
                 </div>
