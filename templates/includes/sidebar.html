@@ -244,21 +244,25 @@
     {% endif %}
     {% if 'rajal' in allowed_mods %}
     <div class="sidebar-rajal">
-        <a href="{% url 'pasien:rajal_dashboard' %}"
-           class="nav-link{% if u == 'rajal_dashboard' and not request.GET.poli %} active{% endif %}">
+        <a class="nav-link nav-pokja" data-bs-toggle="collapse" href="#rajalPoli-{{ sidebar_uid }}"
+           role="button"
+           aria-expanded="{% if u == 'rajal_dashboard' %}true{% else %}false{% endif %}"
+           aria-controls="rajalPoli-{{ sidebar_uid }}">
             <span class="nav-icon"><i class="bi bi-hospital nav-icon-slate" aria-hidden="true"></i></span>
             <span class="nav-text"><span class="nav-title">Poli Rawat Jalan</span></span>
         </a>
-        <div class="ps-3">
-            <a href="{% url 'pasien:rajal_dashboard' %}" class="nav-link{% if not request.GET.poli %} active{% endif %}">Semua poli</a>
-            <a href="{% url 'pasien:rajal_dashboard' %}?poli=Jantung" class="nav-link{% if request.GET.poli == 'Jantung' %} active{% endif %}">Poli Jantung</a>
-            <a href="{% url 'pasien:rajal_dashboard' %}?poli=Paru" class="nav-link{% if request.GET.poli == 'Paru' %} active{% endif %}">Poli Paru</a>
-            <a href="{% url 'pasien:rajal_dashboard' %}?poli=Penyakit+Dalam" class="nav-link{% if 'Penyakit' in request.GET.poli %} active{% endif %}">Poli Penyakit Dalam</a>
-            <a href="{% url 'pasien:rajal_dashboard' %}?poli=Bedah" class="nav-link{% if 'Bedah' in request.GET.poli %} active{% endif %}">Poli Bedah Umum</a>
-            <a href="{% url 'pasien:rajal_dashboard' %}?poli=Anak" class="nav-link{% if 'Anak' in request.GET.poli %} active{% endif %}">Poli Anak</a>
-            <a href="{% url 'pasien:rajal_dashboard' %}?poli=Obgyn" class="nav-link{% if 'Obgyn' in request.GET.poli %} active{% endif %}">Poli Kandungan</a>
-            <a href="{% url 'pasien:rajal_dashboard' %}?poli=Mata" class="nav-link{% if 'Mata' in request.GET.poli %} active{% endif %}">Poli Mata</a>
-            <a href="{% url 'pasien:rajal_dashboard' %}?poli=Saraf" class="nav-link{% if 'Saraf' in request.GET.poli %} active{% endif %}">Poli Saraf</a>
+        <div class="collapse{% if u == 'rajal_dashboard' %} show{% endif %}" id="rajalPoli-{{ sidebar_uid }}">
+            <div>
+                <a href="{% url 'pasien:rajal_dashboard' %}" class="nav-link{% if u == 'rajal_dashboard' and not request.GET.poli %} active{% endif %}">Semua poli</a>
+                <a href="{% url 'pasien:rajal_dashboard' %}?poli=Jantung" class="nav-link{% if request.GET.poli == 'Jantung' %} active{% endif %}">Poli Jantung</a>
+                <a href="{% url 'pasien:rajal_dashboard' %}?poli=Paru" class="nav-link{% if request.GET.poli == 'Paru' %} active{% endif %}">Poli Paru</a>
+                <a href="{% url 'pasien:rajal_dashboard' %}?poli=Penyakit+Dalam" class="nav-link{% if 'Penyakit' in request.GET.poli %} active{% endif %}">Poli Penyakit Dalam</a>
+                <a href="{% url 'pasien:rajal_dashboard' %}?poli=Bedah" class="nav-link{% if 'Bedah' in request.GET.poli %} active{% endif %}">Poli Bedah Umum</a>
+                <a href="{% url 'pasien:rajal_dashboard' %}?poli=Anak" class="nav-link{% if 'Anak' in request.GET.poli %} active{% endif %}">Poli Anak</a>
+                <a href="{% url 'pasien:rajal_dashboard' %}?poli=Obgyn" class="nav-link{% if 'Obgyn' in request.GET.poli %} active{% endif %}">Poli Kandungan</a>
+                <a href="{% url 'pasien:rajal_dashboard' %}?poli=Mata" class="nav-link{% if 'Mata' in request.GET.poli %} active{% endif %}">Poli Mata</a>
+                <a href="{% url 'pasien:rajal_dashboard' %}?poli=Saraf" class="nav-link{% if 'Saraf' in request.GET.poli %} active{% endif %}">Poli Saraf</a>
+            </div>
         </div>
     </div>
     {% endif %}
