@@ -55,9 +55,10 @@ class SidebarKredensialPribadiTests(KredensialPribadiMenuBase):
 
         self.assertIn('Kredensial saya', body)
         self.assertIn('Pengajuan kredensial', body)
-        self.assertIn('Logbook saya', body)
+        self.assertNotIn('Logbook saya', body)
+        self.assertIn('Logbook terpadu', body)
         self.assertIn(reverse('sdm:kredensial_pengajuan_sendiri'), body)
-        self.assertIn(reverse('sdm:logbook_list'), body)
+        self.assertIn(reverse('akreditasi:logbook_daftar'), body)
 
     def test_menu_links_are_active_on_their_own_pages(self):
         user = self._nakes('nakes-active')
@@ -68,7 +69,7 @@ class SidebarKredensialPribadiTests(KredensialPribadiMenuBase):
         self.assertContains(page, 'nav-link active', msg_prefix='pengajuan link active')
 
         page = self.client.get(reverse('sdm:logbook_list'))
-        self.assertContains(page, 'Logbook saya')
+        self.assertContains(page, 'Logbook terpadu')
 
     def test_nakes_without_linked_pegawai_still_sees_personal_menu(self):
         # Brief requirement: a STAF_NAKES account sees the menu even when it
