@@ -297,7 +297,13 @@ def logbook_buat(request):
         unit = get_object_or_404(_unit_pilihan(request.user), pk=unit_id)
         ruangan = None
         if ruangan_id:
-            ruangan = Ruangan.objects.filter(pk=ruangan_id).first()
+            candidate_room = Ruangan.objects.filter(pk=ruangan_id).first()
+            if candidate_room:
+                valid_unit_ids = unit_subtree_ids(unit)
+                if candidate_room.unit_kerja_id in valid_unit_ids:
+                    ruangan = candidate_room
+                else:
+                    ruangan = None
 
         logbook, dibuat = LogbookHarian.objects.get_or_create(
             jenis=jenis, unit=unit, tanggal=tanggal, shift=shift,

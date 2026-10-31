@@ -79,3 +79,31 @@ class LogbookFormTemplateRenderTest(TestCase):
         self.assertIn(f'data-unit="{self.bangsal.pk}"', content)
         # Check presence of client-side sync script
         self.assertIn('filterRuanganByUnit', content)
+
+
+class LogbookPostValidationTest(TestCase):
+    def setUp(self):
+        self.bangsal = UnitKerja.objects.create(code='BANGSAL-D-VAL', name='Bangsal Dewasa Val', level=3)
+        self.igd = UnitKerja.objects.create(code='IGD-VAL', name='IGD Val', level=2)
+
+        self.r_bangsal = Ruangan.objects.create(kode='R-K1-VAL', nama='Bangsal Mawar Val', kelas='1', jenis='RANAP', unit_kerja=self.bangsal)
+        self.r_igd = Ruangan.objects.create(kode='IGD-01-VAL', nama='Triase IGD Val', kelas='IGD', jenis='IGD', unit_kerja=self.igd)
+
+        self.user = User.objects.create_user('ka.bangsal.val', password='x')
+        UserProfile.objects.update_or_create(user=self.user, defaults={'role': 'KEPALA_UNIT', 'unit_kerja': self.bangsal})
+
+    def test_forged_room_from_different_unit_is_sanitized_or_rejected(self):
+        """If user submits Bangsal Dewasa unit but injects IGD ruangan, room must not be linked."""
+        self.client.force_login(self.user)
+        r = self.client.post(reverse('akreditasi:logbook_buat'), {
+            'jenis': 'RANAP',
+            'shift': 'PAGI',
+            'unit': self.bangsal.pk,
+            'ruangan': self.r_igd.pk,  # Tampered room
+            'tanggal': '2026-10-31',
+        })
+        self.assertEqual(r.status_code, 302)
+        from akreditasi.logbook_models import LogbookHarian
+        lb = LogbookHarian.objects.get(unit=self.bangsal, shift='PAGI', tanggal='2026-10-31')
+        # Room must be sanitized to None because r_igd does not belong to self.bangsal
+        self.assertIsNone(lb.ruangan, "Mismatched ruangan must be sanitized to None")
