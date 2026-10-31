@@ -93,11 +93,12 @@
                     <label class="form-check-label" for="rememberMe">Ingat saya di perangkat ini</label>
                 </div>
 
-                <button type="submit" class="btn btn-primary w-100">
+                <button type="submit" class="btn btn-primary w-100" id="loginSubmitBtn"
+                        data-bs-toggle="tooltip" data-bs-title="Klik sekali saja">
                     <i class="bi bi-box-arrow-in-right" aria-hidden="true"></i>
                     Masuk
                 </button>
-            </form>
+                </form>
 
             <p class="login-foot">
                 Lupa kata sandi? Hubungi admin RS untuk pengaturan ulang. Sesi berakhir otomatis setelah tidak aktif.
@@ -116,17 +117,29 @@
     (function () {
         var btn = document.getElementById('togglePassword');
         var input = document.getElementById('id_password');
-        if (!btn || !input) return;
-        btn.addEventListener('click', function () {
-            var shown = input.type === 'text';
-            input.type = shown ? 'password' : 'text';
-            btn.setAttribute('aria-pressed', shown ? 'false' : 'true');
-            btn.setAttribute('aria-label', shown ? 'Tampilkan kata sandi' : 'Sembunyikan kata sandi');
-            btn.setAttribute('title', shown ? 'Tampilkan kata sandi' : 'Sembunyikan kata sandi');
-            var icon = btn.querySelector('i');
-            if (icon) icon.className = shown ? 'bi bi-eye' : 'bi bi-eye-slash';
-            input.focus();
-        });
+        if (btn && input) {
+            btn.addEventListener('click', function () {
+                var shown = input.type === 'text';
+                input.type = shown ? 'password' : 'text';
+                btn.setAttribute('aria-pressed', shown ? 'false' : 'true');
+                btn.setAttribute('aria-label', shown ? 'Tampilkan kata sandi' : 'Sembunyikan kata sandi');
+                btn.setAttribute('title', shown ? 'Tampilkan kata sandi' : 'Sembunyikan kata sandi');
+                var icon = btn.querySelector('i');
+                if (icon) icon.className = shown ? 'bi bi-eye' : 'bi bi-eye-slash';
+                input.focus();
+            });
+        }
+
+        // Anti double-submit: disable tombol Masuk saat form dikirim,
+        // agar POST kedua (double-tap di HP / jaringan lambat) tidak terkirim.
+        var form = document.getElementById('loginSubmitBtn') ? document.getElementById('loginSubmitBtn').form : null;
+        var submitBtn = document.getElementById('loginSubmitBtn');
+        if (form && submitBtn) {
+            form.addEventListener('submit', function () {
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm" aria-hidden="true"></span> Memproses...';
+            });
+        }
     })();
 </script>
 </body>

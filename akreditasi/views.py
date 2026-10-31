@@ -39,6 +39,11 @@ def custom_csrf_failure(request, reason=""):
     CSRF failure view kustom:
     Jika request adalah API/AJAX (mengakses /ai/ atau /api/ atau accept json),
     kembalikan JsonResponse 403. Jika view biasa, kembalikan halaman CSRF default Django.
+
+    Kasus khusus: POST duplikat saat login (double-tap tombol Masuk di jaringan
+    lambat). Login pertama sukses dan memutar token CSRF, sehingga POST kedua
+    membawa token lama dan ditolak middleware — padahal user sudah berhasil
+    masuk. Alih-alih menampilkan 403, arahkan user ke dashboard.
     """
     is_api = (
         request.path.startswith('/ai/') or
@@ -53,6 +58,21 @@ def custom_csrf_failure(request, reason=""):
             'error': 'Token keamanan (CSRF) tidak valid atau kedaluwarsa. Harap muat ulang halaman.',
             'csrf_error': True
         }, status=403)
+
+    if (
+        request.method == 'POST'
+        and request.path == '/accounts/login/'
+        and request.user.is_authenticated
+    ):
+        # Login pertama sudah sukses; POST kedua ini double-submit yang tertinggal.
+        # POST membawa hidden 'next', GET jarang ada pada double-submit.
+        redirect_to = request.POST.get('next') or request.GET.get('next') or ''
+        if not url_has_allowed_host_and_scheme(redirect_to, allowed_hosts=None):
+            # Kosong / lintas-origin -> dashboard bawaan (bisa berupa nama URL,
+            # resolve lewat redirect(), bukan HttpResponseRedirect literal).
+            redirect_to = settings.LOGIN_REDIRECT_URL
+        return redirect(redirect_to)
+
     from django.views.csrf import csrf_failure as django_csrf_failure
     return django_csrf_failure(request, reason=reason)
 
