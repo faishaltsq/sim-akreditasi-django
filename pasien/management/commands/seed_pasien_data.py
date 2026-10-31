@@ -23,12 +23,26 @@ class Command(BaseCommand):
             ('OK-01',  'Kamar Bedah Sentral', 'OK', 'OK', 2),
         ]
 
+        from akreditasi.layanan_unit import RUANGAN_UNIT_CODE
+        from akreditasi.models import UnitKerja
+
+        unit_cache = {
+            u.code: u for u in UnitKerja.objects.filter(code__in=list(RUANGAN_UNIT_CODE.values()))
+        }
+
         total_beds = 0
         for kode, nama, kelas, jenis, kap in ruangan_data:
-            r, _ = Ruangan.objects.get_or_create(
+            target_unit = unit_cache.get(RUANGAN_UNIT_CODE.get(kode))
+            r, created = Ruangan.objects.get_or_create(
                 kode=kode,
-                defaults={'nama': nama, 'kelas': kelas, 'jenis': jenis, 'kapasitas': kap}
+                defaults={
+                    'nama': nama, 'kelas': kelas, 'jenis': jenis, 'kapasitas': kap,
+                    'unit_kerja': target_unit,
+                }
             )
+            if not created and r.unit_kerja != target_unit and target_unit:
+                r.unit_kerja = target_unit
+                r.save(update_fields=['unit_kerja'])
             for i in range(1, kap + 1):
                 b_code = f'{i:02d}'
                 b, created = Bed.objects.get_or_create(
