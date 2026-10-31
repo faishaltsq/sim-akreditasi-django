@@ -17,6 +17,7 @@ from django.views.decorators.http import require_POST
 
 from .akses_indikator import HOSPITAL_WIDE_ROLES, unit_scope_ids
 from .file_security import sanitize_filename, validate_uploaded_file
+from .indikator_views import unit_subtree_ids
 from .logbook_models import (
     JENIS_CHOICES, SEKSI_LABEL, SHIFT_CHOICES,
     LogbookBukti, LogbookChecklist, LogbookHarian, LogbookKejadian,
@@ -130,7 +131,13 @@ def _logbook_scoped(user):
 
 
 def _unit_pilihan(user):
-    """Unit kerja yang boleh dipilih saat membuat logbook."""
+    """Unit kerja yang boleh dipilih saat membuat logbook.
+
+    Untuk user tingkat unit (KEPALA_UNIT, STAF_NAKES), hanya menampilkan unit
+    miliknya dan turunan ke bawah (subtree descendants), TIDAK menampilkan
+    leluhur (ancestors seperti IRIN atau Pelaksana Teknis).
+    Admin RS, Super Admin, dan role lingkup RS tetap melihat seluruh unit aktif.
+    """
     qs = UnitKerja.objects.filter(is_active=True).order_by('level', 'name')
     if user.is_superuser:
         return qs
@@ -140,7 +147,8 @@ def _unit_pilihan(user):
     if p.role in ROLE_LINGKUP_RS:
         return qs
     if p.unit_kerja:
-        return qs.filter(pk__in=unit_scope_ids(p.unit_kerja))
+        allowed_ids = unit_subtree_ids(p.unit_kerja)
+        return qs.filter(pk__in=allowed_ids)
     return qs.none()
 
 
@@ -301,11 +309,27 @@ def logbook_buat(request):
             messages.info(request, 'Logbook shift tersebut sudah ada — dibuka kembali.')
         return redirect('akreditasi:logbook_detail', pk=logbook.pk)
 
-    ruangan_qs = Ruangan.objects.all().order_by('kode')
+    unit_choices = _unit_pilihan(request.user)
+    default_unit_id = None
+    if p and p.unit_kerja and unit_choices.filter(pk=p.unit_kerja_id).exists():
+        default_unit_id = p.unit_kerja_id
+    elif unit_choices.exists():
+        default_unit_id = unit_choices.first().pk
+
+    # Filter ruangan pilihan sesuai lingkup unit yang boleh diakses
+    if request.user.is_superuser or (p and p.role in ROLE_LINGKUP_RS):
+        ruangan_qs = Ruangan.objects.all().order_by('kode')
+    elif p and p.unit_kerja:
+        allowed_unit_ids = unit_subtree_ids(p.unit_kerja)
+        ruangan_qs = Ruangan.objects.filter(unit_kerja_id__in=allowed_unit_ids).order_by('kode')
+    else:
+        ruangan_qs = Ruangan.objects.none()
+
     return render(request, 'akreditasi/logbook_form.html', {
         'jenis_pilihan': JENIS_CHOICES,
         'shift_pilihan': SHIFT_CHOICES,
-        'unit_pilihan': _unit_pilihan(request.user),
+        'unit_pilihan': unit_choices,
+        'default_unit_id': default_unit_id,
         'ruangan_pilihan': ruangan_qs,
         'hari_ini': timezone.localdate(),
         'tanggal_awal': (timezone.localdate() - timedelta(days=1)).isoformat(),
