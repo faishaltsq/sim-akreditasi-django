@@ -29,7 +29,11 @@ class ExtraAllowedHostsTests(TestCase):
     def test_production_hosts_are_always_present(self):
         from django.conf import settings as conf
         self.assertIn('sim-akreditasi-django.vercel.app', conf.ALLOWED_HOSTS)
+        self.assertIn('arima.web.id', conf.ALLOWED_HOSTS)
+        self.assertIn('www.arima.web.id', conf.ALLOWED_HOSTS)
         self.assertIn('testserver', conf.ALLOWED_HOSTS)
+        self.assertIn('https://arima.web.id', conf.CSRF_TRUSTED_ORIGINS)
+        self.assertIn('https://www.arima.web.id', conf.CSRF_TRUSTED_ORIGINS)
 
     def test_csrf_origins_use_https_scheme(self):
         from django.conf import settings as conf

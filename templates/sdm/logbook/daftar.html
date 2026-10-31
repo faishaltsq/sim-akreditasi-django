@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% block page_title %}Logbook Tindakan Klinis{% endblock %}
-{% block page_subtitle %}Rekap 36 bulan{% endblock %}
+{% block page_subtitle %}Rekap 5 Tahun (PMK 13/2025){% endblock %}
 {% block extra_css %}{% include "sdm/_responsive.html" %}{% endblock %}
 
 {% block content %}
@@ -60,10 +60,10 @@
             <div class="d-flex flex-wrap justify-content-between align-items-center mb-2">
                 <div>
                     <h6 class="fw-bold mb-0 text-primary">
-                        <i class="bi bi-graph-up-arrow me-1"></i> Rekapitulasi Portofolio Tindakan Klinis 36 Bulan
+                        <i class="bi bi-graph-up-arrow me-1"></i> Rekapitulasi Portofolio Tindakan Klinis 5 Tahun (PMK 13/2025)
                     </h6>
                     <small class="text-muted">
-                        Periode: <strong>{{ logbook_recap.dari_tanggal|date:"d M Y" }}</strong> s/d <strong>Hari ini</strong> (Akumulasi otomatis dari shift logbook harian & entri mandiri)
+                        Periode: <strong>{{ logbook_recap.dari_tanggal|date:"d M Y" }}</strong> s/d <strong>Hari ini</strong> (Akumulasi otomatis 5 tahun dari shift logbook harian & entri mandiri)
                     </small>
                 </div>
                 <div>

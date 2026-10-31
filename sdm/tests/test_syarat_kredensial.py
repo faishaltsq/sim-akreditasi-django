@@ -172,7 +172,7 @@ class EvaluateTests(SyaratBase):
         )
         evaluate_requirements(self.application)
         row = DokumenSyaratKredensial.objects.get(
-            pengajuan=self.application, jenis='LOGBOOK_36BULAN'
+            pengajuan=self.application, jenis='LOGBOOK_5TAHUN'
         )
         self.assertEqual(row.status, 'TERPENUHI')
         self.assertTrue(row.logbook_ok)
@@ -408,7 +408,7 @@ class DecisionSoftGateTests(SyaratBase):
         from sdm.services.syarat_kredensial import DEFAULT_ROWS
         # Satisfy every evidence row so the gate has nothing to block on.
         for spec in DEFAULT_ROWS:
-            if spec['jenis'] == 'LOGBOOK_36BULAN':
+            if spec['jenis'] == 'LOGBOOK_5TAHUN':
                 from sdm.models import EntriLogbookKlinis, KatalogTindakan
                 from sdm.models import MasterJenjangProfesi, MasterProfesiPegawai
                 profesi = MasterProfesiPegawai.objects.create(

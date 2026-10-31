@@ -54,6 +54,8 @@ ALLOWED_HOSTS = [
 ALLOWED_HOSTS += [
     'sim-akreditasi-django.vercel.app',
     'sim-akreditasi-web-production.up.railway.app',
+    'arima.web.id',
+    'www.arima.web.id',
     'testserver',
 ]
 # Domain tambahan (alias/domain kustom Vercel) lewat env, dipisah koma.
@@ -82,6 +84,10 @@ CSRF_TRUSTED_ORIGINS = [
 CSRF_TRUSTED_ORIGINS += [
     'https://sim-akreditasi-django.vercel.app',
     'https://sim-akreditasi-web-production.up.railway.app',
+    'https://arima.web.id',
+    'https://www.arima.web.id',
+    'https://*.arima.web.id',
+    'https://*.vercel.app',
 ]
 # Setiap domain di ALLOWED_HOSTS juga harus dipercaya untuk POST/CSRF; login
 # dan form akan gagal (403) kalau hanya satu daftar yang diisi.

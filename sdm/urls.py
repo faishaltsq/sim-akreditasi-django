@@ -256,6 +256,11 @@ urlpatterns = [
         name='dokumen_kredensial_edit',
     ),
     path(
+        'kredensial/dokumen/<str:jenis>/edit/',
+        views.dokumen_kredensial_edit,
+        name='dokumen_kredensial_edit_alias',
+    ),
+    path(
         'kredensial/dokumen/<str:jenis>/finalkan/',
         views.dokumen_kredensial_finalize,
         name='dokumen_kredensial_finalize',

@@ -10,9 +10,8 @@ DEFAULT_ROWS = [
     {'domain': 'LEGA', 'jenis': 'SURAT_PERMOHONAN', 'kind': None, 'health': False},
     {'domain': 'KOMP', 'jenis': 'SERTIFIKAT_KOMPETENSI',
      'kind': 'SERTIFIKAT_KOMPETENSI', 'health': False},
-    {'domain': 'KOMP', 'jenis': 'LOGBOOK_36BULAN', 'kind': 'LOGBOOK', 'health': False},
     # PMK 13/2025: siklus rekredensial 5 tahunan memakai Buku Kinerja
-    # Elektronik; keduanya berbagi kind LOGBOOK di dokumen pegawai.
+    # Elektronik (menggantikan logbook 36 bulan).
     {'domain': 'KOMP', 'jenis': 'LOGBOOK_5TAHUN', 'kind': 'LOGBOOK', 'health': False},
     {'domain': 'SEHAT', 'jenis': 'SEHAT_JASMANI', 'kind': 'MCU', 'health': True},
     {'domain': 'SEHAT', 'jenis': 'SEHAT_PSIKOLOGIS', 'kind': 'PSIKOLOGIS', 'health': True},
@@ -67,10 +66,14 @@ def _latest_valid_version(employee, kind, *, health, today):
     ).first()
 
 
-def _logbook_satisfied(employee, *, today, years=3):
+def _logbook_satisfied(employee, *, today, years=5):
+    try:
+        cutoff = today.replace(year=today.year - years)
+    except ValueError:
+        cutoff = today - timedelta(days=years * 365)
     return EntriLogbookKlinis.objects.filter(
         employee=employee,
-        tanggal__gte=today.replace(year=today.year - years),
+        tanggal__gte=cutoff,
     ).exists()
 
 

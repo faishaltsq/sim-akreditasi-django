@@ -11,8 +11,8 @@ from sdm.models import EntriLogbookKlinis, VerifikasiLogbook
 CAPABILITY_VERIFIKASI = 'can_review_hc_credentials'
 
 
-def logbook_recap(employee, *, months=36):
-    """Aggregate one employee's logbook within the trailing window.
+def logbook_recap(employee, *, months=60):
+    """Aggregate one employee's logbook within the trailing window (default 5 years / 60 months PMK 13/2025).
 
     Returns ``{'mandiri', 'supervisi', 'kolaborasi', 'total', 'dari_tanggal', 'per_tindakan'}``;
     ``per_tindakan`` rows carry ``{'label', 'mandiri', 'supervisi', 'kolaborasi'}``.

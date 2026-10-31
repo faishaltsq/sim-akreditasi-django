@@ -34,7 +34,7 @@
                         <div class="col-4"><div class="small text-muted">Supervisi</div><div class="fw-semibold">{{ logbook_recap.supervisi }}</div></div>
                         <div class="col-4"><div class="small text-muted">Total</div><div class="fw-semibold">{{ logbook_recap.total }}</div></div>
                     </div>
-                    <p class="small text-muted mb-2">36 bulan terakhir, dari {{ logbook_recap.dari_tanggal|date:"d M Y" }}.</p>
+                    <p class="small text-muted mb-2">5 tahun terakhir (PMK 13/2025), dari {{ logbook_recap.dari_tanggal|date:"d M Y" }}.</p>
                     {% endif %}
                     <form method="post" action="{% url 'sdm:logbook_create' %}" class="row g-2">
                         {% csrf_token %}

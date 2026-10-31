@@ -1650,7 +1650,7 @@ def kredensial_list(request):
         },
         {
             'level': 'B', 'title': 'Pengajuan Mandiri',
-            'description': 'Portal pengajuan mandiri: kredensial awal, re-kredensial 3 tahunan, penambahan kewenangan.',
+            'description': 'Portal pengajuan mandiri: kredensial awal, re-kredensial 5 tahunan (PMK 13/2025), penambahan kewenangan.',
             'links': [
                 {'url_name': 'sdm:kredensial_pengajuan_sendiri', 'label': 'Pengajuan Saya',
                  'allowed': True},
@@ -3126,7 +3126,9 @@ def dokumen_kredensial_edit(request, jenis):
         return response
     if jenis not in DOKUMEN_KREDENSIAL_REGISTRY:
         raise Http404('Jenis dokumen tidak dapat digenerate.')
-    draf = get_object_or_404(DrafDokumenKredensial, pegawai=pegawai, jenis=jenis)
+    draf = DrafDokumenKredensial.objects.filter(pegawai=pegawai, jenis=jenis).first()
+    if draf is None:
+        draf = generate_dokumen_kredensial(pegawai, jenis, user=request.user)
 
     if request.method == 'POST':
         isian = dict(draf.isian or {})
@@ -3659,7 +3661,7 @@ def logbook_list(request):
     recap = None
     if target:
         from sdm.services.logbook import logbook_recap
-        recap = logbook_recap(target, months=36)
+        recap = logbook_recap(target, months=60)
     return render(request, 'sdm/logbook/daftar.html', {
         'page_obj': page_obj,
         'selected_employee': employee,
