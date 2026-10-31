@@ -6,7 +6,8 @@ from django.contrib import messages
 from django.db import transaction
 from django.db.models import Count, Avg, Sum, Q
 from django.http import HttpResponse, JsonResponse
-from .decorators import require_patient_module
+from django.core.exceptions import PermissionDenied
+from .decorators import require_patient_module, get_unit_scope, scope_kunjungan_qs, scope_pasien_qs
 from akreditasi.input_parsing import parse_int
 from django.utils import timezone
 from datetime import timedelta
@@ -181,6 +182,7 @@ def _kpi():
 
 
 @login_required
+@require_patient_module('pendaftaran')
 def dashboard(request):
     try:
         kpi = _kpi()
@@ -211,22 +213,44 @@ def dashboard(request):
 
 
 @login_required
+@require_patient_module('pendaftaran')
 def pasien_daftar(request):
     q = request.GET.get('q', '')
-    qs = Pasien.objects.all()
+    profile = getattr(request.user, 'profile', None)
+    qs = scope_pasien_qs(Pasien.objects.all(), profile)
     if q:
         qs = qs.filter(Q(nama_lengkap__icontains=q) | Q(no_rm__icontains=q) | Q(nik__icontains=q) | Q(no_bpjs__icontains=q))
     return render(request, 'pasien/pasien_daftar.html', {'pasien_list': qs[:100], 'q': q})
 
 
 @login_required
+@require_patient_module('master_pasien')
 def pasien_detail(request, pk):
     p = get_object_or_404(Pasien, pk=pk)
+    profile = getattr(request.user, 'profile', None)
+    scope = get_unit_scope(profile)
+    if scope is not None:
+        if not scope:
+            raise PermissionDenied("Anda tidak memiliki akses ke data pasien unit lain.")
+        from .unit_scope import DEFAULT_UNIT_BY_JENIS
+        scope_codes = {u.code.upper() for u in scope if u.code}
+        matching_jenis = [j for j, c in DEFAULT_UNIT_BY_JENIS.items() if any(c.upper() in uc for uc in scope_codes)]
+        has_access = KunjunganPasien.objects.filter(
+            Q(pasien=p) & (
+                Q(unit_kerja__in=scope) |
+                (Q(unit_kerja__isnull=True) & Q(jenis_kunjungan__in=matching_jenis))
+            )
+        ).exists()
+        if not has_access:
+            raise PermissionDenied("Anda tidak memiliki akses ke data pasien unit lain.")
     kunjungan_list = p.kunjungan.select_related('bed__ruangan').order_by('-tanggal_masuk')
+    if scope is not None:
+        kunjungan_list = scope_kunjungan_qs(kunjungan_list, profile)
     return render(request, 'pasien/pasien_detail.html', {'pasien': p, 'kunjungan_list': kunjungan_list})
 
 
 @login_required
+@require_patient_module('pendaftaran')
 def pasien_daftar_baru(request):
     if request.method == 'POST':
         try:
@@ -255,10 +279,15 @@ def pasien_daftar_baru(request):
 
 
 @login_required
+@require_patient_module('pendaftaran')
 def kunjungan_daftar(request):
     status_filter = request.GET.get('status', '')
     jenis_filter  = request.GET.get('jenis', '')
-    qs = KunjunganPasien.objects.select_related('pasien', 'bed__ruangan').order_by('-tanggal_masuk')
+    profile = getattr(request.user, 'profile', None)
+    qs = scope_kunjungan_qs(
+        KunjunganPasien.objects.select_related('pasien', 'bed__ruangan').order_by('-tanggal_masuk'),
+        profile
+    )
     if status_filter:
         qs = qs.filter(status=status_filter)
     if jenis_filter:
@@ -273,8 +302,24 @@ def kunjungan_daftar(request):
 
 
 @login_required
+@require_patient_module('riwayat')
 def kunjungan_detail(request, pk):
     k = get_object_or_404(KunjunganPasien.objects.select_related('pasien', 'bed__ruangan', 'created_by'), pk=pk)
+    profile = getattr(request.user, 'profile', None)
+    scope = get_unit_scope(profile)
+    if scope is not None:
+        allowed_visit = False
+        if scope:
+            if k.unit_kerja and k.unit_kerja in scope:
+                allowed_visit = True
+            elif k.unit_kerja is None:
+                from .unit_scope import DEFAULT_UNIT_BY_JENIS
+                scope_codes = {u.code.upper() for u in scope if u.code}
+                expected_code = DEFAULT_UNIT_BY_JENIS.get(k.jenis_kunjungan)
+                if expected_code and any(expected_code.upper() in uc for uc in scope_codes):
+                    allowed_visit = True
+        if not allowed_visit:
+            raise PermissionDenied("Anda tidak memiliki akses ke kunjungan unit lain.")
     billing_list  = k.billing.all()
     total_billing = sum(b.subtotal for b in billing_list)
     ctx = {
@@ -293,6 +338,7 @@ def kunjungan_detail(request, pk):
 
 
 @login_required
+@require_patient_module('pendaftaran')
 def kunjungan_baru(request):
     if request.method == 'POST':
         try:
@@ -342,11 +388,21 @@ def kunjungan_baru(request):
                 jenis_kunjungan = request.POST.get('jenis_kunjungan', 'RAJAL')
                 no_kunjungan = request.POST.get('no_kunjungan', '').strip() or generate_no_kunjungan(jenis=jenis_kunjungan)
                 tgl_masuk = request.POST.get('tanggal_masuk') or timezone.now()
+                profile = getattr(request.user, 'profile', None)
+                unit_kerja_val = None
+                bed_id = request.POST.get('bed')
+                if bed_id:
+                    bed_obj = Bed.objects.select_related('ruangan__unit_kerja').filter(pk=bed_id).first()
+                    if bed_obj and bed_obj.ruangan and bed_obj.ruangan.unit_kerja:
+                        unit_kerja_val = bed_obj.ruangan.unit_kerja
+                if not unit_kerja_val and profile and profile.unit_kerja:
+                    unit_kerja_val = profile.unit_kerja
 
                 k = KunjunganPasien(
                     pasien=pasien_obj,
                     no_kunjungan=no_kunjungan,
                     jenis_kunjungan=jenis_kunjungan,
+                    unit_kerja=unit_kerja_val,
                     tanggal_masuk=tgl_masuk,
                     dpjp=request.POST.get('dpjp', ''),
                     poliklinik=request.POST.get('poliklinik', ''),
@@ -800,17 +856,18 @@ def pendaftaran_dashboard(request):
 
 
 @login_required
+@require_patient_module('master_pasien')
 def api_cari_pasien(request):
-    """API endpoint for live search of patients by No. RM, NIK, or Name."""
+    """API endpoint for live search of patients by No. RM or Name (scoped, PII redacted)."""
     q = request.GET.get('q', '').strip()
     if not q:
         return JsonResponse({'results': []})
 
-    qs = Pasien.objects.filter(
+    profile = getattr(request.user, 'profile', None)
+    qs = scope_pasien_qs(Pasien.objects.all(), profile)
+    qs = qs.filter(
         Q(no_rm__icontains=q) |
-        Q(nama_lengkap__icontains=q) |
-        Q(nik__icontains=q) |
-        Q(no_hp__icontains=q)
+        Q(nama_lengkap__icontains=q)
     ).order_by('nama_lengkap')[:20]
 
     results = []
@@ -818,49 +875,31 @@ def api_cari_pasien(request):
         results.append({
             'id': p.pk,
             'no_rm': p.no_rm,
-            'nik': p.nik,
             'nama_lengkap': p.nama_lengkap,
             'tanggal_lahir': p.tanggal_lahir.strftime('%d/%m/%Y') if p.tanggal_lahir else '',
             'tanggal_lahir_raw': p.tanggal_lahir.strftime('%Y-%m-%d') if p.tanggal_lahir else '',
             'umur': p.umur,
             'jenis_kelamin': p.get_jenis_kelamin_display(),
-            'alamat': p.alamat,
-            'no_hp': p.no_hp,
-            'no_bpjs': p.no_bpjs,
-            'penjamin_default': 'BPJS' if p.no_bpjs else 'UMUM',
-            'nama_pj': p.nama_pj,
-            'hubungan_pj': p.hubungan_pj,
-            'no_hp_pj': p.no_hp_pj,
-            'alamat_pj': p.alamat_pj,
         })
     return JsonResponse({'results': results})
 
 
 @login_required
+@require_patient_module('master_pasien')
 def api_cek_nik(request):
-    """API endpoint to check duplicate NIK / No RM."""
+    """API endpoint to check duplicate NIK / No RM (scoped, no PII leak)."""
     nik = request.GET.get('nik', '').strip()
     no_rm = request.GET.get('no_rm', '').strip()
+    profile = getattr(request.user, 'profile', None)
+    qs = scope_pasien_qs(Pasien.objects.all(), profile)
     p = None
     if nik:
-        p = Pasien.objects.filter(nik=nik).first()
+        p = qs.filter(nik=nik).first()
     elif no_rm:
-        p = Pasien.objects.filter(no_rm=no_rm).first()
+        p = qs.filter(no_rm=no_rm).first()
     
     if p:
-        return JsonResponse({
-            'exists': True,
-            'pasien': {
-                'id': p.pk,
-                'no_rm': p.no_rm,
-                'nama': p.nama_lengkap,
-                'nik': p.nik,
-                'tanggal_lahir': p.tanggal_lahir.strftime('%Y-%m-%d'),
-                'jenis_kelamin': p.get_jenis_kelamin_display(),
-                'no_bpjs': p.no_bpjs,
-                'alamat': p.alamat,
-            }
-        })
+        return JsonResponse({'exists': True})
     return JsonResponse({'exists': False})
 
 

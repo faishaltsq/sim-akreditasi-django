@@ -1,0 +1,106 @@
+name: Security Tests
+# Suite pengujian keamanan otorisasi (RBAC, IDOR, eskalasi hak akses).
+#
+# PENTING — suite ini SENGAJA MERAH sampai temuan P0 diperbaiki.
+# 32 tes gagal secara sengaja: setiap kegagalan adalah `self.fail()` dengan
+# pesan berbahasa Indonesia yang mendokumentasikan kerentanan yang masih hidup.
+# Jangan tambahkan `continue-on-error` atau `|| true`: jalur hijau HARUS berarti
+# kerentanan sudah diperbaiki, bukan berarti tesnya dilewati.
+#
+# Temuan P0 yang didokumentasikan (lihat accounts/tests_priv_escalation.py,
+# akreditasi/tests_admin_gate.py, pasien/tests_object_authz.py,
+# akreditasi/tests_session_security.py, accounts/tests_security_owasp.py,
+# akreditasi/tests_security_owasp.py, pasien/tests_security_owasp.py,
+# sdm/tests/security_owasp.py):
+#   P0-1  ADMIN_RS dapat membuat akun SUPER_ADMIN via accounts:user_create
+#   P0-2  ADMIN_RS dapat menaikkan akun menjadi SUPER_ADMIN via accounts:user_edit
+#   P0-3  ADMIN_RS dapat menghapus akun SUPER_ADMIN via accounts:user_delete
+#   P0-4  custom_permissions dapat ditulis untuk user mana pun (termasuk diri sendiri)
+#   P0-5  custom_permissions menerima kunci izin tidak dikenal tanpa validasi
+#   P0-6  LOCKOUT_SAFE_PERMS dapat diubah untuk role selain SUPER_ADMIN
+#   P0-7  can_access_control_center dapat diberikan ke seluruh role STAF_NAKES
+#   P0-8  admin_required berbasis string role, mengabaikan RolePermissionConfig
+#   P0-9  pengguna terautentikasi tanpa wewenang dialihkan ke login, bukan 403
+#   P0-10 IDOR data pasien: pasien_detail / kunjungan_detail lintas unit
+#   P0-11 Enumerasi pasien: pasien_daftar menampilkan seluruh rumah sakit
+#   P0-12 Kebocoran PII via pasien:api_cari_pasien (NIK, alamat, no_hp, no_bpjs)
+#   P0-13 Kebocoran PII via pasien:api_cek_nik (enumerasi NIK)
+#   P0-14 require_patient_module() ada tetapi tidak dipasang pada view baca inti
+#   P0-15 Token rekrutmen memakai uuid.uuid4, bukan secrets.token_urlsafe(32)
+#         (Pelamar.token, KonfirmasiOffering.token)
+#   P0-16 SESSION_COOKIE_SAMESITE / CSRF_COOKIE_SAMESITE tidak di-set eksplisit
+#         di settings.py (default Django 'Lax')
+#
+# `config.tests_allowed_hosts` melengkapi cakupan A05/A01 (Security
+# Misconfiguration / Broken Access Control) pada permukaan host: 4 tes yang
+# memaku kontrak ALLOWED_HOSTS dan CSRF_TRUSTED_ORIGINS, termasuk
+# `test_no_wildcard_host_is_ever_added` (pengerasan host-header injection) dan
+# `test_csrf_origins_use_https_scheme`. Modul ini berada di paket `config/`,
+# jadi sebelumnya hanya ikut berjalan pada `manage.py test` tanpa argumen dan
+# tidak pernah dieksekusi di CI.
+#
+# Lingkungan uji: SQLite (config/settings.py jatuh ke db.sqlite3 saat
+# DATABASE_URL tidak di-set) dan DEBUG=True (default non-produksi). Tidak ada
+# langkah seed: perintah seed_all_roles/seed_unit_hierarchy/seed_hospital_type_b/
+# seed_fase4_extended tidak ada di repo ini. Fixture dibuat di dalam masing-masing
+# TestCase.setUp().
+on:
+  push:
+    branches: [main]
+  pull_request:
+concurrency:
+  group: security-tests-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  security:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      # Kunci khusus CI: mencegah fallback 'django-insecure-...' di settings.py
+      # ikut terpakai. Nilai ini tidak menyentuh data produksi apa pun.
+      DJANGO_SECRET_KEY: ci-only-security-suite-key-not-for-production
+      # Dipakai membentuk tautan aktivasi; nilai lokal agar tidak ada host
+      # produksi yang bocor ke dalam konteks uji.
+      PUBLIC_BASE_URL: http://localhost:8000
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - name: Install dependencies
+        run: |
+          set -euo pipefail
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+      - name: Run security tests
+        env:
+          DJANGO_SECRET_KEY: ci-only-security-suite-key-not-for-production
+        run: |
+          set -euo pipefail
+          python manage.py test \
+            accounts.tests_security_owasp \
+            akreditasi.tests_security_owasp \
+            pasien.tests_security_owasp \
+            sdm.tests.security_owasp \
+            akreditasi.tests_session_security \
+            accounts.tests_priv_escalation \
+            akreditasi.tests_admin_gate \
+            pasien.tests_object_authz \
+            akreditasi.tests_security \
+            config.tests_allowed_hosts \
+            accounts.tests_unit_rbac \
+            sdm.tests.test_akses \
+            sdm.tests.test_private_documents \
+            --verbosity 2 2>&1 | tee /tmp/security-tests.log
+      # Django's test runner has no JUnit output and pytest is not a dependency,
+      # so the honest structured artifact is the verbosity-2 log itself: every
+      # test name with its PASS/FAIL line. Uploading it keeps the 32 documented
+      # failures readable from the PR instead of buried in the job log.
+      - name: Upload security test log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: security-test-log
+          path: /tmp/security-tests.log
+          if-no-files-found: warn

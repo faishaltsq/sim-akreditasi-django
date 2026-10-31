@@ -1,4 +1,5 @@
 """Level 2 workflows: recruitment, PSV, clinical privileging, orientation."""
+import secrets
 import uuid
 from decimal import Decimal
 
@@ -7,6 +8,11 @@ from django.core.exceptions import ValidationError
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.utils import timezone
+
+
+def generate_recruitment_token():
+    """Token capability portal rekrutmen (43 char, 256 bit entropi)."""
+    return secrets.token_urlsafe(32)
 
 
 class Lowongan(models.Model):
@@ -120,7 +126,7 @@ class Pelamar(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     token = models.CharField(
         'Token Akses', max_length=64, unique=True,
-        default=uuid.uuid4,
+        default=generate_recruitment_token,
         help_text='Capability URL untuk pelamar mengakses lamaran sendiri.',
     )
     nama_lengkap = models.CharField('Nama Lengkap', max_length=200)
@@ -416,7 +422,8 @@ class KonfirmasiOffering(models.Model):
         verbose_name='Lamaran',
     )
     token = models.CharField(
-        'Token Konfirmasi', max_length=64, unique=True, default=uuid.uuid4,
+        'Token Konfirmasi', max_length=64, unique=True,
+        default=generate_recruitment_token,
     )
     nomor_surat = models.CharField(
         'Nomor Surat', max_length=100, blank=True,

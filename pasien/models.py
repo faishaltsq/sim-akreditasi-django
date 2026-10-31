@@ -161,6 +161,13 @@ class Ruangan(models.Model):
     kelas   = models.CharField('Kelas', max_length=5, choices=KELAS)
     jenis   = models.CharField('Jenis', max_length=10, choices=JENIS, default='RANAP')
     kapasitas = models.IntegerField('Kapasitas Bed', default=1)
+    unit_kerja = models.ForeignKey(
+        'akreditasi.UnitKerja',
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name='ruangan',
+        verbose_name='Unit Kerja',
+    )
 
     class Meta:
         verbose_name = 'Ruangan'
@@ -280,6 +287,13 @@ class KunjunganPasien(models.Model):
     tanggal_keluar  = models.DateTimeField('Tanggal Keluar', null=True, blank=True)
     dpjp            = models.CharField('DPJP', max_length=150, blank=True)
     poliklinik      = models.CharField('Poliklinik / Unit', max_length=100, blank=True)
+    unit_kerja = models.ForeignKey(
+        'akreditasi.UnitKerja',
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name='kunjungan_pasien',
+        verbose_name='Unit Kerja Pelayanan',
+    )
     bed             = models.ForeignKey(Bed, on_delete=models.SET_NULL, null=True, blank=True, related_name='kunjungan')
     penjamin        = models.CharField('Penjamin', max_length=10, choices=TIPE_PENJAMIN, default='UMUM')
     diagnosa_masuk  = models.CharField('Diagnosa Masuk (ICD-10)', max_length=300, blank=True)
@@ -598,6 +612,20 @@ class KunjunganPasien(models.Model):
                     'dibuat_oleh':       user,
                 }
             )
+
+    def save(self, *args, **kwargs):
+        if not self.unit_kerja_id:
+            if self.bed and getattr(self.bed, 'ruangan', None) and getattr(self.bed.ruangan, 'unit_kerja', None):
+                self.unit_kerja = self.bed.ruangan.unit_kerja
+            elif self.jenis_kunjungan:
+                from akreditasi.models import UnitKerja
+                from .unit_scope import DEFAULT_UNIT_BY_JENIS
+                code = DEFAULT_UNIT_BY_JENIS.get(self.jenis_kunjungan)
+                if code:
+                    unit = UnitKerja.objects.filter(code__iexact=code).first()
+                    if unit:
+                        self.unit_kerja = unit
+        super().save(*args, **kwargs)
 
 
 # ── 4. Asesmen Risiko Klinis ─────────────────────────────────────────────────

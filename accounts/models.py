@@ -88,6 +88,7 @@ HC_PERMISSION_LABELS = [
 ]
 for _role_defaults in PERMISSION_DEFAULTS.values():
     _role_defaults.update({permission: False for permission, _ in HC_PERMISSION_LABELS})
+VALID_PERMISSION_KEYS = set(PERMISSION_DEFAULTS['SUPER_ADMIN'].keys())
 
 # Izin yang tidak boleh diblokir survey freeze (tetap bisa akses) — hanya SUPER_ADMIN override
 FREEZE_PROTECTED_PERMS = {

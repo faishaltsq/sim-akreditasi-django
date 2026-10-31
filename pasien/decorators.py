@@ -4,6 +4,8 @@ Decorator untuk kontrol akses modul Manajemen Pasien berdasarkan unit kerja & pr
 from functools import wraps
 from django.core.exceptions import PermissionDenied
 
+from pasien.unit_scope import get_unit_scope, scope_kunjungan_qs, scope_pasien_qs
+
 
 def require_patient_module(module_name):
     """
@@ -20,7 +22,14 @@ def require_patient_module(module_name):
                 from django.shortcuts import redirect
                 return redirect(f"{settings.LOGIN_URL}?next={request.path}")
 
-            allowed = request.user.profile.get_allowed_patient_modules()
+            if getattr(request.user, 'is_superuser', False):
+                return view_func(request, *args, **kwargs)
+
+            profile = getattr(request.user, 'profile', None)
+            if profile is None:
+                return view_func(request, *args, **kwargs)
+
+            allowed = profile.get_allowed_patient_modules()
             if module_name not in allowed:
                 raise PermissionDenied(
                     f"Akses ditolak: Unit kerja Anda tidak memiliki wewenang untuk modul '{module_name}'."

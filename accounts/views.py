@@ -1,3 +1,4 @@
+from django.http import JsonResponse
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.auth.views import LoginView as BaseLoginView
@@ -8,7 +9,7 @@ from django.views.decorators.http import require_POST
 from django.db import transaction
 from django.db.models import Q
 
-from .models import UserProfile
+from .models import UserProfile, VALID_PERMISSION_KEYS
 from .forms import UserCreateForm, UserEditForm, UserProfileForm
 from akreditasi.models import AuditLog, UnitKerja
 from sdm.models import HcGrant
@@ -31,6 +32,61 @@ def admin_only(user):
         return True
     profile = getattr(user, 'profile', None)
     return profile and profile.can_manage_users
+
+
+def _is_super_admin(user) -> bool:
+    """Cek apakah user adalah superuser Django atau memiliki peran SUPER_ADMIN."""
+    if not user or not user.is_authenticated:
+        return False
+    if user.is_superuser:
+        return True
+    profile = getattr(user, 'profile', None)
+    return bool(profile and profile.role == 'SUPER_ADMIN')
+
+
+def _caller_role_level(user) -> int:
+    """Tingkat hierarki peran pemanggil; superuser/SUPER_ADMIN selalu di puncak (5)."""
+    if _is_super_admin(user):
+        return UserProfile.ROLE_HIERARCHY.get('SUPER_ADMIN', 5)
+    profile = getattr(user, 'profile', None)
+    return profile.role_level if profile else 0
+
+
+def _can_assign_role(caller, target_role: str) -> bool:
+    """Pemanggil hanya boleh menetapkan peran yang lebih rendah dari tingkatnya sendiri.
+    Non-superuser / non-SUPER_ADMIN tidak dapat menetapkan peran setara atau lebih tinggi,
+    dan tidak dapat membuat akun SUPER_ADMIN.
+    """
+    if _is_super_admin(caller):
+        return True
+    if target_role == 'SUPER_ADMIN':
+        return False
+    target_level = UserProfile.ROLE_HIERARCHY.get(target_role, 0)
+    return target_level < _caller_role_level(caller)
+
+
+def _can_modify_account(caller, target_user) -> bool:
+    """Hanya boleh mengubah akun dengan tingkat hierarki lebih rendah.
+    Superuser / SUPER_ADMIN boleh mengubah akun setara atau lebih rendah.
+    """
+    if _is_super_admin(caller):
+        return True
+    target_profile = getattr(target_user, 'profile', None)
+    target_level = target_profile.role_level if target_profile else 0
+    return target_level < _caller_role_level(caller)
+
+
+def _is_last_active_superuser(target_user) -> bool:
+    """True bila target adalah satu-satunya superuser / SUPER_ADMIN aktif."""
+    is_target_super = target_user.is_superuser or (
+        hasattr(target_user, 'profile') and target_user.profile.role == 'SUPER_ADMIN'
+    )
+    if not is_target_super:
+        return False
+    active_supers = User.objects.filter(is_active=True).filter(
+        Q(is_superuser=True) | Q(profile__role='SUPER_ADMIN')
+    ).exclude(pk=target_user.pk).exists()
+    return not active_supers
 
 
 @login_required
@@ -130,6 +186,14 @@ def user_create(request):
         user_form = UserCreateForm(request.POST)
         profile_form = UserProfileForm(request.POST)
         if user_form.is_valid() and profile_form.is_valid():
+            target_role = profile_form.cleaned_data.get('role')
+            if not _can_assign_role(request.user, target_role):
+                messages.error(
+                    request,
+                    f"Anda tidak berwenang menetapkan peran '{dict(UserProfile.ROLE_CHOICES).get(target_role, target_role)}'."
+                )
+                return redirect('accounts:user_list')
+
             with transaction.atomic():
                 user = user_form.save()
                 profile = profile_form.save(commit=False)
@@ -178,10 +242,28 @@ def user_edit(request, user_id):
         defaults={'role': 'SUPER_ADMIN' if target_user.is_superuser else 'ASESOR'}
     )
 
+    if not _can_modify_account(request.user, target_user):
+        messages.error(request, "Anda tidak berwenang mengubah akun dengan peran setara atau lebih tinggi.")
+        return redirect('accounts:user_list')
+
     if request.method == 'POST':
         user_form = UserEditForm(request.POST, instance=target_user)
         profile_form = UserProfileForm(request.POST, instance=profile)
         if user_form.is_valid() and profile_form.is_valid():
+            new_role = profile_form.cleaned_data.get('role')
+            if not _can_assign_role(request.user, new_role):
+                messages.error(
+                    request,
+                    f"Anda tidak berwenang menetapkan peran '{dict(UserProfile.ROLE_CHOICES).get(new_role, new_role)}'."
+                )
+                return redirect('accounts:user_list')
+
+            new_is_active = user_form.cleaned_data.get('is_active')
+            if _is_last_active_superuser(target_user):
+                if not new_is_active or new_role != 'SUPER_ADMIN':
+                    messages.error(request, "Super Admin aktif terakhir tidak dapat dinonaktifkan atau diturunkan perannya.")
+                    return redirect('accounts:user_list')
+
             with transaction.atomic():
                 user_form.save()
                 profile = profile_form.save()
@@ -230,6 +312,14 @@ def user_delete(request, user_id):
     target_user = get_object_or_404(User, id=user_id)
     if target_user == request.user:
         messages.error(request, "Anda tidak dapat menghapus akun Anda sendiri!")
+        return redirect('accounts:user_list')
+
+    if not _can_modify_account(request.user, target_user):
+        messages.error(request, "Akun dengan peran setara atau lebih tinggi tidak dapat dihapus.")
+        return redirect('accounts:user_list')
+
+    if _is_last_active_superuser(target_user):
+        messages.error(request, "Super Admin aktif terakhir tidak dapat dihapus.")
         return redirect('accounts:user_list')
 
     username = target_user.username
@@ -410,6 +500,9 @@ def update_role_permissions(request):
             # Super Admin lockout protection
             if role_code == 'SUPER_ADMIN' and perm_field in LOCKOUT_SAFE_PERMS:
                 continue  # Tidak boleh diubah
+            # Invarian global: non-super admin tidak boleh mengubah LOCKOUT_SAFE_PERMS untuk peran mana pun
+            if perm_field in LOCKOUT_SAFE_PERMS and not _is_super_admin(request.user):
+                continue
             if hasattr(cfg, perm_field):
                 setattr(cfg, perm_field, bool(value))
         cfg.save()
@@ -461,13 +554,13 @@ def update_user_custom_permissions(request, user_id):
     data = json_body(request)
     if data is None:
         custom_perms = {
-            key: value for key, value in request.POST.items()
+            key.split('custom_permissions.', 1)[1] if key.startswith('custom_permissions.') else key: value
+            for key, value in request.POST.items()
             if key.startswith('custom_permissions.')
         }
         if custom_perms:
             data = {'custom_permissions': custom_perms}
         else:
-            from django.http import JsonResponse
             return JsonResponse(
                 {'success': False, 'error': 'Payload hak akses tidak valid.'},
                 status=400,
@@ -475,12 +568,55 @@ def update_user_custom_permissions(request, user_id):
 
     custom_perms = data.get('custom_permissions', {})
     if not isinstance(custom_perms, dict):
-        from django.http import JsonResponse
         return JsonResponse(
             {'success': False, 'error': 'custom_permissions harus berupa objek.'},
             status=400,
         )
-    profile.custom_permissions = custom_perms
+
+    # 1. Validasi whitelist kunci izin
+    for key in custom_perms:
+        if not isinstance(key, str) or key not in VALID_PERMISSION_KEYS:
+            return JsonResponse(
+                {'success': False, 'error': f"Kunci izin tidak dikenal: {key}."},
+                status=400,
+            )
+
+    # 2. Pemisahan tugas: tidak boleh mengubah hak akses akun sendiri
+    if target_user == request.user:
+        return JsonResponse(
+            {'success': False, 'error': "Anda tidak dapat mengubah hak akses akun Anda sendiri."},
+            status=400,
+        )
+
+    # 3. Otorisasi pemanggil: harus memiliki wewenang mengelola pengguna / izin
+    caller_profile = getattr(request.user, 'profile', None)
+    has_manage_users = _is_super_admin(request.user) or (
+        caller_profile and caller_profile.has_permission('can_manage_users')
+    )
+    if not has_manage_users:
+        return JsonResponse(
+            {'success': False, 'error': "Anda tidak memiliki wewenang untuk mengelola hak akses pengguna."},
+            status=400,
+        )
+
+    # 4. Hierarki: tidak boleh mengubah izin akun dengan peran setara atau lebih tinggi
+    if not _can_modify_account(request.user, target_user):
+        return JsonResponse(
+            {'success': False, 'error': "Anda tidak berwenang mengubah izin akun dengan peran setara atau lebih tinggi."},
+            status=400,
+        )
+
+    # 5. Non-superuser tidak dapat memberikan izin yang tidak mereka miliki sendiri
+    if not _is_super_admin(request.user):
+        for perm_key, val in custom_perms.items():
+            if bool(val) and not (caller_profile and caller_profile.has_permission(perm_key)):
+                return JsonResponse(
+                    {'success': False, 'error': f"Anda tidak dapat memberikan izin yang tidak Anda miliki: {perm_key}."},
+                    status=400,
+                )
+
+    cleaned_custom_perms = {k: bool(v) for k, v in custom_perms.items()}
+    profile.custom_permissions = cleaned_custom_perms
     profile.save(update_fields=['custom_permissions', 'updated_at'])
 
     AuditLog.objects.create(
@@ -488,10 +624,9 @@ def update_user_custom_permissions(request, user_id):
         aksi='UPDATE',
         model_name='UserProfile',
         object_repr=f"{target_user.username} [{profile.role}]",
-        detail=f"Hak akses kustom diperbarui: {json.dumps(custom_perms)}"
+        detail=f"Hak akses kustom diperbarui: {json.dumps(cleaned_custom_perms)}"
     )
 
-    from django.http import JsonResponse
     return JsonResponse({'success': True, 'user_id': target_user.id})
 
 

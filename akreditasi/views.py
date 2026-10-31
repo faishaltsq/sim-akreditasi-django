@@ -1,5 +1,7 @@
 import json
 import logging
+from functools import wraps
+from django.conf import settings
 from django.shortcuts import render, redirect, get_object_or_404, reverse
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.contrib.auth.decorators import login_required, user_passes_test
@@ -60,16 +62,6 @@ from .file_security import validate_uploaded_file, sanitize_filename
 from . import catalogue
 
 
-def _is_admin(user):
-    """Admin RS atau Superuser."""
-    if not user.is_authenticated:
-        return False
-    if user.is_superuser:
-        return True
-    p = getattr(user, 'profile', None)
-    return p and p.role in ('SUPER_ADMIN', 'ADMIN_RS')
-
-
 def _can_edit(user):
     """Role yang boleh create/edit/delete EP (bukan Asesor, bukan Nakes)."""
     if not user.is_authenticated:
@@ -90,9 +82,29 @@ def _is_nakes_or_admin(user):
     return p and p.role in ('SUPER_ADMIN', 'ADMIN_RS', 'STAF_NAKES')
 
 
-admin_required = user_passes_test(_is_admin, login_url='/accounts/login/')
 editor_required = user_passes_test(_can_edit, login_url='/accounts/login/')
 nakes_or_admin = user_passes_test(_is_nakes_or_admin, login_url='/accounts/login/')
+
+
+def require_permission(perm_code):
+    """Gate berbasis kode izin (RolePermissionConfig / custom_permissions).
+
+    - Anonim  -> redirect ke LOGIN_URL (perilaku login_required).
+    - Terautentikasi tanpa izin -> PermissionDenied (HTTP 403), bukan 302.
+    """
+    def decorator(view_func):
+        @wraps(view_func)
+        def _wrapped(request, *args, **kwargs):
+            if not request.user.is_authenticated:
+                return redirect(f"{settings.LOGIN_URL}?next={request.path}")
+            profile = getattr(request.user, 'profile', None)
+            if request.user.is_superuser or (profile and profile.has_permission(perm_code)):
+                return view_func(request, *args, **kwargs)
+            raise PermissionDenied(
+                f"Anda tidak memiliki izin '{perm_code}' untuk mengakses halaman ini."
+            )
+        return _wrapped
+    return decorator
 
 
 def _can_modify_ep(user, standard_item) -> bool:
@@ -1353,7 +1365,7 @@ def ep_delete(request, item_id):
 # 9. MANAJEMEN DATA: UNIT KERJA HIERARKI & POKJA
 # ==============================================================================
 @login_required
-@admin_required
+@require_permission('can_manage_units')
 def unit_list_create(request):
     # Support ?parent_id= pre-select dari tombol inline tree / tabel
     parent_id = request.GET.get('parent_id') or request.POST.get('parent')
@@ -1437,7 +1449,7 @@ def unit_tree(request):
 
 
 @login_required
-@admin_required
+@require_permission('can_manage_units')
 def unit_edit(request, unit_id):
     unit = get_object_or_404(UnitKerja, id=unit_id)
     if request.method == 'POST':
@@ -1481,7 +1493,7 @@ def unit_edit(request, unit_id):
 
 
 @login_required
-@admin_required
+@require_permission('can_manage_units')
 @require_POST
 def unit_delete(request, unit_id):
     unit = get_object_or_404(UnitKerja, id=unit_id)
@@ -1520,7 +1532,7 @@ def unit_delete(request, unit_id):
 
 
 @login_required
-@admin_required
+@require_permission('can_manage_units')
 def pokja_manage(request):
     categories = Category.objects.all().order_by('order')
     return render(request, 'akreditasi/pokja_list.html', {'categories': categories})
@@ -1530,7 +1542,7 @@ def pokja_manage(request):
 # 10. PENGATURAN: PROFIL RS & LOG SISTEM
 # ==============================================================================
 @login_required
-@admin_required
+@require_permission('can_manage_units')
 def profil_rs_view(request):
     profile = RumahSakitProfile.get_default()
     if request.method == 'POST':
@@ -1574,7 +1586,7 @@ def profil_rs_view(request):
 
 
 @login_required
-@admin_required
+@require_permission('can_view_audit_log')
 def audit_log_view(request):
     logs = AuditLog.objects.select_related('user').order_by('-timestamp')[:100]
     return render(request, 'akreditasi/audit_log.html', {'logs': logs})

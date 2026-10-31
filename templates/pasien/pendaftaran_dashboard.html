@@ -1217,8 +1217,10 @@
                         .then(r => r.json())
                         .then(d => {
                             if (d.exists) {
-                                nikResult.innerHTML = '<span class="text-success"><i class="bi bi-check-circle-fill"></i> Ditemukan: <strong>' + d.pasien.nama + '</strong> (RM: ' + d.pasien.no_rm + ')</span>';
-                                if (selectPasien) {
+                                const pName = (d.pasien && d.pasien.nama) ? d.pasien.nama : 'Pasien sudah terdaftar';
+                                const pRm = (d.pasien && d.pasien.no_rm) ? ' (RM: ' + d.pasien.no_rm + ')' : '';
+                                nikResult.innerHTML = '<span class="text-success"><i class="bi bi-check-circle-fill"></i> NIK Terdaftar: <strong>' + pName + '</strong>' + pRm + '</span>';
+                                if (selectPasien && d.pasien && d.pasien.id) {
                                     for (let opt of selectPasien.options) {
                                         if (opt.value == d.pasien.id) { opt.selected = true; break; }
                                     }
