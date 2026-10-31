@@ -59,3 +59,23 @@ class UnitPilihanScopingTest(TestCase):
         r = self.client.get(reverse('akreditasi:logbook_buat'))
         self.assertEqual(r.status_code, 200)
         self.assertEqual(r.context['default_unit_id'], self.bangsal.pk)
+
+
+class LogbookFormTemplateRenderTest(TestCase):
+    def setUp(self):
+        self.bangsal = UnitKerja.objects.create(code='BANGSAL-D-TMPL', name='Bangsal Dewasa Tmpl', level=3)
+        self.r1 = Ruangan.objects.create(kode='R-K1-TMPL', nama='Bangsal Mawar Tmpl', kelas='1', jenis='RANAP', unit_kerja=self.bangsal)
+        self.user = User.objects.create_user('ka.bangsal.tmpl', password='x')
+        UserProfile.objects.update_or_create(user=self.user, defaults={'role': 'KEPALA_UNIT', 'unit_kerja': self.bangsal})
+
+    def test_rendered_form_has_preselected_unit_and_data_unit_attributes(self):
+        self.client.force_login(self.user)
+        r = self.client.get(reverse('akreditasi:logbook_buat'))
+        self.assertEqual(r.status_code, 200)
+        content = r.content.decode('utf-8')
+        # Check pre-selected unit
+        self.assertIn(f'value="{self.bangsal.pk}" selected', content)
+        # Check data-unit on room option
+        self.assertIn(f'data-unit="{self.bangsal.pk}"', content)
+        # Check presence of client-side sync script
+        self.assertIn('filterRuanganByUnit', content)

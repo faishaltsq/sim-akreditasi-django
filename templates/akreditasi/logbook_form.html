@@ -36,21 +36,21 @@
                             <div class="form-text">Shift malam 21.00–07.00 dihitung menurut tanggal mulai.</div>
                         </div>
                         <div class="col-12 col-md-6">
-                            <label class="form-label small mb-1">Unit Kerja</label>
-                            <select name="unit" class="form-select form-select-sm" required>
+                            <label class="form-label small mb-1" for="id_unit">Unit Kerja</label>
+                            <select name="unit" id="id_unit" class="form-select form-select-sm" required>
                                 {% for u in unit_pilihan %}
-                                <option value="{{ u.pk }}">{{ u.name }}</option>
+                                <option value="{{ u.pk }}" {% if u.pk == default_unit_id %}selected{% endif %}>{{ u.name }}</option>
                                 {% empty %}
                                 <option value="">— tidak ada unit dalam lingkup Anda —</option>
                                 {% endfor %}
                             </select>
                         </div>
                         <div class="col-12">
-                            <label class="form-label small mb-1">Ruangan <span class="text-muted">(opsional, untuk logbook per bangsal)</span></label>
-                            <select name="ruangan" class="form-select form-select-sm">
-                                <option value="">— tingkat unit (semua ruangan) —</option>
+                            <label class="form-label small mb-1" for="id_ruangan">Ruangan <span class="text-muted">(opsional, untuk logbook per bangsal)</span></label>
+                            <select name="ruangan" id="id_ruangan" class="form-select form-select-sm">
+                                <option value="" data-unit="">— tingkat unit (semua ruangan) —</option>
                                 {% for r in ruangan_pilihan %}
-                                <option value="{{ r.pk }}">{{ r }}</option>
+                                <option value="{{ r.pk }}" data-unit="{{ r.unit_kerja_id|default:'' }}">{{ r }}</option>
                                 {% endfor %}
                             </select>
                         </div>
@@ -64,4 +64,45 @@
         </div>
     </div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const unitSelect = document.getElementById('id_unit');
+    const ruanganSelect = document.getElementById('id_ruangan');
+    if (!unitSelect || !ruanganSelect) return;
+
+    // Simpan semua opsi ruangan awal
+    const allOptions = Array.from(ruanganSelect.querySelectorAll('option'));
+
+    function filterRuanganByUnit() {
+        const selectedUnit = unitSelect.value;
+        const currentRuangan = ruanganSelect.value;
+        let isCurrentStillValid = false;
+
+        // Kosongkan opsi ruangan
+        ruanganSelect.innerHTML = '';
+
+        allOptions.forEach(opt => {
+            const optUnit = opt.getAttribute('data-unit');
+            // Tampilkan opsi umum (data-unit kosong) atau yang unitnya cocok
+            if (!optUnit || optUnit === selectedUnit) {
+                ruanganSelect.appendChild(opt);
+                if (opt.value === currentRuangan && currentRuangan !== '') {
+                    isCurrentStillValid = true;
+                }
+            }
+        });
+
+        if (isCurrentStillValid) {
+            ruanganSelect.value = currentRuangan;
+        } else {
+            ruanganSelect.value = '';
+        }
+    }
+
+    unitSelect.addEventListener('change', filterRuanganByUnit);
+    // Jalankan filter saat halaman pertama kali dibuka
+    filterRuanganByUnit();
+});
+</script>
 {% endblock %}
