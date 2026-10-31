@@ -19,8 +19,12 @@ from accounts.models import UserProfile
 from akreditasi.models import UnitKerja
 from sdm.models import (
     EntriLogbookKlinis,
+    KatalogTindakan,
+    MasterJenjangProfesi,
+    MasterProfesiPegawai,
     Pegawai,
     PenempatanPegawai,
+    VerifikasiLogbook,
 )
 from sdm.services.dokumen_kredensial import generate_draft
 
@@ -78,6 +82,12 @@ class Command(BaseCommand):
             },
         )
 
+        prof = MasterProfesiPegawai.objects.filter(code='KPR').first()
+        jenjang = (
+            MasterJenjangProfesi.objects.filter(profesi=prof, kode='PK-II').first()
+            if prof else None
+        )
+
         pegawai, _ = Pegawai.objects.update_or_create(
             nomor_pegawai='NIP-19950812-202101-2-001',
             defaults={
@@ -85,6 +95,8 @@ class Command(BaseCommand):
                 'kategori': 'PPA',
                 'profesi': 'Perawat',
                 'jabatan': 'Perawat Klinik II (PK II)',
+                'profesi_master': prof,
+                'jenjang_master': jenjang,
                 'akun': user,
                 'status': 'AKTIF',
             },
@@ -99,17 +111,19 @@ class Command(BaseCommand):
             },
         )
 
-        # Bersihkan entri 5 tahun sebelumnya supaya seed idempoten. Entri
-        # 36 bulan lama tidak dihapus: keduanya berbagi tabel yang sama dan
-        # rentang 36 bulan adalah subset dari 5 tahun.
-        EntriLogbookKlinis.objects.filter(
-            employee=pegawai,
-            tanggal__lt=today - timedelta(days=5 * 365),
-        ).delete()
+        # Bersihkan entri lama agar seeder bersifat idempoten penuh
+        EntriLogbookKlinis.objects.filter(employee=pegawai).delete()
+
+        katalog_items = list(KatalogTindakan.objects.filter(jenjang__profesi__code='KPR'))
+        if not katalog_items:
+            katalog_items = list(KatalogTindakan.objects.all()[:10])
 
         tahun_terakhir = today.year
         entries = []
-        for nama, total, mandiri, kolaborasi, supervisi in self.TINDAKAN:
+        for t_idx, (nama, total, mandiri, kolaborasi, supervisi) in enumerate(self.TINDAKAN):
+            kt = katalog_items[t_idx % len(katalog_items)] if katalog_items else None
+            tindakan_nama = kt.nama if kt else nama
+
             # Sebar volume tiap tindakan ke 5 tahun kalender; jaga proporsi
             # mandiri/kolaborasi/supervisi agar rekap tetap konsisten.
             for idx in range(5):
@@ -121,14 +135,27 @@ class Command(BaseCommand):
                     employee=pegawai,
                     unit_kerja=unit,
                     tanggal=tanggal,
-                    tindakan=nama,
+                    tindakan=tindakan_nama,
+                    katalog_tindakan=kt,
                     jumlah_mandiri=max(1, mandiri // 5),
                     jumlah_kolaborasi=kolaborasi // 5,
                     jumlah_supervisi=supervisi // 5,
                     pasien_ref=f'RM-PED-{tahun}-{total}',
                 ))
 
-        EntriLogbookKlinis.objects.bulk_create(entries)
+        created_entries = EntriLogbookKlinis.objects.bulk_create(entries)
+
+        verifikasi_list = [
+            VerifikasiLogbook(
+                entri=entry,
+                verifikator=user,
+                status=VerifikasiLogbook.VERIFIED,
+                catatan='Terverifikasi oleh Tim Preseptor Bangsal Anak (PMK 13/2025)',
+                verified_at=timezone.now(),
+            )
+            for entry in created_entries
+        ]
+        VerifikasiLogbook.objects.bulk_create(verifikasi_list)
 
         draf = generate_draft(pegawai, 'LOGBOOK_5TAHUN', user=user)
         draf.isian = {

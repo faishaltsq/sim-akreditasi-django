@@ -436,38 +436,50 @@ def _section_heading(number, title, styles):
 
 
 def _ranah1_matrix(employee, styles, years=5):
-    """Ranah 1: volume tindakan per tahun T1..T5, mandiri vs pelimpahan."""
+    """Ranah 1: volume dan jenis pelayanan / tindakan keprofesian 10-kolom PMK 13/2025."""
     recap = logbook_recap_5tahun(employee, years=years)
     labels = recap['tahun_labels']
-    header = [Paragraph('<b>Kompetensi / Tindakan</b>', styles['cell_title'])]
+    header = [
+        Paragraph('<b>No</b>', styles['cell_title']),
+        Paragraph('<b>Jenis Tindakan Keprofesian</b>', styles['cell_title']),
+        Paragraph('<b>Kode Standar</b>', styles['cell_title']),
+    ]
     header += [Paragraph(f'<b>{label}</b>', styles['cell_title']) for label in labels]
     header += [
-        Paragraph('<b>Mandiri</b>', styles['cell_title']),
-        Paragraph('<b>Pelimpahan</b>', styles['cell_title']),
-        Paragraph('<b>Total</b>', styles['cell_title']),
+        Paragraph('<b>Total 5 Thn</b>', styles['cell_title']),
+        Paragraph('<b>Status Verifikasi</b>', styles['cell_title']),
     ]
     rows = [header]
-    for item in recap['per_tindakan']:
-        pelimpahan = item['supervisi'] + item['kolaborasi']
-        row = [Paragraph(item['label'], styles['cell'])]
+    for idx, item in enumerate(recap['per_tindakan'], start=1):
+        row = [
+            Paragraph(str(idx), styles['cell']),
+            Paragraph(item['label'], styles['cell']),
+            Paragraph(item.get('kode', '-'), styles['cell']),
+        ]
         row += [Paragraph(str(v) or '0', styles['cell']) for v in item['tahunan']]
         row += [
-            Paragraph(str(item['mandiri']), styles['cell']),
-            Paragraph(str(pelimpahan), styles['cell']),
             Paragraph(str(item['total']), styles['cell']),
+            Paragraph(item.get('status_verifikasi', 'Menunggu'), styles['cell']),
         ]
         rows.append(row)
 
-    total_row = [Paragraph('<b>Total Tindakan</b>', styles['cell_title'])]
+    total_row = [
+        Paragraph('', styles['cell_title']),
+        Paragraph('<b>Total Tindakan Klinis</b>', styles['cell_title']),
+        Paragraph('-', styles['cell_title']),
+    ]
     total_row += [Paragraph(f'<b>{v}</b>', styles['cell_title']) for v in recap['tahunan']]
     total_row += [
-        Paragraph(f"<b>{recap['mandiri']}</b>", styles['cell_title']),
-        Paragraph(f"<b>{recap['supervisi'] + recap['kolaborasi']}</b>", styles['cell_title']),
         Paragraph(f"<b>{recap['total_5tahun']}</b>", styles['cell_title']),
+        Paragraph(
+            f"<b>{recap['terverifikasi']}/{recap['total_5tahun']} Valid</b>"
+            if recap['total_5tahun'] else '<b>-</b>',
+            styles['cell_title'],
+        ),
     ]
     rows.append(total_row)
 
-    widths = [50 * mm] + [13 * mm] * years + [17 * mm] * 3
+    widths = [8 * mm, 44 * mm, 20 * mm] + [12 * mm] * years + [16 * mm, 22 * mm]
     return _boxed_table(rows, widths, styles), recap
 
 

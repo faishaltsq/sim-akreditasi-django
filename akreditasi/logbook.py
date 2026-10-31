@@ -347,17 +347,39 @@ def logbook_detail(request, pk):
         b.rt_menit = response_time_menit(k) if k else None
         b.los_menit = los_menit(k) if k else None
 
-    from sdm.models import KatalogTindakan
+    from sdm.models import KatalogTindakan, Pegawai
     tindakan_shift = logbook.tindakan_klinis.select_related(
         'employee', 'katalog_tindakan', 'logbook_pasien'
     ).order_by('-created_at')
-    katalog_tindakan_pilihan = list(
+
+    user_pegawai = getattr(request.user, 'pegawai_hc', None)
+    if not user_pegawai:
+        user_pegawai = Pegawai.objects.filter(akun=request.user).first()
+
+    user_profesi_nama = ''
+    if user_pegawai:
+        if user_pegawai.profesi_master:
+            user_profesi_nama = user_pegawai.profesi_master.nama
+        elif user_pegawai.jenjang_master and user_pegawai.jenjang_master.profesi:
+            user_profesi_nama = user_pegawai.jenjang_master.profesi.nama
+        elif user_pegawai.profesi:
+            user_profesi_nama = user_pegawai.profesi
+
+    katalog_qs = list(
         KatalogTindakan.objects.filter(is_active=True)
         .select_related('jenjang__profesi')
         .values('id', 'kode', 'nama', 'jenjang__profesi__nama')
-        .order_by('jenjang__profesi__nama', 'nama')
     )
-
+    if user_profesi_nama:
+        pref_lower = user_profesi_nama.lower()
+        def _prof_sort(item):
+            pname = (item['jenjang__profesi__nama'] or '').lower()
+            match = (pref_lower in pname or pname in pref_lower)
+            return (0 if match else 1, item['jenjang__profesi__nama'] or '', item['nama'])
+        katalog_qs.sort(key=_prof_sort)
+    else:
+        katalog_qs.sort(key=lambda item: (item['jenjang__profesi__nama'] or '', item['nama']))
+    katalog_tindakan_pilihan = katalog_qs
     return render(request, 'akreditasi/logbook_detail.html', {
         'logbook': logbook,
         'baris': baris,
@@ -367,6 +389,7 @@ def logbook_detail(request, pk):
         'bukti': logbook.bukti.all(),
         'tindakan_shift': tindakan_shift,
         'katalog_tindakan_pilihan': katalog_tindakan_pilihan,
+        'user_profesi_nama': user_profesi_nama,
         'kategori_tindakan_choices': [('M', 'Mandiri'), ('K', 'Kolaborasi'), ('S', 'Supervisi')],
         'disposisi_pilihan': list(DISPOSISI_LABEL.items()),
         'jenis_insiden': LogbookKejadian._meta.get_field('jenis_insiden').choices,

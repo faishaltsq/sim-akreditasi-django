@@ -6,6 +6,76 @@
     <a class="small text-decoration-none" href="{% url 'sdm:kredensial_pengajuan_sendiri' %}"><i class="bi bi-arrow-left me-1"></i>Kembali</a>
     <h1 class="page-title h4 mt-2 mb-3">Isi {{ title }}</h1>
 
+    {% if logbook_recap %}
+    <div class="card border shadow-sm mb-4">
+        <div class="card-header bg-white d-flex justify-content-between align-items-center">
+            <div>
+                <h2 class="h6 mb-0">
+                    {% if jenis == 'LOGBOOK_5TAHUN' %}
+                    Ranah 1: Rekapitulasi Pelayanan &amp; Tindakan Klinis (dari Logbook Harian)
+                    {% else %}
+                    Rekapitulasi Tindakan Klinis 36 Bulan (dari Logbook Harian)
+                    {% endif %}
+                </h2>
+                <small class="text-muted">
+                    Total: {{ logbook_recap.total }} tindakan · 
+                    Terverifikasi: {{ logbook_recap.terverifikasi }}
+                </small>
+            </div>
+            <a href="{% url 'sdm:logbook_list' %}" class="btn btn-outline-primary btn-sm">
+                <i class="bi bi-journal-plus me-1"></i>Buka Logbook Harian
+            </a>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-sm table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th class="ps-3" style="width: 40px;">No</th>
+                            <th>Jenis Tindakan Keprofesian</th>
+                            <th style="width: 140px;">Kode Standar</th>
+                            {% for yr in logbook_recap.tahun_labels %}
+                            <th class="text-center" style="width: 60px;">{{ yr }}</th>
+                            {% endfor %}
+                            <th class="text-center" style="width: 80px;">Total</th>
+                            <th class="pe-3" style="width: 130px;">Status Verifikasi</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in logbook_recap.per_tindakan %}
+                        <tr>
+                            <td class="ps-3 text-muted">{{ forloop.counter }}</td>
+                            <td class="fw-medium">{{ item.label }}</td>
+                            <td><code>{{ item.kode|default:"-" }}</code></td>
+                            {% for val in item.tahunan %}
+                            <td class="text-center">{{ val }}</td>
+                            {% endfor %}
+                            <td class="text-center fw-bold">{{ item.total }}</td>
+                            <td class="pe-3">
+                                {% if item.status_verifikasi == 'Terverifikasi' %}
+                                <span class="badge text-bg-success">Terverifikasi</span>
+                                {% else %}
+                                <span class="badge text-bg-warning">Menunggu</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="10" class="text-center py-4 text-muted">
+                                <i class="bi bi-journal-x display-6 d-block mb-2 text-secondary"></i>
+                                Belum ada entri tindakan di logbook harian untuk window 5 tahun ini.
+                                <br/>
+                                <a href="{% url 'sdm:logbook_list' %}" class="btn btn-sm btn-link mt-1">Mulai isi tindakan di Logbook Harian</a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
     <div class="card border shadow-sm">
         <div class="card-header bg-white"><h2 class="h6 mb-0">Isian Manual</h2></div>
         <div class="card-body">

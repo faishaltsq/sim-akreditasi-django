@@ -3166,12 +3166,22 @@ def dokumen_kredensial_edit(request, jenis):
             'field_groups', []
         )
     ]
+
+    logbook_recap_data = None
+    if jenis == 'LOGBOOK_5TAHUN':
+        from sdm.services.logbook import logbook_recap_5tahun
+        logbook_recap_data = logbook_recap_5tahun(pegawai)
+    elif jenis == 'LOGBOOK_36BLN':
+        from sdm.services.logbook import logbook_recap
+        logbook_recap_data = logbook_recap(pegawai, months=36)
+
     return render(request, 'sdm/kredensial/dokumen_edit.html', {
         'draf': draf,
         'jenis': jenis,
         'title': _dokumen_kredensial_title(jenis),
         'manual_fields': manual_fields,
         'field_groups': field_groups,
+        'logbook_recap': logbook_recap_data,
         'has_final': draf.versi_dokumen_id is not None,
     })
 

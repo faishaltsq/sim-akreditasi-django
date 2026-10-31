@@ -193,11 +193,15 @@
                     </div>
                     <div class="col-12 col-md-4">
                         <label class="form-label small fw-semibold mb-1">Pilih Tindakan Klinis (Master Database)</label>
-                        <select name="katalog_id" class="form-select form-select-sm" required>
+                        <div class="input-group input-group-sm mb-1">
+                            <span class="input-group-text bg-light py-0"><i class="bi bi-search text-muted"></i></span>
+                            <input type="text" id="cariTindakanKlinis" class="form-control form-control-sm" placeholder="Ketik cari nama / kode tindakan..." autocomplete="off">
+                        </div>
+                        <select name="katalog_id" id="selectKatalogTindakan" class="form-select form-select-sm" required>
                             <option value="">-- Pilih Tindakan (Master Database) --</option>
                             {% regroup katalog_tindakan_pilihan by jenjang__profesi__nama as profesi_list %}
                             {% for grp in profesi_list %}
-                            <optgroup label="{{ grp.grouper|default:'Tindakan Klinis' }}">
+                            <optgroup label="{% if user_profesi_nama and user_profesi_nama|lower in grp.grouper|lower %}⭐ {% endif %}{{ grp.grouper|default:'Tindakan Klinis' }}">
                                 {% for kat in grp.list %}
                                 <option value="{{ kat.id }}">{{ kat.kode }} — {{ kat.nama }}</option>
                                 {% endfor %}
@@ -206,6 +210,32 @@
                         </select>
                         <div class="form-text" style="font-size: 0.72rem;">*Tindakan resmi dari master kewenangan klinis (RKK).</div>
                     </div>
+                    <script>
+                    (function() {
+                        var search = document.getElementById('cariTindakanKlinis');
+                        var select = document.getElementById('selectKatalogTindakan');
+                        if (!search || !select) return;
+                        search.addEventListener('input', function(e) {
+                            var q = e.target.value.toLowerCase().trim();
+                            var options = select.querySelectorAll('option');
+                            var optgroups = select.querySelectorAll('optgroup');
+                            options.forEach(function(opt) {
+                                if (!opt.value) return;
+                                var text = (opt.textContent || '').toLowerCase();
+                                var matches = !q || text.indexOf(q) !== -1;
+                                opt.hidden = !matches;
+                                opt.style.display = matches ? '' : 'none';
+                            });
+                            optgroups.forEach(function(og) {
+                                var hasVisible = Array.from(og.querySelectorAll('option')).some(function(o) {
+                                    return !o.hidden;
+                                });
+                                og.hidden = !hasVisible;
+                                og.style.display = hasVisible ? '' : 'none';
+                            });
+                        });
+                    })();
+                    </script>
                     <div class="col-12 col-md-3">
                         <label class="form-label small fw-semibold mb-1">Kategori Pelaksanaan</label>
                         <div class="d-flex gap-2 align-items-center mt-1">

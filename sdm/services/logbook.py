@@ -80,6 +80,7 @@ def logbook_recap_5tahun(employee, *, years=5, end_date=None):
     recap = {
         'tahun_labels': [f'T{i}' for i in range(1, years + 1)],
         'total_5tahun': 0,
+        'total': 0,
         'mandiri': 0,
         'supervisi': 0,
         'kolaborasi': 0,
@@ -113,13 +114,20 @@ def logbook_recap_5tahun(employee, *, years=5, end_date=None):
         recap['tahunan'][idx] += total
 
         label = entry.katalog_tindakan.nama if entry.katalog_tindakan else entry.tindakan
+        kode = entry.katalog_tindakan.kode if entry.katalog_tindakan else '-'
+        is_verified = any(v.status == VerifikasiLogbook.VERIFIED for v in entry.verifikasi.all())
+
         row = next(
             (item for item in recap['per_tindakan'] if item['label'] == label), None,
         )
         if row is None:
             row = {
-                'label': label, 'mandiri': 0, 'supervisi': 0, 'kolaborasi': 0,
+                'label': label,
+                'kode': kode,
+                'mandiri': 0, 'supervisi': 0, 'kolaborasi': 0,
                 'total': 0, 'tahunan': [0] * years,
+                'verified_count': 0,
+                'status_verifikasi': 'Menunggu',
             }
             recap['per_tindakan'].append(row)
         row['mandiri'] += m
@@ -128,9 +136,17 @@ def logbook_recap_5tahun(employee, *, years=5, end_date=None):
         row['total'] += total
         row['tahunan'][idx] += total
 
-        if any(v.status == VerifikasiLogbook.VERIFIED for v in entry.verifikasi.all()):
+        if is_verified:
             recap['terverifikasi'] += total
+            row['verified_count'] += total
 
+    for item in recap['per_tindakan']:
+        if item.get('verified_count', 0) > 0:
+            item['status_verifikasi'] = 'Terverifikasi'
+        else:
+            item['status_verifikasi'] = 'Menunggu'
+
+    recap['total'] = recap['total_5tahun']
     return recap
 
 

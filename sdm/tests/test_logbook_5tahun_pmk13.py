@@ -191,6 +191,9 @@ class Logbook5TahunRecapTests(Logbook5TahunBase):
         recap = logbook_recap_5tahun(self.employee)
         self.assertEqual(recap['terverifikasi'], 4)
         self.assertEqual(recap['total_5tahun'], 4)
+        row = recap['per_tindakan'][0]
+        self.assertEqual(row['status_verifikasi'], 'Terverifikasi')
+        self.assertIn('kode', row)
 
 
 class Logbook5TahunPdfRenderTests(Logbook5TahunBase):
@@ -381,3 +384,28 @@ class Logbook5TahunUiTests(Logbook5TahunBase):
             pegawai=self.employee, jenis='LOGBOOK_5TAHUN',
         )
         self.assertNotIn('catatan_rekomendasi_adhoc', draf.isian)
+
+    def test_dokumen_edit_context_includes_logbook_recap(self):
+        """GET dokumen_kredensial_edit provides logbook_recap context for preview."""
+        self._entry(days_ago=50, mandiri=5, label='Injeksi')
+        generate_draft(self.employee, 'LOGBOOK_5TAHUN', user=self.manager)
+        url = reverse('sdm:dokumen_kredensial_edit', args=['LOGBOOK_5TAHUN'])
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('logbook_recap', response.context)
+        self.assertEqual(response.context['logbook_recap']['total_5tahun'], 5)
+
+    def test_seed_logbook_5tahun_siska_creates_katalog_linked_entries(self):
+        """Seeder Siska Lestari links entries to real catalog & verifies them."""
+        from django.core.management import call_command
+        from sdm.models import EntriLogbookKlinis, Pegawai
+
+        call_command('seed_logbook_5tahun_siska')
+        siska = Pegawai.objects.get(nomor_pegawai='NIP-19950812-202101-2-001')
+        entries = EntriLogbookKlinis.objects.filter(employee=siska)
+        self.assertEqual(entries.count(), 40)
+        # Every entry should be verified
+        for entry in entries:
+            self.assertTrue(entry.verifikasi.filter(status='VERIFIED').exists())
+            self.assertIsNotNone(entry.katalog_tindakan)
+

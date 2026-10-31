@@ -103,8 +103,22 @@ def plan_missing():
     return profesi_baru, jenjang_baru, katalog_baru
 
 
-def apply_seed():
-    """Idempotently write every missing row inside one transaction."""
+def apply_seed(apps=None):
+    """Idempotently write every missing row inside one transaction.
+    
+    Accepts an optional Django apps registry for use in migrations.
+    """
+    if apps is not None:
+        MasterProfesiPegawai = apps.get_model('sdm', 'MasterProfesiPegawai')
+        MasterJenjangProfesi = apps.get_model('sdm', 'MasterJenjangProfesi')
+        KatalogTindakan = apps.get_model('sdm', 'KatalogTindakan')
+    else:
+        from sdm.models import (
+            KatalogTindakan,
+            MasterJenjangProfesi,
+            MasterProfesiPegawai,
+        )
+
     profesi_baru = jenjang_baru = katalog_baru = 0
 
     with transaction.atomic():
