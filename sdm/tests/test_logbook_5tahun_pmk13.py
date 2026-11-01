@@ -22,6 +22,7 @@ from sdm.models import (
     DrafDokumenKredensial,
     EntriLogbookKlinis,
     HcGrant,
+    KoreksiLogbookTahunan,
     Pegawai,
     PenempatanPegawai,
     VerifikasiLogbook,
@@ -194,6 +195,33 @@ class Logbook5TahunRecapTests(Logbook5TahunBase):
         row = recap['per_tindakan'][0]
         self.assertEqual(row['status_verifikasi'], 'Terverifikasi')
         self.assertIn('kode', row)
+
+    def test_recap_incorporates_koreksi_logbook_tahunan(self):
+        # Entry harian 10 mandiri pada tahun ini
+        self._entry(days_ago=10, mandiri=10, label='Resusitasi Bayi')
+        current_year = self.today.year
+        # Koreksi portofolio masa lalu 15 mandiri + 5 kolaborasi
+        KoreksiLogbookTahunan.objects.create(
+            pegawai=self.employee,
+            tindakan='Resusitasi Bayi',
+            tahun=current_year,
+            koreksi_mandiri=15,
+            koreksi_kolaborasi=5,
+            koreksi_supervisi=0,
+            catatan_koreksi='Saldo portofolio pra-SIM',
+            created_by=self.manager,
+        )
+        recap = logbook_recap_5tahun(self.employee)
+        # Mandiri total: 10 harian + 15 koreksi = 25. Kolaborasi: 5. Total = 30.
+        self.assertEqual(recap['mandiri'], 25)
+        self.assertEqual(recap['kolaborasi'], 5)
+        self.assertEqual(recap['total_5tahun'], 30)
+        self.assertEqual(recap['grand_total_mandiri'], 25)
+        row = next(r for r in recap['per_tindakan'] if r['label'] == 'Resusitasi Bayi')
+        self.assertEqual(row['per_tahun'][current_year]['m'], 25)
+        self.assertEqual(row['per_tahun'][current_year]['k'], 5)
+        self.assertEqual(row['per_tahun'][current_year]['total'], 30)
+
 
 
 class Logbook5TahunPdfRenderTests(Logbook5TahunBase):
@@ -408,4 +436,61 @@ class Logbook5TahunUiTests(Logbook5TahunBase):
         for entry in entries:
             self.assertTrue(entry.verifikasi.filter(status='VERIFIED').exists())
             self.assertIsNotNone(entry.katalog_tindakan)
+
+    def test_logbook_koreksi_simpan_and_hapus(self):
+        """Koreksi manual portofolio tersimpan dan dapat dihapus."""
+        url_simpan = reverse('sdm:logbook_koreksi_simpan')
+        resp = self.client.post(url_simpan, {
+            'pegawai': self.employee.pk,
+            'tahun': 2024,
+            'tindakan': 'Koreksi Operasi Laparotomi',
+            'koreksi_mandiri': 12,
+            'koreksi_kolaborasi': 3,
+            'koreksi_supervisi': 1,
+            'catatan_koreksi': 'Saldo portofolio lama',
+        })
+        self.assertEqual(resp.status_code, 302)
+        kor = KoreksiLogbookTahunan.objects.get(pegawai=self.employee, tahun=2024)
+        self.assertEqual(kor.koreksi_mandiri, 12)
+        self.assertEqual(kor.koreksi_kolaborasi, 3)
+
+        # Hapus koreksi
+        url_hapus = reverse('sdm:logbook_koreksi_hapus', args=[kor.pk])
+        resp_hapus = self.client.post(url_hapus, {'pegawai': self.employee.pk})
+        self.assertEqual(resp_hapus.status_code, 302)
+        self.assertFalse(KoreksiLogbookTahunan.objects.filter(pk=kor.pk).exists())
+
+    def test_logbook_5tahun_pdf_export(self):
+        """Export PDF 5 tahun menghasilkan berkas PDF lanskap valid."""
+        self._entry(days_ago=50, mandiri=8, label='Triase Anak')
+        url = reverse('sdm:logbook_5tahun_pdf_export') + f'?pegawai={self.employee.pk}'
+        resp = self.client.get(url)
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp['Content-Type'], 'application/pdf')
+        self.assertTrue(resp.content.startswith(b'%PDF'))
+        text = pdf_text(resp.content)
+        self.assertIn('REKAPITULASI PORTOFOLIO TINDAKAN KLINIS 5 TAHUN', text.upper())
+        self.assertIn('TRIASE ANAK', text.upper())
+
+    def test_logbook_list_renders_tab_harian(self):
+        """Halaman logbook_list pada tab harian menampilkan entri harian."""
+        self._entry(days_ago=10, mandiri=5, label='Triase Anak')
+        resp = self.client.get(reverse('sdm:logbook_list') + f'?tab=harian&pegawai={self.employee.pk}')
+        self.assertEqual(resp.status_code, 200)
+        content = resp.content.decode('utf-8')
+        self.assertIn('Entri Logbook Harian', content)
+        self.assertIn('Triase Anak', content)
+
+    def test_logbook_list_renders_tab_rekap_5tahun(self):
+        """Halaman logbook_list pada tab rekap_5tahun menampilkan matriks 5 tahun & form koreksi."""
+        self._entry(days_ago=10, mandiri=5, label='Triase Anak')
+        resp = self.client.get(reverse('sdm:logbook_list') + f'?tab=rekap_5tahun&pegawai={self.employee.pk}')
+        self.assertEqual(resp.status_code, 200)
+        content = resp.content.decode('utf-8')
+        self.assertIn('Matriks 5 Tahun & Tahunan (PMK 13/2025)', content)
+        self.assertIn('Grand Total 5 Tahun', content)
+        self.assertIn('modalKoreksiLogbook', content)
+        self.assertIn('Unduh PDF PMK 13/2025', content)
+
+
 

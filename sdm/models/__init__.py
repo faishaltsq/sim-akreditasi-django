@@ -56,7 +56,7 @@ from .kredensial import (
     VerifikasiSumber,
 )
 from .katalog_rkk import KatalogTindakan, MasterJenjangProfesi
-from .logbook import EntriLogbookKlinis, VerifikasiLogbook
+from .logbook import EntriLogbookKlinis, KoreksiLogbookTahunan, VerifikasiLogbook
 from .orientasi import (
     AktivitasOrientasi,
     AsesmenOrientasi,

@@ -443,6 +443,21 @@ urlpatterns = [
         views.logbook_delete,
         name='logbook_delete',
     ),
+    path(
+        'logbook/koreksi/simpan/',
+        views.logbook_koreksi_simpan,
+        name='logbook_koreksi_simpan',
+    ),
+    path(
+        'logbook/koreksi/<uuid:koreksi_id>/hapus/',
+        views.logbook_koreksi_hapus,
+        name='logbook_koreksi_hapus',
+    ),
+    path(
+        'logbook/ekspor-pdf/',
+        views.logbook_5tahun_pdf_export,
+        name='logbook_5tahun_pdf_export',
+    ),
     path('saya/ajukan/', portal_views.portal_request_create, name='portal_request_create'),
     path('saya/ajukan/<uuid:request_id>/batal/', portal_views.portal_request_cancel, name='portal_request_cancel'),
     path('analitik/', views.analitik_dashboard, name='analitik_dashboard'),

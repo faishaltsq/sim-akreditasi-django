@@ -154,3 +154,63 @@ class VerifikasiLogbook(models.Model):
 
     def __str__(self):
         return f'{self.entri_id} — {self.get_status_display()}'
+
+
+class KoreksiLogbookTahunan(models.Model):
+    """Koreksi / penyesuaian portofolio tindakan tahunan masa lalu (PMK 13/2025).
+
+    Digunakan bila ada akumulasi tindakan mandiri, kolaborasi, atau supervisi
+    dari tahun-tahun sebelumnya sebelum sistem digital diterapkan, atau koreksi audit
+    portofolio tanpa merusak log transaksi harian.
+    """
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    pegawai = models.ForeignKey(
+        'sdm.Pegawai', on_delete=models.CASCADE, related_name='koreksi_logbook_tahunan',
+        verbose_name='Pegawai',
+    )
+    katalog_tindakan = models.ForeignKey(
+        'sdm.KatalogTindakan', on_delete=models.PROTECT, null=True, blank=True,
+        related_name='koreksi_logbook', verbose_name='Tindakan (Katalog)',
+    )
+    tindakan = models.CharField('Tindakan (Teks Bebas)', max_length=200, blank=True)
+    tahun = models.IntegerField('Tahun Pelaksanaan')
+    koreksi_mandiri = models.IntegerField('Koreksi Mandiri', default=0)
+    koreksi_kolaborasi = models.IntegerField('Koreksi Kolaborasi', default=0)
+    koreksi_supervisi = models.IntegerField('Koreksi Supervisi', default=0)
+    catatan_koreksi = models.TextField('Catatan / Alasan Koreksi', blank=True)
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='koreksi_logbook_created', verbose_name='Dibuat Oleh',
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = 'Koreksi Logbook Tahunan'
+        verbose_name_plural = 'Koreksi Logbook Tahunan'
+        ordering = ['-tahun', 'katalog_tindakan', 'tindakan']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['pegawai', 'katalog_tindakan', 'tahun'],
+                condition=models.Q(katalog_tindakan__isnull=False),
+                name='uniq_koreksi_logbook_katalog_tahun',
+            ),
+            models.UniqueConstraint(
+                fields=['pegawai', 'tindakan', 'tahun'],
+                condition=models.Q(tindakan__gt=''),
+                name='uniq_koreksi_logbook_teks_tahun',
+            ),
+        ]
+
+    def clean(self):
+        if bool(self.katalog_tindakan_id) == bool((self.tindakan or '').strip()):
+            raise ValidationError({
+                'katalog_tindakan': 'Pilih salah satu: tindakan katalog atau teks bebas.',
+                'tindakan': 'Pilih salah satu: tindakan katalog atau teks bebas.',
+            })
+
+    def __str__(self):
+        label = self.katalog_tindakan.nama if self.katalog_tindakan else self.tindakan
+        return f'{self.pegawai} — {label} ({self.tahun})'
+

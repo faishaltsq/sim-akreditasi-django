@@ -8,6 +8,7 @@ from sdm.akses import visible_units
 from sdm.models import (
     EntriLogbookKlinis,
     KatalogTindakan,
+    KoreksiLogbookTahunan,
     PenugasanKlinis,
     RincianKewenangan,
 )
@@ -140,3 +141,38 @@ class EntriLogbookForm(forms.ModelForm):
         )):
             self.add_error(None, 'Minimal satu jumlah (mandiri, supervisi, atau kolaborasi) harus lebih dari nol.')
         return cleaned
+
+
+class KoreksiLogbookTahunanForm(forms.ModelForm):
+    """Form penyesuaian/koreksi portofolio tindakan tahunan masa lalu (PMK 13/2025)."""
+
+    class Meta:
+        model = KoreksiLogbookTahunan
+        fields = [
+            'tahun', 'katalog_tindakan', 'tindakan',
+            'koreksi_mandiri', 'koreksi_kolaborasi', 'koreksi_supervisi',
+            'catatan_koreksi',
+        ]
+        widgets = {
+            'tahun': forms.NumberInput(attrs={'class': FIELD_CLASS, 'min': '2000', 'max': '2100'}),
+            'katalog_tindakan': forms.Select(attrs={'class': SELECT_CLASS}),
+            'tindakan': forms.TextInput(attrs={'class': FIELD_CLASS, 'maxlength': 200}),
+            'koreksi_mandiri': forms.NumberInput(attrs={'class': FIELD_CLASS}),
+            'koreksi_kolaborasi': forms.NumberInput(attrs={'class': FIELD_CLASS}),
+            'koreksi_supervisi': forms.NumberInput(attrs={'class': FIELD_CLASS}),
+            'catatan_koreksi': forms.Textarea(attrs={'class': TEXTAREA_CLASS, 'rows': 2}),
+        }
+
+    def __init__(self, *args, employee=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['katalog_tindakan'].required = False
+        self.fields['tindakan'].required = False
+        if employee is not None:
+            profesi_id = getattr(employee, 'profesi_master_id', None)
+            if profesi_id is None and getattr(employee, 'jenjang_master', None) is not None:
+                profesi_id = employee.jenjang_master.profesi_id
+            qs = KatalogTindakan.objects.filter(is_active=True)
+            if profesi_id:
+                qs = qs.filter(jenjang__profesi_id=profesi_id)
+            self.fields['katalog_tindakan'].queryset = qs.select_related('jenjang').order_by('jenjang__urutan', 'kode')
+

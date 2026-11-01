@@ -3055,9 +3055,11 @@ def kredensial_pengajuan_sendiri(request):
         for draft in DrafDokumenKredensial.objects.filter(pegawai=pegawai)
     }
     supporting_documents = []
+    seen_jenis = set()
     for row in DEFAULT_ROWS:
         if not row['kind']:
             continue
+        seen_jenis.add(row['jenis'])
         draft = draft_by_jenis.get(row['jenis'])
         ada = (row['kind'] in owned_kinds) or (draft is not None and draft.versi_dokumen_id is not None)
         supporting_documents.append({
@@ -3068,6 +3070,16 @@ def kredensial_pengajuan_sendiri(request):
             'has_draft': draft is not None,
             'has_final': draft is not None and draft.versi_dokumen_id is not None,
         })
+    for jenis, draft in draft_by_jenis.items():
+        if jenis not in seen_jenis:
+            supporting_documents.append({
+                'jenis': jenis,
+                'label': dict(DokumenSyaratKredensial.JENIS_CHOICES).get(jenis, jenis),
+                'ada': draft.versi_dokumen_id is not None,
+                'can_generate': jenis in DOKUMEN_KREDENSIAL_REGISTRY,
+                'has_draft': True,
+                'has_final': draft.versi_dokumen_id is not None,
+            })
     return render(request, 'sdm/kredensial/pengajuan_saya.html', {
         'form': form,
         'profile': credential_profile(pegawai),
@@ -3659,9 +3671,17 @@ def logbook_list(request):
             },
         )
     recap = None
+    recap_5tahun = None
+    koreksi_form = None
     if target:
-        from sdm.services.logbook import logbook_recap
+        from sdm.services.logbook import logbook_recap, logbook_recap_5tahun
         recap = logbook_recap(target, months=60)
+        recap_5tahun = logbook_recap_5tahun(target, years=5)
+        if can_manage:
+            from sdm.forms.logbook import KoreksiLogbookTahunanForm
+            koreksi_form = KoreksiLogbookTahunanForm(
+                employee=target, initial={'tahun': timezone.localdate().year}
+            )
     return render(request, 'sdm/logbook/daftar.html', {
         'page_obj': page_obj,
         'selected_employee': employee,
@@ -3670,6 +3690,9 @@ def logbook_list(request):
         'quick_form': quick_form,
         'quick_target': target,
         'logbook_recap': recap,
+        'logbook_5tahun': recap_5tahun,
+        'koreksi_form': koreksi_form,
+        'active_tab': request.GET.get('tab', 'harian'),
     })
 
 
@@ -3914,6 +3937,104 @@ def logbook_delete(request, entry_id):
     )
     messages.success(request, 'Entri logbook dihapus.')
     return redirect('sdm:logbook_list')
+
+
+@login_required
+@require_POST
+def logbook_koreksi_simpan(request):
+    """Menyimpan atau memperbarui koreksi akumulasi tahunan portofolio klinis."""
+    pegawai = _portal_pegawai_or_none(request.user)
+    posted_employee = _resolve_post_pegawai(request)
+    if pegawai is not None and (posted_employee is None or posted_employee.pk == pegawai.pk):
+        target = pegawai
+    else:
+        target = posted_employee
+    if target is None:
+        messages.error(request, 'Akun belum terhubung data pegawai.')
+        return redirect('sdm:logbook_list')
+    if not _logbook_target_allowed(request.user, target):
+        raise PermissionDenied('Pegawai di luar lingkup.')
+
+    tahun_str = request.POST.get('tahun')
+    katalog_id = request.POST.get('katalog_tindakan') or None
+    tindakan_teks = (request.POST.get('tindakan') or '').strip()
+    try:
+        tahun = int(tahun_str)
+        km = int(request.POST.get('koreksi_mandiri') or 0)
+        kk = int(request.POST.get('koreksi_kolaborasi') or 0)
+        ks = int(request.POST.get('koreksi_supervisi') or 0)
+    except (ValueError, TypeError):
+        messages.error(request, 'Format angka tahun atau koreksi tidak valid.')
+        return redirect('sdm:logbook_list')
+
+    catatan = (request.POST.get('catatan_koreksi') or '').strip()
+
+    from sdm.models import KoreksiLogbookTahunan
+    if katalog_id:
+        obj, _ = KoreksiLogbookTahunan.objects.get_or_create(
+            pegawai=target, katalog_tindakan_id=katalog_id, tahun=tahun,
+            defaults={'created_by': request.user},
+        )
+    elif tindakan_teks:
+        obj, _ = KoreksiLogbookTahunan.objects.get_or_create(
+            pegawai=target, tindakan=tindakan_teks, tahun=tahun,
+            defaults={'created_by': request.user},
+        )
+    else:
+        messages.error(request, 'Pilih tindakan katalog atau tulis tindakan teks.')
+        return redirect('sdm:logbook_list')
+
+    obj.koreksi_mandiri = km
+    obj.koreksi_kolaborasi = kk
+    obj.koreksi_supervisi = ks
+    obj.catatan_koreksi = catatan
+    obj.save()
+
+    messages.success(request, f'Koreksi logbook tahun {tahun} berhasil disimpan.')
+    back = reverse('sdm:logbook_list') + '?tab=rekap_5tahun'
+    if request.POST.get('pegawai'):
+        back += f'&pegawai={request.POST["pegawai"]}'
+    return redirect(back)
+
+
+@login_required
+@require_POST
+def logbook_koreksi_hapus(request, koreksi_id):
+    """Menghapus baris koreksi portofolio tahunan."""
+    from sdm.models import KoreksiLogbookTahunan
+    kor = get_object_or_404(
+        KoreksiLogbookTahunan.objects.select_related('pegawai'), pk=koreksi_id,
+    )
+    if not _logbook_target_allowed(request.user, kor.pegawai):
+        raise PermissionDenied('Pegawai di luar lingkup.')
+
+    th = kor.tahun
+    kor.delete()
+    messages.success(request, f'Koreksi logbook tahun {th} dihapus.')
+    back = reverse('sdm:logbook_list') + '?tab=rekap_5tahun'
+    if request.POST.get('pegawai'):
+        back += f'&pegawai={request.POST["pegawai"]}'
+    return redirect(back)
+
+
+@login_required
+def logbook_5tahun_pdf_export(request):
+    """Export Rekapitulasi Portofolio Tindakan Klinis 5 Tahun ke PDF Lanskap A4."""
+    employee, _ = _logbook_context(
+        request.user, pegawai_filter=request.GET.get('pegawai') or None,
+    )
+    target = employee or _portal_pegawai_or_none(request.user)
+    if target is None:
+        messages.error(request, 'Data pegawai tidak ditemukan.')
+        return redirect('sdm:logbook_list')
+
+    from sdm.services.logbook import generate_logbook_5tahun_pdf
+    buffer = generate_logbook_5tahun_pdf(target)
+    response = HttpResponse(buffer.getvalue(), content_type='application/pdf')
+    filename = f"Logbook_5Tahun_{target.nomor_pegawai or target.pk}.pdf"
+    response['Content-Disposition'] = f'attachment; filename="{filename}"'
+    return response
+
 
 
 # ── C-5: self-service supporting-document upload ─────────────────────────

@@ -36,6 +36,7 @@
 
     {% if employees %}
     <form method="get" class="card border shadow-sm mb-3" role="search" aria-label="Filter pegawai">
+        <input type="hidden" name="tab" value="{{ active_tab }}">
         <div class="card-body row g-2 align-items-end">
             <div class="col-8 col-md-4">
                 <label class="form-label small fw-semibold" for="pegawai-filter">Pegawai</label>
@@ -48,12 +49,194 @@
             </div>
             <div class="col-4 col-md-3 d-flex gap-2">
                 <button class="btn btn-outline-primary btn-sm" type="submit">Terapkan</button>
-                <a class="btn btn-outline-secondary btn-sm" href="{% url 'sdm:logbook_list' %}">Reset</a>
+                <a class="btn btn-outline-secondary btn-sm" href="{% url 'sdm:logbook_list' %}?tab={{ active_tab }}">Reset</a>
             </div>
         </div>
     </form>
     {% endif %}
 
+    {# Sub-Navigasi Antara Entri Harian vs Matriks 5 Tahun #}
+    <ul class="nav nav-pills mb-3 p-1 bg-light rounded border d-inline-flex" role="tablist">
+        <li class="nav-item">
+            <a class="nav-link {% if active_tab != 'rekap_5tahun' %}active shadow-sm{% endif %} py-1 px-3 small" href="?tab=harian{% if selected_employee %}&pegawai={{ selected_employee.pk }}{% endif %}">
+                <i class="bi bi-list-check me-1"></i> Entri Logbook Harian
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link {% if active_tab == 'rekap_5tahun' %}active shadow-sm{% endif %} py-1 px-3 small" href="?tab=rekap_5tahun{% if selected_employee %}&pegawai={{ selected_employee.pk }}{% endif %}">
+                <i class="bi bi-grid-3x3 me-1"></i> Matriks 5 Tahun & Tahunan (PMK 13/2025)
+            </a>
+        </li>
+    </ul>
+
+    {% if active_tab == 'rekap_5tahun' %}
+    {# ================= VIEW: MATRIKS 5 TAHUN & TAHUNAN (PMK 13/2025) ================= #}
+    {% if logbook_5tahun %}
+    <div class="card border-0 shadow-sm bg-gradient mb-3" style="background: linear-gradient(135deg, #f8fafc 0%, #edf2f7 100%); border-left: 4px solid #0d6efd !important;">
+        <div class="card-body py-3">
+            <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
+                <div>
+                    <h5 class="fw-bold mb-1 text-primary">
+                        <i class="bi bi-grid-3x3 me-1"></i> Rekapitulasi Portofolio Tindakan Klinis 5 Tahun
+                    </h5>
+                    <div class="small text-muted">
+                        Standar Portofolio Kredensial PMK 13/2025 &bull; Siklus Evaluasi:
+                        <strong>{{ logbook_5tahun.daftar_tahun.0 }} s.d. {{ logbook_5tahun.daftar_tahun|last }}</strong>
+                    </div>
+                    {% if quick_target %}
+                    <div class="small text-muted mt-1">
+                        Pegawai: <strong>{{ quick_target.nama_lengkap }}</strong>
+                        {% if quick_target.nomor_pegawai %}(NIP: {{ quick_target.nomor_pegawai }}){% endif %}
+                        &bull; Profesi: <strong>{{ quick_target.profesi|default:"Klinis" }}</strong>
+                    </div>
+                    {% endif %}
+                </div>
+                <div class="d-flex gap-2 flex-wrap">
+                    {% if can_manage and koreksi_form %}
+                    <button type="button" class="btn btn-outline-primary btn-sm" data-bs-toggle="modal" data-bs-target="#modalKoreksiLogbook">
+                        <i class="bi bi-pencil-square me-1"></i> Koreksi / Saldo Portofolio
+                    </button>
+                    {% endif %}
+                    <a href="{% url 'sdm:logbook_5tahun_pdf_export' %}{% if quick_target %}?pegawai={{ quick_target.pk }}{% endif %}" class="btn btn-danger btn-sm" target="_blank">
+                        <i class="bi bi-file-earmark-pdf me-1"></i> Unduh PDF PMK 13/2025
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {# 4 Kartu Banner Ringkasan 5 Tahun #}
+    <div class="row g-2 mb-3 text-center">
+        <div class="col-6 col-md-3">
+            <div class="p-3 bg-white rounded border shadow-sm border-start border-4 border-success">
+                <small class="text-muted d-block fw-semibold">Mandiri (M)</small>
+                <span class="fs-4 fw-bold text-success">{{ logbook_5tahun.grand_total_mandiri }}</span>
+                <small class="text-muted d-block">Tindakan Mandiri</small>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="p-3 bg-white rounded border shadow-sm border-start border-4 border-primary">
+                <small class="text-muted d-block fw-semibold">Kolaborasi (K)</small>
+                <span class="fs-4 fw-bold text-primary">{{ logbook_5tahun.grand_total_kolaborasi }}</span>
+                <small class="text-muted d-block">Tindakan Kolaborasi</small>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="p-3 bg-white rounded border shadow-sm border-start border-4 border-warning">
+                <small class="text-muted d-block fw-semibold">Supervisi (S)</small>
+                <span class="fs-4 fw-bold text-warning text-dark">{{ logbook_5tahun.grand_total_supervisi }}</span>
+                <small class="text-muted d-block">Di Bawah Supervisi</small>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="p-3 bg-white rounded border shadow-sm border-start border-4 border-info">
+                <small class="text-muted d-block fw-semibold">Grand Total 5 Tahun</small>
+                <span class="fs-4 fw-bold text-dark">{{ logbook_5tahun.total_5tahun }}</span>
+                <small class="text-success d-block fw-semibold">{{ logbook_5tahun.terverifikasi }} terverifikasi</small>
+            </div>
+        </div>
+    </div>
+
+    {# Tabel Matriks Multi-Header #}
+    <div class="card border shadow-sm mb-4">
+        <div class="card-header bg-white py-2 d-flex justify-content-between align-items-center">
+            <span class="small fw-semibold text-secondary">Rincian Tindakan per Tahun Kalender (Mandiri / Kolaborasi / Supervisi)</span>
+            <span class="badge bg-light text-dark border">{{ logbook_5tahun.per_tindakan|length }} Tindakan Terdaftar</span>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-sm table-bordered table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th rowspan="2" class="text-center align-middle" style="width: 40px;">No</th>
+                        <th rowspan="2" class="align-middle" style="min-width: 200px;">Jenis Tindakan Klinis</th>
+                        <th rowspan="2" class="text-center align-middle" style="width: 80px;">Kode</th>
+                        {% for th in logbook_5tahun.daftar_tahun %}
+                        <th colspan="3" class="text-center border-bottom bg-light-subtle">{{ th }}</th>
+                        {% endfor %}
+                        <th rowspan="2" class="text-center align-middle bg-primary-subtle text-primary-emphasis" style="width: 85px;">Total 5 Th</th>
+                        <th rowspan="2" class="text-center align-middle" style="width: 110px;">Status</th>
+                        {% if can_manage %}<th rowspan="2" class="text-center align-middle" style="width: 70px;">Aksi</th>{% endif %}
+                    </tr>
+                    <tr>
+                        {% for th in logbook_5tahun.daftar_tahun %}
+                        <th class="text-center small py-1 text-success" style="width: 32px;" title="Mandiri">M</th>
+                        <th class="text-center small py-1 text-primary" style="width: 32px;" title="Kolaborasi">K</th>
+                        <th class="text-center small py-1 text-warning" style="width: 32px;" title="Supervisi">S</th>
+                        {% endfor %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in logbook_5tahun.per_tindakan %}
+                    <tr>
+                        <td class="text-center text-muted small">{{ forloop.counter }}</td>
+                        <td>
+                            <span class="fw-semibold">{{ item.label }}</span>
+                            {% if item.tindakan_teks %}
+                            <span class="badge bg-light text-muted border ms-1">Teks Bebas</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-center"><span class="badge bg-light text-dark border font-monospace">{{ item.kode|default:"-" }}</span></td>
+                        {% for th_item in item.tahunan_items %}
+                        <td class="text-center small {% if th_item.m %}fw-bold text-success{% else %}text-muted opacity-50{% endif %}">{{ th_item.m }}</td>
+                        <td class="text-center small {% if th_item.k %}fw-bold text-primary{% else %}text-muted opacity-50{% endif %}">{{ th_item.k }}</td>
+                        <td class="text-center small {% if th_item.s %}fw-bold text-warning{% else %}text-muted opacity-50{% endif %}">{{ th_item.s }}</td>
+                        {% endfor %}
+                        <td class="text-center fw-bold bg-primary-subtle text-primary-emphasis fs-6">{{ item.total }}</td>
+                        <td class="text-center small">
+                            {% if item.status_verifikasi == 'Terverifikasi' %}
+                            <span class="badge bg-success-subtle text-success-emphasis">Terverifikasi</span>
+                            {% elif item.status_verifikasi == 'Koreksi Portofolio' %}
+                            <span class="badge bg-info-subtle text-info-emphasis">Koreksi</span>
+                            {% else %}
+                            <span class="badge bg-secondary-subtle text-secondary-emphasis">Menunggu</span>
+                            {% endif %}
+                        </td>
+                        {% if can_manage %}
+                        <td class="text-center">
+                            {% for th_item in item.tahunan_items %}
+                            {% if th_item.koreksi_id %}
+                            <form method="post" action="{% url 'sdm:logbook_koreksi_hapus' th_item.koreksi_id %}" class="d-inline" onsubmit="return confirm('Hapus koreksi tahun {{ th_item.tahun }} untuk {{ item.label }}?');">
+                                {% csrf_token %}
+                                {% if selected_employee %}<input type="hidden" name="pegawai" value="{{ selected_employee.pk }}">{% endif %}
+                                <button type="submit" class="btn btn-outline-danger btn-xs p-1 py-0 my-1" title="Hapus koreksi tahun {{ th_item.tahun }}">
+                                    <i class="bi bi-trash"></i> {{ th_item.tahun }}
+                                </button>
+                            </form>
+                            {% endif %}
+                            {% endfor %}
+                        </td>
+                        {% endif %}
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="22" class="text-center py-4 text-muted">
+                            Belum ada rekapitulasi portofolio tindakan klinis 5 tahun untuk pegawai ini.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+                {% if logbook_5tahun.per_tindakan %}
+                <tfoot class="table-light border-top border-2">
+                    <tr class="fw-bold">
+                        <td colspan="3" class="text-end pe-3">TOTAL AKUMULASI:</td>
+                        {% for tot in logbook_5tahun.tahunan_totals %}
+                        <td class="text-center text-success small">{{ tot.m }}</td>
+                        <td class="text-center text-primary small">{{ tot.k }}</td>
+                        <td class="text-center text-warning small">{{ tot.s }}</td>
+                        {% endfor %}
+                        <td class="text-center bg-primary text-white fs-6">{{ logbook_5tahun.total_5tahun }}</td>
+                        <td class="text-center small text-success">{{ logbook_5tahun.terverifikasi }} Valid</td>
+                        {% if can_manage %}<td></td>{% endif %}
+                    </tr>
+                </tfoot>
+                {% endif %}
+            </table>
+        </div>
+    </div>
+    {% endif %}
+
+    {% else %}
+    {# ================= VIEW: ENTRI LOGBOOK HARIAN ================= #}
     {% if logbook_recap %}
     <div class="card border-0 shadow-sm bg-gradient mb-3" style="background: linear-gradient(135deg, #f8fafc 0%, #edf2f7 100%); border-left: 4px solid #0d6efd !important;">
         <div class="card-body py-3">
@@ -208,17 +391,78 @@
     <nav aria-label="Navigasi halaman" class="mt-2">
         <ul class="pagination pagination-sm mb-0">
             {% if page_obj.has_previous %}
-            <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if selected_employee %}&pegawai={{ selected_employee.pk }}{% endif %}">Sebelumnya</a></li>
+            <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if selected_employee %}&pegawai={{ selected_employee.pk }}{% endif %}&tab=harian">Sebelumnya</a></li>
             {% endif %}
             <li class="page-item disabled"><span class="page-link">Halaman {{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span></li>
             {% if page_obj.has_next %}
-            <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}{% if selected_employee %}&pegawai={{ selected_employee.pk }}{% endif %}">Berikutnya</a></li>
+            <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}{% if selected_employee %}&pegawai={{ selected_employee.pk }}{% endif %}&tab=harian">Berikutnya</a></li>
             {% endif %}
         </ul>
     </nav>
     {% endif %}
     {% else %}
-    <div class="card border shadow-sm"><div class="card-body text-muted">Belum ada entri logbook.</div></div>
+    <div class="card border shadow-sm"><div class="card-body text-muted">Belum ada entri logbook harian.</div></div>
+    {% endif %}
+    {% endif %}
+
+    {# Modal Koreksi / Saldo Portofolio Historis (PMK 13/2025) #}
+    {% if can_manage and koreksi_form %}
+    <div class="modal fade" id="modalKoreksiLogbook" tabindex="-1" aria-labelledby="modalKoreksiLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <form method="post" action="{% url 'sdm:logbook_koreksi_simpan' %}" class="modal-content">
+                {% csrf_token %}
+                {% if quick_target %}<input type="hidden" name="pegawai" value="{{ quick_target.pk }}">{% endif %}
+                {% if quick_target %}<input type="hidden" name="employee" value="{{ quick_target.pk }}">{% endif %}
+                <div class="modal-header bg-light">
+                    <h5 class="modal-title h6 mb-0" id="modalKoreksiLabel">
+                        <i class="bi bi-pencil-square me-1 text-primary"></i> Koreksi / Saldo Portofolio Historis (PMK 13/2025)
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tutup"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-info py-2 small mb-3">
+                        <i class="bi bi-info-circle me-1"></i>
+                        Gunakan form ini untuk mencatat akumulasi portofolio tahun-tahun sebelumnya sebelum sistem digital diterapkan, atau koreksi audit kredensial. Logbook transaksi harian tidak akan terganggu.
+                    </div>
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <label class="form-label small fw-semibold" for="{{ koreksi_form.tahun.id_for_label }}">Tahun Pelaksanaan</label>
+                            {{ koreksi_form.tahun }}
+                        </div>
+                        <div class="col-md-8">
+                            <label class="form-label small fw-semibold" for="{{ koreksi_form.katalog_tindakan.id_for_label }}">Pilih Tindakan Katalog</label>
+                            {{ koreksi_form.katalog_tindakan }}
+                            <div class="form-text small">Atau isi tindakan teks bebas di bawah jika tidak ada di katalog.</div>
+                        </div>
+                        <div class="col-md-12">
+                            <label class="form-label small fw-semibold" for="{{ koreksi_form.tindakan.id_for_label }}">Tindakan Lain (Teks Bebas)</label>
+                            {{ koreksi_form.tindakan }}
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small fw-semibold text-success" for="{{ koreksi_form.koreksi_mandiri.id_for_label }}">Jumlah Mandiri (M)</label>
+                            {{ koreksi_form.koreksi_mandiri }}
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small fw-semibold text-primary" for="{{ koreksi_form.koreksi_kolaborasi.id_for_label }}">Jumlah Kolaborasi (K)</label>
+                            {{ koreksi_form.koreksi_kolaborasi }}
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small fw-semibold text-warning" for="{{ koreksi_form.koreksi_supervisi.id_for_label }}">Jumlah Supervisi (S)</label>
+                            {{ koreksi_form.koreksi_supervisi }}
+                        </div>
+                        <div class="col-md-12">
+                            <label class="form-label small fw-semibold" for="{{ koreksi_form.catatan_koreksi.id_for_label }}">Catatan / Alasan Koreksi</label>
+                            {{ koreksi_form.catatan_koreksi }}
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light py-2">
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Batal</button>
+                    <button type="submit" class="btn btn-primary btn-sm">Simpan Koreksi Portofolio</button>
+                </div>
+            </form>
+        </div>
+    </div>
     {% endif %}
 </div>
 {% endblock %}

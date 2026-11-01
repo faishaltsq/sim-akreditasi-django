@@ -17,6 +17,13 @@ def sort_standards_filter(codes):
 
 
 @register.filter
+def get_item(dictionary, key):
+    if isinstance(dictionary, dict):
+        return dictionary.get(key)
+    return None
+
+
+@register.filter
 def rupiah(value):
     try:
         value = float(value)
