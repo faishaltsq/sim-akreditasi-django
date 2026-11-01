@@ -64,7 +64,14 @@
 
     {# ── I. Rekap shift ─────────────────────────────────────────────── #}
     <div class="lb-seksi">
-        <h6><i class="bi bi-activity me-1"></i> I. Rekap Shift <span class="text-muted fw-normal">— dihitung dari EMR</span></h6>
+        <div class="d-flex align-items-center justify-content-between mb-2">
+            <h6 class="mb-0"><i class="bi bi-activity me-1"></i> I. Rekap Shift &amp; Pasien <span class="text-muted fw-normal">— dihitung dari EMR</span></h6>
+            {% if boleh_isi %}
+            <button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="collapse" data-bs-target="#collapseTambahPasien" aria-expanded="false">
+                <i class="bi bi-person-plus me-1"></i> + Tambah Pasien Shift
+            </button>
+            {% endif %}
+        </div>
         <div class="isi">
             <div class="row g-2 mb-3">
                 <div class="col-6 col-md-2"><div class="kpi"><div class="label">Pasien</div><div class="nilai angka">{{ rekap.jumlah_pasien }}</div></div></div>
@@ -79,8 +86,102 @@
                     <div class="nilai angka">{% if rekap.bor_persen is None %}—{% else %}{{ rekap.bor_persen }}<small class="fw-normal">%</small>{% endif %}</div></div></div>
             </div>
 
+            {% if boleh_isi %}
+            <div class="collapse mb-3" id="collapseTambahPasien">
+                <div class="card card-body bg-light border p-3">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <h6 class="card-title mb-0 small fw-bold text-primary">
+                            <i class="bi bi-person-plus me-1"></i> Tambah Pasien Manual ke Shift
+                        </h6>
+                        <button type="button" class="btn-close btn-sm" data-bs-toggle="collapse" data-bs-target="#collapseTambahPasien" aria-label="Close"></button>
+                    </div>
+                    <form method="post" action="{% url 'akreditasi:logbook_tambah_pasien' logbook.pk %}">
+                        {% csrf_token %}
+                        <div class="row g-2">
+                            <div class="col-12 col-md-4">
+                                <label class="form-label small mb-1 fw-semibold">Pilih dari Master Pasien RS</label>
+                                <select name="master_id" id="tambahPasienMasterSelect" class="form-select form-select-sm">
+                                    <option value="">— Ketik Baru di Bawah / Non-Master —</option>
+                                    {% for mp in master_pasien %}
+                                    <option value="{{ mp.id }}" data-rm="{{ mp.no_rm }}" data-nama="{{ mp.nama_lengkap }}" data-jk="{{ mp.jenis_kelamin }}">
+                                        {{ mp.no_rm }} — {{ mp.nama_lengkap }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-6 col-md-2">
+                                <label class="form-label small mb-1 fw-semibold">No. RM <span class="text-danger">*</span></label>
+                                <input type="text" name="no_rm" id="tambahPasienNoRm" class="form-control form-control-sm" placeholder="No. RM" required>
+                            </div>
+                            <div class="col-6 col-md-3">
+                                <label class="form-label small mb-1 fw-semibold">Nama Pasien</label>
+                                <input type="text" name="nama_pasien" id="tambahPasienNama" class="form-control form-control-sm" placeholder="Nama lengkap">
+                            </div>
+                            <div class="col-4 col-md-1">
+                                <label class="form-label small mb-1">JK</label>
+                                <select name="jenis_kelamin" id="tambahPasienJk" class="form-select form-select-sm">
+                                    <option value="">—</option>
+                                    <option value="L">L</option>
+                                    <option value="P">P</option>
+                                </select>
+                            </div>
+                            <div class="col-4 col-md-1">
+                                <label class="form-label small mb-1">Umur</label>
+                                <input type="number" name="umur" class="form-control form-control-sm" placeholder="Thn">
+                            </div>
+                            <div class="col-4 col-md-1">
+                                <label class="form-label small mb-1">Bed</label>
+                                <input type="text" name="no_bed" class="form-control form-control-sm" placeholder="Bed">
+                            </div>
+                            <div class="col-6 col-md-2">
+                                <label class="form-label small mb-1">Triage</label>
+                                <select name="triage" class="form-select form-select-sm">
+                                    <option value="">—</option>
+                                    <option value="MERAH">Merah (P1)</option>
+                                    <option value="KUNING">Kuning (P2)</option>
+                                    <option value="HIJAU">Hijau (P3)</option>
+                                    <option value="HITAM">Hitam (P4)</option>
+                                </select>
+                            </div>
+                            <div class="col-6 col-md-2">
+                                <label class="form-label small mb-1">Jam Masuk</label>
+                                <input type="text" name="jam_masuk" class="form-control form-control-sm" placeholder="HH:MM">
+                            </div>
+                            <div class="col-12 col-md-6">
+                                <label class="form-label small mb-1">Diagnosa Masuk</label>
+                                <input type="text" name="diagnosa" class="form-control form-control-sm" placeholder="Diagnosa klinis...">
+                            </div>
+                            <div class="col-12 col-md-2 d-flex align-items-end">
+                                <button type="submit" class="btn btn-sm btn-primary w-100">
+                                    <i class="bi bi-save me-1"></i> Simpan
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            <script>
+            (function() {
+                var mSel = document.getElementById('tambahPasienMasterSelect');
+                var rmInp = document.getElementById('tambahPasienNoRm');
+                var nmInp = document.getElementById('tambahPasienNama');
+                var jkInp = document.getElementById('tambahPasienJk');
+                if (mSel && rmInp) {
+                    mSel.addEventListener('change', function() {
+                        var opt = this.options[this.selectedIndex];
+                        if (opt && opt.value) {
+                            rmInp.value = opt.getAttribute('data-rm') || '';
+                            if (nmInp) nmInp.value = opt.getAttribute('data-nama') || '';
+                            if (jkInp) jkInp.value = opt.getAttribute('data-jk') || '';
+                        }
+                    });
+                }
+            })();
+            </script>
+            {% endif %}
+
             {% if not baris %}
-            <p class="text-muted small mb-0">Belum ada kunjungan pasien pada periode shift ini.</p>
+            <p class="text-muted small mb-0">Belum ada kunjungan pasien pada periode shift ini. Tambahkan pasien via tombol <strong>+ Tambah Pasien Shift</strong> di atas, atau catat tindakan klinis langsung di bawah.</p>
             {% else %}
             <form method="post" action="{% url 'akreditasi:logbook_simpan_pasien' logbook.pk %}">
                 {% csrf_token %}
@@ -98,7 +199,15 @@
                             {% for b in baris %}
                             <tr>
                                 <td>{{ forloop.counter }}</td>
-                                <td class="text-nowrap">{{ b.no_rm|default:"—" }}</td>
+                                <td class="text-nowrap">
+                                    {{ b.no_rm|default:"—" }}
+                                    {% if boleh_isi and not b.kunjungan %}
+                                    <form method="post" action="{% url 'akreditasi:logbook_hapus_pasien' logbook.pk b.pk %}" class="d-inline" onsubmit="return confirm('Hapus pasien {{ b.no_rm }} dari shift ini?');">
+                                        {% csrf_token %}
+                                        <button type="submit" class="btn btn-link text-danger p-0 ms-1" style="font-size: 0.75rem;" title="Hapus baris pasien dari shift"><i class="bi bi-x-circle"></i></button>
+                                    </form>
+                                    {% endif %}
+                                </td>
                                 <td class="nama">{{ b.nama_pasien }}</td>
                                 <td>{{ b.jenis_kelamin|default:"—" }}</td>
                                 <td class="angka">{{ b.umur|default_if_none:"—" }}</td>
@@ -183,14 +292,51 @@
                 <div class="row g-2">
                     <div class="col-12 col-md-3">
                         <label class="form-label small fw-semibold mb-1">Pilih Pasien (No. RM)</label>
-                        <select name="pasien_id" class="form-select form-select-sm">
+                        <select name="pasien_id" id="selectPasienTindakan" class="form-select form-select-sm">
                             <option value="">— Pasien Umum / Tanpa No. RM —</option>
-                            {% for b in baris %}
-                            <option value="{{ b.pk }}">No. RM: {{ b.no_rm|default:"(Tanpa RM)" }}{% if b.no_bed %} · Bed {{ b.no_bed }}{% endif %}</option>
-                            {% endfor %}
+                            {% if baris %}
+                            <optgroup label="Pasien Shift Ini">
+                                {% for b in baris %}
+                                <option value="baris_{{ b.pk }}">No. RM: {{ b.no_rm|default:"(Tanpa RM)" }}{% if b.no_bed %} · Bed {{ b.no_bed }}{% endif %}</option>
+                                {% endfor %}
+                            </optgroup>
+                            {% endif %}
+                            {% if master_pasien %}
+                            <optgroup label="Master Pasien RS">
+                                {% for mp in master_pasien %}
+                                <option value="master_{{ mp.id }}">No. RM: {{ mp.no_rm }}</option>
+                                {% endfor %}
+                            </optgroup>
+                            {% endif %}
+                            <option value="manual">+ Ketik No. RM Baru / Manual...</option>
                         </select>
+                        <div id="wrapInputNoRmManual" class="mt-1" style="display: none;">
+                            <input type="text" name="no_rm_manual" id="inputNoRmManual" list="datalistMasterNoRm" class="form-control form-control-sm" placeholder="Ketik No. RM (misal: RM-2026-0001)" autocomplete="off">
+                            <datalist id="datalistMasterNoRm">
+                                {% for mp in master_pasien %}
+                                <option value="{{ mp.no_rm }}">
+                                {% endfor %}
+                            </datalist>
+                        </div>
                         <div class="form-text" style="font-size: 0.72rem;">*Privasi medis: hanya mencatat No. RM.</div>
                     </div>
+                    <script>
+                    (function() {
+                        var sel = document.getElementById('selectPasienTindakan');
+                        var wrap = document.getElementById('wrapInputNoRmManual');
+                        var inp = document.getElementById('inputNoRmManual');
+                        if (sel && wrap) {
+                            sel.addEventListener('change', function() {
+                                if (this.value === 'manual') {
+                                    wrap.style.display = 'block';
+                                    if (inp) inp.focus();
+                                } else {
+                                    wrap.style.display = 'none';
+                                }
+                            });
+                        }
+                    })();
+                    </script>
                     <div class="col-12 col-md-4">
                         <label class="form-label small fw-semibold mb-1">Pilih Tindakan Klinis (Master Database)</label>
                         <div class="input-group input-group-sm mb-1">

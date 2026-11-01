@@ -20,11 +20,11 @@ from .file_security import sanitize_filename, validate_uploaded_file
 from .indikator_views import unit_subtree_ids
 from .logbook_models import (
     JENIS_CHOICES, SEKSI_LABEL, SHIFT_CHOICES,
-    LogbookBukti, LogbookChecklist, LogbookHarian, LogbookKejadian,
+    LogbookBukti, LogbookChecklist, LogbookHarian, LogbookKejadian, LogbookPasien,
     los_menit, parse_jam, response_time_menit, shift_window,
 )
 from .models import AuditLog, UnitKerja
-from pasien.models import Ruangan
+from pasien.models import Pasien, Ruangan
 
 # Label disposisi IGD untuk tampilan tabel & PDF. Disimpan di sini (bukan di
 # model) karena LogbookPasien hanya menyimpan kode, sedangkan labelnya milik
@@ -410,9 +410,13 @@ def logbook_detail(request, pk):
     else:
         katalog_qs.sort(key=lambda item: (item['jenjang__profesi__nama'] or '', item['nama']))
     katalog_tindakan_pilihan = katalog_qs
+    master_pasien = list(
+        Pasien.objects.all().values('id', 'no_rm', 'nama_lengkap', 'jenis_kelamin', 'tanggal_lahir').order_by('no_rm')[:50]
+    )
     return render(request, 'akreditasi/logbook_detail.html', {
         'logbook': logbook,
         'baris': baris,
+        'master_pasien': master_pasien,
         'rekap': rekap,
         'checklist_seksi': checklist_seksi,
         'kejadian': logbook.kejadian.select_related('insiden').all(),
@@ -465,6 +469,84 @@ def logbook_simpan_pasien(request, pk):
 
     _catat(request.user, 'UPDATE', logbook, f'Isian pasien shift: {diubah} baris')
     messages.success(request, f'Isian {diubah} pasien disimpan.')
+    return redirect('akreditasi:logbook_detail', pk=logbook.pk)
+
+
+@login_required
+@require_POST
+def logbook_tambah_pasien(request, pk):
+    """Tambah baris pasien secara manual ke shift ini."""
+    logbook = get_object_or_404(LogbookHarian, pk=pk)
+    _cek(request.user, logbook)
+    if not (_boleh_isi(request.user, logbook) and logbook.boleh_ubah):
+        raise PermissionDenied('Logbook ini sudah dikunci.')
+
+    master_id = request.POST.get('master_id', '').strip()
+    no_rm = request.POST.get('no_rm', '').strip()
+    nama_pasien = request.POST.get('nama_pasien', '').strip()
+    jenis_kelamin = request.POST.get('jenis_kelamin', '').strip().upper()
+    umur_str = request.POST.get('umur', '').strip()
+    no_bed = request.POST.get('no_bed', '').strip()
+    triage = request.POST.get('triage', '').strip().upper()
+    diagnosa = request.POST.get('diagnosa', '').strip()
+    jam_masuk_str = request.POST.get('jam_masuk', '').strip()
+
+    p_master = None
+    if master_id.isdigit():
+        p_master = Pasien.objects.filter(pk=int(master_id)).first()
+
+    if p_master:
+        no_rm = p_master.no_rm
+        nama_pasien = nama_pasien or p_master.nama_lengkap
+        jenis_kelamin = jenis_kelamin or p_master.jenis_kelamin
+        if not umur_str and p_master.umur:
+            umur_str = str(p_master.umur)
+
+    if not no_rm and not nama_pasien:
+        messages.error(request, 'Isi No. RM atau Nama Pasien untuk menambahkan ke shift.')
+        return redirect('akreditasi:logbook_detail', pk=logbook.pk)
+
+    umur = int(umur_str) if umur_str.isdigit() else None
+    jam_masuk = parse_jam(jam_masuk_str) if jam_masuk_str else None
+
+    # Hindari duplikasi nomor RM yang sama persis dalam satu shift
+    if no_rm and logbook.pasien.filter(no_rm=no_rm).exists():
+        messages.warning(request, f'Pasien dengan No. RM {no_rm} sudah ada di shift ini.')
+        return redirect('akreditasi:logbook_detail', pk=logbook.pk)
+
+    LogbookPasien.objects.create(
+        logbook=logbook,
+        no_rm=no_rm,
+        nama_pasien=nama_pasien or f'Pasien {no_rm}',
+        jenis_kelamin=jenis_kelamin if jenis_kelamin in ('L', 'P') else '',
+        umur=umur,
+        no_bed=no_bed,
+        triage=triage if triage in ('MERAH', 'KUNING', 'HIJAU', 'HITAM') else '',
+        diagnosa=diagnosa,
+        jam_masuk=jam_masuk,
+    )
+    _catat(request.user, 'UPDATE', logbook, f'Tambah pasien shift No. RM: {no_rm or "-"}')
+    messages.success(request, f'Pasien No. RM {no_rm or nama_pasien} berhasil ditambahkan ke shift.')
+    return redirect('akreditasi:logbook_detail', pk=logbook.pk)
+
+
+@login_required
+@require_POST
+def logbook_hapus_pasien(request, pk, pasien_pk):
+    """Hapus baris pasien manual dari shift."""
+    logbook = get_object_or_404(LogbookHarian, pk=pk)
+    _cek(request.user, logbook)
+    if not (_boleh_isi(request.user, logbook) and logbook.boleh_ubah):
+        raise PermissionDenied('Logbook ini sudah dikunci.')
+
+    pasien = logbook.pasien.filter(pk=pasien_pk).first()
+    if pasien:
+        no_rm = pasien.no_rm
+        # Putuskan relasi tindakan klinis agar tidak ikut terhapus
+        pasien.tindakan_klinis.all().update(logbook_pasien=None)
+        pasien.delete()
+        _catat(request.user, 'UPDATE', logbook, f'Hapus pasien shift No. RM: {no_rm or "-"}')
+        messages.success(request, 'Baris pasien berhasil dihapus dari shift.')
     return redirect('akreditasi:logbook_detail', pk=logbook.pk)
 
 
@@ -661,13 +743,53 @@ def logbook_simpan_tindakan(request, pk):
         messages.error(request, 'Tindakan klinis yang dipilih tidak valid di master katalog database.')
         return redirect('akreditasi:logbook_detail', pk=logbook.pk)
 
-    # Resolusi pasien baris jika dipilih (Hanya No. RM, privasi terjaga tanpa nama pasien)
+    # Resolusi pasien baris / No. RM (Hanya No. RM, privasi terjaga tanpa nama pasien)
     pasien_baris = None
     pasien_ref = ''
-    if pasien_id:
-        pasien_baris = logbook.pasien.filter(pk=pasien_id).first()
-        if pasien_baris:
-            pasien_ref = (pasien_baris.no_rm or (f"Bed {pasien_baris.no_bed}" if pasien_baris.no_bed else "RM: -")).strip()[:60]
+    pasien_id_str = str(pasien_id or '').strip()
+    no_rm_manual = request.POST.get('no_rm_manual', '').strip()
+
+    if pasien_id_str.startswith('master_'):
+        m_id = pasien_id_str.replace('master_', '')
+        if m_id.isdigit():
+            p_m = Pasien.objects.filter(pk=int(m_id)).first()
+            if p_m:
+                pasien_ref = p_m.no_rm.strip()[:60]
+                pasien_baris = logbook.pasien.filter(no_rm=p_m.no_rm).first()
+                if not pasien_baris:
+                    pasien_baris = LogbookPasien.objects.create(
+                        logbook=logbook,
+                        no_rm=p_m.no_rm,
+                        nama_pasien=p_m.nama_lengkap,
+                        jenis_kelamin=p_m.jenis_kelamin or '',
+                        umur=p_m.umur,
+                    )
+    elif pasien_id_str == 'manual' or (not pasien_id_str and no_rm_manual):
+        if no_rm_manual:
+            pasien_ref = no_rm_manual[:60]
+            pasien_baris = logbook.pasien.filter(no_rm__iexact=no_rm_manual).first()
+            if not pasien_baris:
+                p_m = Pasien.objects.filter(no_rm__iexact=no_rm_manual).first()
+                if p_m:
+                    pasien_baris = LogbookPasien.objects.create(
+                        logbook=logbook,
+                        no_rm=p_m.no_rm,
+                        nama_pasien=p_m.nama_lengkap,
+                        jenis_kelamin=p_m.jenis_kelamin or '',
+                        umur=p_m.umur,
+                    )
+                else:
+                    pasien_baris = LogbookPasien.objects.create(
+                        logbook=logbook,
+                        no_rm=no_rm_manual,
+                        nama_pasien=f'Pasien {no_rm_manual}',
+                    )
+    elif pasien_id_str:
+        b_id = pasien_id_str.replace('baris_', '')
+        if b_id.isdigit():
+            pasien_baris = logbook.pasien.filter(pk=int(b_id)).first()
+            if pasien_baris:
+                pasien_ref = (pasien_baris.no_rm or (f"Bed {pasien_baris.no_bed}" if pasien_baris.no_bed else "RM: -")).strip()[:60]
 
     # Resolusi pegawai pelaksana: dari form pegawai_id atau request.user
     pegawai = None
