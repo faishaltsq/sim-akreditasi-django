@@ -157,9 +157,14 @@ def resolve_code(poliklinik, ruangan_nama, index):
 
 
 def visit_unit_code(kunjungan, index):
+    if getattr(kunjungan, 'jenis_kunjungan', None) == 'IGD':
+        return 'IGD'
     bed = getattr(kunjungan, 'bed', None)
     ruangan_nama = bed.ruangan.nama if bed is not None else None
-    return resolve_code(kunjungan.poliklinik, ruangan_nama, index)
+    code = resolve_code(kunjungan.poliklinik, ruangan_nama, index)
+    if not code and getattr(kunjungan, 'unit_kerja', None):
+        return kunjungan.unit_kerja.code
+    return code
 
 
 def unit_codes(unit):
@@ -197,11 +202,19 @@ def resolve_visit_ids(visits_qs, unit):
     if not codes:
         return []
     index = alias_index()
-    rows = visits_qs.values_list('pk', 'poliklinik', 'bed__ruangan__nama')
-    return [
-        pk for pk, poliklinik, ruangan in rows
-        if resolve_code(poliklinik, ruangan, index) in codes
-    ]
+    rows = visits_qs.values_list('pk', 'poliklinik', 'bed__ruangan__nama', 'jenis_kunjungan', 'unit_kerja__code')
+    matching = []
+    for pk, poliklinik, ruangan, jenis_kunjungan, uk_code in rows:
+        if jenis_kunjungan == 'IGD':
+            if 'IGD' in codes:
+                matching.append(pk)
+            continue
+        code = resolve_code(poliklinik, ruangan, index)
+        if not code and uk_code:
+            code = uk_code
+        if code in codes:
+            matching.append(pk)
+    return matching
 
 
 def service_codes():

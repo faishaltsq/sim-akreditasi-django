@@ -334,9 +334,18 @@ def _layanan_block(unit, on_date=None):
 
     items, by_status = [], {}
     for k in rows:
-        ruangan_nama = k.bed.ruangan.nama if k.bed else None
-        if resolve_code(k.poliklinik, ruangan_nama, index) not in codes:
-            continue
+        if k.jenis_kunjungan == 'IGD':
+            if 'IGD' not in codes:
+                continue
+            code = 'IGD'
+        else:
+            ruangan_nama = k.bed.ruangan.nama if k.bed else None
+            code = resolve_code(k.poliklinik, ruangan_nama, index)
+            if not code and k.unit_kerja:
+                code = k.unit_kerja.code
+            if code not in codes:
+                continue
+
         by_status[k.status] = by_status.get(k.status, 0) + 1
         items.append({
             'pk': k.pk,
@@ -346,7 +355,7 @@ def _layanan_block(unit, on_date=None):
             'umur': k.pasien.umur,
             'jk': k.pasien.get_jenis_kelamin_display(),
             'jenis': LAYANAN_JENIS_LABEL.get(k.jenis_kunjungan, k.jenis_kunjungan),
-            'poli': k.poliklinik or '—',
+            'poli': 'IGD' if k.jenis_kunjungan == 'IGD' else (k.poliklinik or '—'),
             'ruangan': k.bed.ruangan.nama if k.bed else '',
             'dpjp': k.dpjp or '',
             'status': k.status,
@@ -436,6 +445,12 @@ def snapshot_cached(unit, profile=None, year=None):
     snapshot = build_unit_snapshot(unit, profile=profile, year=year)
     cache.set(key, snapshot, SNAPSHOT_CACHE_SECONDS)
     return snapshot
+
+
+def invalidate_snapshot_cache(unit=None):
+    """Invalidate snapshot cache agar pembaruan data pasien/kunjungan langsung terlihat."""
+    from django.core.cache import cache
+    cache.clear()
 
 
 def sample_units(max_items=12):

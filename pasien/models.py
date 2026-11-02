@@ -614,7 +614,14 @@ class KunjunganPasien(models.Model):
             )
 
     def save(self, *args, **kwargs):
-        if not self.unit_kerja_id:
+        if self.jenis_kunjungan == 'IGD':
+            self.poliklinik = 'IGD'
+            if not self.unit_kerja_id or getattr(self.unit_kerja, 'code', None) != 'IGD':
+                from akreditasi.models import UnitKerja
+                igd_unit = UnitKerja.objects.filter(code='IGD').first()
+                if igd_unit:
+                    self.unit_kerja = igd_unit
+        elif not self.unit_kerja_id:
             if self.bed and getattr(self.bed, 'ruangan', None) and getattr(self.bed.ruangan, 'unit_kerja', None):
                 self.unit_kerja = self.bed.ruangan.unit_kerja
             elif self.jenis_kunjungan:

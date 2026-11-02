@@ -385,6 +385,9 @@ def kunjungan_baru(request):
                         pasien_obj.no_bpjs = new_bpjs
                         pasien_obj.save(update_fields=['no_bpjs'])
 
+                from akreditasi.models import UnitKerja
+                from akreditasi.kontrol_data import invalidate_snapshot_cache
+
                 jenis_kunjungan = request.POST.get('jenis_kunjungan', 'RAJAL')
                 no_kunjungan = request.POST.get('no_kunjungan', '').strip() or generate_no_kunjungan(jenis=jenis_kunjungan)
                 tgl_masuk = request.POST.get('tanggal_masuk') or timezone.now()
@@ -395,8 +398,23 @@ def kunjungan_baru(request):
                     bed_obj = Bed.objects.select_related('ruangan__unit_kerja').filter(pk=bed_id).first()
                     if bed_obj and bed_obj.ruangan and bed_obj.ruangan.unit_kerja:
                         unit_kerja_val = bed_obj.ruangan.unit_kerja
-                if not unit_kerja_val and profile and profile.unit_kerja:
-                    unit_kerja_val = profile.unit_kerja
+
+                if jenis_kunjungan == 'IGD':
+                    unit_kerja_val = UnitKerja.objects.filter(code='IGD').first()
+                    poliklinik_val = 'IGD'
+                    dpjp_val = (
+                        request.POST.get('dpjp_igd_baru', '').strip()
+                        or request.POST.get('dpjp_igd_lama', '').strip()
+                        or request.POST.get('dpjp', '').strip()
+                        or 'dr. Jaga IGD'
+                    )
+                    triage_val = request.POST.get('triage', '').strip() or 'HIJAU'
+                else:
+                    if not unit_kerja_val and profile and profile.unit_kerja:
+                        unit_kerja_val = profile.unit_kerja
+                    poliklinik_val = request.POST.get('poliklinik', '').strip()
+                    dpjp_val = request.POST.get('dpjp', '').strip()
+                    triage_val = ''
 
                 k = KunjunganPasien(
                     pasien=pasien_obj,
@@ -404,17 +422,25 @@ def kunjungan_baru(request):
                     jenis_kunjungan=jenis_kunjungan,
                     unit_kerja=unit_kerja_val,
                     tanggal_masuk=tgl_masuk,
-                    dpjp=request.POST.get('dpjp', ''),
-                    poliklinik=request.POST.get('poliklinik', ''),
+                    dpjp=dpjp_val,
+                    poliklinik=poliklinik_val,
                     penjamin=request.POST.get('penjamin', 'UMUM'),
-                    triage=request.POST.get('triage', ''),
+                    triage=triage_val,
                     catatan_admisi=request.POST.get('catatan_admisi', ''),
                     general_consent=bool(request.POST.get('general_consent')),
                     status='TRIAGE' if jenis_kunjungan == 'IGD' else 'DAFTAR',
                     created_by=request.user,
                 )
+                if jenis_kunjungan == 'IGD':
+                    k.nomor_antrean = generate_nomor_antrean('IGD')
+                    k.status_antrean = 'MENUNGGU'
+                elif jenis_kunjungan == 'RAJAL':
+                    k.nomor_antrean = generate_nomor_antrean('RAJAL', poliklinik_val)
+                    k.status_antrean = 'MENUNGGU'
+
                 k.full_clean()
                 k.save()
+                invalidate_snapshot_cache()
 
             messages.success(request, f'✅ Pasien {pasien_obj.nama_lengkap} (RM: {pasien_obj.no_rm}) berhasil didaftarkan. Kunjungan: {k.no_kunjungan}')
             next_url = request.POST.get('next_url')
@@ -914,6 +940,11 @@ def pendaftaran_route(request, pk):
         try:
             if tujuan == 'IGD':
                 k.jenis_kunjungan = 'IGD'
+                k.poliklinik = 'IGD'
+                from akreditasi.models import UnitKerja
+                igd_unit = UnitKerja.objects.filter(code='IGD').first()
+                if igd_unit:
+                    k.unit_kerja = igd_unit
                 k.triage = request.POST.get('triage', 'HIJAU')
                 k.flag_khusus = flag
                 k.status = 'TRIAGE'
@@ -923,6 +954,8 @@ def pendaftaran_route(request, pk):
                 if dpjp:
                     k.dpjp = dpjp
                 k.save()
+                from akreditasi.kontrol_data import invalidate_snapshot_cache
+                invalidate_snapshot_cache()
                 messages.success(request, f'Pasien {k.pasien.nama_lengkap} diarahkan ke IGD ({k.get_triage_display()}) — Antrean: {k.nomor_antrean}.')
                 return redirect('pasien:igd_dashboard')
             elif tujuan == 'RAJAL':
@@ -938,6 +971,8 @@ def pendaftaran_route(request, pk):
                 if dpjp:
                     k.dpjp = dpjp
                 k.save()
+                from akreditasi.kontrol_data import invalidate_snapshot_cache
+                invalidate_snapshot_cache()
                 messages.success(request, f'Pasien {k.pasien.nama_lengkap} diarahkan ke {k.poliklinik} — Antrean: {k.nomor_antrean}.')
                 return redirect('pasien:rajal_dashboard')
             else:

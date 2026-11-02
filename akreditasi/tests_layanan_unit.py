@@ -445,3 +445,91 @@ class IndicatorBlockRegressionTest(TestCase):
         res = self.client.get(reverse('akreditasi:kontrol_emr'))
         self.assertEqual(res.status_code, 200)
         cache.clear()
+
+
+class PendaftaranIGDIntegrationTest(TestCase):
+    def setUp(self):
+        from django.contrib.auth import get_user_model
+        from accounts.models import UserProfile
+        from django.core.cache import cache
+
+        cache.clear()
+        self.igd_unit = _unit('IGD', 'Instalasi Gawat Darurat (IGD)', 2)
+        self.rm_unit = _unit('REKAM-MEDIS', 'Instalasi Rekam Medis & Pendaftaran', 2)
+
+        user_rm = get_user_model().objects.create_user('staf.pendaftaran', 'sp@rs.id', 'p')
+        UserProfile.objects.create(user=user_rm, role='STAF_NAKES', unit_kerja=self.rm_unit)
+        self.user_rm = user_rm
+
+        user_admin = get_user_model().objects.create_user('admin.rs', 'admin@rs.id', 'p')
+        UserProfile.objects.create(user=user_admin, role='SUPER_ADMIN', unit_kerja=None)
+        self.user_admin = user_admin
+
+    def test_pendaftaran_baru_ke_igd_muncul_di_kontrol_emr_dan_layanan(self):
+        from django.urls import reverse
+        from pasien.models import KunjunganPasien
+
+        self.client.force_login(self.user_rm)
+        post_data = {
+            'is_pasien_baru': '1',
+            'no_rm': 'RM-TEST-IGD-01',
+            'nama_lengkap': 'Aimto IGD Patient',
+            'tanggal_lahir': '1998-07-20',
+            'jenis_kelamin': 'L',
+            'jenis_kunjungan': 'IGD',
+            'triage': 'KUNING',
+            'dpjp_igd_baru': 'dr. Jaga IGD',
+            'general_consent': '1',
+        }
+        res = self.client.post(reverse('pasien:kunjungan_baru'), post_data)
+        self.assertEqual(res.status_code, 302)
+
+        kunjungan = KunjunganPasien.objects.filter(pasien__nama_lengkap='Aimto IGD Patient').first()
+        self.assertIsNotNone(kunjungan)
+        self.assertEqual(kunjungan.jenis_kunjungan, 'IGD')
+        self.assertEqual(kunjungan.poliklinik, 'IGD')
+        self.assertEqual(kunjungan.unit_kerja, self.igd_unit)
+        self.assertEqual(kunjungan.triage, 'KUNING')
+        self.assertEqual(kunjungan.status, 'TRIAGE')
+
+        # Check kontrol_emr for IGD unit
+        self.client.force_login(self.user_admin)
+        emr_res = self.client.get(reverse('akreditasi:kontrol_emr'), {'unit': self.igd_unit.pk})
+        self.assertEqual(emr_res.status_code, 200)
+        self.assertIn('Aimto IGD Patient', emr_res.content.decode())
+
+        # Check kontrol_layanan for IGD unit
+        layanan_res = self.client.get(reverse('akreditasi:kontrol_layanan'), {'unit': self.igd_unit.pk})
+        self.assertEqual(layanan_res.status_code, 200)
+        self.assertIn('Aimto IGD Patient', layanan_res.content.decode())
+
+    def test_routing_ulang_ke_igd_memperbarui_poliklinik_dan_unit_kerja(self):
+        from django.urls import reverse
+        from pasien.models import KunjunganPasien
+
+        pasien = _pasien('RM-ROUTE-01')
+        k = KunjunganPasien.objects.create(
+            pasien=pasien,
+            no_kunjungan='K-ROUTE-01',
+            jenis_kunjungan='RAJAL',
+            poliklinik='Poli Jantung & Pembuluh Darah',
+            tanggal_masuk=timezone.now(),
+            status='DAFTAR'
+        )
+
+        self.client.force_login(self.user_rm)
+        route_data = {
+            'tujuan': 'IGD',
+            'triage': 'MERAH',
+            'dpjp': 'dr. Pratama',
+        }
+        res = self.client.post(reverse('pasien:pendaftaran_route', args=[k.pk]), route_data)
+        self.assertEqual(res.status_code, 302)
+
+        k.refresh_from_db()
+        self.assertEqual(k.jenis_kunjungan, 'IGD')
+        self.assertEqual(k.poliklinik, 'IGD')
+        self.assertEqual(k.unit_kerja, self.igd_unit)
+        self.assertEqual(k.triage, 'MERAH')
+        self.assertEqual(k.status, 'TRIAGE')
+

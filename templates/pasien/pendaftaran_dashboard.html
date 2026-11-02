@@ -277,7 +277,7 @@
                                             <div class="row g-2">
                                                 <div class="col-6">
                                                     <label class="form-label small mb-1">Triage Awal:</label>
-                                                    <select name="triage" class="form-select form-select-sm">
+                                                    <select name="triage" class="form-select form-select-sm" disabled>
                                                         <option value="KUNING" selected>Kuning (Urgent)</option>
                                                         <option value="MERAH">Merah (Kritis)</option>
                                                         <option value="HIJAU">Hijau (Non-Urgent)</option>
@@ -286,7 +286,7 @@
                                                 </div>
                                                 <div class="col-6">
                                                     <label class="form-label small mb-1">Dokter Jaga IGD:</label>
-                                                    <select name="dpjp_igd_lama" class="form-select form-select-sm">
+                                                    <select name="dpjp_igd_lama" class="form-select form-select-sm" disabled>
                                                         <option value="dr. Jaga IGD" selected>dr. Jaga IGD</option>
                                                         <option value="dr. Pratama">dr. Pratama</option>
                                                         <option value="dr. Intan">dr. Intan</option>
@@ -549,7 +549,7 @@
                                             <div class="row g-2">
                                                 <div class="col-6">
                                                     <label class="form-label small mb-1">Triage Awal:</label>
-                                                    <select name="triage" class="form-select form-select-sm">
+                                                    <select name="triage" class="form-select form-select-sm" disabled>
                                                         <option value="KUNING" selected>Kuning (Urgent)</option>
                                                         <option value="MERAH">Merah (Kritis)</option>
                                                         <option value="HIJAU">Hijau (Non-Urgent)</option>
@@ -558,7 +558,7 @@
                                                 </div>
                                                 <div class="col-6">
                                                     <label class="form-label small mb-1">Dokter Jaga IGD:</label>
-                                                    <select name="dpjp_igd_baru" class="form-select form-select-sm">
+                                                    <select name="dpjp_igd_baru" class="form-select form-select-sm" disabled>
                                                         <option value="dr. Jaga IGD" selected>dr. Jaga IGD</option>
                                                         <option value="dr. Pratama">dr. Pratama</option>
                                                         <option value="dr. Intan">dr. Intan</option>
@@ -978,7 +978,7 @@
                                             </div>
                                             <div id="modGroupIGD{{ k.pk }}" class="mb-3" {% if k.jenis_kunjungan != 'IGD' %}style="display:none;"{% endif %}>
                                                 <label class="form-label small fw-semibold">Triage IGD</label>
-                                                <select name="triage" class="form-select form-select-sm">
+                                                <select name="triage" class="form-select form-select-sm" {% if k.jenis_kunjungan != 'IGD' %}disabled{% endif %}>
                                                     {% for code, label in triage_choices %}
                                                     <option value="{{ code }}" {% if k.triage == code %}selected{% endif %}>{{ label }}</option>
                                                     {% endfor %}
@@ -986,7 +986,7 @@
                                             </div>
                                             <div id="modGroupRajal{{ k.pk }}" class="mb-3" {% if k.jenis_kunjungan == 'IGD' %}style="display:none;"{% endif %}>
                                                 <label class="form-label small fw-semibold">Poliklinik Spesialis</label>
-                                                <select name="poliklinik" class="form-select form-select-sm">
+                                                <select name="poliklinik" class="form-select form-select-sm" {% if k.jenis_kunjungan == 'IGD' %}disabled{% endif %}>
                                                     {% for code, label in poliklinik_choices %}
                                                     <option value="{{ code }}" {% if k.poliklinik == label %}selected{% endif %}>{{ label }}</option>
                                                     {% endfor %}
@@ -1038,6 +1038,15 @@
         const tglInput = document.getElementById('tglMasukInput');
         if (tglInput && !tglInput.value) {
             tglInput.value = localIso;
+        }
+
+        const lamaIGDRadio = document.getElementById('tujuanLamaIGD');
+        if (lamaIGDRadio) {
+            toggleTujuanLama(lamaIGDRadio.checked ? 'IGD' : 'RAJAL');
+        }
+        const baruIGDRadio = document.getElementById('tujuanBaruIGD');
+        if (baruIGDRadio) {
+            toggleTujuanBaru(baruIGDRadio.checked ? 'IGD' : 'RAJAL');
         }
     });
 
@@ -1151,11 +1160,23 @@
         const groupIGD = document.getElementById('modGroupIGD' + pk);
         const groupRajal = document.getElementById('modGroupRajal' + pk);
         if (type === 'IGD') {
-            groupIGD.style.display = 'block';
-            groupRajal.style.display = 'none';
+            if (groupIGD) {
+                groupIGD.style.display = 'block';
+                groupIGD.querySelectorAll('input, select, textarea').forEach(el => el.disabled = false);
+            }
+            if (groupRajal) {
+                groupRajal.style.display = 'none';
+                groupRajal.querySelectorAll('input, select, textarea').forEach(el => el.disabled = true);
+            }
         } else {
-            groupIGD.style.display = 'none';
-            groupRajal.style.display = 'block';
+            if (groupIGD) {
+                groupIGD.style.display = 'none';
+                groupIGD.querySelectorAll('input, select, textarea').forEach(el => el.disabled = true);
+            }
+            if (groupRajal) {
+                groupRajal.style.display = 'block';
+                groupRajal.querySelectorAll('input, select, textarea').forEach(el => el.disabled = false);
+            }
         }
     }
 
@@ -1354,12 +1375,24 @@
         const igdPanel = document.getElementById('routingLamaIGD');
         const noKunjInput = document.getElementById('noKunjunganLama');
         if (tujuan === 'IGD') {
-            rajalPanel.style.display = 'none';
-            igdPanel.style.display = 'block';
+            if (rajalPanel) {
+                rajalPanel.style.display = 'none';
+                rajalPanel.querySelectorAll('input, select, textarea').forEach(el => el.disabled = true);
+            }
+            if (igdPanel) {
+                igdPanel.style.display = 'block';
+                igdPanel.querySelectorAll('input, select, textarea').forEach(el => el.disabled = false);
+            }
             if (noKunjInput) noKunjInput.value = '{{ auto_no_kunjungan_igd }}';
         } else {
-            rajalPanel.style.display = 'block';
-            igdPanel.style.display = 'none';
+            if (rajalPanel) {
+                rajalPanel.style.display = 'block';
+                rajalPanel.querySelectorAll('input, select, textarea').forEach(el => el.disabled = false);
+            }
+            if (igdPanel) {
+                igdPanel.style.display = 'none';
+                igdPanel.querySelectorAll('input, select, textarea').forEach(el => el.disabled = true);
+            }
             if (noKunjInput) noKunjInput.value = '{{ auto_no_kunjungan_rajal }}';
         }
     }
@@ -1371,13 +1404,25 @@
         const badgeNoKunj = document.getElementById('badgeNoKunjunganBaru');
         const hiddenNoKunj = document.getElementById('noKunjunganBaru');
         if (tujuan === 'IGD') {
-            rajalPanel.style.display = 'none';
-            igdPanel.style.display = 'block';
+            if (rajalPanel) {
+                rajalPanel.style.display = 'none';
+                rajalPanel.querySelectorAll('input, select, textarea').forEach(el => el.disabled = true);
+            }
+            if (igdPanel) {
+                igdPanel.style.display = 'block';
+                igdPanel.querySelectorAll('input, select, textarea').forEach(el => el.disabled = false);
+            }
             if (badgeNoKunj) badgeNoKunj.textContent = 'No. Kunjungan: {{ auto_no_kunjungan_igd }}';
             if (hiddenNoKunj) hiddenNoKunj.value = '{{ auto_no_kunjungan_igd }}';
         } else {
-            rajalPanel.style.display = 'block';
-            igdPanel.style.display = 'none';
+            if (rajalPanel) {
+                rajalPanel.style.display = 'block';
+                rajalPanel.querySelectorAll('input, select, textarea').forEach(el => el.disabled = false);
+            }
+            if (igdPanel) {
+                igdPanel.style.display = 'none';
+                igdPanel.querySelectorAll('input, select, textarea').forEach(el => el.disabled = true);
+            }
             if (badgeNoKunj) badgeNoKunj.textContent = 'No. Kunjungan: {{ auto_no_kunjungan_rajal }}';
             if (hiddenNoKunj) hiddenNoKunj.value = '{{ auto_no_kunjungan_rajal }}';
         }
