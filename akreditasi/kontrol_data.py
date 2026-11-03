@@ -325,11 +325,21 @@ def _layanan_block(unit, on_date=None):
     serves = bool(codes & service_codes())
     owns_beds = unit_owns_beds(unit, codes)
 
+    is_today = on_date == timezone.localdate()
+    if is_today and 'IGD' in codes:
+        visit_filter = Q(tanggal_masuk__date=on_date) | Q(
+            jenis_kunjungan='IGD',
+            status__in=['TRIAGE', 'ASESMEN', 'DAFTAR']
+        )
+    else:
+        visit_filter = Q(tanggal_masuk__date=on_date)
+
     rows = list(
         KunjunganPasien.objects
-        .filter(tanggal_masuk__date=on_date)
+        .filter(visit_filter)
         .select_related('pasien', 'bed__ruangan')
-        .order_by('tanggal_masuk')[:LAYANAN_LIMIT]
+        .order_by('tanggal_masuk')
+        .distinct()[:LAYANAN_LIMIT]
     )
 
     items, by_status = [], {}
@@ -346,6 +356,9 @@ def _layanan_block(unit, on_date=None):
             if code not in codes:
                 continue
 
+        k_local = timezone.localtime(k.tanggal_masuk)
+        jam_str = k_local.strftime('%d/%m %H:%M') if k_local.date() < on_date else k_local.strftime('%H:%M')
+
         by_status[k.status] = by_status.get(k.status, 0) + 1
         items.append({
             'pk': k.pk,
@@ -360,7 +373,7 @@ def _layanan_block(unit, on_date=None):
             'dpjp': k.dpjp or '',
             'status': k.status,
             'status_label': k.get_status_display(),
-            'jam': timezone.localtime(k.tanggal_masuk).strftime('%H:%M'),
+            'jam': jam_str,
             'penjamin': k.get_penjamin_display(),
         })
 

@@ -82,8 +82,8 @@ class RegistrationEntryTest(TestCase):
                 unit = self.login(code=code, role=role, superuser=superuser)
                 response = self.emr(unit)
                 self.assertEqual(response.status_code, 200)
-                self.assertContains(response, 'data-service-action="pendaftaran"', count=1)
-                self.assertContains(response, 'Pendaftaran pasien')
+                # Kartu pendaftaran di dalam blok Layanan Unit sudah dihapus sesuai instruksi
+                self.assertNotContains(response, 'data-service-action="pendaftaran"')
                 action = response.context['registration_action']
                 self.assertEqual(action['href'], reverse('pasien:pendaftaran_dashboard'))
                 target = self.client.get(action['href'])
@@ -93,7 +93,7 @@ class RegistrationEntryTest(TestCase):
         unit = self.login(code='ADMISI')
         response = self.emr(unit)
         self.assertFalse(response.context['snapshot']['layanan']['mapped'])
-        self.assertContains(response, 'data-service-action="pendaftaran"')
+        self.assertNotContains(response, 'data-service-action="pendaftaran"')
         self.assertContains(response, 'belum memiliki pemetaan layanan klinis untuk daftar kunjungan harian')
         self.assertNotContains(response, 'tidak memiliki layanan pendaftaran pasien')
 
@@ -120,9 +120,7 @@ class RegistrationEntryTest(TestCase):
         body = self.emr(unit).content.decode()
         start = body.index('<section class="kontrol-layanan"')
         end = body.index('</section>', start)
-        marker = body.index('data-service-action="pendaftaran"')
-        self.assertLess(start, marker)
-        self.assertLess(marker, end)
+        self.assertNotContains(self.emr(unit), 'data-service-action="pendaftaran"')
         self.assertLess(end, body.index('class="kontrol-kpis"'))
         self.assertLess(end, body.index('class="kontrol-ai"'))
 
@@ -133,12 +131,24 @@ class RegistrationEntryTest(TestCase):
         self.assertEqual(response.context['unit'].pk, unit.pk)
         self.assertEqual(response.context['registration_action']['href'],
                          reverse('pasien:pendaftaran_dashboard'))
-        self.assertContains(response, 'Cakupan seluruh rumah sakit sesuai hak akses.')
+        self.assertIn('Cakupan seluruh rumah sakit',
+                      response.context['registration_action']['description'])
 
     def test_anonymous_emr_still_redirects_to_login(self):
         self.client.logout()
         self.assertEqual(self.client.get(
             reverse('akreditasi:kontrol_emr')).status_code, 302)
+
+    def test_emr_defaults_to_clinical_service_unit_when_no_unit_specified(self):
+        # Akun superuser / non-unit-scoped membuka EMR tanpa ?unit=
+        self.login(code='KOMITE-MUTU', role='SUPER_ADMIN', superuser=True)
+        response = self.client.get(reverse('akreditasi:kontrol_emr'))
+        self.assertEqual(response.status_code, 200)
+        # Unit aktif otomatis jatuh ke IGD (clinical unit), bukan ke unit non-klinis
+        self.assertEqual(response.context['unit'].code, 'IGD')
+        # Dropdown options memuat unit layanan klinis
+        option_codes = [u.code for u in response.context['unit_options']]
+        self.assertIn('IGD', option_codes)
 
     def test_dashboard_explanations_are_visible_and_specific(self):
         unit = self.login(code='IGD')

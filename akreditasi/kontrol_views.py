@@ -65,7 +65,7 @@ def _profile(request):
     return getattr(request.user, 'profile', None)
 
 
-def _resolve_unit(request, profile):
+def _resolve_unit(request, profile, active_portal=None):
     """Unit aktif: paksa unit milik user unit-scoped, selain itu dari ?unit=."""
     requested = request.GET.get('unit')
     if profile is not None and profile.is_unit_scoped and profile.unit_kerja_id:
@@ -78,6 +78,14 @@ def _resolve_unit(request, profile):
         unit = UnitKerja.objects.filter(pk=requested, is_active=True).first()
         if unit:
             return unit
+
+    if active_portal == 'emr':
+        from .layanan_unit import service_codes
+        clinical = UnitKerja.objects.filter(
+            code__in=service_codes(), is_active=True
+        ).order_by('level', 'order', 'code').first()
+        if clinical:
+            return clinical
 
     units = sample_units(1)
     return units[0] if units else None
@@ -94,7 +102,16 @@ def _common_context(request, unit, profile, *, snapshot=None, active_portal='hub
 
     from .views import _is_manager_role
 
-    units = list(sample_units(12))
+    if active_portal == 'emr':
+        from .layanan_unit import service_codes
+        clinical_units = list(
+            UnitKerja.objects.filter(code__in=service_codes(), is_active=True)
+            .order_by('level', 'order', 'code')[:12]
+        )
+        units = clinical_units or list(sample_units(12))
+    else:
+        units = list(sample_units(12))
+
     if profile is not None and profile.is_unit_scoped and profile.unit_kerja:
         units = [profile.unit_kerja]
     elif unit and unit not in units:
@@ -263,7 +280,7 @@ def _briefing(request, unit, profile, portal_key):
 
 def _portal(request, template, portal_key):
     profile = _profile(request)
-    unit = _resolve_unit(request, profile)
+    unit = _resolve_unit(request, profile, active_portal=portal_key)
     if unit is None:
         messages.warning(request, 'Belum ada unit kerja aktif untuk ditampilkan.')
         return redirect('akreditasi:kontrol_hub')
@@ -311,7 +328,7 @@ def kontrol_layanan(request):
     from .kontrol_data import _layanan_block
 
     profile = _profile(request)
-    unit = _resolve_unit(request, profile)
+    unit = _resolve_unit(request, profile, active_portal='emr')
     if unit is None:
         messages.warning(request, 'Belum ada unit kerja aktif untuk ditampilkan.')
         return redirect('akreditasi:kontrol_hub')

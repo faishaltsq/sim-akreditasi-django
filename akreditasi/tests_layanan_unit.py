@@ -533,3 +533,51 @@ class PendaftaranIGDIntegrationTest(TestCase):
         self.assertEqual(k.triage, 'MERAH')
         self.assertEqual(k.status, 'TRIAGE')
 
+    def test_overnight_active_igd_patient_appears_in_today_layanan(self):
+        from datetime import timedelta
+        from django.urls import reverse
+        from django.utils import timezone
+        from akreditasi.kontrol_data import _layanan_block
+        from pasien.models import KunjunganPasien
+
+        pasien_active = _pasien('RM-OVERNIGHT-01')
+        k_active = KunjunganPasien.objects.create(
+            pasien=pasien_active,
+            no_kunjungan='IGD-OVERNIGHT-01',
+            jenis_kunjungan='IGD',
+            poliklinik='IGD',
+            unit_kerja=self.igd_unit,
+            tanggal_masuk=timezone.now() - timedelta(days=1),
+            status='TRIAGE',
+            triage='KUNING',
+        )
+
+        pasien_discharged = _pasien('RM-OVERNIGHT-02')
+        k_discharged = KunjunganPasien.objects.create(
+            pasien=pasien_discharged,
+            no_kunjungan='IGD-OVERNIGHT-02',
+            jenis_kunjungan='IGD',
+            poliklinik='IGD',
+            unit_kerja=self.igd_unit,
+            tanggal_masuk=timezone.now() - timedelta(days=1),
+            status='PULANG',
+            triage='HIJAU',
+        )
+
+        today_block = _layanan_block(self.igd_unit, on_date=timezone.localdate())
+        item_pks = [item['pk'] for item in today_block['items']]
+        self.assertIn(k_active.pk, item_pks)
+        self.assertNotIn(k_discharged.pk, item_pks)
+
+        # Kontrol EMR and layanan HTML rendering
+        self.client.force_login(self.user_admin)
+        emr_res = self.client.get(reverse('akreditasi:kontrol_emr'), {'unit': self.igd_unit.pk})
+        self.assertEqual(emr_res.status_code, 200)
+        self.assertContains(emr_res, '1 pasien')
+
+        layanan_res = self.client.get(reverse('akreditasi:kontrol_layanan'), {'unit': self.igd_unit.pk})
+        self.assertEqual(layanan_res.status_code, 200)
+        self.assertIn('IGD-OVERNIGHT-01', layanan_res.content.decode())
+        self.assertNotIn('IGD-OVERNIGHT-02', layanan_res.content.decode())
+
+
