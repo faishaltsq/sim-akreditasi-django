@@ -6,6 +6,7 @@ from django.contrib import messages
 from django.db import transaction
 from django.db.models import Count, Avg, Sum, Q
 from django.http import HttpResponse, JsonResponse
+from django.views.decorators.http import require_POST
 from django.core.exceptions import PermissionDenied
 from .decorators import require_patient_module, get_unit_scope, scope_kunjungan_qs, scope_pasien_qs
 from akreditasi.input_parsing import parse_int
@@ -984,6 +985,9 @@ def pendaftaran_route(request, pk):
 
 # ── DASBOR IGD ───────────────────────────────────────────────────────────────
 
+ACTIVE_IGD_STATUSES = ['DAFTAR', 'TRIAGE', 'ASESMEN', 'PENUNJANG', 'TINDAKAN', 'DISPOSISI']
+
+
 @login_required
 @require_patient_module('igd')
 def igd_dashboard(request):
@@ -991,7 +995,7 @@ def igd_dashboard(request):
     triage_filter = request.GET.get('triage', '')
     qs = KunjunganPasien.objects.filter(
         jenis_kunjungan='IGD',
-        status__in=['TRIAGE', 'ASESMEN', 'DAFTAR']
+        status__in=ACTIVE_IGD_STATUSES
     ).select_related('pasien', 'bed').prefetch_related('order_penunjang')
 
     if triage_filter:
@@ -999,7 +1003,7 @@ def igd_dashboard(request):
     qs = qs.order_by('triage', 'tanggal_masuk')
 
     def _cnt(t):
-        return KunjunganPasien.objects.filter(jenis_kunjungan='IGD', status__in=['TRIAGE', 'ASESMEN', 'DAFTAR'], triage=t).count()
+        return KunjunganPasien.objects.filter(jenis_kunjungan='IGD', status__in=ACTIVE_IGD_STATUSES, triage=t).count()
 
     available_beds = (
         Bed.objects.filter(status='TERSEDIA')
@@ -1097,6 +1101,7 @@ def igd_dashboard(request):
         'profesi_cppt':       CPPT.PROFESI,
         'icd10_codes':        ICD10_CODES,
         'sdki_codes':         SDKI_CODES,
+        'status_choices':     [(s, l) for s, l in KunjunganPasien.STATUS_KUNJUNGAN if s in ACTIVE_IGD_STATUSES],
     }
     return render(request, 'pasien/igd_dashboard.html', ctx)
 
@@ -1126,6 +1131,89 @@ def igd_ttv_update(request, pk):
         except Exception as e:
             messages.error(request, f'Gagal update TTV: {e}')
     return redirect('pasien:igd_dashboard')
+
+
+@login_required
+@require_POST
+def igd_kunjungan_edit(request, pk):
+    kunjungan = get_object_or_404(KunjunganPasien, pk=pk, jenis_kunjungan='IGD')
+    catatan_admisi = request.POST.get('catatan_admisi', '').strip()
+    dpjp = request.POST.get('dpjp', '').strip()
+    triage = request.POST.get('triage', '').strip()
+    penjamin = request.POST.get('penjamin', '').strip()
+    diagnosa_masuk = request.POST.get('diagnosa_masuk', '').strip()
+    diagnosa_sdki = request.POST.get('diagnosa_keperawatan_sdki', '').strip()
+
+    if catatan_admisi:
+        kunjungan.catatan_admisi = catatan_admisi
+    if dpjp:
+        kunjungan.dpjp = dpjp
+    if triage in dict(KunjunganPasien.TRIAGE_CHOICES):
+        kunjungan.triage = triage
+    if penjamin in dict(KunjunganPasien.TIPE_PENJAMIN):
+        kunjungan.penjamin = penjamin
+    if diagnosa_masuk:
+        kunjungan.diagnosa_masuk = diagnosa_masuk
+    if diagnosa_sdki:
+        kunjungan.diagnosa_keperawatan_sdki = diagnosa_sdki
+
+    kunjungan.save()
+    messages.success(request, f"Data kunjungan {kunjungan.no_kunjungan} berhasil diperbarui.")
+    next_url = request.POST.get('next') or request.META.get('HTTP_REFERER') or reverse('pasien:igd_dashboard')
+    return redirect(next_url)
+
+
+@login_required
+@require_POST
+def igd_kunjungan_batal(request, pk):
+    kunjungan = get_object_or_404(KunjunganPasien, pk=pk, jenis_kunjungan='IGD')
+    alasan = request.POST.get('alasan_batal', '').strip() or 'Dibatalkan oleh petugas'
+
+    if kunjungan.bed:
+        bed = kunjungan.bed
+        bed.status = 'TERSEDIA'
+        bed.save()
+        kunjungan.bed = None
+
+    kunjungan.status = 'BATAL'
+    waktu_str = timezone.now().strftime('%d/%m/%Y %H:%M')
+    prefix = f"[BATAL {waktu_str} oleh {request.user.username}]: {alasan}"
+    kunjungan.catatan_admisi = f"{prefix}\n{kunjungan.catatan_admisi}".strip()
+    kunjungan.save()
+
+    messages.warning(request, f"Kunjungan {kunjungan.no_kunjungan} telah dibatalkan.")
+    next_url = request.POST.get('next') or request.META.get('HTTP_REFERER') or reverse('pasien:igd_dashboard')
+    return redirect(next_url)
+
+
+@login_required
+@require_POST
+def igd_status_update(request, pk):
+    kunjungan = get_object_or_404(KunjunganPasien, pk=pk, jenis_kunjungan='IGD')
+    new_status = request.POST.get('status', '').strip()
+    valid_statuses = dict(KunjunganPasien.STATUS_KUNJUNGAN)
+
+    if new_status not in valid_statuses:
+        if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+            return JsonResponse({'status': 'error', 'message': 'Status tidak valid'}, status=400)
+        messages.error(request, 'Status tidak valid.')
+        return redirect('pasien:igd_dashboard')
+
+    kunjungan.status = new_status
+    kunjungan.save()
+
+    label = valid_statuses[new_status]
+    if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+        return JsonResponse({
+            'status': 'ok',
+            'new_status': new_status,
+            'label': label,
+            'message': f"Status pasien diubah menjadi {label}."
+        })
+
+    messages.success(request, f"Status pasien {kunjungan.no_kunjungan} diubah menjadi {label}.")
+    next_url = request.POST.get('next') or request.META.get('HTTP_REFERER') or reverse('pasien:igd_dashboard')
+    return redirect(next_url)
 
 
 # ── DASBOR POLI RAWAT JALAN ───────────────────────────────────────────────────

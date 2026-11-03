@@ -237,10 +237,36 @@
     </a>
     {% endif %}
     {% if 'igd' in allowed_mods %}
-    <a href="{% url 'pasien:igd_dashboard' %}" class="nav-link{% if u == 'igd_dashboard' %} active{% endif %}">
-        <span class="nav-icon"><i class="bi bi-heart-pulse nav-icon-cyan" aria-hidden="true"></i></span>
-        <span class="nav-text"><span class="nav-title">Gawat Darurat (IGD)</span></span>
-    </a>
+    <div class="sidebar-igd">
+        <a class="nav-link nav-pokja" data-bs-toggle="collapse" href="#igdMenu-{{ sidebar_uid }}"
+           role="button"
+           aria-expanded="{% if 'igd' in request.path %}true{% else %}false{% endif %}"
+           aria-controls="igdMenu-{{ sidebar_uid }}">
+            <span class="nav-icon"><i class="bi bi-heart-pulse nav-icon-cyan" aria-hidden="true"></i></span>
+            <span class="nav-text"><span class="nav-title">Gawat Darurat (IGD)</span></span>
+        </a>
+        <div class="collapse{% if 'igd' in request.path %} show{% endif %}" id="igdMenu-{{ sidebar_uid }}">
+            <div>
+                <a href="{% url 'pasien:igd_dashboard' %}" class="nav-link{% if u == 'igd_dashboard' and not request.GET.focus and not request.GET.audit %} active{% endif %}">
+                    <i class="bi bi-speedometer2 me-1"></i> Dashboard IGD
+                </a>
+                <div class="px-3 pt-2 pb-1 text-uppercase text-muted" style="font-size: .65rem; font-weight: 700; letter-spacing: .5px;">Alur Pelayanan (1 - 6)</div>
+                <a href="{% url 'akreditasi:igd_alur_triage' %}" class="nav-link{% if request.GET.focus == 'triage' %} active{% endif %}">1. Triage &amp; P1-P4</a>
+                <a href="{% url 'akreditasi:igd_alur_asesmen_ppa' %}" class="nav-link{% if request.GET.focus == 'asesmen' %} active{% endif %}">2. Asesmen PPA &amp; CPPT</a>
+                <a href="{% url 'akreditasi:igd_alur_penunjang' %}" class="nav-link{% if request.GET.focus == 'penunjang' %} active{% endif %}">3. Penunjang CITO</a>
+                <a href="{% url 'akreditasi:igd_alur_tindakan' %}" class="nav-link{% if request.GET.focus == 'tindakan' %} active{% endif %}">4. Tindakan &amp; Resusitasi</a>
+                <a href="{% url 'akreditasi:igd_alur_disposisi' %}" class="nav-link{% if request.GET.focus == 'disposisi' %} active{% endif %}">5. Keputusan Disposisi</a>
+                <a href="{% url 'akreditasi:igd_alur_administrasi' %}" class="nav-link{% if request.GET.focus == 'administrasi' %} active{% endif %}">6. Administrasi &amp; Kasir</a>
+
+                <div class="px-3 pt-2 pb-1 text-uppercase text-muted" style="font-size: .65rem; font-weight: 700; letter-spacing: .5px;">Mutu &amp; Logbook (1 - 5)</div>
+                <a href="{% url 'akreditasi:igd_mutu_logbook' %}" class="nav-link">1. Logbook Pasien IGD</a>
+                <a href="{% url 'akreditasi:igd_mutu_triage_audit' %}" class="nav-link{% if request.GET.audit == 'door_time' %} active{% endif %}">2. Audit Door-to-Triage</a>
+                <a href="{% url 'akreditasi:igd_mutu_indicators' %}" class="nav-link">3. Indikator Mutu IGD</a>
+                <a href="{% url 'akreditasi:igd_mutu_inventory' %}" class="nav-link">4. Inventaris &amp; Troli</a>
+                <a href="{% url 'akreditasi:igd_mutu_handover' %}" class="nav-link">5. Handover Shift &amp; SBAR</a>
+            </div>
+        </div>
+    </div>
     {% endif %}
     {% if 'rajal' in allowed_mods %}
     <div class="sidebar-rajal">

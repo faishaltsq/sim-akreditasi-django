@@ -31,7 +31,8 @@ from .risiko_models import (
 )
 
 LEVEL_ORDER = ('SANGAT_TINGGI', 'TINGGI', 'SEDANG', 'RENDAH', 'SANGAT_RENDAH')
-ACTIVE_VISIT_STATUSES = ('DAFTAR', 'TRIAGE', 'ASESMEN', 'RANAP')
+ACTIVE_VISIT_STATUSES = ('DAFTAR', 'TRIAGE', 'ASESMEN', 'PENUNJANG', 'TINDAKAN', 'DISPOSISI', 'RANAP')
+ACTIVE_IGD_STATUSES = ('DAFTAR', 'TRIAGE', 'ASESMEN', 'PENUNJANG', 'TINDAKAN', 'DISPOSISI')
 OPEN_INCIDENT_STATUSES = ('DILAPORKAN', 'VERIFIKASI', 'INVESTIGASI')
 
 SNAPSHOT_CACHE_SECONDS = 60
@@ -329,7 +330,7 @@ def _layanan_block(unit, on_date=None):
     if is_today and 'IGD' in codes:
         visit_filter = Q(tanggal_masuk__date=on_date) | Q(
             jenis_kunjungan='IGD',
-            status__in=['TRIAGE', 'ASESMEN', 'DAFTAR']
+            status__in=ACTIVE_IGD_STATUSES
         )
     else:
         visit_filter = Q(tanggal_masuk__date=on_date)

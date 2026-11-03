@@ -1,4 +1,4 @@
-from django.urls import path
+from django.urls import path, include
 from . import logbook as logbook_views
 from . import views
 from . import risiko_views
@@ -14,6 +14,7 @@ app_name = 'akreditasi'
 urlpatterns = [
     # Dasbor Eksekutif — Hospital Integrated Control (tanpa sidebar)
     path('control/', kontrol_views.kontrol_hub, name='kontrol_hub'),
+    path('control/igd/', include('akreditasi.igd_control_urls')),
     path('control/risiko/', kontrol_views.kontrol_risiko, name='kontrol_risiko'),
     path('control/emr/', kontrol_views.kontrol_emr, name='kontrol_emr'),
     path('control/dokumen/', kontrol_views.kontrol_dokumen, name='kontrol_dokumen'),

@@ -40,8 +40,35 @@
                         Triage Klinis 4 Level &bull; Keputusan Disposisi: Pulang (Discharge) atau Admisi Rawat Inap &bull; RS MonsisKami
                     </p>
                 </div>
-                <div class="ms-auto pe-4 d-none d-md-block">
-                    <a href="{% url 'pasien:pendaftaran_dashboard' %}" class="btn btn-outline-light btn-sm fw-semibold">
+                <div class="ms-auto pe-4 d-none d-md-flex gap-2">
+                    <div class="dropdown">
+                        <button class="btn btn-outline-light btn-sm dropdown-toggle fw-semibold" type="button" data-bs-toggle="dropdown">
+                            <i class="bi bi-diagram-3 me-1"></i> Alur Pelayanan (1-6)
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end shadow" style="font-size: .83rem;">
+                            <li><h6 class="dropdown-header">6 Alur Utama Pelayanan IGD</h6></li>
+                            <li><a class="dropdown-item" href="{% url 'akreditasi:igd_alur_triage' %}">1. Triage &amp; P1-P4</a></li>
+                            <li><a class="dropdown-item" href="{% url 'akreditasi:igd_alur_asesmen_ppa' %}">2. Asesmen PPA &amp; CPPT</a></li>
+                            <li><a class="dropdown-item" href="{% url 'akreditasi:igd_alur_penunjang' %}">3. Penunjang CITO</a></li>
+                            <li><a class="dropdown-item" href="{% url 'akreditasi:igd_alur_tindakan' %}">4. Tindakan &amp; Resusitasi</a></li>
+                            <li><a class="dropdown-item" href="{% url 'akreditasi:igd_alur_disposisi' %}">5. Keputusan Disposisi</a></li>
+                            <li><a class="dropdown-item" href="{% url 'akreditasi:igd_alur_administrasi' %}">6. Administrasi &amp; Kasir</a></li>
+                        </ul>
+                    </div>
+                    <div class="dropdown">
+                        <button class="btn btn-outline-light btn-sm dropdown-toggle fw-semibold" type="button" data-bs-toggle="dropdown">
+                            <i class="bi bi-award me-1"></i> Mutu &amp; Logbook (1-5)
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end shadow" style="font-size: .83rem;">
+                            <li><h6 class="dropdown-header">5 Menu Mutu &amp; Logbook IGD</h6></li>
+                            <li><a class="dropdown-item" href="{% url 'akreditasi:igd_mutu_logbook' %}">1. Logbook Pasien IGD</a></li>
+                            <li><a class="dropdown-item" href="{% url 'akreditasi:igd_mutu_triage_audit' %}">2. Audit Door-to-Triage</a></li>
+                            <li><a class="dropdown-item" href="{% url 'akreditasi:igd_mutu_indicators' %}">3. Indikator Mutu IGD</a></li>
+                            <li><a class="dropdown-item" href="{% url 'akreditasi:igd_mutu_inventory' %}">4. Inventaris &amp; Troli</a></li>
+                            <li><a class="dropdown-item" href="{% url 'akreditasi:igd_mutu_handover' %}">5. Handover Shift &amp; SBAR</a></li>
+                        </ul>
+                    </div>
+                    <a href="{% url 'pasien:pendaftaran_dashboard' %}" class="btn btn-light btn-sm fw-semibold text-danger">
                         <i class="bi bi-plus-circle me-1"></i> Pendaftaran Baru
                     </a>
                 </div>
@@ -185,6 +212,7 @@
                             <th style="min-width: 140px;">Diagnosa / Tindakan</th>
                             <th>DPJP Jaga</th>
                             <th>Dwell Time</th>
+                            <th>Status Alur</th>
                             <th class="text-center" style="min-width: 250px;">Keputusan Disposisi Klinis</th>
                             <th class="text-end pe-3">Detail</th>
                         </tr>
@@ -278,6 +306,29 @@
                             <td><small class="text-muted">{{ k.dpjp|default:"dr. Jaga IGD" }}</small></td>
                             <td>
                                 <div class="font-monospace text-muted">{{ k.tanggal_masuk|date:"H:i" }}</div>
+                            </td>
+                            <td>
+                                <div class="dropdown">
+                                    <button class="btn btn-sm btn-outline-primary dropdown-toggle py-0 px-2 font-monospace fw-semibold"
+                                            type="button" data-bs-toggle="dropdown" aria-expanded="false" style="font-size: .75rem;">
+                                        {{ k.get_status_display }}
+                                    </button>
+                                    <ul class="dropdown-menu shadow-sm" style="font-size: .8rem;">
+                                        <li><h6 class="dropdown-header text-uppercase">Ubah Status Alur IGD</h6></li>
+                                        {% for s_val, s_lbl in status_choices %}
+                                        <li>
+                                            <form method="post" action="{% url 'pasien:igd_status_update' k.pk %}">
+                                                {% csrf_token %}
+                                                <input type="hidden" name="status" value="{{ s_val }}">
+                                                <button type="submit" class="dropdown-item {% if k.status == s_val %}active{% endif %}">
+                                                    {{ s_lbl }}
+                                                </button>
+                                            </form>
+                                        </li>
+                                        {% endfor %}
+                                    </ul>
+                                </div>
+                            </td>
                             <td class="text-center" style="white-space: nowrap;">
                                 <div class="btn-group btn-group-sm shadow-sm" role="group">
                                     <!-- ASESMEN AWAL (Revisi 02) -->
@@ -354,7 +405,18 @@
                                             </li>
                                             <li><hr class="dropdown-divider my-1"></li>
                                             <li>
-                                                <a class="dropdown-item py-2 text-primary" href="{% url 'pasien:kunjungan_detail' k.pk %}">
+                                                <a class="dropdown-item py-2 text-primary" href="#" data-bs-toggle="modal" data-bs-target="#modalEditKunjungan{{ k.pk }}">
+                                                    <i class="bi bi-pencil-square me-2"></i> Edit Data Kunjungan
+                                                </a>
+                                            </li>
+                                            <li>
+                                                <a class="dropdown-item py-2 text-danger" href="#" data-bs-toggle="modal" data-bs-target="#modalBatalKunjungan{{ k.pk }}">
+                                                    <i class="bi bi-trash3 me-2"></i> Batalkan Kunjungan
+                                                </a>
+                                            </li>
+                                            <li><hr class="dropdown-divider my-1"></li>
+                                            <li>
+                                                <a class="dropdown-item py-2 text-secondary" href="{% url 'pasien:kunjungan_detail' k.pk %}">
                                                     <i class="bi bi-folder2-open me-2"></i> Buka Rekam Medis Lengkap
                                                 </a>
                                             </li>
@@ -2383,6 +2445,96 @@
                                     <div class="modal-footer bg-light">
                                         <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Tutup</button>
                                     </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- MODAL EDIT KUNJUNGAN IGD -->
+                        <div class="modal fade" id="modalEditKunjungan{{ k.pk }}" tabindex="-1" aria-hidden="true">
+                            <div class="modal-dialog modal-dialog-centered">
+                                <div class="modal-content">
+                                    <form method="POST" action="{% url 'pasien:igd_kunjungan_edit' k.pk %}">
+                                        {% csrf_token %}
+                                        <div class="modal-header bg-light">
+                                            <h6 class="modal-title fw-bold">
+                                                <i class="bi bi-pencil-square text-primary me-2"></i>Edit Data Kunjungan — {{ k.pasien.nama_lengkap }}
+                                            </h6>
+                                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                        </div>
+                                        <div class="modal-body">
+                                            <div class="mb-3">
+                                                <label class="form-label small fw-semibold">Triage Prioritas</label>
+                                                <select name="triage" class="form-select form-select-sm">
+                                                    <option value="MERAH" {% if k.triage == 'MERAH' %}selected{% endif %}>Merah — Prioritas I (Kritis)</option>
+                                                    <option value="KUNING" {% if k.triage == 'KUNING' %}selected{% endif %}>Kuning — Prioritas II (Urgent)</option>
+                                                    <option value="HIJAU" {% if k.triage == 'HIJAU' %}selected{% endif %}>Hijau — Prioritas III (Non-Urgent)</option>
+                                                    <option value="HITAM" {% if k.triage == 'HITAM' %}selected{% endif %}>Hitam — Prioritas IV (Expectant)</option>
+                                                </select>
+                                            </div>
+                                            <div class="mb-3">
+                                                <label class="form-label small fw-semibold">DPJP Jaga IGD</label>
+                                                <input type="text" name="dpjp" class="form-control form-control-sm" value="{{ k.dpjp|default:'' }}" placeholder="dr. Jaga IGD">
+                                            </div>
+                                            <div class="mb-3">
+                                                <label class="form-label small fw-semibold">Tipe Penjamin</label>
+                                                <select name="penjamin" class="form-select form-select-sm">
+                                                    <option value="UMUM" {% if k.penjamin == 'UMUM' %}selected{% endif %}>Umum / Tunai</option>
+                                                    <option value="BPJS" {% if k.penjamin == 'BPJS' %}selected{% endif %}>BPJS Kesehatan</option>
+                                                    <option value="ASURANSI" {% if k.penjamin == 'ASURANSI' %}selected{% endif %}>Asuransi Swasta</option>
+                                                </select>
+                                            </div>
+                                            <div class="mb-3">
+                                                <label class="form-label small fw-semibold">Keluhan Awal / Catatan Admisi</label>
+                                                <textarea name="catatan_admisi" rows="3" class="form-control form-control-sm" placeholder="Catatan admisi atau keluhan utama...">{{ k.catatan_admisi }}</textarea>
+                                            </div>
+                                            <div class="mb-3">
+                                                <label class="form-label small fw-semibold">Diagnosa Awal Medis (ICD-10)</label>
+                                                <input type="text" name="diagnosa_masuk" class="form-control form-control-sm" value="{{ k.diagnosa_masuk|default:'' }}" placeholder="Misal: I21.9 Acute Myocardial Infarction">
+                                            </div>
+                                            <div class="mb-3">
+                                                <label class="form-label small fw-semibold">Diagnosa Keperawatan SDKI</label>
+                                                <input type="text" name="diagnosa_keperawatan_sdki" class="form-control form-control-sm" value="{{ k.diagnosa_keperawatan_sdki|default:'' }}" placeholder="Misal: D.0077 Nyeri Akut">
+                                            </div>
+                                        </div>
+                                        <div class="modal-footer bg-light">
+                                            <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Batal</button>
+                                            <button type="submit" class="btn btn-primary btn-sm">
+                                                <i class="bi bi-save me-1"></i> Simpan Perubahan
+                                            </button>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- MODAL BATAL KUNJUNGAN IGD -->
+                        <div class="modal fade" id="modalBatalKunjungan{{ k.pk }}" tabindex="-1" aria-hidden="true">
+                            <div class="modal-dialog modal-dialog-centered">
+                                <div class="modal-content border-danger">
+                                    <form method="POST" action="{% url 'pasien:igd_kunjungan_batal' k.pk %}">
+                                        {% csrf_token %}
+                                        <div class="modal-header bg-danger text-white">
+                                            <h6 class="modal-title fw-bold">
+                                                <i class="bi bi-exclamation-triangle-fill me-2"></i>Konfirmasi Pembatalan Kunjungan
+                                            </h6>
+                                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                                        </div>
+                                        <div class="modal-body">
+                                            <div class="alert alert-warning py-2 mb-3 small">
+                                                <strong>Perhatian:</strong> Kunjungan <code>{{ k.no_kunjungan }}</code> atas nama <strong>{{ k.pasien.nama_lengkap }}</strong> akan diubah statusnya menjadi <code>BATAL</code> dan dilepas dari antrean aktif IGD.
+                                            </div>
+                                            <div class="mb-3">
+                                                <label class="form-label small fw-semibold text-danger">Alasan Pembatalan <span class="text-danger">*</span></label>
+                                                <textarea name="alasan_batal" rows="3" class="form-control form-control-sm" required placeholder="Contoh: Salah registrasi unit, pasien terdaftar ganda, atau batal berobat sebelum ditindak..."></textarea>
+                                            </div>
+                                        </div>
+                                        <div class="modal-footer bg-light">
+                                            <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Tutup</button>
+                                            <button type="submit" class="btn btn-danger btn-sm">
+                                                <i class="bi bi-trash3 me-1"></i> Ya, Batalkan Kunjungan
+                                            </button>
+                                        </div>
+                                    </form>
                                 </div>
                             </div>
                         </div>
