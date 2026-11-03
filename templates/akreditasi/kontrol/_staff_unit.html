@@ -1,0 +1,18 @@
+<section class="kontrol-panel" aria-label="Petugas unit">
+    <header class="panel-head">
+        <h2><i class="bi bi-person-badge"></i> Petugas unit</h2>
+        <span class="panel-hint">penempatan aktif</span>
+    </header>
+    {% if snapshot.staff.total %}
+    <ul class="list-group list-group-flush">
+        {% for s in snapshot.staff.items %}
+        <li class="list-group-item">
+            <strong>{{ s.nama }}</strong>
+            <div class="kontrol-caption">{{ s.profesi }} · {{ s.shift }} · Kredensial: {{ s.kredensial }}</div>
+        </li>
+        {% endfor %}
+    </ul>
+    {% else %}
+    <p class="kontrol-empty-inline"><i class="bi bi-inbox"></i> Belum ada petugas yang ditempatkan di unit ini.</p>
+    {% endif %}
+</section>

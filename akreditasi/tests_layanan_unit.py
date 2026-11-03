@@ -581,3 +581,70 @@ class PendaftaranIGDIntegrationTest(TestCase):
         self.assertNotIn('IGD-OVERNIGHT-02', layanan_res.content.decode())
 
 
+
+
+class AdmissionDeskTest(TestCase):
+    """Loket pendaftaran bukan unit klinis: layanan dan KPI dibaca RS-wide."""
+
+    def test_admission_codes_are_desks(self):
+        from akreditasi.layanan_unit import is_admission_desk
+
+        for code, name in (
+            ('PENDAFTARAN-ADMISSION', 'Unit Pendaftaran & Admission'),
+            ('ADMISI', 'Unit Pendaftaran & Admisi Pasien'),
+        ):
+            with self.subTest(code=code):
+                self.assertTrue(is_admission_desk(_unit(code, name, 4)))
+
+    def test_parent_installation_of_a_desk_is_a_desk(self):
+        from akreditasi.layanan_unit import is_admission_desk
+
+        parent = _unit('REKAM-MEDIS', 'Instalasi Rekam Medis & Pendaftaran', 3)
+        _unit('PENDAFTARAN-ADMISSION', 'Unit Pendaftaran & Admission', 4, parent)
+        self.assertTrue(is_admission_desk(parent))
+
+    def test_clinical_and_committee_units_are_not_desks(self):
+        from akreditasi.layanan_unit import is_admission_desk
+
+        for code, name, level in (
+            ('POLI-JANTUNG', 'Poliklinik Jantung & Pembuluh Darah', 4),
+            ('KOMITE-MUTU', 'Komite Mutu PMKP & Keselamatan Pasien', 2),
+            ('DIREKSI', 'Direksi', 1),
+        ):
+            with self.subTest(code=code):
+                self.assertFalse(is_admission_desk(_unit(code, name, level)))
+
+    def test_none_is_not_a_desk(self):
+        from akreditasi.layanan_unit import is_admission_desk
+
+        self.assertFalse(is_admission_desk(None))
+
+    def _visit(self, no, poli, status='DAFTAR', jenis='RAJAL'):
+        return KunjunganPasien.objects.create(
+            pasien=_pasien('RM-' + no), no_kunjungan=no,
+            jenis_kunjungan=jenis, tanggal_masuk=timezone.now(),
+            poliklinik=poli, status=status)
+
+    def test_desk_block_is_hospital_wide(self):
+        from akreditasi.kontrol_data import _layanan_block
+
+        _unit('POLI-PD', 'Poliklinik Penyakit Dalam', 3)
+        desk = _unit('PENDAFTARAN-ADMISSION', 'Unit Pendaftaran & Admission', 4)
+        self._visit('K-1', 'Poli Penyakit Dalam')
+        block = _layanan_block(desk)
+        self.assertTrue(block['mapped'])
+        self.assertEqual(block['scope'], 'hospital')
+        self.assertEqual(block['total'], 1)
+
+    def test_clinical_block_stays_unit_scoped(self):
+        from akreditasi.kontrol_data import _layanan_block
+
+        poli = _unit('POLI-PD', 'Poliklinik Penyakit Dalam', 3)
+        _unit('POLI-ANAK', 'Poliklinik Anak', 3)
+        self._visit('K-2', 'Poli Penyakit Dalam')
+        self._visit('K-3', 'Poli Anak')
+        block = _layanan_block(poli)
+        self.assertTrue(block['mapped'])
+        self.assertEqual(block['scope'], 'unit')
+        self.assertEqual(block['total'], 1)
+

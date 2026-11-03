@@ -71,7 +71,7 @@ def module_actions(portal, *, unit, year, is_manager=False,
         return actions
     if portal == 'emr':
         from pasien.models import POLIKLINIK_CHOICES
-        from .layanan_unit import POLI_UNIT_CODE
+        from .layanan_unit import POLI_UNIT_CODE, is_admission_desk
 
         allowed = set(allowed_patient_modules or ())
         layanan = layanan or {}
@@ -91,6 +91,11 @@ def module_actions(portal, *, unit, year, is_manager=False,
         if layanan.get('owns_beds') and 'ranap' in allowed:
             actions.append(_action('beds', 'Manajemen tempat tidur',
                                    'pasien:bed_management', scope='Seluruh RS'))
+        if 'pendaftaran' in allowed and is_admission_desk(unit):
+            # Pintu masuk pendaftaran bersifat RS-wide: tanpa parameter unit.
+            actions.append(_action('pendaftaran', 'Pendaftaran pasien',
+                                   'pasien:pendaftaran_dashboard',
+                                   scope='Seluruh rumah sakit'))
         return actions
     return []
 

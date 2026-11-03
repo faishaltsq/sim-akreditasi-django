@@ -5,6 +5,7 @@
   <div class="kontrol-module-actions">
     {% for action in module_actions %}
     <a href="{{ action.href }}" class="kontrol-module-link{% if forloop.first %} is-primary{% endif %}"
+       data-module-action="{{ action.key }}"
        {% if forloop.first %}data-module-primary{% endif %}>
       <span>{{ action.label }}</span><small>{{ action.scope }}</small>
       <i class="bi bi-arrow-up-right" aria-hidden="true"></i>

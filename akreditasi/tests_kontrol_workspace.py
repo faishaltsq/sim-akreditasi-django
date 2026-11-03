@@ -273,3 +273,20 @@ class ControlWorkspaceScopeTest(TestCase):
         self.assertEqual(
             self.client.post(reverse('akreditasi:kontrol_ringkasan_ai'),
                              {'portal': 'asing'}).status_code, 400)
+
+    def test_admission_desk_gets_registration_shortcut(self):
+        unit = self._unit('PENDAFTARAN-ADMISSION', 'Unit Pendaftaran & Admission', level=4)
+        self._login(unit, role='STAF')
+        res = self._get('akreditasi:kontrol_emr', unit)
+        keys = [a['key'] for a in res.context['module_actions']]
+        self.assertIn('pendaftaran', keys)
+        self.assertContains(res, 'data-module-action="pendaftaran"')
+        self.assertNotContains(res, 'Tidak ada pintasan operasional')
+
+    def test_registration_shortcut_is_entitlement_gated(self):
+        unit = self._unit('DIREKSI', 'Direksi', level=1)
+        self._login(unit, role='DIREKSI')
+        res = self._get('akreditasi:kontrol_emr', unit)
+        self.assertNotIn('pendaftaran',
+                         [a['key'] for a in res.context['module_actions']])
+

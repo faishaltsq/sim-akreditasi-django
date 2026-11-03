@@ -36,7 +36,7 @@ ACTIVE_IGD_STATUSES = ('DAFTAR', 'TRIAGE', 'ASESMEN', 'PENUNJANG', 'TINDAKAN', '
 OPEN_INCIDENT_STATUSES = ('DILAPORKAN', 'VERIFIKASI', 'INVESTIGASI')
 
 SNAPSHOT_CACHE_SECONDS = 60
-SNAPSHOT_CACHE_VERSION = 'v2'
+SNAPSHOT_CACHE_VERSION = 'v3'
 
 
 def risk_level_for(score, cfg):
@@ -198,14 +198,18 @@ def _emr_block(unit):
     untuk unit yang punya staf.
     """
     from pasien.models import AsesmenRisikoKlinis, Bed, CPPT, KunjunganPasien
-    from .layanan_unit import resolve_visit_ids
+    from .layanan_unit import is_admission_desk, resolve_visit_ids
 
     active = KunjunganPasien.objects.filter(status__in=ACTIVE_VISIT_STATUSES)
-    matching = resolve_visit_ids(active, unit)
-    visits = (
-        KunjunganPasien.objects.filter(pk__in=matching)
-        if matching else KunjunganPasien.objects.none()
-    )
+    if is_admission_desk(unit):
+        # Loket pendaftaran: KPI mengikuti arus pasien seluruh rumah sakit.
+        visits = active
+    else:
+        matching = resolve_visit_ids(active, unit)
+        visits = (
+            KunjunganPasien.objects.filter(pk__in=matching)
+            if matching else KunjunganPasien.objects.none()
+        )
 
     by_jenis = {
         row['jenis_kunjungan']: row['n']
@@ -317,13 +321,15 @@ def _layanan_block(unit, on_date=None):
     from django.utils import timezone
     from pasien.models import KunjunganPasien
     from .layanan_unit import (
-        alias_index, resolve_code, service_codes, unit_codes, unit_owns_beds,
+        alias_index, is_admission_desk, resolve_code, service_codes, unit_codes,
+        unit_owns_beds,
     )
 
     on_date = on_date or timezone.localdate()
     codes = unit_codes(unit)
     index = alias_index()
-    serves = bool(codes & service_codes())
+    hospital_wide = is_admission_desk(unit, codes)
+    serves = hospital_wide or bool(codes & service_codes())
     owns_beds = unit_owns_beds(unit, codes)
 
     is_today = on_date == timezone.localdate()
@@ -345,7 +351,9 @@ def _layanan_block(unit, on_date=None):
 
     items, by_status = [], {}
     for k in rows:
-        if k.jenis_kunjungan == 'IGD':
+        if hospital_wide:
+            pass  # loket pendaftaran: seluruh kunjungan RS pada tanggal itu
+        elif k.jenis_kunjungan == 'IGD':
             if 'IGD' not in codes:
                 continue
             code = 'IGD'
@@ -376,6 +384,7 @@ def _layanan_block(unit, on_date=None):
             'status_label': k.get_status_display(),
             'jam': jam_str,
             'penjamin': k.get_penjamin_display(),
+            'penjamin_code': k.penjamin,
         })
 
     return {
@@ -384,9 +393,64 @@ def _layanan_block(unit, on_date=None):
         'by_status': by_status,
         'items': items,
         'mapped': serves,
+        'scope': 'hospital' if hospital_wide else 'unit',
         'truncated': len(rows) >= LAYANAN_LIMIT,
         'owns_beds': owns_beds,
     }
+
+
+def _staff_block(unit):
+    """Petugas yang ditempatkan di unit ini hari ini (bukan daftar karangan).
+
+    Sumber: ``sdm.PenempatanPegawai`` (penempatan berjalan) dan
+    ``sdm.PenugasanShift`` (roster hari ini). Kehadiran tidak diisi karena
+    ``PeristiwaPresensi`` belum punya data — template mencetak "—", bukan
+    status palsu.
+    """
+    from django.db.models import Q
+    from django.utils import timezone
+
+    from accounts.models import NakesCredential
+    from sdm.models import PenempatanPegawai, PenugasanShift
+
+    if unit is None:
+        return {'items': [], 'total': 0, 'scope': 'unit'}
+
+    today = timezone.localdate()
+    placements = (
+        PenempatanPegawai.objects
+        .filter(unit_kerja=unit, tanggal_mulai__lte=today)
+        .filter(Q(tanggal_selesai__isnull=True) | Q(tanggal_selesai__gte=today))
+        .select_related('pegawai__akun__profile')
+    )
+    shifts = {
+        a.employee_id: a.shift
+        for a in PenugasanShift.objects
+        .filter(tanggal=today, is_active=True, shift__unit_kerja=unit)
+        .select_related('shift')
+    }
+
+    items = []
+    for p in placements:
+        pegawai = p.pegawai
+        profile = getattr(pegawai.akun, 'profile', None) if pegawai.akun_id else None
+        if profile is None:
+            kredensial = 'Belum ada kredensial'
+        else:
+            valid = NakesCredential.objects.filter(
+                user_profile=profile, status='VERIFIED').filter(
+                Q(valid_until__isnull=True) | Q(valid_until__gte=today))
+            kredensial = 'Valid' if valid.exists() else 'Belum valid'
+        shift = shifts.get(pegawai.pk)
+        items.append({
+            'nama': pegawai.nama_lengkap,
+            'profesi': pegawai.profesi or pegawai.get_kategori_display(),
+            'unit': unit.name,
+            'shift': shift.nama if shift else 'Belum ada jadwal shift',
+            'hadir': None,
+            'kredensial': kredensial,
+        })
+    return {'items': items, 'total': len(items), 'scope': 'unit'}
 
 
 def build_unit_snapshot(unit, profile=None, year=None):
@@ -407,6 +471,7 @@ def build_unit_snapshot(unit, profile=None, year=None):
         'laporan': _laporan_block(unit_ids),
         'emr': _emr_block(unit),
         'layanan': _layanan_block(unit),
+        'staff': _staff_block(unit),
         'ppa': _ppa_block(unit_ids),
         'ep': _ep_block(unit_ids),
     }

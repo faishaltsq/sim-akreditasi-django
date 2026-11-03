@@ -64,6 +64,13 @@ EXTRA_ALIASES = {
     'IGD': 'IGD',
 }
 
+# Unit administratif yang mengelola alur pendaftaran seluruh rumah sakit.
+# Unit seperti ini TIDAK dipetakan ke poliklinik/bangsal: pasiennya bukan
+# "milik" unit, sehingga blok layanan dan KPI EMR harus dibaca RS-wide.
+# Tambahkan kode di sini bila ada loket pendaftaran baru; bila suatu saat
+# jumlahnya bertambah, ganti dengan flag DB di UnitKerja.
+ADMISSION_DESK_CODES = frozenset({'PENDAFTARAN-ADMISSION', 'ADMISI'})
+
 _WS = re.compile(r'[^a-z0-9]+')
 _PARENS = re.compile(r'\([^)]*\)')
 
@@ -194,6 +201,14 @@ def unit_codes(unit):
             .values_list('code', flat=True)
         )
     return codes
+
+
+def is_admission_desk(unit, codes=None):
+    """True bila unit (atau turunannya) adalah loket pendaftaran/admisi."""
+    if unit is None:
+        return False
+    codes = unit_codes(unit) if codes is None else codes
+    return bool(codes & ADMISSION_DESK_CODES)
 
 
 def resolve_visit_ids(visits_qs, unit):

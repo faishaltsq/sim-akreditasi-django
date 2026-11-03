@@ -10,7 +10,12 @@
 <section class="kontrol-kpis">
     <div class="kpi">
         <span class="kpi-label">Kunjungan aktif</span>
+        {% if snapshot.emr.active_total %}
+        <a class="kpi-value" data-kpi-link="layanan"
+           href="{% url 'akreditasi:kontrol_layanan' %}?unit={{ unit.id }}">{{ snapshot.emr.active_total }}</a>
+        {% else %}
         <strong class="kpi-value">{{ snapshot.emr.active_total }}</strong>
+        {% endif %}
         <span class="kpi-foot">status terdaftar sampai rawat inap pada unit aktif</span>
     </div>
     <div class="kpi {% if snapshot.emr.cppt_gap %}kpi-critical{% endif %}">
@@ -69,5 +74,6 @@
     </section>
 </div>
 
+{% include "akreditasi/kontrol/_staff_unit.html" %}
 {% include "akreditasi/kontrol/_ai_panel.html" %}
 {% endblock %}

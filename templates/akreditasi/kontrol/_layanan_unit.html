@@ -26,7 +26,10 @@
         <i class="bi bi-arrow-right layanan-entry-go"></i>
     </a>
 
-    <p class="kontrol-caption layanan-scope-note">Daftar harian mengikuti unit aktif dan tanggal layanan.</p>
+    <p class="kontrol-caption layanan-scope-note">
+        {% if snapshot.layanan.scope == 'hospital' %}Daftar harian mencakup seluruh rumah sakit pada tanggal layanan, bukan hanya layanan klinis unit ini.
+        {% else %}Daftar harian mengikuti unit aktif dan tanggal layanan.{% endif %}
+    </p>
 
     {% if snapshot.layanan.owns_beds %}
     <a class="layanan-entry layanan-entry-sub" href="{% url 'pasien:bed_management' %}">

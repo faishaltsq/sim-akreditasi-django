@@ -89,13 +89,16 @@ class RegistrationEntryTest(TestCase):
                 target = self.client.get(action['href'])
                 self.assertEqual(target.status_code, 200)
 
-    def test_unmapped_admission_still_has_registration(self):
+    def test_admission_desk_reads_hospital_wide_instead_of_unmapped(self):
         unit = self.login(code='ADMISI')
         response = self.emr(unit)
-        self.assertFalse(response.context['snapshot']['layanan']['mapped'])
+        layanan = response.context['snapshot']['layanan']
+        self.assertTrue(layanan['mapped'])
+        self.assertEqual(layanan['scope'], 'hospital')
         self.assertNotContains(response, 'data-service-action="pendaftaran"')
-        self.assertContains(response, 'belum memiliki pemetaan layanan klinis untuk daftar kunjungan harian')
-        self.assertNotContains(response, 'tidak memiliki layanan pendaftaran pasien')
+        self.assertNotContains(
+            response,
+            'belum memiliki pemetaan layanan klinis untuk daftar kunjungan harian')
 
     def test_non_entitled_users_get_neither_menu_nor_destination_access(self):
         for code in ('POLI-PD', 'LAB-BDRS', 'FARM', 'BANGSAL-DEWASA', 'DIREKSI'):
@@ -140,6 +143,10 @@ class RegistrationEntryTest(TestCase):
             reverse('akreditasi:kontrol_emr')).status_code, 302)
 
     def test_emr_defaults_to_clinical_service_unit_when_no_unit_specified(self):
+        # Database test tidak memuat seed: IGD harus dibuat eksplisit agar
+        # default punya kandidat klinis untuk dipilih.
+        UnitKerja.objects.get_or_create(
+            code='IGD', defaults={'name': 'Instalasi Gawat Darurat', 'level': 3})
         # Akun superuser / non-unit-scoped membuka EMR tanpa ?unit=
         self.login(code='KOMITE-MUTU', role='SUPER_ADMIN', superuser=True)
         response = self.client.get(reverse('akreditasi:kontrol_emr'))
