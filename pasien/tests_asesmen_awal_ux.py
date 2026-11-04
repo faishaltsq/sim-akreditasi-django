@@ -44,3 +44,22 @@ class MstAutoCalcTest(TestCase):
         self.assertContains(res, 'name="mst_q1"')
         self.assertContains(res, 'name="mst_q2"')
         self.assertContains(res, f'mstResult_{self.k.pk}')
+
+
+class SmartDefaultUiTest(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user('smartuser')
+        self.client.force_login(self.user)
+        self.pasien = Pasien.objects.create(
+            no_rm='RM-SMART-001', nik='3201000000000104', nama_lengkap='Smart Pasien',
+            tanggal_lahir='1995-05-05', jenis_kelamin='P')
+        self.k = KunjunganPasien.objects.create(
+            pasien=self.pasien, jenis_kunjungan='IGD', no_kunjungan='IGD-SMART-001',
+            tanggal_masuk=timezone.now())
+
+    def test_igd_dashboard_has_smart_default_and_pain_slider(self):
+        res = self.client.get(reverse('pasien:igd_dashboard'))
+        self.assertContains(res, 'setNormalAsesmen')
+        self.assertContains(res, 'type="range"')
+        self.assertContains(res, f'skorNyeriBadge_{self.k.pk}')
+        self.assertContains(res, 'Set Normal / Baik')

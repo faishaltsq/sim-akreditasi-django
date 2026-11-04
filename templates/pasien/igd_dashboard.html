@@ -1514,6 +1514,12 @@
 
                                                 <!-- TAB 3: BIOPSIKOSOSIAL & SKRINING (STANDAR 3.09 CHECKLIST) -->
                                                 <div class="tab-pane fade" id="tabBio{{ k.pk }}">
+                                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                                        <span class="small text-muted"><i class="bi bi-info-circle me-1"></i>Isi keadaan umum, kesadaran, nyeri, gizi (MST), dan risiko jatuh.</span>
+                                                        <button type="button" class="btn btn-outline-success btn-sm py-0 px-2" id="setNormalAsesmen_{{ k.pk }}" onclick="setNormalAsesmen('{{ k.pk }}')" title="Isi otomatis parameter normal">
+                                                            <i class="bi bi-lightning-charge-fill me-1"></i>Set Normal / Baik
+                                                        </button>
+                                                    </div>
                                                     <!-- Keadaan Umum & Kesadaran -->
                                                     <div class="p-2.5 border rounded mb-2 bg-light">
                                                         <div class="row g-2">
@@ -1564,14 +1570,18 @@
 
                                                     <!-- Asesmen Nyeri (NRS 0-10) -->
                                                     <div class="p-2.5 border rounded mb-2 bg-light">
-                                                        <label class="form-label small fw-bold text-danger mb-1">Asesmen Nyeri (Skala 0–10):</label>
+                                                        <div class="d-flex justify-content-between align-items-center mb-1">
+                                                            <label class="form-label small fw-bold text-danger mb-0">Asesmen Nyeri (Skala 0–10):</label>
+                                                            <span class="badge {% if k.ttv_skala_nyeri >= 7 %}bg-danger{% elif k.ttv_skala_nyeri >= 4 %}bg-warning text-dark{% elif k.ttv_skala_nyeri >= 1 %}bg-warning-subtle text-dark border{% else %}bg-success{% endif %}" id="skorNyeriBadge_{{ k.pk }}">
+                                                                {{ k.ttv_skala_nyeri|default:0 }} — {% if k.ttv_skala_nyeri >= 7 %}Nyeri berat{% elif k.ttv_skala_nyeri >= 4 %}Nyeri sedang{% elif k.ttv_skala_nyeri >= 1 %}Nyeri ringan{% else %}Tidak ada nyeri{% endif %}
+                                                            </span>
+                                                        </div>
                                                         <div class="row g-2 align-items-center">
                                                             <div class="col-md-5">
-                                                                <div class="input-group input-group-sm">
-                                                                    <span class="input-group-text">Skor Nyeri:</span>
-                                                                    <input type="number" name="ttv_skala_nyeri" class="form-control" min="0" max="10" value="{{ k.ttv_skala_nyeri|default:0 }}">
-                                                                    <span class="input-group-text">/ 10</span>
-                                                                </div>
+                                                                <input type="range" class="form-range" min="0" max="10" step="1"
+                                                                       name="ttv_skala_nyeri" id="skorNyeri_{{ k.pk }}"
+                                                                       value="{{ k.ttv_skala_nyeri|default:0 }}"
+                                                                       oninput="updateSkorNyeri('{{ k.pk }}', this.value)">
                                                             </div>
                                                             <div class="col-md-7">
                                                                 <div class="d-flex flex-wrap gap-2">
@@ -2662,6 +2672,47 @@
             q2.addEventListener('change', hitung);
         });
     });
+
+    // Smart default & Slider Nyeri Live Handler
+    function updateSkorNyeri(pk, val) {
+        var badge = document.getElementById('skorNyeriBadge_' + pk);
+        if (!badge) return;
+        var cls = 'bg-success', ket = 'Tidak ada nyeri';
+        val = parseInt(val) || 0;
+        if (val >= 7) { cls = 'bg-danger'; ket = 'Nyeri berat'; }
+        else if (val >= 4) { cls = 'bg-warning text-dark'; ket = 'Nyeri sedang'; }
+        else if (val >= 1) { cls = 'bg-warning-subtle text-dark border'; ket = 'Nyeri ringan'; }
+        badge.className = 'badge ' + cls;
+        badge.innerText = val + ' — ' + ket;
+    }
+
+    function setNormalAsesmen(pk) {
+        var modal = document.getElementById('modalAsesmenAwal' + pk) || document;
+        var setVal = function(name, val) {
+            var el = modal.querySelector('[name="' + name + '"]');
+            if (el) el.value = val;
+        };
+        var checkRadio = function(name, val) {
+            var el = modal.querySelector('[name="' + name + '"][value="' + val + '"]');
+            if (el) el.checked = true;
+        };
+        checkRadio('keadaan_umum', 'Baik');
+        checkRadio('kesadaran', 'Compos Mentis');
+        checkRadio('nyeri_karakteristik', 'Hilang-Timbul');
+        checkRadio('fungsional_adl', 'Mandiri');
+        setVal('mst_q1', '0');
+        setVal('mst_q2', '0');
+        setVal('ttv_sistole', '120');
+        setVal('ttv_diastole', '80');
+        setVal('ttv_nadi', '80');
+        setVal('ttv_rr', '18');
+        setVal('ttv_suhu', '36.5');
+        setVal('ttv_spo2', '98');
+        setVal('ttv_skala_nyeri', '0');
+        updateSkorNyeri(pk, 0);
+        var q1 = document.getElementById('mstQ1_' + pk);
+        if (q1) q1.dispatchEvent(new Event('change'));
+    }
 </script>
 
 <!-- GLOBAL DATALISTS FOR ICD-10 & SDKI QUICK SEARCH -->
