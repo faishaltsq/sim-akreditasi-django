@@ -2042,9 +2042,15 @@ def igd_asesmen_awal_save(request, pk):
         if request.POST.get('skrining_jatuh_grade'):
             k.skrining_jatuh_grade = request.POST.get('skrining_jatuh_grade', '').strip()
 
-        skor_gizi = request.POST.get('skrining_gizi_mst')
-        if skor_gizi and skor_gizi.isdigit():
-            k.skrining_gizi_mst = int(skor_gizi)
+        # Skrining Gizi (MST) — hitung ulang dari 2 pertanyaan; fallback input manual legacy
+        mst_q1 = request.POST.get('mst_q1', '').strip()
+        mst_q2 = request.POST.get('mst_q2', '').strip()
+        if mst_q1.isdigit() and mst_q2.isdigit():
+            k.skrining_gizi_mst = min(int(mst_q1) + int(mst_q2), 5)
+        else:
+            skor_gizi = request.POST.get('skrining_gizi_mst', '').strip()
+            if skor_gizi.isdigit():
+                k.skrining_gizi_mst = min(int(skor_gizi), 5)
 
         # Diagnosis Medis & Keperawatan 3S
         if request.POST.get('diagnosa_masuk'):

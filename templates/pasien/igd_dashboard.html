@@ -1606,28 +1606,46 @@
                                                             <label class="form-label small fw-bold text-success mb-0">Skrining Gizi (Malnutrition Screening Tool - MST):</label>
                                                             <small class="text-muted">Skor &ge; 2: Konsul Ahli Gizi</small>
                                                         </div>
-                                                        <div class="row g-2 align-items-center">
-                                                            <div class="col-md-5">
-                                                                <div class="input-group input-group-sm">
-                                                                    <span class="input-group-text">Skor MST:</span>
-                                                                    <input type="number" name="skrining_gizi_mst" class="form-control" min="0" max="5" value="{{ k.skrining_gizi_mst|default:0 }}">
+                                                        <div class="row g-2 mb-2">
+                                                            <div class="col-md-6">
+                                                                <label class="form-label small fw-semibold mb-1" for="mstQ1_{{ k.pk }}">1. Penurunan berat badan tidak diinginkan?</label>
+                                                                <select name="mst_q1" class="form-select form-select-sm" id="mstQ1_{{ k.pk }}">
+                                                                    <option value="0">Tidak ada penurunan (0)</option>
+                                                                    <option value="1">Ya, 1–5 kg (1)</option>
+                                                                    <option value="2">Tidak yakin / > 5 kg (2)</option>
+                                                                </select>
+                                                            </div>
+                                                            <div class="col-md-6">
+                                                                <label class="form-label small fw-semibold mb-1" for="mstQ2_{{ k.pk }}">2. Asupan makan berkurang?</label>
+                                                                <select name="mst_q2" class="form-select form-select-sm" id="mstQ2_{{ k.pk }}">
+                                                                    <option value="0">Tidak (0)</option>
+                                                                    <option value="1">Ya (1)</option>
+                                                                </select>
+                                                            </div>
+                                                            <div class="col-12">
+                                                                <div class="alert {% if k.skrining_gizi_mst and k.skrining_gizi_mst >= 2 %}alert-danger{% else %}alert-success{% endif %} py-1 px-2 mb-0 small" id="mstResult_{{ k.pk }}">
+                                                                    Total MST: <strong>{{ k.skrining_gizi_mst|default:0 }}</strong> —
+                                                                    {% if k.skrining_gizi_mst and k.skrining_gizi_mst >= 2 %}
+                                                                        <span class="text-danger fw-bold">Risiko Malnutrisi Tinggi — Konsul Ahli Gizi</span>
+                                                                    {% else %}
+                                                                        <span class="text-success">Risiko Malnutrisi Rendah</span>
+                                                                    {% endif %}
                                                                 </div>
                                                             </div>
-                                                            <div class="col-md-7">
-                                                                <div class="d-flex flex-wrap gap-2">
-                                                                    <div class="form-check form-check-inline">
-                                                                        <input class="form-check-input" type="radio" name="fungsional_adl" value="Mandiri" id="adlM_{{ k.pk }}" {% if k.fungsional_adl == 'Mandiri' or not k.fungsional_adl %}checked{% endif %}>
-                                                                        <label class="form-check-label small" for="adlM_{{ k.pk }}">ADL Mandiri</label>
-                                                                    </div>
-                                                                    <div class="form-check form-check-inline">
-                                                                        <input class="form-check-input" type="radio" name="fungsional_adl" value="Bantuan Parsial" id="adlP_{{ k.pk }}" {% if k.fungsional_adl == 'Bantuan Parsial' %}checked{% endif %}>
-                                                                        <label class="form-check-label small" for="adlP_{{ k.pk }}">Bantuan Parsial</label>
-                                                                    </div>
-                                                                    <div class="form-check form-check-inline">
-                                                                        <input class="form-check-input" type="radio" name="fungsional_adl" value="Ketergantungan Total" id="adlT_{{ k.pk }}" {% if k.fungsional_adl == 'Ketergantungan Total' %}checked{% endif %}>
-                                                                        <label class="form-check-label small" for="adlT_{{ k.pk }}">Total</label>
-                                                                    </div>
-                                                                </div>
+                                                        </div>
+                                                        <div class="d-flex align-items-center gap-2 pt-1 border-top">
+                                                            <span class="small fw-semibold text-muted">Aktivitas (ADL):</span>
+                                                            <div class="form-check form-check-inline mb-0">
+                                                                <input class="form-check-input" type="radio" name="fungsional_adl" value="Mandiri" id="adlM_{{ k.pk }}" {% if k.fungsional_adl == 'Mandiri' or not k.fungsional_adl %}checked{% endif %}>
+                                                                <label class="form-check-label small" for="adlM_{{ k.pk }}">Mandiri</label>
+                                                            </div>
+                                                            <div class="form-check form-check-inline mb-0">
+                                                                <input class="form-check-input" type="radio" name="fungsional_adl" value="Bantuan Parsial" id="adlP_{{ k.pk }}" {% if k.fungsional_adl == 'Bantuan Parsial' %}checked{% endif %}>
+                                                                <label class="form-check-label small" for="adlP_{{ k.pk }}">Bantuan Parsial</label>
+                                                            </div>
+                                                            <div class="form-check form-check-inline mb-0">
+                                                                <input class="form-check-input" type="radio" name="fungsional_adl" value="Ketergantungan Total" id="adlT_{{ k.pk }}" {% if k.fungsional_adl == 'Ketergantungan Total' %}checked{% endif %}>
+                                                                <label class="form-check-label small" for="adlT_{{ k.pk }}">Total</label>
                                                             </div>
                                                         </div>
                                                     </div>
@@ -2625,6 +2643,25 @@
         }
         input.value = items.join(', ');
     }
+
+    // MST auto-calc live updater
+    document.addEventListener('DOMContentLoaded', function() {
+        document.querySelectorAll('[id^="mstQ1_"]').forEach(function(q1) {
+            const pk = q1.id.split('_')[1];
+            const q2 = document.getElementById('mstQ2_' + pk);
+            const out = document.getElementById('mstResult_' + pk);
+            if (!q2 || !out) return;
+            function hitung() {
+                const total = (parseInt(q1.value) || 0) + (parseInt(q2.value) || 0);
+                out.className = 'alert py-1 px-2 mb-0 small ' + (total >= 2 ? 'alert-danger' : 'alert-success');
+                out.innerHTML = 'Total MST: <strong>' + total + '</strong> — ' +
+                    (total >= 2 ? '<span class="text-danger fw-bold">Risiko Malnutrisi Tinggi — Konsul Ahli Gizi</span>'
+                                : '<span class="text-success">Risiko Malnutrisi Rendah</span>');
+            }
+            q1.addEventListener('change', hitung);
+            q2.addEventListener('change', hitung);
+        });
+    });
 </script>
 
 <!-- GLOBAL DATALISTS FOR ICD-10 & SDKI QUICK SEARCH -->
