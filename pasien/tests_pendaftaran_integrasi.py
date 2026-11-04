@@ -215,3 +215,83 @@ class PendaftaranLogbookJadwalTest(TestCase):
         for val, _label, polis in res.context['dpjp_choices_poli']:
             if val in mapped:
                 self.assertTrue(polis, f'{val} kehilangan data-poli')
+
+
+class PendaftaranDashboardTabTest(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(username='loket_tab', password='password123')
+        self.client.login(username='loket_tab', password='password123')
+
+    def test_tab_shift_logbook_rendered(self):
+        res = self.client.get(reverse('pasien:pendaftaran_dashboard'))
+        self.assertEqual(res.status_code, 200)
+        self.assertContains(res, 'id="tab-shift"')
+        self.assertContains(res, 'id="pane-shift"')
+        self.assertContains(res, 'Shift &amp; Logbook Staf')
+        self.assertContains(res, reverse('pasien:pendaftaran_logbook_simpan'))
+        self.assertContains(res, reverse('pasien:pendaftaran_jadwal_simpan'))
+        self.assertContains(res, 'Belum ada jadwal dinas')
+
+    def test_tab_shift_logbook_lists_rows(self):
+        JadwalDinusAdmission.objects.create(petugas=self.user, tanggal=timezone.localdate(), shift='PAGI')
+        LogbookHarianAdmission.objects.create(petugas=self.user, kegiatan='Scan ulang berkas BPJS')
+        res = self.client.get(reverse('pasien:pendaftaran_dashboard'))
+        self.assertContains(res, 'loket_tab')
+        self.assertContains(res, 'Scan ulang berkas BPJS')
+        self.assertContains(res, 'Pagi (07:00 - 14:00)')
+
+
+class PendaftaranBridgingUiTest(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(username='loket_ui', password='password123')
+        self.client.login(username='loket_ui', password='password123')
+
+    def test_kotak_baru_inputs_have_autofill_ids(self):
+        res = self.client.get(reverse('pasien:pendaftaran_dashboard'))
+        self.assertContains(res, 'id="namaLengkapBaru"')
+        self.assertContains(res, 'id="tglLahirBaru"')
+        self.assertContains(res, 'id="bpjsBaruInput"')
+
+    def test_dpjp_options_carry_data_poli(self):
+        res = self.client.get(reverse('pasien:pendaftaran_dashboard'))
+        self.assertContains(res, 'data-poli="POLI_MATA"')  # dr. Farida, Sp.M hanya di Poli Mata
+        self.assertContains(res, 'data-poli="POLI_ANAK"')
+
+    def test_nik_bridging_js_present(self):
+        res = self.client.get(reverse('pasien:pendaftaran_dashboard'))
+        self.assertContains(res, 'cekNikBridging')
+        self.assertContains(res, reverse('pasien:api_bridging_peserta'))
+
+
+class PendaftaranRmeAntreanUiTest(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(username='loket_rme', password='password123')
+        self.client.login(username='loket_rme', password='password123')
+        self.pasien = Pasien.objects.create(
+            no_rm='RM-RME-001', nik='3201000000000021', nama_lengkap='Rina Wulandari',
+            tanggal_lahir='1992-07-07', jenis_kelamin='P')
+        self.kunjungan = KunjunganPasien.objects.create(
+            pasien=self.pasien, jenis_kunjungan='RAJAL', no_kunjungan='RAJAL-RME-001',
+            poliklinik='POLI_ANAK', dpjp='dr. Nurul, Sp.A', penjamin='BPJS',
+            nomor_antrean='A-001', status_antrean='MENUNGGU', tanggal_masuk=timezone.now())
+
+    def test_rme_and_antrean_controls_rendered(self):
+        res = self.client.get(reverse('pasien:pendaftaran_dashboard'))
+        self.assertContains(res, 'modalRme%d' % self.kunjungan.pk)
+        self.assertContains(res, reverse('pasien:pendaftaran_ttv_simpan', args=[self.kunjungan.pk]))
+        self.assertContains(res, reverse('pasien:pendaftaran_antrean_status', args=[self.kunjungan.pk]))
+        self.assertContains(res, 'RME Awal')
+        self.assertContains(res, 'Panggil')
+
+    def test_ttv_badge_shown_when_ttv_exists(self):
+        self.kunjungan.ttv_sistole = 110
+        self.kunjungan.save()
+        res = self.client.get(reverse('pasien:pendaftaran_dashboard'))
+        self.assertContains(res, '</i> ✓')  # tombol RME bertanda ✓ saat TTV sudah terisi
+
+    def test_cancelled_visit_has_no_call_button(self):
+        self.kunjungan.status = 'BATAL'
+        self.kunjungan.save()
+        res = self.client.get(reverse('pasien:pendaftaran_dashboard'))
+        content = res.content.decode()
+        self.assertNotIn(reverse('pasien:pendaftaran_antrean_status', args=[self.kunjungan.pk]), content)
