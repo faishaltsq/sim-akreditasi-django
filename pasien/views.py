@@ -17,7 +17,8 @@ from .models import (
     Pasien, KunjunganPasien, Bed, Ruangan, CPPT, AsesmenRisikoKlinis,
     BillingItem, DischargeRecord, ResepElektronik, ResepDetail,
     OrderPenunjang, POLIKLINIK_CHOICES, DPJP_CHOICES, BookingKamar,
-    GeneralConsentRawatInap, generate_no_rm, generate_no_kunjungan
+    GeneralConsentRawatInap, generate_no_rm, generate_no_kunjungan,
+    JadwalDinusAdmission, LogbookHarianAdmission, DPJP_POLI_MAP
 )
 from .pdf_utils import generate_resume_pdf
 from .satusehat import sync_encounter_satusehat, parse_qr_medis
@@ -1299,6 +1300,81 @@ def rajal_antrean_status(request, pk):
             k.save()
             messages.info(request, f'Status Antrean {k.nomor_antrean} ({k.pasien.nama_lengkap}) diubah ke {k.get_status_antrean_display()}.')
     return redirect('pasien:rajal_dashboard')
+
+
+@login_required
+@require_POST
+def pendaftaran_ttv_simpan(request, pk):
+    """Simpan TTV awal (RME ringkas) dari loket pendaftaran & admisi."""
+    k = get_object_or_404(KunjunganPasien, pk=pk)
+
+    def _int(name):
+        val = request.POST.get(name, '').strip()
+        return int(val) if val else None
+
+    k.ttv_sistole = _int('ttv_sistole')
+    k.ttv_diastole = _int('ttv_diastole')
+    k.ttv_nadi = _int('ttv_nadi')
+    k.ttv_rr = _int('ttv_rr')
+    k.ttv_spo2 = _int('ttv_spo2')
+    suhu = request.POST.get('ttv_suhu', '').strip()
+    k.ttv_suhu = float(suhu) if suhu else None
+    catatan = request.POST.get('catatan_admisi', '').strip()
+    if catatan:
+        k.catatan_admisi = catatan
+    k.save()
+    messages.success(request, f'TTV {k.pasien.nama_lengkap} berhasil disimpan.')
+    return redirect('pasien:pendaftaran_dashboard')
+
+
+@login_required
+@require_POST
+def pendaftaran_antrean_status(request, pk):
+    """Panggil / layani / selesaikan antrean loket pendaftaran."""
+    k = get_object_or_404(KunjunganPasien, pk=pk)
+    st = request.POST.get('status_antrean', '')
+    allowed = ['DIPANGGIL', 'SEDANG_DILAYANI', 'SELESAI']
+    if st in allowed and k.status != 'BATAL':
+        k.status_antrean = st
+        k.save(update_fields=['status_antrean'])
+        messages.info(request, f'Antrean {k.nomor_antrean or k.no_kunjungan} ({k.pasien.nama_lengkap}) → {k.get_status_antrean_display()}.')
+    return redirect('pasien:pendaftaran_dashboard')
+
+
+@login_required
+@require_POST
+def pendaftaran_logbook_simpan(request):
+    """Catat kegiatan & kendala harian staf pendaftaran (akuntabilitas loket)."""
+    kegiatan = request.POST.get('kegiatan', '').strip()
+    if not kegiatan:
+        messages.error(request, 'Uraian kegiatan wajib diisi.')
+        return redirect('pasien:pendaftaran_dashboard')
+    LogbookHarianAdmission.objects.create(
+        petugas=request.user,
+        kegiatan=kegiatan,
+        kendala=request.POST.get('kendala', '').strip(),
+    )
+    messages.success(request, 'Logbook harian tersimpan.')
+    return redirect('pasien:pendaftaran_dashboard')
+
+
+@login_required
+@require_POST
+def pendaftaran_jadwal_simpan(request):
+    """Catat shift dinas staf pendaftaran."""
+    shift = request.POST.get('shift', '')
+    if shift not in dict(JadwalDinusAdmission.SHIFT_CHOICES):
+        messages.error(request, 'Shift tidak valid.')
+        return redirect('pasien:pendaftaran_dashboard')
+    JadwalDinusAdmission.objects.create(
+        petugas=request.user,
+        tanggal=request.POST.get('tanggal') or timezone.localdate(),
+        shift=shift,
+        status_kehadiran=request.POST.get('status_kehadiran', 'HADIR'),
+        catatan=request.POST.get('catatan', '').strip(),
+    )
+    messages.success(request, 'Jadwal dinas tersimpan.')
+    return redirect('pasien:pendaftaran_dashboard')
 
 
 @login_required

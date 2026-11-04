@@ -30,6 +30,10 @@ urlpatterns = [
     # ── Clinical Workflow Dashboards ──
     path('pendaftaran/', views.pendaftaran_dashboard, name='pendaftaran_dashboard'),
     path('pendaftaran/<int:pk>/route/', views.pendaftaran_route, name='pendaftaran_route'),
+    path('pendaftaran/kunjungan/<int:pk>/ttv/', views.pendaftaran_ttv_simpan, name='pendaftaran_ttv_simpan'),
+    path('pendaftaran/kunjungan/<int:pk>/antrean/', views.pendaftaran_antrean_status, name='pendaftaran_antrean_status'),
+    path('pendaftaran/logbook/simpan/', views.pendaftaran_logbook_simpan, name='pendaftaran_logbook_simpan'),
+    path('pendaftaran/jadwal/simpan/', views.pendaftaran_jadwal_simpan, name='pendaftaran_jadwal_simpan'),
     path('igd/', views.igd_dashboard, name='igd_dashboard'),
     path('igd/kunjungan/<int:pk>/ttv/', views.igd_ttv_update, name='igd_ttv_update'),
     path('igd/kunjungan/<int:pk>/edit/', views.igd_kunjungan_edit, name='igd_kunjungan_edit'),
