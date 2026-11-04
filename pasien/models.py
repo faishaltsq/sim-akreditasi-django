@@ -251,6 +251,28 @@ DPJP_CHOICES = [
     ('dr. Intan', 'dr. Intan — Dokter Umum'),
 ]
 
+# Pemetaan DPJP → Poliklinik tujuan (untuk filter dropdown dinamis dasbor pendaftaran).
+# Kunci = POLIKLINIK_CHOICES code; nilai = DPJP_CHOICES value.
+DPJP_POLI_MAP = {
+    'POLI_JANTUNG':        ('dr. Faisal, Sp.JP', 'dr. Bambang, Sp.JP, FIHA'),
+    'POLI_PARU':           ('dr. Indah, Sp.P', 'dr. Gunawan, Sp.P, FAPSR'),
+    'POLI_PENYAKIT_DALAM': ('dr. Budi Santoso, Sp.PD', 'dr. Siti Rahma, Sp.PD-KGEH'),
+    'POLI_BEDAH':          ('dr. Hendra, Sp.B', 'dr. Ahmad, Sp.B, FICS'),
+    'POLI_ANAK':           ('dr. Nurul, Sp.A', 'dr. Maya, Sp.A, M.Biomed'),
+    'POLI_OBGYN':          ('dr. Rina, Sp.OG', 'dr. Dewi, Sp.OG(K)'),
+    'POLI_MATA':           ('dr. Farida, Sp.M',),
+    'POLI_SARAF':          ('dr. Eko, Sp.S',),
+    'POLI_THT':            ('dr. Haryanto, Sp.THT-KL',),
+    'POLI_GIGI':           ('drg. Amanda, Sp.KG', 'drg. Rizki'),
+    'POLI_ORTHO':          ('dr. Kevin, Sp.OT',),
+    'POLI_KULIT':          ('dr. Citra, Sp.DV',),
+    'POLI_JIWA':           ('dr. Hadi, Sp.KJ',),
+    'REHAB_MEDIK':         ('dr. Lina, Sp.KFR',),
+    'POLI_ENDOKRIN':       ('dr. Siti Rahma, Sp.PD-KGEH',),
+    'POLI_BSARAF':         ('dr. Hendra, Sp.B',),
+    'POLI_UMUM':           ('dr. Pratama', 'dr. Intan', 'dr. Jaga IGD'),
+}
+
 
 class KunjunganPasien(models.Model):
     JENIS_KUNJUNGAN = [
