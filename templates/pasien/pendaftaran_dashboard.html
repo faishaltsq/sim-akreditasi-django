@@ -139,6 +139,11 @@
                         <i class="bi bi-tools me-1 text-dark"></i> 7. Utility &amp; Integrasi
                     </button>
                 </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link text-nowrap" id="tab-shift" data-bs-toggle="tab" data-bs-target="#pane-shift" type="button" role="tab">
+                        <i class="bi bi-clipboard-check me-1 text-success"></i> 8. Shift &amp; Logbook Staf
+                    </button>
+                </li>
             </ul>
         </div>
 
@@ -830,6 +835,162 @@
                                 <i class="bi bi-info-circle me-1"></i> Tracer digunakan oleh petugas rekam medis untuk mengambil berkas fisik dari ruang filing.
                             </div>
                         </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 8: SHIFT & LOGBOOK STAF PENDAFTARAN -->
+            <div class="tab-pane fade p-4" id="pane-shift" role="tabpanel">
+                <h6 class="fw-bold mb-3 text-dark">Shift &amp; Logbook Staf Loket Pendaftaran</h6>
+                <div class="row g-3">
+                    <div class="col-lg-6">
+                        <div class="card border h-100">
+                            <div class="card-header bg-white d-flex justify-content-between align-items-center py-2">
+                                <span class="fw-bold small"><i class="bi bi-person-badge me-1 text-primary"></i> Jadwal Dinus Hari Ini</span>
+                                <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#modalJadwal">
+                                    <i class="bi bi-plus-lg"></i> Tambah
+                                </button>
+                            </div>
+                            <div class="card-body p-0">
+                                {% if jadwal_hari_ini %}
+                                <div class="table-responsive">
+                                    <table class="table table-sm table-hover align-middle mb-0 small">
+                                        <thead class="table-light text-muted">
+                                            <tr><th class="ps-3">Petugas</th><th>Shift</th><th>Kehadiran</th><th>Catatan</th></tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for j in jadwal_hari_ini %}
+                                            <tr>
+                                                <td class="ps-3 fw-semibold">{{ j.petugas.get_full_name|default:j.petugas.username }}</td>
+                                                <td>{{ j.get_shift_display }}</td>
+                                                <td><span class="badge {% if j.status_kehadiran == 'HADIR' %}bg-success-subtle text-success{% else %}bg-warning-subtle text-dark{% endif %}">{{ j.get_status_kehadiran_display }}</span></td>
+                                                <td><small class="text-muted">{{ j.catatan|default:"-" }}</small></td>
+                                            </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                                {% else %}
+                                <div class="text-center py-4">
+                                    <i class="bi bi-calendar-x text-muted fs-3"></i>
+                                    <p class="text-muted small mt-2 mb-0">Belum ada jadwal dinas untuk hari ini.</p>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-lg-6">
+                        <div class="card border h-100">
+                            <div class="card-header bg-white d-flex justify-content-between align-items-center py-2">
+                                <span class="fw-bold small"><i class="bi bi-journal-text me-1 text-success"></i> Logbook Harian Staf</span>
+                                <button class="btn btn-sm btn-outline-success" data-bs-toggle="modal" data-bs-target="#modalLogbook">
+                                    <i class="bi bi-plus-lg"></i> Tambah
+                                </button>
+                            </div>
+                            <div class="card-body p-0">
+                                {% if logbook_hari_ini %}
+                                <div class="table-responsive">
+                                    <table class="table table-sm table-hover align-middle mb-0 small">
+                                        <thead class="table-light text-muted">
+                                            <tr><th class="ps-3">Jam</th><th>Petugas</th><th>Kegiatan &amp; Kendala</th></tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for log in logbook_hari_ini %}
+                                            <tr>
+                                                <td class="ps-3 font-monospace">{{ log.jam_aktivitas|date:"H:i" }}</td>
+                                                <td class="text-nowrap">{{ log.petugas.get_full_name|default:log.petugas.username }}</td>
+                                                <td>
+                                                    {{ log.kegiatan }}
+                                                    {% if log.kendala %}<div class="small text-danger"><i class="bi bi-exclamation-triangle me-1"></i>{{ log.kendala }}</div>{% endif %}
+                                                </td>
+                                            </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                                {% else %}
+                                <div class="text-center py-4">
+                                    <i class="bi bi-journal-x text-muted fs-3"></i>
+                                    <p class="text-muted small mt-2 mb-0">Belum ada catatan logbook hari ini.</p>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- MODAL TAMBAH JADWAL DINIS -->
+            <div class="modal fade" id="modalJadwal" tabindex="-1">
+                <div class="modal-dialog modal-dialog-centered">
+                    <div class="modal-content">
+                        <form method="POST" action="{% url 'pasien:pendaftaran_jadwal_simpan' %}">
+                            {% csrf_token %}
+                            <div class="modal-header">
+                                <h6 class="modal-title fw-bold">Tambah Jadwal Dinus</h6>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body">
+                                <div class="mb-3">
+                                    <label class="form-label small fw-semibold">Tanggal</label>
+                                    <input type="date" name="tanggal" class="form-control form-control-sm" value="{{ today_iso|default:'' }}">
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label small fw-semibold">Shift Kerja</label>
+                                    <select name="shift" class="form-select form-select-sm" required>
+                                        {% for code, label in shift_choices %}
+                                        <option value="{{ code }}">{{ label }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label small fw-semibold">Status Kehadiran</label>
+                                    <select name="status_kehadiran" class="form-select form-select-sm">
+                                        <option value="HADIR">Hadir</option>
+                                        <option value="IZIN">Izin</option>
+                                        <option value="SAKIT">Sakit</option>
+                                        <option value="ALPHA">Alpha</option>
+                                    </select>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label small fw-semibold">Catatan</label>
+                                    <input type="text" name="catatan" class="form-control form-control-sm" placeholder="Opsional...">
+                                </div>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Batal</button>
+                                <button type="submit" class="btn btn-primary btn-sm">Simpan Jadwal</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <!-- MODAL TAMBAH LOGBOOK -->
+            <div class="modal fade" id="modalLogbook" tabindex="-1">
+                <div class="modal-dialog modal-dialog-centered">
+                    <div class="modal-content">
+                        <form method="POST" action="{% url 'pasien:pendaftaran_logbook_simpan' %}">
+                            {% csrf_token %}
+                            <div class="modal-header">
+                                <h6 class="modal-title fw-bold">Tambah Logbook Harian</h6>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body">
+                                <div class="mb-3">
+                                    <label class="form-label small fw-semibold">Uraian Kegiatan <span class="text-danger">*</span></label>
+                                    <textarea name="kegiatan" class="form-control form-control-sm" rows="3" required placeholder="Contoh: verifikasi berkas 10 pasien BPJS..."></textarea>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label small fw-semibold">Kendala Operasional</label>
+                                    <textarea name="kendala" class="form-control form-control-sm" rows="2" placeholder="Opsional..."></textarea>
+                                </div>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Batal</button>
+                                <button type="submit" class="btn btn-success btn-sm">Simpan Logbook</button>
+                            </div>
+                        </form>
                     </div>
                 </div>
             </div>
