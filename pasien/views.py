@@ -21,6 +21,7 @@ from .models import (
 )
 from .pdf_utils import generate_resume_pdf
 from .satusehat import sync_encounter_satusehat, parse_qr_medis
+from .bridging_services import BPJSVClaimService, SatuSehatService
 
 
 # ── ICD-10 Quick Reference (80+ common inpatient codes) ──────────────────────
@@ -1814,6 +1815,35 @@ def api_cek_bpjs(request):
             'catatan': 'Ini adalah data simulasi. Integrasi V-Claim BPJS belum terhubung.',
         }
     })
+
+
+@login_required
+def api_bridging_peserta(request):
+    """Auto-fill identitas pasien by NIK: data lokal dulu, fallback simulasi V-Claim BPJS."""
+    nik = request.GET.get('nik', '').strip()
+    if not nik:
+        return JsonResponse({'status': 'error', 'message': 'Parameter nik wajib.'}, status=400)
+
+    p = Pasien.objects.filter(nik=nik).first()
+    if p:
+        return JsonResponse({
+            'status': 'success',
+            'source': 'LOKAL',
+            'peserta': {
+                'nama': p.nama_lengkap,
+                'tglLahir': p.tanggal_lahir.isoformat() if p.tanggal_lahir else '',
+                'sex': p.jenis_kelamin,
+                'noKartu': p.no_bpjs or '',
+                'hakKelas': '',
+                'statusPeserta': '',
+            },
+        })
+
+    try:
+        peserta = BPJSVClaimService.cek_peserta_by_nik(nik)
+    except ValueError as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=400)
+    return JsonResponse({'status': 'success', 'source': 'BPJS_VCLAIM', 'peserta': peserta})
 
 
 @login_required

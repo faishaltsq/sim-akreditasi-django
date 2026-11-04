@@ -51,6 +51,7 @@ urlpatterns = [
     # ── Print / Cetak Views ──
     path('api/cari/', views.api_cari_pasien, name='api_cari_pasien'),
     path('api/cek-nik/', views.api_cek_nik, name='api_cek_nik'),
+    path('api/bridging/peserta/', views.api_bridging_peserta, name='api_bridging_peserta'),
     path('kunjungan/<int:pk>/cetak-gelang/', views.cetak_gelang, name='cetak_gelang'),
     path('kunjungan/<int:pk>/cetak-sep/', views.cetak_sep, name='cetak_sep'),
     path('kunjungan/<int:pk>/cetak-spri/', views.cetak_spri, name='cetak_spri'),
