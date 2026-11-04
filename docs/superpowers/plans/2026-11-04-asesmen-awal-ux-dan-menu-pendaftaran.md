@@ -421,3 +421,21 @@ View: tanpa perubahan (query param ditangani template).
 - TDD per task: test dulu → gagal → implementasi → hijau → commit.
 - Windows/PowerShell: redirect output test ke file log (`> $env:TEMP\opencode\tX.log 2>&1`) lalu cek `$LASTEXITCODE`; pipe langsung ke `Select-Object` bisa melaporkan exit code 1 palsu.
 - `kunjungan_detail.html` memakai form paralel dengan nama field identik — mirror perubahan Task 1–2 secara mekanis (id tanpa `{{ k.pk }}` di template itu; pakai id statis).
+
+---
+
+## EXECUTION STATUS (2026-11-04)
+
+### Done
+- **Task 1:** MST auto-calc (2 pertanyaan q1 + q2 → auto total & alert status) di `pasien/views.py`, `templates/pasien/igd_dashboard.html`, dan `templates/pasien/kunjungan_detail.html`. ✅ 4 tests OK.
+- **Task 2:** Smart default button "⚡ Set Normal / Baik" + slider nyeri 0-10 dinamis dengan badge warna responsif di `templates/pasien/igd_dashboard.html` & `templates/pasien/kunjungan_detail.html`. ✅ 1 test OK.
+- **Task 3:** Banner riwayat alergi obat/lain & tombol "Salin dari Asesmen Sebelumnya" (endpoint `pasien:igd_asesmen_copy_prev` menyalin parameter non-klinis) di `pasien/views.py`, `pasien/urls.py`, `templates/pasien/igd_dashboard.html`, dan `templates/pasien/kunjungan_detail.html`. ✅ 3 tests OK.
+- **Task 4:** Menu sidebar "Jadwal Dinas & Logbook" di grup Pasien (`templates/includes/sidebar.html`) yang langsung membuka Tab 8 pada `pendaftaran_dashboard.html` via query param `?tab=shift`. ✅ 2 tests OK.
+- **Task 5:** Full regression suite pasien app. ✅ **133 tests OK** (0 failure, 0 error).
+
+### Git Commits
+1. `850e041` docs(plan): UX asesmen awal IGD & sidebar menu jadwal/logbook
+2. `f52e5d5` feat(pasien): auto-calculate MST nutrition score from screening questions
+3. `a982181` feat(ui): smart default & color pain slider on IGD initial assessment
+4. `9622d1d` feat(pasien): allergy banner & copy-from-previous assessment
+5. `ff4da73` feat(ui): surface Jadwal Dinas & Logbook in left sidebar menu
