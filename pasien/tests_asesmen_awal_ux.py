@@ -63,3 +63,43 @@ class SmartDefaultUiTest(TestCase):
         self.assertContains(res, 'type="range"')
         self.assertContains(res, f'skorNyeriBadge_{self.k.pk}')
         self.assertContains(res, 'Set Normal / Baik')
+
+
+class AlergiDanCopyPrevTest(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user('asesmenuser')
+        self.client.force_login(self.user)
+        self.pasien = Pasien.objects.create(
+            no_rm='RM-COPY-001', nik='3201000000000102',
+            nama_lengkap='Copy Prev', tanggal_lahir='1985-03-03', jenis_kelamin='P',
+            alergi_obat='Debu, Udang')
+        self.prev = KunjunganPasien.objects.create(
+            pasien=self.pasien, jenis_kunjungan='IGD',
+            no_kunjungan='IGD-PREV', tanggal_masuk=timezone.now() - timedelta(days=5),
+            anamnesis_rps='Batuk sejak seminggu', keadaan_umum='Sedang',
+            kesadaran='Compos Mentis', skrining_gizi_mst=2, status_psikososial='Cemas / Gelisah')
+        self.k = KunjunganPasien.objects.create(
+            pasien=self.pasien, jenis_kunjungan='IGD',
+            no_kunjungan='IGD-NEW', tanggal_masuk=timezone.now())
+
+    def test_alergi_banner_shown_in_igd_dashboard(self):
+        res = self.client.get(reverse('pasien:igd_dashboard'))
+        self.assertContains(res, 'Debu, Udang')
+
+    def test_copy_from_previous_assessment(self):
+        res = self.client.get(reverse('pasien:igd_asesmen_copy_prev', args=[self.k.pk]))
+        self.assertRedirects(res, reverse('pasien:igd_dashboard'))
+        self.k.refresh_from_db()
+        self.assertEqual(self.k.anamnesis_rps, 'Batuk sejak seminggu')
+        self.assertEqual(self.k.keadaan_umum, 'Sedang')
+        self.assertEqual(self.k.skrining_gizi_mst, 2)
+        self.assertEqual(self.k.status_psikososial, 'Cemas / Gelisah')
+
+    def test_copy_prev_no_previous_is_noop(self):
+        k2 = KunjunganPasien.objects.create(
+            pasien=Pasien.objects.create(
+                no_rm='RM-COPY-002', nik='3201000000000103', nama_lengkap='No Prev',
+                tanggal_lahir='1990-01-01', jenis_kelamin='L'),
+            jenis_kunjungan='IGD', no_kunjungan='IGD-NOPREV', tanggal_masuk=timezone.now())
+        res = self.client.get(reverse('pasien:igd_asesmen_copy_prev', args=[k2.pk]))
+        self.assertEqual(res.status_code, 302)

@@ -2078,6 +2078,32 @@ def igd_asesmen_awal_save(request, pk):
     return redirect('pasien:igd_dashboard')
 
 
+COPY_PREV_FIELDS = [
+    'keadaan_umum', 'kesadaran', 'nyeri_karakteristik', 'fungsional_adl',
+    'skrining_gizi_mst', 'skrining_jatuh_skor', 'skrining_jatuh_grade',
+    'anamnesis_rps', 'anamnesis_rpd', 'anamnesis_rpk', 'anamnesis_obat',
+    'status_psikososial',
+]
+
+
+@login_required
+def igd_asesmen_copy_prev(request, pk):
+    """Salin field asesmen non-klinis dari kunjungan terakhir pasien yang sama."""
+    k = get_object_or_404(KunjunganPasien, pk=pk)
+    target_url = request.GET.get('next') or reverse('pasien:igd_dashboard')
+    prev = (KunjunganPasien.objects
+            .filter(pasien=k.pasien, tanggal_masuk__lt=k.tanggal_masuk)
+            .exclude(pk=k.pk).order_by('-tanggal_masuk').first())
+    if prev is None:
+        messages.info(request, 'Belum ada asesmen sebelumnya untuk pasien ini.')
+        return redirect(target_url)
+    for f in COPY_PREV_FIELDS:
+        setattr(k, f, getattr(prev, f))
+    k.save()
+    messages.success(request, f'Asesmen disalin dari kunjungan {prev.no_kunjungan}.')
+    return redirect(target_url)
+
+
 @login_required
 def igd_cppt_quick_add(request, pk):
     """Quick CPPT SOAP logging directly from IGD dashboard modal."""
