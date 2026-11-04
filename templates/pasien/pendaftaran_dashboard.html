@@ -269,8 +269,8 @@
                                                     <label class="form-label small mb-1">Dokter Spesialis (DPJP):</label>
                                                     <select name="dpjp" id="dpjpSelectLama" class="form-select form-select-sm">
                                                         <option value="">— Pilih Dokter DPJP —</option>
-                                                        {% for val, label in dpjp_choices %}
-                                                        <option value="{{ val }}">{{ label }}</option>
+                                                        {% for val, label, polis in dpjp_choices_poli %}
+                                                        <option value="{{ val }}" data-poli="{{ polis }}">{{ label }}</option>
                                                         {% endfor %}
                                                     </select>
                                                 </div>
@@ -342,7 +342,7 @@
                                         <div class="row g-2 mb-2">
                                             <div class="col-md-7">
                                                 <label class="form-label small fw-semibold mb-1">Nama Lengkap (sesuai KTP/KIA) <span class="text-danger">*</span>:</label>
-                                                <input type="text" name="nama_lengkap" class="form-control form-control-sm" required placeholder="Nama lengkap pasien tanpa singkatan...">
+                                                <input type="text" name="nama_lengkap" id="namaLengkapBaru" class="form-control form-control-sm" required placeholder="Nama lengkap pasien tanpa singkatan...">
                                             </div>
                                             <div class="col-md-5">
                                                 <label class="form-label small fw-semibold mb-1">NIK (16 Digit):</label>
@@ -358,7 +358,7 @@
                                             </div>
                                             <div class="col-md-4">
                                                 <label class="form-label small fw-semibold mb-1">Tanggal Lahir <span class="text-danger">*</span>:</label>
-                                                <input type="date" name="tanggal_lahir" class="form-control form-control-sm" required>
+                                                <input type="date" name="tanggal_lahir" id="tglLahirBaru" class="form-control form-control-sm" required>
                                             </div>
                                             <div class="col-md-4">
                                                 <label class="form-label small fw-semibold mb-1">Jenis Kelamin <span class="text-danger">*</span>:</label>
@@ -454,7 +454,7 @@
                                             </div>
                                             <div class="col-md-8" id="bpjsBaruWrap" style="display:none;">
                                                 <label class="form-label small fw-semibold mb-1">Nomor Kartu BPJS:</label>
-                                                <input type="text" name="no_bpjs" class="form-control form-control-sm font-monospace" placeholder="13 digit nomor kartu BPJS...">
+                                                <input type="text" name="no_bpjs" id="bpjsBaruInput" class="form-control form-control-sm font-monospace" placeholder="13 digit nomor kartu BPJS...">
                                             </div>
                                         </div>
                                     </div>
@@ -541,8 +541,8 @@
                                                     <label class="form-label small mb-1">Dokter DPJP Spesialis:</label>
                                                     <select name="dpjp" id="dpjpSelectBaru" class="form-select form-select-sm">
                                                         <option value="">— Pilih Dokter DPJP —</option>
-                                                        {% for val, label in dpjp_choices %}
-                                                        <option value="{{ val }}">{{ label }}</option>
+                                                        {% for val, label, polis in dpjp_choices_poli %}
+                                                        <option value="{{ val }}" data-poli="{{ polis }}">{{ label }}</option>
                                                         {% endfor %}
                                                     </select>
                                                 </div>
@@ -1589,29 +1589,31 @@
         }
     }
 
-    // 4. SYNC DPJP PASIEN LAMA & BARU
-    function syncDpjpLama() {
-        const poliVal = document.getElementById('poliSelectLama').value;
-        const dpjpSelect = document.getElementById('dpjpSelectLama');
+    // 4. FILTER DPJP BERDASARKAN POLIKLINIK (data-poli)
+    function filterDpjpByPoli(selectId, poliVal) {
+        const dpjpSelect = document.getElementById(selectId);
         if (!dpjpSelect) return;
+        let matched = false;
         for (let opt of dpjpSelect.options) {
-            if (poliVal && opt.text.toLowerCase().includes(poliVal.toLowerCase().replace('poli ', ''))) {
+            if (!opt.value) continue;
+            const polis = (opt.getAttribute('data-poli') || '').split(' ');
+            const show = !poliVal || polis.indexOf(poliVal) !== -1;
+            opt.hidden = !show;
+            opt.disabled = !show;
+            if (show && poliVal && !matched) {
                 opt.selected = true;
-                break;
+                matched = true;
             }
         }
+        if (poliVal && !matched) dpjpSelect.value = '';
+    }
+
+    function syncDpjpLama() {
+        filterDpjpByPoli('dpjpSelectLama', document.getElementById('poliSelectLama').value);
     }
 
     function syncDpjpBaru() {
-        const poliVal = document.getElementById('poliSelectBaru').value;
-        const dpjpSelect = document.getElementById('dpjpSelectBaru');
-        if (!dpjpSelect) return;
-        for (let opt of dpjpSelect.options) {
-            if (poliVal && opt.text.toLowerCase().includes(poliVal.toLowerCase().replace('poli ', ''))) {
-                opt.selected = true;
-                break;
-            }
-        }
+        filterDpjpByPoli('dpjpSelectBaru', document.getElementById('poliSelectBaru').value);
     }
 
     // 5. COPY ALAMAT DOMISILI KE PENANGGUNG JAWAB
@@ -1631,6 +1633,69 @@
             bpjsWrap.style.display = (penjamin === 'BPJS') ? 'block' : 'none';
         }
     }
+
+    // 7. BRIDGING NIK → AUTO-FILL IDENTITAS (V-Claim BPJS simulasi)
+    (function() {
+        const nikInput = document.getElementById('nikBaruInput');
+        const nikFeedback = document.getElementById('nikBaruFeedback');
+        if (!nikInput) return;
+
+        function setFeedback(html) {
+            if (nikFeedback) nikFeedback.innerHTML = html;
+        }
+
+        window.cekNikBridging = function(nik) {
+            if (!/^\d{16}$/.test(nik)) {
+                setFeedback('');
+                return;
+            }
+            setFeedback('<span class="text-muted"><span class="spinner-border spinner-border-sm me-1"></span>Cek kepesertaan BPJS...</span>');
+            fetch('{% url "pasien:api_bridging_peserta" %}?nik=' + encodeURIComponent(nik), {
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            })
+                .then(function(r) { return r.json(); })
+                .then(function(data) {
+                    if (data.status !== 'success') {
+                        setFeedback('<span class="text-danger small">' + (data.message || 'NIK tidak dapat diverifikasi.') + '</span>');
+                        return;
+                    }
+                    const s = data.peserta;
+                    const badge = data.source === 'LOKAL'
+                        ? '<span class="badge bg-success-subtle text-success border">Data lokal (pasien terdaftar)</span>'
+                        : '<span class="badge bg-info-subtle text-info border">Terverifikasi V-Claim BPJS (simulasi)</span>';
+                    setFeedback(badge);
+                    if (s.nama) {
+                        const nama = document.getElementById('namaLengkapBaru');
+                        if (nama && !nama.value) nama.value = s.nama;
+                    }
+                    if (s.tglLahir) {
+                        const tgl = document.getElementById('tglLahirBaru');
+                        if (tgl && !tgl.value) tgl.value = s.tglLahir;
+                    }
+                    if (s.sex === 'L') {
+                        const jkL = document.getElementById('jkL');
+                        if (jkL) jkL.checked = true;
+                    } else if (s.sex === 'P') {
+                        const jkP = document.getElementById('jkP');
+                        if (jkP) jkP.checked = true;
+                    }
+                    if (s.noKartu) {
+                        const bpjs = document.getElementById('bpjsBaruInput');
+                        if (bpjs && !bpjs.value) bpjs.value = s.noKartu;
+                        const penjamin = document.getElementById('penjaminBaru');
+                        if (penjamin && !penjamin.value) penjamin.value = 'BPJS';
+                        if (typeof togglePenjaminBaru === 'function') togglePenjaminBaru();
+                    }
+                })
+                .catch(function() {
+                    setFeedback('<span class="text-warning small">Layanan bridging tidak merespons. Isi data manual.</span>');
+                });
+        };
+
+        nikInput.addEventListener('input', function() {
+            if (nikInput.value.length === 16) window.cekNikBridging(nikInput.value);
+        });
+    })();
 
 </script>
 {% endblock %}
