@@ -105,7 +105,7 @@
         <div class="card-header bg-white border-bottom px-3 pt-2 pb-0">
             <ul class="nav nav-tabs border-bottom-0 flex-nowrap overflow-auto" id="pendaftaranTabs" role="tablist">
                 <li class="nav-item" role="presentation">
-                    <button class="nav-link active text-nowrap" id="tab-pasien-baru" data-bs-toggle="tab" data-bs-target="#pane-pasien-baru" type="button" role="tab">
+                    <button class="nav-link text-nowrap{% if request.GET.tab != 'shift' %} active{% endif %}" id="tab-pasien-baru" data-bs-toggle="tab" data-bs-target="#pane-pasien-baru" type="button" role="tab">
                         <i class="bi bi-person-lines-fill me-1 text-primary"></i> 1. Pasien Baru &amp; Lama
                     </button>
                 </li>
@@ -140,7 +140,7 @@
                     </button>
                 </li>
                 <li class="nav-item" role="presentation">
-                    <button class="nav-link text-nowrap" id="tab-shift" data-bs-toggle="tab" data-bs-target="#pane-shift" type="button" role="tab">
+                    <button class="nav-link text-nowrap{% if request.GET.tab == 'shift' %} active{% endif %}" id="tab-shift" data-bs-toggle="tab" data-bs-target="#pane-shift" type="button" role="tab">
                         <i class="bi bi-clipboard-check me-1 text-success"></i> 8. Shift &amp; Logbook Staf
                     </button>
                 </li>
@@ -150,7 +150,7 @@
         <div class="tab-content" id="pendaftaranTabsContent">
 
             <!-- TAB 1: PENDAFTARAN PASIEN BARU & LAMA (2-BOX LAYOUT) -->
-            <div class="tab-pane fade show active p-3 p-md-4" id="pane-pasien-baru" role="tabpanel">
+            <div class="tab-pane fade{% if request.GET.tab != 'shift' %} show active{% endif %} p-3 p-md-4" id="pane-pasien-baru" role="tabpanel">
                 <div class="d-flex justify-content-between align-items-center mb-3">
                     <div>
                         <h5 class="fw-bold mb-1 text-dark"><i class="bi bi-layout-split me-2 text-primary"></i>Loket Pendaftaran &amp; Admisi Pasien</h5>
@@ -840,7 +840,7 @@
             </div>
 
             <!-- TAB 8: SHIFT & LOGBOOK STAF PENDAFTARAN -->
-            <div class="tab-pane fade p-4" id="pane-shift" role="tabpanel">
+            <div class="tab-pane fade{% if request.GET.tab == 'shift' %} show active{% endif %} p-4" id="pane-shift" role="tabpanel">
                 <h6 class="fw-bold mb-3 text-dark">Shift &amp; Logbook Staf Loket Pendaftaran</h6>
                 <div class="row g-3">
                     <div class="col-lg-6">

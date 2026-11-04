@@ -5,6 +5,7 @@ from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
 
+from accounts.models import UserProfile
 from pasien.models import KunjunganPasien, Pasien
 
 
@@ -103,3 +104,25 @@ class AlergiDanCopyPrevTest(TestCase):
             jenis_kunjungan='IGD', no_kunjungan='IGD-NOPREV', tanggal_masuk=timezone.now())
         res = self.client.get(reverse('pasien:igd_asesmen_copy_prev', args=[k2.pk]))
         self.assertEqual(res.status_code, 302)
+
+
+class SidebarMenuTest(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_superuser('sidebaruser', 'sidebar@test.com', 'password123')
+        self.profile = UserProfile.objects.create(user=self.user, role='ADMIN_RS')
+        self.client.force_login(self.user)
+
+    def test_sidebar_has_jadwal_logbook_menus(self):
+        res = self.client.get(reverse('pasien:pendaftaran_dashboard'))
+        self.assertContains(res, 'tab=shift')
+        self.assertContains(res, 'Jadwal Dinas')
+
+    def test_tab_shift_activated_by_query_param(self):
+        res = self.client.get(reverse('pasien:pendaftaran_dashboard') + '?tab=shift')
+        content = res.content.decode()
+        self.assertIn('id="tab-shift" data-bs-toggle="tab" data-bs-target="#pane-shift" type="button" role="tab"', content)
+        self.assertIn('tab-shift" data-bs-toggle="tab" data-bs-target="#pane-shift" type="button" role="tab"', content)
+        self.assertContains(res, 'id="pane-shift" role="tabpanel"')
+        # check that tab-shift has active class
+        self.assertTrue('active' in content[content.find('id="tab-shift"')-30:content.find('id="tab-shift"')+40])
+        self.assertTrue('active' in content[content.find('id="pane-shift"')-30:content.find('id="pane-shift"')+40])
