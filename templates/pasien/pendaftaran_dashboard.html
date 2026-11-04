@@ -1077,6 +1077,11 @@
                                 <span class="badge {% if k.status == 'PULANG' %}bg-secondary{% elif k.status == 'RANAP' %}bg-success{% elif k.status == 'TRIAGE' %}bg-warning text-dark{% elif k.status == 'BATAL' %}bg-danger{% else %}bg-info text-dark{% endif %}">
                                     {{ k.get_status_display }}
                                 </span>
+                                {% if k.status != 'BATAL' %}
+                                <br><span class="badge {% if k.status_antrean == 'MENUNGGU' %}bg-warning-subtle text-dark border{% elif k.status_antrean == 'DIPANGGIL' %}bg-info-subtle text-info border{% elif k.status_antrean == 'SELESAI' %}bg-success-subtle text-success border{% else %}bg-secondary-subtle border{% endif %}" style="font-size:.68rem;">
+                                    <i class="bi bi-person-arms-up me-1"></i>{{ k.get_status_antrean_display }}
+                                </span>
+                                {% endif %}
                             </td>
                             <td class="text-end pe-3">
                                 <div class="btn-group btn-group-sm">
@@ -1095,6 +1100,20 @@
                                     <a href="{% url 'pasien:kunjungan_detail' k.pk %}" class="btn btn-outline-secondary" title="Detail Rekam Medis">
                                         <i class="bi bi-eye"></i>
                                     </a>
+                                    {% if k.status != 'BATAL' %}
+                                    <button class="btn btn-outline-success" data-bs-toggle="modal" data-bs-target="#modalRme{{ k.pk }}" title="Input RME Awal (TTV)">
+                                        <i class="bi bi-clipboard2-pulse"></i>{% if k.ttv_sistole %} ✓{% endif %}
+                                    </button>
+                                    {% if k.status_antrean != 'DIPANGGIL' and k.status_antrean != 'SELESAI' %}
+                                    <form method="POST" action="{% url 'pasien:pendaftaran_antrean_status' k.pk %}" class="d-inline">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="status_antrean" value="DIPANGGIL">
+                                        <button type="submit" class="btn btn-outline-info" title="Panggil Antrean Loket">
+                                            <i class="bi bi-megaphone"></i>
+                                        </button>
+                                    </form>
+                                    {% endif %}
+                                    {% endif %}
                                     <button class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#modalRoute{{ k.pk }}" title="Ubah Routing">
                                         <i class="bi bi-arrow-left-right"></i>
                                     </button>
@@ -1109,6 +1128,60 @@
                                 </div>
                             </td>
                         </tr>
+
+                        <!-- MODAL RME AWAL (TTV) -->
+                        <div class="modal fade" id="modalRme{{ k.pk }}" tabindex="-1">
+                            <div class="modal-dialog modal-dialog-centered">
+                                <div class="modal-content">
+                                    <form method="POST" action="{% url 'pasien:pendaftaran_ttv_simpan' k.pk %}">
+                                        {% csrf_token %}
+                                        <div class="modal-header">
+                                            <h6 class="modal-title fw-bold">RME Awal (TTV) — {{ k.pasien.nama_lengkap }}</h6>
+                                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                        </div>
+                                        <div class="modal-body">
+                                            <p class="small text-muted mb-3">Input tanda-tanda vital awal di loket sebelum pasien dipanggil ke poliklinik.</p>
+                                            <div class="row g-2 mb-2">
+                                                <div class="col-6">
+                                                    <label class="form-label small fw-semibold">Sistole (mmHg)</label>
+                                                    <input type="number" name="ttv_sistole" class="form-control form-control-sm" value="{{ k.ttv_sistole|default:'' }}" min="50" max="300">
+                                                </div>
+                                                <div class="col-6">
+                                                    <label class="form-label small fw-semibold">Diastole (mmHg)</label>
+                                                    <input type="number" name="ttv_diastole" class="form-control form-control-sm" value="{{ k.ttv_diastole|default:'' }}" min="30" max="200">
+                                                </div>
+                                            </div>
+                                            <div class="row g-2 mb-2">
+                                                <div class="col-4">
+                                                    <label class="form-label small fw-semibold">Nadi (bpm)</label>
+                                                    <input type="number" name="ttv_nadi" class="form-control form-control-sm" value="{{ k.ttv_nadi|default:'' }}" min="30" max="250">
+                                                </div>
+                                                <div class="col-4">
+                                                    <label class="form-label small fw-semibold">RR (x/menit)</label>
+                                                    <input type="number" name="ttv_rr" class="form-control form-control-sm" value="{{ k.ttv_rr|default:'' }}" min="5" max="60">
+                                                </div>
+                                                <div class="col-4">
+                                                    <label class="form-label small fw-semibold">SpO2 (%)</label>
+                                                    <input type="number" name="ttv_spo2" class="form-control form-control-sm" value="{{ k.ttv_spo2|default:'' }}" min="50" max="100">
+                                                </div>
+                                            </div>
+                                            <div class="mb-2">
+                                                <label class="form-label small fw-semibold">Suhu (°C)</label>
+                                                <input type="number" step="0.1" name="ttv_suhu" class="form-control form-control-sm" value="{{ k.ttv_suhu|default:'' }}" min="34" max="43">
+                                            </div>
+                                            <div class="mb-2">
+                                                <label class="form-label small fw-semibold">Catatan Admisi</label>
+                                                <textarea name="catatan_admisi" class="form-control form-control-sm" rows="2" placeholder="Keluhan utama / catatan loket...">{{ k.catatan_admisi }}</textarea>
+                                            </div>
+                                        </div>
+                                        <div class="modal-footer">
+                                            <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Batal</button>
+                                            <button type="submit" class="btn btn-success btn-sm">Simpan TTV</button>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
 
                         <!-- MODAL ROUTING ULANG -->
                         <div class="modal fade" id="modalRoute{{ k.pk }}" tabindex="-1">
