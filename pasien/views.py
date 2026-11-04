@@ -863,6 +863,14 @@ def pendaftaran_dashboard(request):
         'ke_batal':            qs_today.filter(status='BATAL').count(),
         'poliklinik_choices':  POLIKLINIK_CHOICES,
         'dpjp_choices':        DPJP_CHOICES,
+        'shift_choices':       JadwalDinusAdmission.SHIFT_CHOICES,
+        'today_iso':           today.isoformat(),
+        'jadwal_hari_ini':     JadwalDinusAdmission.objects.filter(tanggal=today).select_related('petugas'),
+        'logbook_hari_ini':    LogbookHarianAdmission.objects.filter(tanggal=today).select_related('petugas')[:50],
+        'dpjp_choices_poli':   [
+            (val, label, ' '.join(p for p, dps in DPJP_POLI_MAP.items() if val in dps))
+            for val, label in DPJP_CHOICES
+        ],
         'triage_choices':      KunjunganPasien.TRIAGE_CHOICES,
         'penjamin_choices':    KunjunganPasien.TIPE_PENJAMIN,
         'pasien_recent':       Pasien.objects.order_by('-created_at')[:10],

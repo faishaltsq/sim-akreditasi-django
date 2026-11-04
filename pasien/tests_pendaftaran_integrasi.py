@@ -164,3 +164,54 @@ class PendaftaranTtvAntreanTest(TestCase):
     def test_ttv_get_not_allowed(self):
         res = self.client.get(reverse('pasien:pendaftaran_ttv_simpan', args=[self.kunjungan.pk]))
         self.assertEqual(res.status_code, 405)
+
+
+class PendaftaranLogbookJadwalTest(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(username='loket_log', password='password123')
+        self.client.login(username='loket_log', password='password123')
+
+    def test_logbook_valid_post_creates_row(self):
+        res = self.client.post(reverse('pasien:pendaftaran_logbook_simpan'), {
+            'kegiatan': 'Verifikasi 8 berkas BPJS pagi ini',
+            'kendala': 'Server V-Claim lambat',
+        })
+        self.assertRedirects(res, reverse('pasien:pendaftaran_dashboard'))
+        log = LogbookHarianAdmission.objects.get(petugas=self.user)
+        self.assertEqual(log.kegiatan, 'Verifikasi 8 berkas BPJS pagi ini')
+        self.assertEqual(log.kendala, 'Server V-Claim lambat')
+
+    def test_logbook_empty_kegiatan_rejected(self):
+        res = self.client.post(reverse('pasien:pendaftaran_logbook_simpan'), {
+            'kegiatan': '   ', 'kendala': '',
+        })
+        self.assertRedirects(res, reverse('pasien:pendaftaran_dashboard'))
+        self.assertFalse(LogbookHarianAdmission.objects.filter(petugas=self.user).exists())
+
+    def test_jadwal_valid_post_creates_row(self):
+        res = self.client.post(reverse('pasien:pendaftaran_jadwal_simpan'), {
+            'tanggal': '2026-11-04', 'shift': 'MALAM',
+            'status_kehadiran': 'HADIR', 'catatan': 'Jaga loket',
+        })
+        self.assertRedirects(res, reverse('pasien:pendaftaran_dashboard'))
+        j = JadwalDinusAdmission.objects.get(petugas=self.user)
+        self.assertEqual(j.shift, 'MALAM')
+
+    def test_jadwal_invalid_shift_rejected(self):
+        res = self.client.post(reverse('pasien:pendaftaran_jadwal_simpan'), {
+            'tanggal': '2026-11-04', 'shift': 'FOGGING',
+        })
+        self.assertRedirects(res, reverse('pasien:pendaftaran_dashboard'))
+        self.assertFalse(JadwalDinusAdmission.objects.filter(petugas=self.user).exists())
+
+    def test_dashboard_context_has_shift_logbook_and_dpjp_poli(self):
+        res = self.client.get(reverse('pasien:pendaftaran_dashboard'))
+        self.assertEqual(res.status_code, 200)
+        self.assertIn('jadwal_hari_ini', res.context)
+        self.assertIn('logbook_hari_ini', res.context)
+        self.assertEqual(len(res.context['shift_choices']), 3)
+        # setiap dpjp punya string data-poli (boleh kosong hanya bila belum ter-map)
+        mapped = {dpjp for dpjps in DPJP_POLI_MAP.values() for dpjp in dpjps}
+        for val, _label, polis in res.context['dpjp_choices_poli']:
+            if val in mapped:
+                self.assertTrue(polis, f'{val} kehilangan data-poli')
