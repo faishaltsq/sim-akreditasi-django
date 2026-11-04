@@ -9,6 +9,7 @@ from django.http import HttpResponse, JsonResponse
 from django.views.decorators.http import require_POST
 from django.core.exceptions import PermissionDenied
 from .decorators import require_patient_module, get_unit_scope, scope_kunjungan_qs, scope_pasien_qs
+from .unit_scope import can_read_pasien, can_read_kunjungan, boleh_baca_kunjungan_jenis
 from akreditasi.input_parsing import parse_int
 from django.utils import timezone
 from datetime import timedelta
@@ -232,20 +233,8 @@ def pasien_detail(request, pk):
     p = get_object_or_404(Pasien, pk=pk)
     profile = getattr(request.user, 'profile', None)
     scope = get_unit_scope(profile)
-    if scope is not None:
-        if not scope:
-            raise PermissionDenied("Anda tidak memiliki akses ke data pasien unit lain.")
-        from .unit_scope import DEFAULT_UNIT_BY_JENIS
-        scope_codes = {u.code.upper() for u in scope if u.code}
-        matching_jenis = [j for j, c in DEFAULT_UNIT_BY_JENIS.items() if any(c.upper() in uc for uc in scope_codes)]
-        has_access = KunjunganPasien.objects.filter(
-            Q(pasien=p) & (
-                Q(unit_kerja__in=scope) |
-                (Q(unit_kerja__isnull=True) & Q(jenis_kunjungan__in=matching_jenis))
-            )
-        ).exists()
-        if not has_access:
-            raise PermissionDenied("Anda tidak memiliki akses ke data pasien unit lain.")
+    if not can_read_pasien(p, profile):
+        raise PermissionDenied("Anda tidak memiliki akses ke data pasien unit lain.")
     kunjungan_list = p.kunjungan.select_related('bed__ruangan').order_by('-tanggal_masuk')
     if scope is not None:
         kunjungan_list = scope_kunjungan_qs(kunjungan_list, profile)
@@ -309,20 +298,8 @@ def kunjungan_daftar(request):
 def kunjungan_detail(request, pk):
     k = get_object_or_404(KunjunganPasien.objects.select_related('pasien', 'bed__ruangan', 'created_by'), pk=pk)
     profile = getattr(request.user, 'profile', None)
-    scope = get_unit_scope(profile)
-    if scope is not None:
-        allowed_visit = False
-        if scope:
-            if k.unit_kerja and k.unit_kerja in scope:
-                allowed_visit = True
-            elif k.unit_kerja is None:
-                from .unit_scope import DEFAULT_UNIT_BY_JENIS
-                scope_codes = {u.code.upper() for u in scope if u.code}
-                expected_code = DEFAULT_UNIT_BY_JENIS.get(k.jenis_kunjungan)
-                if expected_code and any(expected_code.upper() in uc for uc in scope_codes):
-                    allowed_visit = True
-        if not allowed_visit:
-            raise PermissionDenied("Anda tidak memiliki akses ke kunjungan unit lain.")
+    if not can_read_kunjungan(k, profile):
+        raise PermissionDenied("Anda tidak memiliki akses ke kunjungan unit lain.")
     billing_list  = k.billing.all()
     total_billing = sum(b.subtotal for b in billing_list)
     ctx = {
@@ -838,6 +815,7 @@ def pendaftaran_dashboard(request):
     """Dedicated Front-Office Registration & Routing Desk."""
     today = timezone.localdate()
     qs_today = KunjunganPasien.objects.filter(tanggal_masuk__date=today).select_related('pasien', 'created_by')
+    profile = getattr(request.user, 'profile', None)
 
     # Bed availability summary matrix
     ruangan_list = Ruangan.objects.filter(jenis='RANAP').prefetch_related('beds')
@@ -888,6 +866,9 @@ def pendaftaran_dashboard(request):
         # Reporting metrics
         'total_pasien_baru_hari_ini': Pasien.objects.filter(created_at__date=today).count(),
         'total_pasien_lama_hari_ini': qs_today.exclude(pasien__created_at__date=today).values('pasien').distinct().count(),
+        # Jangan tawarkan tautan rekam klinis yang pasti berakhir 403 bagi
+        # petugas front-office (mereka memegang identitas pasien, bukan rekam).
+        'boleh_detail_igd': boleh_baca_kunjungan_jenis(profile, 'IGD'),
     }
     return render(request, 'pasien/pendaftaran_dashboard.html', ctx)
 
