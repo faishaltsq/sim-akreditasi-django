@@ -1,5 +1,11 @@
 from django.test import TestCase
-from pasien.models import DPJP_CHOICES, DPJP_POLI_MAP, POLIKLINIK_CHOICES
+from django.contrib.auth.models import User
+from django.utils import timezone
+from datetime import date
+from pasien.models import (
+    DPJP_CHOICES, DPJP_POLI_MAP, POLIKLINIK_CHOICES,
+    JadwalDinusAdmission, LogbookHarianAdmission,
+)
 
 
 class DPJPPoliMapTest(TestCase):
@@ -20,3 +26,20 @@ class DPJPPoliMapTest(TestCase):
         for poli, _label in POLIKLINIK_CHOICES:
             self.assertIn(poli, DPJP_POLI_MAP, f'{poli} tidak punya DPJP')
             self.assertTrue(DPJP_POLI_MAP[poli])
+
+
+class AdmissionShiftLogbookModelTest(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(username='petugas_loket', password='password123')
+
+    def test_create_jadwal_dinus_defaults(self):
+        j = JadwalDinusAdmission.objects.create(petugas=self.user, tanggal=date(2026, 11, 4), shift='PAGI')
+        self.assertEqual(j.status_kehadiran, 'HADIR')
+        self.assertEqual(str(j), f'{self.user.username} — 2026-11-04 Pagi (07:00 - 14:00)')
+
+    def test_create_logbook_defaults(self):
+        log = LogbookHarianAdmission.objects.create(
+            petugas=self.user, kegiatan='Verifikasi berkas 12 pasien BPJS')
+        self.assertEqual(log.tanggal, timezone.localdate())
+        self.assertIsNotNone(log.jam_aktivitas)
+        self.assertIn('Verifikasi berkas', str(log))

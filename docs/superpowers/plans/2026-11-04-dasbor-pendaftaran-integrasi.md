@@ -133,6 +133,7 @@ Append to `pasien/tests_pendaftaran_integrasi.py`:
 ```python
 from django.contrib.auth.models import User
 from django.utils import timezone
+from datetime import date
 from pasien.models import JadwalDinusAdmission, LogbookHarianAdmission
 
 
@@ -141,7 +142,7 @@ class AdmissionShiftLogbookModelTest(TestCase):
         self.user = User.objects.create_user(username='petugas_loket', password='password123')
 
     def test_create_jadwal_dinus_defaults(self):
-        j = JadwalDinusAdmission.objects.create(petugas=self.user, tanggal='2026-11-04', shift='PAGI')
+        j = JadwalDinusAdmission.objects.create(petugas=self.user, tanggal=date(2026, 11, 4), shift='PAGI')
         self.assertEqual(j.status_kehadiran, 'HADIR')
         self.assertEqual(str(j), f'{self.user.username} — 2026-11-04 Pagi (07:00 - 14:00)')
 

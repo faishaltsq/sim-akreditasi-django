@@ -3,6 +3,7 @@ Modul Manajemen Pasien MonsisKami (ARIMA System)
 Tahap 1–5: Pendaftaran → Pelayanan → Ranap → Billing → Discharge
 """
 from django.db import models
+from django.utils import timezone
 from django.contrib.auth.models import User
 from django.core.validators import MinValueValidator, MaxValueValidator
 
@@ -1025,6 +1026,55 @@ class GeneralConsentRawatInap(models.Model):
     @property
     def is_lengkap(self):
         return bool(self.nama_pj and self.nik_pj and self.setuju_perawatan_umum and self.setuju_pelepasan_informasi)
+
+
+# ── 10. Jadwal Dinus & Logbook Staf Pendaftaran/Admisi ───────────────────────
+
+class JadwalDinusAdmission(models.Model):
+    """Pencatatan shift dinas petugas loket pendaftaran & admisi."""
+    SHIFT_CHOICES = [
+        ('PAGI', 'Pagi (07:00 - 14:00)'),
+        ('SIANG', 'Siang (14:00 - 21:00)'),
+        ('MALAM', 'Malam (21:00 - 07:00)'),
+    ]
+    STATUS_KEHADIRAN_CHOICES = [
+        ('HADIR', 'Hadir'),
+        ('IZIN', 'Izin'),
+        ('SAKIT', 'Sakit'),
+        ('ALPHA', 'Alpha'),
+    ]
+    petugas = models.ForeignKey(User, on_delete=models.CASCADE, related_name='jadwal_admission')
+    tanggal = models.DateField('Tanggal Dinus')
+    shift = models.CharField('Shift Kerja', max_length=10, choices=SHIFT_CHOICES)
+    status_kehadiran = models.CharField('Status Kehadiran', max_length=12, choices=STATUS_KEHADIRAN_CHOICES, default='HADIR')
+    catatan = models.CharField('Catatan', max_length=200, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = 'Jadwal Dinus Pendaftaran'
+        verbose_name_plural = 'Jadwal Dinus Pendaftaran'
+        ordering = ['-tanggal', 'shift']
+
+    def __str__(self):
+        return f'{self.petugas.username} — {self.tanggal:%Y-%m-%d} {self.get_shift_display()}'
+
+
+class LogbookHarianAdmission(models.Model):
+    """Logbook akuntabilitas kinerja harian dan kendala staf loket pendaftaran."""
+    petugas = models.ForeignKey(User, on_delete=models.CASCADE, related_name='logbook_admission')
+    tanggal = models.DateField('Tanggal Catatan', default=timezone.localdate)
+    jam_aktivitas = models.TimeField('Jam Aktivitas', auto_now_add=True)
+    kegiatan = models.TextField('Uraian Kegiatan Pelayanan')
+    kendala = models.TextField('Kendala Operasional', blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = 'Logbook Harian Pendaftaran'
+        verbose_name_plural = 'Logbook Harian Pendaftaran'
+        ordering = ['-tanggal', '-jam_aktivitas']
+
+    def __str__(self):
+        return f'{self.petugas.username} {self.tanggal:%Y-%m-%d}: {self.kegiatan[:60]}'
 
 
 
