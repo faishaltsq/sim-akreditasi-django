@@ -1342,7 +1342,6 @@ git commit -m "feat(ui): add RME awal modal & queue-call buttons to today's visi
 ---
 
 ### Task 9: Full regression — pasien app suite
-
 **Files:**
 - No file changes expected. Fix only failures caused by this plan's tasks.
 
@@ -1365,3 +1364,31 @@ Fix in the owning task's files only; re-run the failing module, then re-run the 
 git add -A
 git commit -m "fix(pasien): regression fixes from registration dashboard integration"
 ```
+
+---
+
+## EXECUTION STATUS (2026-11-04)
+
+### Done
+- Task 1: `DPJP_POLI_MAP` di `pasien/models.py` + 3 test map-invariants. 3 tests OK.
+- Task 2: Model `JadwalDinusAdmission` + `LogbookHarianAdmission` di `pasien/models.py`, import `timezone`, migrasi `pasien/migrations/0015_jadwaldinusadmission_logbookharianadmission.py`. 2 tests OK.
+- Task 3: `pasien/bridging_services.py` (`BPJSVClaimService`, `SatuSehatService`, simulasi), view `api_bridging_peserta`, URL `api/bridging/peserta/`. 7 tests OK.
+- Task 4: View `pendaftaran_ttv_simpan`, `pendaftaran_antrean_status` (+ URL). 6 tests OK. Catatan: view `pendaftaran_logbook_simpan` & `pendaftaran_jadwal_simpan` (Task 5) ter-landing di commit Task 4 karena satu blok edit views.py.
+- Task 5: View logbook/jadwal + ctx dasbor (`shift_choices`, `today_iso`, `jadwal_hari_ini`, `logbook_hari_ini`, `dpjp_choices_poli`). 5 tests OK.
+- Task 6: Tab 8 "Shift & Logbook Staf" + 2 modal form di `templates/pasien/pendaftaran_dashboard.html`. 2 tests OK.
+- Task 7: Auto-fill NIK (`cekNikBridging` fetch ke `api_bridging_peserta`), id `namaLengkapBaru`/`tglLahirBaru`/`bpjsBaruInput`, filter DPJP `data-poli` ganti text-match heuristic. 3 tests OK.
+- Task 8: Modal RME Awal (TTV) per-baris, tombol Panggil Antrean, badge status antrean. 3 tests OK.
+- Task 9: Regresi penuh `python manage.py test pasien`. 123 tests OK (termasuk suite lama `tests_revisi_pendaftaran_dua_kotak.py` & `tests_revisi_pendaftaran_formulir.py`).
+
+### Deviasi dari plan (sudah dipatch ke plan file)
+1. Task 2 test: pakai `date(2026, 11, 4)`, bukan string `'2026-11-04'` — `__str__` model crash (`ValueError: Invalid format specifier`) saat tanggal masih string di memori.
+2. Task 4/8 test: `KunjunganPasien.objects.create(...)` butuh `tanggal_masuk=timezone.now()` — kolom NOT NULL tanpa default.
+3. Selama Task 4, edit views.py sempat menghapus header `def order_penunjang_buat` dan baris URL `pendaftaran_route`; keduanya dipulihkan sebelum test lanjut (verifikasi: `git diff --stat` views.py = 75 insertions, 0 deletions).
+4. Test runner via pipe PowerShell melaporkan exit code 1 palsu; semua run diverifikasi ulang dengan redirect ke file log (EXIT=0).
+
+### Not done, needs the live environment
+- Integrasi nyata BPJS V-Claim / SatuSehat Kemenkes: belum ada server, endpoint tetap simulasi. Untuk mengaktifkan: ganti body `BPJSVClaimService.cek_peserta_by_nik` & `SatuSehatService.get_patient_by_nik` dengan HTTP call ke server asli — kontrak payload sudah siap.
+- Uji visual Tab 8/modal di browser nyata (Bootstrap tab & modal render) — belum dijalankan; butuh server dev + login.
+
+### Skipped on purpose
+- Tidak ada. Semua step plan dieksekusi.
