@@ -514,10 +514,14 @@ class KunjunganPasien(models.Model):
 
     @property
     def is_asesmen_awal_lengkap(self):
-        """Compliance check: anamnesis, ABCDE airway, diagnosis medis, AND diagnosis keperawatan 3S."""
+        """Compliance check: anamnesis, ABCDE airway / head-to-toe, diagnosis medis, AND diagnosis keperawatan 3S."""
+        has_fisik = bool(
+            self.fisik_airway.strip()
+            or (self.fisik_head_to_toe and isinstance(self.fisik_head_to_toe, dict) and self.fisik_head_to_toe.get('kepala_leher', '').strip())
+        )
         return bool(
             self.anamnesis_rps.strip()
-            and self.fisik_airway.strip()
+            and has_fisik
             and self.diagnosa_masuk.strip()
             and self.diagnosa_keperawatan_sdki.strip()
         )

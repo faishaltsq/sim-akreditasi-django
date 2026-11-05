@@ -1586,6 +1586,55 @@
                                                         </div>
                                                     </div>
 
+                                                    <!-- Tanda-Tanda Vital (TTV) -->
+                                                    <div class="p-2.5 border rounded mb-2 bg-light">
+                                                        <label class="form-label small fw-bold text-primary mb-1"><i class="bi bi-heart-pulse me-1"></i>Tanda-Tanda Vital (TTV):</label>
+                                                        <div class="row g-2">
+                                                            <div class="col-md-2 col-6">
+                                                                <label class="form-label small mb-1" style="font-size:.75rem;">Sistole</label>
+                                                                <div class="input-group input-group-sm">
+                                                                    <input type="number" name="ttv_sistole" class="form-control" value="{{ k.ttv_sistole|default:'' }}" placeholder="120" min="40" max="300">
+                                                                    <span class="input-group-text" style="font-size:.7rem;">mmHg</span>
+                                                                </div>
+                                                            </div>
+                                                            <div class="col-md-2 col-6">
+                                                                <label class="form-label small mb-1" style="font-size:.75rem;">Diastole</label>
+                                                                <div class="input-group input-group-sm">
+                                                                    <input type="number" name="ttv_diastole" class="form-control" value="{{ k.ttv_diastole|default:'' }}" placeholder="80" min="30" max="200">
+                                                                    <span class="input-group-text" style="font-size:.7rem;">mmHg</span>
+                                                                </div>
+                                                            </div>
+                                                            <div class="col-md-2 col-6">
+                                                                <label class="form-label small mb-1" style="font-size:.75rem;">Nadi</label>
+                                                                <div class="input-group input-group-sm">
+                                                                    <input type="number" name="ttv_nadi" class="form-control" value="{{ k.ttv_nadi|default:'' }}" placeholder="80" min="30" max="250">
+                                                                    <span class="input-group-text" style="font-size:.7rem;">x/m</span>
+                                                                </div>
+                                                            </div>
+                                                            <div class="col-md-2 col-6">
+                                                                <label class="form-label small mb-1" style="font-size:.75rem;">RR</label>
+                                                                <div class="input-group input-group-sm">
+                                                                    <input type="number" name="ttv_rr" class="form-control" value="{{ k.ttv_rr|default:'' }}" placeholder="18" min="5" max="80">
+                                                                    <span class="input-group-text" style="font-size:.7rem;">x/m</span>
+                                                                </div>
+                                                            </div>
+                                                            <div class="col-md-2 col-6">
+                                                                <label class="form-label small mb-1" style="font-size:.75rem;">Suhu</label>
+                                                                <div class="input-group input-group-sm">
+                                                                    <input type="number" step="0.1" name="ttv_suhu" class="form-control" value="{{ k.ttv_suhu|default:'' }}" placeholder="36.5" min="30" max="45">
+                                                                    <span class="input-group-text" style="font-size:.7rem;">&deg;C</span>
+                                                                </div>
+                                                            </div>
+                                                            <div class="col-md-2 col-6">
+                                                                <label class="form-label small mb-1" style="font-size:.75rem;">SpO2</label>
+                                                                <div class="input-group input-group-sm">
+                                                                    <input type="number" name="ttv_spo2" class="form-control" value="{{ k.ttv_spo2|default:'' }}" placeholder="98" min="50" max="100">
+                                                                    <span class="input-group-text" style="font-size:.7rem;">%</span>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+
                                                     <!-- Asesmen Nyeri (NRS 0-10) -->
                                                     <div class="p-2.5 border rounded mb-2 bg-light">
                                                         <div class="d-flex justify-content-between align-items-center mb-1">

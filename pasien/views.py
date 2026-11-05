@@ -2013,6 +2013,17 @@ def igd_asesmen_awal_save(request, pk):
                 htt[part] = val
         k.fisik_head_to_toe = htt
 
+        # Sync fisik ABCDE dari Head-To-Toe jika form memakai modal Head-To-Toe
+        if not k.fisik_airway and htt.get('kepala_leher'):
+            k.fisik_airway = htt['kepala_leher']
+        if not k.fisik_breathing and htt.get('toraks_dada'):
+            k.fisik_breathing = htt['toraks_dada']
+        if not k.fisik_circulation and htt.get('abdomen'):
+            k.fisik_circulation = htt['abdomen']
+        if not k.fisik_disability and htt.get('ekstremitas'):
+            k.fisik_disability = htt['ekstremitas']
+        if not k.fisik_exposure and htt.get('integumen_kulit'):
+            k.fisik_exposure = htt['integumen_kulit']
         # Bio-Psiko-Sosial-Spiritual
         if request.POST.get('status_psikososial'):
             k.status_psikososial = request.POST.get('status_psikososial', '').strip()
@@ -2054,8 +2065,16 @@ def igd_asesmen_awal_save(request, pk):
             k.pasien.save(update_fields=['alergi_obat'])
 
         k.save()
-        messages.success(request, f'Asesmen awal pasien {k.pasien.nama_lengkap} berhasil diperbarui.')
-
+        action_mode = request.POST.get('action_mode', 'save')
+        if action_mode == 'selesai':
+            if k.is_asesmen_awal_lengkap:
+                messages.success(request, f'Asesmen awal pasien {k.pasien.nama_lengkap} selesai dan lengkap!')
+            else:
+                messages.warning(request, f'Asesmen awal pasien {k.pasien.nama_lengkap} berhasil disimpan. Lengkapi parameter wajib (anamnesis, fisik, diagnosis) untuk mencapai status Lengkap.')
+        elif action_mode == 'draft':
+            messages.info(request, f'Draft asesmen awal pasien {k.pasien.nama_lengkap} berhasil disimpan sementara.')
+        else:
+            messages.success(request, f'Asesmen awal pasien {k.pasien.nama_lengkap} berhasil diperbarui.')
         next_url = request.POST.get('next_url')
         if next_url:
             return redirect(next_url)
