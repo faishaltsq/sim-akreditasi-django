@@ -2,32 +2,33 @@
 
 Aturan scope ditulis SEKALI di sini dan dipakai oleh tiga konsumen: queryset
 daftar (``scope_*_qs``), pemeriksaan per-objek (``can_read_*``), dan penentu
-tombol di template (``boleh_baca_kunjungan_jenis``). Sebelumnya aturan yang
+tombol di template (``boleh_detail_kunjungan``). Sebelumnya aturan yang
 sama ditulis ulang di ``pasien_detail`` dan ``kunjungan_detail``, sehingga
 perbaikan di satu tempat tidak ikut memperbaiki tempat lain.
+
+Kepemilikan pasien ("pasien sedang di unit mana") TIDAK ditebak di sini.
+Satu-satunya pemegang jawaban itu adalah ``akreditasi.layanan_unit`` — peta
+poliklinik→UnitKerja dan ruangan→UnitKerja yang sudah dipakai blok LAYANAN
+serta angka EMR, supaya front-office, dasbor unit, dan KPI akreditasi tidak
+bisa memberi jawaban berbeda untuk kunjungan yang sama. Modul ini hanya
+menerjemahkan jawaban itu menjadi batas baca.
 
 Dua lapisan otorisasi yang berlaku:
 
 * Modul (``UserProfile.get_allowed_patient_modules``) — fungsi klinis/kerja.
 * Unit (modul ini) — unit kerja yang berwenang atas rekam.
 
-Keduanya harus sepakat. ``master_pasien`` (indeks identitas pasien) diberikan
-ke semua pengguna login, sehingga halaman identitas pasien bersifat
-rumah-sakit-luas; yang dibatasi unit adalah REKAM KLINIS (kunjungan, CPPT,
-diagnosa, billing).
+Keduanya harus sepakat. Unit front-office (pendaftaran/admisi/rekam medis)
+memegang modul ``master_pasien`` tetapi tetap dibatasi unit: mereka hanya
+melihat pasien yang sedang berada di unit layanan di bawah hierarkinya, bukan
+seluruh rumah sakit.
 """
 
-# Jenis kunjungan → penanda kode unit yang berwenang atas jenis itu.
-# Token sengaja mengikuti kosakata yang sudah dipakai
-# UserProfile.get_allowed_patient_modules() ('IGD', 'IRJ'/'POLI', 'IRIN'/
-# 'BANGSAL'/'INTENSIF'/'RUANG') supaya lapisan modul dan lapisan unit tidak
-# saling bertentangan. Versi lama hanya mencari kata 'IGD'/'RAJAL'/'RANAP',
-# yang tidak pernah cocok dengan kode unit nyata seperti 'IRJ' atau 'POLI-ANAK'.
-JENIS_UNIT_TOKENS = {
-    'IGD':   ('IGD',),
-    'RAJAL': ('IRJ', 'POLI', 'RAJAL'),
-    'RANAP': ('IRIN', 'BANGSAL', 'INTENSIF', 'RUANG', 'RANAP'),
-}
+# Batas ukuran hasil daftar Pasien. ``scope_pasien_qs`` menyaring lewat JOIN
+# ke KunjunganPasien dan karena relasinya one-to-many hasilnya harus
+# ``.distinct()``; nilai ini menjaga agar JOIN itu tetap murah. Bukan
+# pagination UI — pemotongan ``[:100]`` yang sudah ada tetap di view.
+MAX_SCOPE_PASIEN = 100
 
 # Kode unit kanonik per jenis — dipakai saat MENSTEMPEL kunjungan baru
 # (``KunjunganPasien.save`` dan command backfill), bukan saat memeriksa akses.
@@ -41,11 +42,6 @@ JENIS_UNIT_TOKENS = {
 DEFAULT_UNIT_BY_JENIS = {
     'IGD': 'IGD',
 }
-
-# Unit front-office (pendaftaran/admisi/rekam medis). Mereka memegang modul
-# 'pendaftaran' dan 'master_pasien' — yaitu indeks identitas pasien — tetapi
-# bukan wewenang atas rekam klinis unit lain.
-FRONT_OFFICE_TOKENS = ('ADMISI', 'PENDAFTARAN', 'REKAM-MEDIS', 'REKAM MEDIS')
 
 UNRESTRICTED_ROLES = ('SUPER_ADMIN', 'ADMIN_RS', 'DIREKTUR')
 
@@ -73,71 +69,37 @@ def get_unit_scope(profile):
     return scope
 
 
-def _scope_codes(scope):
-    return {u.code.upper() for u in scope if u.code}
-
-
-def _ancestor_codes(profile):
-    """Kode unit profil beserta seluruh leluhurnya (hierarki UnitKerja)."""
-    codes = set()
-    curr = getattr(profile, 'unit_kerja', None)
-    while curr:
-        if curr.code:
-            codes.add(curr.code.upper())
-        curr = curr.parent
-    return codes
-
-
-def _visible_jenis(scope_codes):
-    """Jenis kunjungan yang boleh dibaca berdasarkan kode unit dalam scope."""
-    return {
-        jenis for jenis, tokens in JENIS_UNIT_TOKENS.items()
-        if any(token in code for code in scope_codes for token in tokens)
-    }
-
-
-def is_front_office(profile):
-    """True bila pengguna bertugas di pendaftaran/admisi/rekam medis."""
-    if profile is None:
-        return False
-    if get_unit_scope(profile) is None:
-        return False  # sudah tanpa batas, bukan kasus front-office
-    if not profile.unit_kerja:
-        return False
-    return any(
-        token in code
-        for token in FRONT_OFFICE_TOKENS
-        for code in _ancestor_codes(profile)
-    )
-
-
-def has_hospital_wide_pasien_read(profile):
-    """True bila pengguna boleh membaca indeks identitas pasien seluruh RS."""
-    if get_unit_scope(profile) is None:
-        return True
-    return is_front_office(profile)
-
-
 def pasien_scope_q(profile):
-    """Q untuk Pasien yang boleh dibaca profil, atau None bila tanpa batas."""
+    """Q untuk Pasien yang boleh dibaca profil, atau None bila tanpa batas.
+
+    Seorang pengguna melihat pasien yang kunjungannya sedang dilayani oleh
+    unitnya (atau turunannya). Kepemilikan dihitung oleh ``layanan_unit``
+    berdasarkan poliklinik/ruangan kunjungan, bukan dari jenis kunjungan.
+    """
     from django.db.models import Q
 
     scope = get_unit_scope(profile)
     if scope is None:
         return None
-    if has_hospital_wide_pasien_read(profile):
-        return None
     if not scope:
         return Q(pk__in=[])
-    jenis = _visible_jenis(_scope_codes(scope))
-    return (
-        Q(kunjungan__unit_kerja__in=scope)
-        | Q(kunjungan__unit_kerja__isnull=True, kunjungan__jenis_kunjungan__in=jenis)
-    )
+    return kunjungan_scope_q(profile)
 
 
 def kunjungan_scope_q(profile):
-    """Q untuk KunjunganPasien yang boleh dibaca profil, atau None bila tanpa batas."""
+    """Q untuk KunjunganPasien yang boleh dibaca profil, atau None bila tanpa batas.
+
+    Satu kunjungan dianggap milik unit U bila ``layanan_unit.visit_unit_code``
+    mengembalikan kode U atau salah satu turunannya. Karena kode itu dihitung
+    per-baris (bukan ekspresi SQL), penyaringan dilakukan dengan memfilter
+    daftar kunjungan terlebih dahulu lalu memakainya sebagai ``pk__in``.
+
+    KEPEMILIKAN: stempel ``unit_kerja`` menang — itu yang menjawab "pasien
+    sedang di unit mana" (``kunjungan_baru`` menstempel unit petugas pendaftar,
+    ``KunjunganPasien.save`` menstempel unit IGD, bed/ruangan menentukan unit
+    rawat inap). Peta poliklinik/ruangan hanya dipakai untuk kunjungan lama
+    yang belum punya stempel.
+    """
     from django.db.models import Q
 
     scope = get_unit_scope(profile)
@@ -145,11 +107,7 @@ def kunjungan_scope_q(profile):
         return None
     if not scope:
         return Q(pk__in=[])
-    jenis = _visible_jenis(_scope_codes(scope))
-    return (
-        Q(unit_kerja__in=scope)
-        | Q(unit_kerja__isnull=True, jenis_kunjungan__in=jenis)
-    )
+    return Q(pk__in=scope_kunjungan_ids(profile))
 
 
 def scope_kunjungan_qs(qs, profile):
@@ -162,6 +120,28 @@ def scope_pasien_qs(qs, profile):
     """Batasi queryset Pasien ke unit dalam scope profil."""
     q = pasien_scope_q(profile)
     return qs if q is None else qs.filter(q).distinct()
+
+
+def scope_kunjungan_ids(profile):
+    """PK kunjungan yang dilayani unit dalam scope profil.
+
+    Satu-satunya jembatan ke ``akreditasi.layanan_unit``: di sana letak peta
+    poliklinik→unit dan ruangan→unit yang juga dipakai blok LAYANAN dan angka
+    EMR dasbor akreditasi.
+    """
+    from akreditasi.kontrol_data import ACTIVE_VISIT_STATUSES
+    from akreditasi.layanan_unit import resolve_visit_ids
+    from .models import KunjunganPasien
+
+    scope = get_unit_scope(profile)
+    if scope is None or not scope:
+        return []
+    # Hanya kunjungan yang masih aktif, seperti blok EMR/Layanan dasbor
+    # akreditasi: pasien yang sudah pulang/rujuk bukan lagi beban unit mana
+    # pun, sehingga front-office pun berhenti melihatnya.
+    qs = KunjunganPasien.objects.filter(
+        status__in=ACTIVE_VISIT_STATUSES).select_related('bed__ruangan')
+    return resolve_visit_ids(qs, profile.unit_kerja)
 
 
 def can_read_pasien(pasien, profile):
@@ -184,14 +164,11 @@ def can_read_kunjungan(kunjungan, profile):
     return KunjunganPasien.objects.filter(q, pk=kunjungan.pk).exists()
 
 
-def boleh_baca_kunjungan_jenis(profile, jenis):
-    """True bila profil boleh membaca kunjungan berjenis tertentu.
+def boleh_detail_kunjungan(kunjungan, profile):
+    """True bila profil boleh membuka rekam klinis kunjungan ini.
 
     Dipakai template untuk tidak menampilkan tautan yang pasti berakhir 403.
+    Memakai jalur yang sama dengan ``kunjungan_detail`` (``can_read_kunjungan``)
+    agar tombol dan pemeriksaan view tidak bisa berbeda pendapat.
     """
-    scope = get_unit_scope(profile)
-    if scope is None:
-        return True
-    if not scope:
-        return False
-    return jenis in _visible_jenis(_scope_codes(scope))
+    return can_read_kunjungan(kunjungan, profile)

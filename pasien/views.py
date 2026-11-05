@@ -9,7 +9,9 @@ from django.http import HttpResponse, JsonResponse
 from django.views.decorators.http import require_POST
 from django.core.exceptions import PermissionDenied
 from .decorators import require_patient_module, get_unit_scope, scope_kunjungan_qs, scope_pasien_qs
-from .unit_scope import can_read_pasien, can_read_kunjungan, boleh_baca_kunjungan_jenis
+from .unit_scope import (
+    boleh_detail_kunjungan, can_read_kunjungan, can_read_pasien,
+)
 from akreditasi.input_parsing import parse_int
 from django.utils import timezone
 from datetime import timedelta
@@ -833,7 +835,11 @@ def pendaftaran_dashboard(request):
         })
 
     ctx = {
-        'kunjungan_hari_ini':  qs_today.order_by('-tanggal_masuk')[:100],
+        # Jangan tawarkan tautan rekam klinis yang pasti berakhir 403: daftar
+        # kunjungan di dasbor ini belum dibatasi unit, jadi tombol Detail harus
+        # diperiksa satu per satu.
+        'kunjungan_hari_ini': [k for k in qs_today.order_by('-tanggal_masuk')[:100]
+                               if boleh_detail_kunjungan(k, profile)],
         'total_hari_ini':      qs_today.count(),
         'ke_igd':              qs_today.filter(jenis_kunjungan='IGD').count(),
         'ke_rajal':            qs_today.filter(jenis_kunjungan='RAJAL').count(),
@@ -866,9 +872,6 @@ def pendaftaran_dashboard(request):
         # Reporting metrics
         'total_pasien_baru_hari_ini': Pasien.objects.filter(created_at__date=today).count(),
         'total_pasien_lama_hari_ini': qs_today.exclude(pasien__created_at__date=today).values('pasien').distinct().count(),
-        # Jangan tawarkan tautan rekam klinis yang pasti berakhir 403 bagi
-        # petugas front-office (mereka memegang identitas pasien, bukan rekam).
-        'boleh_detail_igd': boleh_baca_kunjungan_jenis(profile, 'IGD'),
     }
     return render(request, 'pasien/pendaftaran_dashboard.html', ctx)
 

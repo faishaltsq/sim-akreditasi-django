@@ -110,6 +110,28 @@ class ResolveVisitIdsTest(TestCase):
         ids = resolve_visit_ids(KunjunganPasien.objects.all(), self.unit)
         self.assertEqual(ids, [self.mine.pk])
 
+    def test_stamped_unit_wins_over_poliklinik_map(self):
+        """Kunjungan yang sudah distempel unit tetap milik unit itu.
+
+        Poliklinik hanya tujuan layanan; "pasien sedang di unit mana" dijawab
+        oleh stempel ``unit_kerja`` — inilah yang membuat kunjungan yang baru
+        didaftarkan (poliklinik sudah dipilih, belum dirouting) tetap terlihat
+        oleh petugas pendaftar, bukan langsung diambil alih oleh poliklinik.
+        """
+        from akreditasi.layanan_unit import resolve_visit_ids
+        admisi = _unit('ADMISI', 'Unit Pendaftaran & Admisi', 3)
+        KunjunganPasien.objects.create(
+            pasien=self.pasien, no_kunjungan='K-ADM', jenis_kunjungan='RAJAL',
+            poliklinik='Poli Jantung & Pembuluh Darah', unit_kerja=admisi,
+            tanggal_masuk=timezone.now(), status='DAFTAR')
+
+        # Kunjungan lama tanpa stempel tetap milik polikliniknya (peta);
+        # kunjungan baru yang distempel ADMISI tidak lagi diambil alih POLI-JANTUNG.
+        self.assertEqual(resolve_visit_ids(KunjunganPasien.objects.all(), self.unit), [self.mine.pk])
+        self.assertEqual(
+            resolve_visit_ids(KunjunganPasien.objects.all(), admisi),
+            [k.pk for k in KunjunganPasien.objects.filter(no_kunjungan='K-ADM')])
+
     def test_ruangan_match_for_inpatient(self):
         from akreditasi.layanan_unit import resolve_visit_ids
         bangsal = _unit('BANGSAL-DEWASA', 'Bangsal Dewasa Non-Bedah', 3)

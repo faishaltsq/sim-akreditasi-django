@@ -31,6 +31,9 @@ class DPJPSelectionTestCase(TestCase):
             no_bpjs='0001234567890',
             alergi_obat='Amoxicillin'
         )
+        # Fixture mengikuti alur nyata: kunjungan_baru menstempel
+        # unit_kerja ke unit petugas pendaftar (pasien/views.py), sehingga
+        # kunjungan ini memang sedang berada di unit admisi.
         self.kunjungan = KunjunganPasien.objects.create(
             pasien=self.pasien,
             no_kunjungan='KUNJ-FORM-001',
@@ -39,7 +42,8 @@ class DPJPSelectionTestCase(TestCase):
             dpjp='dr. Faisal, Sp.JP',
             penjamin='BPJS',
             tanggal_masuk=timezone.now(),
-            catatan_admisi='Nyeri dada kiri menjalar'
+            catatan_admisi='Nyeri dada kiri menjalar',
+            unit_kerja=self.unit_admisi,
         )
 
     def test_pendaftaran_dashboard_contains_dpjp_choices(self):

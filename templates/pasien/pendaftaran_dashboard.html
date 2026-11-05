@@ -1097,11 +1097,9 @@
                                     <a href="{% url 'pasien:cetak_sep' k.pk %}" target="_blank" class="btn btn-outline-success" title="Cetak SEP BPJS">
                                         <i class="bi bi-file-earmark-text"></i>
                                     </a>
-                                    {% if boleh_detail_igd %}
                                     <a href="{% url 'pasien:kunjungan_detail' k.pk %}" class="btn btn-outline-secondary" title="Detail Rekam Medis">
                                         <i class="bi bi-eye"></i>
                                     </a>
-                                    {% endif %}
                                     {% if k.status != 'BATAL' %}
                                     <button class="btn btn-outline-success" data-bs-toggle="modal" data-bs-target="#modalRme{{ k.pk }}" title="Input RME Awal (TTV)">
                                         <i class="bi bi-clipboard2-pulse"></i>{% if k.ttv_sistole %} ✓{% endif %}

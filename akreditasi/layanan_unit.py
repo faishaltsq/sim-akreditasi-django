@@ -166,12 +166,16 @@ def resolve_code(poliklinik, ruangan_nama, index):
 def visit_unit_code(kunjungan, index):
     if getattr(kunjungan, 'jenis_kunjungan', None) == 'IGD':
         return 'IGD'
+    # Stempel "pasien sedang di unit mana" menang atas peta poliklinik/ruangan:
+    # kunjungan yang baru didaftarkan (atau sudah dirouting ke poli lain)
+    # masih dibawa oleh unit yang menstempelnya, dan hanya peta yang menentukan
+    # unit saat tidak ada stempel. Ini juga yang membuat kunjungan yang
+    # polikliniknya belum terpetakan tetap terlihat oleh pemiliknya.
+    if getattr(kunjungan, 'unit_kerja', None):
+        return kunjungan.unit_kerja.code
     bed = getattr(kunjungan, 'bed', None)
     ruangan_nama = bed.ruangan.nama if bed is not None else None
-    code = resolve_code(kunjungan.poliklinik, ruangan_nama, index)
-    if not code and getattr(kunjungan, 'unit_kerja', None):
-        return kunjungan.unit_kerja.code
-    return code
+    return resolve_code(kunjungan.poliklinik, ruangan_nama, index)
 
 
 def unit_codes(unit):
@@ -224,9 +228,7 @@ def resolve_visit_ids(visits_qs, unit):
             if 'IGD' in codes:
                 matching.append(pk)
             continue
-        code = resolve_code(poliklinik, ruangan, index)
-        if not code and uk_code:
-            code = uk_code
+        code = uk_code or resolve_code(poliklinik, ruangan, index)
         if code in codes:
             matching.append(pk)
     return matching
