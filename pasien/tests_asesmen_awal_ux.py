@@ -228,3 +228,35 @@ class KunjunganDetailAsesmenUxTest(TestCase):
         self.assertTrue(self.k.is_asesmen_awal_lengkap)
         messages = [m.message for m in res.context['messages']]
         self.assertTrue(any('selesai dan lengkap' in m for m in messages))
+
+    def test_post_save_asesmen_with_comma_in_suhu(self):
+        payload = {
+            'action_mode': 'draft',
+            'ttv_suhu': '36,5',
+            'anamnesis_rps': 'Cek suhu dengan koma',
+        }
+        res = self.client.post(
+            reverse('pasien:igd_asesmen_awal_save', args=[self.k.pk]),
+            payload,
+            follow=True,
+        )
+        self.assertEqual(res.status_code, 200)
+        self.k.refresh_from_db()
+        self.assertEqual(self.k.ttv_suhu, 36.5)
+
+    def test_modal_placement_and_wizard_navigation(self):
+        res = self.client.get(reverse('pasien:kunjungan_detail', args=[self.k.pk]))
+        self.assertEqual(res.status_code, 200)
+        html = res.content.decode('utf-8')
+        
+        # Verify modal exists outside kunjunganAccordion
+        acc_idx = html.find('id="kunjunganAccordion"')
+        modal_idx = html.find('id="modalEditAsesmenAwal"')
+        self.assertNotEqual(acc_idx, -1)
+        self.assertNotEqual(modal_idx, -1)
+        
+        # Verify wizard buttons and tab controls
+        self.assertIn('goToAsesmenTab', html)
+        self.assertIn('data-bs-toggle="tab"', html)
+        self.assertIn('id="globalIcd10List"', html)
+        self.assertIn('id="globalSdkiList"', html)

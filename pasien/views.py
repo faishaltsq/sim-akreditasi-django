@@ -1110,7 +1110,7 @@ def igd_ttv_update(request, pk):
             k.ttv_diastole = int(request.POST['ttv_diastole']) if request.POST.get('ttv_diastole') else None
             k.ttv_nadi = int(request.POST['ttv_nadi']) if request.POST.get('ttv_nadi') else None
             k.ttv_rr = int(request.POST['ttv_rr']) if request.POST.get('ttv_rr') else None
-            k.ttv_suhu = float(request.POST['ttv_suhu']) if request.POST.get('ttv_suhu') else None
+            k.ttv_suhu = float(request.POST['ttv_suhu'].strip().replace(',', '.')) if request.POST.get('ttv_suhu') and request.POST['ttv_suhu'].strip() else None
             k.ttv_spo2 = int(request.POST['ttv_spo2']) if request.POST.get('ttv_spo2') else None
             k.ttv_gcs = request.POST.get('ttv_gcs', '').strip()
             k.ttv_skala_nyeri = int(request.POST['ttv_skala_nyeri']) if request.POST.get('ttv_skala_nyeri') else None
@@ -1309,8 +1309,11 @@ def pendaftaran_ttv_simpan(request, pk):
     k.ttv_nadi = _int('ttv_nadi')
     k.ttv_rr = _int('ttv_rr')
     k.ttv_spo2 = _int('ttv_spo2')
-    suhu = request.POST.get('ttv_suhu', '').strip()
-    k.ttv_suhu = float(suhu) if suhu else None
+    suhu = request.POST.get('ttv_suhu', '').strip().replace(',', '.')
+    try:
+        k.ttv_suhu = float(suhu) if suhu else None
+    except ValueError:
+        k.ttv_suhu = None
     catatan = request.POST.get('catatan_admisi', '').strip()
     if catatan:
         k.catatan_admisi = catatan
@@ -1972,7 +1975,8 @@ def igd_asesmen_awal_save(request, pk):
             k.ttv_rr = int(request.POST['ttv_rr']) if request.POST['ttv_rr'].isdigit() else None
         if request.POST.get('ttv_suhu'):
             try:
-                k.ttv_suhu = float(request.POST['ttv_suhu'])
+                suhu_raw = request.POST['ttv_suhu'].strip().replace(',', '.')
+                k.ttv_suhu = float(suhu_raw)
             except (ValueError, TypeError):
                 pass
         if request.POST.get('ttv_spo2'):
@@ -2263,7 +2267,8 @@ def igd_asesmen_medis_save(request, pk):
             k.ttv_rr = int(request.POST['ttv_rr'])
         if request.POST.get('ttv_suhu'):
             try:
-                k.ttv_suhu = float(request.POST['ttv_suhu'])
+                suhu_raw = request.POST['ttv_suhu'].strip().replace(',', '.')
+                k.ttv_suhu = float(suhu_raw)
             except (ValueError, TypeError):
                 pass
         if request.POST.get('ttv_spo2') and request.POST['ttv_spo2'].isdigit():
