@@ -1,0 +1,628 @@
+    {% if k.pasien.has_alergi %}
+    <div class="alert alert-danger d-flex align-items-center justify-content-between py-1 px-3 mb-3 small border-danger">
+        <div>
+            <i class="bi bi-exclamation-triangle-fill text-danger me-1"></i>
+            <strong>Riwayat Alergi:</strong> {{ k.pasien.alergi_obat }}{% if k.pasien.alergi_obat and k.pasien.alergi_lain %}; {% endif %}{{ k.pasien.alergi_lain }}
+        </div>
+        <a href="{% url 'pasien:igd_asesmen_copy_prev' k.pk %}?next={{ next_url }}" class="btn btn-outline-dark btn-sm py-0 px-2 ms-2 bg-white">
+            <i class="bi bi-clipboard-check me-1"></i>Salin dari Asesmen Sebelumnya
+        </a>
+    </div>
+    {% else %}
+    <div class="d-flex justify-content-end mb-3">
+        <a href="{% url 'pasien:igd_asesmen_copy_prev' k.pk %}?next={{ next_url }}" class="btn btn-outline-secondary btn-sm py-0 px-2">
+            <i class="bi bi-clipboard-check me-1"></i>Salin dari Asesmen Sebelumnya
+        </a>
+    </div>
+    {% endif %}
+
+    <!-- 4-STEP WIZARD / TABULASI ASESMEN AWAL (STANDAR 3.09) -->
+    <ul class="nav nav-pills nav-fill mb-3 bg-light p-1 rounded border" id="pillsAsesmenDetailTab" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active btn-sm py-2 fw-semibold" id="tab-ku-ttv-btn" data-bs-toggle="tab" data-bs-target="#tab-ku-ttv-pane" type="button" role="tab" aria-controls="tab-ku-ttv-pane" aria-selected="true">
+                <i class="bi bi-heart-pulse me-1"></i>1. KU &amp; TTV
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link btn-sm py-2 fw-semibold" id="tab-nyeri-gizi-btn" data-bs-toggle="tab" data-bs-target="#tab-nyeri-gizi-pane" type="button" role="tab" aria-controls="tab-nyeri-gizi-pane" aria-selected="false">
+                <i class="bi bi-activity me-1"></i>2. Nyeri &amp; Gizi (MST)
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link btn-sm py-2 fw-semibold" id="tab-fungsional-fisik-btn" data-bs-toggle="tab" data-bs-target="#tab-fungsional-fisik-pane" type="button" role="tab" aria-controls="tab-fungsional-fisik-pane" aria-selected="false">
+                <i class="bi bi-person-walking me-1"></i>3. Fungsional &amp; Fisik
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link btn-sm py-2 fw-semibold" id="tab-diagnosa-risiko-btn" data-bs-toggle="tab" data-bs-target="#tab-diagnosa-risiko-pane" type="button" role="tab" aria-controls="tab-diagnosa-risiko-pane" aria-selected="false">
+                <i class="bi bi-shield-exclamation me-1"></i>4. Diagnosis &amp; Risiko
+            </button>
+        </li>
+    </ul>
+
+    <div class="tab-content" id="pillsAsesmenDetailTabContent">
+        <!-- TAB 1: KU & TTV -->
+        <div class="tab-pane fade show active" id="tab-ku-ttv-pane" role="tabpanel" aria-labelledby="tab-ku-ttv-btn">
+            <!-- A. Keadaan Umum & Kesadaran -->
+            <div class="card border mb-3">
+                <div class="card-header bg-light py-2 fw-bold small text-primary d-flex justify-content-between align-items-center">
+                    <span><i class="bi bi-person-check me-1"></i> A. Keadaan Umum &amp; Kesadaran</span>
+                    <button type="button" class="btn btn-outline-success btn-sm py-0 px-2" onclick="setNormalDetail()" title="Isi otomatis parameter normal">
+                        <i class="bi bi-lightning-charge-fill me-1"></i>Set Normal / Baik
+                    </button>
+                </div>
+                <div class="card-body p-3">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label small fw-semibold">Keadaan Umum:</label>
+                            <div class="d-flex gap-3">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="keadaan_umum" value="Baik" id="kuBaik" {% if k.keadaan_umum == 'Baik' or not k.keadaan_umum %}checked{% endif %}>
+                                    <label class="form-check-label small" for="kuBaik">Baik</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="keadaan_umum" value="Sedang" id="kuSedang" {% if k.keadaan_umum == 'Sedang' %}checked{% endif %}>
+                                    <label class="form-check-label small" for="kuSedang">Sedang</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="keadaan_umum" value="Lemah / Buruk" id="kuLemah" {% if k.keadaan_umum == 'Lemah / Buruk' %}checked{% endif %}>
+                                    <label class="form-check-label small" for="kuLemah">Lemah / Buruk</label>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-semibold">Tingkat Kesadaran:</label>
+                            <select name="kesadaran" class="form-select form-select-sm" id="kesadaranDetail">
+                                <option value="Compos Mentis" {% if k.kesadaran == 'Compos Mentis' or not k.kesadaran %}selected{% endif %}>Compos Mentis</option>
+                                <option value="Apatis" {% if k.kesadaran == 'Apatis' %}selected{% endif %}>Apatis</option>
+                                <option value="Somnolen" {% if k.kesadaran == 'Somnolen' %}selected{% endif %}>Somnolen</option>
+                                <option value="Sopor" {% if k.kesadaran == 'Sopor' %}selected{% endif %}>Sopor</option>
+                                <option value="Koma" {% if k.kesadaran == 'Koma' %}selected{% endif %}>Koma</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tanda-Tanda Vital (TTV) -->
+            <div class="card border mb-3">
+                <div class="card-header bg-light py-2 fw-bold small text-primary d-flex justify-content-between align-items-center">
+                    <span><i class="bi bi-heart-pulse me-1"></i> Tanda-Tanda Vital (TTV)</span>
+                    <span class="badge bg-secondary-subtle text-dark border">Parameter Klinis</span>
+                </div>
+                <div class="card-body p-3">
+                    <div class="row g-3">
+                        <div class="col-md-3 col-6">
+                            <label class="form-label small fw-semibold" for="ttvSistoleDetail">Sistole (mmHg):</label>
+                            <div class="input-group input-group-sm">
+                                <input type="number" name="ttv_sistole" id="ttvSistoleDetail" class="form-control" value="{{ k.ttv_sistole|default:'' }}" placeholder="120" min="40" max="300">
+                                <span class="input-group-text">mmHg</span>
+                            </div>
+                        </div>
+                        <div class="col-md-3 col-6">
+                            <label class="form-label small fw-semibold" for="ttvDiastoleDetail">Diastole (mmHg):</label>
+                            <div class="input-group input-group-sm">
+                                <input type="number" name="ttv_diastole" id="ttvDiastoleDetail" class="form-control" value="{{ k.ttv_diastole|default:'' }}" placeholder="80" min="30" max="200">
+                                <span class="input-group-text">mmHg</span>
+                            </div>
+                        </div>
+                        <div class="col-md-3 col-6">
+                            <label class="form-label small fw-semibold" for="ttvNadiDetail">Nadi (x/m):</label>
+                            <div class="input-group input-group-sm">
+                                <input type="number" name="ttv_nadi" id="ttvNadiDetail" class="form-control" value="{{ k.ttv_nadi|default:'' }}" placeholder="80" min="30" max="250">
+                                <span class="input-group-text">x/m</span>
+                            </div>
+                        </div>
+                        <div class="col-md-3 col-6">
+                            <label class="form-label small fw-semibold" for="ttvRrDetail">RR (x/m):</label>
+                            <div class="input-group input-group-sm">
+                                <input type="number" name="ttv_rr" id="ttvRrDetail" class="form-control" value="{{ k.ttv_rr|default:'' }}" placeholder="18" min="5" max="80">
+                                <span class="input-group-text">x/m</span>
+                            </div>
+                        </div>
+                        <div class="col-md-3 col-6">
+                            <label class="form-label small fw-semibold" for="ttvSuhuDetail">Suhu (&deg;C):</label>
+                            <div class="input-group input-group-sm">
+                                <input type="number" step="0.1" name="ttv_suhu" id="ttvSuhuDetail" class="form-control" value="{% if k.ttv_suhu %}{{ k.ttv_suhu|stringformat:'.1f' }}{% endif %}" placeholder="36.5" min="30" max="45">
+                                <span class="input-group-text">&deg;C</span>
+                            </div>
+                        </div>
+                        <div class="col-md-3 col-6">
+                            <label class="form-label small fw-semibold" for="ttvSpo2Detail">SpO2 (%):</label>
+                            <div class="input-group input-group-sm">
+                                <input type="number" name="ttv_spo2" id="ttvSpo2Detail" class="form-control" value="{{ k.ttv_spo2|default:'' }}" placeholder="98" min="50" max="100">
+                                <span class="input-group-text">%</span>
+                            </div>
+                        </div>
+                        <div class="col-md-6 col-12">
+                            <label class="form-label small fw-semibold" for="ttvGcsDetail">Glasgow Coma Scale (GCS):</label>
+                            <input type="text" name="ttv_gcs" id="ttvGcsDetail" class="form-control form-control-sm" value="{{ k.ttv_gcs|default:'' }}" placeholder="E4V5M6 (15)">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Keluhan Utama & Anamnesis -->
+            <div class="card border mb-3">
+                <div class="card-header bg-light py-2 fw-bold small text-dark">
+                    <i class="bi bi-chat-left-text me-1 text-primary"></i> Keluhan Utama &amp; Riwayat Penyakit Sekarang (Anamnesis)
+                </div>
+                <div class="card-body p-3">
+                    <textarea name="anamnesis_rps" id="anamnesisRpsDetail" rows="2" class="form-control form-control-sm" placeholder="Keluhan utama saat masuk dan riwayat penyakit sekarang...">{{ k.anamnesis_rps }}</textarea>
+                </div>
+            </div>
+            <div class="d-flex justify-content-end mt-3 pt-2 border-top">
+                <button type="button" class="btn btn-primary btn-sm px-3 fw-semibold" onclick="goToAsesmenTab('#tab-nyeri-gizi-pane')">
+                    Lanjut: 2. Nyeri &amp; Gizi (MST) <i class="bi bi-arrow-right ms-1"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- TAB 2: NYERI & GIZI (MST) -->
+        <div class="tab-pane fade" id="tab-nyeri-gizi-pane" role="tabpanel" aria-labelledby="tab-nyeri-gizi-btn">
+    <!-- B. Asesmen Nyeri (NRS 0-10) -->
+    <div class="card border mb-3">
+        <div class="card-header bg-light py-2 fw-bold small text-danger d-flex justify-content-between align-items-center">
+            <span>B. Asesmen Nyeri (Skala 0–10)</span>
+            <span class="badge {% if k.ttv_skala_nyeri >= 7 %}bg-danger{% elif k.ttv_skala_nyeri >= 4 %}bg-warning text-dark{% elif k.ttv_skala_nyeri >= 1 %}bg-warning-subtle text-dark border{% else %}bg-success{% endif %}" id="skorNyeriBadgeDetail">
+                {{ k.ttv_skala_nyeri|default:0 }} — {% if k.ttv_skala_nyeri >= 7 %}Nyeri berat{% elif k.ttv_skala_nyeri >= 4 %}Nyeri sedang{% elif k.ttv_skala_nyeri >= 1 %}Nyeri ringan{% else %}Tidak ada nyeri{% endif %}
+            </span>
+        </div>
+        <div class="card-body p-3">
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label small fw-semibold">Skala Nyeri (0-10):</label>
+                    <input type="range" name="ttv_skala_nyeri" class="form-range" min="0" max="10" step="1" value="{{ k.ttv_skala_nyeri|default:0 }}" id="skorNyeriDetail" oninput="updateSkorNyeriDetail(this.value)">
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label small fw-semibold">Karakteristik Nyeri:</label>
+                    <select name="nyeri_karakteristik" class="form-select form-select-sm" id="nyeriKarakteristikDetail">
+                        <option value="Tidak Nyeri" {% if not k.nyeri_karakteristik or k.nyeri_karakteristik == 'Tidak Nyeri' %}selected{% endif %}>Tidak Nyeri</option>
+                        <option value="Tumpul" {% if k.nyeri_karakteristik == 'Tumpul' %}selected{% endif %}>Tumpul</option>
+                        <option value="Tajam/Tusuk" {% if k.nyeri_karakteristik == 'Tajam/Tusuk' %}selected{% endif %}>Tajam / Tusuk</option>
+                        <option value="Terbakar" {% if k.nyeri_karakteristik == 'Terbakar' %}selected{% endif %}>Terbakar</option>
+                        <option value="Denyut" {% if k.nyeri_karakteristik == 'Denyut' %}selected{% endif %}>Denyut</option>
+                        <option value="Hilang-Timbul" {% if k.nyeri_karakteristik == 'Hilang-Timbul' %}selected{% endif %}>Hilang-Timbul</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- C. Skrining Gizi (MST) -->
+    <div class="card border mb-3">
+        <div class="card-header bg-light py-2 fw-bold small text-success">C. Skrining Gizi (Malnutrition Screening Tool - MST)</div>
+        <div class="card-body p-3">
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label small fw-semibold" for="mstQ1Detail">1. Penurunan berat badan tidak diinginkan?</label>
+                    <select name="mst_q1" class="form-select form-select-sm" id="mstQ1Detail">
+                        <option value="0">Tidak ada penurunan (0)</option>
+                        <option value="1">Ya, 1–5 kg (1)</option>
+                        <option value="2">Tidak yakin / > 5 kg (2)</option>
+                    </select>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label small fw-semibold" for="mstQ2Detail">2. Asupan makan berkurang?</label>
+                    <select name="mst_q2" class="form-select form-select-sm" id="mstQ2Detail">
+                        <option value="0">Tidak (0)</option>
+                        <option value="1">Ya (1)</option>
+                    </select>
+                </div>
+                <div class="col-12">
+                    <div class="alert {% if k.skrining_gizi_mst and k.skrining_gizi_mst >= 2 %}alert-danger{% else %}alert-success{% endif %} py-1 px-2 mb-0 small" id="mstResultDetail">
+                        Total Skor MST: <strong>{{ k.skrining_gizi_mst|default:0 }}</strong> —
+                        {% if k.skrining_gizi_mst and k.skrining_gizi_mst >= 2 %}
+                            <span class="text-danger fw-bold">Risiko Malnutrisi Tinggi — Konsul Ahli Gizi</span>
+                        {% else %}
+                            <span class="text-success">Risiko Malnutrisi Rendah</span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="d-flex justify-content-between mt-3 pt-2 border-top">
+        <button type="button" class="btn btn-outline-secondary btn-sm px-3" onclick="goToAsesmenTab('#tab-ku-ttv-pane')">
+            <i class="bi bi-arrow-left me-1"></i> Kembali ke 1. KU &amp; TTV
+        </button>
+        <button type="button" class="btn btn-primary btn-sm px-3 fw-semibold" onclick="goToAsesmenTab('#tab-fungsional-fisik-pane')">
+            Lanjut: 3. Fungsional &amp; Fisik <i class="bi bi-arrow-right ms-1"></i>
+        </button>
+    </div>
+</div>
+
+<!-- TAB 3: FUNGSIONAL & FISIK -->
+<div class="tab-pane fade" id="tab-fungsional-fisik-pane" role="tabpanel" aria-labelledby="tab-fungsional-fisik-btn">
+    <!-- Fungsional & Psikososial -->
+    <div class="card border mb-3">
+        <div class="card-header bg-light py-2 fw-bold small text-primary d-flex justify-content-between align-items-center">
+            <span><i class="bi bi-person-walking me-1"></i> Fungsional (ADL) &amp; Status Psikososial</span>
+        </div>
+        <div class="card-body p-3">
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <label class="form-label small fw-semibold">Aktivitas Sehari-hari (ADL):</label>
+                    <select name="fungsional_adl" class="form-select form-select-sm">
+                        <option value="Mandiri" {% if k.fungsional_adl == 'Mandiri' or not k.fungsional_adl %}selected{% endif %}>Mandiri</option>
+                        <option value="Bantuan Parsial / Sebagian" {% if k.fungsional_adl == 'Bantuan Parsial / Sebagian' %}selected{% endif %}>Bantuan Parsial / Sebagian</option>
+                        <option value="Ketergantungan Total" {% if k.fungsional_adl == 'Ketergantungan Total' %}selected{% endif %}>Ketergantungan Total</option>
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label small fw-semibold">Status Psikososial:</label>
+                    <select name="status_psikososial" class="form-select form-select-sm">
+                        <option value="Tenang / Kooperatif" {% if k.status_psikososial == 'Tenang / Kooperatif' or not k.status_psikososial %}selected{% endif %}>Tenang / Kooperatif</option>
+                        <option value="Cemas / Gelisah" {% if k.status_psikososial == 'Cemas / Gelisah' %}selected{% endif %}>Cemas / Gelisah</option>
+                        <option value="Menolak / Agitatif" {% if k.status_psikososial == 'Menolak / Agitatif' %}selected{% endif %}>Menolak / Agitatif</option>
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label small fw-semibold">Status Spiritual:</label>
+                    <input type="text" name="status_spiritual" class="form-control form-control-sm" value="{{ k.status_spiritual|default:'Perlu Bimbingan Spiritual Normal' }}">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- D. Pemeriksaan Fisik Head-To-Toe (Checklist Standar 3.09) -->
+    <div class="card border mb-3">
+        <div class="card-header bg-light py-2 fw-bold small text-dark d-flex justify-content-between align-items-center">
+            <span><i class="bi bi-person-arms-spread me-1 text-primary"></i> D. Pemeriksaan Fisik Head-To-Toe (Tinggal Mencetang)</span>
+            <span class="badge bg-primary-subtle text-primary border border-primary-subtle" style="font-size: .7rem;">Formulir Standar 3.09</span>
+        </div>
+        <div class="card-body p-3">
+            <div class="row g-3">
+                <!-- 1. Kepala & Leher -->
+                <div class="col-12">
+                    <div class="p-2.5 border rounded bg-light">
+                        <div class="fw-bold text-primary mb-1 small"><i class="bi bi-person-bounding-box me-1"></i>1. KEPALA &amp; LEHER</div>
+                        <div class="d-flex flex-wrap gap-2 mb-2 py-1">
+                            <span class="badge bg-secondary-subtle text-dark border me-1 align-self-center">Kepala:</span>
+                            <div class="form-check form-check-inline mb-0">
+                                <input class="form-check-input" type="checkbox" id="kd_normo" value="Normosefali / Simetris" onchange="toggleCheckValue('#ta_kepala', 'Normosefali / Simetris', this.checked)">
+                                <label class="form-check-label small" for="kd_normo">Normosefali / Simetris</label>
+                            </div>
+                            <div class="form-check form-check-inline mb-0">
+                                <input class="form-check-input" type="checkbox" id="kd_asimetris" value="Asimetris" onchange="toggleCheckValue('#ta_kepala', 'Asimetris', this.checked)">
+                                <label class="form-check-label small text-danger" for="kd_asimetris">Asimetris</label>
+                            </div>
+                            <div class="form-check form-check-inline mb-0">
+                                <input class="form-check-input" type="checkbox" id="kd_massa" value="Benjolan / Massa" onchange="toggleCheckValue('#ta_kepala', 'Benjolan / Massa', this.checked)">
+                                <label class="form-check-label small text-danger" for="kd_massa">Benjolan/Massa</label>
+                            </div>
+                            <div class="form-check form-check-inline mb-0">
+                                <input class="form-check-input" type="checkbox" id="kd_lesi" value="Lesi / Jejas" onchange="toggleCheckValue('#ta_kepala', 'Lesi / Jejas', this.checked)">
+                                <label class="form-check-label small text-danger" for="kd_lesi">Lesi/Jejas</label>
+                            </div>
+                        </div>
+                        <div class="d-flex flex-wrap gap-2 mb-2 py-1 border-top pt-1">
+                            <span class="badge bg-secondary-subtle text-dark border me-1 align-self-center">Mata:</span>
+                            <div class="form-check form-check-inline mb-0">
+                                <input class="form-check-input" type="checkbox" id="kd_anemis_min" value="Konjungtiva Anemis (-/-)" onchange="toggleCheckValue('#ta_kepala', 'Konjungtiva Anemis (-/-)', this.checked)">
+                                <label class="form-check-label small" for="kd_anemis_min">Anemis (-/-)</label>
+                            </div>
+                            <div class="form-check form-check-inline mb-0">
+                                <input class="form-check-input" type="checkbox" id="kd_anemis_plus" value="Konjungtiva Anemis (+/+)" onchange="toggleCheckValue('#ta_kepala', 'Konjungtiva Anemis (+/+)', this.checked)">
+                                <label class="form-check-label small text-danger" for="kd_anemis_plus">Anemis (+/+)</label>
+                            </div>
+                            <div class="form-check form-check-inline mb-0">
+                                <input class="form-check-input" type="checkbox" id="kd_ikterik_min" value="Sklera Ikterik (-/-)" onchange="toggleCheckValue('#ta_kepala', 'Sklera Ikterik (-/-)', this.checked)">
+                                <label class="form-check-label small" for="kd_ikterik_min">Ikterik (-/-)</label>
+                            </div>
+                            <div class="form-check form-check-inline mb-0">
+                                <input class="form-check-input" type="checkbox" id="kd_isokor" value="Pupil Isokor (2 mm / 2 mm)" onchange="toggleCheckValue('#ta_kepala', 'Pupil Isokor (2 mm / 2 mm)', this.checked)">
+                                <label class="form-check-label small" for="kd_isokor">Isokor (2mm/2mm)</label>
+                            </div>
+                            <div class="form-check form-check-inline mb-0">
+                                <input class="form-check-input" type="checkbox" id="kd_refleks" value="Refleks Cahaya (+/+)" onchange="toggleCheckValue('#ta_kepala', 'Refleks Cahaya (+/+)', this.checked)">
+                                <label class="form-check-label small" for="kd_refleks">Refleks Cahaya (+/+)</label>
+                            </div>
+                        </div>
+                        <div class="d-flex flex-wrap gap-2 mb-2 py-1 border-top pt-1">
+                            <span class="badge bg-secondary-subtle text-dark border me-1 align-self-center">Telinga &amp; Hidung:</span>
+                            <div class="form-check form-check-inline mb-0">
+                                <input class="form-check-input" type="checkbox" id="kd_pend_norm" value="Pendengaran Normal" onchange="toggleCheckValue('#ta_kepala', 'Pendengaran Normal', this.checked)">
+                                <label class="form-check-label small" for="kd_pend_norm">Pendengaran Normal</label>
+                            </div>
+                            <div class="form-check form-check-inline mb-0">
+                                <input class="form-check-input" type="checkbox" id="kd_hid_sim" value="Hidung Simetris" onchange="toggleCheckValue('#ta_kepala', 'Hidung Simetris', this.checked)">
+                                <label class="form-check-label small" for="kd_hid_sim">Hidung Simetris</label>
+                            </div>
+                            <div class="form-check form-check-inline mb-0">
+                                <input class="form-check-input" type="checkbox" id="kd_mukosa" value="Mukosa Lembap" onchange="toggleCheckValue('#ta_kepala', 'Mukosa Lembap', this.checked)">
+                                <label class="form-check-label small" for="kd_mukosa">Mukosa Lembap</label>
+                            </div>
+                            <div class="form-check form-check-inline mb-0">
+                                <input class="form-check-input" type="checkbox" id="kd_sianosis" value="Sianosis Bibir" onchange="toggleCheckValue('#ta_kepala', 'Sianosis Bibir', this.checked)">
+                                <label class="form-check-label small text-danger" for="kd_sianosis">Sianosis Bibir</label>
+                            </div>
+                        </div>
+                        <div class="d-flex flex-wrap gap-2 mb-1 py-1 border-top pt-1">
+                            <span class="badge bg-secondary-subtle text-dark border me-1 align-self-center">Leher:</span>
+                            <div class="form-check form-check-inline mb-0">
+                                <input class="form-check-input" type="checkbox" id="kd_kgb_min" value="Pembesaran KGB (-)" onchange="toggleCheckValue('#ta_kepala', 'Pembesaran KGB (-)', this.checked)">
+                                <label class="form-check-label small" for="kd_kgb_min">KGB (-)</label>
+                            </div>
+                            <div class="form-check form-check-inline mb-0">
+                                <input class="form-check-input" type="checkbox" id="kd_tiroid_min" value="Pembesaran Tiroid (-)" onchange="toggleCheckValue('#ta_kepala', 'Pembesaran Tiroid (-)', this.checked)">
+                                <label class="form-check-label small" for="kd_tiroid_min">Tiroid (-)</label>
+                            </div>
+                            <div class="form-check form-check-inline mb-0">
+                                <input class="form-check-input" type="checkbox" id="kd_jvp_min" value="Peningkatan JVP (-)" onchange="toggleCheckValue('#ta_kepala', 'Peningkatan JVP (-)', this.checked)">
+                                <label class="form-check-label small" for="kd_jvp_min">JVP Normal (-)</label>
+                            </div>
+                            <div class="form-check form-check-inline mb-0">
+                                <input class="form-check-input" type="checkbox" id="kd_kuduk_min" value="Kaku Kuduk (-)" onchange="toggleCheckValue('#ta_kepala', 'Kaku Kuduk (-)', this.checked)">
+                                <label class="form-check-label small" for="kd_kuduk_min">Kaku Kuduk (-)</label>
+                            </div>
+                        </div>
+                        <textarea name="fisik_kepala_leher" id="ta_kepala" rows="2" class="form-control form-control-sm bg-white mt-1" placeholder="Rangkuman kepala &amp; leher...">{{ k.fisik_head_to_toe.kepala_leher|default:k.fisik_airway }}</textarea>
+                    </div>
+                </div>
+
+                <!-- 2. Dada & Toraks (Paru & Jantung) -->
+                <div class="col-12">
+                    <div class="p-2.5 border rounded bg-light">
+                        <div class="fw-bold text-danger mb-1 small"><i class="bi bi-lungs me-1"></i>2. DADA &amp; TORAKS (PARU &amp; JANTUNG)</div>
+                        <div class="d-flex flex-wrap gap-2 mb-2 py-1">
+                            <span class="badge bg-secondary-subtle text-dark border me-1 align-self-center">Dada &amp; Respirasi:</span>
+                            <div class="form-check form-check-inline mb-0">
+                                <input class="form-check-input" type="checkbox" id="dt_simetris" value="Simetris Kiri & Kanan" onchange="toggleCheckValue('#ta_toraks', 'Simetris Kiri & Kanan', this.checked)">
+                                <label class="form-check-label small" for="dt_simetris">Simetris Kiri &amp; Kanan</label>
+                            </div>
+                            <div class="form-check form-check-inline mb-0">
+                                <input class="form-check-input" type="checkbox" id="dt_retraksi_min" value="Retraksi Dinding Dada (-)" onchange="toggleCheckValue('#ta_toraks', 'Retraksi Dinding Dada (-)', this.checked)">
+                                <label class="form-check-label small" for="dt_retraksi_min">Retraksi (-)</label>
+                            </div>
+                            <div class="form-check form-check-inline mb-0">
+                                <input class="form-check-input" type="checkbox" id="dt_retraksi_plus" value="Retraksi Dinding Dada (+)" onchange="toggleCheckValue('#ta_toraks', 'Retraksi Dinding Dada (+)', this.checked)">
+                                <label class="form-check-label small text-danger" for="dt_retraksi_plus">Retraksi (+)</label>
+                            </div>
+                            <div class="form-check form-check-inline mb-0">
+                                <input class="form-check-input" type="checkbox" id="dt_deformitas" value="Jejas / Deformitas" onchange="toggleCheckValue('#ta_toraks', 'Jejas / Deformitas', this.checked)">
+                                <label class="form-check-label small text-danger" for="dt_deformitas">Jejas/Deformitas</label>
+                            </div>
+                        </div>
+                        <div class="d-flex flex-wrap gap-2 mb-2 py-1 border-top pt-1">
+                            <span class="badge bg-secondary-subtle text-dark border me-1 align-self-center">Auskultasi Paru:</span>
+                            <div class="form-check form-check-inline mb-0">
+                                <input class="form-check-input" type="checkbox" id="dt_vesikuler" value="Vesikuler (+/+)" onchange="toggleCheckValue('#ta_toraks', 'Vesikuler (+/+)', this.checked)">
+                                <label class="form-check-label small" for="dt_vesikuler">Vesikuler (+/+)</label>
+                            </div>
+                            <div class="form-check form-check-inline mb-0">
+                                <input class="form-check-input" type="checkbox" id="dt_ronkhi" value="Ronkhi (+/+)" onchange="toggleCheckValue('#ta_toraks', 'Ronkhi (+/+)', this.checked)">
+                                <label class="form-check-label small text-danger" for="dt_ronkhi">Ronkhi (+/+)</label>
+                            </div>
+                            <div class="form-check form-check-inline mb-0">
+                                <input class="form-check-input" type="checkbox" id="dt_wheezing" value="Wheezing (+/+)" onchange="toggleCheckValue('#ta_toraks', 'Wheezing (+/+)', this.checked)">
+                                <label class="form-check-label small text-danger" for="dt_wheezing">Wheezing (+/+)</label>
+                            </div>
+                        </div>
+                        <div class="d-flex flex-wrap gap-2 mb-1 py-1 border-top pt-1">
+                            <span class="badge bg-secondary-subtle text-dark border me-1 align-self-center">Jantung:</span>
+                            <div class="form-check form-check-inline mb-0">
+                                <input class="form-check-input" type="checkbox" id="dt_murni" value="Suara Jantung I/II Murni Reguler" onchange="toggleCheckValue('#ta_toraks', 'Suara Jantung I/II Murni Reguler', this.checked)">
+                                <label class="form-check-label small" for="dt_murni">BJ I/II Murni Reguler</label>
+                            </div>
+                            <div class="form-check form-check-inline mb-0">
+                                <input class="form-check-input" type="checkbox" id="dt_aritmia" value="Aritmia / Irreguler" onchange="toggleCheckValue('#ta_toraks', 'Aritmia / Irreguler', this.checked)">
+                                <label class="form-check-label small text-danger" for="dt_aritmia">Aritmia</label>
+                            </div>
+                            <div class="form-check form-check-inline mb-0">
+                                <input class="form-check-input" type="checkbox" id="dt_murmur" value="Murmur (+)" onchange="toggleCheckValue('#ta_toraks', 'Murmur (+)', this.checked)">
+                                <label class="form-check-label small text-danger" for="dt_murmur">Murmur (+)</label>
+                            </div>
+                            <div class="form-check form-check-inline mb-0">
+                                <input class="form-check-input" type="checkbox" id="dt_gallop" value="Gallop (+)" onchange="toggleCheckValue('#ta_toraks', 'Gallop (+)', this.checked)">
+                                <label class="form-check-label small text-danger" for="dt_gallop">Gallop (+)</label>
+                            </div>
+                        </div>
+                        <textarea name="fisik_toraks_dada" id="ta_toraks" rows="2" class="form-control form-control-sm bg-white mt-1" placeholder="Rangkuman paru &amp; jantung...">{{ k.fisik_head_to_toe.toraks_dada|default:k.fisik_breathing }}</textarea>
+                    </div>
+                </div>
+
+                <!-- 3. Abdomen (Perut) -->
+                <div class="col-12">
+                    <div class="p-2.5 border rounded bg-light">
+                        <div class="fw-bold text-success mb-1 small"><i class="bi bi-capsule me-1"></i>3. ABDOMEN (PERUT)</div>
+                        <div class="d-flex flex-wrap gap-2 mb-2 py-1">
+                            <span class="badge bg-secondary-subtle text-dark border me-1 align-self-center">Inspeksi/Auskultasi:</span>
+                            <div class="form-check form-check-inline mb-0">
+                                <input class="form-check-input" type="checkbox" id="ab_datar" value="Datar" onchange="toggleCheckValue('#ta_abdomen', 'Datar', this.checked)">
+                                <label class="form-check-label small" for="ab_datar">Datar</label>
+                            </div>
+                            <div class="form-check form-check-inline mb-0">
+                                <input class="form-check-input" type="checkbox" id="ab_distensi" value="Cembung / Distensi" onchange="toggleCheckValue('#ta_abdomen', 'Cembung / Distensi', this.checked)">
+                                <label class="form-check-label small text-danger" for="ab_distensi">Cembung / Distensi</label>
+                            </div>
+                            <div class="form-check form-check-inline mb-0">
+                                <input class="form-check-input" type="checkbox" id="ab_bu_norm" value="Bising Usus Normal (5-30 x/m)" onchange="toggleCheckValue('#ta_abdomen', 'Bising Usus Normal (5-30 x/m)', this.checked)">
+                                <label class="form-check-label small" for="ab_bu_norm">BU Normal (5-30 x/m)</label>
+                            </div>
+                        </div>
+                        <div class="d-flex flex-wrap gap-2 mb-2 py-1 border-top pt-1">
+                            <span class="badge bg-secondary-subtle text-dark border me-1 align-self-center">Palpasi / Nyeri Tekan:</span>
+                            <div class="form-check form-check-inline mb-0">
+                                <input class="form-check-input" type="checkbox" id="ab_supel" value="Supel (Lunak)" onchange="toggleCheckValue('#ta_abdomen', 'Supel (Lunak)', this.checked)">
+                                <label class="form-check-label small" for="ab_supel">Supel (Lunak)</label>
+                            </div>
+                            <div class="form-check form-check-inline mb-0">
+                                <input class="form-check-input" type="checkbox" id="ab_epigastrium" value="Nyeri Tekan Epigastrium" onchange="toggleCheckValue('#ta_abdomen', 'Nyeri Tekan Epigastrium', this.checked)">
+                                <label class="form-check-label small text-danger" for="ab_epigastrium">Nyeri Epigastrium</label>
+                            </div>
+                            <div class="form-check form-check-inline mb-0">
+                                <input class="form-check-input" type="checkbox" id="ab_rlq" value="Nyeri Tekan RLQ" onchange="toggleCheckValue('#ta_abdomen', 'Nyeri Tekan RLQ', this.checked)">
+                                <label class="form-check-label small text-danger" for="ab_rlq">Nyeri RLQ</label>
+                            </div>
+                            <div class="form-check form-check-inline mb-0">
+                                <input class="form-check-input" type="checkbox" id="ab_defans" value="Defans Muskular (Perut Papan)" onchange="toggleCheckValue('#ta_abdomen', 'Defans Muskular (Perut Papan)', this.checked)">
+                                <label class="form-check-label small text-danger" for="ab_defans">Defans Muskular</label>
+                            </div>
+                            <div class="form-check form-check-inline mb-0">
+                                <input class="form-check-input" type="checkbox" id="ab_hepato_min" value="Hepatomegali (-)" onchange="toggleCheckValue('#ta_abdomen', 'Hepatomegali (-)', this.checked)">
+                                <label class="form-check-label small" for="ab_hepato_min">Hepatomegali (-)</label>
+                            </div>
+                            <div class="form-check form-check-inline mb-0">
+                                <input class="form-check-input" type="checkbox" id="ab_timpani" value="Timpani (Normal)" onchange="toggleCheckValue('#ta_abdomen', 'Timpani (Normal)', this.checked)">
+                                <label class="form-check-label small" for="ab_timpani">Timpani</label>
+                            </div>
+                        </div>
+                        <textarea name="fisik_abdomen" id="ta_abdomen" rows="2" class="form-control form-control-sm bg-white mt-1" placeholder="Rangkuman pemeriksaan abdomen...">{{ k.fisik_head_to_toe.abdomen|default:k.fisik_circulation }}</textarea>
+                    </div>
+                </div>
+
+                <!-- 4. Ekstremitas -->
+                <div class="col-12">
+                    <div class="p-2.5 border rounded bg-light">
+                        <div class="fw-bold text-warning-emphasis mb-1 small"><i class="bi bi-hand-index me-1"></i>4. EKSTREMITAS (ANGGOTA GERAK &amp; PERFUSI)</div>
+                        <div class="d-flex flex-wrap gap-2 mb-1 py-1">
+                            <div class="form-check form-check-inline mb-0">
+                                <input class="form-check-input" type="checkbox" id="ek_hangat" value="Akral Hangat" onchange="toggleCheckValue('#ta_ekstremitas', 'Akral Hangat', this.checked)">
+                                <label class="form-check-label small" for="ek_hangat">Akral Hangat</label>
+                            </div>
+                            <div class="form-check form-check-inline mb-0">
+                                <input class="form-check-input" type="checkbox" id="ek_dingin" value="Akral Dingin / Pucat" onchange="toggleCheckValue('#ta_ekstremitas', 'Akral Dingin / Pucat', this.checked)">
+                                <label class="form-check-label small text-danger" for="ek_dingin">Akral Dingin</label>
+                            </div>
+                            <div class="form-check form-check-inline mb-0">
+                                <input class="form-check-input" type="checkbox" id="ek_crt" value="CRT < 2 detik" onchange="toggleCheckValue('#ta_ekstremitas', 'CRT < 2 detik', this.checked)">
+                                <label class="form-check-label small" for="ek_crt">CRT &lt; 2s</label>
+                            </div>
+                            <div class="form-check form-check-inline mb-0">
+                                <input class="form-check-input" type="checkbox" id="ek_edema_min" value="Edema Ekstremitas (-/-)" onchange="toggleCheckValue('#ta_ekstremitas', 'Edema Ekstremitas (-/-)', this.checked)">
+                                <label class="form-check-label small" for="ek_edema_min">Edema (-/-)</label>
+                            </div>
+                            <div class="form-check form-check-inline mb-0">
+                                <input class="form-check-input" type="checkbox" id="ek_fraktur_min" value="Deformitas / Fraktur (-)" onchange="toggleCheckValue('#ta_ekstremitas', 'Deformitas / Fraktur (-)', this.checked)">
+                                <label class="form-check-label small" for="ek_fraktur_min">Fraktur (-)</label>
+                            </div>
+                            <div class="form-check form-check-inline mb-0">
+                                <input class="form-check-input" type="checkbox" id="ek_otot" value="5/5/5/5 (Normal)" onchange="toggleCheckValue('#ta_ekstremitas', '5/5/5/5 (Normal)', this.checked)">
+                                <label class="form-check-label small" for="ek_otot">Kekuatan 5/5/5/5</label>
+                            </div>
+                            <div class="form-check form-check-inline mb-0">
+                                <input class="form-check-input" type="checkbox" id="ek_hemi" value="Hemiparesis" onchange="toggleCheckValue('#ta_ekstremitas', 'Hemiparesis', this.checked)">
+                                <label class="form-check-label small text-danger" for="ek_hemi">Hemiparesis</label>
+                            </div>
+                        </div>
+                        <textarea name="fisik_ekstremitas" id="ta_ekstremitas" rows="2" class="form-control form-control-sm bg-white mt-1" placeholder="Rangkuman ekstremitas...">{{ k.fisik_head_to_toe.ekstremitas|default:k.fisik_disability }}</textarea>
+                    </div>
+                </div>
+
+                <!-- 5. Genitalia & 6. Integumen -->
+                <div class="col-md-6">
+                    <div class="p-2.5 border rounded bg-light h-100">
+                        <div class="fw-bold text-secondary mb-1 small"><i class="bi bi-shield me-1"></i>5. GENITALIA &amp; ANUS</div>
+                        <div class="d-flex flex-wrap gap-2 mb-1 py-1">
+                            <div class="form-check form-check-inline mb-0">
+                                <input class="form-check-input" type="checkbox" id="ge_tdk" value="Tidak Diperiksa (Atas Indikasi)" onchange="toggleCheckValue('#ta_genitalia', 'Tidak Diperiksa (Atas Indikasi)', this.checked)">
+                                <label class="form-check-label small" for="ge_tdk">Tidak Diperiksa</label>
+                            </div>
+                            <div class="form-check form-check-inline mb-0">
+                                <input class="form-check-input" type="checkbox" id="ge_norm" value="Normal" onchange="toggleCheckValue('#ta_genitalia', 'Normal', this.checked)">
+                                <label class="form-check-label small" for="ge_norm">Normal</label>
+                            </div>
+                            <div class="form-check form-check-inline mb-0">
+                                <input class="form-check-input" type="checkbox" id="ge_foley" value="Terpasang Kateter Urin" onchange="toggleCheckValue('#ta_genitalia', 'Terpasang Kateter Urin', this.checked)">
+                                <label class="form-check-label small text-primary" for="ge_foley">Kateter Urin</label>
+                            </div>
+                        </div>
+                        <input type="text" name="fisik_genitalia_anus" id="ta_genitalia" class="form-control form-control-sm bg-white mt-1" value="{{ k.fisik_head_to_toe.genitalia_anus|default:'Tidak Diperiksa (Atas Indikasi)' }}">
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="p-2.5 border rounded bg-light h-100">
+                        <div class="fw-bold text-info-emphasis mb-1 small"><i class="bi bi-droplet-half me-1"></i>6. INTEGUMEN &amp; KULIT</div>
+                        <div class="d-flex flex-wrap gap-2 mb-1 py-1">
+                            <div class="form-check form-check-inline mb-0">
+                                <input class="form-check-input" type="checkbox" id="it_turgor" value="Turgor Cepat Kembali (Baik)" onchange="toggleCheckValue('#ta_integumen', 'Turgor Cepat Kembali (Baik)', this.checked)">
+                                <label class="form-check-label small" for="it_turgor">Turgor Baik</label>
+                            </div>
+                            <div class="form-check form-check-inline mb-0">
+                                <input class="form-check-input" type="checkbox" id="it_utuh" value="Integritas Utuh / Normal" onchange="toggleCheckValue('#ta_integumen', 'Integritas Utuh / Normal', this.checked)">
+                                <label class="form-check-label small" for="it_utuh">Utuh / Normal</label>
+                            </div>
+                            <div class="form-check form-check-inline mb-0">
+                                <input class="form-check-input" type="checkbox" id="it_dekub_min" value="Ulkus Dekubitus (-)" onchange="toggleCheckValue('#ta_integumen', 'Ulkus Dekubitus (-)', this.checked)">
+                                <label class="form-check-label small" for="it_dekub_min">Dekubitus (-)</label>
+                            </div>
+                        </div>
+                        <input type="text" name="fisik_integumen_kulit" id="ta_integumen" class="form-control form-control-sm bg-white mt-1" value="{{ k.fisik_head_to_toe.integumen_kulit|default:'Turgor Cepat Kembali (Baik), Integritas Utuh / Normal' }}">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="d-flex justify-content-between mt-3 pt-2 border-top">
+        <button type="button" class="btn btn-outline-secondary btn-sm px-3" onclick="goToAsesmenTab('#tab-nyeri-gizi-pane')">
+            <i class="bi bi-arrow-left me-1"></i> Kembali ke 2. Nyeri &amp; Gizi
+        </button>
+        <button type="button" class="btn btn-primary btn-sm px-3 fw-semibold" onclick="goToAsesmenTab('#tab-diagnosa-risiko-pane')">
+            Lanjut: 4. Diagnosis &amp; Risiko <i class="bi bi-arrow-right ms-1"></i>
+        </button>
+    </div>
+</div>
+
+<!-- TAB 4: DIAGNOSIS & RISIKO -->
+<div class="tab-pane fade" id="tab-diagnosa-risiko-pane" role="tabpanel" aria-labelledby="tab-diagnosa-risiko-btn">
+    <!-- E. Diagnosis Medis & Asuhan 3S -->
+    <div class="card border mb-3">
+        <div class="card-header bg-light py-2 fw-bold small text-dark d-flex justify-content-between align-items-center">
+            <span><i class="bi bi-clipboard2-pulse me-1 text-primary"></i> E. Diagnosis Medis &amp; Asuhan Keperawatan (3S)</span>
+        </div>
+        <div class="card-body p-3">
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label small fw-semibold">Diagnosis Medis Masuk (ICD-10):</label>
+                    <input type="text" name="diagnosa_masuk" list="globalIcd10List" class="form-control form-control-sm" value="{{ k.diagnosa_masuk }}" placeholder="Pilih atau cari kode / nama ICD-10...">
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label small fw-semibold">Diagnosis Keperawatan (SDKI):</label>
+                    <input type="text" name="diagnosa_keperawatan_sdki" list="globalSdkiList" class="form-control form-control-sm" value="{{ k.diagnosa_keperawatan_sdki }}" placeholder="Pilih atau cari kode / nama SDKI...">
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label small fw-semibold">Intervensi Keperawatan (SIKI):</label>
+                    <input type="text" name="intervensi_keperawatan_siki" class="form-control form-control-sm" value="{{ k.intervensi_keperawatan_siki }}" placeholder="cth: I.08238 - Manajemen Nyeri">
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label small fw-semibold">Luaran Keperawatan (SLKI):</label>
+                    <input type="text" name="luaran_keperawatan_slki" class="form-control form-control-sm" value="{{ k.luaran_keperawatan_slki }}" placeholder="cth: L.08066 - Tingkat Nyeri Menurun">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Skrining Risiko Jatuh -->
+    <div class="card border mb-3">
+        <div class="card-header bg-light py-2 fw-bold small text-dark d-flex justify-content-between align-items-center">
+            <span><i class="bi bi-shield-shaded me-1 text-warning"></i> Skrining Risiko Jatuh</span>
+        </div>
+        <div class="card-body p-3">
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label small fw-semibold">Tingkat Risiko Jatuh (Grade):</label>
+                    <select name="skrining_jatuh_grade" class="form-select form-select-sm">
+                        <option value="RENDAH" {% if k.skrining_jatuh_grade == 'RENDAH' or not k.skrining_jatuh_grade %}selected{% endif %}>Risiko Rendah</option>
+                        <option value="SEDANG" {% if k.skrining_jatuh_grade == 'SEDANG' %}selected{% endif %}>Risiko Sedang</option>
+                        <option value="TINGGI" {% if k.skrining_jatuh_grade == 'TINGGI' %}selected{% endif %}>Risiko Tinggi</option>
+                    </select>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label small fw-semibold">Skor Risiko Jatuh:</label>
+                    <input type="number" name="skrining_jatuh_skor" class="form-control form-control-sm" value="{{ k.skrining_jatuh_skor|default:0 }}" min="0" max="125">
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="d-flex justify-content-between mt-3 pt-2 border-top">
+        <button type="button" class="btn btn-outline-secondary btn-sm px-3" onclick="goToAsesmenTab('#tab-fungsional-fisik-pane')">
+            <i class="bi bi-arrow-left me-1"></i> Kembali ke 3. Fungsional &amp; Fisik
+        </button>
+        <button type="submit" name="action_mode" value="selesai" class="btn btn-primary btn-sm px-4 fw-semibold">
+            <i class="bi bi-check-circle-fill me-1"></i> Simpan &amp; Selesaikan Asesmen
+        </button>
+    </div>
+</div>
+</div>
+</div>

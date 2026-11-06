@@ -189,21 +189,18 @@ def unit_codes(unit):
 
     if unit is None:
         return set()
+    children = {}
+    for pk, parent_id, code in UnitKerja.objects.values_list('pk', 'parent_id', 'code'):
+        children.setdefault(parent_id, []).append((pk, code))
     codes = {unit.code}
-    frontier = {unit.pk}
+    frontier = [unit.pk]
     seen = {unit.pk}
     while frontier:
-        frontier = set(
-            UnitKerja.objects.filter(parent_id__in=frontier)
-            .values_list('pk', flat=True)
-        ) - seen
-        if not frontier:
-            break
-        seen |= frontier
-        codes |= set(
-            UnitKerja.objects.filter(pk__in=frontier)
-            .values_list('code', flat=True)
-        )
+        for pk, code in children.get(frontier.pop(), ()):
+            if pk not in seen:
+                seen.add(pk)
+                codes.add(code)
+                frontier.append(pk)
     return codes
 
 

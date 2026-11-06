@@ -66,7 +66,7 @@ class AdmissionDeskDashboardTest(TestCase):
             reverse('akreditasi:kontrol_layanan'),
             {'unit': self.unit.pk}).content.decode()
         sep_url = reverse('pasien:bpjs_buat_sep', args=[k.pk])
-        self.assertIn(f'action="{sep_url}"', body)
+        self.assertIn(f'action="{sep_url}?format=json"', body)
         self.assertIn('method="post"', body.lower())
         self.assertIn(reverse('pasien:kunjungan_detail', args=[k.pk]), body)
 

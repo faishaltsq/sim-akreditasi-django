@@ -178,6 +178,15 @@ class Ruangan(models.Model):
     def __str__(self):
         return f'[{self.kode}] {self.nama} ({self.get_kelas_display()})'
 
+    @property
+    def label(self):
+        """Nama ruangan + kelas, tanpa mengulang kelas yang sudah tertulis di nama."""
+        nama = (self.nama or '').strip()
+        kelas = self.get_kelas_display()
+        if kelas and kelas.lower() not in nama.lower():
+            return f'{nama} ({kelas})'
+        return nama
+
 
 class Bed(models.Model):
     STATUS = [
@@ -511,6 +520,21 @@ class KunjunganPasien(models.Model):
     @property
     def is_aktif(self):
         return self.status not in ('PULANG', 'RUJUK', 'MENINGGAL')
+
+    @property
+    def bed_aktif(self):
+        """Bed yang benar-benar ditempati pasien sekarang, atau ``None``.
+
+        Hanya kunjungan rawat inap yang punya lokasi bed: ``bed_id`` saja tidak
+        cukup, karena penempatan yang belum selesai (atau data lama) bisa
+        meninggalkan bed terpasang pada kunjungan IGD/rajal yang belum — atau
+        tidak pernah — diadmisikan. Setiap jalur yang mengadmisikan ke bangsal
+        menandai kunjungannya ``RANAP`` (``BookingKamar.checkin``,
+        ``admit_to_ranap``), jadi kedua penanda ini adalah invariannya.
+        """
+        if self.bed_id and (self.jenis_kunjungan == 'RANAP' or self.status == 'RANAP'):
+            return self.bed
+        return None
 
     @property
     def is_asesmen_awal_lengkap(self):

@@ -1,0 +1,239 @@
+{% extends "base.html" %}
+
+{% block title %}Asesmen Awal {{ k.no_kunjungan }} — ARIMA{% endblock %}
+{% block page_title %}Asesmen Awal Pasien (Standar 3.09){% endblock %}
+{% block page_subtitle %}{{ k.pasien.nama_lengkap }} — No. Kunjungan {{ k.no_kunjungan }}{% endblock %}
+
+{% block content %}
+<form method="post" id="asesmenAwalForm" action="{% url 'pasien:igd_asesmen_awal_save' k.pk %}">
+    {% csrf_token %}
+    <input type="hidden" name="next_url" value="{{ next_url }}">
+    <div class="container-fluid p-0" style="padding-bottom:5.5rem;">
+
+        <!-- BREADCRUMB -->
+        <nav aria-label="breadcrumb" class="mb-3">
+            <ol class="breadcrumb mb-0" style="font-size:.8rem;">
+                <li class="breadcrumb-item"><a href="{% url 'pasien:dashboard' %}" class="text-decoration-none" style="color:var(--primary);">Dashboard</a></li>
+                <li class="breadcrumb-item"><a href="{% url 'pasien:kunjungan_daftar' %}" class="text-decoration-none" style="color:var(--primary);">Kunjungan unit saya</a></li>
+                <li class="breadcrumb-item"><a href="{% url 'pasien:kunjungan_detail' k.pk %}" class="text-decoration-none" style="color:var(--primary);">{{ k.no_kunjungan }}</a></li>
+                <li class="breadcrumb-item active">Asesmen Awal</li>
+            </ol>
+        </nav>
+
+        <!-- IDENTITAS PASIEN & KUNJUNGAN -->
+        <div class="card border-0 shadow-sm mb-3">
+            <div class="card-body p-3 p-md-4">
+                <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3">
+                    <div>
+                        <div class="d-flex align-items-center gap-2 mb-2 flex-wrap">
+                            <span class="badge font-monospace px-2.5 py-1" style="background:var(--primary-light); color:var(--primary-deep); font-size:.8rem;">{{ k.no_kunjungan }}</span>
+                            {% if k.status == 'DAFTAR' %}<span class="badge bg-secondary">Terdaftar</span>
+                            {% elif k.status == 'TRIAGE' %}<span class="badge bg-warning text-dark">Triage</span>
+                            {% elif k.status == 'ASESMEN' %}<span class="badge bg-info">Asesmen PPA</span>
+                            {% elif k.status == 'RANAP' %}<span class="badge bg-primary">Rawat Inap</span>
+                            {% else %}<span class="badge bg-dark">{{ k.get_status_display }}</span>{% endif %}
+                            {% if k.triage %}<span class="badge bg-danger-subtle text-danger border border-danger">Triage {{ k.get_triage_display }}</span>{% endif %}
+                            {% if k.is_asesmen_awal_lengkap %}<span class="badge bg-success-subtle text-success border border-success">Asesmen lengkap</span>{% endif %}
+                        </div>
+                        <h5 class="fw-bold mb-1">{{ k.pasien.nama_lengkap }} <small class="text-muted fs-6 font-monospace">({{ k.pasien.no_rm }})</small></h5>
+                        <div class="text-muted d-flex flex-wrap gap-3" style="font-size:.82rem;">
+                            <span><i class="bi bi-person me-1"></i>{{ k.pasien.get_jenis_kelamin_display }}, {{ k.pasien.umur }} th</span>
+                            <span><i class="bi bi-person-badge me-1"></i>DPJP: <strong>{{ k.dpjp|default:"Belum ditentukan" }}</strong></span>
+                            {% if k.poliklinik %}<span><i class="bi bi-door-open me-1"></i>Poli/Unit: {{ k.poliklinik }}</span>{% endif %}
+                            <span><i class="bi bi-clock-history me-1"></i>Masuk: {{ k.tanggal_masuk|date:"d/m/Y H:i" }}</span>
+                            {% if k.bed_aktif %}<span><i class="bi bi-hospital me-1"></i>Ruangan: <strong>{{ k.bed_aktif.ruangan.label }}</strong> &bull; Bed: <strong>{{ k.bed_aktif.kode_bed }}</strong></span>{% endif %}
+                        </div>
+                        {% if k.pasien.has_alergi %}
+                        <div class="mt-2">
+                            <span class="badge bg-danger-subtle text-danger border border-danger px-2.5 py-1" style="font-size:.75rem;">
+                                <i class="bi bi-exclamation-triangle-fill me-1"></i>Alergi: {{ k.pasien.alergi_obat|default:k.pasien.alergi_lain }}
+                            </span>
+                        </div>
+                        {% endif %}
+                    </div>
+                    <div class="d-flex flex-wrap gap-2">
+                        <a href="{% url 'pasien:kunjungan_detail' k.pk %}" class="btn btn-sm btn-outline-secondary">
+                            <i class="bi bi-arrow-left me-1"></i>Kembali ke Detail
+                        </a>
+                        <a href="{% url 'pasien:igd_asesmen_copy_prev' k.pk %}?next={{ next_url|urlencode }}" class="btn btn-sm btn-outline-dark">
+                            <i class="bi bi-clipboard-check me-1"></i>Salin dari Asesmen Sebelumnya
+                        </a>
+                        <a href="{% url 'pasien:cetak_resume_igd' k.pk %}" target="_blank" class="btn btn-sm btn-outline-dark">
+                            <i class="bi bi-printer me-1"></i>Cetak Asesmen / Resume
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white py-3 border-bottom">
+                <span class="fw-bold text-dark" style="font-size:.88rem;">
+                    <i class="bi bi-clipboard2-pulse me-1" style="color:var(--primary);"></i>
+                    Formulir Asesmen Awal Medis &amp; Keperawatan (Standar Akreditasi 3.09)
+                </span>
+                <div class="small text-muted">Evaluasi holistik: Keadaan Umum, Nyeri, MST Gizi, Fungsional ADL, Head-To-Toe, &amp; Skrining Risiko</div>
+            </div>
+            <div class="card-body p-3 p-md-4 bg-light-subtle">
+                {% include 'pasien/_asesmen_awal_wizard.html' %}
+            </div>
+        </div>
+    </div>
+
+    <!-- STICKY ACTION BAR -->
+    <div class="asesmen-action-bar d-flex justify-content-between align-items-center gap-2 flex-wrap">
+        <a href="{% url 'pasien:kunjungan_detail' k.pk %}" class="btn btn-sm btn-outline-secondary">
+            <i class="bi bi-x-lg me-1"></i>Batal
+        </a>
+        <div class="d-flex gap-2">
+            <button type="submit" name="action_mode" value="draft" class="btn btn-sm btn-outline-secondary">
+                <i class="bi bi-save me-1"></i>Simpan Draft
+            </button>
+            <button type="submit" name="action_mode" value="selesai" class="btn btn-sm btn-primary fw-semibold">
+                <i class="bi bi-check-circle-fill me-1"></i>Simpan &amp; Selesaikan Asesmen
+            </button>
+        </div>
+    </div>
+</form>
+
+<!-- GLOBAL DATALISTS FOR ICD-10 & SDKI QUICK SEARCH -->
+<datalist id="globalIcd10List">
+    {% for kode, nama in icd10_codes %}
+    <option value="{{ kode }} - {{ nama }}">{{ kode }} - {{ nama }}</option>
+    {% endfor %}
+</datalist>
+<datalist id="globalSdkiList">
+    {% for kode, nama in sdki_codes %}
+    <option value="{{ kode }} - {{ nama }}">{{ kode }} - {{ nama }}</option>
+    {% endfor %}
+</datalist>
+
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.asesmen-action-bar {
+    position: sticky;
+    bottom: 0;
+    z-index: 1030;
+    background: #fff;
+    border-top: 1px solid var(--border, #dee2e6);
+    padding: .65rem 1rem;
+    box-shadow: 0 -4px 12px rgba(15, 23, 42, .06);
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function() {
+    // ── Wizard navigation between tabs ──
+    function goToAsesmenTab(targetSelector) {
+        var btn = document.querySelector('#pillsAsesmenDetailTab button[data-bs-target="' + targetSelector + '"]');
+        if (!btn) return;
+        var tab = bootstrap.Tab.getOrCreateInstance(btn);
+        tab.show();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        btn.focus({ preventScroll: true });
+    }
+    window.goToAsesmenTab = goToAsesmenTab;
+
+    // Explicit click binding so tab switching works across all browsers.
+    document.querySelectorAll('#pillsAsesmenDetailTab button').forEach(function(btn) {
+        btn.addEventListener('click', function(e) {
+            e.preventDefault();
+            bootstrap.Tab.getOrCreateInstance(this).show();
+        });
+    });
+
+    // ── Smart default & Slider Nyeri live handler ──
+    function updateSkorNyeriDetail(val) {
+        var badge = document.getElementById('skorNyeriBadgeDetail');
+        if (!badge) return;
+        var cls = 'bg-success', ket = 'Tidak ada nyeri';
+        val = parseInt(val) || 0;
+        if (val >= 7) { cls = 'bg-danger'; ket = 'Nyeri berat'; }
+        else if (val >= 4) { cls = 'bg-warning text-dark'; ket = 'Nyeri sedang'; }
+        else if (val >= 1) { cls = 'bg-warning-subtle text-dark border'; ket = 'Nyeri ringan'; }
+        badge.className = 'badge ' + cls;
+        badge.innerText = val + ' — ' + ket;
+    }
+    window.updateSkorNyeriDetail = updateSkorNyeriDetail;
+    updateSkorNyeriDetail(document.getElementById('skorNyeriDetail')?.value || 0);
+
+    // ── MST auto-calc live updater ──
+    var q1 = document.getElementById('mstQ1Detail');
+    var q2 = document.getElementById('mstQ2Detail');
+    var out = document.getElementById('mstResultDetail');
+    if (q1 && q2 && out) {
+        function hitungMstDetail() {
+            var total = (parseInt(q1.value) || 0) + (parseInt(q2.value) || 0);
+            out.className = 'alert py-1 px-2 mb-0 small ' + (total >= 2 ? 'alert-danger' : 'alert-success');
+            out.innerHTML = 'Total Skor MST: <strong>' + total + '</strong> — ' +
+                (total >= 2 ? '<span class="text-danger fw-bold">Risiko Malnutrisi Tinggi — Konsul Ahli Gizi</span>'
+                            : '<span class="text-success">Risiko Malnutrisi Rendah</span>');
+        }
+        q1.addEventListener('change', hitungMstDetail);
+        q2.addEventListener('change', hitungMstDetail);
+        hitungMstDetail();
+    }
+
+    function setNormalDetail() {
+        var checkRadio = function(id) {
+            var el = document.getElementById(id);
+            if (el) el.checked = true;
+        };
+        var setVal = function(id, val) {
+            var el = document.getElementById(id);
+            if (el) el.value = val;
+        };
+
+        // 1. KU & TTV
+        checkRadio('kuBaik');
+        setVal('kesadaranDetail', 'Compos Mentis');
+        setVal('ttvSistoleDetail', '120');
+        setVal('ttvDiastoleDetail', '80');
+        setVal('ttvNadiDetail', '80');
+        setVal('ttvRrDetail', '18');
+        setVal('ttvSuhuDetail', '36.5');
+        setVal('ttvSpo2Detail', '98');
+        setVal('ttvGcsDetail', 'E4V5M6 (15)');
+        var anamnesis = document.getElementById('anamnesisRpsDetail');
+        if (anamnesis && !anamnesis.value.trim()) {
+            anamnesis.value = 'Pasien datang untuk evaluasi / kontrol kondisi klinis. Keluhan akut disangkal.';
+        }
+
+        // 2. Nyeri & MST
+        setVal('skorNyeriDetail', 0);
+        updateSkorNyeriDetail(0);
+        setVal('nyeriKarakteristikDetail', 'Tidak Nyeri');
+        setVal('mstQ1Detail', '0');
+        setVal('mstQ2Detail', '0');
+        var mq1 = document.getElementById('mstQ1Detail');
+        if (mq1) mq1.dispatchEvent(new Event('change'));
+
+        // 3. Fungsional & Fisik Head-to-Toe
+        var selFungsional = document.querySelector('select[name="fungsional_adl"]');
+        if (selFungsional) selFungsional.value = 'Mandiri';
+        var selPsiko = document.querySelector('select[name="status_psikososial"]');
+        if (selPsiko) selPsiko.value = 'Tenang / Kooperatif';
+        var selSpiritual = document.querySelector('select[name="status_spiritual"]');
+        if (selSpiritual) selSpiritual.value = 'Baik / Tenang';
+
+        setVal('ta_kepala', 'Normosefali, Konjungtiva Ananemis, Sklera Anikterik, Pembesaran KGB (-)');
+        setVal('ta_toraks', 'Simetris bilateral, Vesikuler (+/+), Ronkhi (-/-), Wheezing (-/-), Bunyi Jantung I/II Murni Reguler');
+        setVal('ta_abdomen', 'Supel, Datar, Bising Usus (+) Normal, Nyeri Tekan (-), Hepatosplenomegali (-)');
+        setVal('ta_ekstremitas', 'Akral Hangat, Kering, Merah, CRT < 2 detik, Edema (-/-), Gerak Bebas');
+        setVal('ta_genitalia', 'Dalam batas normal / Tidak ada kelainan');
+        setVal('ta_integumen', 'Turgor Cepat Kembali (Baik), Integritas Utuh / Normal');
+
+        // 4. Skrining Risiko Jatuh
+        var selJatuh = document.querySelector('select[name="skrining_jatuh_grade"]');
+        if (selJatuh) selJatuh.value = 'RENDAH';
+        var skorJatuh = document.querySelector('input[name="skrining_jatuh_skor"]');
+        if (skorJatuh) skorJatuh.value = '0';
+    }
+    window.setNormalDetail = setNormalDetail;
+})();
+</script>
+{% endblock %}

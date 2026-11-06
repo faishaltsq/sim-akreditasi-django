@@ -61,7 +61,11 @@ class AsesmenAwalDetailTestCase(TestCase):
         self.assertContains(res, 'DADA &amp; TORAKS')
         self.assertContains(res, 'ABDOMEN')
         self.assertContains(res, 'EKSTREMITAS')
-        # Check that interactive checkboxes exist (tinggal mencentang)
+
+    def test_full_page_asesmen_renders_interactive_checkboxes(self):
+        """Checkbox interaktif (tinggal mencentang) hanya ada di halaman penuh asesmen awal."""
+        res = self.client.get(reverse('pasien:kunjungan_asesmen_awal', kwargs={'pk': self.kunjungan.pk}))
+        self.assertEqual(res.status_code, 200)
         self.assertContains(res, 'kd_normo')
         self.assertContains(res, 'dt_simetris')
         self.assertContains(res, 'ab_datar')

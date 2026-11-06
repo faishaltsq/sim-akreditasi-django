@@ -1252,17 +1252,16 @@
                         </div>
 
                         <!-- MODAL ASESMEN AWAL KLINIS & 3S KEPERAWATAN (Revisi 02) -->
-                        <div class="modal fade" id="modalAsesmenAwal{{ k.pk }}" tabindex="-1">
-                            <div class="modal-dialog modal-xl modal-dialog-scrollable">
-                                <div class="modal-content">
+                        <div class="modal fade" id="modalAsesmenAwal{{ k.pk }}" tabindex="-1" aria-labelledby="asesmenTitle{{ k.pk }}">
+                                                    <div class="modal-dialog modal-xl modal-dialog-scrollable">
+                                                        <form class="modal-content" method="post" action="{% url 'pasien:igd_asesmen_medis_save' k.pk %}">
+                                                            {% csrf_token %}
                                     <div class="modal-header bg-primary text-white">
-                                        <h5 class="modal-title fw-bold">
-                                            <i class="bi bi-clipboard-pulse me-2"></i>Asesmen Awal Medis & Keperawatan IGD
-                                        </h5>
-                                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-                                    </div>
-                                    <form method="post" action="{% url 'pasien:igd_asesmen_medis_save' k.pk %}">
-                                        {% csrf_token %}
+                                        <h5 class="modal-title fw-bold" id="asesmenTitle{{ k.pk }}">
+                                                                                    <i class="bi bi-clipboard-pulse me-2"></i>Asesmen Awal Medis & Keperawatan IGD
+                                                                                </h5>
+                                                                                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Tutup"></button>
+                                                                            </div>
                                         <div class="modal-body p-3">
                                             <!-- Patient Summary Banner -->
                                             <div class="p-2 mb-3 bg-light border rounded d-flex justify-content-between align-items-center">
@@ -2282,7 +2281,6 @@
                                             <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-save me-1"></i>Simpan Asesmen Awal</button>
                                         </div>
                                     </form>
-                                </div>
                             </div>
                         </div>
 

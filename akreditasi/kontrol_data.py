@@ -36,7 +36,7 @@ ACTIVE_IGD_STATUSES = ('DAFTAR', 'TRIAGE', 'ASESMEN', 'PENUNJANG', 'TINDAKAN', '
 OPEN_INCIDENT_STATUSES = ('DILAPORKAN', 'VERIFIKASI', 'INVESTIGASI')
 
 SNAPSHOT_CACHE_SECONDS = 60
-SNAPSHOT_CACHE_VERSION = 'v3'
+SNAPSHOT_CACHE_VERSION = 'v4'
 
 
 def risk_level_for(score, cfg):
@@ -321,8 +321,8 @@ def _layanan_block(unit, on_date=None):
     from django.utils import timezone
     from pasien.models import KunjunganPasien
     from .layanan_unit import (
-        alias_index, is_admission_desk, resolve_code, service_codes, unit_codes,
-        unit_owns_beds,
+        alias_index, is_admission_desk, service_codes, unit_codes,
+        unit_owns_beds, visit_unit_code,
     )
 
     on_date = on_date or timezone.localdate()
@@ -344,26 +344,15 @@ def _layanan_block(unit, on_date=None):
     rows = list(
         KunjunganPasien.objects
         .filter(visit_filter)
-        .select_related('pasien', 'bed__ruangan')
+        .select_related('pasien', 'bed__ruangan', 'unit_kerja')
         .order_by('tanggal_masuk')
         .distinct()[:LAYANAN_LIMIT]
     )
 
     items, by_status = [], {}
     for k in rows:
-        if hospital_wide:
-            pass  # loket pendaftaran: seluruh kunjungan RS pada tanggal itu
-        elif k.jenis_kunjungan == 'IGD':
-            if 'IGD' not in codes:
-                continue
-            code = 'IGD'
-        else:
-            ruangan_nama = k.bed.ruangan.nama if k.bed else None
-            code = resolve_code(k.poliklinik, ruangan_nama, index)
-            if not code and k.unit_kerja:
-                code = k.unit_kerja.code
-            if code not in codes:
-                continue
+        if not hospital_wide and visit_unit_code(k, index) not in codes:
+            continue
 
         k_local = timezone.localtime(k.tanggal_masuk)
         jam_str = k_local.strftime('%d/%m %H:%M') if k_local.date() < on_date else k_local.strftime('%H:%M')

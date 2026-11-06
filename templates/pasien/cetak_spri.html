@@ -54,7 +54,7 @@
         <tr><td class="label">DPJP Penanggung Jawab</td><td class="sep">:</td><td>{{ k.dpjp|default:"-" }}</td></tr>
         <tr><td class="label">Diagnosa Masuk</td><td class="sep">:</td><td>{{ k.diagnosa_masuk|default:k.catatan_admisi|default:"-" }}</td></tr>
         <tr><td class="label">Ruangan / Bed</td><td class="sep">:</td><td>
-            {% if k.bed %}{{ k.bed.ruangan.kode }} — {{ k.bed.kode_bed }} (Kelas {{ k.bed.ruangan.get_kelas_display }}){% else %}-{% endif %}
+            {% if k.bed %}{{ k.bed.ruangan.label }} — {{ k.bed.kode_bed }}{% else %}-{% endif %}
         </td></tr>
         <tr><td class="label">Penjamin</td><td class="sep">:</td><td>{{ k.get_penjamin_display }}</td></tr>
     </table>

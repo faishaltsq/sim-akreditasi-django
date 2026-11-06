@@ -109,8 +109,8 @@
                             <td class="font-monospace text-muted" style="font-size:.75rem;">{{ k.tanggal_keluar|date:"d/m/Y H:i"|default:"-" }}</td>
                             <td>{{ k.dpjp|default:"-" }}</td>
                             <td>
-                                {% if k.bed %}
-                                <span class="badge bg-light text-dark border">{{ k.bed.ruangan.nama }} ({{ k.bed.kode_bed }})</span>
+                                {% if k.bed_aktif %}
+                                <span class="badge bg-light text-dark border">{{ k.bed_aktif.ruangan.label }} ({{ k.bed_aktif.kode_bed }})</span>
                                 {% else %}
                                 <span class="text-muted">-</span>
                                 {% endif %}

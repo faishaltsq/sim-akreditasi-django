@@ -130,8 +130,7 @@ class Command(BaseCommand):
             b2.status = 'TERISI'
             b2.save()
 
-        # Pasien 3: IGD Aktif
-        b3 = avail_beds.pop(0) if avail_beds else None
+        # Pasien 3: IGD Aktif (belum diadmisikan — IGD tidak punya bed bangsal)
         k3, _ = KunjunganPasien.objects.get_or_create(
             no_kunjungan='REG-2026-0003',
             defaults={
@@ -140,7 +139,6 @@ class Command(BaseCommand):
                 'tanggal_masuk': now - timedelta(hours=4),
                 'dpjp': 'dr. Maya Sp.EM',
                 'poliklinik': 'IGD',
-                'bed': b3,
                 'penjamin': 'UMUM',
                 'diagnosa_masuk': 'Sindrom Koroner Akut — UAP (I20.0)',
                 'triage': 'MERAH',
@@ -149,9 +147,6 @@ class Command(BaseCommand):
                 'catatan_admisi': 'Nyeri dada menjalar ke lengan kiri, skala nyeri 8. EKG sedang evaluasi.',
             }
         )
-        if b3:
-            b3.status = 'TERISI'
-            b3.save()
 
         # Pasien 4: Rajal Poliklinik
         k4, _ = KunjunganPasien.objects.get_or_create(

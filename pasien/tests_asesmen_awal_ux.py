@@ -139,8 +139,19 @@ class KunjunganDetailAsesmenUxTest(TestCase):
             pasien=self.pasien, jenis_kunjungan='IGD', no_kunjungan='IGD-DET-001',
             tanggal_masuk=timezone.now())
 
-    def test_modal_renders_4_step_tabs_and_ttv_fields(self):
+    def test_detail_page_links_to_full_page_assessment(self):
+        """Kontrak baru: detail halaman TIDAK lagi merender modal asesmen;
+        tombolnya menjadi tautan ke halaman penuh yang memuat wizard."""
         res = self.client.get(reverse('pasien:kunjungan_detail', args=[self.k.pk]))
+        self.assertEqual(res.status_code, 200)
+        html = res.content.decode('utf-8')
+        # Modal dihapus; tombol menjadi tautan ke halaman asesmen penuh.
+        self.assertNotIn('id="modalEditAsesmenAwal"', html)
+        self.assertIn(reverse('pasien:kunjungan_asesmen_awal', args=[self.k.pk]), html)
+        self.assertNotIn('pillsAsesmenDetailTab', html)
+
+    def test_full_page_renders_4_step_tabs_and_ttv_fields(self):
+        res = self.client.get(reverse('pasien:kunjungan_asesmen_awal', args=[self.k.pk]))
         self.assertEqual(res.status_code, 200)
         content = res.content.decode()
         # 4-step wizard tabs
@@ -157,13 +168,24 @@ class KunjunganDetailAsesmenUxTest(TestCase):
         self.assertIn('name="ttv_suhu"', content)
         self.assertIn('name="ttv_spo2"', content)
         self.assertIn('name="ttv_gcs"', content)
-        # Smart default & buttons
+        # Smart default & buttons — action bar + form
         self.assertIn('setNormalDetail', content)
+        self.assertIn('id="asesmenAwalForm"', content)
         self.assertIn('Simpan Draft', content)
         self.assertIn('Simpan &amp; Selesaikan Asesmen', content)
+        self.assertIn('globalIcd10List', content)
+        self.assertIn('globalSdkiList', content)
+
+    def test_copy_returns_to_full_page(self):
+        target = reverse('pasien:kunjungan_asesmen_awal', args=[self.k.pk])
+        response = self.client.get(
+            reverse('pasien:igd_asesmen_copy_prev', args=[self.k.pk]), {'next': target})
+        self.assertRedirects(response, target)
 
     def test_post_save_asesmen_draft_updates_ttv_and_redirects(self):
+        target = reverse('pasien:kunjungan_asesmen_awal', args=[self.k.pk])
         payload = {
+            'next_url': target,
             'action_mode': 'draft',
             'ttv_sistole': '130',
             'ttv_diastole': '85',
@@ -181,7 +203,7 @@ class KunjunganDetailAsesmenUxTest(TestCase):
             payload,
             follow=True,
         )
-        self.assertEqual(res.status_code, 200)
+        self.assertRedirects(res, target)
         self.k.refresh_from_db()
         self.assertEqual(self.k.ttv_sistole, 130)
         self.assertEqual(self.k.ttv_diastole, 85)
@@ -245,17 +267,14 @@ class KunjunganDetailAsesmenUxTest(TestCase):
         self.assertEqual(self.k.ttv_suhu, 36.5)
 
     def test_modal_placement_and_wizard_navigation(self):
-        res = self.client.get(reverse('pasien:kunjungan_detail', args=[self.k.pk]))
+        res = self.client.get(reverse('pasien:kunjungan_asesmen_awal', args=[self.k.pk]))
         self.assertEqual(res.status_code, 200)
         html = res.content.decode('utf-8')
-        
-        # Verify modal exists outside kunjunganAccordion
-        acc_idx = html.find('id="kunjunganAccordion"')
-        modal_idx = html.find('id="modalEditAsesmenAwal"')
-        self.assertNotEqual(acc_idx, -1)
-        self.assertNotEqual(modal_idx, -1)
-        
-        # Verify wizard buttons and tab controls
+
+        # Halaman penuh: wizard ada di dalam form, bukan di dalam modal.
+        self.assertIn('id="asesmenAwalForm"', html)
+        self.assertNotIn('id="modalEditAsesmenAwal"', html)
+        # Wizard buttons and tab controls
         self.assertIn('goToAsesmenTab', html)
         self.assertIn('data-bs-toggle="tab"', html)
         self.assertIn('id="globalIcd10List"', html)

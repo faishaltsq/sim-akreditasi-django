@@ -93,9 +93,13 @@
                     <td><span class="layanan-badge layanan-badge-{{ i.status|lower }}">{{ i.status_label }}</span></td>
                     <td>{{ i.penjamin }}</td>
                     <td class="text-nowrap">
+                        {% if i.jenis == 'IGD' %}
+                        <a class="kontrol-ghost" href="{% url 'pasien:igd_dashboard' %}" title="Pasien IGD dikelola di dasbor IGD">Detail</a>
+                        {% else %}
                         <a class="kontrol-ghost" href="{% url 'pasien:kunjungan_detail' i.pk %}">Detail</a>
+                        {% endif %}
                         {% if i.penjamin_code == 'BPJS' or i.penjamin == 'BPJS Kesehatan' %}
-                        <form method="post" action="{% url 'pasien:bpjs_buat_sep' i.pk %}" class="d-inline">
+                        <form method="post" action="{% url 'pasien:bpjs_buat_sep' i.pk %}?format=json" class="d-inline layanan-sep-form">
                             {% csrf_token %}
                             <button type="submit" class="kontrol-ghost">SEP</button>
                         </form>
@@ -114,4 +118,36 @@
     {% endif %}
 </section>
 {% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.querySelectorAll('.layanan-sep-form').forEach(function(form) {
+    var feedback = document.createElement('span');
+    feedback.className = 'd-block small';
+    feedback.setAttribute('role', 'status');
+    form.after(feedback);
+    form.addEventListener('submit', async function(event) {
+        event.preventDefault();
+        var button = form.querySelector('button');
+        button.disabled = true;
+        feedback.textContent = 'Memproses SEP…';
+        try {
+            var response = await fetch(form.action, {
+                method: 'POST', credentials: 'same-origin', body: new FormData(form),
+                headers: {'X-Requested-With': 'XMLHttpRequest'}
+            });
+            if (!response.ok) throw new Error('SEP request failed');
+            var result = await response.json();
+            feedback.textContent = result.message || 'Respons SEP tidak memuat pesan.';
+            feedback.className = 'd-block small ' + (result.success ? 'text-success' : 'text-danger');
+        } catch (error) {
+            feedback.textContent = 'SEP belum dapat dikonfirmasi. Periksa status sebelum mencoba lagi.';
+            feedback.className = 'd-block small text-danger';
+        } finally {
+            button.disabled = false;
+        }
+    });
+});
+</script>
 {% endblock %}

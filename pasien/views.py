@@ -320,6 +320,23 @@ def kunjungan_detail(request, pk):
 
 
 @login_required
+@require_patient_module('riwayat')
+def kunjungan_asesmen_awal(request, pk):
+    """Halaman penuh form Asesmen Awal (Standar 3.09) untuk satu kunjungan."""
+    k = get_object_or_404(
+        KunjunganPasien.objects.select_related('pasien', 'bed__ruangan'), pk=pk)
+    profile = getattr(request.user, 'profile', None)
+    if not can_read_kunjungan(k, profile):
+        raise PermissionDenied("Anda tidak memiliki akses ke kunjungan unit lain.")
+    return render(request, 'pasien/asesmen_awal_form.html', {
+        'k': k,
+        'icd10_codes': ICD10_CODES,
+        'sdki_codes': SDKI_CODES,
+        'next_url': reverse('pasien:kunjungan_asesmen_awal', args=[k.pk]),
+    })
+
+
+@login_required
 @require_patient_module('pendaftaran')
 def kunjungan_baru(request):
     if request.method == 'POST':
@@ -1953,6 +1970,8 @@ def cetak_tracer(request, pk):
 def igd_asesmen_awal_save(request, pk):
     """Save comprehensive initial clinical assessment (Biopsikososiospiritual, Physical, 3S, Standar 3.09)."""
     k = get_object_or_404(KunjunganPasien, pk=pk)
+    if not can_read_kunjungan(k, getattr(request.user, 'profile', None)):
+        raise PermissionDenied("Anda tidak memiliki akses ke kunjungan unit lain.")
     if request.method == 'POST':
         # Keadaan Umum & Kesadaran (Standar 3.09)
         if request.POST.get('keadaan_umum'):
@@ -2097,6 +2116,8 @@ COPY_PREV_FIELDS = [
 def igd_asesmen_copy_prev(request, pk):
     """Salin field asesmen non-klinis dari kunjungan terakhir pasien yang sama."""
     k = get_object_or_404(KunjunganPasien, pk=pk)
+    if not can_read_kunjungan(k, getattr(request.user, 'profile', None)):
+        raise PermissionDenied("Anda tidak memiliki akses ke kunjungan unit lain.")
     target_url = request.GET.get('next') or reverse('pasien:igd_dashboard')
     prev = (KunjunganPasien.objects
             .filter(pasien=k.pasien, tanggal_masuk__lt=k.tanggal_masuk)

@@ -99,7 +99,7 @@
                             <td style="font-size:.8rem;">{{ k.dpjp|default:"-" }}</td>
                             <td><span class="badge bg-light text-dark border" style="font-size:.7rem;">{{ k.get_penjamin_display }}</span></td>
                             <td style="font-size:.78rem;">
-                                {% if k.bed %}{{ k.bed.ruangan.nama }} / {{ k.bed.kode_bed }}{% else %}-{% endif %}
+                                {% if k.bed_aktif %}{{ k.bed_aktif.ruangan.label }} / {{ k.bed_aktif.kode_bed }}{% else %}-{% endif %}
                             </td>
                         </tr>
                         {% empty %}
