@@ -59,17 +59,159 @@
     <!-- CRITICAL VALUE ALERT BANNER -->
     <div class="alert border-0 shadow-sm mb-4 d-flex align-items-start gap-3" style="background:#fee2e2; border-radius:.75rem; border-left:5px solid #dc2626 !important;" role="alert">
         <i class="bi bi-exclamation-octagon-fill text-danger fs-4 mt-1 flex-shrink-0"></i>
-        <div>
-            <div class="fw-bold text-danger mb-1" style="font-size:.95rem;">⚠️ CRITICAL VALUE ALERT — Nilai Lab Kritis Terdeteksi di Poli</div>
-            {% for o in critical_orders %}
-            <div class="small mb-1">
-                <strong>{{ o.kunjungan.pasien.nama_lengkap }}</strong> (RM: {{ o.kunjungan.pasien.no_rm }}) &mdash;
-                <span class="badge bg-danger">{{ o.nama_pemeriksaan }}</span>
-                {% if o.critical_value_catatan %}<span class="text-danger fw-semibold">: {{ o.critical_value_catatan }}</span>{% endif %}
+        <div class="w-100">
+            <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
+                <div class="fw-bold text-danger d-flex align-items-center gap-2" style="font-size:.95rem;">
+                    <span>⚠️ CRITICAL VALUE ALERT — Nilai Lab Kritis Terdeteksi di Poli</span>
+                </div>
+                <span class="badge bg-danger rounded-pill px-2 py-1">{{ critical_orders|length }} Kasus Kritis</span>
             </div>
-            {% endfor %}
+            <div class="d-flex flex-column gap-2">
+                {% for o in critical_orders %}
+                <div class="p-2 bg-white rounded border border-danger-subtle d-flex flex-wrap align-items-center justify-content-between gap-2 shadow-sm">
+                    <div class="d-flex flex-wrap align-items-center gap-2">
+                        <span class="badge bg-danger"><i class="bi bi-exclamation-triangle-fill me-1"></i>{{ o.nama_pemeriksaan }}</span>
+                        <strong class="text-dark">{{ o.kunjungan.pasien.nama_lengkap }}</strong>
+                        <span class="badge bg-light text-dark border">RM: {{ o.kunjungan.pasien.no_rm }}</span>
+                        <span class="badge bg-secondary-subtle text-secondary">{{ o.kunjungan.no_kunjungan }}</span>
+                        {% if o.critical_value_catatan %}
+                        <span class="text-danger fw-bold"><i class="bi bi-arrow-right-short"></i>{{ o.critical_value_catatan }}</span>
+                        {% endif %}
+                        {% if o.hasil_pemeriksaan %}
+                        <span class="text-muted small">({{ o.hasil_pemeriksaan|truncatechars:45 }})</span>
+                        {% endif %}
+                    </div>
+                    <div class="d-flex gap-1 align-items-center">
+                        <button type="button" class="btn btn-sm btn-danger py-1 px-2 fw-semibold" data-bs-toggle="modal" data-bs-target="#modalCriticalLabRajal{{ o.pk }}">
+                            <i class="bi bi-eye-fill me-1"></i>Lihat Detail Hasil
+                        </button>
+                        <a href="{% url 'pasien:kunjungan_detail' o.kunjungan.pk %}" class="btn btn-sm btn-outline-danger py-1 px-2" title="Buka ERM Pasien">
+                            <i class="bi bi-journal-medical me-1"></i>ERM
+                        </a>
+                        <a href="{% url 'pasien:cetak_permintaan_lab_order' o.kunjungan.pk o.pk %}" target="_blank" class="btn btn-sm btn-outline-secondary py-1 px-2" title="Cetak Hasil / Permintaan Lab">
+                            <i class="bi bi-printer"></i>
+                        </a>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
         </div>
     </div>
+
+    <!-- MODAL DETAIL NILAI KRITIS LAB RAJAL -->
+    {% for o in critical_orders %}
+    <div class="modal fade" id="modalCriticalLabRajal{{ o.pk }}" tabindex="-1" aria-labelledby="modalCriticalLabRajalLabel{{ o.pk }}" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-scrollable">
+            <div class="modal-content border-danger shadow">
+                <div class="modal-header bg-danger text-white py-2 flex-shrink-0">
+                    <div class="d-flex align-items-center gap-2">
+                        <i class="bi bi-exclamation-octagon-fill fs-5"></i>
+                        <div>
+                            <h6 class="modal-title fw-bold mb-0" id="modalCriticalLabRajalLabel{{ o.pk }}">PELAPORAN NILAI KRITIS LABORATORIUM (POLIKLINIK)</h6>
+                            <small class="text-white-50">RS MONSISKAMI ARIMA — Cito Reporting &amp; Safety Protocol</small>
+                        </div>
+                    </div>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-3" style="overflow-y: auto;">
+                    <!-- Info Pasien & Order -->
+                    <div class="row g-2 mb-3">
+                        <div class="col-md-6">
+                            <div class="p-2 border rounded bg-light h-100">
+                                <div class="text-muted small fw-semibold text-uppercase">Identitas Pasien</div>
+                                <div class="fw-bold fs-6 text-dark">{{ o.kunjungan.pasien.nama_lengkap }}</div>
+                                <div class="small text-muted">
+                                    No. RM: <strong class="text-dark">{{ o.kunjungan.pasien.no_rm }}</strong> &bull;
+                                    {{ o.kunjungan.pasien.get_jenis_kelamin_display }}, {{ o.kunjungan.pasien.usia }} th
+                                </div>
+                                <div class="small text-muted mt-1">
+                                    Kunjungan: <span class="badge bg-secondary">{{ o.kunjungan.no_kunjungan }}</span>
+                                    ({{ o.kunjungan.get_status_display }})
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="p-2 border rounded bg-light h-100">
+                                <div class="text-muted small fw-semibold text-uppercase">Informasi Order Lab</div>
+                                <div class="fw-bold text-dark">{{ o.nama_pemeriksaan }}</div>
+                                <div class="small mt-1">
+                                    <span class="badge {% if o.prioritas == 'CITO' %}bg-danger{% else %}bg-secondary{% endif %}">{{ o.get_prioritas_display }}</span>
+                                    <span class="badge bg-info text-white">{{ o.get_status_display }}</span>
+                                    <span class="badge bg-light text-dark border">{{ o.kondisi_sampel|default:"Sampel Standar" }}</span>
+                                </div>
+                                <div class="small text-muted mt-1">
+                                    Waktu Order: {{ o.created_at|date:"d M Y H:i" }} WIB &bull;
+                                    DPJP: {{ o.dokter_pengirim|default:o.kunjungan.dpjp|default:"-" }}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Highlight Catatan Nilai Kritis -->
+                    <div class="alert alert-danger border-2 border-danger d-flex align-items-start gap-2 mb-3 py-2 shadow-sm" role="alert">
+                        <i class="bi bi-exclamation-triangle-fill fs-4 text-danger flex-shrink-0 mt-1"></i>
+                        <div>
+                            <div class="fw-bold text-danger text-uppercase small" style="letter-spacing: 0.5px;">Peringatan Nilai Kritis (Critical Result):</div>
+                            <div class="fs-6 fw-bold text-dark">{{ o.critical_value_catatan|default:"Nilai pemeriksaan berada pada rentang kritis yang memerlukan tindakan medis segera." }}</div>
+                        </div>
+                    </div>
+
+                    <!-- Hasil Pemeriksaan Lengkap -->
+                    <div class="card border mb-3 shadow-none">
+                        <div class="card-header bg-light py-2 fw-bold small d-flex justify-content-between align-items-center">
+                            <span><i class="bi bi-file-earmark-medical text-primary me-1"></i>Rincian Hasil Laboratorium</span>
+                            {% if o.status == 'SELESAI' %}
+                            <span class="badge bg-success">Hasil Telah Terverifikasi</span>
+                            {% else %}
+                            <span class="badge bg-warning text-dark">{{ o.get_status_display }}</span>
+                            {% endif %}
+                        </div>
+                        <div class="card-body p-3">
+                            {% if o.hasil_pemeriksaan %}
+                            <div class="p-3 bg-light rounded border font-monospace text-dark" style="white-space: pre-wrap; font-size: 0.88rem; line-height: 1.5;">{{ o.hasil_pemeriksaan }}</div>
+                            {% else %}
+                            <div class="alert alert-warning py-2 mb-0 small">
+                                <i class="bi bi-info-circle me-1"></i>Teks rincian hasil belum diinput lengkap oleh analis laboratorium. Silakan konfirmasi ke instalasi lab atau cek worklist laboratorium.
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Parameter Checklist jika ada -->
+                    {% if o.parameter_list %}
+                    <div class="mb-3">
+                        <div class="small fw-bold text-muted mb-1">Parameter Pemeriksaan yang Diminta:</div>
+                        <div class="d-flex flex-wrap gap-1">
+                            {% for p in o.parameter_list %}
+                            <span class="badge bg-light text-dark border py-1 px-2" style="font-size: 0.75rem;">
+                                <i class="bi bi-check2 text-danger me-1"></i>{{ p.category }}: {{ p.item }}
+                            </span>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    {% if o.catatan_klinis %}
+                    <div class="small text-muted mb-1">
+                        <strong>Indikasi / Catatan Klinis:</strong> {{ o.catatan_klinis }}
+                    </div>
+                    {% endif %}
+                </div>
+                <div class="modal-footer bg-light py-2 d-flex justify-content-between flex-shrink-0">
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Tutup</button>
+                    <div class="d-flex gap-2">
+                        <a href="{% url 'pasien:cetak_permintaan_lab_order' o.kunjungan.pk o.pk %}" target="_blank" class="btn btn-outline-danger btn-sm">
+                            <i class="bi bi-printer me-1"></i>Cetak Hasil / Formulir Lab
+                        </a>
+                        <a href="{% url 'pasien:kunjungan_detail' o.kunjungan.pk %}" class="btn btn-primary btn-sm">
+                            <i class="bi bi-journal-medical me-1"></i>Buka Rekam Medis (ERM)
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
     {% endif %}
 
     <!-- PILL NAVIGATION PER POLIKLINIK -->

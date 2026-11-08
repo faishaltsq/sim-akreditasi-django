@@ -106,19 +106,32 @@ class IGDDashboardRevisiTestCase(TestCase):
         self.assertEqual(self.kunjungan_hitam.diagnosa_masuk, 'I10 - Hipertensi Esensial')
 
     def test_critical_value_alert_rendered(self):
-        """If patient has an order with is_critical_value=True, table should show critical badge."""
-        OrderPenunjang.objects.create(
+        """If patient has an order with is_critical_value=True, table should show critical badge and viewable modal."""
+        order = OrderPenunjang.objects.create(
             kunjungan=self.kunjungan1,
             jenis='LAB',
             nama_pemeriksaan='Troponin I Kuantitatif',
             status='SELESAI',
             hasil_pemeriksaan='0.85 ng/mL (CRITICAL HIGH)',
+            critical_value_catatan='Troponin I sangat tinggi',
             is_critical_value=True
         )
         res = self.client.get(reverse('pasien:igd_dashboard'))
         self.assertEqual(res.status_code, 200)
         self.assertContains(res, 'CRITICAL')
+        self.assertContains(res, 'Lihat Detail Hasil')
+        self.assertContains(res, f'modalCriticalLab{order.pk}')
+        self.assertContains(res, '0.85 ng/mL (CRITICAL HIGH)')
+        self.assertContains(res, 'Troponin I sangat tinggi')
 
+    def test_modal_order_lab_scrollable(self):
+        """Lab order modal has scrollable structure and form container."""
+        res = self.client.get(reverse('pasien:igd_dashboard'))
+        self.assertEqual(res.status_code, 200)
+        self.assertContains(res, f'modalOrderLab{self.kunjungan1.pk}')
+        self.assertContains(res, 'modal-dialog modal-xl modal-dialog-scrollable')
+        self.assertContains(res, 'form class="modal-content"')
+        self.assertContains(res, 'overflow-y: auto')
     def test_critical_value_auto_upgrades_triage_to_merah(self):
         """Revisi 02: Ordering a critical-value penunjang on non-MERAH patient auto-upgrades triage."""
         # Create a KUNING patient

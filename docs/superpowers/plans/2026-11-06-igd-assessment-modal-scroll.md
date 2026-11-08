@@ -10,6 +10,24 @@
 
 **Spec:** `C:/Users/cubeb/Downloads/Perbaikan dan urutan menunya pemeriksaan fisik lengkap.docx` (text and all three embedded screenshots inspected).
 
+## Execution Status
+
+### Done
+- Modal form boundary and accessible title/close label deployed in `4da26b8`.
+- 94 targeted tests passed; full regression passed 1031 tests; frozen release checkout passed 20 tests.
+- Actual Chromium checks at 1366x768 and 1920x1080 verified body overflow auto, reachable last physical-exam field, visible modal footer, no horizontal document overflow, and four-tab page footer visibility.
+- All seven modal tabs and all four full-page tabs activated by keyboard; save buttons focusable, Escape closes and opener focus returns.
+- Two distinct fixture patients verified at both sizes. Real browser form submission reached the actual Django save view through a test-client transport; database values and reopened form selections matched. This is isolated application integration evidence, not production HTTP/authentication evidence.
+- Evidence: `C:/Users/cubeb/AppData/Local/hermes/cache/scratch/arima-browser/results.json` and `journey-results.json`; screenshots `modal-1366-1.png`, `modal-1366-2.png`, `modal-1920-1.png`, `modal-1920-2.png` in the same folder.
+
+### Not done, needs the live environment
+- Authenticated production verification: browser has no authenticated ARIMA session; login vault setup was declined. User must log in interactively before read-only production checks can run. Do not write test clinical values to production.
+- Keyboard caveat: after Tab from final save control Chromium reports BODY, then next Tab returns inside modal. No background page control was selected. Strict focus containment is not certified; retain this observation rather than adding a custom focus trap without evidence of an actionable page-focus escape.
+
+### Skipped on purpose
+- No clinical tab reordering, schema changes, real patient writes or new deployment for documentation-only evidence.
+- Pre-fix browser reproduction was not captured; structural evidence and post-fix browser measurements are available, not a fabricated before/after screenshot.
+
 ## Global Constraints
 
 - Preserve all existing dirty/untracked work; no commit, push, deployment or database changes without separate authorization.

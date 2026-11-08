@@ -159,6 +159,31 @@
 </div>
 {% endif %}
 
+{% if order and order.hasil_pemeriksaan or order.is_critical_value %}
+<!-- HASIL PEMERIKSAAN & NILAI KRITIS (BILA SUDAH TERSEDIA) -->
+<div class="section-title" style="{% if order.is_critical_value %}background:#fee2e2; border-left:3px solid #dc2626; color:#b91c1c;{% endif %}">
+  HASIL PEMERIKSAAN LABORATORIUM {% if order.is_critical_value %}— PERINGATAN NILAI KRITIS (CRITICAL VALUE){% endif %}
+</div>
+<table class="table table-bordered table-sm mb-2">
+  {% if order.is_critical_value %}
+  <tr style="background:#fef2f2;">
+    <th style="width:25%; color:#b91c1c;">Catatan Nilai Kritis</th>
+    <td class="fw-bold text-danger">⚠️ {{ order.critical_value_catatan|default:"Nilai pemeriksaan terdeteksi dalam rentang kritis." }}</td>
+  </tr>
+  {% endif %}
+  {% if order.hasil_pemeriksaan %}
+  <tr>
+    <th style="width:25%;">Hasil / Interpretasi Lab</th>
+    <td style="white-space: pre-wrap; font-family: monospace;">{{ order.hasil_pemeriksaan }}</td>
+  </tr>
+  {% endif %}
+  <tr>
+    <th style="width:25%;">Status &amp; Verifikasi</th>
+    <td><span class="badge bg-secondary">{{ order.get_status_display }}</span> — Waktu Order: {{ order.created_at|date:"d/m/Y H:i" }} WIB</td>
+  </tr>
+</table>
+{% endif %}
+
 <!-- TANDA TANGAN & PENGESAHAN -->
 <div class="row mt-3">
   <div class="col-4 text-center">

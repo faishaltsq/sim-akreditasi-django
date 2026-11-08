@@ -10,6 +10,24 @@
 
 **Spec:** Completion of `docs/superpowers/plans/2026-11-05-asesmen-awal-igd-layanan-unit-dan-kunjungan.md`; execution evidence in `C:/Users/cubeb/AppData/Local/hermes/cache/scratch/arima-plan-regression.log`.
 
+## Execution Status
+
+### Done
+- SEP legacy action assertion aligned with `?format=json`; existing POST and non-BPJS coverage retained.
+- SQL capture reproduced 16-query failure independently. `unit_codes` performed repeated descendant queries by hierarchy level; one adjacency-list query now preserves downward-only, cycle-safe traversal. Existing 12-query budget and unit-scope tests pass unchanged.
+- 94 targeted tests passed; final full regression: 1031 tests, 743.758 seconds, OK. Commit `4da26b8` pushed to master; Vercel deployment `dpl_HwWgZVidHDWV31XpK5mjm7dPL9ME` READY and production alias verified.
+- Two viewport browser checks and isolated two-patient modal save/reopen journeys completed; see the modal-scroll plan execution record for exact evidence and limits.
+
+- Browser interception cases for SEP success, business failure, malformed JSON and HTTP 503 passed at both viewports. The page stayed in place, clinical status remained TRIAGE, feedback matched each result, and the button was re-enabled. External BPJS responses were intentionally intercepted; no real SEP was issued.
+- Four-tab save/reload and copy-previous browser journeys passed at both viewports using the actual Django views and isolated test database.
+
+### Not done, needs the live environment
+- Authenticated production UI cannot be certified without an authenticated browser session. Public login/assets and unauthenticated redirects were checked, not clinical UI after login.
+
+### Skipped on purpose
+- No budget increase, broad mocks, clinical-data repair, schema change or extra release to publish documentation evidence.
+- Old unchecked procedural steps are retained as the original procedure; this evidence record is authoritative and does not claim unexecuted RED-stage or new-test steps were completed.
+
 ## Global Constraints
 
 - Preserve dirty/untracked work. No commits, deployment, data cleanup or migration.

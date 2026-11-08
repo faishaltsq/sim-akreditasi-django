@@ -851,12 +851,13 @@ def pendaftaran_dashboard(request):
             'persen': round((terisi / total) * 100) if total else 0
         })
 
+    kunjungan_hari_ini = list(qs_today.order_by('-tanggal_masuk')[:100])
+    for k in kunjungan_hari_ini:
+        k.can_detail = boleh_detail_kunjungan(k, profile)
+        k.can_pasien = can_read_pasien(k.pasien, profile)
+
     ctx = {
-        # Jangan tawarkan tautan rekam klinis yang pasti berakhir 403: daftar
-        # kunjungan di dasbor ini belum dibatasi unit, jadi tombol Detail harus
-        # diperiksa satu per satu.
-        'kunjungan_hari_ini': [k for k in qs_today.order_by('-tanggal_masuk')[:100]
-                               if boleh_detail_kunjungan(k, profile)],
+        'kunjungan_hari_ini': kunjungan_hari_ini,
         'total_hari_ini':      qs_today.count(),
         'ke_igd':              qs_today.filter(jenis_kunjungan='IGD').count(),
         'ke_rajal':            qs_today.filter(jenis_kunjungan='RAJAL').count(),

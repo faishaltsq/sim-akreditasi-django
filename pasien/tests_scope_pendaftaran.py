@@ -144,14 +144,17 @@ class FrontOfficePatientDetailTest(_ScopeFixtures):
             reverse('pasien:kunjungan_detail', args=[self.kunjungan.pk]))
         self.assertEqual(resp.status_code, 200)
 
-    def test_dasbor_hanya_menampilkan_kunjungan_unit_sendiri(self):
-        """Tidak ada tombol Detail yang berakhir 403: daftar sudah disaring."""
+    def test_dasbor_menampilkan_kunjungan_hari_ini_dan_cegah_detail_403(self):
+        """Kunjungan terdaftar hari ini tetap muncul di dasbor, dan tombol Detail dicegah dari 403."""
         self._routing_ke_poli()
         self._login('petugas.daftar')
         resp = self.client.get(reverse('pasien:pendaftaran_dashboard'))
         self.assertEqual(resp.status_code, 200)
-        self.assertNotIn(self.kunjungan.pk,
-                         [k.pk for k in resp.context['kunjungan_hari_ini']])
+        self.assertIn(self.kunjungan.pk,
+                      [k.pk for k in resp.context['kunjungan_hari_ini']])
+        # Link kunjungan_detail tidak ditawarkan untuk kunjungan di luar unit scope (mencegah 403)
+        self.assertNotIn(f'href="{reverse("pasien:kunjungan_detail", args=[self.kunjungan.pk])}"',
+                         resp.content.decode())
 
 
 class PoliOwnershipTest(_ScopeFixtures):

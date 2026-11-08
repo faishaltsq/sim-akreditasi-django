@@ -1037,9 +1037,13 @@
                                 {% endif %}
                             </td>
                             <td>
+                                {% if k.can_pasien %}
                                 <a href="{% url 'pasien:pasien_detail' k.pasien.pk %}" class="fw-bold text-decoration-none text-dark">
                                     {{ k.pasien.nama_lengkap }}
                                 </a>
+                                {% else %}
+                                <span class="fw-bold text-dark">{{ k.pasien.nama_lengkap }}</span>
+                                {% endif %}
                                 <div class="small text-muted">{{ k.pasien.get_jenis_kelamin_display }}, {{ k.pasien.usia }} th</div>
                                 {% if k.flag_khusus == 'KRITIS' %}<span class="flag-kritis">⚡ KRITIS</span>
                                 {% elif k.flag_khusus == 'AMBULANS' %}<span class="flag-ambulans">🚑 AMBULANS</span>{% endif %}
@@ -1097,9 +1101,15 @@
                                     <a href="{% url 'pasien:cetak_sep' k.pk %}" target="_blank" class="btn btn-outline-success" title="Cetak SEP BPJS">
                                         <i class="bi bi-file-earmark-text"></i>
                                     </a>
+                                    {% if k.can_detail %}
                                     <a href="{% url 'pasien:kunjungan_detail' k.pk %}" class="btn btn-outline-secondary" title="Detail Rekam Medis">
                                         <i class="bi bi-eye"></i>
                                     </a>
+                                    {% else %}
+                                    <button type="button" class="btn btn-outline-secondary disabled opacity-50" title="Rekam Medis (Akses Terbatas Unit Pelayanan)" disabled>
+                                        <i class="bi bi-eye-slash"></i>
+                                    </button>
+                                    {% endif %}
                                     {% if k.status != 'BATAL' %}
                                     <button class="btn btn-outline-success" data-bs-toggle="modal" data-bs-target="#modalRme{{ k.pk }}" title="Input RME Awal (TTV)">
                                         <i class="bi bi-clipboard2-pulse"></i>{% if k.ttv_sistole %} ✓{% endif %}

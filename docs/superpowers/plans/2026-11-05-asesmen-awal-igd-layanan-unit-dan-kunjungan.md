@@ -5,7 +5,7 @@ Source request: `Lakukan perubahan ini.docx` (3 items, screenshots of `/pasien/k
 message with a screenshot of `/control/layanan/?unit=54&tanggal=2026-11-06` (3 further items)
 Scope: `pasien` app (kunjungan detail, asesmen awal form, visit list) and `akreditasi` app
 (kontrol layanan block + snapshot)
-Status: implementation complete; 75 targeted tests pass. Browser layout/keyboard verification and full pasien + akreditasi regression suite remain pending.
+Status: implementation deployed at commit 4da26b8; full regression 1031 tests passed. Isolated-browser scroll/footer/keyboard checks passed at 1366x768 and 1920x1080. Authenticated production acceptance remains blocked by unavailable browser login; detailed completion records are in the two 2026-11-06 follow-up plans.
 
 Implementation completion notes:
 - SEP uses the existing JSON endpoint with same-origin CSRF-protected POST, duplicate-click prevention, and accessible inline success/error feedback. Clinical status is intentionally not overwritten by a SEP message.

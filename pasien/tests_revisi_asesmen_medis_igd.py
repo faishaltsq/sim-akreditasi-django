@@ -205,9 +205,15 @@ class CetakAsesmenMedisIgdViewTest(TestCase):
             ],
             kondisi_sampel='Tidak Puasa',
             dokter_pengirim='dr. Cetak Sp.EM',
+            is_critical_value=True,
+            critical_value_catatan='Laktat 4.5 mmol/L (Severe Lactic Acidosis)',
+            hasil_pemeriksaan='Laktat 4.5 mmol/L, Leukosit 18.000 /uL',
         )
         url = reverse('pasien:cetak_permintaan_lab_order', args=[self.kunjungan.pk, order.pk])
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'PERMINTAAN')
         self.assertContains(response, 'Darah Lengkap')
+        self.assertContains(response, 'CRITICAL VALUE')
+        self.assertContains(response, 'Laktat 4.5 mmol/L (Severe Lactic Acidosis)')
+        self.assertContains(response, 'Laktat 4.5 mmol/L, Leukosit 18.000 /uL')
