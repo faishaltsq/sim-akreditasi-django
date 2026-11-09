@@ -565,6 +565,11 @@ from .logbook_models import (  # noqa: E402, F401
     LogbookBukti,
     LogbookKejadian,
 )
+from .logbook_nonmedis_models import (  # noqa: E402, F401
+    LogbookNonMedis,
+    ChecklistNonMedis,
+    BuktiNonMedis,
+)
 
 class SumberKatalog(models.Model):
     """Manifest sumber katalog standar (edisi/dekre/instrumen/arsip)."""
