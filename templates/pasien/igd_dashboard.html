@@ -1394,7 +1394,7 @@
                         <!-- MODAL ASESMEN AWAL KLINIS & 3S KEPERAWATAN (Revisi 02) -->
                         <div class="modal fade" id="modalAsesmenAwal{{ k.pk }}" tabindex="-1" aria-labelledby="asesmenTitle{{ k.pk }}">
                                                     <div class="modal-dialog modal-xl modal-dialog-scrollable">
-                                                        <form class="modal-content" method="post" action="{% url 'pasien:igd_asesmen_medis_save' k.pk %}">
+                                                        <form class="modal-content" method="post" action="{% url 'pasien:igd_asesmen_medis_save' k.pk %}" enctype="multipart/form-data">
                                                             {% csrf_token %}
                                     <div class="modal-header bg-primary text-white">
                                         <h5 class="modal-title fw-bold" id="asesmenTitle{{ k.pk }}">
@@ -1878,7 +1878,7 @@
                                                             </select>
                                                         </div>
                                                         <div class="col-md-6">
-                                                            <label class="form-label small fw-semibold">Skrining Risiko Jatuh:</label>
+                                                            <label class="form-label small fw-semibold">Skrining Risiko Jatuh (Morse Fall Scale):</label>
                                                             <div class="row g-1">
                                                                 <div class="col-5">
                                                                     <input type="number" name="skrining_jatuh_skor" class="form-control form-control-sm" value="{{ k.skrining_jatuh_skor|default:'' }}" placeholder="Skor">
@@ -1892,6 +1892,65 @@
                                                                 </div>
                                                             </div>
                                                         </div>
+                                                        <div class="col-md-12 mt-2">
+                                                            <div class="p-2 border rounded bg-white">
+                                                                <label class="form-label small fw-semibold text-primary mb-1"><i class="bi bi-shield-shaded me-1"></i>Kalkulator Morse Fall Scale (MFS):</label>
+                                                                <div class="row g-1" data-morse-group>
+                                                                    <div class="col-6">
+                                                                        <label class="form-label small mb-0" style="font-size:0.75rem;">Riwayat jatuh</label>
+                                                                        <select name="jatuh_riwayat" class="form-select form-select-sm" onchange="hitungMorse(this.closest('.modal, form'))">
+                                                                            <option value="0" {% if k.skrining_jatuh_detail.jatuh_riwayat == 0 or not k.skrining_jatuh_detail.jatuh_riwayat %}selected{% endif %}>Tidak pernah (0)</option>
+                                                                            <option value="1" {% if k.skrining_jatuh_detail.jatuh_riwayat == 1 or k.skrining_jatuh_detail.jatuh_riwayat == 25 %}selected{% endif %}>Ya (dalam 3 bln) (25)</option>
+                                                                        </select>
+                                                                    </div>
+                                                                    <div class="col-6">
+                                                                        <label class="form-label small mb-0" style="font-size:0.75rem;">Diagnosis sekunder</label>
+                                                                        <select name="jatuh_diagnosis" class="form-select form-select-sm" onchange="hitungMorse(this.closest('.modal, form'))">
+                                                                            <option value="0" {% if k.skrining_jatuh_detail.jatuh_diagnosis == 0 or not k.skrining_jatuh_detail.jatuh_diagnosis %}selected{% endif %}>Tidak ada (0)</option>
+                                                                            <option value="1" {% if k.skrining_jatuh_detail.jatuh_diagnosis == 1 or k.skrining_jatuh_detail.jatuh_diagnosis == 15 %}selected{% endif %}>Ya (&ge;2 diagnosis) (15)</option>
+                                                                        </select>
+                                                                    </div>
+                                                                    <div class="col-6">
+                                                                        <label class="form-label small mb-0" style="font-size:0.75rem;">Alat bantu jalan</label>
+                                                                        <select name="jatuh_alat" class="form-select form-select-sm" onchange="hitungMorse(this.closest('.modal, form'))">
+                                                                            <option value="0" {% if k.skrining_jatuh_detail.jatuh_alat == 0 or not k.skrining_jatuh_detail.jatuh_alat %}selected{% endif %}>Tidak ada / tirah baring / dibantu perawat (0)</option>
+                                                                            <option value="1" {% if k.skrining_jatuh_detail.jatuh_alat == 1 or k.skrining_jatuh_detail.jatuh_alat == 15 %}selected{% endif %}>Kruk / tongkat / walker (15)</option>
+                                                                            <option value="2" {% if k.skrining_jatuh_detail.jatuh_alat == 2 or k.skrining_jatuh_detail.jatuh_alat == 30 %}selected{% endif %}>Berpegangan pada furnitur (30)</option>
+                                                                        </select>
+                                                                    </div>
+                                                                    <div class="col-6">
+                                                                        <label class="form-label small mb-0" style="font-size:0.75rem;">Terpasang infus</label>
+                                                                        <select name="jatuh_infus" class="form-select form-select-sm" onchange="hitungMorse(this.closest('.modal, form'))">
+                                                                            <option value="0" {% if k.skrining_jatuh_detail.jatuh_infus == 0 or not k.skrining_jatuh_detail.jatuh_infus %}selected{% endif %}>Tidak (0)</option>
+                                                                            <option value="1" {% if k.skrining_jatuh_detail.jatuh_infus == 1 or k.skrining_jatuh_detail.jatuh_infus == 20 %}selected{% endif %}>Ya (20)</option>
+                                                                        </select>
+                                                                    </div>
+                                                                    <div class="col-6">
+                                                                        <label class="form-label small mb-0" style="font-size:0.75rem;">Cara berjalan</label>
+                                                                        <select name="jatuh_jalan" class="form-select form-select-sm" onchange="hitungMorse(this.closest('.modal, form'))">
+                                                                            <option value="0" {% if k.skrining_jatuh_detail.jatuh_jalan == 0 or not k.skrining_jatuh_detail.jatuh_jalan %}selected{% endif %}>Normal / tirah baring / kursi roda (0)</option>
+                                                                            <option value="1" {% if k.skrining_jatuh_detail.jatuh_jalan == 1 or k.skrining_jatuh_detail.jatuh_jalan == 10 %}selected{% endif %}>Lemah (10)</option>
+                                                                            <option value="2" {% if k.skrining_jatuh_detail.jatuh_jalan == 2 or k.skrining_jatuh_detail.jatuh_jalan == 20 %}selected{% endif %}>Gangguan / tidak mampu (20)</option>
+                                                                        </select>
+                                                                    </div>
+                                                                    <div class="col-6">
+                                                                        <label class="form-label small mb-0" style="font-size:0.75rem;">Status mental</label>
+                                                                        <select name="jatuh_mental" class="form-select form-select-sm" onchange="hitungMorse(this.closest('.modal, form'))">
+                                                                            <option value="0" {% if k.skrining_jatuh_detail.jatuh_mental == 0 or not k.skrining_jatuh_detail.jatuh_mental %}selected{% endif %}>Oriented (sadar kemampuan) (0)</option>
+                                                                            <option value="1" {% if k.skrining_jatuh_detail.jatuh_mental == 1 or k.skrining_jatuh_detail.jatuh_mental == 15 %}selected{% endif %}>Overestimasi / lupa keterbatasan (15)</option>
+                                                                        </select>
+                                                                    </div>
+                                                                </div>
+                                                                <div class="mt-2 d-flex align-items-center justify-content-between">
+                                                                    <div>
+                                                                        <span class="badge {% if k.skrining_jatuh_grade == 'TINGGI' %}bg-danger{% elif k.skrining_jatuh_grade == 'SEDANG' %}bg-warning text-dark{% else %}bg-success{% endif %}" data-morse-result>
+                                                                            {{ k.skrining_jatuh_skor|default:0 }} — {% if k.skrining_jatuh_grade == 'TINGGI' %}Risiko Tinggi{% elif k.skrining_jatuh_grade == 'SEDANG' %}Risiko Sedang{% else %}Risiko Rendah{% endif %}
+                                                                        </span>
+                                                                        <span class="small text-muted ms-1" style="font-size:0.72rem;">Skor &amp; grade terhitung otomatis</span>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        </div>
                                                     </div>
                                                 </div>
 
@@ -1902,9 +1961,8 @@
                                                             <label class="form-label fw-semibold text-primary"><i class="bi bi-tag-fill me-1"></i>Diagnosis Medis Masuk (ICD-10):</label>
                                                             <input type="text" name="diagnosa_masuk" list="globalIcd10List" class="form-control form-control-sm" value="{{ k.diagnosa_masuk }}" placeholder="Pilih atau cari kode ICD-10...">
                                                         </div>
-                                                        <div class="col-md-6">
-                                                            <label class="form-label fw-semibold">Prosedur / Tindakan Medis (ICD-9-CM):</label>
-                                                            <input type="text" name="icd9_tindakan" class="form-control form-control-sm" value="{{ k.icd9_tindakan }}" placeholder="Kode ICD-9-CM (misal: 89.52 - EKG, 96.04 - Intubasi)">
+                                                        <div class="col-md-12 mt-2">
+                                                            {% include 'pasien/_tindakan_tarif_ep.html' %}
                                                         </div>
                                                         <div class="col-md-12">
                                                             <hr class="my-2">
@@ -2891,6 +2949,41 @@
         badge.innerText = val + ' — ' + ket;
     }
 
+    function hitungMorse(scope) {
+        if (!scope) return;
+        var bobot = {
+            jatuh_riwayat:  [0, 25],
+            jatuh_diagnosis:[0, 15],
+            jatuh_alat:     [0, 15, 30],
+            jatuh_infus:    [0, 20],
+            jatuh_jalan:    [0, 10, 20],
+            jatuh_mental:   [0, 15],
+        };
+        var total = 0;
+        Object.keys(bobot).forEach(function (name) {
+            var el = scope.querySelector('[name="' + name + '"]');
+            if (!el || el.value === '') return;
+            var idx = parseInt(el.value, 10);
+            if (!isNaN(idx)) {
+                if (bobot[name][idx] !== undefined) {
+                    total += bobot[name][idx];
+                } else if (bobot[name].indexOf(idx) !== -1) {
+                    total += idx;
+                }
+            }
+        });
+        var skor = scope.querySelector('[name="skrining_jatuh_skor"]');
+        var grade = scope.querySelector('[name="skrining_jatuh_grade"]');
+        if (skor) skor.value = total;
+        if (grade) grade.value = total >= 45 ? 'TINGGI' : (total >= 25 ? 'SEDANG' : 'RENDAH');
+        var badge = scope.querySelector('[data-morse-result]');
+        if (badge) {
+            badge.className = 'badge ' + (total >= 45 ? 'bg-danger' : total >= 25 ? 'bg-warning text-dark' : 'bg-success');
+            badge.innerText = total + ' — ' + (total >= 45 ? 'Risiko Tinggi' : total >= 25 ? 'Risiko Sedang' : 'Risiko Rendah');
+        }
+    }
+    window.hitungMorse = hitungMorse;
+
     function setNormalAsesmen(pk) {
         var modal = document.getElementById('modalAsesmenAwal' + pk) || document;
         var setVal = function(name, val) {
@@ -2917,6 +3010,11 @@
         updateSkorNyeri(pk, 0);
         var q1 = document.getElementById('mstQ1_' + pk);
         if (q1) q1.dispatchEvent(new Event('change'));
+        var m = document.getElementById('modalAsesmenAwal' + pk);
+        if (m) {
+            m.querySelectorAll('[data-morse-group] select').forEach(function (s) { s.value = '0'; });
+            hitungMorse(m);
+        }
     }
 </script>
 
@@ -2930,6 +3028,12 @@
 <datalist id="globalSdkiList">
     {% for kode, nama in sdki_codes %}
     <option value="{{ kode }} - {{ nama }}">{{ kode }} - {{ nama }}</option>
+    {% endfor %}
+</datalist>
+
+<datalist id="globalIcd9List">
+    {% for item in icd9_list %}
+    <option value="{{ item.kode }} - {{ item.nama }}">{{ item.kode }} - {{ item.nama }}</option>
     {% endfor %}
 </datalist>
 {% endblock %}

@@ -66,6 +66,8 @@ urlpatterns = [
     # ── Registration & Admission Utilities ──
     path('fast-track-igd/', views.fast_track_igd, name='fast_track_igd'),
     path('api/cek-bpjs/', views.api_cek_bpjs, name='api_cek_bpjs'),
+    path('api/tarif-preview/', views.api_tarif_preview, name='api_tarif_preview'),
+    path('api/saran-icd/', views.api_saran_icd, name='api_saran_icd'),
     path('kunjungan/<int:pk>/batal/', views.kunjungan_batal, name='kunjungan_batal'),
     # ── Laboratorium & LIS ──
     path('laboratorium/', views.laboratorium_dashboard, name='laboratorium_dashboard'),
@@ -82,4 +84,12 @@ urlpatterns = [
     path('kunjungan/<int:pk>/cetak-asesmen-medis-igd/', views.cetak_asesmen_medis_igd, name='cetak_asesmen_medis_igd'),
     path('kunjungan/<int:pk>/cetak-permintaan-lab/', views.cetak_permintaan_lab, name='cetak_permintaan_lab'),
     path('kunjungan/<int:pk>/cetak-permintaan-lab/<int:order_id>/', views.cetak_permintaan_lab, name='cetak_permintaan_lab_order'),
+    # ── Lampiran Asesmen Medis / Dokumen ──
+    path('kunjungan/<int:pk>/asesmen/lampiran/upload/', views.asesmen_lampiran_upload, name='asesmen_lampiran_upload'),
+    path('kunjungan/<int:pk>/asesmen/lampiran/<int:lampiran_id>/download/', views.asesmen_lampiran_download, name='asesmen_lampiran_download'),
+    path('kunjungan/<int:pk>/asesmen/lampiran/<int:lampiran_id>/hapus/', views.asesmen_lampiran_hapus, name='asesmen_lampiran_hapus'),
+    # ── Rekapitulasi Asesmen Medis Awal IGD ──
+    path('igd/rekap-asesmen/', views.asesmen_rekap, name='asesmen_rekap'),
+    path('kunjungan/<int:pk>/asesmen-detail/', views.asesmen_detail, name='asesmen_detail'),
+    path('kunjungan/<int:pk>/asesmen-hapus/', views.asesmen_hapus, name='asesmen_hapus'),
 ]

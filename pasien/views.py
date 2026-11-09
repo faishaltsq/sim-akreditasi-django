@@ -4,15 +4,19 @@ from django.urls import reverse
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.db import transaction
-from django.db.models import Count, Avg, Sum, Q
-from django.http import HttpResponse, JsonResponse
+from django.db.models import Count, Avg, Sum, Q, F
+from django.http import HttpResponse, JsonResponse, FileResponse
 from django.views.decorators.http import require_POST
 from django.core.exceptions import PermissionDenied
+from django.core.paginator import Paginator
+from pathlib import Path
+import re
 from .decorators import require_patient_module, get_unit_scope, scope_kunjungan_qs, scope_pasien_qs
 from .unit_scope import (
     boleh_detail_kunjungan, can_read_kunjungan, can_read_pasien,
 )
 from akreditasi.input_parsing import parse_int
+from akreditasi.models import StandardItem, AuditLog
 from django.utils import timezone
 from datetime import timedelta
 
@@ -21,8 +25,16 @@ from .models import (
     BillingItem, DischargeRecord, ResepElektronik, ResepDetail,
     OrderPenunjang, POLIKLINIK_CHOICES, DPJP_CHOICES, BookingKamar,
     GeneralConsentRawatInap, generate_no_rm, generate_no_kunjungan,
-    JadwalDinusAdmission, LogbookHarianAdmission, DPJP_POLI_MAP
+    JadwalDinusAdmission, LogbookHarianAdmission, DPJP_POLI_MAP,
+    KorelasiEpAsesmen, LampiranAsesmen
 )
+from klinis.models import (
+    AturanEpAsesmen, MasterIcd9, KasusTindakan,
+    Pemetaan3S, SlkiLuaran, SikiIntervensi
+)
+from klinis.services.tarif import sync_billing, _kelompok_for, resolve_detail
+from klinis.services.saran import saran_untuk
+from .asesmen_tindakan import has_tindakan_payload, parse_tindakan, simpan_tindakan
 from .pdf_utils import generate_resume_pdf
 from .satusehat import sync_encounter_satusehat, parse_qr_medis
 from .bridging_services import BPJSVClaimService, SatuSehatService
@@ -324,14 +336,63 @@ def kunjungan_detail(request, pk):
 def kunjungan_asesmen_awal(request, pk):
     """Halaman penuh form Asesmen Awal (Standar 3.09) untuk satu kunjungan."""
     k = get_object_or_404(
-        KunjunganPasien.objects.select_related('pasien', 'bed__ruangan'), pk=pk)
+        KunjunganPasien.objects
+        .select_related('pasien', 'bed__ruangan', 'unit_kerja')
+        .prefetch_related('tindakan_asesmen__standard_item', 'tindakan_asesmen__icd9',
+                          'tindakan_asesmen__siki'),
+        pk=pk)
     profile = getattr(request.user, 'profile', None)
     if not can_read_kunjungan(k, profile):
         raise PermissionDenied("Anda tidak memiliki akses ke kunjungan unit lain.")
+
+    kelompok = _kelompok_for(k)
+    if kelompok:
+        icd9_kodes = list(KasusTindakan.objects.filter(kasus__kelompok=kelompok).values_list('icd9__kode', flat=True).distinct())
+        if icd9_kodes:
+            icd9_list = MasterIcd9.objects.filter(kode__in=icd9_kodes).order_by('kode')
+        else:
+            icd9_list = MasterIcd9.objects.all().order_by('kode')
+    else:
+        icd9_list = MasterIcd9.objects.all().order_by('kode')
+
+    all_sub_standards = (
+        StandardItem.objects.values('sub_standard', 'category__name', 'category__code')
+        .distinct()
+        .order_by('category__code', 'sub_standard')
+    )
+    all_standard_items = StandardItem.objects.select_related('category').order_by('category__order', 'order', 'code')
+
+    aturan_rules = []
+    for r in AturanEpAsesmen.objects.all().order_by('urutan'):
+        std_item = StandardItem.objects.filter(sub_standard=r.sub_standard).first()
+        aturan_rules.append({
+            'rule': r,
+            'sub_standard': r.sub_standard,
+            'deskripsi': r.label,
+            'standard_item': std_item,
+            'unresolved': std_item is None,
+        })
+
+    existing_korelasi = {rel.standard_item_id: rel for rel in k.korelasi_ep.select_related('standard_item').all()}
+    lampiran_list = k.lampiran_asesmen.all().order_by('-diunggah_pada')
+    pemetaan_3s = Pemetaan3S.objects.select_related('sdki', 'slki', 'siki').all()
+    slki_list = SlkiLuaran.objects.all().order_by('kode')
+    siki_list = SikiIntervensi.objects.all().order_by('kode')
+
     return render(request, 'pasien/asesmen_awal_form.html', {
         'k': k,
         'icd10_codes': ICD10_CODES,
         'sdki_codes': SDKI_CODES,
+        'icd9_list': icd9_list,
+        'all_sub_standards': all_sub_standards,
+        'all_standard_items': all_standard_items,
+        'aturan_rules': aturan_rules,
+        'existing_korelasi': existing_korelasi,
+        'lampiran_list': lampiran_list,
+        'pemetaan_3s':        pemetaan_3s,
+        'slki_list':          slki_list,
+        'siki_list':          siki_list,
+        'ep_sub_choices':     StandardItem.objects.values_list('sub_standard', flat=True).distinct().order_by('sub_standard'),
         'next_url': reverse('pasien:kunjungan_asesmen_awal', args=[k.pk]),
     })
 
@@ -1008,7 +1069,12 @@ def igd_dashboard(request):
     qs = KunjunganPasien.objects.filter(
         jenis_kunjungan='IGD',
         status__in=ACTIVE_IGD_STATUSES
-    ).select_related('pasien', 'bed').prefetch_related('order_penunjang')
+    ).select_related('pasien', 'bed').prefetch_related(
+        'order_penunjang',
+        'tindakan_asesmen__standard_item',
+        'tindakan_asesmen__icd9',
+        'tindakan_asesmen__siki',
+    )
 
     if triage_filter:
         qs = qs.filter(triage=triage_filter)
@@ -1113,6 +1179,23 @@ def igd_dashboard(request):
         'profesi_cppt':       CPPT.PROFESI,
         'icd10_codes':        ICD10_CODES,
         'sdki_codes':         SDKI_CODES,
+        'icd9_list':          MasterIcd9.objects.all().order_by('kode'),
+        'ep_sub_choices':     StandardItem.objects.values_list('sub_standard', flat=True).distinct().order_by('sub_standard'),
+        'all_sub_standards':  StandardItem.objects.values('sub_standard', 'category__name', 'category__code').distinct().order_by('category__code', 'sub_standard'),
+        'all_standard_items': StandardItem.objects.select_related('category').order_by('category__order', 'order', 'code'),
+        'aturan_rules':       [
+            {
+                'rule': r,
+                'sub_standard': r.sub_standard,
+                'deskripsi': r.label,
+                'standard_item': StandardItem.objects.filter(sub_standard=r.sub_standard).first(),
+                'unresolved': not StandardItem.objects.filter(sub_standard=r.sub_standard).exists(),
+            }
+            for r in AturanEpAsesmen.objects.all().order_by('urutan')
+        ],
+        'pemetaan_3s':        Pemetaan3S.objects.select_related('sdki', 'slki', 'siki').all(),
+        'slki_list':          SlkiLuaran.objects.all().order_by('kode'),
+        'siki_list':          SikiIntervensi.objects.all().order_by('kode'),
         'status_choices':     [(s, l) for s, l in KunjunganPasien.STATUS_KUNJUNGAN if s in ACTIVE_IGD_STATUSES],
     }
     return render(request, 'pasien/igd_dashboard.html', ctx)
@@ -2088,7 +2171,83 @@ def igd_asesmen_awal_save(request, pk):
             k.pasien.alergi_obat = request.POST.get('alergi_obat', '').strip()
             k.pasien.save(update_fields=['alergi_obat'])
 
+        # Skrining Jatuh Morse Detail
+        detail_jatuh = {}
+        for key in ('jatuh_riwayat', 'jatuh_diagnosis', 'jatuh_alat',
+                    'jatuh_infus', 'jatuh_jalan', 'jatuh_mental'):
+            val = request.POST.get(key, '').strip()
+            if val.isdigit():
+                detail_jatuh[key] = int(val)
+        if detail_jatuh:
+            k.skrining_jatuh_detail = detail_jatuh
+
+        # Catatan Waktu
+        if 'asesmen_catatan_waktu' in request.POST:
+            k.asesmen_catatan_waktu = request.POST['asesmen_catatan_waktu'].strip()
+
         k.save()
+
+        # ── Baris tindakan: tarif editable + EP per item ──
+        if has_tindakan_payload(request):
+            try:
+                simpan_tindakan(k, parse_tindakan(request), user=request.user)
+            except ValueError as exc:
+                messages.error(request, str(exc))
+                return redirect(request.path)
+            k.icd9_tindakan = '; '.join(t.nama for t in k.tindakan_asesmen.all())
+            k.save(update_fields=['icd9_tindakan'])
+        elif not k.tindakan_asesmen.exists():
+            # Kompatibilitas form lama: hanya teks bebas yang dikirim.
+            kode_list = [c.strip().split(' - ')[0]
+                         for c in request.POST.getlist('icd9_kode') if c.strip()]
+            if not kode_list and request.POST.get('icd9_tindakan'):
+                raw_tindakan = request.POST.get('icd9_tindakan', '').strip()
+                if raw_tindakan:
+                    parts = re.split(r'[,;\n]+', raw_tindakan)
+                    for p in parts:
+                        clean_p = p.strip()
+                        if clean_p:
+                            kode_list.append(clean_p.split(' - ')[0].split(' ')[0].strip())
+            with transaction.atomic():
+                sync_billing(k, kode_list, user=request.user)
+
+        # ── Korelasi EP ──
+        for rule in AturanEpAsesmen.objects.all():
+            status = request.POST.get(f'ep_status_{rule.pk}')
+            if status not in ('TERPENUHI', 'BELUM', 'NA'):
+                continue
+            std_item = StandardItem.objects.filter(sub_standard=rule.sub_standard).first()
+            if not std_item:
+                continue
+            KorelasiEpAsesmen.objects.update_or_create(
+                kunjungan=k, standard_item=std_item,
+                defaults={
+                    'status': status,
+                    'catatan': request.POST.get(f'ep_catatan_{rule.pk}', '').strip(),
+                    'diverifikasi_oleh': request.user,
+                    'diverifikasi_pada': timezone.now(),
+                }
+            )
+
+        for std_id in request.POST.getlist('custom_ep_id'):
+            if not std_id:
+                continue
+            status = request.POST.get(f'custom_ep_status_{std_id}', 'TERPENUHI')
+            if status not in ('TERPENUHI', 'BELUM', 'NA'):
+                continue
+            std_item = StandardItem.objects.filter(pk=std_id).first()
+            if not std_item:
+                continue
+            KorelasiEpAsesmen.objects.update_or_create(
+                kunjungan=k, standard_item=std_item,
+                defaults={
+                    'status': status,
+                    'catatan': request.POST.get(f'custom_ep_catatan_{std_id}', '').strip(),
+                    'diverifikasi_oleh': request.user,
+                    'diverifikasi_pada': timezone.now(),
+                }
+            )
+
         action_mode = request.POST.get('action_mode', 'save')
         if action_mode == 'selesai':
             if k.is_asesmen_awal_lengkap:
@@ -2455,13 +2614,399 @@ def igd_asesmen_medis_save(request, pk):
         k.petugas_handover_dokter = (request.POST.get('petugas_handover_dokter') or k.petugas_handover_dokter or '').strip()
         k.petugas_handover_dokter_jam = (request.POST.get('petugas_handover_dokter_jam') or k.petugas_handover_dokter_jam or '').strip()
 
+        # Skrining Jatuh Morse Detail
+        detail_jatuh = {}
+        for key in ('jatuh_riwayat', 'jatuh_diagnosis', 'jatuh_alat',
+                    'jatuh_infus', 'jatuh_jalan', 'jatuh_mental'):
+            val = request.POST.get(key, '').strip()
+            if val.isdigit():
+                detail_jatuh[key] = int(val)
+        if detail_jatuh:
+            k.skrining_jatuh_detail = detail_jatuh
+
+        # Catatan Waktu
+        if 'asesmen_catatan_waktu' in request.POST:
+            k.asesmen_catatan_waktu = request.POST['asesmen_catatan_waktu'].strip()
+
         k.save()
+
+        # ── Baris tindakan: tarif editable + EP per item ──
+        if has_tindakan_payload(request):
+            try:
+                simpan_tindakan(k, parse_tindakan(request), user=request.user)
+            except ValueError as exc:
+                messages.error(request, str(exc))
+                return redirect(request.path)
+            k.icd9_tindakan = '; '.join(t.nama for t in k.tindakan_asesmen.all())
+            k.save(update_fields=['icd9_tindakan'])
+        elif not k.tindakan_asesmen.exists():
+            # Kompatibilitas form lama: hanya teks bebas yang dikirim.
+            kode_list = [c.strip().split(' - ')[0]
+                         for c in request.POST.getlist('icd9_kode') if c.strip()]
+            if not kode_list and request.POST.get('icd9_tindakan'):
+                raw_tindakan = request.POST.get('icd9_tindakan', '').strip()
+                if raw_tindakan:
+                    parts = re.split(r'[,;\n]+', raw_tindakan)
+                    for p in parts:
+                        clean_p = p.strip()
+                        if clean_p:
+                            kode_list.append(clean_p.split(' - ')[0].split(' ')[0].strip())
+            with transaction.atomic():
+                sync_billing(k, kode_list, user=request.user)
+
+        # ── Korelasi EP ──
+        for rule in AturanEpAsesmen.objects.all():
+            status = request.POST.get(f'ep_status_{rule.pk}')
+            if status not in ('TERPENUHI', 'BELUM', 'NA'):
+                continue
+            std_item = StandardItem.objects.filter(sub_standard=rule.sub_standard).first()
+            if not std_item:
+                continue
+            KorelasiEpAsesmen.objects.update_or_create(
+                kunjungan=k, standard_item=std_item,
+                defaults={
+                    'status': status,
+                    'catatan': request.POST.get(f'ep_catatan_{rule.pk}', '').strip(),
+                    'diverifikasi_oleh': request.user,
+                    'diverifikasi_pada': timezone.now(),
+                }
+            )
+
+        for std_id in request.POST.getlist('custom_ep_id'):
+            if not std_id:
+                continue
+            status = request.POST.get(f'custom_ep_status_{std_id}', 'TERPENUHI')
+            if status not in ('TERPENUHI', 'BELUM', 'NA'):
+                continue
+            std_item = StandardItem.objects.filter(pk=std_id).first()
+            if not std_item:
+                continue
+            KorelasiEpAsesmen.objects.update_or_create(
+                kunjungan=k, standard_item=std_item,
+                defaults={
+                    'status': status,
+                    'catatan': request.POST.get(f'custom_ep_catatan_{std_id}', '').strip(),
+                    'diverifikasi_oleh': request.user,
+                    'diverifikasi_pada': timezone.now(),
+                }
+            )
+
+        # ── Lampiran berkas ──
+        files = request.FILES.getlist('lampiran_files')
+        kategori = request.POST.get('lampiran_kategori', 'ASESMEN')
+        for f in files:
+            LampiranAsesmen.objects.create(
+                kunjungan=k,
+                file=f,
+                nama_asli=f.name[:255],
+                ukuran=f.size,
+                jenis=kategori,
+                diunggah_oleh=request.user if request.user.is_authenticated else None,
+            )
+
         messages.success(request, f'Asesmen medis awal IGD pasien {k.pasien.nama_lengkap} berhasil diperbarui.')
 
         next_url = request.POST.get('next_url')
         if next_url:
             return redirect(next_url)
     return redirect('pasien:igd_dashboard')
+
+
+@login_required
+@require_patient_module('igd')
+def api_tarif_preview(request):
+    kunjungan_id = request.GET.get('kunjungan')
+    if not kunjungan_id:
+        return JsonResponse({'error': 'Parameter kunjungan diperlukan'}, status=400)
+    kunjungan = get_object_or_404(KunjunganPasien, pk=kunjungan_id)
+    profile = getattr(request.user, 'profile', None)
+    if not can_read_kunjungan(kunjungan, profile):
+        raise PermissionDenied("Anda tidak memiliki akses ke kunjungan unit lain.")
+
+    icd9_raw = request.GET.get('icd9', '')
+    codes = [c.strip().split(' - ')[0] for c in icd9_raw.replace(';', ',').split(',') if c.strip()]
+    if not codes:
+        codes = [c.strip().split(' - ')[0] for c in request.GET.getlist('icd9') if c.strip()]
+
+    total = 0
+    all_resolved = True
+    items = []
+    for code in codes:
+        detail = resolve_detail(kunjungan, code)
+        if detail:
+            nom = detail['nominal']
+            if nom is None:
+                all_resolved = False
+            else:
+                total += nom
+            items.append({
+                'kode': code,
+                'nama': detail['icd9'].nama,
+                'nominal': nom,
+                'penjamin': detail['penjamin'],
+                'kelompok': detail['kelompok'].nama if detail['kelompok'] else '-',
+                'found': nom is not None,
+            })
+        else:
+            all_resolved = False
+            items.append({
+                'kode': code,
+                'nama': '',
+                'nominal': None,
+                'penjamin': kunjungan.penjamin,
+                'kelompok': '-',
+                'found': False,
+            })
+    return JsonResponse({
+        'kunjungan_id': kunjungan.pk,
+        'penjamin': kunjungan.penjamin,
+        'penjamin_display': kunjungan.get_penjamin_display(),
+        'total': total if all_resolved else None,
+        'all_resolved': all_resolved,
+        'items': items,
+    })
+
+
+@login_required
+@require_patient_module('igd')
+def api_saran_icd(request):
+    """Saran diagnosis deterministik dari katalog kasus tersering (bukan LLM)."""
+    kunjungan_id = request.GET.get('kunjungan')
+    if not kunjungan_id:
+        return JsonResponse({'error': 'Parameter kunjungan diperlukan'}, status=400)
+    kunjungan = get_object_or_404(KunjunganPasien, pk=kunjungan_id)
+    if not can_read_kunjungan(kunjungan, getattr(request.user, 'profile', None)):
+        raise PermissionDenied("Anda tidak memiliki akses ke kunjungan unit lain.")
+
+    jenis = request.GET.get('jenis', 'ICD10').upper()
+    if jenis not in ('ICD10', 'ICD9'):
+        jenis = 'ICD10'
+    items = saran_untuk(kunjungan, request.GET.get('q', '').strip(), jenis)
+    return JsonResponse({'kunjungan_id': kunjungan.pk, 'jenis': jenis, 'items': items})
+
+
+# ── LAMPIRAN ASESMEN DOKUMEN / PENUNJANG ──────────────────────────────────────
+
+LAMPIRAN_EKSTENSI = {'.pdf', '.xls', '.xlsx', '.doc', '.docx'}
+LAMPIRAN_MAKS_BYTE = 10 * 1024 * 1024
+
+
+@login_required
+@require_POST
+def asesmen_lampiran_upload(request, pk):
+    k = get_object_or_404(KunjunganPasien, pk=pk)
+    if not can_read_kunjungan(k, getattr(request.user, 'profile', None)):
+        raise PermissionDenied("Anda tidak memiliki akses ke kunjungan unit lain.")
+    target_url = request.POST.get('next_url') or request.META.get('HTTP_REFERER') or reverse('pasien:igd_dashboard')
+    f = request.FILES.get('file')
+    if not f:
+        messages.error(request, 'Tidak ada berkas yang dipilih.')
+        return redirect(target_url)
+    ext = Path(f.name).suffix.lower()
+    if ext not in LAMPIRAN_EKSTENSI:
+        messages.error(request, f'Format berkas {ext} tidak diizinkan. Unggah PDF, DOC, DOCX, XLS, atau XLSX.')
+        return redirect(target_url)
+    if f.size > LAMPIRAN_MAKS_BYTE:
+        messages.error(request, 'Ukuran berkas melebihi batas maksimal 10 MB.')
+        return redirect(target_url)
+
+    LampiranAsesmen.objects.create(
+        kunjungan=k,
+        jenis=request.POST.get('jenis', 'ASESMEN'),
+        file=f,
+        nama_asli=f.name,
+        ukuran=f.size,
+        diunggah_oleh=request.user,
+    )
+    messages.success(request, f'Lampiran "{f.name}" berhasil diunggah.')
+    return redirect(target_url)
+
+
+@login_required
+def asesmen_lampiran_download(request, pk, lampiran_id):
+    lap = get_object_or_404(LampiranAsesmen, pk=lampiran_id, kunjungan_id=pk)
+    if not can_read_kunjungan(lap.kunjungan, getattr(request.user, 'profile', None)):
+        raise PermissionDenied("Anda tidak memiliki akses ke kunjungan unit lain.")
+    resp = FileResponse(lap.file.open('rb'), as_attachment=True, filename=lap.nama_asli)
+    resp['Content-Type'] = 'application/octet-stream'
+    return resp
+
+
+@login_required
+@require_POST
+def asesmen_lampiran_hapus(request, pk, lampiran_id):
+    lap = get_object_or_404(LampiranAsesmen, pk=lampiran_id, kunjungan_id=pk)
+    if not can_read_kunjungan(lap.kunjungan, getattr(request.user, 'profile', None)):
+        raise PermissionDenied("Anda tidak memiliki akses ke kunjungan unit lain.")
+    if lap.file:
+        try:
+            lap.file.delete(save=False)
+        except Exception:
+            pass
+    lap.delete()
+    messages.success(request, 'Lampiran berhasil dihapus.')
+    target_url = request.POST.get('next_url') or request.META.get('HTTP_REFERER') or reverse('pasien:igd_dashboard')
+    return redirect(target_url)
+
+
+# ── Rekapitulasi & Manajemen Asesmen Medis Awal IGD (ARIMA 2026) ──
+
+ASESMEN_DELETE_NILAI = {
+    **{f: '' for f in (
+        'keadaan_umum', 'kesadaran', 'nyeri_karakteristik', 'fungsional_adl',
+        'anamnesis_rps', 'anamnesis_rpd', 'anamnesis_rpk', 'anamnesis_obat',
+        'fisik_airway', 'fisik_breathing', 'fisik_circulation', 'fisik_disability',
+        'fisik_exposure', 'status_psikososial', 'status_spiritual',
+        'skrining_jatuh_grade', 'diagnosa_keperawatan_sdki',
+        'luaran_keperawatan_slki', 'intervensi_keperawatan_siki',
+        'diagnosa_masuk', 'icd9_tindakan', 'asesmen_catatan_waktu',
+    )},
+    'fisik_head_to_toe': {},
+    'skrining_jatuh_detail': {},
+    'skrining_jatuh_skor': None,
+    'skrining_gizi_mst': None,
+}
+
+
+@login_required
+@require_patient_module('igd')
+def asesmen_rekap(request):
+    """
+    Tabel rekapitulasi asesmen medis awal IGD.
+    Hanya menampilkan kunjungan IGD yang memiliki asesmen klinis (exclude anamnesis_rps='').
+    Mendukung filter pencarian, penjamin, status EP, dan rentang tanggal.
+    """
+    profile = getattr(request.user, 'profile', None)
+    base_qs = (
+        KunjunganPasien.objects
+        .filter(jenis_kunjungan='IGD')
+        .exclude(anamnesis_rps='')
+        .select_related('pasien', 'unit_kerja')
+        .prefetch_related('korelasi_ep__standard_item', 'lampiran_asesmen')
+        .annotate(
+            tarif_asesmen=Sum(
+                F('billing__kuantitas') * F('billing__harga_satuan'),
+                filter=Q(billing__sumber='ASESMEN')
+            )
+        )
+        .order_by('-tanggal_masuk')
+    )
+    qs = scope_kunjungan_qs(base_qs, profile)
+
+    q = request.GET.get('q', '').strip()
+    if q:
+        qs = qs.filter(
+            Q(pasien__no_rm__icontains=q) |
+            Q(pasien__nama_lengkap__icontains=q) |
+            Q(no_kunjungan__icontains=q) |
+            Q(diagnosa_masuk__icontains=q) |
+            Q(diagnosa_keperawatan_sdki__icontains=q)
+        )
+
+    penjamin = request.GET.get('penjamin', '').strip()
+    if penjamin:
+        qs = qs.filter(penjamin=penjamin)
+
+    tgl_awal = request.GET.get('tanggal_awal', '').strip()
+    if tgl_awal:
+        qs = qs.filter(tanggal_masuk__date__gte=tgl_awal)
+
+    tgl_akhir = request.GET.get('tanggal_akhir', '').strip()
+    if tgl_akhir:
+        qs = qs.filter(tanggal_masuk__date__lte=tgl_akhir)
+
+    ep_filter = request.GET.get('ep_status', '').strip()
+    if ep_filter:
+        items = [k for k in qs if k.status_ep_ringkas.lower() == ep_filter.lower()]
+        paginator = Paginator(items, 20)
+    else:
+        paginator = Paginator(qs, 20)
+
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+
+    return render(request, 'pasien/asesmen_rekap.html', {
+        'page_obj': page_obj,
+        'q': q,
+        'penjamin': penjamin,
+        'tanggal_awal': tgl_awal,
+        'tanggal_akhir': tgl_akhir,
+        'ep_status': ep_filter,
+    })
+
+
+@login_required
+@require_patient_module('igd')
+def asesmen_detail(request, pk):
+    """
+    Tampilan detail read-only asesmen medis awal IGD.
+    Menampilkan anamnesis, TTV, 3S, tindakan ICD-9, billing, Morse Fall Scale, EP, dan lampiran.
+    """
+    k = get_object_or_404(
+        KunjunganPasien.objects.select_related('pasien', 'unit_kerja')
+        .prefetch_related('korelasi_ep__standard_item', 'lampiran_asesmen', 'billing'),
+        pk=pk
+    )
+    profile = getattr(request.user, 'profile', None)
+    if not can_read_kunjungan(k, profile):
+        raise PermissionDenied("Anda tidak memiliki akses ke kunjungan unit lain.")
+
+    billing_asesmen = k.billing.filter(sumber='ASESMEN')
+    total_tarif = billing_asesmen.aggregate(
+        total=Sum(F('kuantitas') * F('harga_satuan'))
+    )['total'] or 0
+
+    return render(request, 'pasien/asesmen_detail.html', {
+        'k': k,
+        'billing_asesmen': billing_asesmen,
+        'total_tarif_asesmen': total_tarif,
+        'korelasi_ep_list': k.korelasi_ep.all(),
+        'lampiran_list': k.lampiran_asesmen.all(),
+    })
+
+
+@login_required
+@require_POST
+@require_patient_module('igd')
+def asesmen_hapus(request, pk):
+    """
+    Menghapus data asesmen awal IGD dengan sistem pengamanan prompt 'HAPUS'.
+    Mengosongkan field klinis di KunjunganPasien, menghapus korelasi EP, lampiran berkas,
+    dan billing tindakan bersumber ASESMEN. Record KunjunganPasien tetap dipertahankan.
+    """
+    k = get_object_or_404(KunjunganPasien, pk=pk)
+    profile = getattr(request.user, 'profile', None)
+    if not can_read_kunjungan(k, profile):
+        raise PermissionDenied("Anda tidak memiliki akses ke kunjungan unit lain.")
+
+    konfirmasi = request.POST.get('konfirmasi', '').strip().upper()
+    if konfirmasi != 'HAPUS':
+        messages.error(request, 'Ketik HAPUS untuk mengonfirmasi penghapusan data asesmen.')
+        return redirect('pasien:asesmen_rekap')
+
+    with transaction.atomic():
+        # 1. Hapus artefak asesmen
+        k.korelasi_ep.all().delete()
+        k.lampiran_asesmen.all().delete()
+        BillingItem.objects.filter(kunjungan=k, sumber='ASESMEN').delete()
+
+        # 2. Reset field klinis
+        for field, nilai in ASESMEN_DELETE_NILAI.items():
+            setattr(k, field, nilai)
+        k.save(update_fields=list(ASESMEN_DELETE_NILAI))
+
+        # 3. Log audit tindakan
+        AuditLog.objects.create(
+            user=request.user,
+            aksi='DELETE',
+            model_name='AsesmenKlinis',
+            object_repr=f"Kunjungan #{k.pk} - {k.pasien.nama_lengkap}",
+            detail="Penghapusan data asesmen klinis awal IGD via rekapitulasi (soft-reset field klinis & hapus artefak EP/lampiran/billing ASESMEN)"
+        )
+
+    messages.success(request, f'Data asesmen pasien {k.pasien.nama_lengkap} berhasil dihapus.')
+    return redirect('pasien:asesmen_rekap')
+
 
 
 @login_required

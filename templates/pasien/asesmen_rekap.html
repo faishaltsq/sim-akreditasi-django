@@ -1,0 +1,234 @@
+{% extends "base.html" %}
+
+{% block title %}Rekap Asesmen Medis Awal IGD — ARIMA{% endblock %}
+{% block page_title %}Rekapitulasi Asesmen Medis Awal IGD{% endblock %}
+{% block page_subtitle %}Modul Pelayanan Klinis &amp; Pemenuhan Standar Akreditasi Rumah Sakit (STARKES){% endblock %}
+
+{% block content %}
+<div class="container-fluid p-0">
+
+    <!-- BREADCRUMB -->
+    <nav aria-label="breadcrumb" class="mb-3">
+        <ol class="breadcrumb mb-0" style="font-size:.8rem;">
+            <li class="breadcrumb-item"><a href="{% url 'pasien:dashboard' %}" class="text-decoration-none" style="color:var(--primary);">Dashboard</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'pasien:igd_dashboard' %}" class="text-decoration-none" style="color:var(--primary);">IGD</a></li>
+            <li class="breadcrumb-item active">Rekap Asesmen IGD</li>
+        </ol>
+    </nav>
+
+    <!-- FILTER & SEARCH CARD -->
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-body py-3">
+            <form method="get" class="row g-2 align-items-end">
+                <div class="col-md-3">
+                    <label class="form-label small fw-semibold text-muted mb-1">Cari Pasien / Diagnosis:</label>
+                    <div class="input-group input-group-sm">
+                        <span class="input-group-text"><i class="bi bi-search"></i></span>
+                        <input type="text" name="q" class="form-control" placeholder="No. RM, Nama, ICD-10, SDKI..." value="{{ q }}">
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label small fw-semibold text-muted mb-1">Penjamin:</label>
+                    <select name="penjamin" class="form-select form-select-sm">
+                        <option value="">Semua Penjamin</option>
+                        <option value="UMUM" {% if penjamin == 'UMUM' %}selected{% endif %}>Umum / Mandiri</option>
+                        <option value="BPJS_PBI" {% if penjamin == 'BPJS_PBI' %}selected{% endif %}>BPJS PBI</option>
+                        <option value="BPJS_NON_PBI" {% if penjamin == 'BPJS_NON_PBI' %}selected{% endif %}>BPJS Non-PBI</option>
+                        <option value="ASURANSI_SWASTA" {% if penjamin == 'ASURANSI_SWASTA' %}selected{% endif %}>Asuransi Swasta</option>
+                        <option value="PERUSAHAAN" {% if penjamin == 'PERUSAHAAN' %}selected{% endif %}>Perusahaan / Korporasi</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label small fw-semibold text-muted mb-1">Status Standar EP:</label>
+                    <select name="ep_status" class="form-select form-select-sm">
+                        <option value="">Semua Status EP</option>
+                        <option value="lengkap" {% if ep_status|lower == 'lengkap' %}selected{% endif %}>Lengkap</option>
+                        <option value="sebagian" {% if ep_status|lower == 'sebagian' %}selected{% endif %}>Sebagian</option>
+                        <option value="belum ada" {% if ep_status|lower == 'belum ada' %}selected{% endif %}>Belum Ada</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label small fw-semibold text-muted mb-1">Tanggal Awal:</label>
+                    <input type="date" name="tanggal_awal" class="form-control form-control-sm" value="{{ tanggal_awal }}">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label small fw-semibold text-muted mb-1">Tanggal Akhir:</label>
+                    <input type="date" name="tanggal_akhir" class="form-control form-control-sm" value="{{ tanggal_akhir }}">
+                </div>
+                <div class="col-md-1 d-flex gap-1">
+                    <button type="submit" class="btn btn-primary btn-sm w-100" title="Terapkan Filter">
+                        <i class="bi bi-filter"></i>
+                    </button>
+                    <a href="{% url 'pasien:asesmen_rekap' %}" class="btn btn-outline-secondary btn-sm" title="Reset Filter">
+                        <i class="bi bi-arrow-counterclockwise"></i>
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- REKAP TABLE CARD -->
+    <div class="card border-0 shadow-sm">
+        <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+            <h6 class="fw-bold mb-0 text-dark">
+                <i class="bi bi-journal-check me-2 text-primary"></i>Daftar Asesmen Medis Awal IGD
+                <span class="badge bg-primary-subtle text-primary border ms-2">{{ page_obj.paginator.count }} Data</span>
+            </h6>
+            <div class="small text-muted">
+                Menampilkan data kunjungan IGD yang telah memiliki asesmen klinis aktif
+            </div>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0" style="font-size:0.85rem;">
+                <thead class="table-light">
+                    <tr>
+                        <th style="width: 4%;" class="text-center">No</th>
+                        <th style="width: 22%;">No. RM &amp; Pasien</th>
+                        <th style="width: 25%;">Diagnosis (ICD-10 / SDKI)</th>
+                        <th style="width: 14%;">Jenis Pasien</th>
+                        <th style="width: 13%;">Tarif (Rp)</th>
+                        <th style="width: 10%;" class="text-center">Status EP</th>
+                        <th style="width: 12%;" class="text-center">Aksi</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in page_obj %}
+                    <tr>
+                        <td class="text-center text-muted small">{{ forloop.counter0|add:page_obj.start_index }}</td>
+                        <td>
+                            <div class="fw-bold text-dark">{{ item.pasien.nama_lengkap }}</div>
+                            <div class="small text-muted">
+                                <span class="badge bg-secondary-subtle text-secondary me-1">{{ item.pasien.no_rm }}</span>
+                                <span>{{ item.tanggal_masuk|date:"d/m/Y H:i" }}</span>
+                            </div>
+                        </td>
+                        <td>
+                            {% if item.diagnosa_masuk %}
+                                <div class="fw-semibold text-primary" title="Diagnosis Masuk">
+                                    <i class="bi bi-tag-fill me-1 small"></i>{{ item.diagnosa_masuk }}
+                                </div>
+                            {% else %}
+                                <span class="text-muted small fst-italic">Diagnosis medis belum diisi</span>
+                            {% endif %}
+                            {% if item.diagnosa_keperawatan_sdki %}
+                                <div class="small text-success mt-1" title="Diagnosis Keperawatan SDKI">
+                                    <i class="bi bi-clipboard2-pulse me-1"></i>{{ item.diagnosa_keperawatan_sdki }}
+                                </div>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div><span class="badge bg-info-subtle text-info-emphasis border">{{ item.get_penjamin_display }}</span></div>
+                            <div class="small text-muted mt-1">{{ item.unit_kerja.nama|default:"IGD" }}</div>
+                        </td>
+                        <td>
+                            {% if item.tarif_asesmen is not None %}
+                                <strong class="text-success">Rp {{ item.tarif_asesmen|floatformat:0 }}</strong>
+                            {% else %}
+                                <span class="text-muted fw-bold">—</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-center">
+                            {% if item.status_ep_ringkas == 'Lengkap' %}
+                                <span class="badge bg-success"><i class="bi bi-check-circle me-1"></i>Lengkap</span>
+                            {% elif item.status_ep_ringkas == 'Sebagian' %}
+                                <span class="badge bg-warning text-dark"><i class="bi bi-clock-history me-1"></i>Sebagian</span>
+                            {% elif item.status_ep_ringkas == 'Belum Ada' %}
+                                <span class="badge bg-secondary">Belum Ada</span>
+                            {% else %}
+                                <span class="badge bg-light text-muted border">{{ item.status_ep_ringkas }}</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-center">
+                            <div class="btn-group btn-group-sm" role="group">
+                                <a href="{% url 'pasien:asesmen_detail' item.pk %}" class="btn btn-outline-primary" title="Lihat Detail Asesmen">
+                                    <i class="bi bi-eye"></i>
+                                </a>
+                                <a href="{% url 'pasien:kunjungan_asesmen_awal' item.pk %}" class="btn btn-outline-warning" title="Edit Form Asesmen">
+                                    <i class="bi bi-pencil"></i>
+                                </a>
+                                <button type="button" class="btn btn-outline-danger" title="Hapus Data Asesmen" data-bs-toggle="modal" data-bs-target="#modalHapus{{ item.pk }}">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </div>
+
+                            <!-- MODAL KONFIRMASI HAPUS ASESMEN (SAFETY PROMPT) -->
+                            <div class="modal fade" id="modalHapus{{ item.pk }}" tabindex="-1" aria-labelledby="modalHapusTitle{{ item.pk }}" aria-hidden="true">
+                                <div class="modal-dialog modal-dialog-centered text-start">
+                                    <form class="modal-content border-danger" method="post" action="{% url 'pasien:asesmen_hapus' item.pk %}">
+                                        {% csrf_token %}
+                                        <div class="modal-header bg-danger text-white py-2">
+                                            <h6 class="modal-title fw-bold" id="modalHapusTitle{{ item.pk }}">
+                                                <i class="bi bi-exclamation-triangle-fill me-2"></i>Konfirmasi Hapus Data Asesmen
+                                            </h6>
+                                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                                        </div>
+                                        <div class="modal-body p-3">
+                                            <p class="mb-2">
+                                                Apakah Anda yakin ingin menghapus data asesmen awal untuk pasien:
+                                            </p>
+                                            <div class="alert alert-warning py-2 mb-3">
+                                                <strong>{{ item.pasien.nama_lengkap }}</strong> (No. RM: {{ item.pasien.no_rm }})<br>
+                                                <span class="small text-muted">Kunjungan IGD: {{ item.tanggal_masuk|date:"d M Y H:i" }}</span>
+                                            </div>
+                                            <p class="small text-muted mb-2">
+                                                Tindakan ini akan mengosongkan seluruh field asesmen klinis, menghapus data korelasi Elemen Penilaian (EP), berkas lampiran, dan tagihan tindakan otomatis (Billing ASESMEN). Record kunjungan pasien tetap tersimpan.
+                                            </p>
+                                            <div class="mb-2">
+                                                <label class="form-label small fw-bold text-danger">Ketik "HAPUS" untuk konfirmasi:</label>
+                                                <input type="text" name="konfirmasi" class="form-control form-control-sm text-uppercase" placeholder="HAPUS" required autocomplete="off">
+                                            </div>
+                                        </div>
+                                        <div class="modal-footer bg-light py-2">
+                                            <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Batal</button>
+                                            <button type="submit" class="btn btn-danger btn-sm fw-semibold">
+                                                <i class="bi bi-trash me-1"></i>Hapus Asesmen
+                                            </button>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="7" class="text-center py-4 text-muted">
+                            <i class="bi bi-inbox fs-2 d-block mb-2 text-secondary"></i>
+                            Tidak ada data asesmen klinis IGD yang ditemukan sesuai kriteria filter.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- PAGINATION -->
+        {% if page_obj.has_other_pages %}
+        <div class="card-footer bg-white py-2 d-flex justify-content-between align-items-center">
+            <span class="small text-muted">
+                Halaman {{ page_obj.number }} dari {{ page_obj.paginator.num_pages }}
+            </span>
+            <ul class="pagination pagination-sm mb-0">
+                {% if page_obj.has_previous %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.previous_page_number }}&q={{ q }}&penjamin={{ penjamin }}&ep_status={{ ep_status }}&tanggal_awal={{ tanggal_awal }}&tanggal_akhir={{ tanggal_akhir }}">
+                        <i class="bi bi-chevron-left"></i>
+                    </a>
+                </li>
+                {% endif %}
+                <li class="page-item active">
+                    <span class="page-link">{{ page_obj.number }}</span>
+                </li>
+                {% if page_obj.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.next_page_number }}&q={{ q }}&penjamin={{ penjamin }}&ep_status={{ ep_status }}&tanggal_awal={{ tanggal_awal }}&tanggal_akhir={{ tanggal_akhir }}">
+                        <i class="bi bi-chevron-right"></i>
+                    </a>
+                </li>
+                {% endif %}
+            </ul>
+        </div>
+        {% endif %}
+    </div>
+
+</div>
+{% endblock %}

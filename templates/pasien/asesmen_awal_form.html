@@ -5,7 +5,7 @@
 {% block page_subtitle %}{{ k.pasien.nama_lengkap }} — No. Kunjungan {{ k.no_kunjungan }}{% endblock %}
 
 {% block content %}
-<form method="post" id="asesmenAwalForm" action="{% url 'pasien:igd_asesmen_awal_save' k.pk %}">
+<form method="post" id="asesmenAwalForm" action="{% url 'pasien:igd_asesmen_awal_save' k.pk %}" enctype="multipart/form-data">
     {% csrf_token %}
     <input type="hidden" name="next_url" value="{{ next_url }}">
     <div class="container-fluid p-0" style="padding-bottom:5.5rem;">
@@ -105,6 +105,11 @@
 <datalist id="globalSdkiList">
     {% for kode, nama in sdki_codes %}
     <option value="{{ kode }} - {{ nama }}">{{ kode }} - {{ nama }}</option>
+    {% endfor %}
+</datalist>
+<datalist id="globalIcd9List">
+    {% for item in icd9_list %}
+    <option value="{{ item.kode }} - {{ item.nama }}">{{ item.kode }} - {{ item.nama }}</option>
     {% endfor %}
 </datalist>
 

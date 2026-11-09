@@ -254,6 +254,9 @@
                 <a href="{% url 'pasien:igd_dashboard' %}" class="nav-link{% if u == 'igd_dashboard' and not request.GET.focus and not request.GET.audit %} active{% endif %}">
                     <i class="bi bi-speedometer2 me-1"></i> Dashboard IGD
                 </a>
+                <a href="{% url 'pasien:asesmen_rekap' %}" class="nav-link{% if u == 'asesmen_rekap' %} active{% endif %}">
+                    <i class="bi bi-journal-medical me-1"></i> Rekap Asesmen IGD
+                </a>
                 <div class="px-3 pt-2 pb-1 text-uppercase text-muted" style="font-size: .65rem; font-weight: 700; letter-spacing: .5px;">Alur Pelayanan (1 - 6)</div>
                 <a href="{% url 'akreditasi:igd_alur_triage' %}" class="nav-link{% if request.GET.focus == 'triage' %} active{% endif %}">1. Triage &amp; P1-P4</a>
                 <a href="{% url 'akreditasi:igd_alur_asesmen_ppa' %}" class="nav-link{% if request.GET.focus == 'asesmen' %} active{% endif %}">2. Asesmen PPA &amp; CPPT</a>

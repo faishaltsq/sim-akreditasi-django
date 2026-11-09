@@ -154,6 +154,7 @@ INSTALLED_APPS = [
     'accounts',
     'akreditasi',
     'pasien',
+    'klinis',
     'sdm.apps.SdmConfig',
 ]
 

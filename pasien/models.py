@@ -399,6 +399,7 @@ class KunjunganPasien(models.Model):
     skrining_jatuh_skor    = models.PositiveSmallIntegerField('Skor Risiko Jatuh', null=True, blank=True)
     skrining_jatuh_grade   = models.CharField('Grade Risiko Jatuh', max_length=20, blank=True, help_text='RENDAH / SEDANG / TINGGI')
     skrining_gizi_mst      = models.PositiveSmallIntegerField('Skor Skrining Gizi (MST)', null=True, blank=True)
+    skrining_jatuh_detail  = models.JSONField('Detail Skrining Jatuh (Morse)', default=dict, blank=True)
 
     # ── Diagnosis Keperawatan 3S (SDKI / SLKI / SIKI) ──
     diagnosa_keperawatan_sdki   = models.TextField('Diagnosis Keperawatan (SDKI)', blank=True, help_text='Contoh: D.0077 - Nyeri Akut')
@@ -500,6 +501,7 @@ class KunjunganPasien(models.Model):
     petugas_handover_jam           = models.CharField('Jam Handover Perawat', max_length=10, blank=True)
     petugas_handover_dokter        = models.CharField('Nama Dokter IGD / DPJP', max_length=150, blank=True)
     petugas_handover_dokter_jam    = models.CharField('Jam TTD Dokter IGD', max_length=10, blank=True)
+    asesmen_catatan_waktu          = models.TextField('Catatan / Penyesuaian Waktu Pelayanan', blank=True)
 
     class Meta:
         verbose_name = 'Kunjungan Pasien'
@@ -549,6 +551,18 @@ class KunjunganPasien(models.Model):
             and self.diagnosa_masuk.strip()
             and self.diagnosa_keperawatan_sdki.strip()
         )
+
+    @property
+    def status_ep_ringkas(self):
+        from klinis.models import AturanEpAsesmen
+        rules = set(AturanEpAsesmen.objects.filter(wajib=True).values_list('sub_standard', flat=True))
+        if not rules:
+            return '-'
+        rows = self.korelasi_ep.select_related('standard_item')
+        terpenuhi = {r.standard_item.sub_standard for r in rows if r.status == 'TERPENUHI'}
+        if rules <= terpenuhi:
+            return 'TERPENUHI'
+        return 'SEBAGIAN' if terpenuhi & rules else 'BELUM'
 
     @property
     def news_score(self):
@@ -771,12 +785,15 @@ class BillingItem(models.Model):
         ('LAINNYA',     'Lainnya'),
     ]
 
+    SUMBER = [('MANUAL', 'Input Manual'), ('ASESMEN', 'Otomatis dari Asesmen')]
+
     kunjungan  = models.ForeignKey(KunjunganPasien, on_delete=models.CASCADE, related_name='billing')
     kategori   = models.CharField('Kategori', max_length=15, choices=KATEGORI)
     nama_item  = models.CharField('Nama Item', max_length=200)
     kuantitas  = models.DecimalField('Kuantitas', max_digits=8, decimal_places=2, default=1)
     harga_satuan = models.DecimalField('Harga Satuan (Rp)', max_digits=12, decimal_places=2, default=0)
     kode_icd   = models.CharField('Kode ICD-10/9-CM', max_length=20, blank=True)
+    sumber     = models.CharField('Sumber', max_length=10, choices=SUMBER, default='MANUAL')
     tanggal    = models.DateTimeField('Tanggal', auto_now_add=True)
     dicatat_oleh = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
 
@@ -1103,6 +1120,119 @@ class LogbookHarianAdmission(models.Model):
 
     def __str__(self):
         return f'{self.petugas.username} {self.tanggal:%Y-%m-%d}: {self.kegiatan[:60]}'
+
+
+# ── 12. Korelasi EP Akreditasi & Lampiran Asesmen ──────────────────────────────
+
+class KorelasiEpAsesmen(models.Model):
+    STATUS = [
+        ('TERPENUHI', 'Terpenuhi'),
+        ('BELUM',     'Belum Terpenuhi'),
+        ('NA',        'Tidak Berlaku'),
+    ]
+    kunjungan     = models.ForeignKey(KunjunganPasien, on_delete=models.CASCADE, related_name='korelasi_ep')
+    standard_item = models.ForeignKey('akreditasi.StandardItem', on_delete=models.CASCADE, related_name='korelasi_asesmen')
+    status        = models.CharField('Status Pemenuhan', max_length=12, choices=STATUS, default='BELUM')
+    catatan       = models.TextField('Catatan Verifikasi / Bukti', blank=True)
+    diverifikasi_oleh = models.ForeignKey(User, null=True, blank=True, on_delete=models.SET_NULL, related_name='verifikasi_ep_asesmen')
+    diverifikasi_pada = models.DateTimeField('Waktu Verifikasi', null=True, blank=True)
+
+    class Meta:
+        verbose_name = 'Korelasi EP Asesmen'
+        verbose_name_plural = 'Korelasi EP Asesmen'
+        unique_together = [('kunjungan', 'standard_item')]
+
+    def __str__(self):
+        return f'{self.kunjungan.no_kunjungan} — {self.standard_item.sub_standard} ({self.get_status_display()})'
+
+
+class LampiranAsesmen(models.Model):
+    JENIS = [
+        ('ASESMEN',   'Dokumen Asesmen'),
+        ('PENUNJANG', 'Hasil Penunjang'),
+        ('RUJUKAN',   'Surat Rujukan'),
+        ('LAINNYA',   'Lainnya'),
+    ]
+    kunjungan     = models.ForeignKey(KunjunganPasien, on_delete=models.CASCADE, related_name='lampiran_asesmen')
+    jenis         = models.CharField('Jenis Lampiran', max_length=12, choices=JENIS, default='ASESMEN')
+    file          = models.FileField('File Dokumen', upload_to='asesmen/%Y/%m/')
+    nama_asli     = models.CharField('Nama Asli File', max_length=255)
+    ukuran        = models.PositiveIntegerField('Ukuran File (bytes)', default=0)
+    diunggah_oleh = models.ForeignKey(User, null=True, blank=True, on_delete=models.SET_NULL, related_name='unggah_lampiran_asesmen')
+    diunggah_pada = models.DateTimeField('Waktu Unggah', auto_now_add=True)
+
+    class Meta:
+        verbose_name = 'Lampiran Asesmen'
+        verbose_name_plural = 'Lampiran Asesmen'
+        ordering = ['-diunggah_pada']
+
+    def __str__(self):
+        return f'{self.nama_asli} ({self.kunjungan.no_kunjungan})'
+
+
+# ── 13. Baris Tindakan Asesmen (tarif editable + EP per item) ─────────────────
+
+class TindakanAsesmen(models.Model):
+    JENIS = [
+        ('ICD9', 'ICD-9-CM'),
+        ('SIKI', 'SIKI'),
+        ('BEBAS', 'Manual / Bebas'),
+    ]
+    SUMBER = [
+        ('MASTER', 'Master'),
+        ('SARAN', 'Saran Sistem'),
+        ('MANUAL', 'Input Manual'),
+    ]
+    EP_STATUS = [
+        ('TERPENUHI', 'Terpenuhi'),
+        ('BELUM', 'Belum Lengkap'),
+        ('NA', 'Tidak Berlaku'),
+    ]
+
+    kunjungan   = models.ForeignKey(KunjunganPasien, on_delete=models.CASCADE, related_name='tindakan_asesmen')
+    urutan      = models.PositiveIntegerField('Urutan', default=1)
+    jenis       = models.CharField('Jenis Tindakan', max_length=6, choices=JENIS, default='ICD9')
+    icd9        = models.ForeignKey('klinis.MasterIcd9', null=True, blank=True,
+                                    on_delete=models.PROTECT, related_name='tindakan_asesmen')
+    siki        = models.ForeignKey('klinis.SikiIntervensi', null=True, blank=True,
+                                    on_delete=models.PROTECT, related_name='tindakan_asesmen')
+    kode        = models.CharField('Kode Tindakan', max_length=20, blank=True)
+    nama        = models.CharField('Nama Tindakan (dapat diedit)', max_length=200)
+    sumber_data = models.CharField('Sumber Data', max_length=8, choices=SUMBER, default='MANUAL')
+    tarif_acuan = models.DecimalField('Tarif Acuan Master (Rp)', max_digits=12, decimal_places=2,
+                                      null=True, blank=True)
+    tarif       = models.DecimalField('Tarif Final / Override (Rp)', max_digits=12, decimal_places=2,
+                                      null=True, blank=True)
+    catatan_tarif = models.TextField('Catatan Perubahan Tarif', blank=True)
+    standard_item = models.ForeignKey('akreditasi.StandardItem', null=True, blank=True,
+                                      on_delete=models.SET_NULL, related_name='tindakan_asesmen')
+    ep_status     = models.CharField('Status EP', max_length=12, choices=EP_STATUS, default='BELUM')
+    ep_catatan    = models.TextField('Catatan Bukti EP', blank=True)
+    billing_item  = models.OneToOneField(BillingItem, null=True, blank=True,
+                                         on_delete=models.SET_NULL, related_name='tindakan_asesmen')
+    diubah_oleh   = models.ForeignKey(User, null=True, blank=True, on_delete=models.SET_NULL,
+                                      related_name='tindakan_asesmen_diubah')
+    created_at    = models.DateTimeField(auto_now_add=True)
+    updated_at    = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = 'Tindakan Asesmen'
+        verbose_name_plural = 'Tindakan Asesmen'
+        unique_together = [('kunjungan', 'urutan')]
+        ordering = ['urutan']
+
+    def __str__(self):
+        return f'{self.kode} {self.nama} ({self.kunjungan.no_kunjungan})'
+
+    @property
+    def tarif_efektif(self):
+        """Override bila diisi, jika tidak tarif acuan master. None = belum ditetapkan."""
+        return self.tarif if self.tarif is not None else self.tarif_acuan
+
+    @property
+    def ep_lengkap(self):
+        return self.standard_item_id is None or self.ep_status in ('TERPENUHI', 'NA')
+
 
 
 

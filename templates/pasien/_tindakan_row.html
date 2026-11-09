@@ -1,0 +1,78 @@
+{% load l10n %}
+{% comment %}
+Satu baris tindakan asesmen. Dipakai untuk baris tersimpan (t terisi) dan untuk
+template baris baru (t=None, i='__i__').
+{% endcomment %}
+<div class="border rounded bg-white p-2 mb-2" data-row data-jenis="{{ t.jenis|default:'ICD9' }}">
+    <input type="hidden" name="tindakan_{{ i }}_id" value="{{ t.pk|default:'' }}">
+    <input type="hidden" name="tindakan_{{ i }}_jenis" value="{{ t.jenis|default:'ICD9' }}">
+    <input type="hidden" name="tindakan_{{ i }}_kode" value="{{ t.kode|default:'' }}">
+    <input type="hidden" name="tindakan_{{ i }}_sumber" value="{{ t.sumber_data|default:'MANUAL' }}">
+    <input type="hidden" name="tindakan_{{ i }}_hapus" value="0">
+
+    <div class="d-flex justify-content-between align-items-start gap-2">
+        <div class="flex-grow-1">
+            <div class="d-flex align-items-center gap-2 mb-1">
+                <span class="badge bg-primary-subtle text-primary border" data-kode>{{ t.kode|default:'—' }}</span>
+                {% if t.sumber_data == 'MASTER' %}
+                    <span class="badge bg-primary-subtle text-primary border" data-sumber>Master</span>
+                {% elif t.sumber_data == 'SARAN' %}
+                    <span class="badge bg-info-subtle text-info border" data-sumber>Saran</span>
+                {% else %}
+                    <span class="badge bg-secondary-subtle text-secondary border" data-sumber>Manual</span>
+                {% endif %}
+                {% if t.ep_status == 'TERPENUHI' %}
+                    <span class="badge bg-success" data-ep-badge>Terpenuhi</span>
+                {% elif t.ep_status == 'NA' %}
+                    <span class="badge bg-secondary" data-ep-badge>Tidak Berlaku</span>
+                {% else %}
+                    <span class="badge bg-warning text-dark" data-ep-badge>Belum Lengkap</span>
+                {% endif %}
+            </div>
+            <input type="text" name="tindakan_{{ i }}_nama" class="form-control form-control-sm"
+                   value="{{ t.nama|default:'' }}" placeholder="Nama tindakan (dapat diedit)">
+        </div>
+        <button type="button" class="btn btn-sm btn-outline-danger" title="Hapus baris"
+                onclick="hapusTindakanRow(this)">&times;</button>
+    </div>
+
+    <div class="row g-2 mt-1">
+        <div class="col-md-4">
+            <label class="form-label small mb-0">Tarif (Rp)</label>
+            <input type="number" step="1" min="0" name="tindakan_{{ i }}_tarif"
+                   class="form-control form-control-sm" data-acuan="{% if t.tarif_acuan is not None %}{{ t.tarif_acuan|unlocalize }}{% endif %}"
+                   value="{% if t.tarif is not None %}{{ t.tarif|unlocalize }}{% endif %}" oninput="hitungTotalTindakan('{{ k.pk }}')"
+                   placeholder="{% if t.tarif_acuan is not None %}{{ t.tarif_acuan|unlocalize }}{% else %}belum ditetapkan{% endif %}">
+            <div class="form-text" style="font-size:0.7rem;">
+                Acuan: {% if t.tarif_acuan %}Rp {{ t.tarif_acuan|floatformat:0 }}{% else %}belum ditetapkan{% endif %}
+            </div>
+        </div>
+        <div class="col-md-4">
+            <label class="form-label small mb-0">EP Akreditasi</label>
+            <select name="tindakan_{{ i }}_ep_sub" class="form-select form-select-sm">
+                <option value="">— tanpa EP —</option>
+                {% for sub in ep_sub_choices %}
+                    <option value="{{ sub }}" {% if t.standard_item.sub_standard == sub %}selected{% endif %}>{{ sub }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-4">
+            <label class="form-label small mb-0">Status EP</label>
+            <select name="tindakan_{{ i }}_ep_status" class="form-select form-select-sm"
+                    onchange="hitungTotalTindakan('{{ k.pk }}')">
+                <option value="BELUM" {% if t.ep_status == 'BELUM' or not t.ep_status %}selected{% endif %}>Belum Lengkap</option>
+                <option value="TERPENUHI" {% if t.ep_status == 'TERPENUHI' %}selected{% endif %}>Terpenuhi</option>
+                <option value="NA" {% if t.ep_status == 'NA' %}selected{% endif %}>Tidak Berlaku</option>
+            </select>
+        </div>
+        <div class="col-md-6">
+            <input type="text" name="tindakan_{{ i }}_catatan_tarif" class="form-control form-control-sm"
+                   value="{{ t.catatan_tarif|default:'' }}"
+                   placeholder="Alasan bila tarif diubah dari acuan (wajib)">
+        </div>
+        <div class="col-md-6">
+            <input type="text" name="tindakan_{{ i }}_ep_catatan" class="form-control form-control-sm"
+                   value="{{ t.ep_catatan|default:'' }}" placeholder="Catatan bukti EP (opsional)">
+        </div>
+    </div>
+</div>
