@@ -30,10 +30,11 @@ from .models import (
 )
 from klinis.models import (
     AturanEpAsesmen, MasterIcd9, KasusTindakan,
-    Pemetaan3S, SlkiLuaran, SikiIntervensi
+    Pemetaan3S, SlkiLuaran, SikiIntervensi, SdkiDiagnosis
 )
 from klinis.services.tarif import sync_billing, _kelompok_for, resolve_detail
 from klinis.services.saran import saran_untuk
+from klinis.services.ep_tindakan import primary_for
 from .asesmen_tindakan import has_tindakan_payload, parse_tindakan, simpan_tindakan
 from .pdf_utils import generate_resume_pdf
 from .satusehat import sync_encounter_satusehat, parse_qr_medis
@@ -2783,6 +2784,77 @@ def api_saran_icd(request):
         jenis = 'ICD10'
     items = saran_untuk(kunjungan, request.GET.get('q', '').strip(), jenis)
     return JsonResponse({'kunjungan_id': kunjungan.pk, 'jenis': jenis, 'items': items})
+
+
+@login_required
+@require_patient_module('igd')
+def api_3s_cascade(request):
+    """
+    Cascading 3S: Menerima kode SDKI dan mengembalikan rekomendasi
+    Luaran SLKI dan Intervensi SIKI dari Pemetaan3S.
+    """
+    kunjungan_id = request.GET.get('kunjungan')
+    penjamin = 'UMUM'
+    if kunjungan_id:
+        kunjungan = get_object_or_404(KunjunganPasien, pk=kunjungan_id)
+        if not can_read_kunjungan(kunjungan, getattr(request.user, 'profile', None)):
+            raise PermissionDenied("Anda tidak memiliki akses ke kunjungan unit lain.")
+        penjamin = kunjungan.penjamin
+
+    sdki_input = request.GET.get('sdki', '').strip()
+    if not sdki_input:
+        return JsonResponse({'error': 'Parameter sdki diperlukan'}, status=400)
+
+    # Cari diagnosis SDKI via kode atau substring kode
+    sdki = SdkiDiagnosis.objects.filter(kode__iexact=sdki_input).first()
+    if not sdki:
+        first_token = sdki_input.split()[0].strip()
+        sdki = SdkiDiagnosis.objects.filter(kode__iexact=first_token).first()
+    if not sdki:
+        sdki = SdkiDiagnosis.objects.filter(nama__icontains=sdki_input).first()
+
+    if not sdki:
+        return JsonResponse({
+            'sdki': {'kode': sdki_input, 'nama': ''},
+            'slki_list': [],
+            'siki_list': [],
+        })
+
+    pemetaan_qs = (
+        Pemetaan3S.objects
+        .filter(sdki=sdki)
+        .select_related('slki', 'siki')
+        .order_by('prioritas')
+    )
+
+    slki_list = []
+    seen_slki = set()
+    siki_list = []
+    seen_siki = set()
+
+    for p in pemetaan_qs:
+        if p.slki.kode not in seen_slki:
+            seen_slki.add(p.slki.kode)
+            slki_list.append({
+                'kode': p.slki.kode,
+                'nama': p.slki.nama,
+            })
+        if p.siki.kode not in seen_siki:
+            seen_siki.add(p.siki.kode)
+            ep_rule = primary_for('SIKI', p.siki.kode)
+            siki_list.append({
+                'kode': p.siki.kode,
+                'nama': p.siki.nama,
+                'ep_sub': ep_rule.sub_standard if ep_rule else '',
+                'ep_status': 'TERPENUHI',
+            })
+
+    return JsonResponse({
+        'sdki': {'kode': sdki.kode, 'nama': sdki.nama},
+        'slki_list': slki_list,
+        'siki_list': siki_list,
+        'penjamin': penjamin,
+    })
 
 
 # ── LAMPIRAN ASESMEN DOKUMEN / PENUNJANG ──────────────────────────────────────

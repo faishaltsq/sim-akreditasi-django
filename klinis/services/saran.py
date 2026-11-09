@@ -51,6 +51,31 @@ def saran_untuk(kunjungan, q='', jenis='ICD10', limit=5):
 
     scored.sort(key=lambda item: (-item[0], item[1].urutan))
 
+    if jenis == 'ICD9':
+        results = []
+        seen = set()
+        penjamin = getattr(kunjungan, 'penjamin', 'UMUM')
+        for _, row in scored:
+            for t in row.tindakan.all():
+                if t.icd9.kode in seen:
+                    continue
+                seen.add(t.icd9.kode)
+                tarif = t.tarif_bpjs if penjamin == 'BPJS' else t.tarif_umum
+                results.append({
+                    'kode': t.icd9.kode,
+                    'nama': t.icd9.nama,
+                    'satuan': t.satuan,
+                    'tarif': float(tarif) if tarif is not None else None,
+                    'tarif_umum': float(t.tarif_umum) if t.tarif_umum is not None else None,
+                    'tarif_bpjs': float(t.tarif_bpjs) if t.tarif_bpjs is not None else None,
+                    'kasus_nama': row.icd10.nama if row.icd10 else '',
+                })
+                if len(results) >= limit:
+                    break
+            if len(results) >= limit:
+                break
+        return results
+
     results = []
     for score, row in scored[:limit]:
         results.append({

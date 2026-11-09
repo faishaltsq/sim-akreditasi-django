@@ -68,6 +68,7 @@ urlpatterns = [
     path('api/cek-bpjs/', views.api_cek_bpjs, name='api_cek_bpjs'),
     path('api/tarif-preview/', views.api_tarif_preview, name='api_tarif_preview'),
     path('api/saran-icd/', views.api_saran_icd, name='api_saran_icd'),
+    path('api/3s-cascade/', views.api_3s_cascade, name='api_3s_cascade'),
     path('kunjungan/<int:pk>/batal/', views.kunjungan_batal, name='kunjungan_batal'),
     # ── Laboratorium & LIS ──
     path('laboratorium/', views.laboratorium_dashboard, name='laboratorium_dashboard'),
