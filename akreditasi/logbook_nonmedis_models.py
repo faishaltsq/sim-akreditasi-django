@@ -14,7 +14,7 @@ from django.conf import settings
 from django.db import models
 from django.utils import timezone
 
-from .models import StandardItem, UnitKerja
+from .models import StandardItem, UnitKerja, active_framework
 
 
 # ---------------------------------------------------------------------------
@@ -45,6 +45,49 @@ CHECKLIST_UMUM = [
 def checklist_template():
     """Daftar checklist umum (dapat diperluas per unit di masa depan)."""
     return CHECKLIST_UMUM
+
+
+# ---------------------------------------------------------------------------
+# 1b. Helper autolink Fokus EP akreditasi
+# ---------------------------------------------------------------------------
+
+def ep_kandidat(unit):
+    """Kandidat ``StandardItem`` yang relevan untuk satu unit kerja.
+
+    Menyaring katalog EP framework aktif memakai ``UnitKerja.standar_terkait``
+    (JSONField ``{"TKRS": ["TKRS 1", ...]}``). Tanpa pemetaan, hasil kosong —
+    petugas tetap bisa mengetik kode EP bebas (``fokus_ep_teks``).
+    """
+    if unit is None:
+        return StandardItem.objects.none()
+    pemetaan = unit.standar_terkait or {}
+    if not isinstance(pemetaan, dict) or not pemetaan:
+        return StandardItem.objects.none()
+
+    qs = StandardItem.objects.filter(category__framework=active_framework())
+    filter_q = None
+    for kode_pokja, substandar_list in pemetaan.items():
+        q_pokja = models.Q(category__code=kode_pokja)
+        if substandar_list:
+            q_pokja &= models.Q(sub_standard__in=substandar_list)
+        filter_q = q_pokja if filter_q is None else (filter_q | q_pokja)
+    if filter_q is None:
+        return StandardItem.objects.none()
+    return qs.filter(filter_q).select_related('category').order_by('category__order', 'order', 'code')
+
+
+def resolve_fokus_ep(kode):
+    """Temukan ``StandardItem`` dari kode EP (mis. ``'TKRS 1 EP a'``).
+
+    Pencocokan dibatasi ke framework aktif supaya kode edisi lama tidak
+    menunjuk EP yang sudah dicabut. Kode tak dikenal → ``None``.
+    """
+    kode = (kode or '').strip()
+    if not kode:
+        return None
+    return StandardItem.objects.filter(
+        category__framework=active_framework(), code__iexact=kode,
+    ).select_related('category').first()
 
 
 # ---------------------------------------------------------------------------
