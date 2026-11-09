@@ -1,0 +1,163 @@
+{% extends "base.html" %}
+
+{% block title %}Detail Logbook Non-Medis — ARIMA{% endblock %}
+{% block page_title %}Logbook Harian Non-Medis{% endblock %}
+{% block page_subtitle %}{{ entry.unit.name }} · {% if entry.pegawai %}{{ entry.pegawai.nama_lengkap }}{% else %}{{ entry.pelaksana_nama|default:"—" }}{% endif %} · {{ entry.tanggal|date:"D, d/m/Y" }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-3">
+
+    <div class="d-flex flex-wrap gap-2 align-items-center mb-3">
+        <a href="{% url 'akreditasi:logbook_nonmedis_daftar' %}" class="btn btn-sm btn-outline-secondary">← Kembali</a>
+        <a href="{% url 'akreditasi:logbook_nonmedis_pdf' entry.pk %}" class="btn btn-sm btn-outline-primary">📥 Download PDF</a>
+        {% if entry.status == 'DISETUJUI' %}
+        <span class="badge bg-success">Disetujui / Terkunci</span>
+        {% else %}
+        <span class="badge bg-warning text-dark">Draf</span>
+        {% endif %}
+    </div>
+
+    {# ── A. Identitas & Waktu ─────────────────────────────────────────── #}
+    <div class="card mb-3 shadow-sm">
+        <div class="card-header fw-semibold">A. Identitas &amp; Waktu Pelayanan</div>
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-4"><strong>Unit Kerja:</strong> {{ entry.unit.name }}</div>
+                <div class="col-md-4"><strong>Pelaksana:</strong> {% if entry.pegawai %}{{ entry.pegawai.nama_lengkap }}{% else %}{{ entry.pelaksana_nama|default:"—" }}{% endif %}</div>
+                <div class="col-md-4"><strong>Shift:</strong> {{ shift_label|default:"—" }}</div>
+            </div>
+        </div>
+    </div>
+
+    {# ── B. Checklist & Fokus EP ──────────────────────────────────────── #}
+    <div class="card mb-3 shadow-sm">
+        <div class="card-header fw-semibold">B. Checklist Kepatuhan &amp; Fokus Standar Akreditasi (EP)</div>
+        <div class="card-body">
+            {% if boleh_isi %}
+            <form method="post" action="{% url 'akreditasi:logbook_nonmedis_simpan_checklist' entry.pk %}">
+                {% csrf_token %}
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <thead><tr><th>Parameter</th><th>Status</th><th>Keterangan / Temuan</th></tr></thead>
+                        <tbody>
+                        {% for c in checklist %}
+                        <tr>
+                            <td>{{ c.parameter }}</td>
+                            <td>
+                                <select name="cek_{{ c.kunci }}" class="form-select form-select-sm">
+                                    {% for kode, label in status_pilihan %}
+                                    <option value="{{ kode }}" {% if c.status == kode %}selected{% endif %}>{{ label }}</option>
+                                    {% endfor %}
+                                </select>
+                            </td>
+                            <td><input type="text" name="ket_{{ c.kunci }}" value="{{ c.keterangan }}" class="form-control form-control-sm"></td>
+                        </tr>
+                        {% empty %}
+                        <tr><td colspan="3" class="text-muted">Tidak ada butir checklist.</td></tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                <button type="submit" class="btn btn-primary btn-sm">Simpan Checklist</button>
+            </form>
+            {% else %}
+            <div class="table-responsive">
+                <table class="table table-sm">
+                    <thead><tr><th>Parameter</th><th>Status</th><th>Keterangan</th></tr></thead>
+                    <tbody>
+                    {% for c in checklist %}
+                    <tr><td>{{ c.parameter }}</td><td>{{ c.get_status_display }}</td><td>{{ c.keterangan|default:"—" }}</td></tr>
+                    {% empty %}
+                    <tr><td colspan="3" class="text-muted">Tidak ada butir checklist.</td></tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    {# ── C. Uraian Layanan & Risiko ───────────────────────────────────── #}
+    <div class="card mb-3 shadow-sm">
+        <div class="card-header fw-semibold">C. Uraian Aktivitas / Layanan &amp; Potensi Risiko</div>
+        <div class="card-body">
+            {% if boleh_isi %}
+            <form method="post" action="{% url 'akreditasi:logbook_nonmedis_simpan_narasi' entry.pk %}">
+                {% csrf_token %}
+                <div class="mb-3">
+                    <label class="form-label">Fokus Utama (EP Akreditasi) — Autolink</label>
+                    <select name="fokus_ep" class="form-select">
+                        <option value="">— Pilih EP (opsional) —</option>
+                        {% for ep in kandidat_ep %}
+                        <option value="{{ ep.pk }}" {% if entry.fokus_ep_id == ep.pk %}selected{% endif %}>{{ ep.code }} — {{ ep.sub_title }}</option>
+                        {% endfor %}
+                    </select>
+                    <input type="text" name="fokus_ep_teks" value="{{ entry.fokus_ep_teks }}" class="form-control form-control-sm mt-1" placeholder="Atau ketik kode EP bebas (mis. MFK 1)">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Uraian Aktivitas / Layanan</label>
+                    <textarea name="uraian_aktivitas" class="form-control" rows="4">{{ entry.uraian_aktivitas }}</textarea>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Evaluasi Ketercapaian Target Harian</label>
+                    <input type="text" name="target_harian" value="{{ entry.target_harian }}" class="form-control">
+                </div>
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label">Identifikasi Potensi Risiko</label>
+                        <textarea name="risiko_identifikasi" class="form-control" rows="3">{{ entry.risiko_identifikasi }}</textarea>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Rencana Mitigasi / Penanganan</label>
+                        <textarea name="risiko_mitigasi" class="form-control" rows="3">{{ entry.risiko_mitigasi }}</textarea>
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-primary btn-sm mt-3">Simpan Uraian &amp; Risiko</button>
+            </form>
+            {% else %}
+            <p><strong>Fokus EP:</strong> {% if entry.fokus_ep %}{{ entry.fokus_ep.code }}{% elif entry.fokus_ep_teks %}{{ entry.fokus_ep_teks }}{% else %}—{% endif %}</p>
+            <p><strong>Uraian Aktivitas:</strong><br>{{ entry.uraian_aktivitas|default:"—"|linebreaksbr }}</p>
+            <p><strong>Evaluasi Target Harian:</strong> {{ entry.target_harian|default:"—" }}</p>
+            <p><strong>Identifikasi Risiko:</strong><br>{{ entry.risiko_identifikasi|default:"—"|linebreaksbr }}</p>
+            <p><strong>Mitigasi:</strong><br>{{ entry.risiko_mitigasi|default:"—"|linebreaksbr }}</p>
+            {% endif %}
+        </div>
+    </div>
+
+    {# ── D. Lampiran Bukti ────────────────────────────────────────────── #}
+    <div class="card mb-3 shadow-sm">
+        <div class="card-header fw-semibold">D. Lampiran Dokumen &amp; Bukti Audit (EP)</div>
+        <div class="card-body">
+            {% if boleh_isi %}
+            <form method="post" action="{% url 'akreditasi:logbook_nonmedis_unggah_bukti' entry.pk %}" enctype="multipart/form-data" class="mb-3">
+                {% csrf_token %}
+                <div class="row g-2">
+                    <div class="col-md-4"><input type="text" name="judul" class="form-control form-control-sm" placeholder="Judul berkas"></div>
+                    <div class="col-md-4"><input type="file" name="berkas" class="form-control form-control-sm" accept=".xls,.xlsx,.pdf,.doc,.docx"></div>
+                    <div class="col-md-2"><button type="submit" class="btn btn-sm btn-outline-primary">Unggah</button></div>
+                </div>
+            </form>
+            {% endif %}
+            <ul class="list-group">
+                {% for b in bukti %}
+                <li class="list-group-item d-flex justify-content-between">
+                    <span>{{ b.judul }} <span class="text-muted small">({{ b.ukuran }})</span></span>
+                    {% if b.berkas %}<a href="{{ b.berkas.url }}" target="_blank" class="btn btn-sm btn-link">Unduh</a>{% endif %}
+                </li>
+                {% empty %}
+                <li class="list-group-item text-muted">Belum ada lampiran.</li>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+
+    {# ── Pengesahan ───────────────────────────────────────────────────── #}
+    {% if boleh_setujui %}
+    <form method="post" action="{% url 'akreditasi:logbook_nonmedis_setujui' entry.pk %}" class="text-end">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-success">Simpan &amp; Setujui Logbook</button>
+    </form>
+    {% endif %}
+
+</div>
+{% endblock %}

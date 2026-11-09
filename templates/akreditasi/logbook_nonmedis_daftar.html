@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+
+{% block title %}Logbook Harian Non-Medis — ARIMA{% endblock %}
+{% block page_title %}Logbook Harian Non-Medis{% endblock %}
+{% block page_subtitle %}Logbook harian seluruh unit kerja non-medis (pendaftaran, rekam medis, keuangan, administrasi, dst.) dengan checklist kepatuhan &amp; bukti EP akreditasi{% endblock %}
+
+{% block extra_css %}
+<style>
+    .tbl-logbook { table-layout: auto; width: 100%; font-size: .82rem; }
+    .tbl-logbook th, .tbl-logbook td { vertical-align: middle; }
+    .tbl-logbook thead th { white-space: nowrap; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-3">
+
+    <div class="d-flex flex-wrap gap-2 align-items-end justify-content-between mb-3">
+        <form method="get" class="d-flex flex-wrap gap-2 align-items-end">
+            <div>
+                <label class="form-label small mb-1">Unit Kerja</label>
+                <select name="unit" class="form-select form-select-sm">
+                    <option value="">Semua Unit</option>
+                    {% for u in unit_pilihan %}
+                    <option value="{{ u.pk }}" {% if filter_unit == u.pk|stringformat:'s' %}selected{% endif %}>{{ u.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
+                <label class="form-label small mb-1">Periode</label>
+                <select name="periode" class="form-select form-select-sm">
+                    <option value="">Semua</option>
+                    <option value="bulan_ini" {% if filter_periode == 'bulan_ini' %}selected{% endif %}>Bulan Ini</option>
+                    <option value="bulan_lalu" {% if filter_periode == 'bulan_lalu' %}selected{% endif %}>Bulan Lalu</option>
+                </select>
+            </div>
+            <div>
+                <label class="form-label small mb-1">Cari</label>
+                <input type="text" name="cari" value="{{ filter_cari }}" class="form-control form-control-sm" placeholder="Nama pelaksana…">
+            </div>
+            <button type="submit" class="btn btn-sm btn-outline-secondary">Cari / Saring 🔍</button>
+        </form>
+
+        {% if boleh_buat %}
+        <a href="{% url 'akreditasi:logbook_nonmedis_buat' %}" class="btn btn-primary btn-sm">
+            <i class="bi bi-plus-lg me-1"></i> Tambah Logbook Harian Baru
+        </a>
+        {% endif %}
+    </div>
+
+    <div class="table-responsive">
+        <table class="table table-striped table-hover tbl-logbook align-middle">
+            <thead class="table-light">
+                <tr>
+                    <th>No</th>
+                    <th>Hari, Tanggal</th>
+                    <th>Unit Kerja</th>
+                    <th>Pelaksana</th>
+                    <th>Fokus EP Akredit.</th>
+                    <th>Status Checklist &amp; Risiko</th>
+                    <th>Lampiran</th>
+                    <th class="text-end">Aksi</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for e in daftar %}
+                <tr>
+                    <td>{{ forloop.counter }}</td>
+                    <td>{{ e.tanggal|date:"D, d/m/Y" }}</td>
+                    <td>{{ e.unit.name }}</td>
+                    <td>{% if e.pegawai %}{{ e.pegawai.nama_lengkap }}{% else %}{{ e.pelaksana_nama|default:"—" }}{% endif %}</td>
+                    <td>
+                        {% if e.fokus_ep %}{{ e.fokus_ep.code }}{% elif e.fokus_ep_teks %}{{ e.fokus_ep_teks }}{% else %}—{% endif %}
+                    </td>
+                    <td>
+                        {% if e.checklist.count %}
+                            {% if e.status == 'DISETUJUI' %}
+                            <span class="badge bg-success">Lengkap (Terkunci)</span>
+                            {% else %}
+                            <span class="badge bg-warning text-dark">{{ e.checklist.count }} butir</span>
+                            {% endif %}
+                        {% else %}<span class="text-muted">—</span>{% endif %}
+                        {% if e.risiko_identifikasi %}<span class="badge bg-info text-dark ms-1">Mitigasi</span>{% endif %}
+                    </td>
+                    <td>{{ e.bukti.count }} berkas</td>
+                    <td class="text-end text-nowrap">
+                        <a href="{% url 'akreditasi:logbook_nonmedis_detail' e.pk %}" class="btn btn-sm btn-outline-secondary" title="Tampil / Detail">👁️</a>
+                        <a href="{% url 'akreditasi:logbook_nonmedis_detail' e.pk %}" class="btn btn-sm btn-outline-secondary" title="Edit / Lengkapi">✏️</a>
+                        <a href="{% url 'akreditasi:logbook_nonmedis_pdf' e.pk %}" class="btn btn-sm btn-outline-secondary" title="Download PDF">📥</a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="8" class="text-center text-muted py-4">Belum ada logbook harian non-medis. Klik "Tambah Logbook Harian Baru" untuk memulai.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <div class="small text-muted mt-2">
+        Keterangan tombol aksi: 👁️ Tampilan/Detail · ✏️ Edit/Lengkapi Data · 📥 Download PDF (Bukti Dokumen EP Akreditasi)
+    </div>
+
+</div>
+{% endblock %}

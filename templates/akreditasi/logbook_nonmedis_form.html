@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+
+{% block title %}Buat Logbook Harian Non-Medis — ARIMA{% endblock %}
+{% block page_title %}Tambah Logbook Harian Non-Medis{% endblock %}
+{% block page_subtitle %}Pilih unit kerja, pelaksana, dan tanggal dinas untuk memulai logbook harian{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-3">
+    <div class="row justify-content-center">
+        <div class="col-lg-6">
+            <form method="post" class="card shadow-sm">
+                <div class="card-body">
+                    {% csrf_token %}
+
+                    <div class="mb-3">
+                        <label class="form-label">Unit Kerja</label>
+                        <select name="unit" class="form-select" required>
+                            <option value="">— Pilih Unit Kerja —</option>
+                            {% for u in unit_pilihan %}
+                            <option value="{{ u.pk }}" {% if u.pk == default_unit_id %}selected{% endif %}>{{ u.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Nama Pelaksana / Pegawai</label>
+                        <select name="pegawai" class="form-select">
+                            <option value="">— Pilih Pegawai —</option>
+                            {% for p in pegawai_pilihan %}
+                            <option value="{{ p.pk }}">{{ p.nama_lengkap }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Hari, Tanggal Dinas</label>
+                            <input type="date" name="tanggal" class="form-control" value="{{ hari_ini|date:'Y-m-d' }}" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Shift</label>
+                            <select name="shift" class="form-select">
+                                {% for kode, label in shift_pilihan %}
+                                <option value="{{ kode }}">{{ label }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-footer d-flex justify-content-between">
+                    <a href="{% url 'akreditasi:logbook_nonmedis_daftar' %}" class="btn btn-outline-secondary">Batal</a>
+                    <button type="submit" class="btn btn-primary">Simpan &amp; Buka Logbook</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

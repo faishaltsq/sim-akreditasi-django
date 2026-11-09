@@ -1,5 +1,6 @@
 from django.urls import path, include
 from . import logbook as logbook_views
+from . import logbook_nonmedis as logbook_nonmedis_views
 from . import views
 from . import risiko_views
 from . import ai_views
@@ -154,6 +155,16 @@ urlpatterns = [
     path('logbook/<int:pk>/serah-terima/', logbook_views.logbook_serah_terima, name='logbook_serah_terima'),
     path('logbook/<int:pk>/setujui/', logbook_views.logbook_setujui, name='logbook_setujui'),
     path('logbook/<int:pk>/pdf/', logbook_views.logbook_pdf, name='logbook_pdf'),
+
+    # ── Logbook Harian Non-Medis (semua unit kerja, per pegawai per hari) ──
+    path('logbook-nonmedis/', logbook_nonmedis_views.logbook_nonmedis_daftar, name='logbook_nonmedis_daftar'),
+    path('logbook-nonmedis/buat/', logbook_nonmedis_views.logbook_nonmedis_buat, name='logbook_nonmedis_buat'),
+    path('logbook-nonmedis/<int:pk>/', logbook_nonmedis_views.logbook_nonmedis_detail, name='logbook_nonmedis_detail'),
+    path('logbook-nonmedis/<int:pk>/simpan-checklist/', logbook_nonmedis_views.logbook_nonmedis_simpan_checklist, name='logbook_nonmedis_simpan_checklist'),
+    path('logbook-nonmedis/<int:pk>/simpan-narasi/', logbook_nonmedis_views.logbook_nonmedis_simpan_narasi, name='logbook_nonmedis_simpan_narasi'),
+    path('logbook-nonmedis/<int:pk>/bukti/', logbook_nonmedis_views.logbook_nonmedis_unggah_bukti, name='logbook_nonmedis_unggah_bukti'),
+    path('logbook-nonmedis/<int:pk>/setujui/', logbook_nonmedis_views.logbook_nonmedis_setujui, name='logbook_nonmedis_setujui'),
+    path('logbook-nonmedis/<int:pk>/pdf/', logbook_nonmedis_views.logbook_nonmedis_pdf, name='logbook_nonmedis_pdf'),
 
     # ── Endpoint AI Asisten Cerdas DeepSeek (backend-only, tidak ada API Key di response) ──
     path('ai/mitigasi-risiko/', ai_views.api_ai_mitigasi_risiko, name='ai_mitigasi_risiko'),
