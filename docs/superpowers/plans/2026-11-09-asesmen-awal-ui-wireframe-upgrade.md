@@ -68,4 +68,26 @@ While the Logbook Non-Medis module (`LogbookNonMedis`) focuses on administrative
 - **Task 5.1:** Run automated test suites:
   - `python manage.py test pasien klinis --keepdb`
 - **Task 5.2:** Browser / DOM smoke testing on assessment wizard and IGD dashboard modal.
+
+---
+
+## 4. Execution & Verification Log
+
+- **Phase 1 (Completed):**
+  - Added ICD-9 support with insurance tariff resolution in `klinis/services/saran.py`.
+  - Created `/pasien/api/3s-cascade/` in `pasien/views.py` and `pasien/urls.py` with full SDKI -> SLKI + SIKI mapping.
+  - Implemented unit tests in `pasien/tests_3s_cascade.py` (Passed).
+  - Commit: `feat(pasien): backend endpoint cascading 3S dan saran prosedur ICD-9`.
+- **Phase 2 & Phase 3 (Completed):**
+  - Reconstructed `templates/pasien/_tindakan_tarif_ep.html` and `templates/pasien/_tindakan_row.html` to fully match the wireframe:
+    - **Seksi B (Dokter DPJP):** Primary & Sekunder ICD-10 search, AI suggestion chips (`A09`, `I21.9`, `J45.901`, `K35.80`, `E11.9`), ICD-9 procedure table with editable tariffs, modification notes, and Subtotal Medis display.
+    - **Seksi C (Perawat Asuhan Klinis 3S):** SDKI diagnosis search with chips (`D.0001`, `D.0005`, `D.0023`, `D.0077`, `D.0130`), automatic cascading into SLKI outcomes and SIKI interventions, nursing intervention procedures with editable tariffs, EP selectors, and Subtotal Keperawatan display.
+  - Updated `pasien/tests_tindakan_ui.py` with UI render assertions (Passed).
+- **Phase 4 & Phase 5 (Completed):**
+  - Built unified System Recapitulation box:
+    - Realtime calculation: Subtotal Medis + Subtotal Keperawatan = Total Estimasi Biaya.
+    - Dynamic STARKES Audit badges: `ARK 3.1` (Triage/Admisi), `PAP 2.1` (Asuhan Seragam), `SKP 2` (Komunikasi Efektif), `PP 1.1` (Pengkajian Awal).
+    - Robust fallback for sub-standard hierarchy mapping (`ARK 3.1` -> `ARK 3`, etc.) in `pasien/asesmen_tindakan.py`.
+  - Authored comprehensive end-to-end integration test in `pasien/tests_wireframe_integration.py` verifying full Dokter + Perawat form submission, diagnosis saving, action items, billing sync, and EP accreditation linkage (Passed).
+  - All 39 tests in `pasien` test suite passed cleanly (`tests_wireframe_integration`, `tests_tindakan_ui`, `tests_3s_cascade`, `tests_asesmen_tindakan_save`, `tests_tindakan_asesmen`, `tests_asesmen_rekap`).
 - **Task 5.3:** Validate no regression on existing billing sync (`BillingItem`) and accreditation records.

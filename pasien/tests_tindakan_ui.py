@@ -57,3 +57,30 @@ class TindakanUiTest(TestCase):
         self.assertEqual(res.status_code, 200)
         self.assertContains(res, f'tindakanCard_{self.k.pk}')
         self.assertContains(res, f'tindakanPicker_{self.k.pk}')
+
+    def test_seksi_b_dokter_renders_icd10_and_ai_chips(self):
+        res = self.client.get(reverse('pasien:kunjungan_asesmen_awal', args=[self.k.pk]))
+        self.assertEqual(res.status_code, 200)
+        self.assertContains(res, 'Seksi B: Dokter DPJP')
+        self.assertContains(res, 'name="diagnosa_masuk"')
+        self.assertContains(res, 'AI Suggestion')
+        self.assertContains(res, 'data-chip-icd10="R50.9"')
+        self.assertContains(res, 'data-chip-icd10="A09"')
+        self.assertContains(res, 'data-sub-medis')
+
+    def test_seksi_c_perawat_renders_3s_and_cascading(self):
+        res = self.client.get(reverse('pasien:kunjungan_asesmen_awal', args=[self.k.pk]))
+        self.assertEqual(res.status_code, 200)
+        self.assertContains(res, 'Seksi C: Perawat Asuhan Klinis')
+        self.assertContains(res, 'name="diagnosa_keperawatan_sdki"')
+        self.assertContains(res, 'name="luaran_keperawatan_slki"')
+        self.assertContains(res, 'name="intervensi_keperawatan_siki"')
+        self.assertContains(res, 'data-sub-keperawatan')
+
+    def test_rekapitulasi_audit_renders_starkes_ep_badges(self):
+        res = self.client.get(reverse('pasien:kunjungan_asesmen_awal', args=[self.k.pk]))
+        self.assertEqual(res.status_code, 200)
+        self.assertContains(res, 'data-badge-ep="ARK 3.1"')
+        self.assertContains(res, 'data-badge-ep="PAP 2.1"')
+        self.assertContains(res, 'data-badge-ep="SKP 2"')
+        self.assertContains(res, 'data-badge-ep="PP 1.1"')

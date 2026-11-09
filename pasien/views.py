@@ -2581,11 +2581,17 @@ def igd_asesmen_medis_save(request, pk):
         k.penunjang_ekg = (request.POST.get('penunjang_ekg') or k.penunjang_ekg or '').strip()
         k.penunjang_hasil_kritis = (request.POST.get('penunjang_hasil_kritis') or k.penunjang_hasil_kritis or '').strip()
 
-        # Section VIII: Diagnosis Kerja
+        # Section VIII: Diagnosis Kerja Medis & Standar 3S Keperawatan
         if request.POST.get('diagnosa_masuk'):
             k.diagnosa_masuk = request.POST.get('diagnosa_masuk', '').strip()
         if request.POST.get('diagnosa_keluar'):
             k.diagnosa_keluar = request.POST.get('diagnosa_keluar', '').strip()
+        if 'diagnosa_keperawatan_sdki' in request.POST:
+            k.diagnosa_keperawatan_sdki = request.POST.get('diagnosa_keperawatan_sdki', '').strip()
+        if 'luaran_keperawatan_slki' in request.POST:
+            k.luaran_keperawatan_slki = request.POST.get('luaran_keperawatan_slki', '').strip()
+        if 'intervensi_keperawatan_siki' in request.POST:
+            k.intervensi_keperawatan_siki = request.POST.get('intervensi_keperawatan_siki', '').strip()
 
         # Section IX: Tatalaksana & Tindakan IGD
         k.tatalaksana_resusitasi = (request.POST.get('tatalaksana_resusitasi') or k.tatalaksana_resusitasi or '').strip()
@@ -2842,10 +2848,11 @@ def api_3s_cascade(request):
         if p.siki.kode not in seen_siki:
             seen_siki.add(p.siki.kode)
             ep_rule = primary_for('SIKI', p.siki.kode)
+            ep_sub = (ep_rule.sub_standard if ep_rule else '') or 'PAP 2.1'
             siki_list.append({
                 'kode': p.siki.kode,
                 'nama': p.siki.nama,
-                'ep_sub': ep_rule.sub_standard if ep_rule else '',
+                'ep_sub': ep_sub,
                 'ep_status': 'TERPENUHI',
             })
 

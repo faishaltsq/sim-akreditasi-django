@@ -125,13 +125,21 @@ def simpan_tindakan(kunjungan, rows, user=None):
             line.siki = None
 
         if row['ep_sub']:
-            line.standard_item = StandardItem.objects.filter(sub_standard=row['ep_sub']).first()
+            item = StandardItem.objects.filter(sub_standard=row['ep_sub']).first()
+            if not item:
+                root_sub = row['ep_sub'].split('.')[0].strip()
+                item = StandardItem.objects.filter(sub_standard=root_sub).first()
+            line.standard_item = item
         elif is_new:
             rule = primary_for(row['jenis'], row['kode'])
-            line.standard_item = (
-                StandardItem.objects.filter(sub_standard=rule.sub_standard).first()
-                if rule else None
-            )
+            if rule:
+                item = StandardItem.objects.filter(sub_standard=rule.sub_standard).first()
+                if not item:
+                    root_sub = rule.sub_standard.split('.')[0].strip()
+                    item = StandardItem.objects.filter(sub_standard=root_sub).first()
+                line.standard_item = item
+            else:
+                line.standard_item = None
         else:
             line.standard_item = None
 
