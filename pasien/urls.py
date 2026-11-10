@@ -1,5 +1,6 @@
 from django.urls import path
 from . import views
+from . import apm_views
 
 app_name = 'pasien'
 
@@ -94,4 +95,15 @@ urlpatterns = [
     path('igd/rekap-asesmen/', views.asesmen_rekap, name='asesmen_rekap'),
     path('kunjungan/<int:pk>/asesmen-detail/', views.asesmen_detail, name='asesmen_detail'),
     path('kunjungan/<int:pk>/asesmen-hapus/', views.asesmen_hapus, name='asesmen_hapus'),
+    # ── Anjungan Pendaftaran Mandiri (APM) & Antrean Kiosk ──
+    path('apm/', apm_views.apm_kiosk_view, name='apm_kiosk'),
+    path('apm/api/cari-pasien/', apm_views.apm_api_cari_pasien, name='apm_api_cari_pasien'),
+    path('apm/api/jadwal-dokter/', apm_views.apm_api_jadwal_dokter, name='apm_api_jadwal_dokter'),
+    path('apm/api/daftar/', apm_views.apm_api_daftar, name='apm_api_daftar'),
+    path('apm/api/checkin/', apm_views.apm_api_checkin, name='apm_api_checkin'),
+    path('apm/batal/', apm_views.apm_batal_mandiri, name='apm_batal_mandiri'),
+    path('apm/struk/<int:pk>/', apm_views.apm_cetak_struk, name='apm_cetak_struk'),
+    # ── Papan Display Antrean TV & Audio TTS ──
+    path('antrean/display/', apm_views.antrean_display_board, name='antrean_display_board'),
+    path('antrean/display/api/', apm_views.antrean_display_api, name='antrean_display_api'),
 ]
