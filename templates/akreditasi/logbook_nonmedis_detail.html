@@ -19,12 +19,191 @@
 
     {# ── A. Identitas & Waktu ─────────────────────────────────────────── #}
     <div class="card mb-3 shadow-sm">
-        <div class="card-header fw-semibold">A. Identitas &amp; Waktu Pelayanan</div>
+        <div class="card-header fw-semibold d-flex justify-content-between align-items-center">
+            <span>A. Identitas &amp; Jam Dinas</span>
+            <span class="badge bg-primary-subtle text-primary border border-primary-subtle">
+                {{ aktivitas_list|length }} Kegiatan Tercatat
+            </span>
+        </div>
         <div class="card-body">
             <div class="row g-3">
-                <div class="col-md-4"><strong>Unit Kerja:</strong> {{ entry.unit.name }}</div>
-                <div class="col-md-4"><strong>Pelaksana:</strong> {% if entry.pegawai %}{{ entry.pegawai.nama_lengkap }}{% else %}{{ entry.pelaksana_nama|default:"—" }}{% endif %}</div>
-                <div class="col-md-4"><strong>Shift:</strong> {{ shift_label|default:"—" }}</div>
+                <div class="col-md-3"><strong>Unit Kerja:</strong><br>{{ entry.unit.name }}</div>
+                <div class="col-md-3"><strong>Pelaksana:</strong><br>{% if entry.pegawai %}{{ entry.pegawai.nama_lengkap }}{% else %}{{ entry.pelaksana_nama|default:"—" }}{% endif %}</div>
+                <div class="col-md-2"><strong>Shift:</strong><br>{{ shift_label|default:"—" }}</div>
+                <div class="col-md-4">
+                    <strong>Jam Dinas:</strong><br>
+                    {% if entry.jam_mulai and entry.jam_selesai %}
+                    {{ entry.jam_mulai|time:"H.i" }} – {{ entry.jam_selesai|time:"H.i" }} WIB
+                    {% else %}
+                    <span class="text-muted">—</span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {# ── B. Rincian Aktivitas Harian & Dokumen Bukti (Multi-Baris Terstandar) ── #}
+    <div class="card mb-3 shadow-sm border-0">
+        <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center py-2">
+            <span class="fw-semibold"><i class="bi bi-list-task me-2"></i>B. Rincian Aktivitas Harian &amp; Dokumen Bukti</span>
+            {% if boleh_isi %}
+            <button class="btn btn-sm btn-light py-0 fw-medium" type="button" data-bs-toggle="collapse" data-bs-target="#formTambahAktivitas">
+                <i class="bi bi-plus-circle me-1"></i>Tambah Aktivitas
+            </button>
+            {% endif %}
+        </div>
+        <div class="card-body p-0">
+            {% if boleh_isi %}
+            {# Form Tambah Aktivitas #}
+            <div class="collapse p-3 bg-light border-bottom" id="formTambahAktivitas">
+                <form method="post" action="{% url 'akreditasi:logbook_nonmedis_tambah_aktivitas' entry.pk %}" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    <h6 class="fw-semibold text-primary mb-3">Input Baris Aktivitas Harian &amp; Bukti Dokumen</h6>
+                    <div class="row g-2 mb-2">
+                        <div class="col-md-5">
+                            <label class="form-label small fw-semibold">Pilih Dari Master Aktivitas (13 Katalog Diklat / Non-Medis)</label>
+                            <select name="master_id" id="selectMasterAktivitas" class="form-select form-select-sm">
+                                <option value="">— Input Mandiri / Pilih Standar —</option>
+                                {% for m in master_aktivitas_list %}
+                                <option value="{{ m.pk }}" data-nama="{{ m.nama }}" data-deskripsi="{{ m.deskripsi }}" data-ep="{{ m.ep_rekomendasi }}">
+                                    [{{ m.kode }}] {{ m.nama|truncatechars:45 }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-7">
+                            <label class="form-label small fw-semibold">Nama Aktivitas <span class="text-danger">*</span></label>
+                            <input type="text" name="nama_aktivitas" id="inputNamaAktivitas" class="form-control form-control-sm" required placeholder="Judul ringkas aktivitas">
+                        </div>
+                    </div>
+
+                    <div class="row g-2 mb-2">
+                        <div class="col-md-3">
+                            <label class="form-label small fw-semibold">Jam Mulai</label>
+                            <input type="time" name="jam_mulai" class="form-control form-control-sm" value="08:00">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label small fw-semibold">Jam Selesai</label>
+                            <input type="time" name="jam_selesai" class="form-control form-control-sm" value="10:00">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-semibold">Rekomendasi / Kesesuaian Standar STARKES (EP)</label>
+                            <input type="text" name="ep_starkes" id="inputEpStarkes" class="form-control form-control-sm" placeholder="Contoh: KPS 8 / TKRS 9 (otomatis terisi jika pilih master)">
+                        </div>
+                    </div>
+
+                    <div class="mb-2">
+                        <label class="form-label small fw-semibold">Detail Aktivitas / Uraian Bebas</label>
+                        <textarea name="detail_uraian" id="inputDetailUraian" class="form-control form-control-sm" rows="3" placeholder="Uraian kegiatan operasional, KAK/TOR, peserta, notulen, dll."></textarea>
+                    </div>
+
+                    <div class="row g-2 mb-3">
+                        <div class="col-md-4">
+                            <label class="form-label small fw-semibold">Nama Dokumen Bukti</label>
+                            <input type="text" name="nama_bukti" class="form-control form-control-sm" placeholder="Mis. Undangan &amp; Daftar Hadir.pdf">
+                        </div>
+                        <div class="col-md-5">
+                            <label class="form-label small fw-semibold">Unggah File Bukti (.pdf, .doc, .xls, .jpg)</label>
+                            <input type="file" name="dokumen_bukti" class="form-control form-control-sm" accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label small fw-semibold">Pelaksana</label>
+                            <input type="text" name="pelaksana_nama" class="form-control form-control-sm" value="{% if entry.pegawai %}{{ entry.pegawai.nama_lengkap }}{% else %}{{ entry.pelaksana_nama }}{% endif %}">
+                        </div>
+                    </div>
+
+                    <div class="d-flex justify-content-end gap-2">
+                        <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="collapse" data-bs-target="#formTambahAktivitas">Batal</button>
+                        <button type="submit" class="btn btn-sm btn-primary px-3 fw-semibold"><i class="bi bi-save me-1"></i>Simpan Baris Aktivitas</button>
+                    </div>
+                </form>
+            </div>
+            {% endif %}
+
+            {# Tabel Baris Aktivitas #}
+            <div class="table-responsive">
+                <table class="table table-hover table-striped align-middle mb-0" style="font-size: 0.9rem;">
+                    <thead class="table-light">
+                        <tr>
+                            <th style="width: 40px;" class="text-center">No</th>
+                            <th style="width: 130px;">Waktu</th>
+                            <th style="width: 220px;">Aktivitas</th>
+                            <th>Detail Aktivitas / Uraian Bebas</th>
+                            <th style="width: 170px;">Standar STARKES</th>
+                            <th style="width: 180px;">Bukti Dokumen</th>
+                            <th style="width: 120px;">Pelaksana</th>
+                            {% if boleh_isi %}<th style="width: 60px;" class="text-center">Aksi</th>{% endif %}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for a in aktivitas_list %}
+                        <tr>
+                            <td class="text-center fw-semibold text-secondary">{{ forloop.counter }}</td>
+                            <td>
+                                {% if a.waktu_display %}
+                                <span class="badge bg-secondary-subtle text-dark border">{{ a.waktu_display }}</span>
+                                {% if a.durasi_jam > 0 %}
+                                <div class="text-muted small">({{ a.durasi_jam }} jam)</div>
+                                {% endif %}
+                                {% else %}
+                                <span class="text-muted">—</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="fw-semibold text-dark">{{ a.nama_aktivitas }}</div>
+                                {% if a.master %}
+                                <span class="badge bg-primary-subtle text-primary border border-primary-subtle small font-mono" style="font-size: 0.75rem;">
+                                    {{ a.master.kode }}
+                                </span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div style="white-space: pre-wrap;">{{ a.detail_uraian|default:"—" }}</div>
+                            </td>
+                            <td>
+                                {% if a.ep_starkes %}
+                                <span class="badge bg-success-subtle text-success border border-success-subtle font-mono">
+                                    <i class="bi bi-link-45deg me-1"></i>{{ a.ep_starkes }}
+                                </span>
+                                {% else %}
+                                <span class="text-muted small">Tidak ditautkan</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if a.dokumen_bukti %}
+                                <a href="{{ a.dokumen_bukti.url }}" target="_blank" class="btn btn-sm btn-outline-info py-0 px-2 small text-truncate d-inline-block" style="max-width: 160px;" title="{{ a.nama_bukti|default:a.dokumen_bukti.name }}">
+                                    <i class="bi bi-file-earmark-arrow-down me-1"></i>{{ a.nama_bukti|default:"Lihat Dokumen" }}
+                                </a>
+                                {% elif a.nama_bukti %}
+                                <span class="text-dark small"><i class="bi bi-file-earmark-text me-1 text-muted"></i>{{ a.nama_bukti }}</span>
+                                {% else %}
+                                <span class="text-muted small">—</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <small class="text-secondary">{{ a.pelaksana_nama|default:"—" }}</small>
+                            </td>
+                            {% if boleh_isi %}
+                            <td class="text-center">
+                                <form method="post" action="{% url 'akreditasi:logbook_nonmedis_hapus_aktivitas' entry.pk a.pk %}" onsubmit="return confirm('Hapus baris aktivitas ini?');" class="d-inline">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-link text-danger p-0" title="Hapus baris">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </form>
+                            </td>
+                            {% endif %}
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="{% if boleh_isi %}8{% else %}7{% endif %}" class="text-center py-4 text-muted">
+                                <i class="bi bi-inbox fs-3 d-block mb-1 text-secondary"></i>
+                                Belum ada baris aktivitas harian tercatat. Klik <strong>Tambah Aktivitas</strong> untuk memulai.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
             </div>
         </div>
     </div>
@@ -160,4 +339,40 @@
     {% endif %}
 
 </div>
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const selMaster = document.getElementById('selectMasterAktivitas');
+    const inputNama = document.getElementById('inputNamaAktivitas');
+    const inputUraian = document.getElementById('inputDetailUraian');
+    const inputEp = document.getElementById('inputEpStarkes');
+
+    if (selMaster) {
+        selMaster.addEventListener('change', function () {
+            const opt = this.options[this.selectedIndex];
+            if (!opt || !opt.value) return;
+
+            const nama = opt.getAttribute('data-nama') || '';
+            const deskripsi = opt.getAttribute('data-deskripsi') || '';
+            const ep = opt.getAttribute('data-ep') || '';
+
+            if (inputNama && (!inputNama.value || inputNama.value.trim() === '')) {
+                inputNama.value = nama;
+            } else if (inputNama) {
+                inputNama.value = nama;
+            }
+
+            if (inputUraian && (!inputUraian.value || inputUraian.value.trim() === '')) {
+                inputUraian.value = deskripsi;
+            }
+
+            if (inputEp) {
+                inputEp.value = ep;
+            }
+        });
+    }
+});
+</script>
+{% endblock %}
 {% endblock %}
