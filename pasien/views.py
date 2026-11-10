@@ -408,12 +408,29 @@ def kunjungan_baru(request):
                 
                 if is_pasien_baru:
                     no_rm = request.POST.get('no_rm', '').strip() or generate_no_rm()
+                    from .services.ktp_validator import parse_flexible_date
+                    tgl_lahir_raw = request.POST.get('tanggal_lahir', '').strip()
+                    parsed_dob = parse_flexible_date(tgl_lahir_raw, prefer='MDY')
+                    tgl_lahir_val = parsed_dob if parsed_dob else tgl_lahir_raw
+
+                    foto_ktp_file = request.FILES.get('foto_ktp')
+                    if not foto_ktp_file and request.POST.get('foto_ktp_base64'):
+                        import base64
+                        from django.core.files.base import ContentFile
+                        b64_raw = request.POST.get('foto_ktp_base64', '').strip()
+                        if ',' in b64_raw:
+                            b64_raw = b64_raw.split(',', 1)[1]
+                        try:
+                            foto_ktp_file = ContentFile(base64.b64decode(b64_raw), name=f'ktp_{no_rm}.jpg')
+                        except Exception:
+                            foto_ktp_file = None
+
                     pasien_obj = Pasien(
                         no_rm=no_rm,
                         nik=request.POST.get('nik', '').strip(),
                         nama_lengkap=request.POST['nama_lengkap'].strip(),
                         tempat_lahir=request.POST.get('tempat_lahir', '').strip(),
-                        tanggal_lahir=request.POST['tanggal_lahir'],
+                        tanggal_lahir=tgl_lahir_val,
                         jenis_kelamin=request.POST['jenis_kelamin'],
                         agama=request.POST.get('agama', ''),
                         status_perkawinan=request.POST.get('status_perkawinan', ''),
@@ -433,6 +450,7 @@ def kunjungan_baru(request):
                         hubungan_pj=request.POST.get('hubungan_pj', ''),
                         no_hp_pj=request.POST.get('no_hp_pj', '').strip(),
                         alamat_pj=request.POST.get('alamat_pj', '').strip(),
+                        foto_ktp=foto_ktp_file,
                         alergi_obat=request.POST.get('alergi_obat', '').strip(),
                         alergi_lain=request.POST.get('alergi_lain', '').strip(),
                     )
@@ -998,10 +1016,77 @@ def api_cek_nik(request):
         p = qs.filter(nik=nik).first()
     elif no_rm:
         p = qs.filter(no_rm=no_rm).first()
-    
+
+    decoded = {}
+    valid = True
+    if nik:
+        from .services.ktp_validator import decode_nik
+        decoded = decode_nik(nik)
+        valid = decoded.get('valid', False)
+
+    resp = {
+        'exists': bool(p),
+        'valid': valid,
+        'decoded': decoded,
+    }
     if p:
-        return JsonResponse({'exists': True})
-    return JsonResponse({'exists': False})
+        resp['pasien'] = {'id': p.pk, 'no_rm': p.no_rm}
+    return JsonResponse(resp)
+
+
+@login_required
+@require_patient_module('pendaftaran')
+def api_ocr_ktp(request):
+    """API endpoint for KTP image upload/webcam OCR extraction.
+    
+    Adheres to STARKES SKP 1 (two-identifier patient verification) and MRMIK standards.
+    """
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'Method not allowed'}, status=405)
+
+    image_bytes = None
+    if 'foto_ktp' in request.FILES:
+        image_bytes = request.FILES['foto_ktp'].read()
+    else:
+        b64_data = request.POST.get('image_base64')
+        if not b64_data and request.content_type == 'application/json':
+            import json
+            try:
+                body = json.loads(request.body)
+                b64_data = body.get('image_base64')
+            except Exception:
+                pass
+        if b64_data:
+            import base64
+            if ',' in b64_data:
+                b64_data = b64_data.split(',', 1)[1]
+            try:
+                image_bytes = base64.b64decode(b64_data)
+            except Exception:
+                pass
+
+    if not image_bytes:
+        return JsonResponse({'success': False, 'error': 'Berkas gambar KTP tidak ditemukan'}, status=400)
+
+    from .services.ktp_ocr import extract_ktp_pasien
+    from .services.ktp_validator import decode_nik
+
+    data = extract_ktp_pasien(image_bytes)
+    nik = data.get('nik', '')
+    profile = getattr(request.user, 'profile', None)
+    qs = scope_pasien_qs(Pasien.objects.all(), profile)
+    is_existing = False
+    if nik and len(nik) == 16:
+        is_existing = qs.filter(nik=nik).exists()
+
+    nik_decoded = decode_nik(nik) if nik else {}
+
+    return JsonResponse({
+        'success': True,
+        'data': data,
+        'is_existing_patient': is_existing,
+        'nik_decoded': nik_decoded,
+    })
 
 
 @login_required
