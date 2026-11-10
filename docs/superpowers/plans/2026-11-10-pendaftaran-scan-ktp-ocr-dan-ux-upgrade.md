@@ -96,3 +96,14 @@
   - Run all patient test suites (`pasien.tests_*`).
   - Run smoke test on admission endpoints.
   - Run `collectstatic --noinput`.
+
+---
+
+## Execution Status
+- **Task 1 (Model `foto_ktp` & Migrations):** DONE (`pasien/migrations/0018_pasien_foto_ktp.py`, unit test passing). Commit `998f996`.
+- **Task 2 (Flexible Date Parser & 16-Digit NIK Decoder):** DONE (`pasien/services/ktp_validator.py`, 7 unit tests passing). Commit `3af2990`.
+- **Task 3 (KTP OCR DeepSeek Vision & API Endpoints):** DONE (`pasien/services/ktp_ocr.py`, `POST /pasien/api/ocr-ktp/`, `GET /pasien/api/cek-nik/`). Commit `cff2daf`.
+- **Task 4 (Frontend UI/UX, Webcam Modal, Sticky Footer, Realtime Calc):** DONE (`templates/pasien/pendaftaran_dashboard.html`, unit test `pasien.tests_pendaftaran_ktp_ui` passing). Commit `9f2134f`.
+- **Task 5 (EMR KTP Integration & STARKES SKP 1 / MRMIK Compliance):** DONE (`templates/pasien/pasien_detail.html`, `templates/pasien/kunjungan_detail.html`, `templates/pasien/cetak_formulir_pendaftaran.html`, unit test `pasien.tests_ktp_emr_integration` passing). Commit `9f2134f`.
+- **Task 6 (Regression & Verification):** DONE (274 test cases passed in 264.8s, smoke test HTTP 200 OK, `collectstatic` 386 files processed).
+
