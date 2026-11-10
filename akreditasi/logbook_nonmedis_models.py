@@ -90,6 +90,46 @@ def resolve_fokus_ep(kode):
     ).select_related('category').first()
 
 
+def resolve_ep_aktivitas(master=None, nama='', uraian=''):
+    """Rekomendasikan string kode EP STARKES berdasarkan master aktivitas atau keyword teks."""
+    if master and getattr(master, 'ep_rekomendasi', None):
+        return master.ep_rekomendasi.strip()
+
+    combined = f'{nama} {uraian}'.lower()
+    if not combined.strip():
+        return ''
+
+    # Kata kunci spesifik dan padanannya
+    if any(k in combined for k in ['mahasiswa', 'magang', 'praktik klinik', 'pembimbing klinik', 'ci ']):
+        return 'IPKP 1 / IPKP 2 / IPKP 3 / KPS 8'
+    if any(k in combined for k in ['penelitian', 'riset', 'ethical clearance', 'responden', 'studi kasus']):
+        return 'IPKP 3 / TKRS 9'
+    if any(k in combined for k in ['bhd', 'ppi', 'k3rs', 'apar', 'mandatory', 'pelatihan wajib']):
+        return 'KPS 8 / SKP / PPI / MFK'
+    if any(k in combined for k in ['jam pelatihan', 'training hours', 'matriks kompetensi', '20 jpl', 'jpl']):
+        return 'KPS 8.1 / TKRS 9'
+    if any(k in combined for k in ['orientasi', 'pegawai baru', 'peserta didik']):
+        return 'KPS 8 / TKRS 9'
+    if any(k in combined for k in ['kak', 'tor', 'iht', 'in-house training']):
+        return 'KPS 8 / TKRS 9'
+    if any(k in combined for k in ['eksternal', 'seminar', 'workshop luar']):
+        return 'KPS 8 / KPS 8.1'
+    if any(k in combined for k in ['evaluasi pasca', 'pre-test', 'post-test', 'umpan balik', 'efektivitas']):
+        return 'KPS 8.1'
+    if any(k in combined for k in ['arsip', 'digitalisasi', 'dokumen akreditasi', 'repository', 'repositori']):
+        return 'KPS 8 / TKRS 9 / MRMIK'
+    if any(k in combined for k in ['sosialisasi', 'sop baru', 'kebijakan baru', 'regulasi baru']):
+        return 'TKRS 9 / KPS 8'
+    if any(k in combined for k in ['rapat pimpinan', 'direksi', 'manajemen']):
+        return 'TKRS 9'
+    if any(k in combined for k in ['rapat koordinasi', 'antar unit', 'internal']):
+        return 'TKRS 9'
+    if 'rapat' in combined or 'workshop' in combined or 'fgd' in combined:
+        return 'KPS 8'
+
+    return ''
+
+
 # ---------------------------------------------------------------------------
 # 2. LogbookNonMedis — satu entri per pegawai + tanggal + unit
 # ---------------------------------------------------------------------------
