@@ -68,7 +68,19 @@ def module_actions(portal, *, unit, year, is_manager=False,
                                    scope='Sesuai akses'))
         actions.append(_action('laporan', 'Laporan mutu', 'akreditasi:laporan_mutu_daftar',
                                scope='Sesuai akses'))
+        actions.append(_action('logbook_nonmedis', 'Logbook & Rekap Kinerja Unit',
+                               'akreditasi:logbook_nonmedis_rekap',
+                               scope='Non-medis & Diklat', unit=unit.pk))
         return actions
+    if portal == 'human_capital':
+        return [
+            _action('logbook_diklat', 'Logbook & Rekap Kinerja Diklat',
+                    'akreditasi:logbook_nonmedis_rekap',
+                    scope='Unit Diklat / Non-Medis', unit=unit.pk),
+            _action('logbook_daftar', 'Daftar Logbook Non-Medis',
+                    'akreditasi:logbook_nonmedis_daftar',
+                    scope='Unit aktif', unit=unit.pk),
+        ]
     if portal == 'emr':
         from pasien.models import POLIKLINIK_CHOICES
         from .layanan_unit import POLI_UNIT_CODE, is_admission_desk

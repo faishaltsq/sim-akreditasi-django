@@ -41,11 +41,16 @@
             <button type="submit" class="btn btn-sm btn-outline-secondary">Cari / Saring 🔍</button>
         </form>
 
-        {% if boleh_buat %}
-        <a href="{% url 'akreditasi:logbook_nonmedis_buat' %}" class="btn btn-primary btn-sm">
-            <i class="bi bi-plus-lg me-1"></i> Tambah Logbook Harian Baru
-        </a>
-        {% endif %}
+        <div class="d-flex gap-2">
+            <a href="{% url 'akreditasi:logbook_nonmedis_rekap' %}" class="btn btn-outline-primary btn-sm">
+                <i class="bi bi-bar-chart-line me-1"></i> Dashboard Rekap Kinerja
+            </a>
+            {% if boleh_buat %}
+            <a href="{% url 'akreditasi:logbook_nonmedis_buat' %}" class="btn btn-primary btn-sm">
+                <i class="bi bi-plus-lg me-1"></i> Tambah Logbook Harian Baru
+            </a>
+            {% endif %}
+        </div>
     </div>
 
     <div class="table-responsive">
