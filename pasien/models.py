@@ -370,6 +370,16 @@ class KunjunganPasien(models.Model):
     flag_khusus     = models.CharField('Flag Kondisi Khusus', max_length=10, choices=FLAG_KHUSUS_CHOICES, default='NORMAL')
     status_antrean  = models.CharField('Status Antrean', max_length=20, choices=STATUS_ANTREAN_CHOICES, default='MENUNGGU')
 
+    # ── APM & Online Booking ──
+    kode_booking       = models.CharField('Kode Booking Antrean', max_length=30, blank=True, db_index=True)
+    token_batal        = models.CharField('Token Pembatalan APM', max_length=64, blank=True, unique=True, null=True, db_index=True)
+    estimasi_pelayanan = models.TimeField('Estimasi Waktu Pelayanan', null=True, blank=True)
+    is_apm             = models.BooleanField('Daftar via Mandiri / APM', default=False)
+    is_checkin         = models.BooleanField('Sudah Check-In di Kiosk', default=False)
+    waktu_checkin      = models.DateTimeField('Waktu Check-In Kiosk', null=True, blank=True)
+    is_noshow          = models.BooleanField('Tercatat No-Show', default=False)
+    wa_notifikasi_sent = models.BooleanField('Notifikasi WA Terkirim', default=False)
+
     # ── Tanda-Tanda Vital (TTV) ──
     ttv_sistole     = models.PositiveSmallIntegerField('Tekanan Darah Sistole (mmHg)', null=True, blank=True)
     ttv_diastole    = models.PositiveSmallIntegerField('Tekanan Darah Diastole (mmHg)', null=True, blank=True)
@@ -1235,6 +1245,133 @@ class TindakanAsesmen(models.Model):
     @property
     def ep_lengkap(self):
         return self.standard_item_id is None or self.ep_status in ('TERPENUHI', 'NA')
+
+
+# ── 12. Anjungan Pendaftaran Mandiri (APM) & Antrean Online ──────────────────
+
+class JadwalDokterPoli(models.Model):
+    STATUS_CHOICES = [
+        ('BUKA', 'Buka / Kuota Tersedia'),
+        ('PENUH', 'Kuota Penuh'),
+        ('LIBUR', 'Libur / Tutup'),
+    ]
+
+    nama_dokter             = models.CharField('Nama Lengkap Dokter', max_length=150)
+    gelar                   = models.CharField('Gelar / Spesialisasi', max_length=150, blank=True)
+    poliklinik              = models.CharField('Poliklinik Tujuan', max_length=100, choices=POLIKLINIK_CHOICES)
+    hari_praktik            = models.CharField('Hari Praktik', max_length=100, default='Senin - Jumat')
+    jam_mulai               = models.TimeField('Jam Mulai Praktik')
+    jam_selesai             = models.TimeField('Jam Selesai Praktik')
+    kuota_maksimal          = models.PositiveIntegerField('Kuota Maksimal Harian', default=20)
+    durasi_per_pasien_menit = models.PositiveIntegerField('Durasi per Pasien (Menit)', default=15)
+    status_ketersediaan     = models.CharField('Status Ketersediaan', max_length=20, choices=STATUS_CHOICES, default='BUKA')
+    foto_dokter             = models.FileField('Foto Dokter', upload_to='dokter/foto/%Y/', blank=True, null=True)
+    foto_url                = models.URLField('URL Foto Avatar Dokter', blank=True)
+    keterangan              = models.TextField('Keterangan / Pengumuman', blank=True)
+    created_at              = models.DateTimeField(auto_now_add=True)
+    updated_at              = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = 'Jadwal Dokter Poli (APM)'
+        verbose_name_plural = 'Jadwal Dokter Poli (APM)'
+        ordering = ['poliklinik', 'nama_dokter']
+
+    def __str__(self):
+        return f"{self.nama_dokter} — {self.get_poliklinik_display()} ({self.jam_mulai.strftime('%H:%M')} - {self.jam_selesai.strftime('%H:%M')})"
+
+    def get_terdaftar_hari_ini(self, tanggal=None):
+        from django.utils import timezone
+        tgl = tanggal or timezone.localdate()
+        return KunjunganPasien.objects.filter(
+            tanggal_masuk__date=tgl,
+            jenis_kunjungan='RAJAL',
+            dpjp=self.nama_dokter,
+            poliklinik=self.poliklinik
+        ).exclude(status='BATAL').count()
+
+    def get_sisa_kuota(self, tanggal=None):
+        terdaftar = self.get_terdaftar_hari_ini(tanggal)
+        return max(0, self.kuota_maksimal - terdaftar)
+
+    def is_tersedia(self, tanggal=None):
+        if self.status_ketersediaan != 'BUKA':
+            return False
+        return self.get_sisa_kuota(tanggal) > 0
+
+    def hitung_estimasi_jam(self, urutan=None):
+        import datetime
+        if urutan is None:
+            urutan = self.get_terdaftar_hari_ini() + 1
+        minutes_offset = (max(1, urutan) - 1) * self.durasi_per_pasien_menit
+        base_dt = datetime.datetime.combine(datetime.date.today(), self.jam_mulai)
+        est_dt = base_dt + datetime.timedelta(minutes=minutes_offset)
+        return est_dt.time()
+
+
+class WhatsAppLog(models.Model):
+    JENIS_PILIHAN = [
+        ('TIKET_APM', 'Tiket Pendaftaran APM'),
+        ('REMINDER_H1', 'Pengingat H-1 Antrean'),
+        ('BATAL_APM', 'Konfirmasi Pembatalan APM'),
+        ('NOTIFIKASI_IGD', 'Alert Fast-Track IGD'),
+        ('LAINNYA', 'Lainnya'),
+    ]
+    STATUS_PILIHAN = [
+        ('SENT', 'Terkirim'),
+        ('FAILED', 'Gagal'),
+        ('SIMULASI', 'Simulasi / Dummy'),
+    ]
+
+    nomor_tujuan = models.CharField('Nomor WhatsApp Tujuan', max_length=30)
+    jenis_pesan  = models.CharField('Jenis Notifikasi', max_length=30, choices=JENIS_PILIHAN, default='TIKET_APM')
+    pesan        = models.TextField('Isi Pesan WhatsApp')
+    status       = models.CharField('Status Pengiriman', max_length=20, choices=STATUS_PILIHAN, default='SIMULASI')
+    kunjungan    = models.ForeignKey(KunjunganPasien, on_delete=models.SET_NULL, null=True, blank=True, related_name='wa_logs')
+    response_api = models.JSONField('Response Gateway API', default=dict, blank=True)
+    created_at   = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = 'Log Notifikasi WhatsApp'
+        verbose_name_plural = 'Log Notifikasi WhatsApp'
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"WA to {self.nomor_tujuan} [{self.jenis_pesan}] - {self.status}"
+
+
+class AntreanBpjsTaskLog(models.Model):
+    TASK_CHOICES = [
+        (1, 'Mulai waktu tunggu admisi'),
+        (2, 'Akhir waktu tunggu admisi / mulai pelayanan admisi'),
+        (3, 'Akhir pelayanan admisi / check-in APM / mulai waktu tunggu poli'),
+        (4, 'Mulai pemeriksaan dokter'),
+        (5, 'Selesai pemeriksaan dokter / mulai waktu tunggu farmasi'),
+        (6, 'Mulai pelayanan farmasi'),
+        (7, 'Selesai pelayanan farmasi / serah terima obat'),
+    ]
+    STATUS_CHOICES = [
+        ('PENDING', 'Pending'),
+        ('SENT', 'Terkirim ke BPJS'),
+        ('FAILED', 'Gagal Kirim'),
+        ('SIMULATED', 'Simulasi BPJS'),
+    ]
+
+    kunjungan     = models.ForeignKey(KunjunganPasien, on_delete=models.CASCADE, related_name='bpjs_task_logs')
+    task_id       = models.PositiveSmallIntegerField('Task ID (1-7)', choices=TASK_CHOICES)
+    nama_task     = models.CharField('Nama Task ID', max_length=150, blank=True)
+    waktu         = models.DateTimeField('Waktu Kejadian (WIB)', default=timezone.now)
+    status_kirim  = models.CharField('Status Bridging BPJS', max_length=20, choices=STATUS_CHOICES, default='SIMULATED')
+    response_bpjs = models.JSONField('Response BPJS API', default=dict, blank=True)
+    created_at    = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = 'Log Antrean BPJS 7 Task ID'
+        verbose_name_plural = 'Log Antrean BPJS 7 Task ID'
+        ordering = ['kunjungan', 'task_id']
+
+    def __str__(self):
+        return f"[{self.kunjungan.no_kunjungan}] Task {self.task_id}: {self.nama_task} ({self.status_kirim})"
+
 
 
 
