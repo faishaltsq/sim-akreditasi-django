@@ -48,6 +48,11 @@
                         <!-- JENIS & PENJAMIN -->
                         <span class="badge bg-light text-dark border">{{ k.get_jenis_kunjungan_display }}</span>
                         <span class="badge bg-light text-secondary border font-monospace">{{ k.get_penjamin_display }}</span>
+                        {% if k.pasien.foto_ktp %}
+                        <a href="#modalLihatKtp" data-bs-toggle="modal" class="badge bg-success-subtle text-success border border-success text-decoration-none" style="font-size:.75rem;" title="Klik untuk melihat bukti e-KTP">
+                            <i class="bi bi-person-vcard me-1"></i>Scan KTP (SKP 1 / MRMIK)
+                        </a>
+                        {% endif %}
                         {% if k.general_consent %}
                         <span class="badge bg-success-subtle text-success border border-success"><i class="bi bi-check2-circle me-1"></i>General Consent OK</span>
                         {% endif %}
@@ -1353,5 +1358,33 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 })();
 </script>
+
+{% if k.pasien.foto_ktp %}
+<!-- MODAL LIHAT KTP -->
+<div class="modal fade" id="modalLihatKtp" tabindex="-1" aria-labelledby="modalLihatKtpLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header bg-dark text-white py-2">
+                <h6 class="modal-title fw-bold" id="modalLihatKtpLabel">
+                    <i class="bi bi-person-vcard me-2"></i>Berkas e-KTP — {{ k.pasien.nama_lengkap }} ({{ k.pasien.no_rm }})
+                </h6>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body text-center p-3 bg-light">
+                <img src="{{ k.pasien.foto_ktp.url }}" alt="Scan KTP {{ k.pasien.nama_lengkap }}" class="img-fluid rounded border shadow-sm" style="max-height: 520px; object-fit: contain;">
+                <div class="mt-2 small text-muted">
+                    <i class="bi bi-shield-check text-success me-1"></i>Verifikasi Identitas Pasien (STARKES SKP 1 &amp; MRMIK)
+                </div>
+            </div>
+            <div class="modal-footer py-1 px-3 bg-white">
+                <a href="{{ k.pasien.foto_ktp.url }}" target="_blank" class="btn btn-sm btn-outline-primary">
+                    <i class="bi bi-box-arrow-up-right me-1"></i>Buka Tab Baru
+                </a>
+                <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Tutup</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
 
 {% endblock %}

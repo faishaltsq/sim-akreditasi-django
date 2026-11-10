@@ -150,6 +150,18 @@
     <td>:</td>
     <td class="font-monospace fw-semibold">{{ pasien.no_bpjs|default:"-" }}</td>
   </tr>
+  <tr>
+    <td><strong>Verifikasi Identitas (STARKES SKP 1 / MRMIK)</strong></td>
+    <td>:</td>
+    <td colspan="4">
+      <span class="badge bg-light text-dark border"><i class="bi bi-shield-check text-success me-1"></i>Dua Parameter Terverifikasi (Nama Lengkap + NIK/Tanggal Lahir)</span>
+      {% if pasien.foto_ktp %}
+      <span class="badge bg-success-subtle text-success border ms-1"><i class="bi bi-person-vcard me-1"></i>Scan e-KTP Terarsip Digital</span>
+      {% else %}
+      <span class="badge bg-secondary-subtle text-secondary border ms-1">Scan e-KTP Belum Terunggah</span>
+      {% endif %}
+    </td>
+  </tr>
 </table>
 
 <!-- C. PENANGGUNG JAWAB PASIEN (EMERGENCY CONTACT) -->

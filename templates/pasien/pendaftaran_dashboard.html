@@ -320,16 +320,55 @@
                     <!-- KOTAK 2: PASIEN BARU (PENDAFTARAN LENGKAP STANDAR RS) -->
                     <!-- ========================================================================= -->
                     <div class="col-lg-7">
-                        <div class="card h-100 border-success shadow-sm" style="border-width: 2px; border-radius: .85rem;">
+                        <div class="card h-100 border-success shadow-sm d-flex flex-column" style="border-width: 2px; border-radius: .85rem; position: relative;">
                             <div class="card-header bg-success text-white py-2.5 px-3 d-flex justify-content-between align-items-center" style="border-radius: .75rem .75rem 0 0;">
-                                <div class="fw-bold fs-6"><i class="bi bi-person-plus-fill me-2"></i>KOTAK 2: PASIEN BARU</div>
-                                <span class="badge bg-white text-success fw-bold" style="font-size: .72rem;">Pendaftaran Pertama Kali</span>
+                                <div class="d-flex align-items-center gap-2">
+                                    <div class="fw-bold fs-6"><i class="bi bi-person-plus-fill me-1"></i>KOTAK 2: PASIEN BARU</div>
+                                    <span class="badge bg-white text-success fw-bold" style="font-size: .72rem;">Pendaftaran Pertama Kali</span>
+                                </div>
+                                <span class="badge bg-success-subtle text-white border border-light" style="font-size: .7rem;" title="Kepatuhan STARKES SKP 1 (Identifikasi Pasien) & MRMIK (Rekam Medis)"><i class="bi bi-shield-check me-1"></i>SKP 1 &amp; MRMIK Ready</span>
                             </div>
-                            <div class="card-body p-3 p-md-4">
-                                <form method="POST" action="{% url 'pasien:kunjungan_baru' %}" id="formPasienBaru">
+                            <div class="card-body p-3 p-md-4 flex-grow-1">
+                                <form method="POST" action="{% url 'pasien:kunjungan_baru' %}" id="formPasienBaru" enctype="multipart/form-data">
                                     {% csrf_token %}
                                     <input type="hidden" name="is_pasien_baru" value="1">
                                     <input type="hidden" name="next_url" value="{% url 'pasien:pendaftaran_dashboard' %}">
+                                    <input type="file" name="foto_ktp" id="fotoKtpInput" class="d-none">
+                                    <input type="hidden" name="foto_ktp_base64" id="fotoKtpBase64">
+
+                                    <!-- BANNER SCAN / UPLOAD KTP (AI OCR & SKP 1) -->
+                                    <div class="p-2.5 mb-3 border rounded-3 bg-white shadow-xs d-flex flex-wrap justify-content-between align-items-center gap-2" style="border-left: 4px solid #198754 !important;">
+                                        <div>
+                                            <div class="fw-bold small text-success"><i class="bi bi-person-vcard me-1"></i>Scan / Upload e-KTP Pasien</div>
+                                            <div class="text-muted" style="font-size: .72rem;">Ekstraksi otomatis NIK, Nama, Tanggal Lahir, Alamat via Vision AI &amp; Verifikasi SKP 1</div>
+                                        </div>
+                                        <div class="d-flex gap-2">
+                                            <button type="button" id="btnBukaModalKtp" class="btn btn-outline-success btn-sm fw-semibold shadow-xs" data-bs-toggle="modal" data-bs-target="#modalScanKtp">
+                                                <i class="bi bi-camera me-1"></i> Scan / Kamera KTP
+                                            </button>
+                                            <label for="fotoKtpDirectInput" class="btn btn-success btn-sm fw-semibold shadow-xs mb-0" style="cursor: pointer;">
+                                                <i class="bi bi-upload me-1"></i> Upload Berkas
+                                            </label>
+                                            <input type="file" id="fotoKtpDirectInput" accept="image/*" class="d-none" onchange="handleKtpFileDirect(this)">
+                                        </div>
+                                    </div>
+
+                                    <!-- KTP PREVIEW CARD -->
+                                    <div id="ktpPreviewContainer" class="p-2.5 mb-3 border rounded-3 bg-light-subtle d-none">
+                                        <div class="d-flex align-items-center justify-content-between">
+                                            <div class="d-flex align-items-center gap-2">
+                                                <img id="ktpThumbnailImg" src="" alt="Thumbnail KTP" class="img-thumbnail" style="height: 60px; max-width: 100px; object-fit: cover;">
+                                                <div>
+                                                    <div class="fw-bold small text-dark" id="ktpStatusTitle">KTP Berhasil Dipindai</div>
+                                                    <div class="small text-muted" id="ktpStatusSub" style="font-size: .72rem;">Data demografi otomatis terisi. Verifikasi ulang sebelum simpan.</div>
+                                                </div>
+                                            </div>
+                                            <div class="d-flex align-items-center gap-1">
+                                                <span class="badge bg-success-subtle text-success border"><i class="bi bi-check2-circle me-1"></i>SKP 1 Teridentifikasi</span>
+                                                <button type="button" class="btn btn-outline-danger btn-sm py-0 px-1.5" onclick="clearKtpScan()" title="Hapus foto KTP"><i class="bi bi-x"></i></button>
+                                            </div>
+                                        </div>
+                                    </div>
 
                                     <!-- SECTION A: IDENTITAS PRIBADI PASIEN -->
                                     <div class="p-3 border rounded-3 bg-light mb-3">
@@ -342,10 +381,13 @@
                                         <div class="row g-2 mb-2">
                                             <div class="col-md-7">
                                                 <label class="form-label small fw-semibold mb-1">Nama Lengkap (sesuai KTP/KIA) <span class="text-danger">*</span>:</label>
-                                                <input type="text" name="nama_lengkap" id="namaLengkapBaru" class="form-control form-control-sm" required placeholder="Nama lengkap pasien tanpa singkatan...">
+                                                <input type="text" name="nama_lengkap" id="namaLengkapBaru" class="form-control form-control-sm text-uppercase" required placeholder="Nama lengkap pasien tanpa singkatan...">
                                             </div>
                                             <div class="col-md-5">
-                                                <label class="form-label small fw-semibold mb-1">NIK (16 Digit):</label>
+                                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                                    <label class="form-label small fw-semibold mb-0">NIK (16 Digit):</label>
+                                                    <span id="nikDigitCounter" class="badge bg-light text-muted border font-monospace" style="font-size: .65rem;">0 / 16</span>
+                                                </div>
                                                 <input type="text" name="nik" id="nikBaruInput" class="form-control form-control-sm font-monospace" maxlength="16" placeholder="16 digit NIK KTP...">
                                                 <div id="nikBaruFeedback" class="small mt-0.5"></div>
                                             </div>
@@ -354,21 +396,28 @@
                                         <div class="row g-2 mb-2">
                                             <div class="col-md-4">
                                                 <label class="form-label small fw-semibold mb-1">Tempat Lahir:</label>
-                                                <input type="text" name="tempat_lahir" class="form-control form-control-sm" placeholder="Kota lahir...">
+                                                <input type="text" name="tempat_lahir" id="tempatLahirBaru" class="form-control form-control-sm" placeholder="Kota lahir...">
                                             </div>
                                             <div class="col-md-4">
-                                                <label class="form-label small fw-semibold mb-1">Tanggal Lahir <span class="text-danger">*</span>:</label>
-                                                <input type="date" name="tanggal_lahir" id="tglLahirBaru" class="form-control form-control-sm" required>
+                                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                                    <label class="form-label small fw-semibold mb-0">Tgl Lahir <span class="text-danger">*</span>:</label>
+                                                    <span id="badgeUsiaBaru" class="badge bg-info-subtle text-info border" style="font-size: .68rem;">Usia: -</span>
+                                                </div>
+                                                <div class="input-group input-group-sm">
+                                                    <input type="text" name="tanggal_lahir" id="tglLahirBaru" class="form-control form-control-sm font-monospace" required placeholder="MM/DD/YY atau YYYY-MM-DD" oninput="onTglLahirInput(this.value)">
+                                                    <input type="date" id="tglLahirPicker" class="form-control form-control-sm px-1" style="max-width: 36px;" title="Pilih dari Kalender" onchange="onTglPickerChange(this.value)">
+                                                </div>
+                                                <div id="tglLahirFeedback" class="small text-muted" style="font-size: .68rem;">Ketik manual: MM/DD/YY (cth: 05/20/90) atau kalender</div>
                                             </div>
                                             <div class="col-md-4">
                                                 <label class="form-label small fw-semibold mb-1">Jenis Kelamin <span class="text-danger">*</span>:</label>
                                                 <div class="d-flex gap-2 pt-1">
                                                     <div class="form-check form-check-inline mb-0">
-                                                        <input class="form-check-input" type="radio" name="jenis_kelamin" id="jkL" value="L" checked>
+                                                        <input class="form-check-input" type="radio" name="jenis_kelamin" id="jkL" value="L" checked onchange="checkNikDemographicMatch()">
                                                         <label class="form-check-label small" for="jkL">Laki-laki</label>
                                                     </div>
                                                     <div class="form-check form-check-inline mb-0">
-                                                        <input class="form-check-input" type="radio" name="jenis_kelamin" id="jkP" value="P">
+                                                        <input class="form-check-input" type="radio" name="jenis_kelamin" id="jkP" value="P" onchange="checkNikDemographicMatch()">
                                                         <label class="form-check-label small" for="jkP">Perempuan</label>
                                                     </div>
                                                 </div>
@@ -376,9 +425,19 @@
                                         </div>
 
                                         <div class="row g-2 mb-2">
-                                            <div class="col-md-4">
+                                            <div class="col-md-3">
+                                                <label class="form-label small fw-semibold mb-1">Gol. Darah:</label>
+                                                <select name="golongan_darah" id="goldarBaru" class="form-select form-select-sm">
+                                                    <option value="-">-</option>
+                                                    <option value="A">A</option>
+                                                    <option value="B">B</option>
+                                                    <option value="AB">AB</option>
+                                                    <option value="O">O</option>
+                                                </select>
+                                            </div>
+                                            <div class="col-md-3">
                                                 <label class="form-label small fw-semibold mb-1">Agama:</label>
-                                                <select name="agama" class="form-select form-select-sm">
+                                                <select name="agama" id="agamaBaru" class="form-select form-select-sm">
                                                     <option value="ISLAM" selected>Islam</option>
                                                     <option value="KRISTEN">Kristen</option>
                                                     <option value="KATOLIK">Katolik</option>
@@ -388,17 +447,17 @@
                                                     <option value="LAINNYA">Lainnya</option>
                                                 </select>
                                             </div>
-                                            <div class="col-md-4">
-                                                <label class="form-label small fw-semibold mb-1">Status Perkawinan:</label>
-                                                <select name="status_perkawinan" class="form-select form-select-sm">
+                                            <div class="col-md-3">
+                                                <label class="form-label small fw-semibold mb-1">Status Nikah:</label>
+                                                <select name="status_perkawinan" id="statusPerkawinanBaru" class="form-select form-select-sm">
                                                     <option value="BELUM_MENIKAH">Belum Menikah</option>
                                                     <option value="MENIKAH" selected>Menikah</option>
                                                     <option value="DUDA_JANDA">Duda / Janda</option>
                                                 </select>
                                             </div>
-                                            <div class="col-md-4">
-                                                <label class="form-label small fw-semibold mb-1">Pendidikan Terakhir:</label>
-                                                <select name="pendidikan_terakhir" class="form-select form-select-sm">
+                                            <div class="col-md-3">
+                                                <label class="form-label small fw-semibold mb-1">Pendidikan:</label>
+                                                <select name="pendidikan_terakhir" id="pendidikanBaru" class="form-select form-select-sm">
                                                     <option value="SD_SMP_SMA" selected>SD / SMP / SMA</option>
                                                     <option value="D3_D4">D3 / D4</option>
                                                     <option value="S1_S2_S3">S1 / S2 / S3</option>
@@ -410,15 +469,15 @@
                                         <div class="row g-2 mb-2">
                                             <div class="col-md-6">
                                                 <label class="form-label small fw-semibold mb-1">Pekerjaan:</label>
-                                                <input type="text" name="pekerjaan" class="form-control form-control-sm" placeholder="Contoh: Karyawan Swasta, Wiraswasta, PNS, IRT...">
+                                                <input type="text" name="pekerjaan" id="pekerjaanBaru" class="form-control form-control-sm" placeholder="Contoh: Karyawan Swasta, Wiraswasta, PNS, IRT...">
                                             </div>
                                             <div class="col-md-3">
                                                 <label class="form-label small fw-semibold mb-1">No. HP / WA:</label>
-                                                <input type="text" name="no_hp" id="hpBaruInput" class="form-control form-control-sm" placeholder="08xxxxxxxxxx">
+                                                <input type="text" name="no_hp" id="hpBaruInput" class="form-control form-control-sm font-monospace" placeholder="08xxxxxxxxxx" oninput="sanitizeHpInput(this)">
                                             </div>
                                             <div class="col-md-3">
                                                 <label class="form-label small fw-semibold mb-1">Email:</label>
-                                                <input type="email" name="email" class="form-control form-control-sm" placeholder="pasien@email.com">
+                                                <input type="email" name="email" id="emailBaru" class="form-control form-control-sm" placeholder="pasien@email.com">
                                             </div>
                                         </div>
 
@@ -428,17 +487,20 @@
                                             <input type="text" name="alamat" id="alamatBaruInput" class="form-control form-control-sm" placeholder="Nama Jalan, Gang, Nomor Rumah...">
                                         </div>
                                         <div class="row g-2 mb-2">
-                                            <div class="col-md-3">
-                                                <input type="text" name="rt_rw" class="form-control form-control-sm" placeholder="RT / RW (cth: 002/005)">
+                                            <div class="col-md-2">
+                                                <input type="text" name="rt_rw" id="rtRwBaru" class="form-control form-control-sm" placeholder="RT / RW">
+                                            </div>
+                                            <div class="col-md-2">
+                                                <input type="text" name="kelurahan" id="kelurahanBaru" class="form-control form-control-sm" placeholder="Kelurahan / Desa">
+                                            </div>
+                                            <div class="col-md-2">
+                                                <input type="text" name="kecamatan" id="kecamatanBaru" class="form-control form-control-sm" placeholder="Kecamatan">
                                             </div>
                                             <div class="col-md-3">
-                                                <input type="text" name="kelurahan" class="form-control form-control-sm" placeholder="Kelurahan / Desa">
+                                                <input type="text" name="kota_kabupaten" id="kotaKabupatenBaru" class="form-control form-control-sm" placeholder="Kota / Kabupaten">
                                             </div>
                                             <div class="col-md-3">
-                                                <input type="text" name="kecamatan" class="form-control form-control-sm" placeholder="Kecamatan">
-                                            </div>
-                                            <div class="col-md-3">
-                                                <input type="text" name="kota_kabupaten" class="form-control form-control-sm" placeholder="Kota / Kabupaten">
+                                                <input type="text" name="provinsi" id="provinsiBaru" class="form-control form-control-sm" placeholder="Provinsi">
                                             </div>
                                         </div>
 
@@ -580,10 +642,17 @@
                                         </label>
                                     </div>
 
-                                    <button type="submit" class="btn btn-success w-100 fw-bold py-2 shadow-sm">
+                                </form>
+                            </div>
+                            <div class="sticky-action-footer card-footer bg-white border-top p-2.5 shadow-sm" style="position: sticky; bottom: 0; z-index: 10; border-radius: 0 0 .75rem .75rem;">
+                                <div class="d-flex align-items-center justify-content-between gap-2">
+                                    <div class="small text-muted d-none d-sm-block" style="font-size: .72rem;">
+                                        <i class="bi bi-shield-check text-success me-1"></i>Verifikasi 2 Parameter (Nama &amp; Tgl Lahir/NIK)
+                                    </div>
+                                    <button type="button" onclick="submitFormPasienBaru()" id="btnSubmitPasienBaru" class="btn btn-success fw-bold py-2 px-3 shadow-sm flex-grow-1 flex-sm-grow-0">
                                         <i class="bi bi-person-check me-1"></i> Simpan Pasien Baru &amp; Daftarkan Kunjungan
                                     </button>
-                                </form>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -991,6 +1060,81 @@
                                 <button type="submit" class="btn btn-success btn-sm">Simpan Logbook</button>
                             </div>
                         </form>
+                    </div>
+                </div>
+            </div>
+
+            <!-- MODAL SCAN / KAMERA KTP (AI OCR & STARKES SKP 1) -->
+            <div class="modal fade" id="modalScanKtp" tabindex="-1" aria-labelledby="modalScanKtpLabel" aria-hidden="true">
+                <div class="modal-dialog modal-dialog-centered modal-lg">
+                    <div class="modal-content shadow border-0" style="border-radius: .85rem; overflow: hidden;">
+                        <div class="modal-header bg-success text-white py-2.5 px-3">
+                            <h6 class="modal-title fw-bold" id="modalScanKtpLabel">
+                                <i class="bi bi-person-vcard me-2"></i>Pindai / Ambil Foto e-KTP Pasien Baru
+                            </h6>
+                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Tutup" onclick="stopWebcam()"></button>
+                        </div>
+                        <div class="modal-body p-3 position-relative">
+                            <ul class="nav nav-pills nav-fill mb-3" id="pills-tab-ktp" role="tablist">
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link active py-1.5 fw-semibold" id="tab-webcam-ktp" data-bs-toggle="pill" data-bs-target="#pane-webcam-ktp" type="button" role="tab" onclick="startWebcam()">
+                                        <i class="bi bi-camera-video me-1"></i> Kamera / Webcam
+                                    </button>
+                                </li>
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link py-1.5 fw-semibold" id="tab-upload-ktp" data-bs-toggle="pill" data-bs-target="#pane-upload-ktp" type="button" role="tab" onclick="stopWebcam()">
+                                        <i class="bi bi-upload me-1"></i> Unggah Berkas Gambar
+                                    </button>
+                                </li>
+                            </ul>
+
+                            <div class="tab-content" id="pills-tabContentKtp">
+                                <!-- TAB 1: WEBCAM -->
+                                <div class="tab-pane fade show active" id="pane-webcam-ktp" role="tabpanel">
+                                    <div class="position-relative bg-dark rounded overflow-hidden text-center d-flex align-items-center justify-content-center" style="min-height: 280px; max-height: 380px;">
+                                        <video id="ktpWebcamVideo" autoplay playsinline class="w-100" style="max-height: 360px; object-fit: contain;"></video>
+                                        <canvas id="ktpWebcamCanvas" class="d-none"></canvas>
+                                        <!-- Overlay Guideline Frame -->
+                                        <div class="position-absolute border border-2 border-warning rounded pointer-events-none" style="width: 78%; height: 75%; box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.45); pointer-events: none;">
+                                            <div class="position-absolute top-0 start-50 translate-middle-x badge bg-warning text-dark mt-2 fw-semibold" style="font-size: .7rem;">Posisikan e-KTP di dalam kotak ini</div>
+                                        </div>
+                                    </div>
+                                    <div class="d-flex flex-wrap justify-content-between align-items-center mt-3 gap-2">
+                                        <small class="text-muted"><i class="bi bi-info-circle me-1"></i>Pastikan e-KTP tidak silau dan teks NIK terbaca tajam.</small>
+                                        <button type="button" class="btn btn-success fw-semibold shadow-xs" onclick="captureKtpWebcam()">
+                                            <i class="bi bi-camera me-1"></i> Ambil Foto &amp; Ekstrak Data
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <!-- TAB 2: UPLOAD FILE -->
+                                <div class="tab-pane fade" id="pane-upload-ktp" role="tabpanel">
+                                    <div class="border border-2 border-dashed rounded-3 p-4 text-center bg-light" id="ktpDropZone" style="cursor: pointer;" onclick="document.getElementById('ktpModalFileInput').click()">
+                                        <i class="bi bi-cloud-arrow-up text-success fs-1"></i>
+                                        <div class="fw-bold text-dark mt-2">Klik untuk Pilih Gambar KTP atau Seret File ke Sini</div>
+                                        <small class="text-muted">Format: JPG, JPEG, PNG, WEBP (Maks 10 MB)</small>
+                                        <input type="file" id="ktpModalFileInput" accept="image/*" class="d-none" onchange="handleModalKtpFile(this)">
+                                    </div>
+                                    <div id="ktpFilePreviewWrap" class="mt-3 d-none text-center">
+                                        <img id="ktpFilePreviewImg" src="" alt="Pratinjau KTP" class="img-fluid rounded border mb-2" style="max-height: 200px;">
+                                        <div>
+                                            <button type="button" class="btn btn-success fw-semibold shadow-xs" onclick="processModalKtpFile()">
+                                                <i class="bi bi-magic me-1"></i> Ekstrak Data KTP Sekarang
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- LOADING SPINNER OVERLAY -->
+                            <div id="ktpOcrLoading" class="position-absolute top-0 start-0 w-100 h-100 bg-white bg-opacity-75 d-none flex-column align-items-center justify-content-center" style="z-index: 1055; border-radius: inherit;">
+                                <div class="spinner-border text-success" role="status" style="width: 3rem; height: 3rem;">
+                                    <span class="visually-hidden">Memproses...</span>
+                                </div>
+                                <div class="fw-bold text-dark mt-3 fs-6">Membaca Data e-KTP dengan AI Vision...</div>
+                                <small class="text-muted">Mengekstrak NIK, Nama, Tanggal Lahir, Alamat &amp; SKP 1</small>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -1776,9 +1920,553 @@
         };
 
         nikInput.addEventListener('input', function() {
-            if (nikInput.value.length === 16) window.cekNikBridging(nikInput.value);
+            // Keep digits only
+            this.value = this.value.replace(/\D/g, '').slice(0, 16);
+            const counter = document.getElementById('nikDigitCounter');
+            if (counter) {
+                counter.textContent = this.value.length + ' / 16';
+                if (this.value.length === 16) {
+                    counter.className = 'badge bg-success text-white font-monospace';
+                } else {
+                    counter.className = 'badge bg-light text-muted border font-monospace';
+                }
+            }
+
+            if (this.value.length === 16) {
+                const nik = this.value;
+                setFeedback('<span class="text-muted"><span class="spinner-border spinner-border-sm me-1"></span>Memvalidasi struktur NIK &amp; cek duplikat...</span>');
+                
+                // 1. Cek NIK ke server lokal (duplikat & decoder wilayah/tgl lahir/gender)
+                fetch('{% url "pasien:api_cek_nik" %}?nik=' + encodeURIComponent(nik), {
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                })
+                .then(r => r.json())
+                .then(data => {
+                    if (data.exists) {
+                        const namaPasien = data.pasien ? data.pasien.nama_lengkap : 'Pasien Lain';
+                        const noRm = data.pasien ? data.pasien.no_rm : '';
+                        setFeedback('<div class="alert alert-warning py-1 px-2 mb-0 mt-1 small"><i class="bi bi-exclamation-triangle-fill me-1"></i><strong>NIK Sudah Terdaftar!</strong> ' + namaPasien + ' (' + noRm + '). Mohon gunakan Kotak 1 (Pasien Lama) untuk menghindari rekam medis ganda.</div>');
+                        window.decodedNikMeta = null;
+                        return;
+                    }
+
+                    if (data.decoded && data.decoded.valid) {
+                        window.decodedNikMeta = data.decoded;
+                        let infoProv = data.decoded.nama_provinsi || 'Indonesia';
+                        let infoJk = data.decoded.jenis_kelamin === 'P' ? 'Perempuan' : 'Laki-laki';
+                        let infoTgl = data.decoded.tanggal_lahir_display || data.decoded.tanggal_lahir;
+                        setFeedback('<div class="badge bg-success-subtle text-success border mt-1"><i class="bi bi-shield-check me-1"></i>NIK Valid: ' + infoProv + ' • ' + infoJk + ' • Lahir: ' + infoTgl + '</div>');
+                        
+                        // Cek sinkronisasi demografi
+                        checkNikDemographicMatch();
+                    } else {
+                        window.decodedNikMeta = null;
+                        setFeedback('<div class="badge bg-danger-subtle text-danger border mt-1"><i class="bi bi-x-circle me-1"></i>Struktur NIK tidak valid</div>');
+                    }
+
+                    // 2. Jalankan bridging kepesertaan BPJS bila bukan pasien duplikat
+                    window.cekNikBridging(nik);
+                })
+                .catch(() => {
+                    window.cekNikBridging(nik);
+                });
+            } else {
+                window.decodedNikMeta = null;
+                setFeedback('');
+            }
         });
     })();
+
+    // 8. SANITASI NOMOR TELEPON / HP
+    function sanitizeHpInput(el) {
+        if (!el) return;
+        let v = el.value.replace(/[^\d+]/g, '');
+        if (v.startsWith('+62')) {
+            v = '0' + v.slice(3);
+        } else if (v.startsWith('62')) {
+            v = '0' + v.slice(2);
+        }
+        v = v.replace(/\D/g, '');
+        el.value = v.slice(0, 15);
+    }
+
+    // 9. PARSER TANGGAL LAHIR FLEKSIBEL & KALKULATOR USIA REAL-TIME
+    function parseFlexibleDateJS(rawStr) {
+        if (!rawStr || typeof rawStr !== 'string') return null;
+        const cleaned = rawStr.trim();
+        if (!cleaned) return null;
+
+        // ISO: YYYY-MM-DD
+        const mIso = cleaned.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})$/);
+        if (mIso) {
+            const y = parseInt(mIso[1], 10);
+            const m = parseInt(mIso[2], 10) - 1;
+            const d = parseInt(mIso[3], 10);
+            const dt = new Date(y, m, d);
+            if (dt.getFullYear() === y && dt.getMonth() === m && dt.getDate() === d) return dt;
+            return null;
+        }
+
+        // P1 / P2 / P3 (slash or dash)
+        const mSlash = cleaned.match(/^(\d{1,2})[-/](\d{1,2})[-/](\d{2,4})$/);
+        if (!mSlash) return null;
+
+        let p1 = parseInt(mSlash[1], 10);
+        let p2 = parseInt(mSlash[2], 10);
+        let p3 = mSlash[3];
+
+        let year;
+        const curYear = new Date().getFullYear();
+        if (p3.length === 2) {
+            const yy = parseInt(p3, 10);
+            const curYy = curYear % 100;
+            year = yy <= curYy ? (2000 + yy) : (1900 + yy);
+        } else {
+            year = parseInt(p3, 10);
+        }
+
+        // Month & Day resolution: default MM/DD/YYYY, fallback to DD/MM/YYYY if p1 > 12
+        let month, day;
+        if (p1 > 12 && p2 <= 12) {
+            day = p1;
+            month = p2 - 1;
+        } else if (p2 > 12 && p1 <= 12) {
+            month = p1 - 1;
+            day = p2;
+        } else {
+            // Ambiguous: default to MM/DD as requested in MM/DD/YY spec
+            month = p1 - 1;
+            day = p2;
+        }
+
+        const dt = new Date(year, month, day);
+        if (dt.getFullYear() === year && dt.getMonth() === month && dt.getDate() === day) return dt;
+        return null;
+    }
+
+    function calculateAgeDetail(dobDate) {
+        if (!dobDate) return null;
+        const today = new Date();
+        let years = today.getFullYear() - dobDate.getFullYear();
+        let months = today.getMonth() - dobDate.getMonth();
+        let days = today.getDate() - dobDate.getDate();
+
+        if (days < 0) {
+            months--;
+        }
+        if (months < 0) {
+            years--;
+            months += 12;
+        }
+        if (years < 0) return null;
+        return { years: years, months: months };
+    }
+
+    function onTglLahirInput(rawVal) {
+        const badgeUsia = document.getElementById('badgeUsiaBaru');
+        const feedback = document.getElementById('tglLahirFeedback');
+        const picker = document.getElementById('tglLahirPicker');
+
+        const parsed = parseFlexibleDateJS(rawVal);
+        if (!parsed) {
+            if (badgeUsia) badgeUsia.textContent = 'Usia: -';
+            if (feedback) {
+                feedback.innerHTML = rawVal.length > 5 
+                    ? '<span class="text-danger"><i class="bi bi-x-circle me-1"></i>Format tgl belum valid (gunakan MM/DD/YY atau YYYY-MM-DD)</span>' 
+                    : '<span class="text-muted">Ketik manual: MM/DD/YY (cth: 05/20/90) atau kalender</span>';
+            }
+            return;
+        }
+
+        const age = calculateAgeDetail(parsed);
+        if (age && badgeUsia) {
+            badgeUsia.textContent = 'Usia: ' + age.years + ' thn ' + age.months + ' bln';
+            badgeUsia.className = 'badge bg-success-subtle text-success border';
+        }
+
+        const yyyy = parsed.getFullYear();
+        const mm = String(parsed.getMonth() + 1).padStart(2, '0');
+        const dd = String(parsed.getDate()).padStart(2, '0');
+        const namaBulan = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'][parsed.getMonth()];
+
+        if (picker) picker.value = yyyy + '-' + mm + '-' + dd;
+        if (feedback) {
+            feedback.innerHTML = '<span class="text-success"><i class="bi bi-check-circle me-1"></i>Terbaca: <strong>' + dd + ' ' + namaBulan + ' ' + yyyy + '</strong> (' + age.years + ' tahun)</span>';
+        }
+
+        checkNikDemographicMatch();
+    }
+
+    function onTglPickerChange(isoVal) {
+        if (!isoVal) return;
+        const parts = isoVal.split('-');
+        if (parts.length === 3) {
+            // Set as MM/DD/YYYY to match preferred manual format
+            const formatted = parts[1] + '/' + parts[2] + '/' + parts[0];
+            const tglInput = document.getElementById('tglLahirBaru');
+            if (tglInput) {
+                tglInput.value = formatted;
+                onTglLahirInput(formatted);
+            }
+        }
+    }
+
+    function checkNikDemographicMatch() {
+        if (!window.decodedNikMeta) return;
+        const nikMeta = window.decodedNikMeta;
+        const nikFeedback = document.getElementById('nikBaruFeedback');
+        if (!nikFeedback) return;
+
+        const jkChecked = document.querySelector('input[name="jenis_kelamin"]:checked');
+        const selectedJk = jkChecked ? jkChecked.value : '';
+
+        const tglInput = document.getElementById('tglLahirBaru');
+        const parsedDob = tglInput ? parseFlexibleDateJS(tglInput.value) : null;
+
+        let warnings = [];
+        if (selectedJk && nikMeta.jenis_kelamin && selectedJk !== nikMeta.jenis_kelamin) {
+            const labelNikJk = nikMeta.jenis_kelamin === 'P' ? 'Perempuan' : 'Laki-laki';
+            const labelPilihan = selectedJk === 'P' ? 'Perempuan' : 'Laki-laki';
+            warnings.push('Jenis kelamin pada NIK (' + labelNikJk + ') berbeda dengan isian (' + labelPilihan + ')');
+        }
+
+        if (parsedDob && nikMeta.tanggal_lahir) {
+            const nikYy = parseInt(String(nikMeta.tahun), 10) % 100;
+            const dobYy = parsedDob.getFullYear() % 100;
+            const dobMm = parsedDob.getMonth() + 1;
+            const dobDd = parsedDob.getDate();
+            if (dobDd !== nikMeta.hari || dobMm !== nikMeta.bulan || dobYy !== nikYy) {
+                warnings.push('Tanggal lahir isian berbeda dengan tanggal pada NIK (' + nikMeta.tanggal_lahir_display + ')');
+            }
+        }
+
+        if (warnings.length > 0) {
+            const warnHtml = warnings.map(w => '<div><i class="bi bi-exclamation-circle me-1"></i>' + w + '</div>').join('');
+            nikFeedback.innerHTML = '<div class="alert alert-warning py-1 px-2 mb-0 mt-1 small" style="font-size: .75rem;">' + warnHtml + '</div>';
+        }
+    }
+
+    // 10. WEBCAM STREAMING & CAMERA CAPTURE
+    let ktpWebcamStream = null;
+
+    function startWebcam() {
+        const video = document.getElementById('ktpWebcamVideo');
+        if (!video) return;
+        if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+            navigator.mediaDevices.getUserMedia({
+                video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } }
+            })
+            .then(function(stream) {
+                ktpWebcamStream = stream;
+                video.srcObject = stream;
+                video.play();
+            })
+            .catch(function(err) {
+                console.warn('Gagal akses webcam:', err);
+                const uploadTabBtn = document.getElementById('tab-upload-ktp');
+                if (uploadTabBtn) uploadTabBtn.click();
+            });
+        }
+    }
+
+    function stopWebcam() {
+        if (ktpWebcamStream) {
+            ktpWebcamStream.getTracks().forEach(track => track.stop());
+            ktpWebcamStream = null;
+        }
+    }
+
+    function captureKtpWebcam() {
+        const video = document.getElementById('ktpWebcamVideo');
+        const canvas = document.getElementById('ktpWebcamCanvas');
+        if (!video || !canvas) return;
+
+        canvas.width = video.videoWidth || 640;
+        canvas.height = video.videoHeight || 480;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.88);
+
+        stopWebcam();
+        document.getElementById('fotoKtpBase64').value = dataUrl;
+
+        // Tampilkan loading overlay
+        const loading = document.getElementById('ktpOcrLoading');
+        if (loading) loading.classList.remove('d-none');
+
+        // Kirim base64 ke endpoint OCR
+        fetch('{% url "pasien:api_ocr_ktp" %}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: JSON.stringify({ foto_ktp_base64: dataUrl })
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (loading) loading.classList.add('d-none');
+            const modalEl = document.getElementById('modalScanKtp');
+            if (modalEl && typeof bootstrap !== 'undefined') {
+                const modal = bootstrap.Modal.getInstance(modalEl);
+                if (modal) modal.hide();
+            }
+            if (data.success && data.data) {
+                applyOcrResult(data.data, dataUrl);
+            } else {
+                alert('OCR KTP: ' + (data.error || 'Gagal mengekstrak data e-KTP. Mohon lengkapi manual.'));
+                showKtpThumbnail(dataUrl, 'Foto KTP Disimpan (Ekstraksi Gagal)');
+            }
+        })
+        .catch(err => {
+            if (loading) loading.classList.add('d-none');
+            console.error('Error OCR webcam:', err);
+            showKtpThumbnail(dataUrl, 'Foto KTP Tersimpan');
+        });
+    }
+
+    // 11. DIRECT & MODAL FILE UPLOAD OCR
+    let modalSelectedKtpFile = null;
+
+    function handleModalKtpFile(input) {
+        if (!input.files || !input.files[0]) return;
+        modalSelectedKtpFile = input.files[0];
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const previewWrap = document.getElementById('ktpFilePreviewWrap');
+            const previewImg = document.getElementById('ktpFilePreviewImg');
+            if (previewImg) previewImg.src = e.target.result;
+            if (previewWrap) previewWrap.classList.remove('d-none');
+        };
+        reader.readAsDataURL(modalSelectedKtpFile);
+    }
+
+    function processModalKtpFile() {
+        if (!modalSelectedKtpFile) return;
+        uploadKtpFileToOcr(modalSelectedKtpFile);
+    }
+
+    function handleKtpFileDirect(input) {
+        if (!input.files || !input.files[0]) return;
+        const file = input.files[0];
+        // Sinkronkan ke input foto_ktp utama
+        const mainInput = document.getElementById('fotoKtpInput');
+        if (mainInput && typeof DataTransfer !== 'undefined') {
+            const dt = new DataTransfer();
+            dt.items.add(file);
+            mainInput.files = dt.files;
+        }
+        uploadKtpFileToOcr(file);
+    }
+
+    function uploadKtpFileToOcr(file) {
+        const loading = document.getElementById('ktpOcrLoading');
+        if (loading) loading.classList.remove('d-none');
+
+        // Update input file form
+        const mainInput = document.getElementById('fotoKtpInput');
+        if (mainInput && typeof DataTransfer !== 'undefined') {
+            const dt = new DataTransfer();
+            dt.items.add(file);
+            mainInput.files = dt.files;
+        }
+
+        const formData = new FormData();
+        formData.append('foto_ktp', file);
+
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const fileDataUrl = e.target.result;
+            fetch('{% url "pasien:api_ocr_ktp" %}', {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: formData
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (loading) loading.classList.add('d-none');
+                const modalEl = document.getElementById('modalScanKtp');
+                if (modalEl && typeof bootstrap !== 'undefined') {
+                    const modal = bootstrap.Modal.getInstance(modalEl);
+                    if (modal) modal.hide();
+                }
+                if (data.success && data.data) {
+                    applyOcrResult(data.data, fileDataUrl);
+                } else {
+                    alert('OCR KTP: ' + (data.error || 'Gagal mengekstrak data e-KTP. Mohon verifikasi manual.'));
+                    showKtpThumbnail(fileDataUrl, 'Foto KTP Tersimpan (Isi Manual)');
+                }
+            })
+            .catch(err => {
+                if (loading) loading.classList.add('d-none');
+                console.error('Error OCR file:', err);
+                showKtpThumbnail(fileDataUrl, 'Foto KTP Tersimpan');
+            });
+        };
+        reader.readAsDataURL(file);
+    }
+
+    function showKtpThumbnail(imgUrl, title) {
+        const wrap = document.getElementById('ktpPreviewContainer');
+        const img = document.getElementById('ktpThumbnailImg');
+        const titleEl = document.getElementById('ktpStatusTitle');
+        if (img) img.src = imgUrl;
+        if (titleEl && title) titleEl.textContent = title;
+        if (wrap) wrap.classList.remove('d-none');
+    }
+
+    function clearKtpScan() {
+        const wrap = document.getElementById('ktpPreviewContainer');
+        const img = document.getElementById('ktpThumbnailImg');
+        const mainInput = document.getElementById('fotoKtpInput');
+        const b64Input = document.getElementById('fotoKtpBase64');
+        if (wrap) wrap.classList.add('d-none');
+        if (img) img.src = '';
+        if (mainInput) mainInput.value = '';
+        if (b64Input) b64Input.value = '';
+    }
+
+    function flashHighlight(el) {
+        if (!el) return;
+        el.style.transition = 'background-color 0.4s ease, border-color 0.4s ease';
+        el.style.backgroundColor = '#d1e7dd';
+        el.style.borderColor = '#198754';
+        setTimeout(function() {
+            el.style.backgroundColor = '';
+            el.style.borderColor = '';
+        }, 2200);
+    }
+
+    function applyOcrResult(d, thumbUrl) {
+        showKtpThumbnail(thumbUrl, 'KTP Berhasil Diekstrak (STARKES SKP 1)');
+
+        const fields = [
+            { id: 'namaLengkapBaru', val: d.nama_lengkap },
+            { id: 'nikBaruInput', val: d.nik },
+            { id: 'tempatLahirBaru', val: d.tempat_lahir },
+            { id: 'pekerjaanBaru', val: d.pekerjaan },
+            { id: 'alamatBaruInput', val: d.alamat },
+            { id: 'rtRwBaru', val: d.rt_rw },
+            { id: 'kelurahanBaru', val: d.kelurahan },
+            { id: 'kecamatanBaru', val: d.kecamatan },
+            { id: 'kotaKabupatenBaru', val: d.kota_kabupaten },
+            { id: 'provinsiBaru', val: d.provinsi }
+        ];
+
+        fields.forEach(f => {
+            const el = document.getElementById(f.id);
+            if (el && f.val) {
+                el.value = f.val;
+                flashHighlight(el);
+            }
+        });
+
+        // Tanggal Lahir (gunakan format MM/DD/YYYY atau YYYY-MM-DD)
+        const tglInput = document.getElementById('tglLahirBaru');
+        if (tglInput && (d.tanggal_lahir_mdy || d.tanggal_lahir)) {
+            const tglVal = d.tanggal_lahir_mdy || d.tanggal_lahir;
+            tglInput.value = tglVal;
+            flashHighlight(tglInput);
+            onTglLahirInput(tglVal);
+        }
+
+        // Jenis Kelamin
+        if (d.jenis_kelamin === 'L') {
+            const jkL = document.getElementById('jkL');
+            if (jkL) jkL.checked = true;
+        } else if (d.jenis_kelamin === 'P') {
+            const jkP = document.getElementById('jkP');
+            if (jkP) jkP.checked = true;
+        }
+
+        // Golongan Darah
+        if (d.golongan_darah) {
+            const gd = document.getElementById('goldarBaru');
+            if (gd) {
+                const opt = Array.from(gd.options).find(o => o.value === d.golongan_darah.toUpperCase());
+                if (opt) {
+                    gd.value = opt.value;
+                    flashHighlight(gd);
+                }
+            }
+        }
+
+        // Agama
+        if (d.agama) {
+            const ag = document.getElementById('agamaBaru');
+            if (ag) {
+                const opt = Array.from(ag.options).find(o => o.value === d.agama.toUpperCase());
+                if (opt) {
+                    ag.value = opt.value;
+                    flashHighlight(ag);
+                }
+            }
+        }
+
+        // Status Perkawinan
+        if (d.status_perkawinan) {
+            const sp = document.getElementById('statusPerkawinanBaru');
+            if (sp) {
+                const opt = Array.from(sp.options).find(o => o.value === d.status_perkawinan.toUpperCase());
+                if (opt) {
+                    sp.value = opt.value;
+                    flashHighlight(sp);
+                }
+            }
+        }
+
+        // Trigger validasi NIK
+        const nikEl = document.getElementById('nikBaruInput');
+        if (nikEl && nikEl.value) {
+            nikEl.dispatchEvent(new Event('input'));
+        }
+    }
+
+    // 12. SUBMIT FORM PASIEN BARU VALIDATION
+    function submitFormPasienBaru() {
+        const form = document.getElementById('formPasienBaru');
+        if (!form) return;
+
+        const nama = document.getElementById('namaLengkapBaru');
+        if (!nama || !nama.value.trim()) {
+            alert('Nama Lengkap Pasien Baru wajib diisi!');
+            if (nama) nama.focus();
+            return;
+        }
+
+        const tglInput = document.getElementById('tglLahirBaru');
+        if (!tglInput || !tglInput.value.trim()) {
+            alert('Tanggal Lahir Pasien Baru wajib diisi!');
+            if (tglInput) tglInput.focus();
+            return;
+        }
+
+        const parsedDob = parseFlexibleDateJS(tglInput.value);
+        if (!parsedDob) {
+            alert('Format Tanggal Lahir tidak valid! Silakan gunakan format MM/DD/YY (contoh: 05/20/90) atau pilih dari kalender.');
+            tglInput.focus();
+            return;
+        }
+
+        const nikInput = document.getElementById('nikBaruInput');
+        if (nikInput && nikInput.value.trim() && nikInput.value.trim().length !== 16) {
+            if (!confirm('Jumlah digit NIK (' + nikInput.value.trim().length + ') belum 16 digit. Lanjutkan simpan pendaftaran?')) {
+                nikInput.focus();
+                return;
+            }
+        }
+
+        if (form.requestSubmit) {
+            form.requestSubmit();
+        } else {
+            form.submit();
+        }
+    }
+
 
 </script>
 {% endblock %}

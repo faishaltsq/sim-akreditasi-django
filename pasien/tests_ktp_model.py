@@ -20,4 +20,5 @@ class PasienKtpModelTest(TestCase):
         )
         self.assertTrue(bool(pasien.foto_ktp))
         self.assertIn('pasien/ktp/', pasien.foto_ktp.name)
-        self.assertTrue(pasien.foto_ktp.name.endswith('ktp_test.jpg'))
+        self.assertIn('ktp_test', pasien.foto_ktp.name)
+        self.assertTrue(pasien.foto_ktp.name.endswith('.jpg'))

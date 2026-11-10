@@ -31,6 +31,15 @@
                         <span class="badge bg-danger-subtle text-danger border border-danger" style="font-size:.75rem;">Perempuan</span>
                         {% endif %}
                         <span class="badge bg-light text-secondary border font-monospace" style="font-size:.75rem;">Gol. Darah: {{ pasien.golongan_darah }}</span>
+                        {% if pasien.foto_ktp %}
+                        <a href="#modalFotoKtp" data-bs-toggle="modal" class="badge bg-success-subtle text-success border border-success text-decoration-none" style="font-size:.75rem;" title="Klik untuk pratinjau KTP">
+                            <i class="bi bi-person-vcard me-1"></i>KTP Terverifikasi (STARKES SKP 1 / MRMIK)
+                        </a>
+                        {% else %}
+                        <span class="badge bg-warning-subtle text-warning border border-warning" style="font-size:.75rem;" title="Belum ada scan KTP digital">
+                            <i class="bi bi-exclamation-triangle me-1"></i>Belum Ada Scan KTP (MRMIK)
+                        </span>
+                        {% endif %}
                         {% if pasien.has_alergi %}
                         <span class="badge bg-danger text-white"><i class="bi bi-exclamation-triangle-fill me-1"></i>ALERGI</span>
                         {% endif %}
@@ -130,6 +139,34 @@
             </div>
         </div>
     </div>
+
+    {% if pasien.foto_ktp %}
+    <!-- MODAL FOTO KTP -->
+    <div class="modal fade" id="modalFotoKtp" tabindex="-1" aria-labelledby="modalFotoKtpLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content border-0 shadow">
+                <div class="modal-header bg-dark text-white py-2">
+                    <h6 class="modal-title fw-bold" id="modalFotoKtpLabel">
+                        <i class="bi bi-person-vcard me-2"></i>Berkas Identitas e-KTP — {{ pasien.nama_lengkap }} ({{ pasien.no_rm }})
+                    </h6>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body text-center p-3 bg-light">
+                    <img src="{{ pasien.foto_ktp.url }}" alt="Scan KTP {{ pasien.nama_lengkap }}" class="img-fluid rounded border shadow-sm" style="max-height: 520px; object-fit: contain;">
+                    <div class="mt-2 small text-muted">
+                        <i class="bi bi-shield-lock-fill text-success me-1"></i>Arsip Rekam Medis Digital &amp; Kepatuhan STARKES SKP 1 / MRMIK
+                    </div>
+                </div>
+                <div class="modal-footer py-1 px-3 bg-white">
+                    <a href="{{ pasien.foto_ktp.url }}" target="_blank" class="btn btn-sm btn-outline-primary">
+                        <i class="bi bi-box-arrow-up-right me-1"></i>Buka Tab Baru
+                    </a>
+                    <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Tutup</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
 
 </div>
 {% endblock %}
