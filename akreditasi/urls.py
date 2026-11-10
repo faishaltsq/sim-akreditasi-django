@@ -168,6 +168,7 @@ urlpatterns = [
     path('logbook-nonmedis/<int:pk>/bukti/', logbook_nonmedis_views.logbook_nonmedis_unggah_bukti, name='logbook_nonmedis_unggah_bukti'),
     path('logbook-nonmedis/<int:pk>/setujui/', logbook_nonmedis_views.logbook_nonmedis_setujui, name='logbook_nonmedis_setujui'),
     path('logbook-nonmedis/<int:pk>/pdf/', logbook_nonmedis_views.logbook_nonmedis_pdf, name='logbook_nonmedis_pdf'),
+    path('logbook-nonmedis/rekap-pdf/', logbook_nonmedis_views.logbook_nonmedis_rekap_pdf, name='logbook_nonmedis_rekap_pdf'),
 
     # ── Endpoint AI Asisten Cerdas DeepSeek (backend-only, tidak ada API Key di response) ──
     path('ai/mitigasi-risiko/', ai_views.api_ai_mitigasi_risiko, name='ai_mitigasi_risiko'),

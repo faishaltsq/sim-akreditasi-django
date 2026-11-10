@@ -189,6 +189,19 @@ class LogbookNonMedis(models.Model):
     def terkunci(self):
         return self.status == 'DISETUJUI'
 
+    @property
+    def durasi_dinas_jam(self):
+        """Kalkulasi durasi jam dinas dalam satuan jam desimal."""
+        if not self.jam_mulai or not self.jam_selesai:
+            return 0.0
+        m1 = self.jam_mulai.hour * 60 + self.jam_mulai.minute
+        m2 = self.jam_selesai.hour * 60 + self.jam_selesai.minute
+        if m2 >= m1:
+            diff = m2 - m1
+        else:
+            diff = (24 * 60 - m1) + m2
+        return round(diff / 60.0, 1)
+
     # ── Checklist ─────────────────────────────────────────────────────────
     def ensure_checklist(self):
         """Buat baris checklist yang belum ada. Idempoten."""

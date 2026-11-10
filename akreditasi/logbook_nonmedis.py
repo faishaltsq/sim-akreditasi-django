@@ -450,15 +450,45 @@ def logbook_nonmedis_pdf(request, pk):
 
     pelaksana = entry.pegawai.nama_lengkap if entry.pegawai_id else (entry.pelaksana_nama or '—')
     fokus = entry.fokus_ep.code if entry.fokus_ep_id else (entry.fokus_ep_teks or '—')
+    jam_dinas_str = f"{entry.jam_mulai.strftime('%H:%M')} – {entry.jam_selesai.strftime('%H:%M')} WIB" if entry.jam_mulai and entry.jam_selesai else '—'
 
     elemen = [
         Paragraph(f'Logbook Harian Non-Medis — {entry.unit.name}', judul),
         Paragraph(
             f'Pelaksana: {pelaksana} · Tanggal {entry.tanggal:%d/%m/%Y} · '
             f'Shift {dict(SHIFT_CHOICES).get(entry.shift, entry.shift) or "—"} · '
-            f'Fokus EP: {fokus}', sub),
+            f'Jam Dinas: {jam_dinas_str} · Fokus EP: {fokus}', sub),
         Spacer(1, 8),
     ]
+
+    aktivitas = list(entry.aktivitas_list.select_related('master').all())
+    if aktivitas:
+        elemen += [Paragraph('<b>Rincian Aktivitas Harian &amp; Dokumen Bukti Terstandar</b>', si)]
+        baris_akt = [['No', 'Waktu', 'Aktivitas', 'Detail / Uraian Bebas', 'Standar STARKES', 'Dokumen Bukti']]
+        for i, a in enumerate(aktivitas, start=1):
+            waktu_str = a.waktu_display or '—'
+            if a.durasi_jam > 0:
+                waktu_str += f'\n({a.durasi_jam} jam)'
+            nama_akt = a.nama_aktivitas
+            if a.master:
+                nama_akt = f'[{a.master.kode}] {nama_akt}'
+            baris_akt.append([
+                str(i),
+                Paragraph(waktu_str, si),
+                Paragraph(nama_akt, si),
+                Paragraph(a.detail_uraian or '—', si),
+                Paragraph(a.ep_starkes or '—', si),
+                Paragraph(a.nama_bukti or (a.dokumen_bukti.name if a.dokumen_bukti else '—'), si)
+            ])
+        tabel_akt = Table(baris_akt, repeatRows=1,
+                          colWidths=[8 * mm, 24 * mm, 45 * mm, 53 * mm, 25 * mm, 30 * mm])
+        tabel_akt.setStyle(TableStyle([
+            ('FONTSIZE', (0, 0), (-1, -1), 7.5),
+            ('BACKGROUND', (0, 0), (-1, 0), colors.whitesmoke),
+            ('GRID', (0, 0), (-1, -1), 0.3, colors.grey),
+            ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+        ]))
+        elemen += [tabel_akt, Spacer(1, 8)]
 
     elemen += [Paragraph('<b>Checklist Kepatuhan</b>', si)]
     baris_cek = [['No', 'Parameter', 'Status', 'Keterangan']]
@@ -511,7 +541,211 @@ def logbook_nonmedis_pdf(request, pk):
             f'Disetujui: {entry.disetujui_oleh.get_full_name() or entry.disetujui_oleh.username if entry.disetujui_oleh_id else "—"} '
             f'({timezone.localtime(entry.disetujui_pada):%d/%m/%Y %H:%M} WIB)' if entry.disetujui_pada
             else f'Status: {entry.get_status_display()}', si),
+        Spacer(1, 12),
     ]
+
+    # Tabel Tanda Tangan
+    tgl_teks = entry.tanggal.strftime('%d %B %Y')
+    ttd_data = [
+        [
+            Paragraph(f'Mengetahui / Menyetujui,<br/><b>Kepala Unit Kerja / Atasan</b><br/><br/><br/><br/><u>{entry.disetujui_oleh.get_full_name() if entry.disetujui_oleh_id else "................................................"}</u><br/><font size="7">NIP. ' + (getattr(getattr(entry.disetujui_oleh, 'pegawai', None), 'nip', '') if entry.disetujui_oleh_id else '') + '</font>', si),
+            Paragraph(f'Rumah Sakit, {tgl_teks}<br/><b>Staf Pelaksana Kegiatan</b><br/><br/><br/><br/><u>{pelaksana}</u><br/><font size="7">NIP. ' + (getattr(entry.pegawai, 'nip', '') if entry.pegawai else '') + '</font>', si),
+        ]
+    ]
+    tabel_ttd = Table(ttd_data, colWidths=[90 * mm, 90 * mm])
+    tabel_ttd.setStyle(TableStyle([
+        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+        ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+    ]))
+    elemen += [tabel_ttd]
+
+    doc.build(elemen)
+    return buffer
+
+
+@login_required
+def logbook_nonmedis_rekap_pdf(request):
+    """
+    Cetak PDF Rekapitulasi Multidimensi Kinerja Non-Medis & Diklat:
+    - BULANAN: Evaluasi insentif/remunerasi, kehadiran jam dinas, produktivitas harian.
+    - TAHUNAN: Batas minimal 20 JPL staf, capaian mandatory training KPS 8, SPMI & SKP/DP3.
+    - 5TAHUNAN: Portofolio bukti survei siklus STARKES (KPS, TKRS, IPKP, PPI, MFK) & tren kompetensi.
+    """
+    from reportlab.lib import colors
+    from reportlab.lib.pagesizes import A4, landscape
+    from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
+    from reportlab.lib.units import mm
+    from reportlab.platypus import (Paragraph, SimpleDocTemplate, Spacer, Table,
+                                    TableStyle)
+
+    unit_id = request.GET.get('unit')
+    periode = request.GET.get('periode', 'BULANAN').upper()
+    tahun = int(request.GET.get('tahun') or timezone.now().year)
+    bulan = int(request.GET.get('bulan') or timezone.now().month)
+
+    unit = None
+    if unit_id:
+        unit = get_object_or_404(UnitKerja, pk=unit_id)
+
+    # Scoping logbooks
+    qs = _scoped(request.user)
+    if unit:
+        qs = qs.filter(unit=unit)
+
+    if periode == 'BULANAN':
+        qs = qs.filter(tanggal__year=tahun, tanggal__month=bulan)
+        judul_periode = f"REKAPITULASI KINERJA BULANAN — {bulan:02d}/{tahun}"
+        sub_judul = "Fokus: Evaluasi Insentif / Remunerasi, Jam Pelayanan Dinas & Produktivitas Kerja Harian"
+    elif periode == 'TAHUNAN':
+        qs = qs.filter(tanggal__year=tahun)
+        judul_periode = f"REKAPITULASI KINERJA TAHUNAN — TAHUN {tahun}"
+        sub_judul = "Fokus: Evaluasi Batas Minimal 20 JPL Staf, Mandatory Training KPS 8 & SPMI Rumah Sakit"
+    else:  # 5TAHUNAN
+        tahun_mulai = tahun - 4
+        qs = qs.filter(tanggal__year__gte=tahun_mulai, tanggal__year__lte=tahun)
+        judul_periode = f"REKAPITULASI KINERJA 5 TAHUNAN SIKLUS AKREDITASI STARKES ({tahun_mulai} – {tahun})"
+        sub_judul = "Fokus: Portofolio Digital Bukti Surveior Akreditasi KPS, TKRS, IPKP, PPI, MFK & Tren Pengembangan Kompetensi"
+
+    unit_nama = unit.name if unit else "Seluruh Unit Non-Medis"
+    logbooks = list(qs.prefetch_related('aktivitas_list__master', 'checklist', 'bukti'))
+
+    # Agregat metrik
+    total_logbook = len(logbooks)
+    total_disetujui = sum(1 for lb in logbooks if lb.status == 'DISETUJUI')
+    total_jam_dinas = sum(lb.durasi_dinas_jam for lb in logbooks)
+
+    semua_aktivitas = []
+    for lb in logbooks:
+        semua_aktivitas.extend(list(lb.aktivitas_list.all()))
+    total_aktivitas = len(semua_aktivitas)
+    total_jam_aktivitas = sum(a.durasi_jam for a in semua_aktivitas)
+    total_dokumen_bukti = sum(1 for a in semua_aktivitas if a.dokumen_bukti or a.nama_bukti)
+
+    buffer = HttpResponse(content_type='application/pdf')
+    buffer['Content-Disposition'] = f'inline; filename="rekap-kinerja-{periode.lower()}-{tahun}.pdf"'
+
+    doc = SimpleDocTemplate(buffer, pagesize=landscape(A4),
+                            leftMargin=12 * mm, rightMargin=12 * mm,
+                            topMargin=12 * mm, bottomMargin=12 * mm,
+                            title=f"Rekap Kinerja {unit_nama} - {periode}")
+
+    gaya = getSampleStyleSheet()
+    h1 = ParagraphStyle('h1', parent=gaya['Title'], fontSize=13, leading=15, alignment=1)
+    h2 = ParagraphStyle('h2', parent=gaya['Normal'], fontSize=9, leading=12, alignment=1, textColor=colors.navy)
+    sub = ParagraphStyle('sub', parent=gaya['Normal'], fontSize=8.5, leading=11, alignment=1)
+    si = ParagraphStyle('si', parent=gaya['Normal'], fontSize=7.5, leading=9.5)
+    si_center = ParagraphStyle('si_center', parent=si, alignment=1)
+    si_bold = ParagraphStyle('si_bold', parent=si, fontName='Helvetica-Bold')
+
+    elemen = [
+        Paragraph(f"<b>RUMAH SAKIT UMUM DAERAH</b>", h2),
+        Paragraph(f"<b>{judul_periode}</b>", h1),
+        Paragraph(f"<b>Unit: {unit_nama}</b>", sub),
+        Paragraph(f"<i>{sub_judul}</i>", sub),
+        Spacer(1, 6),
+    ]
+
+    # Ringkasan KPI Card Table
+    kpi_data = [
+        [
+            Paragraph(f"<b>Total Entri Logbook</b><br/><font size=\"11\" color=\"navy\">{total_logbook}</font><br/><font size=\"6.5\" color=\"gray\">Disetujui: {total_disetujui}</font>", si_center),
+            Paragraph(f"<b>Total Jam Dinas</b><br/><font size=\"11\" color=\"navy\">{total_jam_dinas:.1f} Jam</font><br/><font size=\"6.5\" color=\"gray\">Jam pelayanan operasional</font>", si_center),
+            Paragraph(f"<b>Total Kegiatan Tercatat</b><br/><font size=\"11\" color=\"navy\">{total_aktivitas}</font><br/><font size=\"6.5\" color=\"gray\">Baris aktivitas terinci</font>", si_center),
+            Paragraph(f"<b>Total Jam Aktivitas / JPL</b><br/><font size=\"11\" color=\"navy\">{total_jam_aktivitas:.1f} Jam</font><br/><font size=\"6.5\" color=\"gray\">Beban kerja produktif</font>", si_center),
+            Paragraph(f"<b>Dokumen Bukti Fisik / File</b><br/><font size=\"11\" color=\"navy\">{total_dokumen_bukti}</font><br/><font size=\"6.5\" color=\"gray\">Lampiran pendukung akreditasi</font>", si_center),
+        ]
+    ]
+    tabel_kpi = Table(kpi_data, colWidths=[54 * mm, 54 * mm, 54 * mm, 55 * mm, 55 * mm])
+    tabel_kpi.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, -1), colors.whitesmoke),
+        ('BOX', (0, 0), (-1, -1), 0.5, colors.grey),
+        ('INNERGRID', (0, 0), (-1, -1), 0.5, colors.lightgrey),
+        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ('TOPPADDING', (0, 0), (-1, -1), 4),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
+    ]))
+    elemen += [tabel_kpi, Spacer(1, 8)]
+
+    # Tabel Rincian Rekap Aktivitas
+    elemen += [Paragraph("<b>Matriks Rincian Pelaksanaan Tugas &amp; Tautan Standar STARKES</b>", si_bold), Spacer(1, 3)]
+
+    baris_tabel = [[
+        Paragraph("<b>No</b>", si_center),
+        Paragraph("<b>Tanggal &amp; Shift</b>", si_center),
+        Paragraph("<b>Pelaksana</b>", si_center),
+        Paragraph("<b>Nama Aktivitas &amp; Kode Master</b>", si),
+        Paragraph("<b>Uraian Detail / Notulen Kegiatan</b>", si),
+        Paragraph("<b>Waktu / Durasi</b>", si_center),
+        Paragraph("<b>Standar STARKES (EP)</b>", si),
+        Paragraph("<b>Dokumen Bukti</b>", si),
+    ]]
+
+    no = 1
+    for lb in logbooks:
+        pelaksana_lb = lb.pegawai.nama_lengkap if lb.pegawai_id else (lb.pelaksana_nama or '—')
+        tgl_str = f"{lb.tanggal:%d/%m/%Y}<br/><font size=\"6.5\" color=\"gray\">Shift {lb.shift}</font>"
+        for akt in lb.aktivitas_list.all():
+            wkt = akt.waktu_display or '—'
+            if akt.durasi_jam > 0:
+                wkt += f"<br/>({akt.durasi_jam} jam)"
+            nama_full = akt.nama_aktivitas
+            if akt.master:
+                nama_full = f"<b>[{akt.master.kode}]</b> {nama_full}"
+
+            bukti_str = akt.nama_bukti or (akt.dokumen_bukti.name if akt.dokumen_bukti else '—')
+
+            baris_tabel.append([
+                Paragraph(str(no), si_center),
+                Paragraph(tgl_str, si_center),
+                Paragraph(pelaksana_lb, si),
+                Paragraph(nama_full, si),
+                Paragraph(akt.detail_uraian or '—', si),
+                Paragraph(wkt, si_center),
+                Paragraph(akt.ep_starkes or '—', si),
+                Paragraph(bukti_str, si),
+            ])
+            no += 1
+
+    if len(baris_tabel) == 1:
+        baris_tabel.append([
+            Paragraph("—", si_center),
+            Paragraph("—", si_center),
+            Paragraph("—", si_center),
+            Paragraph("<i>Belum ada catatan aktivitas pada periode ini</i>", si),
+            Paragraph("—", si),
+            Paragraph("—", si_center),
+            Paragraph("—", si),
+            Paragraph("—", si),
+        ])
+
+    tabel_rekap = Table(
+        baris_tabel,
+        repeatRows=1,
+        colWidths=[8 * mm, 24 * mm, 32 * mm, 54 * mm, 68 * mm, 22 * mm, 35 * mm, 29 * mm]
+    )
+    tabel_rekap.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#e8eef5')),
+        ('GRID', (0, 0), (-1, -1), 0.3, colors.grey),
+        ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+        ('TOPPADDING', (0, 0), (-1, -1), 2.5),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 2.5),
+    ]))
+    elemen += [tabel_rekap, Spacer(1, 10)]
+
+    # Tanda tangan pengesahan pimpinan
+    ttd_rekap = [
+        [
+            Paragraph(f"Mengetahui,<br/><b>Direktur / Wakil Direktur</b><br/><br/><br/><br/><br/><u>dr. H. Supriyanto, Sp.B, FINACS, M.Kes</u><br/><font size=\"7\">NIP. 196805141998031004</font>", si_center),
+            Paragraph(f"Penyusun / Penanggung Jawab,<br/><b>Kepala {unit_nama}</b><br/><br/><br/><br/><br/><u>{request.user.get_full_name() or request.user.username}</u><br/><font size=\"7\">NIP. " + (getattr(getattr(request.user, 'pegawai', None), 'nip', '') or '—') + "</font>", si_center),
+        ]
+    ]
+    tabel_ttd_rekap = Table(ttd_rekap, colWidths=[136 * mm, 136 * mm])
+    tabel_ttd_rekap.setStyle(TableStyle([
+        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+        ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+    ]))
+    elemen += [tabel_ttd_rekap]
 
     doc.build(elemen)
     return buffer
