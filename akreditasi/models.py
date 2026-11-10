@@ -569,6 +569,8 @@ from .logbook_nonmedis_models import (  # noqa: E402, F401
     LogbookNonMedis,
     ChecklistNonMedis,
     BuktiNonMedis,
+    MasterAktivitasNonMedis,
+    AktivitasNonMedis,
 )
 
 class SumberKatalog(models.Model):

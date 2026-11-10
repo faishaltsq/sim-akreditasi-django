@@ -102,6 +102,8 @@ class LogbookNonMedis(models.Model):
                                 verbose_name='Pelaksana / Pegawai')
     pelaksana_nama = models.CharField('Nama Pelaksana', max_length=150, blank=True)
     tanggal = models.DateField('Hari, Tanggal')
+    jam_mulai = models.TimeField('Jam Mulai Dinas', null=True, blank=True)
+    jam_selesai = models.TimeField('Jam Selesai Dinas', null=True, blank=True)
     shift = models.CharField('Shift', max_length=6, choices=SHIFT_CHOICES, blank=True, default='')
 
     fokus_ep = models.ForeignKey(StandardItem, on_delete=models.SET_NULL, null=True, blank=True,
@@ -215,3 +217,78 @@ class BuktiNonMedis(models.Model):
 
     def __str__(self):
         return self.judul
+
+
+# ---------------------------------------------------------------------------
+# 5. MasterAktivitasNonMedis — Katalog Aktivitas Terstandar (Diklat, SDM, dll.)
+# ---------------------------------------------------------------------------
+
+class MasterAktivitasNonMedis(models.Model):
+    kode = models.CharField('Kode Aktivitas', max_length=30, unique=True, db_index=True)
+    kategori_unit = models.CharField('Kategori Unit', max_length=50, default='DIKLAT', db_index=True)
+    nama = models.CharField('Nama Aktivitas', max_length=200)
+    deskripsi = models.TextField('Detail / Penjelasan Operasional Standar', blank=True)
+    ep_rekomendasi = models.CharField('Rekomendasi EP STARKES', max_length=120, blank=True)
+    standar_terkait = models.JSONField('Standar Terkait (List)', default=list, blank=True)
+    urutan = models.PositiveSmallIntegerField('Urutan', default=1)
+    is_active = models.BooleanField('Aktif', default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = 'Master Aktivitas Non-Medis'
+        verbose_name_plural = 'Master Aktivitas Non-Medis'
+        ordering = ['kategori_unit', 'urutan', 'kode']
+
+    def __str__(self):
+        return f'{self.kode} — {self.nama}'
+
+
+# ---------------------------------------------------------------------------
+# 6. AktivitasNonMedis — Baris Rincian Aktivitas Harian Logbook
+# ---------------------------------------------------------------------------
+
+def _path_bukti_aktivitas(instance, filename):
+    return f'logbook-nonmedis/{instance.logbook_id}/aktivitas/{filename}'
+
+
+class AktivitasNonMedis(models.Model):
+    logbook = models.ForeignKey(LogbookNonMedis, on_delete=models.CASCADE, related_name='aktivitas_list')
+    master = models.ForeignKey(MasterAktivitasNonMedis, on_delete=models.SET_NULL,
+                               null=True, blank=True, related_name='aktivitas_logbook')
+    urutan = models.PositiveSmallIntegerField('No. Urut', default=1)
+    jam_mulai = models.TimeField('Jam Mulai', null=True, blank=True)
+    jam_selesai = models.TimeField('Jam Selesai', null=True, blank=True)
+    nama_aktivitas = models.CharField('Nama Aktivitas', max_length=250)
+    detail_uraian = models.TextField('Detail Aktivitas / Uraian Bebas', blank=True)
+    ep_starkes = models.CharField('Kesesuaian EP STARKES', max_length=120, blank=True)
+    pelaksana_nama = models.CharField('Nama Staf / Pelaksana', max_length=150, blank=True)
+    nama_bukti = models.CharField('Nama Bukti Dokumen', max_length=200, blank=True)
+    dokumen_bukti = models.FileField('Dokumen Bukti', upload_to=_path_bukti_aktivitas, null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = 'Aktivitas Harian Non-Medis'
+        verbose_name_plural = 'Aktivitas Harian Non-Medis'
+        ordering = ['urutan', 'jam_mulai', 'id']
+
+    def __str__(self):
+        return f'{self.logbook} #{self.urutan} — {self.nama_aktivitas}'
+
+    @property
+    def waktu_display(self):
+        if self.jam_mulai and self.jam_selesai:
+            return f"{self.jam_mulai.strftime('%H.%M')} - {self.jam_selesai.strftime('%H.%M')}"
+        elif self.jam_mulai:
+            return f"{self.jam_mulai.strftime('%H.%M')}"
+        return ""
+
+    @property
+    def durasi_jam(self):
+        if not self.jam_mulai or not self.jam_selesai:
+            return 0.0
+        t1 = self.jam_mulai.hour + self.jam_mulai.minute / 60.0
+        t2 = self.jam_selesai.hour + self.jam_selesai.minute / 60.0
+        diff = t2 - t1
+        return max(0.0, round(diff, 2))
