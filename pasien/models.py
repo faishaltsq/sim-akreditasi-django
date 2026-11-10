@@ -66,6 +66,9 @@ class Pasien(models.Model):
     no_hp_pj            = models.CharField('No. HP / WA Penanggung Jawab', max_length=30, blank=True)
     alamat_pj           = models.TextField('Alamat Penanggung Jawab', blank=True)
 
+    # ── Dokumen Bukti Identitas (SKP 1 & MRMIK) ──
+    foto_ktp            = models.FileField('Foto / Scan KTP', upload_to='pasien/ktp/%Y/%m/', blank=True, null=True)
+
     alergi_obat         = models.TextField('Alergi Obat', blank=True, help_text='Pisahkan dengan koma')
     alergi_lain         = models.TextField('Alergi Lain', blank=True)
     # ── SatuSehat Kemenkes ──
