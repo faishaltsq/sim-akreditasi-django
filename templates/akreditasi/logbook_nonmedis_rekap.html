@@ -1,0 +1,503 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard Rekapitulasi Kinerja & STARKES — ARIMA{% endblock %}
+{% block page_title %}Rekapitulasi Kinerja &amp; Portofolio STARKES Non-Medis{% endblock %}
+{% block page_subtitle %}Dashboard analitik multidimensi: evaluasi remunerasi/insentif bulanan, pemenuhan 20 JPL tahunan, dan portofolio bukti surveior 5 tahunan siklus akreditasi{% endblock %}
+
+{% block extra_css %}
+<style>
+    .card-metric { border-radius: 8px; border-left: 4px solid #0d6efd; }
+    .card-metric-green { border-left-color: #198754; }
+    .card-metric-warning { border-left-color: #ffc107; }
+    .card-metric-info { border-left-color: #0dcaf0; }
+    .card-metric-purple { border-left-color: #6f42c1; }
+    .tbl-rekap th, .tbl-rekap td { font-size: 0.83rem; vertical-align: middle; }
+    .nav-tabs .nav-link { font-weight: 500; font-size: 0.9rem; }
+    .nav-tabs .nav-link.active { font-weight: 600; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-3">
+
+    <!-- Filter Bar & Quick Actions -->
+    <div class="card shadow-sm mb-3 border-0 bg-light">
+        <div class="card-body py-2 px-3">
+            <form method="get" class="row g-2 align-items-end">
+                <input type="hidden" name="periode" value="{{ tab_aktif }}">
+                <div class="col-md-3 col-sm-6">
+                    <label class="form-label small mb-1 fw-bold">Unit Kerja</label>
+                    <select name="unit" class="form-select form-select-sm">
+                        <option value="">Seluruh Unit Non-Medis</option>
+                        {% for u in unit_pilihan %}
+                        <option value="{{ u.pk }}" {% if filter_unit == u.pk|stringformat:'s' %}selected{% endif %}>{{ u.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2 col-sm-3">
+                    <label class="form-label small mb-1 fw-bold">Tahun</label>
+                    <select name="tahun" class="form-select form-select-sm">
+                        {% for t in tahun_list %}
+                        <option value="{{ t }}" {% if filter_tahun == t %}selected{% endif %}>{{ t }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                {% if tab_aktif == 'BULANAN' %}
+                <div class="col-md-2 col-sm-3">
+                    <label class="form-label small mb-1 fw-bold">Bulan</label>
+                    <select name="bulan" class="form-select form-select-sm">
+                        {% for b_val, b_label in bulan_list %}
+                        <option value="{{ b_val }}" {% if filter_bulan == b_val %}selected{% endif %}>{{ b_label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                {% endif %}
+                <div class="col-md-5 col-sm-12 d-flex gap-2">
+                    <button type="submit" class="btn btn-sm btn-primary">
+                        <i class="bi bi-filter me-1"></i> Terapkan Filter
+                    </button>
+                    <a href="{% url 'akreditasi:logbook_nonmedis_rekap_pdf' %}?unit={{ filter_unit }}&periode={{ tab_aktif }}&tahun={{ filter_tahun }}&bulan={{ filter_bulan }}" target="_blank" class="btn btn-sm btn-danger">
+                        <i class="bi bi-file-earmark-pdf me-1"></i> Unduh Rekap PDF
+                    </a>
+                    <a href="{% url 'akreditasi:logbook_nonmedis_daftar' %}" class="btn btn-sm btn-outline-secondary">
+                        <i class="bi bi-list-check me-1"></i> Daftar Logbook
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 5 KPI Summary Cards -->
+    <div class="row g-2 mb-3">
+        <div class="col-md-2 col-sm-4 col-6">
+            <div class="card card-metric shadow-sm h-100">
+                <div class="card-body p-2">
+                    <div class="text-muted small">Total Logbook</div>
+                    <div class="h5 mb-0 fw-bold text-primary">{{ total_logbook }}</div>
+                    <div class="small text-muted">{{ total_disetujui }} disetujui / {{ total_draf }} draf</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2 col-sm-4 col-6">
+            <div class="card card-metric card-metric-green shadow-sm h-100">
+                <div class="card-body p-2">
+                    <div class="text-muted small">Total Jam Dinas</div>
+                    <div class="h5 mb-0 fw-bold text-success">{{ total_jam_dinas|floatformat:1 }} Jam</div>
+                    <div class="small text-muted">Pelayanan operasional</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 col-sm-4 col-6">
+            <div class="card card-metric card-metric-info shadow-sm h-100">
+                <div class="card-body p-2">
+                    <div class="text-muted small">Total Kegiatan Tercatat</div>
+                    <div class="h5 mb-0 fw-bold text-info">{{ total_aktivitas }} Baris</div>
+                    <div class="small text-muted">Aktivitas kerja harian</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 col-sm-6 col-6">
+            <div class="card card-metric card-metric-purple shadow-sm h-100">
+                <div class="card-body p-2">
+                    <div class="text-muted small">Total Jam Aktivitas / JPL</div>
+                    <div class="h5 mb-0 fw-bold text-purple" style="color: #6f42c1;">{{ total_jam_aktivitas|floatformat:1 }} Jam</div>
+                    <div class="small text-muted">Beban kerja riil produktif</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2 col-sm-6 col-12">
+            <div class="card card-metric card-metric-warning shadow-sm h-100">
+                <div class="card-body p-2">
+                    <div class="text-muted small">Dokumen Bukti Fisik</div>
+                    <div class="h5 mb-0 fw-bold text-warning">{{ total_dokumen_bukti }} Dokumen</div>
+                    <div class="small text-muted">Lampiran bukti STARKES</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Navigation Tabs -->
+    <ul class="nav nav-tabs mb-3" role="tablist">
+        <li class="nav-item">
+            <a class="nav-link {% if tab_aktif == 'BULANAN' %}active text-primary{% endif %}" href="?unit={{ filter_unit }}&periode=BULANAN&tahun={{ filter_tahun }}&bulan={{ filter_bulan }}">
+                <i class="bi bi-calendar-month me-1"></i> 1. Bulanan (Insentif &amp; Remunerasi)
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link {% if tab_aktif == 'TAHUNAN' %}active text-primary{% endif %}" href="?unit={{ filter_unit }}&periode=TAHUNAN&tahun={{ filter_tahun }}">
+                <i class="bi bi-calendar-check me-1"></i> 2. Tahunan (Standar 20 JPL &amp; Mandatory)
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link {% if tab_aktif == '5TAHUNAN' %}active text-primary{% endif %}" href="?unit={{ filter_unit }}&periode=5TAHUNAN&tahun={{ filter_tahun }}">
+                <i class="bi bi-award me-1"></i> 3. 5 Tahunan (Siklus STARKES &amp; Portofolio)
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link {% if tab_aktif == 'KONTROL' %}active text-primary{% endif %}" href="?unit={{ filter_unit }}&periode=KONTROL&tahun={{ filter_tahun }}">
+                <i class="bi bi-speedometer2 me-1"></i> 4. Kontrol Kinerja &amp; Pengesahan
+            </a>
+        </li>
+    </ul>
+
+    <!-- Tab Contents -->
+    <div class="tab-content">
+        <!-- ══════════════ TAB 1: BULANAN ══════════════ -->
+        {% if tab_aktif == 'BULANAN' %}
+        <div class="tab-pane fade show active">
+            <div class="row g-3">
+                <div class="col-lg-12">
+                    <div class="card shadow-sm border-0 mb-3">
+                        <div class="card-header bg-white py-2 d-flex justify-content-between align-items-center">
+                            <span class="fw-bold"><i class="bi bi-person-badge me-1"></i> Evaluasi Kinerja Pegawai &amp; Tingkat Insentif/Remunerasi</span>
+                            <span class="badge bg-primary">Bulan {{ filter_bulan }} / {{ filter_tahun }}</span>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table table-hover table-striped mb-0 tbl-rekap">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th style="width: 40px;" class="text-center">No</th>
+                                        <th>Nama Staf Pelaksana</th>
+                                        <th>NIP / Identitas</th>
+                                        <th class="text-center">Hari / Logbook</th>
+                                        <th class="text-center">Total Jam Dinas</th>
+                                        <th class="text-center">Total Jam Produktif</th>
+                                        <th class="text-center">Bukti Dilampirkan</th>
+                                        <th class="text-center">Skor Kinerja</th>
+                                        <th class="text-center">Kategori Remunerasi</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for p in rekap_pegawai %}
+                                    <tr>
+                                        <td class="text-center">{{ forloop.counter }}</td>
+                                        <td class="fw-bold">{{ p.nama }}</td>
+                                        <td class="text-muted small">{{ p.nip }}</td>
+                                        <td class="text-center">{{ p.logbook_count }} hari</td>
+                                        <td class="text-center">{{ p.jam_dinas|floatformat:1 }} jam</td>
+                                        <td class="text-center fw-bold text-primary">{{ p.jam_aktivitas|floatformat:1 }} jam</td>
+                                        <td class="text-center">{{ p.bukti_count }} file</td>
+                                        <td class="text-center">
+                                            <span class="badge bg-{{ p.badge }}">{{ p.skor }} / 100</span>
+                                        </td>
+                                        <td class="text-center">
+                                            <span class="badge bg-light text-dark border">{{ p.tier }}</span>
+                                        </td>
+                                    </tr>
+                                    {% empty %}
+                                    <tr>
+                                        <td colspan="9" class="text-center py-3 text-muted">Belum ada data aktivitas logbook staf pada bulan ini.</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Rincian Aktivitas Terdistribusi -->
+                <div class="col-lg-12">
+                    <div class="card shadow-sm border-0">
+                        <div class="card-header bg-white py-2">
+                            <span class="fw-bold"><i class="bi bi-clock-history me-1"></i> Rincian Entri Aktivitas Harian Logbook Terverifikasi</span>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table table-hover mb-0 tbl-rekap">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th style="width: 40px;" class="text-center">No</th>
+                                        <th>Tanggal &amp; Shift</th>
+                                        <th>Pelaksana</th>
+                                        <th>Kode &amp; Aktivitas</th>
+                                        <th>Uraian / Notulen</th>
+                                        <th class="text-center">Jam Kerja</th>
+                                        <th>Tautan EP STARKES</th>
+                                        <th>Dokumen Bukti</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for lb in logbooks %}
+                                        {% for akt in lb.aktivitas_list.all %}
+                                        <tr>
+                                            <td class="text-center">{{ forloop.parentloop.counter }}.{{ forloop.counter }}</td>
+                                            <td>
+                                                <b>{{ lb.tanggal|date:"d/m/Y" }}</b><br>
+                                                <small class="text-muted">Shift {{ lb.shift }}</small>
+                                            </td>
+                                            <td>{{ lb.pegawai.nama_lengkap|default:lb.pelaksana_nama }}</td>
+                                            <td>
+                                                {% if akt.master %}
+                                                <span class="badge bg-secondary mb-1">{{ akt.master.kode }}</span><br>
+                                                {% endif %}
+                                                <span class="fw-semibold">{{ akt.nama_aktivitas }}</span>
+                                            </td>
+                                            <td class="small">{{ akt.detail_uraian|default:"—"|truncatewords:20 }}</td>
+                                            <td class="text-center">
+                                                {{ akt.waktu_display|default:"—" }}
+                                                {% if akt.durasi_jam > 0 %}
+                                                <br><small class="text-primary fw-bold">({{ akt.durasi_jam }} jam)</small>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                {% if akt.ep_starkes %}
+                                                <span class="badge bg-info text-dark">{{ akt.ep_starkes }}</span>
+                                                {% else %}
+                                                <span class="text-muted">—</span>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                {% if akt.dokumen_bukti %}
+                                                <a href="{{ akt.dokumen_bukti.url }}" target="_blank" class="btn btn-xs btn-outline-primary py-0 px-1">
+                                                    <i class="bi bi-paperclip"></i> File
+                                                </a>
+                                                {% elif akt.nama_bukti %}
+                                                <span class="small text-muted">{{ akt.nama_bukti }}</span>
+                                                {% else %}
+                                                <span class="text-muted">—</span>
+                                                {% endif %}
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    {% empty %}
+                                    <tr>
+                                        <td colspan="8" class="text-center py-3 text-muted">Belum ada baris rincian kegiatan tercatat.</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- ══════════════ TAB 2: TAHUNAN ══════════════ -->
+        {% if tab_aktif == 'TAHUNAN' %}
+        <div class="tab-pane fade show active">
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <div class="card shadow-sm border-0 h-100">
+                        <div class="card-header bg-white py-2">
+                            <span class="fw-bold"><i class="bi bi-shield-check me-1"></i> Mandatory Training KPS 8 (Pelatihan Wajib Rumah Sakit)</span>
+                        </div>
+                        <div class="card-body">
+                            <p class="small text-muted mb-3">Monitoring pelaksanaan pelatihan wajib seluruh pegawai sesuai Standar KPS 8 Akreditasi STARKES (Target minimal 100% pegawai terorientasi &amp; tersertifikasi berkala).</p>
+                            <div class="list-group list-group-flush">
+                                {% for kode, item in mandatory_stats.items %}
+                                <div class="list-group-item d-flex justify-content-between align-items-center px-0 py-2">
+                                    <div>
+                                        <div class="fw-bold">{{ item.nama }}</div>
+                                        <small class="text-muted">Standar EP: <span class="badge bg-light text-dark border">{{ item.standar }}</span></small>
+                                    </div>
+                                    <div class="text-end">
+                                        <span class="badge {% if item.count > 0 %}bg-success{% else %}bg-secondary{% endif %} fs-6">{{ item.count }} Kegiatan</span>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-6">
+                    <div class="card shadow-sm border-0 h-100">
+                        <div class="card-header bg-white py-2">
+                            <span class="fw-bold"><i class="bi bi-hourglass-split me-1"></i> Standar Pemenuhan Minimal 20 JPL Pegawai Per Tahun</span>
+                        </div>
+                        <div class="card-body">
+                            <p class="small text-muted mb-3">Sesuai KPS 8.1 dan regulasi Diklat Rumah Sakit, setiap staf wajib mencapai minimal 20 Jam Pembelajaran (JPL) pengembangan kompetensi berkelanjutan per tahun.</p>
+                            <div class="table-responsive">
+                                <table class="table table-sm table-striped tbl-rekap mb-0">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>Staf Pegawai</th>
+                                            <th class="text-center">JPL Tercapai</th>
+                                            <th class="text-center">Target</th>
+                                            <th class="text-center">Status Pemenuhan</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for p in rekap_pegawai %}
+                                        <tr>
+                                            <td><b>{{ p.nama }}</b></td>
+                                            <td class="text-center fw-bold">{{ p.jam_aktivitas|floatformat:1 }} JPL</td>
+                                            <td class="text-center">20 JPL</td>
+                                            <td class="text-center">
+                                                {% if p.jam_aktivitas >= 20 %}
+                                                <span class="badge bg-success">Tercapai (100%)</span>
+                                                {% else %}
+                                                <span class="badge bg-warning text-dark">Kurang {{ 20|add:p.jam_aktivitas|stringformat:"s" }} JPL</span>
+                                                {% endif %}
+                                            </td>
+                                        </tr>
+                                        {% empty %}
+                                        <tr>
+                                            <td colspan="4" class="text-center py-3 text-muted">Belum ada data akumulasi tahunan pegawai.</td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Distribusi Katalog Aktivitas -->
+                <div class="col-12">
+                    <div class="card shadow-sm border-0">
+                        <div class="card-header bg-white py-2">
+                            <span class="fw-bold"><i class="bi bi-pie-chart me-1"></i> Distribusi Beban Tugas &amp; Frekuensi Master Aktivitas Terstandar</span>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table table-hover table-striped mb-0 tbl-rekap">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th style="width: 40px;" class="text-center">No</th>
+                                        <th>Kode Master</th>
+                                        <th>Nama Standar Aktivitas</th>
+                                        <th class="text-center">Frekuensi Dilakukan</th>
+                                        <th class="text-center">Total Durasi Jam</th>
+                                        <th class="text-center">Rata-rata Durasi</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for m in master_distribusi %}
+                                    <tr>
+                                        <td class="text-center">{{ forloop.counter }}</td>
+                                        <td><span class="badge bg-primary">{{ m.kode }}</span></td>
+                                        <td class="fw-bold">{{ m.nama }}</td>
+                                        <td class="text-center">{{ m.frekuensi }} kali</td>
+                                        <td class="text-center fw-bold text-primary">{{ m.durasi_total|floatformat:1 }} jam</td>
+                                        <td class="text-center">
+                                            {% if m.frekuensi > 0 %}
+                                            {{ m.durasi_total|floatformat:1 }} jam
+                                            {% else %}0 jam{% endif %}
+                                        </td>
+                                    </tr>
+                                    {% empty %}
+                                    <tr>
+                                        <td colspan="6" class="text-center py-3 text-muted">Belum ada data aktivitas terdistribusi.</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- ══════════════ TAB 3: 5 TAHUNAN ══════════════ -->
+        {% if tab_aktif == '5TAHUNAN' %}
+        <div class="tab-pane fade show active">
+            <div class="row g-3">
+                <div class="col-12">
+                    <div class="alert alert-info py-2 d-flex align-items-center mb-2">
+                        <i class="bi bi-info-circle-fill fs-5 me-2"></i>
+                        <div>
+                            <b>Portofolio Bukti Survei Siklus STARKES 5 Tahunan:</b> Menampilkan rekapitulasi kepatuhan kegiatan dan ketersediaan berkas bukti dokumen yang siap ditunjukkan kepada surveior akreditasi KARS / Kemenkes RI untuk membuktikan kontinuitas tata kelola non-medis dan diklat.
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-12">
+                    <div class="card shadow-sm border-0 mb-3">
+                        <div class="card-header bg-white py-2">
+                            <span class="fw-bold"><i class="bi bi-folder-check me-1"></i> Kesiapan Portofolio Bukti Surveior STARKES Berdasarkan Kelompok Bab</span>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table table-hover table-striped mb-0 tbl-rekap">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th style="width: 40px;" class="text-center">No</th>
+                                        <th>Pokja / Bab STARKES</th>
+                                        <th>Nama Lengkap Standar</th>
+                                        <th class="text-center">Total Kegiatan Tertaut</th>
+                                        <th class="text-center">Total Dokumen Bukti Terunggah</th>
+                                        <th class="text-center">Kesiapan Audit Surveior</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for bab, d in starkes_bab_map.items %}
+                                    <tr>
+                                        <td class="text-center">{{ forloop.counter }}</td>
+                                        <td><span class="badge bg-dark">{{ bab }}</span></td>
+                                        <td class="fw-bold">{{ d.nama }}</td>
+                                        <td class="text-center">{{ d.aktivitas_count }} kegiatan</td>
+                                        <td class="text-center fw-bold text-success">{{ d.bukti_count }} berkas</td>
+                                        <td class="text-center">
+                                            {% if d.bukti_count >= 5 %}
+                                            <span class="badge bg-success"><i class="bi bi-check-circle me-1"></i> Siap Audit (Lengkap)</span>
+                                            {% elif d.bukti_count >= 1 %}
+                                            <span class="badge bg-warning text-dark"><i class="bi bi-exclamation-triangle me-1"></i> Berkas Parsial</span>
+                                            {% else %}
+                                            <span class="badge bg-secondary">Belum Ada Bukti</span>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- ══════════════ TAB 4: KONTROL ══════════════ -->
+        {% if tab_aktif == 'KONTROL' %}
+        <div class="tab-pane fade show active">
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <div class="card shadow-sm border-0 h-100">
+                        <div class="card-header bg-white py-2">
+                            <span class="fw-bold"><i class="bi bi-check2-all me-1"></i> Status Pengesahan Logbook Oleh Kepala Unit</span>
+                        </div>
+                        <div class="card-body">
+                            <div class="d-flex justify-content-around text-center py-3">
+                                <div>
+                                    <div class="h2 text-success fw-bold mb-0">{{ total_disetujui }}</div>
+                                    <div class="text-muted small">Telah Disetujui</div>
+                                </div>
+                                <div class="border-end"></div>
+                                <div>
+                                    <div class="h2 text-warning fw-bold mb-0">{{ total_draf }}</div>
+                                    <div class="text-muted small">Menunggu Pengesahan</div>
+                                </div>
+                            </div>
+                            <div class="progress mb-2" style="height: 10px;">
+                                <div class="progress-bar bg-success" role="progressbar" style="width: {% if total_logbook > 0 %}{{ total_disetujui|floatformat:0 }}0%{% else %}0%{% endif %}"></div>
+                            </div>
+                            <small class="text-muted">Setiap entri logbook wajib ditelaah dan disahkan kepala unit secara berkala untuk menjamin validitas rekam kerja.</small>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-6">
+                    <div class="card shadow-sm border-0 h-100">
+                        <div class="card-header bg-white py-2">
+                            <span class="fw-bold"><i class="bi bi-link-45deg me-1"></i> Integrasi ke Integrated Control (/control/)</span>
+                        </div>
+                        <div class="card-body">
+                            <p class="small text-muted mb-2">Modul logbook harian non-medis terhubung secara langsung ke Portal Monitoring Terpadu Rumah Sakit (Integrated Control) untuk pengawasan direksi dan komite mutu.</p>
+                            <div class="d-grid gap-2">
+                                <a href="{% url 'akreditasi:kontrol_hub' %}" class="btn btn-outline-primary btn-sm text-start">
+                                    <i class="bi bi-arrow-right-circle me-1"></i> Buka Portal Integrated Control Hub
+                                </a>
+                                <a href="{% url 'akreditasi:logbook_nonmedis_buat' %}" class="btn btn-outline-success btn-sm text-start">
+                                    <i class="bi bi-plus-circle me-1"></i> Entri Baru Logbook Harian Non-Medis
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+</div>
+{% endblock %}

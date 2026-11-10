@@ -564,6 +564,196 @@ def logbook_nonmedis_pdf(request, pk):
 
 
 @login_required
+def logbook_nonmedis_rekap(request):
+    """
+    Dashboard Rekapitulasi Multidimensi Kinerja Non-Medis & Diklat:
+    - Tab 1: BULANAN (Insentif & Remunerasi, Produktivitas, Kehadiran Jam Dinas)
+    - Tab 2: TAHUNAN (20 JPL Pegawai, Mandatory Training KPS 8, SPMI RS, SKP/DP3)
+    - Tab 3: 5 TAHUNAN (Siklus STARKES, Portofolio Dokumen Bukti Surveior, Tren Kompetensi)
+    - Tab 4: KONTROL (Integrated Control, Approval Backlog, Monitoring Realtime)
+    """
+    unit_id = request.GET.get('unit', '')
+    tab_aktif = request.GET.get('periode', 'BULANAN').upper()
+    if tab_aktif not in ['BULANAN', 'TAHUNAN', '5TAHUNAN', 'KONTROL']:
+        tab_aktif = 'BULANAN'
+
+    hari_ini = timezone.localdate()
+    try:
+        tahun = int(request.GET.get('tahun') or hari_ini.year)
+    except ValueError:
+        tahun = hari_ini.year
+    try:
+        bulan = int(request.GET.get('bulan') or hari_ini.month)
+    except ValueError:
+        bulan = hari_ini.month
+
+    # Scoping user unit access
+    qs_base = _scoped(request.user)
+    unit = None
+    if unit_id:
+        try:
+            unit = UnitKerja.objects.get(pk=unit_id)
+            qs_base = qs_base.filter(unit=unit)
+        except UnitKerja.DoesNotExist:
+            unit = None
+
+    # Filter queryset based on tab
+    if tab_aktif == 'BULANAN':
+        qs_rekap = qs_base.filter(tanggal__year=tahun, tanggal__month=bulan)
+    elif tab_aktif == 'TAHUNAN':
+        qs_rekap = qs_base.filter(tanggal__year=tahun)
+    elif tab_aktif == '5TAHUNAN':
+        qs_rekap = qs_base.filter(tanggal__year__gte=tahun - 4, tanggal__year__lte=tahun)
+    else:  # KONTROL
+        qs_rekap = qs_base.filter(tanggal__year=tahun)
+
+    logbooks = list(qs_rekap.prefetch_related('aktivitas_list__master', 'checklist', 'bukti', 'pegawai'))
+
+    # Metrics calculation
+    total_logbook = len(logbooks)
+    total_disetujui = sum(1 for lb in logbooks if lb.status == 'DISETUJUI')
+    total_draf = sum(1 for lb in logbooks if lb.status == 'DRAF')
+    total_jam_dinas = sum(lb.durasi_dinas_jam for lb in logbooks)
+
+    semua_aktivitas = []
+    for lb in logbooks:
+        semua_aktivitas.extend(list(lb.aktivitas_list.all()))
+
+    total_aktivitas = len(semua_aktivitas)
+    total_jam_aktivitas = sum(a.durasi_jam for a in semua_aktivitas)
+    total_dokumen_bukti = sum(1 for a in semua_aktivitas if a.dokumen_bukti or a.nama_bukti)
+
+    # 1. Tab Bulanan: Rekap Pegawai (Insentif & Remunerasi)
+    rekap_pegawai = {}
+    for lb in logbooks:
+        pelaksana_nama = lb.pegawai.nama_lengkap if lb.pegawai_id else (lb.pelaksana_nama or 'Staf Tidak Dikenal')
+        if pelaksana_nama not in rekap_pegawai:
+            rekap_pegawai[pelaksana_nama] = {
+                'nama': pelaksana_nama,
+                'nip': getattr(lb.pegawai, 'nip', '—') if lb.pegawai_id else '—',
+                'logbook_count': 0,
+                'jam_dinas': 0.0,
+                'jam_aktivitas': 0.0,
+                'bukti_count': 0,
+            }
+        rekap_pegawai[pelaksana_nama]['logbook_count'] += 1
+        rekap_pegawai[pelaksana_nama]['jam_dinas'] += lb.durasi_dinas_jam
+        for akt in lb.aktivitas_list.all():
+            rekap_pegawai[pelaksana_nama]['jam_aktivitas'] += akt.durasi_jam
+            if akt.dokumen_bukti or akt.nama_bukti:
+                rekap_pegawai[pelaksana_nama]['bukti_count'] += 1
+
+    # Tentukan skor & tier insentif
+    for r in rekap_pegawai.values():
+        jam_akt = r['jam_aktivitas']
+        if jam_akt >= 30:
+            r['tier'] = 'Tier A (Sangat Produktif)'
+            r['skor'] = 100
+            r['badge'] = 'success'
+        elif jam_akt >= 20:
+            r['tier'] = 'Tier B (Produktif / Standar)'
+            r['skor'] = 85
+            r['badge'] = 'primary'
+        elif jam_akt >= 10:
+            r['tier'] = 'Tier C (Cukup)'
+            r['skor'] = 70
+            r['badge'] = 'warning'
+        else:
+            r['tier'] = 'Tier D (Kurang)'
+            r['skor'] = 50
+            r['badge'] = 'danger'
+
+    rekap_pegawai_list = sorted(rekap_pegawai.values(), key=lambda x: x['jam_aktivitas'], reverse=True)
+
+    # 2. Tab Tahunan: 20 JPL Tracking & Mandatory Training Capaian
+    mandatory_stats = {
+        'BHD': {'nama': 'Bantuan Hidup Dasar (BHD)', 'count': 0, 'standar': 'KPS 8 / SKP'},
+        'PPI': {'nama': 'Pencegahan & Pengendalian Infeksi (PPI)', 'count': 0, 'standar': 'KPS 8 / PPI'},
+        'APAR': {'nama': 'Keselamatan Kerja & APAR (MFK)', 'count': 0, 'standar': 'KPS 8 / MFK'},
+        'SKP': {'nama': 'Sasaran Keselamatan Pasien (SKP)', 'count': 0, 'standar': 'KPS 8 / SKP'},
+    }
+    for akt in semua_aktivitas:
+        teks = f"{akt.nama_aktivitas} {akt.detail_uraian} {akt.ep_starkes}".upper()
+        if 'BHD' in teks or 'RESUSITASI' in teks:
+            mandatory_stats['BHD']['count'] += 1
+        if 'PPI' in teks or 'HAND HYGIENE' in teks or 'INFEKSI' in teks:
+            mandatory_stats['PPI']['count'] += 1
+        if 'APAR' in teks or 'KEBAKARAN' in teks or 'MFK' in teks or 'EVAKUASI' in teks:
+            mandatory_stats['APAR']['count'] += 1
+        if 'SKP' in teks or 'KESELAMATAN PASIEN' in teks:
+            mandatory_stats['SKP']['count'] += 1
+
+    # 3. Tab 5 Tahunan: Portofolio STARKES per Bab
+    starkes_bab_map = {
+        'KPS': {'nama': 'Kualifikasi & Pendidikan Staf (KPS)', 'aktivitas_count': 0, 'bukti_count': 0},
+        'TKRS': {'nama': 'Tata Kelola Rumah Sakit (TKRS)', 'aktivitas_count': 0, 'bukti_count': 0},
+        'IPKP': {'nama': 'Integrasi Pendidikan Kesehatan Klinis (IPKP)', 'aktivitas_count': 0, 'bukti_count': 0},
+        'PPI': {'nama': 'Pencegahan & Pengendalian Infeksi (PPI)', 'aktivitas_count': 0, 'bukti_count': 0},
+        'SKP': {'nama': 'Sasaran Keselamatan Pasien (SKP)', 'aktivitas_count': 0, 'bukti_count': 0},
+        'MFK': {'nama': 'Manajemen Fasilitas & Keselamatan (MFK)', 'aktivitas_count': 0, 'bukti_count': 0},
+        'MRMIK': {'nama': 'Manajemen Rekam Medis & Informasi (MRMIK)', 'aktivitas_count': 0, 'bukti_count': 0},
+        'PMKP': {'nama': 'Peningkatan Mutu & Keselamatan Pasien (PMKP)', 'aktivitas_count': 0, 'bukti_count': 0},
+    }
+    for akt in semua_aktivitas:
+        ep_teks = (akt.ep_starkes or '').upper()
+        memiliki_bukti = bool(akt.dokumen_bukti or akt.nama_bukti)
+        for bab, d in starkes_bab_map.items():
+            if bab in ep_teks:
+                d['aktivitas_count'] += 1
+                if memiliki_bukti:
+                    d['bukti_count'] += 1
+
+    # 4. Distribusi Master Aktivitas
+    master_distribusi = {}
+    for akt in semua_aktivitas:
+        m_kode = akt.master.kode if akt.master else 'NON-MASTER'
+        m_nama = akt.master.nama if akt.master else akt.nama_aktivitas
+        if m_kode not in master_distribusi:
+            master_distribusi[m_kode] = {
+                'kode': m_kode,
+                'nama': m_nama,
+                'frekuensi': 0,
+                'durasi_total': 0.0,
+            }
+        master_distribusi[m_kode]['frekuensi'] += 1
+        master_distribusi[m_kode]['durasi_total'] += akt.durasi_jam
+
+    master_distribusi_list = sorted(master_distribusi.values(), key=lambda x: x['frekuensi'], reverse=True)
+
+    unit_pilihan = _unit_pilihan(request.user)
+
+    context = {
+        'tab_aktif': tab_aktif,
+        'unit': unit,
+        'unit_pilihan': unit_pilihan,
+        'filter_unit': unit_id,
+        'filter_tahun': tahun,
+        'filter_bulan': bulan,
+        'tahun_list': list(range(hari_ini.year - 4, hari_ini.year + 2)),
+        'bulan_list': [
+            (1, 'Januari'), (2, 'Februari'), (3, 'Maret'), (4, 'April'),
+            (5, 'Mei'), (6, 'Juni'), (7, 'Juli'), (8, 'Agustus'),
+            (9, 'September'), (10, 'Oktober'), (11, 'November'), (12, 'Desember'),
+        ],
+        'total_logbook': total_logbook,
+        'total_disetujui': total_disetujui,
+        'total_draf': total_draf,
+        'total_jam_dinas': total_jam_dinas,
+        'total_aktivitas': total_aktivitas,
+        'total_jam_aktivitas': total_jam_aktivitas,
+        'total_dokumen_bukti': total_dokumen_bukti,
+        'logbooks': logbooks,
+        'semua_aktivitas': semua_aktivitas,
+        'rekap_pegawai': rekap_pegawai_list,
+        'mandatory_stats': mandatory_stats,
+        'starkes_bab_map': starkes_bab_map,
+        'master_distribusi': master_distribusi_list,
+        'hari_ini': hari_ini,
+    }
+    return render(request, 'akreditasi/logbook_nonmedis_rekap.html', context)
+
+
+@login_required
 def logbook_nonmedis_rekap_pdf(request):
     """
     Cetak PDF Rekapitulasi Multidimensi Kinerja Non-Medis & Diklat:
