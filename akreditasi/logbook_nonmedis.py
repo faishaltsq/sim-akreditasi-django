@@ -5,20 +5,27 @@ berkas untuk satu domain, izin lewat helper lokal, ``AuditLog`` pada setiap
 aksi POST.
 """
 
-from datetime import date, timedelta
+from datetime import date, time, timedelta
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
-from django.http import HttpResponse
+from django.db import models
+from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 
 from .akses_indikator import HOSPITAL_WIDE_ROLES, unit_scope_ids
 from .indikator_views import unit_subtree_ids
 from .logbook_nonmedis_models import (
-    SHIFT_CHOICES, STATUS_CHOICES, LogbookNonMedis,
-    ep_kandidat, resolve_fokus_ep,
+    AktivitasNonMedis,
+    LogbookNonMedis,
+    MasterAktivitasNonMedis,
+    SHIFT_CHOICES,
+    STATUS_CHOICES,
+    ep_kandidat,
+    resolve_ep_aktivitas,
+    resolve_fokus_ep,
 )
 from .models import AuditLog, UnitKerja
 
@@ -185,6 +192,9 @@ def logbook_nonmedis_buat(request):
         pegawai_id = request.POST.get('pegawai', '') or None
         tanggal_teks = request.POST.get('tanggal', '')
         shift = request.POST.get('shift', '')
+        jam_mulai_teks = request.POST.get('jam_mulai', '').strip()
+        jam_selesai_teks = request.POST.get('jam_selesai', '').strip()
+        pelaksana_nama_input = request.POST.get('pelaksana_nama', '').strip()
 
         unit = get_object_or_404(_unit_pilihan(request.user), pk=unit_id)
         try:
@@ -193,19 +203,53 @@ def logbook_nonmedis_buat(request):
             messages.error(request, 'Tanggal dinas tidak valid.')
             return redirect('akreditasi:logbook_nonmedis_daftar')
 
+        jam_mulai = None
+        jam_selesai = None
+        try:
+            if jam_mulai_teks:
+                jam_mulai = time.fromisoformat(jam_mulai_teks)
+        except (ValueError, TypeError):
+            pass
+        try:
+            if jam_selesai_teks:
+                jam_selesai = time.fromisoformat(jam_selesai_teks)
+        except (ValueError, TypeError):
+            pass
+
         from sdm.models import Pegawai
         pegawai = Pegawai.objects.filter(pk=pegawai_id).first() if pegawai_id else None
 
+        # Delegasi pelaksana untuk role manajerial/admin
+        boleh_delegasi = request.user.is_superuser or (p is not None and p.role in ROLE_BOLEH_SETUJU)
+        if boleh_delegasi and pelaksana_nama_input:
+            pelaksana_nama = pelaksana_nama_input
+        elif pegawai:
+            pelaksana_nama = pegawai.nama_lengkap
+        else:
+            pelaksana_nama = request.user.get_full_name() or request.user.username
+
         entry, dibuat = LogbookNonMedis.objects.get_or_create(
             unit=unit, pegawai=pegawai, tanggal=tanggal,
-            defaults={'shift': shift if shift in dict(SHIFT_CHOICES) else '',
-                      'pelaksana_nama': pegawai.nama_lengkap if pegawai else '',
-                      'dibuat_oleh': request.user})
+            defaults={
+                'shift': shift if shift in dict(SHIFT_CHOICES) else '',
+                'pelaksana_nama': pelaksana_nama,
+                'jam_mulai': jam_mulai,
+                'jam_selesai': jam_selesai,
+                'dibuat_oleh': request.user,
+            })
         if dibuat:
             entry.ensure_checklist()
             _catat(request.user, 'CREATE', entry, 'Logbook non-medis dibuat')
             messages.success(request, 'Logbook non-medis dibuat.')
         else:
+            if entry.boleh_ubah:
+                if jam_mulai:
+                    entry.jam_mulai = jam_mulai
+                if jam_selesai:
+                    entry.jam_selesai = jam_selesai
+                if boleh_delegasi and pelaksana_nama_input:
+                    entry.pelaksana_nama = pelaksana_nama_input
+                entry.save(update_fields=['jam_mulai', 'jam_selesai', 'pelaksana_nama'])
             messages.info(request, 'Logbook non-medis tanggal tersebut sudah ada.')
         return redirect('akreditasi:logbook_nonmedis_detail', pk=entry.pk)
 
@@ -247,11 +291,15 @@ def logbook_nonmedis_detail(request, pk):
 
     checklist = list(entry.checklist.all())
     kandidat_ep = ep_kandidat(entry.unit)
+    aktivitas_list = list(entry.aktivitas_list.select_related('master').all())
+    master_aktivitas_list = list(MasterAktivitasNonMedis.objects.filter(is_active=True).order_by('kategori_unit', 'urutan', 'kode'))
 
     return render(request, 'akreditasi/logbook_nonmedis_detail.html', {
         'entry': entry,
         'checklist': checklist,
         'kandidat_ep': kandidat_ep,
+        'aktivitas_list': aktivitas_list,
+        'master_aktivitas_list': master_aktivitas_list,
         'bukti': entry.bukti.all(),
         'status_pilihan': [('TERLAKSANA', 'Terlaksana'), ('TIDAK', 'Tidak Terlaksana'),
                            ('NA', 'Tidak Berlaku')],
@@ -467,3 +515,121 @@ def logbook_nonmedis_pdf(request, pk):
 
     doc.build(elemen)
     return buffer
+
+
+# ---------------------------------------------------------------------------
+# API & Pengelolaan Aktivitas Harian Logbook
+# ---------------------------------------------------------------------------
+
+@login_required
+def logbook_nonmedis_api_master_aktivitas(request):
+    """API JSON untuk autocomplete dan template master aktivitas."""
+    kategori = request.GET.get('kategori', '').strip().upper()
+    qs = MasterAktivitasNonMedis.objects.filter(is_active=True)
+    if kategori:
+        qs = qs.filter(kategori_unit=kategori)
+
+    items = [
+        {
+            'id': m.id,
+            'kode': m.kode,
+            'kategori_unit': m.kategori_unit,
+            'nama': m.nama,
+            'deskripsi': m.deskripsi,
+            'ep_rekomendasi': m.ep_rekomendasi,
+            'standar_terkait': m.standar_terkait,
+            'urutan': m.urutan,
+        }
+        for m in qs
+    ]
+    return JsonResponse({'items': items})
+
+
+@login_required
+def logbook_nonmedis_tambah_aktivitas(request, pk):
+    """Tambah baris aktivitas harian ke logbook non-medis beserta upload bukti."""
+    entry = get_object_or_404(LogbookNonMedis, pk=pk)
+    _cek(request.user, entry)
+    if not (_boleh_isi(request.user, entry) and entry.boleh_ubah):
+        raise PermissionDenied('Logbook ini sudah dikunci.')
+
+    if request.method == 'POST':
+        master_id = request.POST.get('master_id', '').strip() or None
+        master = MasterAktivitasNonMedis.objects.filter(pk=master_id).first() if master_id else None
+
+        nama_aktivitas = request.POST.get('nama_aktivitas', '').strip()
+        if not nama_aktivitas and master:
+            nama_aktivitas = master.nama
+        if not nama_aktivitas:
+            messages.error(request, 'Nama aktivitas wajib diisi.')
+            return redirect('akreditasi:logbook_nonmedis_detail', pk=entry.pk)
+
+        jam_mulai_teks = request.POST.get('jam_mulai', '').strip()
+        jam_selesai_teks = request.POST.get('jam_selesai', '').strip()
+        jam_mulai = None
+        jam_selesai = None
+        try:
+            if jam_mulai_teks:
+                jam_mulai = time.fromisoformat(jam_mulai_teks)
+        except (ValueError, TypeError):
+            pass
+        try:
+            if jam_selesai_teks:
+                jam_selesai = time.fromisoformat(jam_selesai_teks)
+        except (ValueError, TypeError):
+            pass
+
+        detail_uraian = request.POST.get('detail_uraian', '').strip()
+        ep_starkes = request.POST.get('ep_starkes', '').strip()
+        if not ep_starkes:
+            ep_starkes = resolve_ep_aktivitas(master=master, nama=nama_aktivitas, uraian=detail_uraian)
+
+        pelaksana_nama = request.POST.get('pelaksana_nama', '').strip()
+        if not pelaksana_nama:
+            pelaksana_nama = entry.pelaksana_nama or request.user.get_full_name() or request.user.username
+
+        nama_bukti = request.POST.get('nama_bukti', '').strip()
+        berkas = request.FILES.get('dokumen_bukti')
+        if berkas:
+            from .file_security import sanitize_filename, validate_uploaded_file
+            sah, pesan = validate_uploaded_file(berkas)
+            if not sah:
+                messages.error(request, f'Berkas bukti ditolak: {pesan}')
+                return redirect('akreditasi:logbook_nonmedis_detail', pk=entry.pk)
+            berkas.name = sanitize_filename(berkas.name)
+
+        next_urutan = (entry.aktivitas_list.aggregate(models.Max('urutan'))['urutan__max'] or 0) + 1
+
+        row = AktivitasNonMedis.objects.create(
+            logbook=entry,
+            master=master,
+            urutan=next_urutan,
+            jam_mulai=jam_mulai,
+            jam_selesai=jam_selesai,
+            nama_aktivitas=nama_aktivitas[:250],
+            detail_uraian=detail_uraian,
+            ep_starkes=ep_starkes[:120],
+            pelaksana_nama=pelaksana_nama[:150],
+            nama_bukti=nama_bukti[:200],
+            dokumen_bukti=berkas,
+        )
+        _catat(request.user, 'CREATE', row, f'Aktivitas logbook #{row.urutan} ditambahkan')
+        messages.success(request, f'Aktivitas "{nama_aktivitas}" berhasil ditambahkan.')
+
+    return redirect('akreditasi:logbook_nonmedis_detail', pk=entry.pk)
+
+
+@login_required
+def logbook_nonmedis_hapus_aktivitas(request, pk, aktivitas_id):
+    """Hapus baris aktivitas harian dari logbook draf."""
+    entry = get_object_or_404(LogbookNonMedis, pk=pk)
+    _cek(request.user, entry)
+    if not (_boleh_isi(request.user, entry) and entry.boleh_ubah):
+        raise PermissionDenied('Logbook ini sudah dikunci.')
+
+    row = get_object_or_404(entry.aktivitas_list, pk=aktivitas_id)
+    nama = row.nama_aktivitas
+    row.delete()
+    _catat(request.user, 'DELETE', entry, f'Aktivitas "{nama}" dihapus')
+    messages.success(request, f'Aktivitas "{nama}" telah dihapus.')
+    return redirect('akreditasi:logbook_nonmedis_detail', pk=entry.pk)

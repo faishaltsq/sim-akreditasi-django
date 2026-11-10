@@ -159,7 +159,10 @@ urlpatterns = [
     # ── Logbook Harian Non-Medis (semua unit kerja, per pegawai per hari) ──
     path('logbook-nonmedis/', logbook_nonmedis_views.logbook_nonmedis_daftar, name='logbook_nonmedis_daftar'),
     path('logbook-nonmedis/buat/', logbook_nonmedis_views.logbook_nonmedis_buat, name='logbook_nonmedis_buat'),
+    path('logbook-nonmedis/api/master-aktivitas/', logbook_nonmedis_views.logbook_nonmedis_api_master_aktivitas, name='logbook_nonmedis_api_master_aktivitas'),
     path('logbook-nonmedis/<int:pk>/', logbook_nonmedis_views.logbook_nonmedis_detail, name='logbook_nonmedis_detail'),
+    path('logbook-nonmedis/<int:pk>/aktivitas/tambah/', logbook_nonmedis_views.logbook_nonmedis_tambah_aktivitas, name='logbook_nonmedis_tambah_aktivitas'),
+    path('logbook-nonmedis/<int:pk>/aktivitas/<int:aktivitas_id>/hapus/', logbook_nonmedis_views.logbook_nonmedis_hapus_aktivitas, name='logbook_nonmedis_hapus_aktivitas'),
     path('logbook-nonmedis/<int:pk>/simpan-checklist/', logbook_nonmedis_views.logbook_nonmedis_simpan_checklist, name='logbook_nonmedis_simpan_checklist'),
     path('logbook-nonmedis/<int:pk>/simpan-narasi/', logbook_nonmedis_views.logbook_nonmedis_simpan_narasi, name='logbook_nonmedis_simpan_narasi'),
     path('logbook-nonmedis/<int:pk>/bukti/', logbook_nonmedis_views.logbook_nonmedis_unggah_bukti, name='logbook_nonmedis_unggah_bukti'),
