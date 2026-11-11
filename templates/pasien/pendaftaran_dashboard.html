@@ -68,6 +68,11 @@
         </div>
     </div>
 
+    <nav class="d-flex flex-wrap gap-2 mb-4" aria-label="Layanan mandiri">
+        <a href="{% url 'pasien:apm_kiosk' %}" class="btn btn-primary" target="_blank" rel="noopener"><i class="bi bi-display me-1" aria-hidden="true"></i> Buka Kiosk APM</a>
+        <a href="{% url 'pasien:antrean_display_board' %}" class="btn btn-outline-primary" target="_blank" rel="noopener"><i class="bi bi-megaphone me-1" aria-hidden="true"></i> Buka Papan Antrean</a>
+    </nav>
+
     <!-- 4 KPI CARDS ROW -->
     <div class="row g-3 mb-4">
         <div class="col-6 col-lg-3">

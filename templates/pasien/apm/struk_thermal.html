@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Struk Bukti Antrean APM - {{ kunjungan.nomor_antrean }}</title>
+    <style>
+        @page {
+            size: auto;
+            margin: 0;
+        }
+        body {
+            font-family: 'Courier New', Courier, monospace, sans-serif;
+            font-size: 12px;
+            color: #000;
+            background: #fff;
+            width: {{ content_width }}mm;
+            box-sizing: border-box;
+            overflow-wrap: anywhere;
+            margin: 0 auto;
+            padding: 8px 6px;
+            line-height: 1.3;
+        }
+        .text-center { text-align: center; }
+        .text-end { text-align: right; }
+        .fw-bold { font-weight: bold; }
+        .title { font-size: 14px; font-weight: bold; margin-bottom: 2px; }
+        .subtitle { font-size: 10px; margin-bottom: 6px; }
+        .divider { border-top: 1px dashed #000; margin: 6px 0; }
+        .double-divider { border-top: 2px dashed #000; margin: 6px 0; }
+        .nomor-antrean {
+            font-size: 38px;
+            font-weight: 900;
+            letter-spacing: 2px;
+            margin: 6px 0;
+        }
+        .label { font-size: 10px; text-transform: uppercase; }
+        .info-table { width: 100%; border-collapse: collapse; font-size: 11px; }
+        .info-table td { padding: 2px 0; vertical-align: top; }
+        .info-table td.col-label { width: 35%; }
+        .info-table td.col-sep { width: 4%; }
+        .himbauan {
+            font-size: 9px;
+            text-align: justify;
+            margin-top: 6px;
+            line-height: 1.25;
+        }
+        .qr-code {
+            margin: 8px auto;
+            width: 110px;
+            height: 110px;
+        }
+        @media print {
+            .no-print { display: none !important; }
+            body { padding: 0; margin: 0; }
+        }
+        .btn-print {
+            background: #0d6efd;
+            color: white;
+            border: none;
+            padding: 10px 16px;
+            font-size: 14px;
+            font-weight: bold;
+            border-radius: 6px;
+            cursor: pointer;
+            margin-bottom: 12px;
+            width: 100%;
+        }
+    </style>
+</head>
+<body>
+    <div class="no-print" style="margin-bottom: 10px; text-align: center;">
+        <label>Ukuran kertas
+            <select onchange="const url = new URL(location.href); url.searchParams.set('width', this.value); url.searchParams.set('noprint', '1'); location.href = url;">
+                <option value="80"{% if paper_width == 80 %} selected{% endif %}>80mm</option>
+                <option value="58"{% if paper_width == 58 %} selected{% endif %}>58mm</option>
+            </select>
+        </label>
+        <button class="btn-print" onclick="window.print()">🖨️ Cetak Struk Antrean</button>
+        <button onclick="window.close()" style="background:#6c757d; color:#fff; border:none; padding:6px 12px; border-radius:4px; font-size:12px; cursor:pointer;">Tutup</button>
+    </div>
+
+    <div class="text-center">
+        <div class="title">{{ rs.nama|default:"RSU PKU MUHAMMADIYAH GOMBONG" }}</div>
+        <div class="subtitle">{{ rs.alamat|default:"Jl. Yos Sudarso No. 461 Gombong, Kebumen" }}</div>
+        <div class="divider"></div>
+        <div style="font-size: 11px; font-weight: bold; letter-spacing: 0.5px;">STRUK BUKTI ANTREAN</div>
+        <div style="font-size: 9px;">ANJUNGAN PENDAFTARAN MANDIRI (APM)</div>
+        <div class="double-divider"></div>
+
+        <div class="label">Nomor Antrean Anda:</div>
+        <div class="nomor-antrean">{{ kunjungan.nomor_antrean }}</div>
+
+        <div style="font-size: 13px; font-weight: bold;">
+            {{ kunjungan.get_poliklinik_display|default:kunjungan.poliklinik }}
+        </div>
+        <div style="font-size: 11px; margin-bottom: 4px;">{{ kunjungan.dpjp|default:"Dokter Jaga Poli" }}</div>
+    </div>
+
+    <div class="divider"></div>
+
+    <table class="info-table">
+        <tr>
+            <td class="col-label">No. Rekam Medis</td>
+            <td class="col-sep">:</td>
+            <td class="fw-bold">{{ kunjungan.pasien.no_rm }}</td>
+        </tr>
+        <tr>
+            <td class="col-label">Nama Pasien</td>
+            <td class="col-sep">:</td>
+            <td class="fw-bold">{{ kunjungan.pasien.nama_lengkap }}</td>
+        </tr>
+        <tr>
+            <td class="col-label">Penjamin</td>
+            <td class="col-sep">:</td>
+            <td>{{ kunjungan.get_penjamin_display|default:kunjungan.penjamin }}</td>
+        </tr>
+        <tr>
+            <td class="col-label">Waktu Daftar</td>
+            <td class="col-sep">:</td>
+            <td>{{ kunjungan.tanggal_masuk|date:"d/m/Y H:i" }} WIB</td>
+        </tr>
+        <tr>
+            <td class="col-label">Estimasi Periksa</td>
+            <td class="col-sep">:</td>
+            <td class="fw-bold">
+                {% if kunjungan.estimasi_pelayanan %}
+                    {{ kunjungan.estimasi_pelayanan|time:"H:i" }} WIB
+                {% else %}
+                    Sesuai Antrean
+                {% endif %}
+            </td>
+        </tr>
+        <tr>
+            <td class="col-label">Kode Booking</td>
+            <td class="col-sep">:</td>
+            <td style="font-size: 10px;">{{ kunjungan.kode_booking|default:kunjungan.no_kunjungan }}</td>
+        </tr>
+    </table>
+
+    <div class="text-center">
+        <div class="qr-code" aria-label="QR kode booking">
+            {{ qr_svg|safe }}
+        </div>
+        <div style="font-size: 9px;">Scan QR saat tiba di ruang poli untuk check-in</div>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="himbauan">
+        <b>PERHATIAN:</b><br>
+        1. Harap hadir 30 menit sebelum estimasi waktu pemeriksaan.<br>
+        2. Pembatalan janji mandiri maksimal 60 menit sebelum jadwal (T-60).<br>
+        3. Simpan struk ini sebagai bukti antrean pelayanan rawat jalan.
+    </div>
+
+    <div class="text-center" style="font-size: 8px; margin-top: 8px;">
+        *** Terima kasih atas kepercayaan Anda ***<br>
+        SIM-RS ARima &copy; 2026
+    </div>
+
+    <script>
+        window.addEventListener('load', () => {
+            if (window.location.search.indexOf('noprint=1') === -1) {
+                setTimeout(() => { window.print(); }, 400);
+            }
+        });
+    </script>
+</body>
+</html>

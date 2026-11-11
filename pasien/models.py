@@ -1249,6 +1249,17 @@ class TindakanAsesmen(models.Model):
 
 # ── 12. Anjungan Pendaftaran Mandiri (APM) & Antrean Online ──────────────────
 
+class AntreanHarianCounter(models.Model):
+    tanggal = models.DateField()
+    prefix = models.CharField(max_length=8)
+    nomor_terakhir = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=['tanggal', 'prefix'], name='unique_antrean_harian_prefix'),
+        ]
+
+
 class JadwalDokterPoli(models.Model):
     STATUS_CHOICES = [
         ('BUKA', 'Buka / Kuota Tersedia'),
@@ -1297,6 +1308,25 @@ class JadwalDokterPoli(models.Model):
         if self.status_ketersediaan != 'BUKA':
             return False
         return self.get_sisa_kuota(tanggal) > 0
+
+    def get_next_estimasi_jam(self, tanggal=None):
+        from django.utils import timezone
+        appointments = list(KunjunganPasien.objects.filter(
+            tanggal_masuk__date=tanggal or timezone.localdate(),
+            jenis_kunjungan='RAJAL', dpjp=self.nama_dokter, poliklinik=self.poliklinik,
+        ).exclude(status='BATAL').values_list('estimasi_pelayanan', flat=True))
+        occupied = {value for value in appointments if value is not None}
+        unknown = appointments.count(None)
+        for position in range(1, self.kuota_maksimal + 1):
+            candidate = self.hitung_estimasi_jam(position)
+            if candidate in occupied:
+                continue
+            if unknown:
+                unknown -= 1
+                occupied.add(candidate)
+                continue
+            return candidate
+        return None
 
     def hitung_estimasi_jam(self, urutan=None):
         import datetime

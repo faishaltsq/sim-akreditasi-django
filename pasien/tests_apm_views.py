@@ -27,13 +27,13 @@ class ApmViewsTest(TestCase):
 
     def test_api_cari_pasien_lama(self):
         # By NIK
-        r1 = self.client.get(reverse('pasien:apm_api_cari_pasien'), {'q': '3273010101800001'})
+        r1 = self.client.get(reverse('pasien:apm_api_cari_pasien'), {'q': '3273010101800001', 'nama_lengkap': 'Pasien Lama', 'tanggal_lahir': '1980-01-01'})
         self.assertEqual(r1.status_code, 200)
         self.assertTrue(r1.json()['found'])
         self.assertEqual(r1.json()['pasien']['no_rm'], 'RM-LAMA-001')
 
         # By BPJS
-        r2 = self.client.get(reverse('pasien:apm_api_cari_pasien'), {'q': '0001112223334'})
+        r2 = self.client.get(reverse('pasien:apm_api_cari_pasien'), {'q': '0001112223334', 'nama_lengkap': 'Pasien Lama', 'tanggal_lahir': '1980-01-01'})
         self.assertTrue(r2.json()['found'])
 
     def test_api_jadwal_dokter(self):
@@ -47,6 +47,8 @@ class ApmViewsTest(TestCase):
     def test_api_daftar_pasien_lama_rajal(self):
         payload = {
             'tipe_pasien': 'LAMA',
+            'nama_lengkap': 'Pasien Lama',
+            'tanggal_lahir': '1980-01-01',
             'no_rm': 'RM-LAMA-001',
             'no_wa': '081234567890',
             'jenis_layanan': 'RAJAL',
@@ -88,7 +90,7 @@ class ApmViewsTest(TestCase):
             kode_booking='APM-CHK-001',
             is_apm=True
         )
-        res = self.client.post(reverse('pasien:apm_api_checkin'), {'kode': 'APM-CHK-001'})
+        res = self.client.post(reverse('pasien:apm_api_checkin'), {'kode': 'APM-CHK-001', 'nama_lengkap': 'Pasien Lama', 'tanggal_lahir': '1980-01-01'})
         self.assertEqual(res.status_code, 200)
         self.assertTrue(res.json()['success'])
         k.refresh_from_db()

@@ -243,6 +243,14 @@
         <span class="nav-icon"><i class="bi bi-person-plus nav-icon-cyan" aria-hidden="true"></i></span>
         <span class="nav-text"><span class="nav-title">Pendaftaran &amp; Admisi</span></span>
     </a>
+    <a href="{% url 'pasien:apm_kiosk' %}" class="nav-link" target="_blank" rel="noopener">
+        <span class="nav-icon"><i class="bi bi-display nav-icon-cyan" aria-hidden="true"></i></span>
+        <span class="nav-text"><span class="nav-title">Kiosk APM</span></span>
+    </a>
+    <a href="{% url 'pasien:antrean_display_board' %}" class="nav-link" target="_blank" rel="noopener">
+        <span class="nav-icon"><i class="bi bi-megaphone nav-icon-cyan" aria-hidden="true"></i></span>
+        <span class="nav-text"><span class="nav-title">Papan Antrean</span></span>
+    </a>
     <a href="{% url 'pasien:pendaftaran_dashboard' %}?tab=shift" class="nav-link{% if u == 'pendaftaran_dashboard' and request.GET.tab == 'shift' %} active{% endif %}">
         <span class="nav-icon"><i class="bi bi-clipboard-check nav-icon-cyan" aria-hidden="true"></i></span>
         <span class="nav-text"><span class="nav-title">Jadwal Dinas &amp; Logbook</span></span>

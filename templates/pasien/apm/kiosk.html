@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Anjungan Pendaftaran Mandiri — ARIMA</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#eef4fa;color:#142c46;font:18px system-ui,sans-serif}header{background:#123552;color:white;padding:24px}main{max-width:1100px;margin:auto;padding:24px}h1{font-size:clamp(24px,4vw,36px)}h2{margin-top:0}.panel{background:white;border-radius:18px;padding:28px;margin:20px 0;box-shadow:0 6px 24px #12355212}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:18px}button,.button{font:inherit;min-height:56px;padding:16px;border:2px solid #155ba0;border-radius:10px;background:#155ba0;color:white;cursor:pointer;text-decoration:none;display:inline-block;text-align:center}button:disabled{opacity:.5;cursor:wait}.secondary{background:white;color:#155ba0}.emergency{background:#b42332;border-color:#b42332}.entry{min-height:120px;font-weight:700}label{display:block;font-weight:600;margin-bottom:16px}input,select{display:block;width:100%;font:inherit;padding:14px;margin-top:6px;border:1px solid #8096aa;border-radius:8px}input:focus,select:focus,button:focus-visible,a:focus-visible{outline:3px solid #d88a00;outline-offset:3px}[hidden]{display:none!important}.actions{display:flex;flex-wrap:wrap;gap:12px;margin-top:24px}.muted{color:#52667b}#message{padding:16px;border-radius:10px;background:#fff1d5;color:#653c00;white-space:pre-wrap}.number{font-size:64px;font-weight:800;color:#155ba0}#doctors button{text-align:left;background:#f3f8ff;color:#142c46}#doctors button[aria-pressed=true]{border:4px solid #155ba0}dl{display:grid;grid-template-columns:1fr 1fr;gap:12px}dd{margin:0;overflow-wrap:anywhere}@media(max-width:500px){main{padding:12px}.panel{padding:18px}header{padding:18px}dl{grid-template-columns:1fr}button{width:100%}}
+</style>
+</head>
+<body>
+<header><strong>{{ rs.nama|default:"Rumah Sakit ARIMA" }}</strong><div>Anjungan Pendaftaran Mandiri</div></header>
+<main>
+<h1>Pendaftaran &amp; Check-In Mandiri</h1>
+<p class="muted">Siapkan identitas dan nomor WhatsApp Anda.</p>
+<div id="message" role="alert" hidden></div>
+<section id="welcome" class="panel">
+<h2>Silakan pilih layanan</h2>
+<div class="grid">
+<button type="button" class="entry" data-start="BARU">Pasien Baru</button>
+<button type="button" class="entry" data-start="LAMA">Pasien Lama</button>
+<button type="button" class="entry" id="open-checkin">Check-In Barcode</button>
+</div>
+<p class="muted">Untuk IGD, pilih identitas pasien lalu tekan layanan IGD Fast-Track.</p>
+</section>
+<section id="identity" class="panel" hidden>
+<h2>1. Identitas pasien</h2>
+<form id="identity-form">
+{% csrf_token %}
+<label>Nama lengkap<input name="nama_lengkap" autocomplete="off" maxlength="200" required></label>
+<label>Tanggal lahir<input name="tanggal_lahir" type="date" required></label>
+<div id="existing-fields" hidden>
+<label>NIK / No. BPJS / No. Rekam Medis<input id="lookup" autocomplete="off"></label>
+<button type="button" id="find" class="secondary">Cari Pasien</button>
+<p id="found" aria-live="polite"></p>
+</div>
+<div id="new-fields" class="grid">
+<label>NIK<input name="nik" inputmode="numeric" pattern="[0-9]{16}" maxlength="16" autocomplete="off"></label>
+<label>Jenis kelamin<select name="jenis_kelamin"><option value="L">Laki-laki</option><option value="P">Perempuan</option></select></label>
+<label>Alamat<input name="alamat" autocomplete="off"></label>
+<label>Nomor BPJS (opsional)<input name="no_bpjs" inputmode="numeric" autocomplete="off"></label>
+</div>
+<label>Nomor WhatsApp<input name="no_wa" type="tel" required pattern="[+0-9 ]{9,20}" autocomplete="off"></label>
+<div class="actions"><button type="submit">Lanjut ke layanan</button><button type="button" class="secondary" data-home>Kembali</button></div>
+</form>
+</section>
+<section id="service" class="panel" hidden>
+<h2>2. Pilih layanan dan dokter</h2>
+<button type="button" id="igd" class="emergency">IGD Fast-Track — Lewati antrean poli</button>
+<label>Poliklinik<select id="clinic"><option value="">Pilih poliklinik</option>{% for poli in daftar_poli %}<option value="{{ poli.kode }}">{{ poli.nama }}</option>{% endfor %}</select></label>
+<div id="doctors" class="grid" aria-live="polite"></div>
+<div class="actions"><button type="button" class="secondary" id="back-identity">Kembali ke identitas</button></div>
+</section>
+<section id="confirm" class="panel" hidden>
+<h2>3. Konfirmasi pendaftaran</h2>
+<p id="summary"></p>
+<label>Penjamin<select id="insurance"><option value="UMUM">Umum</option><option value="BPJS">BPJS</option><option value="ASURANSI">Asuransi</option></select></label>
+<button type="button" id="register">Konfirmasi &amp; Daftar</button>
+<button type="button" class="secondary" id="back-service">Kembali ke layanan</button>
+</section>
+<section id="ticket" class="panel" hidden>
+<h2>Pendaftaran berhasil</h2><div id="queue" class="number"></div><dl id="ticket-detail"></dl>
+<div class="actions"><a id="receipt" class="button" target="_blank" rel="noopener">Cetak Struk</a><button type="button" class="secondary" data-home>Selesai</button></div>
+<p class="muted">Layar akan dibersihkan dalam <span id="countdown">60</span> detik.</p>
+</section>
+<section id="checkin" class="panel" hidden>
+<h2>Check-In Barcode</h2>
+<form id="checkin-form"><label>Nama lengkap<input id="checkin-name" required autocomplete="off"></label><label>Tanggal lahir<input id="checkin-dob" type="date" required></label><label>Kode booking — pindai dengan scanner atau ketik manual<input id="booking" required autocomplete="off"></label><button type="submit">Konfirmasi Check-In</button><button type="button" class="secondary" data-home>Kembali</button></form>
+<p id="checkin-result" aria-live="polite"></p>
+</section>
+</main>
+<script>
+'use strict';
+const urls = {lookup: "{% url 'pasien:apm_api_cari_pasien' %}", schedule: "{% url 'pasien:apm_api_jadwal_dokter' %}", register: "{% url 'pasien:apm_api_daftar' %}", checkin: "{% url 'pasien:apm_api_checkin' %}"};
+const $ = id => document.getElementById(id);
+let state = {}, resetTimer, scheduleRequest = 0;
+function show(id) { ['welcome','identity','service','confirm','ticket','checkin'].forEach(name => $(name).hidden = name !== id); $('message').hidden = true; window.scrollTo(0,0); }
+function message(text) { $('message').textContent = text; $('message').hidden = false; }
+function home() { clearInterval(resetTimer); state = {}; scheduleRequest++; $('identity-form').reset(); $('checkin-form').reset(); $('clinic').value = ''; $('insurance').value = 'UMUM'; $('lookup').value = ''; ['found','doctors','ticket-detail','queue','checkin-result'].forEach(id => $(id).replaceChildren()); $('receipt').removeAttribute('href'); show('welcome'); }
+async function api(url, data) {
+    const options = data ? {method:'POST', headers:{'Content-Type':'application/json','X-CSRFToken':document.querySelector('[name=csrfmiddlewaretoken]').value},body:JSON.stringify(data)} : {};
+    const response = await fetch(url, {...options, cache:'no-store'});
+    const result = await response.json();
+    if (!response.ok || result.success === false) throw new Error(result.message || 'Permintaan gagal. Silakan coba lagi.');
+    return result;
+}
+document.querySelectorAll('[data-start]').forEach(button => button.addEventListener('click', () => {
+    state = {tipe_pasien:button.dataset.start};
+    const isNew = state.tipe_pasien === 'BARU';
+    $('existing-fields').hidden = isNew; $('new-fields').hidden = !isNew;
+    $('new-fields').querySelectorAll('input,select').forEach(input => {input.disabled = !isNew; input.required = isNew && ['nama_lengkap','tanggal_lahir'].includes(input.name);});
+    show('identity');
+}));
+document.querySelectorAll('[data-home]').forEach(button => button.addEventListener('click', home));
+$('open-checkin').onclick = () => {show('checkin'); $('booking').focus();};
+$('find').onclick = async () => {
+    state.no_rm = null; $('found').textContent = ''; $('find').disabled = true;
+    try {const data = await api(urls.lookup, {q:$('lookup').value.trim(), nama_lengkap:document.querySelector('[name=nama_lengkap]').value, tanggal_lahir:document.querySelector('[name=tanggal_lahir]').value}); if (!data.found) throw new Error(data.message); state.no_rm = data.pasien.no_rm; $('found').textContent = data.pasien.nama_lengkap + ' — ' + data.pasien.no_rm;}
+    catch(error) {message(error.message);} finally {$('find').disabled = false;}
+};
+$('lookup').addEventListener('input', () => {state.no_rm = null; $('found').textContent = '';});
+$('identity-form').onsubmit = event => {event.preventDefault(); if(state.tipe_pasien === 'LAMA' && !state.no_rm) return message('Cari dan pilih data pasien terlebih dahulu.'); Object.assign(state,Object.fromEntries(new FormData(event.target))); show('service');};
+$('back-identity').onclick = () => show('identity');
+$('back-service').onclick = () => show('service');
+function confirmService() { $('summary').textContent = state.jenis_layanan === 'IGD' ? 'IGD Fast-Track — Dokter Jaga IGD' : state.doctorName; show('confirm'); }
+$('igd').onclick = () => {state.jenis_layanan = 'IGD'; delete state.jadwal_id; delete state.poliklinik; confirmService();};
+$('clinic').onchange = async () => {
+    const requestId = ++scheduleRequest; $('doctors').replaceChildren();
+    if (!$('clinic').value) return;
+    try {
+        const data = await api(urls.schedule + '?' + new URLSearchParams({poli:$('clinic').value}));
+        if (requestId !== scheduleRequest) return;
+        if (!data.jadwal.length) $('doctors').textContent = 'Belum ada jadwal dokter yang dibuka.';
+        data.jadwal.forEach(doctor => {
+            const button = document.createElement('button'); button.type = 'button'; button.disabled = !doctor.is_tersedia;
+            button.textContent = `${doctor.nama_dokter} · ${doctor.jam_mulai}–${doctor.jam_selesai} · Sisa kuota: ${doctor.sisa_kuota}`;
+            button.onclick = () => {Object.assign(state,{jenis_layanan:'RAJAL', jadwal_id:doctor.id, poliklinik:doctor.poliklinik, doctorName:button.textContent}); confirmService();};
+            $('doctors').append(button);
+        });
+    } catch(error) {if (requestId === scheduleRequest) message(error.message);}
+};
+$('register').onclick = async () => {
+    $('register').disabled = true;
+    try {
+        const data = await api(urls.register, {...state,penjamin:$('insurance').value});
+        $('queue').textContent = data.nomor_antrean;
+        const fields = {'Kode booking':data.kode_booking,'Poliklinik':data.poliklinik,'Dokter':data.dpjp,'Estimasi':data.estimasi_pelayanan + ' WIB'};
+        $('ticket-detail').replaceChildren(); Object.entries(fields).forEach(([key,value]) => {const dt=document.createElement('dt'),dd=document.createElement('dd');dt.textContent=key;dd.textContent=value;$('ticket-detail').append(dt,dd);});
+        $('receipt').href = data.struk_url; show('ticket');
+        let seconds=60; $('countdown').textContent=seconds; clearInterval(resetTimer); resetTimer=setInterval(() => {$('countdown').textContent=--seconds;if(seconds<=0)home();},1000);
+    } catch(error) {message(error.message);} finally {$('register').disabled=false;}
+};
+$('checkin-form').onsubmit = async event => {
+    event.preventDefault(); const button=event.target.querySelector('[type=submit]'); button.disabled=true;
+    try {const data=await api(urls.checkin,{kode:$('booking').value.trim(),nama_lengkap:$('checkin-name').value,tanggal_lahir:$('checkin-dob').value});$('checkin-result').textContent=data.message;$('booking').value='';clearInterval(resetTimer);resetTimer=setTimeout(home,30000);}
+    catch(error) {message(error.message);} finally {button.disabled=false;}
+};
+</script>
+</body>
+</html>

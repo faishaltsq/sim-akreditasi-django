@@ -884,26 +884,9 @@ def api_parse_qr(request):
 # ── HELPER ANTREAN ────────────────────────────────────────────────────────────
 
 def generate_nomor_antrean(jenis, poliklinik=''):
-    """Generate daily queue number: IGD-001 or JTG-001, etc."""
-    today = timezone.localdate()
-    if jenis == 'IGD':
-        cnt = KunjunganPasien.objects.filter(tanggal_masuk__date=today, jenis_kunjungan='IGD').count() + 1
-        return f"IGD-{cnt:03d}"
-    
-    # Prefix mapping for clinics
-    prefix_map = {
-        'Jantung': 'JTG', 'Paru': 'PAR', 'Penyakit Dalam': 'INT',
-        'Anak': 'PED', 'Bedah': 'BDH', 'Kandungan': 'OBG',
-        'Mata': 'MTA', 'Saraf': 'SRF', 'Gigi': 'GGI',
-        'THT': 'THT', 'Umum': 'UMM',
-    }
-    pfx = 'POL'
-    for k, v in prefix_map.items():
-        if k.lower() in poliklinik.lower():
-            pfx = v
-            break
-    cnt = KunjunganPasien.objects.filter(tanggal_masuk__date=today, poliklinik__icontains=k if 'k' in locals() else '').count() + 1
-    return f"{pfx}-{cnt:03d}"
+    """Reserve from the same daily sequence used by the self-service kiosk."""
+    from .services.antrean import allocate_queue_number
+    return allocate_queue_number(jenis, poliklinik)
 
 
 # ── DASBOR KHUSUS PENDAFTARAN ─────────────────────────────────────────────────

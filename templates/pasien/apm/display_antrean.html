@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Papan Antrean Poliklinik - RS ARima</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #0b132b;
+            --card-bg: #1c2541;
+            --card-border: #3a506b;
+            --accent-color: #48cae4;
+            --highlight-color: #ffd166;
+            --text-main: #f8fafc;
+        }
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            min-height: 100vh;
+            margin: 0;
+            overflow-x: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+        .header-bar {
+            background: linear-gradient(90deg, #1c2541 0%, #0b132b 100%);
+            border-bottom: 2px solid var(--accent-color);
+            padding: 14px 24px;
+        }
+        .clock-badge {
+            background: #000814;
+            color: var(--accent-color);
+            font-family: monospace;
+            font-size: 26px;
+            font-weight: bold;
+            padding: 6px 16px;
+            border-radius: 8px;
+            border: 1px solid var(--card-border);
+            letter-spacing: 2px;
+        }
+        .current-call-card {
+            background: linear-gradient(135deg, #0077b6 0%, #023e8a 100%);
+            border: 3px solid var(--highlight-color);
+            border-radius: 20px;
+            box-shadow: 0 12px 40px rgba(0, 119, 182, 0.4);
+            animation: pulse-glow 3s infinite;
+        }
+        @keyframes pulse-glow {
+            0% { box-shadow: 0 0 15px rgba(255, 209, 102, 0.3); }
+            50% { box-shadow: 0 0 35px rgba(255, 209, 102, 0.7); }
+            100% { box-shadow: 0 0 15px rgba(255, 209, 102, 0.3); }
+        }
+        .big-number {
+            font-size: 72px;
+            font-weight: 900;
+            color: var(--highlight-color);
+            line-height: 1;
+            letter-spacing: 2px;
+            text-shadow: 2px 2px 8px rgba(0,0,0,0.6);
+        }
+        .poli-card {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 14px;
+            transition: all 0.2s ease-in-out;
+        }
+        .poli-card:hover {
+            border-color: var(--accent-color);
+            transform: translateY(-2px);
+        }
+        .poli-nomor {
+            font-size: 32px;
+            font-weight: 800;
+            color: var(--accent-color);
+            font-family: monospace;
+        }
+        .marquee-footer {
+            background: #000814;
+            border-top: 1px solid var(--card-border);
+            padding: 8px 16px;
+            font-size: 15px;
+            color: #94a3b8;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Header -->
+    <div class="header-bar d-flex justify-content-between align-items-center">
+        <div class="d-flex align-items-center gap-3">
+            <div class="bg-primary text-white rounded-3 p-2 fw-bold fs-4">AR</div>
+            <div>
+                <h3 class="mb-0 fw-bold text-white">{{ rs.nama|default:"RSU PKU MUHAMMADIYAH GOMBONG / RS ARima" }}</h3>
+                <div class="small text-info">Papan Antrean Poliklinik Rawat Jalan Terpadu</div>
+            </div>
+        </div>
+        <div class="d-flex align-items-center gap-3">
+            <button id="btnEnableAudio" class="btn btn-outline-warning btn-sm" onclick="enableAudio()">
+                🔊 Aktifkan Suara Panggilan
+            </button>
+            <div id="liveClock" class="clock-badge">--:--:-- WIB</div>
+        </div>
+    </div>
+
+    <!-- Main Content Grid -->
+    <div class="container-fluid flex-grow-1 p-4">
+        <div class="row g-4">
+            <!-- Left Banner: Active Call & Video / Info -->
+            <div class="col-lg-5">
+                <div class="current-call-card p-4 text-center mb-4">
+                    <span class="badge bg-warning text-dark px-3 py-2 fs-6 fw-bold mb-3">SEDANG DIPANGGIL</span>
+                    <div class="text-white-50 small text-uppercase fw-semibold">Nomor Antrean</div>
+                    <div id="activeCallNumber" class="big-number my-2">-</div>
+                    <h2 id="activeCallPoli" class="text-white fw-bold mb-1">Silakan Menunggu</h2>
+                    <h5 id="activeCallDokter" class="text-info fw-normal mb-3">-</h5>
+                    <div class="border-top border-light border-opacity-25 pt-2 mt-2">
+                        <small class="text-white-50">Pasien: </small>
+                        <span id="activeCallPasien" class="fw-bold text-white fs-5">-</span>
+                    </div>
+                </div>
+
+                <!-- Info Box -->
+                <div class="card bg-dark border-secondary p-3 text-white-50">
+                    <h6 class="text-white fw-bold mb-2">📌 Informasi Bagi Pasien:</h6>
+                    <ul class="small ps-3 mb-0">
+                        <li>Harap memperhatikan nomor antrean pada layar monitor dan panggilan audio.</li>
+                        <li>Pastikan telah melakukan <b>Check-In Kiosk APM</b> saat tiba di ruang poliklinik.</li>
+                        <li>Siapkan berkas rujukan dan kartu identitas saat nomor Anda dipanggil.</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Right Grid: All Polikliniks -->
+            <div class="col-lg-7">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="fw-bold text-white mb-0">Daftar Pelayanan Poliklinik</h5>
+                    <small class="text-muted">Auto-refresh setiap 5 detik</small>
+                </div>
+                <div id="poliGrid" class="row g-3">
+                    <!-- Cards will be populated by JS -->
+                    <div class="col-12 text-center py-5 text-muted">
+                        <div class="spinner-border text-info mb-2" role="status"></div>
+                        <div>Memuat data antrean...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer Running Text -->
+    <div class="marquee-footer mt-auto">
+        <marquee behavior="scroll" direction="left" scrollamount="6">
+            Selamat datang di Rumah Sakit ARima. Layanan Pendaftaran Mandiri (APM) buka setiap hari. Utamakan keselamatan dan kenyamanan bersama. Harap kenakan masker bila sedang batuk atau flu. Terima kasih atas kerjasama Anda.
+        </marquee>
+    </div>
+
+    <script>
+        let audioAllowed = false;
+        let lastAnnouncedNumber = '';
+
+        function enableAudio() {
+            audioAllowed = true;
+            const btn = document.getElementById('btnEnableAudio');
+            btn.className = 'btn btn-success btn-sm';
+            btn.innerText = '🔊 Audio Panggilan Aktif';
+            speakText('Audio panggilan antrean telah diaktifkan.');
+        }
+
+        function speakText(text) {
+            if (!audioAllowed || !('speechSynthesis' in window)) return;
+            window.speechSynthesis.cancel();
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.lang = 'id-ID';
+            utterance.rate = 0.95;
+            utterance.pitch = 1.0;
+            window.speechSynthesis.speak(utterance);
+        }
+
+        function escapeHtml(value) {
+            const element = document.createElement('span');
+            element.textContent = String(value ?? '');
+            return element.innerHTML;
+        }
+
+        function updateClock() {
+            const time = new Intl.DateTimeFormat('id-ID', {timeZone:'Asia/Jakarta',hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false}).format(new Date());
+            document.getElementById('liveClock').innerText = time.replaceAll('.', ':') + ' WIB';
+        }
+        setInterval(updateClock, 1000);
+        updateClock();
+
+        async function fetchQueueData() {
+            try {
+                const res = await fetch("{% url 'pasien:antrean_display_api' %}", {cache:'no-store'});
+                const json = await res.json();
+                if (!json.success) return;
+
+                const grid = document.getElementById('poliGrid');
+                let html = '';
+                let latestCall = null;
+
+                json.data.forEach(p => {
+                    const activeNum = p.nomor_sekarang !== '-' ? p.nomor_sekarang : '-';
+                    if (p.nomor_sekarang !== '-' && !latestCall) {
+                        latestCall = p;
+                    }
+
+                    html += `
+                        <div class="col-md-6">
+                            <div class="poli-card p-3">
+                                <div class="d-flex justify-content-between align-items-start mb-2">
+                                    <div class="fw-bold text-white fs-6 text-truncate" style="max-width: 65%;">${escapeHtml(p.nama_poli)}</div>
+                                    <span class="badge bg-secondary">Sisa: ${escapeHtml(p.sisa_antre)}</span>
+                                </div>
+                                <div class="d-flex justify-content-between align-items-end">
+                                    <div>
+                                        <div class="text-white-50" style="font-size: 11px;">Sedang Diperiksa:</div>
+                                        <div class="poli-nomor">${escapeHtml(activeNum)}</div>
+                                    </div>
+                                    <div class="text-end text-white-50" style="font-size: 11px; max-width: 45%;">
+                                        <div class="text-truncate">${escapeHtml(p.dpjp || '-')}</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+
+                grid.innerHTML = html;
+
+                if (latestCall) {
+                    document.getElementById('activeCallNumber').innerText = latestCall.nomor_sekarang;
+                    document.getElementById('activeCallPoli').innerText = latestCall.nama_poli;
+                    document.getElementById('activeCallDokter').innerText = latestCall.dpjp || '-';
+                    document.getElementById('activeCallPasien').innerText = latestCall.nama_pasien || '-';
+
+                    if (latestCall.nomor_sekarang !== '-' && latestCall.nomor_sekarang !== lastAnnouncedNumber) {
+                        lastAnnouncedNumber = latestCall.nomor_sekarang;
+                        const callSpeech = `Nomor antrean, ${latestCall.nomor_sekarang}, silakan menuju ${latestCall.nama_poli}.`;
+                        speakText(callSpeech);
+                    }
+                } else {
+                    document.getElementById('activeCallNumber').innerText = '-';
+                    document.getElementById('activeCallPoli').innerText = 'Silakan Menunggu';
+                    document.getElementById('activeCallDokter').innerText = '-';
+                    document.getElementById('activeCallPasien').innerText = '-';
+                    lastAnnouncedNumber = '';
+                }
+            } catch (err) {
+                console.error("Error loading queue display:", err);
+            }
+        }
+
+        setInterval(fetchQueueData, 5000);
+        fetchQueueData();
+    </script>
+</body>
+</html>
