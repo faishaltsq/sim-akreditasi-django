@@ -2973,8 +2973,15 @@ def asesmen_lampiran_download(request, pk, lampiran_id):
     lap = get_object_or_404(LampiranAsesmen, pk=lampiran_id, kunjungan_id=pk)
     if not can_read_kunjungan(lap.kunjungan, getattr(request.user, 'profile', None)):
         raise PermissionDenied("Anda tidak memiliki akses ke kunjungan unit lain.")
-    resp = FileResponse(lap.file.open('rb'), as_attachment=True, filename=lap.nama_asli)
+    from .services.igd_attachments import attachment_file, PrivateStorageError
+    try:
+        stream = attachment_file(lap)
+    except PrivateStorageError:
+        return HttpResponse('Lampiran sementara tidak tersedia.',status=503)
+    resp = FileResponse(stream, as_attachment=True, filename=lap.nama_asli)
     resp['Content-Type'] = 'application/octet-stream'
+    resp['Cache-Control'] = 'no-store'
+    resp['X-Content-Type-Options'] = 'nosniff'
     return resp
 
 

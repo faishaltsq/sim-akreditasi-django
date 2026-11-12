@@ -275,7 +275,6 @@ def igd_workflow_records(request):
 def igd_workflow_upload(request,pk):
     import hashlib
     from pathlib import Path
-    from django.core.files.storage import default_storage
     from .services.igd_actions import perform_action
     require_rollout()
     uploaded = request.FILES.get('file')
@@ -291,9 +290,8 @@ def igd_workflow_upload(request,pk):
                 'filename':Path(uploaded.name).name,'size':uploaded.size,'sha256':checksum.hexdigest()},
                 request.POST.get('version'),request.POST.get('request_id'),attachment=uploaded)
         except Exception:
-            stored = getattr(uploaded,'_igd_saved_name',None)
-            if stored:
-                default_storage.delete(stored)
+            from .services.igd_attachments import cleanup_attachment
+            cleanup_attachment(uploaded)
             raise
     except WorkflowConflict as exc:
         return JsonResponse({'success':False,'error':str(exc)},status=409)
@@ -310,6 +308,11 @@ def igd_workflow_download(request,pk,attachment_id):
     from .models import LampiranAsesmen
     get_visit(pk,request.user)
     record = get_object_or_404(LampiranAsesmen,pk=attachment_id,kunjungan_id=pk)
-    response = FileResponse(record.file.open('rb'),as_attachment=True,filename=record.nama_asli,content_type='application/octet-stream')
+    from .services.igd_attachments import attachment_file, PrivateStorageError
+    try:
+        stream = attachment_file(record)
+    except PrivateStorageError:
+        return JsonResponse({'success':False,'error':'Lampiran sementara tidak tersedia.'},status=503)
+    response = FileResponse(stream,as_attachment=True,filename=record.nama_asli,content_type='application/octet-stream')
     response['X-Content-Type-Options'] = 'nosniff'
     return response
