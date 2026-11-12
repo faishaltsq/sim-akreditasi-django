@@ -347,10 +347,10 @@ class Command(BaseCommand):
                     cursor.execute(
                         "INSERT INTO akreditasi_framework "
                         "(name, cycle_type, version, created_at) "
-                        "VALUES (%s, %s, %s, CURRENT_TIMESTAMP)",
+                        "VALUES (%s, %s, %s, CURRENT_TIMESTAMP)" + (" RETURNING id" if connection.vendor == 'postgresql' else ''),
                         ['STARKES Edisi 2022 / Kemenkes RI (PDCA)', 'PDCA', '2022'],
                     )
-                    row = (cursor.lastrowid,)
+                    row = cursor.fetchone() if connection.vendor == 'postgresql' else (cursor.lastrowid,)
                 # Read through raw SQL: the ORM selects every model column,
                 # including ones this migration has not created yet.
                 cursor.execute(

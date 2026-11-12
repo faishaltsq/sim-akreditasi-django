@@ -1,0 +1,173 @@
+{
+  "base_commit": "36aa2900c1d0d3d174acfdabede1c09a6b7174b1",
+  "delivery_state": "uncommitted working tree; no push or deployment",
+  "code_fingerprint_sha256": "9677bd5950d43f6083132110038642f98f977b7ae87620458d216c1f3f1863da",
+  "source_hashes": {
+    "accounts/views.py": "aa9c58ec3d692b931cc086cab58f44df8dd5dcf794ae3d47561769e343f0ed29",
+    "akreditasi/management/commands/seed_data.py": "af299c987c2d0ec9c80e5597951a11780bb8234f1030fca471cad5cef61cb8a3",
+    "akreditasi/management/commands/seed_starkes_16_bab.py": "124afce1695d41f8f81654d3f7452521e92ce01db93b5cc7e7b8327d0453ae0b",
+    "akreditasi/management/commands/setup_cssd.py": "4ec464d4825c2aa7cbeb40dd3cca9270b1160f999c069a4e14510587d889b887",
+    "akreditasi/migrations/0061_igd_clinical_workflow.py": "574ccf463d6cea579894bbaa69bc9bcb233379e2e46c4eef8f4be6222297c0cf",
+    "akreditasi/system_models.py": "14c6f3dd561002479cdb503769dbdce1a8f9367955d850b38df159e72a16b58f",
+    "config/settings.py": "97586e279975853db507357031edd7e3e53edd8e3cb024bfad06b4fb7f8ad794",
+    "klinis/services/ai_igd.py": "78c1ef13a8bb87fed1a213e3268462aec7aa38cf44b0acb37cb4aecd5e78681e",
+    "pasien/forms_igd_operations.py": "0dcae0ce3f4ea5850c677bad1fb2f5672b1105eed856cc2b4a090aaf3d4fa84c",
+    "pasien/forms_igd_workflow.py": "cedda3677a1413367e42eb90f02f78ef48f72e64573d66bc6513fe493a3e7235",
+    "pasien/igd_workflow_views.py": "25e5d9a1aef1fbedc8c79e5269ba7803caade38fc984497e28e9da88bf0142d7",
+    "pasien/migrations/0021_explicit_triage_scale.py": "ffd9ffad2575aeacf6c744fef5b8d45ef696a26c62142a9e56a15198178130ab",
+    "pasien/migrations/0022_igd_workflow_foundation.py": "2bca56d08f333dae0c4b80c62a9accc529af208ff721739d5526d1627afda11a",
+    "pasien/migrations/0023_igd_clinical_workflow.py": "d8fbc69711f616b2c2c5d27924853e1736e5a7b67da1ff7291b1399943539706",
+    "pasien/migrations/0024_igd_execution_links.py": "ee34b5d1e05d4cd702dc7b4b83454f45e989d5987d92159a3070b9ca7b4b1297",
+    "pasien/migrations/0025_igd_result_provenance.py": "3adf98457d0939ba401a06d95c43256bb495e4ab69daf4f85751012a96af15a4",
+    "pasien/models.py": "bd32757de479a1068db178e896b36709b841b5dc0ef7da4d2d51b245f52a772c",
+    "pasien/services/igd_actions.py": "9af4243686a35ea3414cb2b312344bd7330d5cc214bf2f39f39f9711e24489b4",
+    "pasien/services/igd_assessment_workflow.py": "b1806eee960f4dff1135a7ea25b774ddadb4cb724d011b0626ebda31de72d926",
+    "pasien/services/igd_attachments.py": "91cca44cbb49ac5171a02cb1d764be87388362979b2b86eb9b2558c82c8d2a4a",
+    "pasien/services/igd_finalization.py": "00b5e132b911e844c227ed110daf2313ad778e26b026f837c9f254ef3157966d",
+    "pasien/services/igd_planning.py": "b82fa305f050230dab212849c421d5e9c0a09152f885b5071be0c9faeb36d3bb",
+    "pasien/tests_igd_workflow.py": "2ca6109003be5d854db0beffa023202918b0a44b8efc877ff12bcca04dc57123",
+    "pasien/tests_igd_workflow_ai.py": "c97897fc17a63c7f3f741570ca58e1cac321fdcc7c4ec376136104fa9e7ca5e5",
+    "pasien/tests_igd_workflow_clinical.py": "0f82b62d718a799b5a3b95140412cfc340ac78c5d94668664db2559272fc1f74",
+    "pasien/tests_igd_workflow_finalization.py": "0ba8cde51109b05dff24c3ae38702b3ed10cada0d6530393b3578a2cf2f7dc30",
+    "pasien/tests_igd_workflow_hardening.py": "2256db655ab7ffa2dd72535d9757be7c6f084623404a53f3d7f51378fa9d72cf",
+    "pasien/tests_igd_workflow_integration.py": "f81ac32a7edec75d0eb30e61c1198c3d34bf30e3a6f446d3cb3570f000350a4a",
+    "pasien/tests_igd_workflow_outcomes.py": "b291df29fd1905909ba3bdbe4f04aa9a043f8a4c52607a832b6d075f4ad9ed2f",
+    "pasien/tests_igd_workflow_ui.py": "662b0bc89771da4c6b14146ced436917c8823b504f33437029feebfddaf341d8",
+    "pasien/tests_revisi_asesmen_medis_igd.py": "450ebf83c85641ea2e23eef8b606dabb56b6b4cbfd857f7961955d98d17e6141",
+    "pasien/triage.py": "147493ea9f3e80add044ca68e30b499900c36a7ae9366f331dde7254294e42b7",
+    "pasien/urls.py": "471f5e8b18061b18e0b17274cdc9e639fd7a9cfcecb4e4b411101b3fdba0261f",
+    "pasien/views.py": "38eee2f7faa4349f58b2250703d596c5ca98a6fd7cb69319ab8a5d70428aa445",
+    "static/js/igd-assessment-workflow.js": "e3156100582ade25ccb1b0daa3a157ab2489a897809a3592147afb93b80c52d1",
+    "static/js/igd-clinical-controls.js": "861f591d6e9bf1a0cab78659e83118716dd7f845bc468409d6153cdfc7127fec",
+    "templates/accounts/admin_control_center.html": "95b6c5722a0d00fb160fc8a434e46c72fabefa49d246ebf75d15185e87bcf276",
+    "templates/pasien/_igd_action_form.html": "6716342548361bb6b30975580f9be87315adf165b845b2df9b0646a9dfbe5217",
+    "templates/pasien/_igd_clinical_widgets.html": "3a07e178376e4aa4222f86d4e2abef380284569458b4f548a238c0ca465bf9f3",
+    "templates/pasien/_igd_workflow_operations.html": "e98d92e2718b49caa8e9aef4a146a1f821028e80908d138da3cde4ddb7af1eeb",
+    "templates/pasien/cetak_asesmen_medis_igd.html": "1b85b637a982ff6305246213b0f01394af13826d778e878376f4270e04332fed",
+    "templates/pasien/igd_dashboard.html": "baa4c699e13bda76703ca371ad02eed9728fbeed573e4ea8824c6468cca451db",
+    "templates/pasien/igd_workflow.html": "7bb66f5df2cc446a8ac668708416331d46ee00273d0a42abb8a03a48532c41e5",
+    "templates/pasien/igd_workflow_records.html": "e118726b2183485e9861c8f96c90145dc2feacf154cbded4c3e89e3294760af4",
+    "templates/pasien/igd_workflow_resume.html": "7ef617864534117939713b5e4444979086b3521ece37acf597f08ef118cf4fcc"
+  },
+  "tests": {
+    "shared": {
+      "scope": [
+        "klinis",
+        "pasien",
+        "akreditasi",
+        "accounts"
+      ],
+      "tests": 1383,
+      "seconds": 874.286,
+      "status": "passed",
+      "log_name": "igd-final-regression.log"
+    },
+    "clinical": {
+      "scope": [
+        "klinis",
+        "pasien"
+      ],
+      "tests": 400,
+      "seconds": 232.668,
+      "status": "passed",
+      "log_name": "igd-final-clinical-regression.log"
+    },
+    "workflow": {
+      "scope": [
+        "eight IGD workflow test modules"
+      ],
+      "tests": 96,
+      "seconds": 9.753,
+      "status": "passed",
+      "log_name": "igd-final-workflow-regression.log"
+    }
+  },
+  "assets": {
+    "js/igd-assessment-workflow.js": {
+      "manifest_target": "js/igd-assessment-workflow.7a96516e9f96.js",
+      "sha256": "e3156100582ade25ccb1b0daa3a157ab2489a897809a3592147afb93b80c52d1",
+      "source_collected_hashed_gzip_identical": true
+    },
+    "js/igd-clinical-controls.js": {
+      "manifest_target": "js/igd-clinical-controls.c082d318c9ca.js",
+      "sha256": "861f591d6e9bf1a0cab78659e83118716dd7f845bc468409d6153cdfc7127fec",
+      "source_collected_hashed_gzip_identical": true
+    }
+  },
+  "migration_operations": {
+    "pasien/migrations/0021_explicit_triage_scale.py": [
+      "AddField",
+      "AlterField"
+    ],
+    "pasien/migrations/0022_igd_workflow_foundation.py": [
+      "CreateModel",
+      "CreateModel",
+      "CreateModel",
+      "CreateModel"
+    ],
+    "pasien/migrations/0023_igd_clinical_workflow.py": [
+      "AddField",
+      "AddField",
+      "AddField",
+      "AddField",
+      "AddField",
+      "AddField",
+      "AddField",
+      "AddField",
+      "AddField",
+      "AddField",
+      "AddField",
+      "AddField",
+      "AddField",
+      "AddField",
+      "AddField",
+      "AlterField"
+    ],
+    "pasien/migrations/0024_igd_execution_links.py": [
+      "AddField",
+      "AddField",
+      "AddField",
+      "AddField",
+      "AlterField"
+    ],
+    "pasien/migrations/0025_igd_result_provenance.py": [
+      "AddField",
+      "AddField",
+      "AlterField"
+    ],
+    "akreditasi/migrations/0061_igd_clinical_workflow.py": [
+      "AddField"
+    ]
+  },
+  "browser": {
+    "geometry_checks": 48,
+    "outcomes": [
+      "PULANG",
+      "NONE",
+      "RANAP",
+      "CONSULT",
+      "TRANSFER",
+      "RUJUK",
+      "MENINGGAL",
+      "PAPS"
+    ],
+    "page_errors": [],
+    "supplemental": {
+      "datetime_local_two_saves_preserve_wib_value": true,
+      "dashboard_shortcuts_7_9_11": true,
+      "page_errors": []
+    }
+  },
+  "postgresql": {
+    "migration_chain": "all operations executed, historical seed INSERT IDs fixed for PostgreSQL; no RunPython skipped",
+    "races": [
+      "stale_initial_draft",
+      "same_order_request",
+      "same_execution_request",
+      "same_finalization_request",
+      "same_bed_transfer"
+    ],
+    "pending_migrations": 0
+  },
+  "verification_scope_note": "The shared run preceded two localized dashboard/tariff-audit additions. The final clinical run includes both additions; the final workflow run also verifies the portable temporary-media test fixture. Final JavaScript changes are covered by browser persistence smoke and asset-byte checks."
+}

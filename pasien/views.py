@@ -5,10 +5,11 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.db import transaction
 from django.db.models import Count, Avg, Sum, Q, F
-from django.http import HttpResponse, JsonResponse, FileResponse
+from django.http import HttpResponse, HttpResponseBadRequest, JsonResponse, FileResponse
 from django.views.decorators.http import require_POST
 from django.core.exceptions import PermissionDenied
 from django.core.paginator import Paginator
+from django.conf import settings
 from pathlib import Path
 import re
 from .decorators import require_patient_module, get_unit_scope, scope_kunjungan_qs, scope_pasien_qs
@@ -1245,6 +1246,7 @@ def igd_dashboard(request):
         'triage_choices':     KunjunganPasien.TRIAGE_CHOICES,
         'kondisi_choices':    DischargeRecord.KONDISI_PULANG,
         'ews_data':           {k.pk: k.hitung_news_score() for k in qs},
+        'igd_workflow_enabled': settings.IGD_WORKFLOW_ENABLED,
         'profesi_cppt':       CPPT.PROFESI,
         'icd10_codes':        ICD10_CODES,
         'sdki_codes':         SDKI_CODES,
@@ -2470,6 +2472,12 @@ def igd_asesmen_medis_save(request, pk):
     """
     k = get_object_or_404(KunjunganPasien, pk=pk)
     if request.method == 'POST':
+        from .triage import validate_triage
+        try:
+            triase = validate_triage(request.POST)
+        except ValueError as exc:
+            return HttpResponseBadRequest(str(exc))
+
         # Section I: Response Time & Cara Datang
         if request.POST.get('cara_datang'):
             k.cara_datang = request.POST.get('cara_datang', '').strip()
@@ -2479,17 +2487,8 @@ def igd_asesmen_medis_save(request, pk):
             k.waktu_disposisi = request.POST.get('waktu_disposisi', '').strip()
 
         # Section II: Triase Kategori (ATS/ESI)
-        triase_kat = request.POST.get('triase_kategori', '').strip()
-        if triase_kat:
-            k.triase_kategori = triase_kat
-            if '1' in triase_kat or '2' in triase_kat:
-                k.triage = 'MERAH'
-            elif '3' in triase_kat:
-                k.triage = 'KUNING'
-            elif '4' in triase_kat:
-                k.triage = 'HIJAU'
-            elif '5' in triase_kat:
-                k.triage = 'HITAM'
+        for field, value in triase.items():
+            setattr(k, field, value)
 
         # Section III: Primary Survey (GCS, TTV, Skala Nyeri, Risiko Jatuh)
         if request.POST.get('gcs_e') and request.POST['gcs_e'].isdigit():

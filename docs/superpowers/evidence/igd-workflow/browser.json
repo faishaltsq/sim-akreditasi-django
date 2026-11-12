@@ -1,0 +1,494 @@
+{
+  "environment": "isolated synthetic SQLite; real browser HTTP/session/CSRF; no live AI provider",
+  "geometry": [
+    {
+      "step": 1,
+      "width": 375,
+      "scrollWidth": 375,
+      "forms": 1,
+      "steps": 11,
+      "actionsOverlap": false,
+      "nestedForms": 0
+    },
+    {
+      "step": 2,
+      "width": 375,
+      "scrollWidth": 375,
+      "forms": 1,
+      "steps": 11,
+      "actionsOverlap": false,
+      "nestedForms": 0
+    },
+    {
+      "step": 3,
+      "width": 375,
+      "scrollWidth": 375,
+      "forms": 1,
+      "steps": 11,
+      "actionsOverlap": false,
+      "nestedForms": 0
+    },
+    {
+      "step": 4,
+      "width": 375,
+      "scrollWidth": 375,
+      "forms": 1,
+      "steps": 11,
+      "actionsOverlap": false,
+      "nestedForms": 0
+    },
+    {
+      "step": 5,
+      "width": 375,
+      "scrollWidth": 375,
+      "forms": 1,
+      "steps": 11,
+      "actionsOverlap": false,
+      "nestedForms": 0
+    },
+    {
+      "step": 6,
+      "width": 375,
+      "scrollWidth": 375,
+      "forms": 1,
+      "steps": 11,
+      "actionsOverlap": false,
+      "nestedForms": 0
+    },
+    {
+      "step": 7,
+      "width": 375,
+      "scrollWidth": 375,
+      "forms": 1,
+      "steps": 11,
+      "actionsOverlap": false,
+      "nestedForms": 0
+    },
+    {
+      "step": 8,
+      "width": 375,
+      "scrollWidth": 375,
+      "forms": 1,
+      "steps": 11,
+      "actionsOverlap": false,
+      "nestedForms": 0
+    },
+    {
+      "step": 9,
+      "width": 375,
+      "scrollWidth": 375,
+      "forms": 1,
+      "steps": 11,
+      "actionsOverlap": false,
+      "nestedForms": 0
+    },
+    {
+      "step": 10,
+      "width": 375,
+      "scrollWidth": 375,
+      "forms": 1,
+      "steps": 11,
+      "actionsOverlap": false,
+      "nestedForms": 0
+    },
+    {
+      "step": 11,
+      "width": 375,
+      "scrollWidth": 375,
+      "forms": 1,
+      "steps": 11,
+      "actionsOverlap": false,
+      "nestedForms": 0
+    },
+    {
+      "step": 1,
+      "width": 768,
+      "scrollWidth": 768,
+      "forms": 1,
+      "steps": 11,
+      "actionsOverlap": false,
+      "nestedForms": 0
+    },
+    {
+      "step": 2,
+      "width": 768,
+      "scrollWidth": 768,
+      "forms": 1,
+      "steps": 11,
+      "actionsOverlap": false,
+      "nestedForms": 0
+    },
+    {
+      "step": 3,
+      "width": 768,
+      "scrollWidth": 768,
+      "forms": 1,
+      "steps": 11,
+      "actionsOverlap": false,
+      "nestedForms": 0
+    },
+    {
+      "step": 4,
+      "width": 768,
+      "scrollWidth": 768,
+      "forms": 1,
+      "steps": 11,
+      "actionsOverlap": false,
+      "nestedForms": 0
+    },
+    {
+      "step": 5,
+      "width": 768,
+      "scrollWidth": 768,
+      "forms": 1,
+      "steps": 11,
+      "actionsOverlap": false,
+      "nestedForms": 0
+    },
+    {
+      "step": 6,
+      "width": 768,
+      "scrollWidth": 768,
+      "forms": 1,
+      "steps": 11,
+      "actionsOverlap": false,
+      "nestedForms": 0
+    },
+    {
+      "step": 7,
+      "width": 768,
+      "scrollWidth": 768,
+      "forms": 1,
+      "steps": 11,
+      "actionsOverlap": false,
+      "nestedForms": 0
+    },
+    {
+      "step": 8,
+      "width": 768,
+      "scrollWidth": 768,
+      "forms": 1,
+      "steps": 11,
+      "actionsOverlap": false,
+      "nestedForms": 0
+    },
+    {
+      "step": 9,
+      "width": 768,
+      "scrollWidth": 768,
+      "forms": 1,
+      "steps": 11,
+      "actionsOverlap": false,
+      "nestedForms": 0
+    },
+    {
+      "step": 10,
+      "width": 768,
+      "scrollWidth": 768,
+      "forms": 1,
+      "steps": 11,
+      "actionsOverlap": false,
+      "nestedForms": 0
+    },
+    {
+      "step": 11,
+      "width": 768,
+      "scrollWidth": 768,
+      "forms": 1,
+      "steps": 11,
+      "actionsOverlap": false,
+      "nestedForms": 0
+    },
+    {
+      "step": 1,
+      "width": 1366,
+      "scrollWidth": 1366,
+      "forms": 1,
+      "steps": 11,
+      "actionsOverlap": false,
+      "nestedForms": 0
+    },
+    {
+      "step": 2,
+      "width": 1366,
+      "scrollWidth": 1366,
+      "forms": 1,
+      "steps": 11,
+      "actionsOverlap": false,
+      "nestedForms": 0
+    },
+    {
+      "step": 3,
+      "width": 1366,
+      "scrollWidth": 1366,
+      "forms": 1,
+      "steps": 11,
+      "actionsOverlap": false,
+      "nestedForms": 0
+    },
+    {
+      "step": 4,
+      "width": 1366,
+      "scrollWidth": 1366,
+      "forms": 1,
+      "steps": 11,
+      "actionsOverlap": false,
+      "nestedForms": 0
+    },
+    {
+      "step": 5,
+      "width": 1366,
+      "scrollWidth": 1366,
+      "forms": 1,
+      "steps": 11,
+      "actionsOverlap": false,
+      "nestedForms": 0
+    },
+    {
+      "step": 6,
+      "width": 1366,
+      "scrollWidth": 1366,
+      "forms": 1,
+      "steps": 11,
+      "actionsOverlap": false,
+      "nestedForms": 0
+    },
+    {
+      "step": 7,
+      "width": 1366,
+      "scrollWidth": 1366,
+      "forms": 1,
+      "steps": 11,
+      "actionsOverlap": false,
+      "nestedForms": 0
+    },
+    {
+      "step": 8,
+      "width": 1366,
+      "scrollWidth": 1366,
+      "forms": 1,
+      "steps": 11,
+      "actionsOverlap": false,
+      "nestedForms": 0
+    },
+    {
+      "step": 9,
+      "width": 1366,
+      "scrollWidth": 1366,
+      "forms": 1,
+      "steps": 11,
+      "actionsOverlap": false,
+      "nestedForms": 0
+    },
+    {
+      "step": 10,
+      "width": 1366,
+      "scrollWidth": 1366,
+      "forms": 1,
+      "steps": 11,
+      "actionsOverlap": false,
+      "nestedForms": 0
+    },
+    {
+      "step": 11,
+      "width": 1366,
+      "scrollWidth": 1366,
+      "forms": 1,
+      "steps": 11,
+      "actionsOverlap": false,
+      "nestedForms": 0
+    },
+    {
+      "step": 6,
+      "width": 375,
+      "scrollWidth": 375,
+      "forms": 1,
+      "steps": 11,
+      "actionsOverlap": false,
+      "nestedForms": 0
+    },
+    {
+      "step": 6,
+      "width": 768,
+      "scrollWidth": 768,
+      "forms": 1,
+      "steps": 11,
+      "actionsOverlap": false,
+      "nestedForms": 0
+    },
+    {
+      "step": 6,
+      "width": 1366,
+      "scrollWidth": 1366,
+      "forms": 1,
+      "steps": 11,
+      "actionsOverlap": false,
+      "nestedForms": 0
+    },
+    {
+      "step": 7,
+      "width": 375,
+      "scrollWidth": 375,
+      "forms": 1,
+      "steps": 11,
+      "actionsOverlap": false,
+      "nestedForms": 0
+    },
+    {
+      "step": 8,
+      "width": 375,
+      "scrollWidth": 375,
+      "forms": 1,
+      "steps": 11,
+      "actionsOverlap": false,
+      "nestedForms": 0
+    },
+    {
+      "step": 9,
+      "width": 375,
+      "scrollWidth": 375,
+      "forms": 1,
+      "steps": 11,
+      "actionsOverlap": false,
+      "nestedForms": 0
+    },
+    {
+      "step": 11,
+      "width": 375,
+      "scrollWidth": 375,
+      "forms": 1,
+      "steps": 11,
+      "actionsOverlap": false,
+      "nestedForms": 0
+    },
+    {
+      "step": 7,
+      "width": 768,
+      "scrollWidth": 768,
+      "forms": 1,
+      "steps": 11,
+      "actionsOverlap": false,
+      "nestedForms": 0
+    },
+    {
+      "step": 8,
+      "width": 768,
+      "scrollWidth": 768,
+      "forms": 1,
+      "steps": 11,
+      "actionsOverlap": false,
+      "nestedForms": 0
+    },
+    {
+      "step": 9,
+      "width": 768,
+      "scrollWidth": 768,
+      "forms": 1,
+      "steps": 11,
+      "actionsOverlap": false,
+      "nestedForms": 0
+    },
+    {
+      "step": 11,
+      "width": 768,
+      "scrollWidth": 768,
+      "forms": 1,
+      "steps": 11,
+      "actionsOverlap": false,
+      "nestedForms": 0
+    },
+    {
+      "step": 7,
+      "width": 1366,
+      "scrollWidth": 1366,
+      "forms": 1,
+      "steps": 11,
+      "actionsOverlap": false,
+      "nestedForms": 0
+    },
+    {
+      "step": 8,
+      "width": 1366,
+      "scrollWidth": 1366,
+      "forms": 1,
+      "steps": 11,
+      "actionsOverlap": false,
+      "nestedForms": 0
+    },
+    {
+      "step": 9,
+      "width": 1366,
+      "scrollWidth": 1366,
+      "forms": 1,
+      "steps": 11,
+      "actionsOverlap": false,
+      "nestedForms": 0
+    },
+    {
+      "step": 11,
+      "width": 1366,
+      "scrollWidth": 1366,
+      "forms": 1,
+      "steps": 11,
+      "actionsOverlap": false,
+      "nestedForms": 0
+    }
+  ],
+  "journeys": [
+    "keyboard save, persistence/reload, network failure/retry, stale rejection, two-record isolation",
+    "zero pain, computed GCS, append-only observation correction",
+    "typed organ findings; anatomy click/add/edit/delete and persisted marker",
+    "explicit pending order, result, protected attachment upload/download",
+    "Manual, mapped Master 3S, AI unavailable without blocking care; planning does not bill",
+    "medical and nursing performed actions; one known-price bill, no invented nursing tariff; authenticated SOAP append",
+    "medical+nursing signatures, preserved unsaved final resume, repeat vitals, final home discharge, immutable print/addendum revision",
+    "unsigned finalization rejected; legacy edit/delete/vital endpoints reject finalized-record overwrite"
+  ],
+  "roles": {
+    "viewer": {
+      "read": 200,
+      "direct_sign": 403
+    },
+    "outsider": {
+      "read": 403,
+      "direct_sign": 403
+    },
+    "admin": {
+      "read": 200,
+      "direct_sign": 403
+    },
+    "anonymous": {
+      "read": 302
+    }
+  },
+  "outcomes": [
+    "PULANG",
+    "NONE",
+    "RANAP",
+    "CONSULT",
+    "TRANSFER",
+    "RUJUK",
+    "MENINGGAL",
+    "PAPS"
+  ],
+  "passed": true,
+  "page_errors": [],
+  "state_counts": {
+    "visits": 10,
+    "workflows": 8,
+    "actions": 2,
+    "billing": 1,
+    "cppt": 3,
+    "orders": 2,
+    "revisions": 9
+  },
+  "probe_notes": [
+    "Operation response capture uses Playwright pass-through to the real server before client navigation.",
+    "Remaining outcomes resumed after opening the native exception-details disclosure."
+  ],
+  "supplemental": {
+    "datetime_local_two_saves_preserve_wib_value": true,
+    "dashboard_shortcuts_7_9_11": true,
+    "page_errors": []
+  }
+}

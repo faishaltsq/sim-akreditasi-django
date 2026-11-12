@@ -71,18 +71,19 @@
 </table>
 
 <!-- II. TRIASE KATEGORI -->
-<div class="section-title">II. TRIASE KATEGORI (ATS / ESI Level)</div>
+<div class="section-title">II. TRIASE — {{ kunjungan.get_triase_skala_display|default:'Sistem historis tidak diketahui' }}</div>
+<p>Warna operasional: {{ kunjungan.get_triage_display|default:'Belum ditetapkan' }}</p>
 <table class="table table-bordered table-form mb-1">
   <tr>
-    <td><span class="ck{% if kunjungan.triase_kategori == 'KATEGORI_1' %} checked{% endif %}"></span> <strong>Kategori 1</strong> (Resusitasi / Merah) — Immediate</td>
-    <td><span class="ck{% if kunjungan.triase_kategori == 'KATEGORI_2' %} checked{% endif %}"></span> <strong>Kategori 2</strong> (Emergensi / Merah) — 10 menit</td>
+    <td><span class="ck{% if kunjungan.triase_kategori == 'KATEGORI_1' %} checked{% endif %}"></span> <strong>Kategori 1</strong></td>
+    <td><span class="ck{% if kunjungan.triase_kategori == 'KATEGORI_2' %} checked{% endif %}"></span> <strong>Kategori 2</strong></td>
   </tr>
   <tr>
-    <td><span class="ck{% if kunjungan.triase_kategori == 'KATEGORI_3' %} checked{% endif %}"></span> <strong>Kategori 3</strong> (Urgensi / Kuning) — 30 menit</td>
-    <td><span class="ck{% if kunjungan.triase_kategori == 'KATEGORI_4' %} checked{% endif %}"></span> <strong>Kategori 4</strong> (Non-Urgensi / Hijau) — 60 menit</td>
+    <td><span class="ck{% if kunjungan.triase_kategori == 'KATEGORI_3' %} checked{% endif %}"></span> <strong>Kategori 3</strong></td>
+    <td><span class="ck{% if kunjungan.triase_kategori == 'KATEGORI_4' %} checked{% endif %}"></span> <strong>Kategori 4</strong></td>
   </tr>
   <tr>
-    <td colspan="2"><span class="ck{% if kunjungan.triase_kategori == 'KATEGORI_5' %} checked{% endif %}"></span> <strong>Kategori 5</strong> (Rutin / Hitam / DOA) — 120 menit</td>
+    <td colspan="2"><span class="ck{% if kunjungan.triase_kategori == 'KATEGORI_5' %} checked{% endif %}"></span> <strong>Kategori 5</strong> — bukan penetapan kematian / DOA</td>
   </tr>
 </table>
 

@@ -6,6 +6,8 @@ from django.db import models
 from django.utils import timezone
 from django.contrib.auth.models import User
 from django.core.validators import MinValueValidator, MaxValueValidator
+from django.core.serializers.json import DjangoJSONEncoder
+from django.core.exceptions import ValidationError
 
 
 # ── 1. Master Pasien ─────────────────────────────────────────────────────────
@@ -409,6 +411,16 @@ class KunjunganPasien(models.Model):
     fisik_exposure         = models.TextField('Exposure / Environmental', blank=True)
     status_psikososial     = models.TextField('Status Psikologis & Sosial-Ekonomi', blank=True)
     status_spiritual       = models.TextField('Status Spiritual & Budaya', blank=True)
+    skrining_alergi_status = models.CharField('Hasil Skrining Alergi', max_length=20, blank=True,
+        choices=[('BELUM', 'Belum dikaji'), ('TIDAK_DIKETAHUI', 'Tidak diketahui'), ('TIDAK_ADA', 'Tidak ada alergi menurut anamnesis'), ('ADA', 'Ada alergi')])
+    alergi_asesmen = models.TextField('Alergi pada Episode Ini', blank=True)
+    hambatan_edukasi = models.TextField('Hambatan Edukasi', blank=True)
+    skrining_gizi_detail = models.JSONField('Jawaban MST', default=dict, blank=True)
+    fisik_lokalis = models.TextField('Status Lokalis', blank=True)
+    penanda_anatomi = models.JSONField('Penanda Anatomi', default=list, blank=True)
+    evaluasi_respon_terapi = models.TextField('Respons Terapi / Evaluasi Akhir', blank=True)
+    diagnosis_mode = models.CharField('Sumber Diagnosis', max_length=8, default='MANUAL', choices=[('MANUAL','Manual'),('MASTER','Master'),('AI','Bantuan AI')])
+    diagnosis_provenance = models.JSONField(default=dict, blank=True)
     skrining_jatuh_skor    = models.PositiveSmallIntegerField('Skor Risiko Jatuh', null=True, blank=True)
     skrining_jatuh_grade   = models.CharField('Grade Risiko Jatuh', max_length=20, blank=True, help_text='RENDAH / SEDANG / TINGGI')
     skrining_gizi_mst      = models.PositiveSmallIntegerField('Skor Skrining Gizi (MST)', null=True, blank=True)
@@ -438,11 +450,11 @@ class KunjunganPasien(models.Model):
         ('POLISI',   'Polisi'),
     ]
     TRIASE_KATEGORI_CHOICES = [
-        ('KATEGORI_1', 'Kategori 1 (Resusitasi / Merah) — Immediate'),
-        ('KATEGORI_2', 'Kategori 2 (Emergensi / Merah) — 10 menit'),
-        ('KATEGORI_3', 'Kategori 3 (Urgensi / Kuning) — 30 menit'),
-        ('KATEGORI_4', 'Kategori 4 (Non-Urgensi / Hijau) — 60 menit'),
-        ('KATEGORI_5', 'Kategori 5 (Rutin / Hitam / DOA) — 120 menit'),
+        ('KATEGORI_1', 'Kategori 1'),
+        ('KATEGORI_2', 'Kategori 2'),
+        ('KATEGORI_3', 'Kategori 3'),
+        ('KATEGORI_4', 'Kategori 4'),
+        ('KATEGORI_5', 'Kategori 5 — bukan penetapan DOA'),
     ]
     KONDISI_AKHIR_CHOICES = [
         ('MEMBAIK',    'Membaik'),
@@ -455,6 +467,9 @@ class KunjunganPasien(models.Model):
         ('RAWAT_JALAN','Rawat Jalan / Pulang'),
         ('RUJUK',      'Rujuk ke RS Lain'),
         ('PAPS',       'Pulang Atas Permintaan Sendiri (PAPS)'),
+        ('KONSUL',     'Konsultasi Poli — Tetap IGD'),
+        ('TRANSFER',   'Transfer Layanan ke Poli'),
+        ('MENINGGAL',  'Meninggal'),
     ]
 
     # I. Data Waktu & Response Time
@@ -463,7 +478,9 @@ class KunjunganPasien(models.Model):
     waktu_disposisi         = models.CharField('Waktu Keputusan Disposisi (WIB)', max_length=10, blank=True)
 
     # II. Triase ATS / ESI Level
-    triase_kategori         = models.CharField('Triase Kategori (ATS/ESI)', max_length=15, choices=TRIASE_KATEGORI_CHOICES, blank=True)
+    triase_skala = models.CharField('Sistem Triase', max_length=10, blank=True,
+                                   choices=[('ATS', 'ATS'), ('ESI', 'ESI'), ('WARNA', 'Warna operasional')])
+    triase_kategori         = models.CharField('Kategori pada Sistem Triase Terpilih', max_length=15, choices=TRIASE_KATEGORI_CHOICES, blank=True)
 
     # III. Primary Survey — GCS detail, Tanda Vital Kualifikasi
     gcs_e                   = models.PositiveSmallIntegerField('GCS E (Eyes)', null=True, blank=True)
@@ -774,6 +791,7 @@ class CPPT(models.Model):
     asesmen        = models.TextField('A — Asesmen (Diagnosa)')
     plan           = models.TextField('P — Plan (Rencana)')
     verifikasi_dpjp = models.BooleanField('Terverifikasi DPJP', default=False)
+    created_by = models.ForeignKey(User, null=True, blank=True, on_delete=models.SET_NULL, related_name='cppt_authored')
     created_at     = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -873,6 +891,8 @@ class OrderPenunjang(models.Model):
     JENIS_CHOICES = [
         ('LAB',       'Laboratorium'),
         ('RADIOLOGI', 'Radiologi / Imaging'),
+        ('EKG',       'Elektrokardiografi'),
+        ('LAINNYA',   'Penunjang Lainnya'),
     ]
     PRIORITAS_CHOICES = [
         ('CITO',  'CITO / Segera'),
@@ -892,6 +912,8 @@ class OrderPenunjang(models.Model):
     status            = models.CharField('Status Order', max_length=15, choices=STATUS_CHOICES, default='ORDERED')
     dokter_pengirim        = models.CharField('Dokter Pengirim', max_length=150, blank=True)
     hasil_pemeriksaan      = models.TextField('Hasil Pemeriksaan', blank=True)
+    result_recorded_by = models.ForeignKey(User, null=True, blank=True, on_delete=models.SET_NULL, related_name='+')
+    result_recorded_at = models.DateTimeField(null=True, blank=True)
     is_critical_value      = models.BooleanField('Critical Value Alert', default=False)
     critical_value_catatan = models.CharField('Catatan Nilai Kritis', max_length=200, blank=True)
     parameter_list         = models.JSONField('Daftar Parameter Pemeriksaan', default=list, blank=True)
@@ -1195,6 +1217,7 @@ class TindakanAsesmen(models.Model):
         ('MASTER', 'Master'),
         ('SARAN', 'Saran Sistem'),
         ('MANUAL', 'Input Manual'),
+        ('AI', 'Bantuan AI yang Diterima'),
     ]
     EP_STATUS = [
         ('TERPENUHI', 'Terpenuhi'),
@@ -1223,6 +1246,13 @@ class TindakanAsesmen(models.Model):
     ep_catatan    = models.TextField('Catatan Bukti EP', blank=True)
     billing_item  = models.OneToOneField(BillingItem, null=True, blank=True,
                                          on_delete=models.SET_NULL, related_name='tindakan_asesmen')
+    execution_status = models.CharField(max_length=10, default='LEGACY', choices=[('LEGACY','Historis'),('PLANNED','Direncanakan'),('PERFORMED','Dilaksanakan'),('CANCELLED','Dibatalkan')])
+    execution_team = models.CharField(max_length=12, blank=True, choices=[('MEDIS','Medis'),('KEPERAWATAN','Keperawatan')])
+    tarif_penjamin = models.CharField(max_length=10, blank=True)
+    quantity = models.DecimalField(max_digits=8, decimal_places=2, default=1)
+    performed_by = models.ForeignKey(User, null=True, blank=True, on_delete=models.SET_NULL, related_name='+')
+    performed_at = models.DateTimeField(null=True, blank=True)
+    execution_cppt = models.ForeignKey(CPPT, null=True, blank=True, on_delete=models.PROTECT, related_name='+')
     diubah_oleh   = models.ForeignKey(User, null=True, blank=True, on_delete=models.SET_NULL,
                                       related_name='tindakan_asesmen_diubah')
     created_at    = models.DateTimeField(auto_now_add=True)
@@ -1248,6 +1278,75 @@ class TindakanAsesmen(models.Model):
 
 
 # ── 12. Anjungan Pendaftaran Mandiri (APM) & Antrean Online ──────────────────
+
+class IgdAssessmentWorkflow(models.Model):
+    signatures = models.JSONField(default=dict, blank=True)
+    exemptions = models.JSONField(default=dict, blank=True)
+    kunjungan = models.OneToOneField(KunjunganPasien, on_delete=models.PROTECT, related_name='igd_workflow')
+    origin_unit = models.ForeignKey('akreditasi.UnitKerja', null=True, on_delete=models.PROTECT)
+    status = models.CharField(max_length=5, choices=[('DRAFT', 'Draft'), ('FINAL', 'Final')], default='DRAFT')
+    version = models.PositiveIntegerField(default=0)
+    last_step = models.PositiveSmallIntegerField(default=1, validators=[MinValueValidator(1), MaxValueValidator(11)])
+    schema_version = models.PositiveSmallIntegerField(default=1)
+    updated_by = models.ForeignKey(User, null=True, on_delete=models.SET_NULL, related_name='+')
+    updated_at = models.DateTimeField(auto_now=True)
+    finalized_by = models.ForeignKey(User, null=True, blank=True, on_delete=models.SET_NULL, related_name='+')
+    finalized_at = models.DateTimeField(null=True, blank=True)
+
+
+class IgdVitalObservation(models.Model):
+    workflow = models.ForeignKey(IgdAssessmentWorkflow, on_delete=models.PROTECT, related_name='observations')
+    phase = models.CharField(max_length=10, choices=[('INITIAL', 'Awal'), ('EVALUATION', 'Evaluasi')])
+    observed_at = models.DateTimeField()
+    recorded_at = models.DateTimeField(auto_now_add=True)
+    recorded_by = models.ForeignKey(User, null=True, on_delete=models.SET_NULL)
+    data = models.JSONField(default=dict, encoder=DjangoJSONEncoder)
+    corrects = models.ForeignKey('self', null=True, blank=True, on_delete=models.PROTECT)
+
+    class Meta:
+        ordering = ['observed_at', 'pk']
+
+    def save(self, *args, **kwargs):
+        if self.pk:
+            raise ValidationError('Observasi tidak dapat ditimpa; catat pengukuran/koreksi baru.')
+        return super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        raise ValidationError('Riwayat observasi tidak dapat dihapus.')
+
+
+class IgdAssessmentRevision(models.Model):
+    workflow = models.ForeignKey(IgdAssessmentWorkflow, on_delete=models.PROTECT, related_name='revisions')
+    revision = models.PositiveIntegerField()
+    snapshot = models.JSONField(encoder=DjangoJSONEncoder)
+    reason = models.TextField(blank=True)
+    signed_by = models.ForeignKey(User, null=True, on_delete=models.SET_NULL)
+    signed_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=['workflow', 'revision'], name='unique_igd_signed_revision')]
+
+    def save(self, *args, **kwargs):
+        if self.pk:
+            raise ValidationError('Revisi bertanda tangan tidak dapat ditimpa.')
+        return super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        raise ValidationError('Revisi bertanda tangan tidak dapat dihapus.')
+
+
+class IgdWorkflowAction(models.Model):
+    workflow = models.ForeignKey(IgdAssessmentWorkflow, on_delete=models.PROTECT, related_name='actions')
+    request_id = models.UUIDField()
+    operation = models.CharField(max_length=30)
+    digest = models.CharField(max_length=64)
+    actor = models.ForeignKey(User, null=True, on_delete=models.SET_NULL)
+    result = models.JSONField(default=dict, encoder=DjangoJSONEncoder)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=['workflow', 'request_id'], name='unique_igd_action_request')]
+
 
 class AntreanHarianCounter(models.Model):
     tanggal = models.DateField()

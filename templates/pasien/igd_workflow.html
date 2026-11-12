@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Alur IGD — {{ kunjungan.no_kunjungan }}{% endblock %}
+{% block page_title %}Asesmen & Pelayanan IGD{% endblock %}
+{% block page_subtitle %}{{ kunjungan.no_kunjungan }} — {{ pasien.nama_lengkap }}{% endblock %}
+{% block extra_css %}
+<style>
+.igd-layout {display:grid;grid-template-columns:minmax(180px,250px) minmax(0,1fr);gap:1.25rem}
+.igd-steps {list-style:none;padding:0;margin:0}.igd-steps a {display:block;padding:.65rem .8rem;border-radius:.5rem;text-decoration:none;overflow-wrap:anywhere}
+.igd-steps a[aria-current="step"] {background:var(--bs-primary,#2563eb);color:white}
+.igd-identity {display:flex;flex-wrap:wrap;gap:.5rem 1.5rem;align-items:center}
+.igd-actions {display:flex;flex-wrap:wrap;gap:.5rem;background:var(--bs-body-bg,white);padding:1rem 0}
+.igd-mobile-nav {display:none}
+.igd-content {min-width:0}.igd-content textarea {max-width:100%}.igd-content .errorlist {color:#b91c1c}
+.igd-content fieldset,.body-map-layout>div{min-width:0}@media(max-width:991px){.igd-content .body-map-layout{grid-template-columns:minmax(0,1fr)}}
+.igd-operation{margin:1rem 0}.igd-operation label{display:block}.igd-operation input:not([type=hidden]):not([type=checkbox]),.igd-operation select,.igd-operation textarea{max-width:100%}.body-map-layout{display:grid;grid-template-columns:minmax(120px,200px) minmax(0,1fr);gap:1rem;margin-top:1rem}#igd-body-map{width:100%;max-height:360px;cursor:crosshair}.igd-marker-row{display:flex;gap:.4rem;flex-wrap:wrap;align-items:center}.igd-marker-row span{flex:1;overflow-wrap:anywhere}.igd-action-summary{overflow-wrap:anywhere}@media(max-width:767px){.body-map-layout{grid-template-columns:minmax(0,1fr)}#igd-body-map{max-height:300px}}
+@media(max-width:767px){.igd-layout{grid-template-columns:minmax(0,1fr)}.igd-steps{display:none}.igd-mobile-nav{display:block}.igd-actions .btn{flex:1 1 120px}}
+</style>
+{% endblock %}
+{% block content %}
+<div id="igd-workflow" data-version="{{ version }}" data-catalogue="{% url 'pasien:igd_workflow_catalogue' kunjungan.pk %}" data-ai="{% url 'pasien:igd_workflow_ai' kunjungan.pk %}">
+<div class="card mb-3"><div class="card-body igd-identity">
+  <strong>{{ pasien.nama_lengkap }}</strong><span>RM {{ pasien.no_rm }}</span><span>{{ pasien.tanggal_lahir|date:"d M Y" }}</span>
+  <span>{{ kunjungan.get_penjamin_display }}</span><span class="badge bg-secondary">{% if workflow %}{{ workflow.status }}{% else %}Belum ada draft{% endif %}</span>
+  <span>Alergi: {% if pasien.has_alergi %}{{ pasien.alergi_obat }} {{ pasien.alergi_lain }}{% else %}Belum terdokumentasi — bukan pernyataan tidak ada alergi{% endif %}</span>
+</div></div>
+<p class="text-muted">Simpan Draft hanya menyimpan dokumentasi. Order, pelaksanaan, persetujuan klinis dan finalisasi merupakan aksi terpisah.</p>
+{% if latest_revision %}<div class="alert alert-success">Dokumentasi FINAL, revisi {{ latest_revision.revision }}. <a href="{% url 'pasien:igd_workflow_resume' kunjungan.pk %}">Lihat snapshot resume</a>. Koreksi dicatat melalui addendum; order ditampilkan sesuai keadaan operasional terkini.</div>{% endif %}
+<p><a href="{% url 'pasien:igd_workflow_records' %}">Rekam Final & Addendum IGD</a></p>
+<div class="igd-layout">
+<nav aria-label="Langkah pelayanan IGD">
+<div class="igd-mobile-nav"><label for="igd-step-select">Pilih langkah</label><select id="igd-step-select" class="form-select">{% for item in steps %}<option value="{{ item.number }}" {% if item.number == step %}selected{% endif %}>{{ item.number }}. {{ item.title }}</option>{% endfor %}</select></div>
+<ol class="igd-steps">
+{% for item in steps %}<li><a href="?step={{ item.number }}" {% if item.number == step %}aria-current="step"{% endif %}>{{ item.number }}. {{ item.title }}</a></li>{% endfor %}
+</ol></nav>
+<section class="igd-content" aria-labelledby="igd-step-title">
+  <h2 id="igd-step-title" class="h5">{{ step }}. {{ step_title }}</h2>
+  <div id="igd-save-status" role="status" aria-live="polite">Versi <span id="igd-version-label">{{ version }}</span>{% if workflow %} · {{ workflow.updated_at|date:"d M Y H:i" }}{% endif %}</div>
+  <div id="igd-errors" class="alert alert-danger mt-2" role="alert" hidden tabindex="-1"></div>
+  <form id="igd-step-form" method="post" action="{% url 'pasien:igd_workflow_draft' kunjungan.pk step %}" data-version="{{ version }}" data-step="{{ step }}">
+    {% csrf_token %}
+    {% for field in form %}{% if field.is_hidden %}{{ field }}{% else %}<div class="my-3">{{ field.label_tag }}{{ field }}{% if field.help_text %}<div class="form-text">{{ field.help_text }}</div>{% endif %}{{ field.errors }}</div>{% endif %}{% endfor %}
+    {% include 'pasien/_igd_clinical_widgets.html' %}
+    {% if step == 4 or step == 10 %}<input id="igd-corrects" name="corrects_id" type="hidden" value=""><label for="observed-at">Waktu pengukuran (WIB; kosong = waktu simpan, atau waktu asli untuk koreksi)</label><input id="observed-at" type="datetime-local" step="1" class="form-control" {% if readonly %}disabled{% endif %} data-observed-at>{% endif %}
+    {% if step == 8 and not readonly %}<div class="card card-body my-3"><h3 class="h6">Bantuan AI — kandidat untuk ditinjau</h3><label for="igd-ai-query">Istilah keluhan tambahan</label><input id="igd-ai-query" class="form-control" maxlength="4000"><button type="button" id="igd-ai-request" class="btn btn-outline-primary mt-2">Minta Saran AI</button><div id="igd-ai-results" class="mt-2" aria-live="polite"></div><input id="igd-ai-ticket" type="hidden" value=""></div><p class="form-text">Manual menerima teks bebas. Master memvalidasi katalog dan pemetaan SDKI → SLKI → SIKI. AI baru diterapkan setelah kandidat diterima dan draft disimpan.</p>{% endif %}
+    {% if step == 1 %}<p class="text-muted">Koreksi identitas dan perubahan penjamin dilakukan melalui admisi dengan tinjauan tarif. Identitas tidak ditimpa melalui formulir klinis.</p>{% endif %}
+    {% if step == 2 %}<p class="form-text">Pilih sistem dan warna secara eksplisit. ATS dan ESI tidak dikonversi otomatis; kategori 5 bukan DOA.</p>{% endif %}
+    {% if step == 9 %}<p>Catatan CPPT dan tagihan yang sudah tercatat ditampilkan di bawah. Navigasi langkah ini tidak mencatat pelaksanaan baru.</p>{% endif %}
+    {% if step == 11 %}<p class="text-muted">Simpan rencana disposisi, tinjau bagian yang belum lengkap, lalu berikan persetujuan sesuai profesi sebelum finalisasi.</p>{% endif %}
+    <div class="igd-actions">
+      {% if step > 1 %}<a class="btn btn-outline-secondary" href="?step={{ step|add:'-1' }}">Sebelumnya</a>{% endif %}
+      {% if not readonly and step != 9 %}<button class="btn btn-outline-primary" type="submit" name="intent" value="save">Simpan Draft</button>{% if step < 11 %}<button class="btn btn-primary" type="submit" name="intent" value="next">Simpan & Selanjutnya</button>{% endif %}{% endif %}
+      {% if step == 9 %}<a class="btn btn-outline-primary" href="?step=10">Lanjut ke Evaluasi</a>{% endif %}
+      <a class="btn btn-outline-secondary" href="{% url 'pasien:igd_dashboard' %}">Dashboard IGD</a>
+    </div>
+  </form>
+  {% include 'pasien/_igd_workflow_operations.html' %}
+  {% if step == 4 or step == 10 %}<h3 class="h6 mt-4">Riwayat Pengukuran</h3>
+  {% for observation in observations %}<article class="card mb-2"><div class="card-body"><strong>{{ observation.get_phase_display }}</strong> · {{ observation.observed_at|date:'d M Y H:i:s' }} · Petugas #{{ observation.recorded_by_id }}{% if observation.corrects_id %} · Koreksi observasi #{{ observation.corrects_id }}{% endif %}<dl>{% for name,value in observation.data.items %}<dt>{{ name }}</dt><dd>{{ value|default_if_none:'Belum diukur' }}</dd>{% endfor %}</dl>
+  {% if not readonly %}{% if step == 4 and observation.phase == 'INITIAL' or step == 10 and observation.phase == 'EVALUATION' %}{{ observation.data|json_script }}<button type="button" class="btn btn-outline-secondary" data-correction="{{ observation.pk }}">Koreksi Pengukuran Ini</button>{% endif %}{% endif %}
+  </div></article>{% empty %}<p>Belum ada observasi bertimestamp. Nilai historis belum dianggap pengukuran baru sampai dikonfirmasi dan disimpan.</p>{% endfor %}{% endif %}
+</section></div></div>
+{% endblock %}
+{% block extra_js %}<script src="{% static 'js/igd-assessment-workflow.js' %}"></script><script src="{% static 'js/igd-clinical-controls.js' %}"></script>{% endblock %}

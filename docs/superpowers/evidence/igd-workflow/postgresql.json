@@ -1,0 +1,92 @@
+{
+  "environment": "isolated PostgreSQL17, loopback-only disposable container",
+  "migration_policy": "full migration chain, no operations skipped",
+  "races": {
+    "stale_initial_draft": [
+      {
+        "status": "saved",
+        "result": {
+          "version": 1
+        }
+      },
+      {
+        "status": "stale"
+      }
+    ],
+    "same_order_request": [
+      {
+        "status": "saved",
+        "result": {
+          "order_id": 2,
+          "version": 1,
+          "replayed": false
+        }
+      },
+      {
+        "status": "saved",
+        "result": {
+          "order_id": 2,
+          "version": 1,
+          "replayed": true
+        }
+      }
+    ],
+    "same_execution_request": [
+      {
+        "status": "saved",
+        "result": {
+          "action_id": 2,
+          "cppt_id": 2,
+          "billing_id": 2,
+          "version": 2,
+          "replayed": false
+        }
+      },
+      {
+        "status": "saved",
+        "result": {
+          "cppt_id": 2,
+          "action_id": 2,
+          "billing_id": 2,
+          "version": 2,
+          "replayed": true
+        }
+      }
+    ],
+    "same_finalization_request": [
+      {
+        "status": "saved",
+        "result": {
+          "revision_id": 3,
+          "outcome": "NONE",
+          "version": 3,
+          "replayed": false
+        }
+      },
+      {
+        "status": "saved",
+        "result": {
+          "outcome": "NONE",
+          "revision_id": 3,
+          "version": 3,
+          "replayed": true
+        }
+      }
+    ],
+    "same_bed_transfer": [
+      {
+        "status": "saved",
+        "result": {
+          "revision_id": 4,
+          "outcome": "RANAP",
+          "version": 3,
+          "replayed": false
+        }
+      },
+      {
+        "status": "invalid"
+      }
+    ]
+  },
+  "pending_migrations": 0
+}

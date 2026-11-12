@@ -58,6 +58,7 @@ class SystemConfig(models.Model):
         ('deepseek-reasoner', 'DeepSeek-R1 Reasoner (Penalaran Klinis Mendalam)'),
     ]
     ai_enabled = models.BooleanField('Aktifkan Asisten AI DeepSeek', default=False)
+    ai_enable_igd = models.BooleanField('AI: Saran Klinis IGD (opt-in)', default=False)
     ai_api_key = models.CharField(
         'DeepSeek API Key', max_length=200, blank=True,
         help_text='Dimulai dengan sk-... Disimpan terenkripsi, tidak pernah dikirim ke frontend.'

@@ -91,6 +91,8 @@ class IgdAsesmenMedisSaveViewTest(TestCase):
         url = reverse('pasien:igd_asesmen_medis_save', args=[self.kunjungan.pk])
         response = self.client.post(url, {
             'cara_datang': 'RUJUKAN',
+            'triase_skala': 'ATS',
+            'triage': 'KUNING',
             'triase_kategori': 'KATEGORI_3',
             'gcs_e': '3', 'gcs_v': '4', 'gcs_m': '5',
             'ttv_sistole': '120', 'ttv_diastole': '80', 'ttv_nadi': '88',

@@ -1,0 +1,5 @@
+<form id="{{ operation }}-form" class="igd-operation" method="post" action="{% url 'pasien:igd_workflow_action' kunjungan.pk %}" data-operation="{{ operation }}">
+{% csrf_token %}{{ operation_form.as_p }}
+{% if operation == 'finalize' %}<label class="d-block mb-3"><input type="checkbox" required id="final-confirm"> Saya meninjau resume, tujuan disposisi, dan dampak finalisasi yang dipilih.</label>{% endif %}
+<button class="btn {% if operation == 'finalize' %}btn-success{% else %}btn-outline-primary{% endif %}" type="submit">{{ button_label }}</button>
+</form>

@@ -1,0 +1,7 @@
+{% extends "base.html" %}
+{% block title %}Rekam Final IGD{% endblock %}
+{% block page_title %}Rekam Final & Addendum IGD{% endblock %}
+{% block content %}<p>Episode final dalam lingkup unit Anda, termasuk setelah pasien dipindahkan dari IGD.</p>
+<div class="table-responsive"><table class="table"><thead><tr><th>Kunjungan</th><th>Pasien (identitas saat ini)</th><th>Waktu Final</th><th>Aksi</th></tr></thead><tbody>
+{% for item in records %}<tr><td>{{ item.kunjungan.no_kunjungan }}</td><td>{{ item.kunjungan.pasien.nama_lengkap }}</td><td>{{ item.finalized_at|date:'d M Y H:i' }}</td><td><a href="{% url 'pasien:igd_workflow_resume' item.kunjungan_id %}">Resume bertanda persetujuan</a> · <a href="{% url 'pasien:igd_workflow' item.kunjungan_id %}?step=11">Riwayat & Addendum</a></td></tr>{% empty %}<tr><td colspan="4">Belum ada episode final pada lingkup unit ini.</td></tr>{% endfor %}</tbody></table></div>
+<a href="{% url 'pasien:igd_dashboard' %}">Dashboard IGD</a>{% endblock %}

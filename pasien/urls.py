@@ -1,10 +1,22 @@
 from django.urls import path
 from . import views
 from . import apm_views
+from . import igd_workflow_views
 
 app_name = 'pasien'
 
 urlpatterns = [
+    path('igd/rekam-final/', igd_workflow_views.igd_workflow_records, name='igd_workflow_records'),
+    path('kunjungan/<int:pk>/asesmen-igd/', igd_workflow_views.igd_workflow, name='igd_workflow'),
+    path('kunjungan/<int:pk>/asesmen-igd/langkah/<int:step>/draft/', igd_workflow_views.igd_workflow_draft, name='igd_workflow_draft'),
+    path('kunjungan/<int:pk>/asesmen-igd/aksi/', igd_workflow_views.igd_workflow_action, name='igd_workflow_action'),
+    path('kunjungan/<int:pk>/asesmen-igd/finalisasi/', igd_workflow_views.igd_workflow_finalize, name='igd_workflow_finalize'),
+    path('kunjungan/<int:pk>/asesmen-igd/addendum/', igd_workflow_views.igd_workflow_addendum, name='igd_workflow_addendum'),
+    path('kunjungan/<int:pk>/asesmen-igd/saran-ai/', igd_workflow_views.igd_workflow_ai, name='igd_workflow_ai'),
+    path('kunjungan/<int:pk>/asesmen-igd/katalog/', igd_workflow_views.igd_workflow_catalogue, name='igd_workflow_catalogue'),
+    path('kunjungan/<int:pk>/asesmen-igd/resume/', igd_workflow_views.igd_workflow_resume, name='igd_workflow_resume'),
+    path('kunjungan/<int:pk>/asesmen-igd/lampiran/', igd_workflow_views.igd_workflow_upload, name='igd_workflow_upload'),
+    path('kunjungan/<int:pk>/asesmen-igd/lampiran/<int:attachment_id>/', igd_workflow_views.igd_workflow_download, name='igd_workflow_download'),
     path('dashboard/', views.dashboard, name='dashboard'),
     path('daftar/', views.pasien_daftar, name='pasien_daftar'),
     path('baru/', views.pasien_daftar_baru, name='pasien_baru'),
@@ -107,3 +119,19 @@ urlpatterns = [
     path('antrean/display/', apm_views.antrean_display_board, name='antrean_display_board'),
     path('antrean/display/api/', apm_views.antrean_display_api, name='antrean_display_api'),
 ]
+
+# Writer lama tidak boleh menimpa episode yang sudah memakai draft berversi.
+from .services.igd_assessment_workflow import legacy_workflow_guard
+
+_WORKFLOW_GUARDED_VIEWS = {
+    'cetak_resume_igd', 'cetak_asesmen_medis_igd', 'asesmen_detail',
+    'kunjungan_disposisi', 'discharge_proses', 'igd_status_update', 'pendaftaran_route',
+    'cppt_tambah', 'igd_cppt_quick_add', 'order_penunjang_buat', 'order_lab_create',
+    'kunjungan_asesmen_awal', 'igd_asesmen_awal_save', 'igd_asesmen_medis_save',
+    'igd_asesmen_copy_prev', 'asesmen_hapus', 'igd_ttv_update', 'pendaftaran_ttv_simpan',
+    'igd_kunjungan_edit', 'igd_kunjungan_batal', 'kunjungan_batal',
+    'asesmen_lampiran_hapus', 'asesmen_lampiran_upload', 'igd_eksekusi_tindakan',
+}
+for _pattern in urlpatterns:
+    if _pattern.name in _WORKFLOW_GUARDED_VIEWS:
+        _pattern.callback = legacy_workflow_guard(_pattern.callback)

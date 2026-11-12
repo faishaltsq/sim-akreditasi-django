@@ -44,6 +44,7 @@ if not SECRET_KEY:
 
 # Default DEBUG: False di production, True di lokal
 DEBUG = os.environ.get('DJANGO_DEBUG', 'False' if IS_PRODUCTION else 'True').lower() in ('true', '1')
+IGD_WORKFLOW_ENABLED = os.environ.get('IGD_WORKFLOW_ENABLED', 'false').lower() in ('true', '1')
 
 ALLOWED_HOSTS = [
     h.strip()

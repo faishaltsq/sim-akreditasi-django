@@ -168,11 +168,11 @@ class Command(BaseCommand):
                             cursor.execute(
                                 '''INSERT INTO akreditasi_standarditem
                                    (category_id, sub_standard, sub_title, code, description, "order")
-                                   VALUES (%s, %s, %s, %s, %s, %s)''',
+                                   VALUES (%s, %s, %s, %s, %s, %s)''' + (' RETURNING id' if connection.vendor == 'postgresql' else ''),
                                 [cat_ppi.id, item_data['sub_standard'], item_data['sub_title'],
                                  ep_code, ep_desc, max_order + ep_count + 1],
                             )
-                            si_id = cursor.lastrowid
+                            si_id = cursor.fetchone()[0] if connection.vendor == 'postgresql' else cursor.lastrowid
                             created = True
                             ep_count += 1
                             si = StandardItem(

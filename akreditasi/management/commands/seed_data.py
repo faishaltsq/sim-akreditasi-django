@@ -409,11 +409,12 @@ class Command(BaseCommand):
                         cursor.execute(
                             f"INSERT INTO {table} "
                             "(code, category_id, sub_standard, sub_title, description, \"order\") "
-                            "VALUES (%s, %s, %s, %s, %s, %s)",
+                            "VALUES (%s, %s, %s, %s, %s, %s)" + (" RETURNING id" if connection.vendor == 'postgresql' else ''),
                             [code, tkrs.pk, sub_std, sub_title, desc, order],
                         )
+                        inserted_id = cursor.fetchone()[0] if connection.vendor == 'postgresql' else cursor.lastrowid
                         item = StandardItem(
-                            pk=cursor.lastrowid, code=code, category=tkrs,
+                            pk=inserted_id, code=code, category=tkrs,
                             sub_standard=sub_std, sub_title=sub_title,
                             description=desc, order=order,
                         )
