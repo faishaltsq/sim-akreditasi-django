@@ -1,0 +1,989 @@
+{
+  "source": "Pemeriksaan Penunjang untuk aplikasi ARima dengan alur cascading dropdown.docx",
+  "sha256": "a42f2b704625b6ff187bce787090909dd3bb0da1c6cfe7b9614c8a6c0433c69f",
+  "version": "DOCX-2026-11-13-STAGING",
+  "nodes": [
+    {
+      "kode": "laboratorium",
+      "nama": "Laboratorium",
+      "level": 1,
+      "parent": null
+    },
+    {
+      "kode": "penunjang-diagnostik",
+      "nama": "Penunjang Diagnostik",
+      "level": 1,
+      "parent": null
+    },
+    {
+      "kode": "laboratorium-laboratorium-klinik",
+      "nama": "Laboratorium Klinik",
+      "level": 2,
+      "parent": "laboratorium"
+    },
+    {
+      "kode": "laboratorium-laboratorium-klinik-hematologi",
+      "nama": "Hematologi",
+      "level": 3,
+      "parent": "laboratorium-laboratorium-klinik"
+    },
+    {
+      "kode": "laboratorium-laboratorium-klinik-kimia-klinik",
+      "nama": "Kimia Klinik",
+      "level": 3,
+      "parent": "laboratorium-laboratorium-klinik"
+    },
+    {
+      "kode": "laboratorium-laboratorium-klinik-imunoserologi",
+      "nama": "Imunoserologi",
+      "level": 3,
+      "parent": "laboratorium-laboratorium-klinik"
+    },
+    {
+      "kode": "laboratorium-laboratorium-klinik-urinalisis",
+      "nama": "Urinalisis",
+      "level": 3,
+      "parent": "laboratorium-laboratorium-klinik"
+    },
+    {
+      "kode": "laboratorium-laboratorium-klinik-mikrobiologi-klinik",
+      "nama": "Mikrobiologi Klinik",
+      "level": 3,
+      "parent": "laboratorium-laboratorium-klinik"
+    },
+    {
+      "kode": "laboratorium-laboratorium-klinik-endokrinologi",
+      "nama": "Endokrinologi",
+      "level": 3,
+      "parent": "laboratorium-laboratorium-klinik"
+    },
+    {
+      "kode": "laboratorium-laboratorium-klinik-feses-rutin",
+      "nama": "Feses Rutin",
+      "level": 3,
+      "parent": "laboratorium-laboratorium-klinik"
+    },
+    {
+      "kode": "laboratorium-laboratorium-klinik-penanda-tumor",
+      "nama": "Penanda Tumor",
+      "level": 3,
+      "parent": "laboratorium-laboratorium-klinik"
+    },
+    {
+      "kode": "laboratorium-laboratorium-klinik-biologi-molekuler",
+      "nama": "Biologi Molekuler",
+      "level": 3,
+      "parent": "laboratorium-laboratorium-klinik"
+    },
+    {
+      "kode": "laboratorium-patologi-anatomi",
+      "nama": "Patologi Anatomi",
+      "level": 2,
+      "parent": "laboratorium"
+    },
+    {
+      "kode": "laboratorium-patologi-anatomi-histopatologi",
+      "nama": "Histopatologi",
+      "level": 3,
+      "parent": "laboratorium-patologi-anatomi"
+    },
+    {
+      "kode": "laboratorium-patologi-anatomi-sitopatologi",
+      "nama": "Sitopatologi",
+      "level": 3,
+      "parent": "laboratorium-patologi-anatomi"
+    },
+    {
+      "kode": "laboratorium-patologi-anatomi-imunohistokimia",
+      "nama": "Imunohistokimia",
+      "level": 3,
+      "parent": "laboratorium-patologi-anatomi"
+    },
+    {
+      "kode": "laboratorium-bank-darah-bdrs",
+      "nama": "Bank Darah (BDRS)",
+      "level": 2,
+      "parent": "laboratorium"
+    },
+    {
+      "kode": "laboratorium-bank-darah-bdrs-kompatibilitas-komponen-darah",
+      "nama": "Kompatibilitas & Komponen Darah",
+      "level": 3,
+      "parent": "laboratorium-bank-darah-bdrs"
+    },
+    {
+      "kode": "penunjang-diagnostik-radiologi-pencitraan",
+      "nama": "Radiologi & Pencitraan",
+      "level": 2,
+      "parent": "penunjang-diagnostik"
+    },
+    {
+      "kode": "penunjang-diagnostik-radiologi-pencitraan-rontgen-x-ray",
+      "nama": "Rontgen (X-Ray)",
+      "level": 3,
+      "parent": "penunjang-diagnostik-radiologi-pencitraan"
+    },
+    {
+      "kode": "penunjang-diagnostik-radiologi-pencitraan-ultrasonografi-usg",
+      "nama": "Ultrasonografi (USG)",
+      "level": 3,
+      "parent": "penunjang-diagnostik-radiologi-pencitraan"
+    },
+    {
+      "kode": "penunjang-diagnostik-radiologi-pencitraan-ct-scan",
+      "nama": "CT Scan",
+      "level": 3,
+      "parent": "penunjang-diagnostik-radiologi-pencitraan"
+    },
+    {
+      "kode": "penunjang-diagnostik-radiologi-pencitraan-mri",
+      "nama": "MRI",
+      "level": 3,
+      "parent": "penunjang-diagnostik-radiologi-pencitraan"
+    },
+    {
+      "kode": "penunjang-diagnostik-radiologi-pencitraan-pencitraan-khusus",
+      "nama": "Pencitraan Khusus",
+      "level": 3,
+      "parent": "penunjang-diagnostik-radiologi-pencitraan"
+    },
+    {
+      "kode": "penunjang-diagnostik-elektrofisiologi",
+      "nama": "Elektrofisiologi",
+      "level": 2,
+      "parent": "penunjang-diagnostik"
+    },
+    {
+      "kode": "penunjang-diagnostik-elektrofisiologi-kardiologi",
+      "nama": "Kardiologi",
+      "level": 3,
+      "parent": "penunjang-diagnostik-elektrofisiologi"
+    },
+    {
+      "kode": "penunjang-diagnostik-elektrofisiologi-neurologi",
+      "nama": "Neurologi",
+      "level": 3,
+      "parent": "penunjang-diagnostik-elektrofisiologi"
+    },
+    {
+      "kode": "penunjang-diagnostik-elektrofisiologi-pulmonologi-tht",
+      "nama": "Pulmonologi & THT",
+      "level": 3,
+      "parent": "penunjang-diagnostik-elektrofisiologi"
+    },
+    {
+      "kode": "penunjang-diagnostik-endoskopi-teropong-saluran",
+      "nama": "Endoskopi / Teropong Saluran",
+      "level": 2,
+      "parent": "penunjang-diagnostik"
+    },
+    {
+      "kode": "penunjang-diagnostik-endoskopi-teropong-saluran-saluran-cerna",
+      "nama": "Saluran Cerna",
+      "level": 3,
+      "parent": "penunjang-diagnostik-endoskopi-teropong-saluran"
+    },
+    {
+      "kode": "penunjang-diagnostik-endoskopi-teropong-saluran-saluran-napas-tht",
+      "nama": "Saluran Napas & THT",
+      "level": 3,
+      "parent": "penunjang-diagnostik-endoskopi-teropong-saluran"
+    },
+    {
+      "kode": "penunjang-diagnostik-endoskopi-teropong-saluran-saluran-kemih-kandungan",
+      "nama": "Saluran Kemih & Kandungan",
+      "level": 3,
+      "parent": "penunjang-diagnostik-endoskopi-teropong-saluran"
+    },
+    {
+      "kode": "penunjang-diagnostik-kedokteran-nuklir",
+      "nama": "Kedokteran Nuklir",
+      "level": 2,
+      "parent": "penunjang-diagnostik"
+    },
+    {
+      "kode": "penunjang-diagnostik-kedokteran-nuklir-sidik-organ-pet",
+      "nama": "Sidik Organ & PET",
+      "level": 3,
+      "parent": "penunjang-diagnostik-kedokteran-nuklir"
+    },
+    {
+      "kode": "laboratorium-rujukan-luar",
+      "nama": "Rujukan Luar",
+      "level": 2,
+      "parent": "laboratorium"
+    },
+    {
+      "kode": "laboratorium-rujukan-luar-pemeriksaan-sesuai-rujukan",
+      "nama": "Pemeriksaan sesuai rujukan",
+      "level": 3,
+      "parent": "laboratorium-rujukan-luar"
+    },
+    {
+      "kode": "laboratorium-lainnya",
+      "nama": "Lainnya",
+      "level": 2,
+      "parent": "laboratorium"
+    },
+    {
+      "kode": "laboratorium-lainnya-pemeriksaan-lainnya",
+      "nama": "Pemeriksaan lainnya",
+      "level": 3,
+      "parent": "laboratorium-lainnya"
+    }
+  ],
+  "items": [
+    {
+      "kode": "laboratorium-laboratorium-klinik-hematologi-1",
+      "nama": "Darah Lengkap (CBC / Hb, Eritrosit, Leukosit, Trombosit, Ht)",
+      "group": "laboratorium-laboratorium-klinik-hematologi",
+      "jenis_order": "LAB",
+      "is_panel": true,
+      "source_note": "Darah Lengkap (CBC / Hb, Eritrosit, Leukosit, Trombosit, Ht)"
+    },
+    {
+      "kode": "laboratorium-laboratorium-klinik-hematologi-2",
+      "nama": "Hitung Jenis Leukosit (Diff Count)",
+      "group": "laboratorium-laboratorium-klinik-hematologi",
+      "jenis_order": "LAB",
+      "is_panel": false,
+      "source_note": "Hitung Jenis Leukosit (Diff Count)"
+    },
+    {
+      "kode": "laboratorium-laboratorium-klinik-hematologi-3",
+      "nama": "Laju Endap Darah (LED / ESR)",
+      "group": "laboratorium-laboratorium-klinik-hematologi",
+      "jenis_order": "LAB",
+      "is_panel": false,
+      "source_note": "Laju Endap Darah (LED / ESR)"
+    },
+    {
+      "kode": "laboratorium-laboratorium-klinik-hematologi-4",
+      "nama": "Faal Hemostasis (PT, aPTT, INR, D-Dimer, Masa Perdarahan/Pembekuan)",
+      "group": "laboratorium-laboratorium-klinik-hematologi",
+      "jenis_order": "LAB",
+      "is_panel": false,
+      "source_note": "Faal Hemostasis (PT, aPTT, INR, D-Dimer, Masa Perdarahan/Pembekuan)"
+    },
+    {
+      "kode": "laboratorium-laboratorium-klinik-hematologi-5",
+      "nama": "Gambaran Darah Tepi (Apusan Darah)",
+      "group": "laboratorium-laboratorium-klinik-hematologi",
+      "jenis_order": "LAB",
+      "is_panel": false,
+      "source_note": "Gambaran Darah Tepi (Apusan Darah)"
+    },
+    {
+      "kode": "laboratorium-laboratorium-klinik-hematologi-6",
+      "nama": "Analisa Hb (Hb Elektroforesis)",
+      "group": "laboratorium-laboratorium-klinik-hematologi",
+      "jenis_order": "LAB",
+      "is_panel": false,
+      "source_note": "Analisa Hb (Hb Elektroforesis)"
+    },
+    {
+      "kode": "laboratorium-laboratorium-klinik-hematologi-7",
+      "nama": "Golongan Darah & Rhesus",
+      "group": "laboratorium-laboratorium-klinik-hematologi",
+      "jenis_order": "LAB",
+      "is_panel": false,
+      "source_note": "Golongan Darah & Rhesus"
+    },
+    {
+      "kode": "laboratorium-laboratorium-klinik-kimia-klinik-1",
+      "nama": "Profil Lipid: Kolesterol Total, LDL, HDL, Trigliserida",
+      "group": "laboratorium-laboratorium-klinik-kimia-klinik",
+      "jenis_order": "LAB",
+      "is_panel": true,
+      "source_note": "Profil Lipid: Kolesterol Total, LDL, HDL, Trigliserida"
+    },
+    {
+      "kode": "laboratorium-laboratorium-klinik-kimia-klinik-2",
+      "nama": "Glukosa: GDS, GDP, GD2PP, HbA1c",
+      "group": "laboratorium-laboratorium-klinik-kimia-klinik",
+      "jenis_order": "LAB",
+      "is_panel": false,
+      "source_note": "Glukosa: GDS, GDP, GD2PP, HbA1c"
+    },
+    {
+      "kode": "laboratorium-laboratorium-klinik-kimia-klinik-3",
+      "nama": "Fungsi Hati: SGOT, SGPT, Bilirubin (Total/Direk/Indirek), ALP, Gamma-GT, Albumin, Protein Total",
+      "group": "laboratorium-laboratorium-klinik-kimia-klinik",
+      "jenis_order": "LAB",
+      "is_panel": false,
+      "source_note": "Fungsi Hati: SGOT, SGPT, Bilirubin (Total/Direk/Indirek), ALP, Gamma-GT, Albumin, Protein Total"
+    },
+    {
+      "kode": "laboratorium-laboratorium-klinik-kimia-klinik-4",
+      "nama": "Fungsi Ginjal: Ureum (BUN), Kreatinin, eGFR, Asam Urat",
+      "group": "laboratorium-laboratorium-klinik-kimia-klinik",
+      "jenis_order": "LAB",
+      "is_panel": false,
+      "source_note": "Fungsi Ginjal: Ureum (BUN), Kreatinin, eGFR, Asam Urat"
+    },
+    {
+      "kode": "laboratorium-laboratorium-klinik-kimia-klinik-5",
+      "nama": "Elektrolit & Gas Darah: Na, K, Cl, Ca, Mg, Analisa Gas Darah (AGD)",
+      "group": "laboratorium-laboratorium-klinik-kimia-klinik",
+      "jenis_order": "LAB",
+      "is_panel": false,
+      "source_note": "Elektrolit & Gas Darah: Na, K, Cl, Ca, Mg, Analisa Gas Darah (AGD)"
+    },
+    {
+      "kode": "laboratorium-laboratorium-klinik-kimia-klinik-6",
+      "nama": "Penanda Jantung: Troponin I/T, CK-MB, NT-proBNP",
+      "group": "laboratorium-laboratorium-klinik-kimia-klinik",
+      "jenis_order": "LAB",
+      "is_panel": false,
+      "source_note": "Penanda Jantung: Troponin I/T, CK-MB, NT-proBNP"
+    },
+    {
+      "kode": "laboratorium-laboratorium-klinik-imunoserologi-1",
+      "nama": "Hepatitis & HIV: HBsAg, Anti-HBs, Anti-HCV, Anti-HIV",
+      "group": "laboratorium-laboratorium-klinik-imunoserologi",
+      "jenis_order": "LAB",
+      "is_panel": false,
+      "source_note": "Hepatitis & HIV: HBsAg, Anti-HBs, Anti-HCV, Anti-HIV"
+    },
+    {
+      "kode": "laboratorium-laboratorium-klinik-imunoserologi-2",
+      "nama": "Infeksi Tropis: Dengue NS1, IgG/IgM Dengue, Widal, Tubex TF, Malaria",
+      "group": "laboratorium-laboratorium-klinik-imunoserologi",
+      "jenis_order": "LAB",
+      "is_panel": false,
+      "source_note": "Infeksi Tropis: Dengue NS1, IgG/IgM Dengue, Widal, Tubex TF, Malaria"
+    },
+    {
+      "kode": "laboratorium-laboratorium-klinik-imunoserologi-3",
+      "nama": "Infeksi Menular & TORCH: VDRL, TPHA, Anti-Toxoplasma, Rubella, CMV, HSV",
+      "group": "laboratorium-laboratorium-klinik-imunoserologi",
+      "jenis_order": "LAB",
+      "is_panel": false,
+      "source_note": "Infeksi Menular & TORCH: VDRL, TPHA, Anti-Toxoplasma, Rubella, CMV, HSV"
+    },
+    {
+      "kode": "laboratorium-laboratorium-klinik-imunoserologi-4",
+      "nama": "Autoimun & Inflamasi: CRP Kuantitatif, Procalcitonin, ANA Test, Rheumatoid Factor (RF)",
+      "group": "laboratorium-laboratorium-klinik-imunoserologi",
+      "jenis_order": "LAB",
+      "is_panel": false,
+      "source_note": "Autoimun & Inflamasi: CRP Kuantitatif, Procalcitonin, ANA Test, Rheumatoid Factor (RF)"
+    },
+    {
+      "kode": "laboratorium-laboratorium-klinik-imunoserologi-5",
+      "nama": "Alergi: IgE Total, IgE Spesifik",
+      "group": "laboratorium-laboratorium-klinik-imunoserologi",
+      "jenis_order": "LAB",
+      "is_panel": false,
+      "source_note": "Alergi: IgE Total, IgE Spesifik"
+    },
+    {
+      "kode": "laboratorium-laboratorium-klinik-urinalisis-1",
+      "nama": "Urine Rutin / Lengkap (Makroskopis, Kimia Carik Celup, Sedimen Mikroskopis)",
+      "group": "laboratorium-laboratorium-klinik-urinalisis",
+      "jenis_order": "LAB",
+      "is_panel": false,
+      "source_note": "Urine Rutin / Lengkap (Makroskopis, Kimia Carik Celup, Sedimen Mikroskopis)"
+    },
+    {
+      "kode": "laboratorium-laboratorium-klinik-urinalisis-2",
+      "nama": "Tes Kehamilan (Beta-hCG Urine)",
+      "group": "laboratorium-laboratorium-klinik-urinalisis",
+      "jenis_order": "LAB",
+      "is_panel": false,
+      "source_note": "Tes Kehamilan (Beta-hCG Urine)"
+    },
+    {
+      "kode": "laboratorium-laboratorium-klinik-urinalisis-3",
+      "nama": "Protein Esbach / Mikroalbuminuria",
+      "group": "laboratorium-laboratorium-klinik-urinalisis",
+      "jenis_order": "LAB",
+      "is_panel": false,
+      "source_note": "Protein Esbach / Mikroalbuminuria"
+    },
+    {
+      "kode": "laboratorium-laboratorium-klinik-urinalisis-4",
+      "nama": "Tes Narkoba Urine (Panel 3 / 5 / 6 Parameter)",
+      "group": "laboratorium-laboratorium-klinik-urinalisis",
+      "jenis_order": "LAB",
+      "is_panel": true,
+      "source_note": "Tes Narkoba Urine (Panel 3 / 5 / 6 Parameter)"
+    },
+    {
+      "kode": "laboratorium-laboratorium-klinik-mikrobiologi-klinik-1",
+      "nama": "Pewarnaan Gram",
+      "group": "laboratorium-laboratorium-klinik-mikrobiologi-klinik",
+      "jenis_order": "LAB",
+      "is_panel": false,
+      "source_note": "Pewarnaan Gram"
+    },
+    {
+      "kode": "laboratorium-laboratorium-klinik-mikrobiologi-klinik-2",
+      "nama": "Pemeriksaan BTA (Sputum / Dahak TBC)",
+      "group": "laboratorium-laboratorium-klinik-mikrobiologi-klinik",
+      "jenis_order": "LAB",
+      "is_panel": false,
+      "source_note": "Pemeriksaan BTA (Sputum / Dahak TBC)"
+    },
+    {
+      "kode": "laboratorium-laboratorium-klinik-mikrobiologi-klinik-3",
+      "nama": "Pemeriksaan Jamur (KOH)",
+      "group": "laboratorium-laboratorium-klinik-mikrobiologi-klinik",
+      "jenis_order": "LAB",
+      "is_panel": false,
+      "source_note": "Pemeriksaan Jamur (KOH)"
+    },
+    {
+      "kode": "laboratorium-laboratorium-klinik-mikrobiologi-klinik-4",
+      "nama": "Kultur & Uji Resistensi Antibiotik (Darah / Urine / Sputum / Pus)",
+      "group": "laboratorium-laboratorium-klinik-mikrobiologi-klinik",
+      "jenis_order": "LAB",
+      "is_panel": false,
+      "source_note": "Kultur & Uji Resistensi Antibiotik (Darah / Urine / Sputum / Pus)"
+    },
+    {
+      "kode": "laboratorium-laboratorium-klinik-endokrinologi-1",
+      "nama": "Panel Tiroid: TSH, Free T4 (FT4), Free T3 (FT3)",
+      "group": "laboratorium-laboratorium-klinik-endokrinologi",
+      "jenis_order": "LAB",
+      "is_panel": true,
+      "source_note": "Panel Tiroid: TSH, Free T4 (FT4), Free T3 (FT3)"
+    },
+    {
+      "kode": "laboratorium-laboratorium-klinik-endokrinologi-2",
+      "nama": "Panel Reproduksi: FSH, LH, Estradiol, Progesteron, Testosteron, Prolaktin, AMH",
+      "group": "laboratorium-laboratorium-klinik-endokrinologi",
+      "jenis_order": "LAB",
+      "is_panel": true,
+      "source_note": "Panel Reproduksi: FSH, LH, Estradiol, Progesteron, Testosteron, Prolaktin, AMH"
+    },
+    {
+      "kode": "laboratorium-laboratorium-klinik-endokrinologi-3",
+      "nama": "Metabolik: Kortisol, Insulin Puasa",
+      "group": "laboratorium-laboratorium-klinik-endokrinologi",
+      "jenis_order": "LAB",
+      "is_panel": false,
+      "source_note": "Metabolik: Kortisol, Insulin Puasa"
+    },
+    {
+      "kode": "laboratorium-laboratorium-klinik-feses-rutin-1",
+      "nama": "Feses Lengkap (Makroskopis & Mikroskopis)",
+      "group": "laboratorium-laboratorium-klinik-feses-rutin",
+      "jenis_order": "LAB",
+      "is_panel": false,
+      "source_note": "Feses Lengkap (Makroskopis & Mikroskopis)"
+    },
+    {
+      "kode": "laboratorium-laboratorium-klinik-feses-rutin-2",
+      "nama": "Darah Samar Feses (Fecal Occult Blood Test / FOBT)",
+      "group": "laboratorium-laboratorium-klinik-feses-rutin",
+      "jenis_order": "LAB",
+      "is_panel": false,
+      "source_note": "Darah Samar Feses (Fecal Occult Blood Test / FOBT)"
+    },
+    {
+      "kode": "laboratorium-laboratorium-klinik-penanda-tumor-1",
+      "nama": "AFP (Alpha-Fetoprotein - Hati)",
+      "group": "laboratorium-laboratorium-klinik-penanda-tumor",
+      "jenis_order": "LAB",
+      "is_panel": false,
+      "source_note": "AFP (Alpha-Fetoprotein - Hati)"
+    },
+    {
+      "kode": "laboratorium-laboratorium-klinik-penanda-tumor-2",
+      "nama": "CEA (Kolorektal / Saluran Cerna)",
+      "group": "laboratorium-laboratorium-klinik-penanda-tumor",
+      "jenis_order": "LAB",
+      "is_panel": false,
+      "source_note": "CEA (Kolorektal / Saluran Cerna)"
+    },
+    {
+      "kode": "laboratorium-laboratorium-klinik-penanda-tumor-3",
+      "nama": "PSA Total / Free PSA (Prostat)",
+      "group": "laboratorium-laboratorium-klinik-penanda-tumor",
+      "jenis_order": "LAB",
+      "is_panel": false,
+      "source_note": "PSA Total / Free PSA (Prostat)"
+    },
+    {
+      "kode": "laboratorium-laboratorium-klinik-penanda-tumor-4",
+      "nama": "CA 125 (Ovarium)",
+      "group": "laboratorium-laboratorium-klinik-penanda-tumor",
+      "jenis_order": "LAB",
+      "is_panel": false,
+      "source_note": "CA 125 (Ovarium)"
+    },
+    {
+      "kode": "laboratorium-laboratorium-klinik-penanda-tumor-5",
+      "nama": "CA 15-3 (Payudara)",
+      "group": "laboratorium-laboratorium-klinik-penanda-tumor",
+      "jenis_order": "LAB",
+      "is_panel": false,
+      "source_note": "CA 15-3 (Payudara)"
+    },
+    {
+      "kode": "laboratorium-laboratorium-klinik-penanda-tumor-6",
+      "nama": "CA 19-9 (Pankreas)",
+      "group": "laboratorium-laboratorium-klinik-penanda-tumor",
+      "jenis_order": "LAB",
+      "is_panel": false,
+      "source_note": "CA 19-9 (Pankreas)"
+    },
+    {
+      "kode": "laboratorium-laboratorium-klinik-biologi-molekuler-1",
+      "nama": "Tes Cepat Molekuler (TCM / GeneXpert TBC)",
+      "group": "laboratorium-laboratorium-klinik-biologi-molekuler",
+      "jenis_order": "LAB",
+      "is_panel": false,
+      "source_note": "Tes Cepat Molekuler (TCM / GeneXpert TBC)"
+    },
+    {
+      "kode": "laboratorium-laboratorium-klinik-biologi-molekuler-2",
+      "nama": "PCR Kuantitatif (HBV-DNA, HCV-RNA, HIV-RNA, HPV-DNA)",
+      "group": "laboratorium-laboratorium-klinik-biologi-molekuler",
+      "jenis_order": "LAB",
+      "is_panel": false,
+      "source_note": "PCR Kuantitatif (HBV-DNA, HCV-RNA, HIV-RNA, HPV-DNA)"
+    },
+    {
+      "kode": "laboratorium-patologi-anatomi-histopatologi-1",
+      "nama": "Biopsi Jaringan Kecil / Sedang / Besar",
+      "group": "laboratorium-patologi-anatomi-histopatologi",
+      "jenis_order": "LAB",
+      "is_panel": false,
+      "source_note": "Biopsi Jaringan Kecil / Sedang / Besar"
+    },
+    {
+      "kode": "laboratorium-patologi-anatomi-histopatologi-2",
+      "nama": "Pemeriksaan Jaringan Operasi (Potong Beku / Frozen Section)",
+      "group": "laboratorium-patologi-anatomi-histopatologi",
+      "jenis_order": "LAB",
+      "is_panel": false,
+      "source_note": "Pemeriksaan Jaringan Operasi (Potong Beku / Frozen Section)"
+    },
+    {
+      "kode": "laboratorium-patologi-anatomi-sitopatologi-1",
+      "nama": "Pap Smear (Konvensional / Liquid-Based Cytology)",
+      "group": "laboratorium-patologi-anatomi-sitopatologi",
+      "jenis_order": "LAB",
+      "is_panel": false,
+      "source_note": "Pap Smear (Konvensional / Liquid-Based Cytology)"
+    },
+    {
+      "kode": "laboratorium-patologi-anatomi-sitopatologi-2",
+      "nama": "FNAB (Fine Needle Aspiration Biopsy)",
+      "group": "laboratorium-patologi-anatomi-sitopatologi",
+      "jenis_order": "LAB",
+      "is_panel": false,
+      "source_note": "FNAB (Fine Needle Aspiration Biopsy)"
+    },
+    {
+      "kode": "laboratorium-patologi-anatomi-sitopatologi-3",
+      "nama": "Sitologi Cairan Tubuh (Pleura, Ascites, Sputum)",
+      "group": "laboratorium-patologi-anatomi-sitopatologi",
+      "jenis_order": "LAB",
+      "is_panel": false,
+      "source_note": "Sitologi Cairan Tubuh (Pleura, Ascites, Sputum)"
+    },
+    {
+      "kode": "laboratorium-patologi-anatomi-imunohistokimia-1",
+      "nama": "Panel Kanker Payudara (ER, PR, HER2, Ki-67)",
+      "group": "laboratorium-patologi-anatomi-imunohistokimia",
+      "jenis_order": "LAB",
+      "is_panel": true,
+      "source_note": "Panel Kanker Payudara (ER, PR, HER2, Ki-67)"
+    },
+    {
+      "kode": "laboratorium-patologi-anatomi-imunohistokimia-2",
+      "nama": "Panel Limfoma / Jaringan Lunak",
+      "group": "laboratorium-patologi-anatomi-imunohistokimia",
+      "jenis_order": "LAB",
+      "is_panel": true,
+      "source_note": "Panel Limfoma / Jaringan Lunak"
+    },
+    {
+      "kode": "laboratorium-bank-darah-bdrs-kompatibilitas-komponen-darah-1",
+      "nama": "Uji Silang Serasi (Crossmatch)",
+      "group": "laboratorium-bank-darah-bdrs-kompatibilitas-komponen-darah",
+      "jenis_order": "LAB",
+      "is_panel": false,
+      "source_note": "Uji Silang Serasi (Crossmatch)"
+    },
+    {
+      "kode": "laboratorium-bank-darah-bdrs-kompatibilitas-komponen-darah-2",
+      "nama": "Permintaan Komponen Darah (PRC, TC, FFP, Whole Blood)",
+      "group": "laboratorium-bank-darah-bdrs-kompatibilitas-komponen-darah",
+      "jenis_order": "LAB",
+      "is_panel": false,
+      "source_note": "Permintaan Komponen Darah (PRC, TC, FFP, Whole Blood)"
+    },
+    {
+      "kode": "laboratorium-bank-darah-bdrs-kompatibilitas-komponen-darah-3",
+      "nama": "Coombs Test (Direct / Indirect)",
+      "group": "laboratorium-bank-darah-bdrs-kompatibilitas-komponen-darah",
+      "jenis_order": "LAB",
+      "is_panel": false,
+      "source_note": "Coombs Test (Direct / Indirect)"
+    },
+    {
+      "kode": "penunjang-diagnostik-radiologi-pencitraan-rontgen-x-ray-1",
+      "nama": "Thorax (PA / AP / Lateral)",
+      "group": "penunjang-diagnostik-radiologi-pencitraan-rontgen-x-ray",
+      "jenis_order": "RADIOLOGI",
+      "is_panel": false,
+      "source_note": "Thorax (PA / AP / Lateral)"
+    },
+    {
+      "kode": "penunjang-diagnostik-radiologi-pencitraan-rontgen-x-ray-2",
+      "nama": "Abdomen Polos / 3 Posisi",
+      "group": "penunjang-diagnostik-radiologi-pencitraan-rontgen-x-ray",
+      "jenis_order": "RADIOLOGI",
+      "is_panel": false,
+      "source_note": "Abdomen Polos / 3 Posisi"
+    },
+    {
+      "kode": "penunjang-diagnostik-radiologi-pencitraan-rontgen-x-ray-3",
+      "nama": "BNO / BNO-IVP",
+      "group": "penunjang-diagnostik-radiologi-pencitraan-rontgen-x-ray",
+      "jenis_order": "RADIOLOGI",
+      "is_panel": false,
+      "source_note": "BNO / BNO-IVP"
+    },
+    {
+      "kode": "penunjang-diagnostik-radiologi-pencitraan-rontgen-x-ray-4",
+      "nama": "Cranium (Kepala) & Sinus Paranasal",
+      "group": "penunjang-diagnostik-radiologi-pencitraan-rontgen-x-ray",
+      "jenis_order": "RADIOLOGI",
+      "is_panel": false,
+      "source_note": "Cranium (Kepala) & Sinus Paranasal"
+    },
+    {
+      "kode": "penunjang-diagnostik-radiologi-pencitraan-rontgen-x-ray-5",
+      "nama": "Vertebrae (Cervical / Thoracal / Lumbosacral)",
+      "group": "penunjang-diagnostik-radiologi-pencitraan-rontgen-x-ray",
+      "jenis_order": "RADIOLOGI",
+      "is_panel": false,
+      "source_note": "Vertebrae (Cervical / Thoracal / Lumbosacral)"
+    },
+    {
+      "kode": "penunjang-diagnostik-radiologi-pencitraan-rontgen-x-ray-6",
+      "nama": "Ekstremitas Atas & Bawah (Manus, Antebrachii, Humerus, Femur, Cruris, Pedis)",
+      "group": "penunjang-diagnostik-radiologi-pencitraan-rontgen-x-ray",
+      "jenis_order": "RADIOLOGI",
+      "is_panel": false,
+      "source_note": "Ekstremitas Atas & Bawah (Manus, Antebrachii, Humerus, Femur, Cruris, Pedis)"
+    },
+    {
+      "kode": "penunjang-diagnostik-radiologi-pencitraan-ultrasonografi-usg-1",
+      "nama": "USG Abdomen Atas / Bawah / Lengkap",
+      "group": "penunjang-diagnostik-radiologi-pencitraan-ultrasonografi-usg",
+      "jenis_order": "RADIOLOGI",
+      "is_panel": false,
+      "source_note": "USG Abdomen Atas / Bawah / Lengkap"
+    },
+    {
+      "kode": "penunjang-diagnostik-radiologi-pencitraan-ultrasonografi-usg-2",
+      "nama": "USG Urologi (Ginjal, Buli, Prostat)",
+      "group": "penunjang-diagnostik-radiologi-pencitraan-ultrasonografi-usg",
+      "jenis_order": "RADIOLOGI",
+      "is_panel": false,
+      "source_note": "USG Urologi (Ginjal, Buli, Prostat)"
+    },
+    {
+      "kode": "penunjang-diagnostik-radiologi-pencitraan-ultrasonografi-usg-3",
+      "nama": "USG Thyroid / Leher",
+      "group": "penunjang-diagnostik-radiologi-pencitraan-ultrasonografi-usg",
+      "jenis_order": "RADIOLOGI",
+      "is_panel": false,
+      "source_note": "USG Thyroid / Leher"
+    },
+    {
+      "kode": "penunjang-diagnostik-radiologi-pencitraan-ultrasonografi-usg-4",
+      "nama": "USG Mammae (Payudara)",
+      "group": "penunjang-diagnostik-radiologi-pencitraan-ultrasonografi-usg",
+      "jenis_order": "RADIOLOGI",
+      "is_panel": false,
+      "source_note": "USG Mammae (Payudara)"
+    },
+    {
+      "kode": "penunjang-diagnostik-radiologi-pencitraan-ultrasonografi-usg-5",
+      "nama": "USG Obstetri / Ginekologi (Kehamilan / Transvaginal)",
+      "group": "penunjang-diagnostik-radiologi-pencitraan-ultrasonografi-usg",
+      "jenis_order": "RADIOLOGI",
+      "is_panel": false,
+      "source_note": "USG Obstetri / Ginekologi (Kehamilan / Transvaginal)"
+    },
+    {
+      "kode": "penunjang-diagnostik-radiologi-pencitraan-ultrasonografi-usg-6",
+      "nama": "USG Doppler Vaskular (Karotis / Ekstremitas)",
+      "group": "penunjang-diagnostik-radiologi-pencitraan-ultrasonografi-usg",
+      "jenis_order": "RADIOLOGI",
+      "is_panel": false,
+      "source_note": "USG Doppler Vaskular (Karotis / Ekstremitas)"
+    },
+    {
+      "kode": "penunjang-diagnostik-radiologi-pencitraan-ultrasonografi-usg-7",
+      "nama": "Echocardiography (USG Jantung)",
+      "group": "penunjang-diagnostik-radiologi-pencitraan-ultrasonografi-usg",
+      "jenis_order": "RADIOLOGI",
+      "is_panel": false,
+      "source_note": "Echocardiography (USG Jantung)"
+    },
+    {
+      "kode": "penunjang-diagnostik-radiologi-pencitraan-ct-scan-1",
+      "nama": "CT Scan Kepala (Polos / Kontras)",
+      "group": "penunjang-diagnostik-radiologi-pencitraan-ct-scan",
+      "jenis_order": "RADIOLOGI",
+      "is_panel": false,
+      "source_note": "CT Scan Kepala (Polos / Kontras)"
+    },
+    {
+      "kode": "penunjang-diagnostik-radiologi-pencitraan-ct-scan-2",
+      "nama": "CT Scan Thorax (Polos / Kontras / Low-Dose)",
+      "group": "penunjang-diagnostik-radiologi-pencitraan-ct-scan",
+      "jenis_order": "RADIOLOGI",
+      "is_panel": false,
+      "source_note": "CT Scan Thorax (Polos / Kontras / Low-Dose)"
+    },
+    {
+      "kode": "penunjang-diagnostik-radiologi-pencitraan-ct-scan-3",
+      "nama": "CT Scan Abdomen & Pelvis (Polos / Kontras)",
+      "group": "penunjang-diagnostik-radiologi-pencitraan-ct-scan",
+      "jenis_order": "RADIOLOGI",
+      "is_panel": false,
+      "source_note": "CT Scan Abdomen & Pelvis (Polos / Kontras)"
+    },
+    {
+      "kode": "penunjang-diagnostik-radiologi-pencitraan-ct-scan-4",
+      "nama": "CT Angiografi (CTA)",
+      "group": "penunjang-diagnostik-radiologi-pencitraan-ct-scan",
+      "jenis_order": "RADIOLOGI",
+      "is_panel": false,
+      "source_note": "CT Angiografi (CTA)"
+    },
+    {
+      "kode": "penunjang-diagnostik-radiologi-pencitraan-mri-1",
+      "nama": "MRI Kepala / Brain (Polos / Kontras)",
+      "group": "penunjang-diagnostik-radiologi-pencitraan-mri",
+      "jenis_order": "RADIOLOGI",
+      "is_panel": false,
+      "source_note": "MRI Kepala / Brain (Polos / Kontras)"
+    },
+    {
+      "kode": "penunjang-diagnostik-radiologi-pencitraan-mri-2",
+      "nama": "MRI Spine (Cervical / Thoracal / Lumbal)",
+      "group": "penunjang-diagnostik-radiologi-pencitraan-mri",
+      "jenis_order": "RADIOLOGI",
+      "is_panel": false,
+      "source_note": "MRI Spine (Cervical / Thoracal / Lumbal)"
+    },
+    {
+      "kode": "penunjang-diagnostik-radiologi-pencitraan-mri-3",
+      "nama": "MRI Muskuloskeletal (Genu / Shoulder / Ankle)",
+      "group": "penunjang-diagnostik-radiologi-pencitraan-mri",
+      "jenis_order": "RADIOLOGI",
+      "is_panel": false,
+      "source_note": "MRI Muskuloskeletal (Genu / Shoulder / Ankle)"
+    },
+    {
+      "kode": "penunjang-diagnostik-radiologi-pencitraan-mri-4",
+      "nama": "MRCP (Magnetic Resonance Cholangiopancreatography)",
+      "group": "penunjang-diagnostik-radiologi-pencitraan-mri",
+      "jenis_order": "RADIOLOGI",
+      "is_panel": false,
+      "source_note": "MRCP (Magnetic Resonance Cholangiopancreatography)"
+    },
+    {
+      "kode": "penunjang-diagnostik-radiologi-pencitraan-pencitraan-khusus-1",
+      "nama": "Mammografi",
+      "group": "penunjang-diagnostik-radiologi-pencitraan-pencitraan-khusus",
+      "jenis_order": "RADIOLOGI",
+      "is_panel": false,
+      "source_note": "Mammografi"
+    },
+    {
+      "kode": "penunjang-diagnostik-radiologi-pencitraan-pencitraan-khusus-2",
+      "nama": "Bone Mineral Densitometry (BMD / Densitas Tulang)",
+      "group": "penunjang-diagnostik-radiologi-pencitraan-pencitraan-khusus",
+      "jenis_order": "RADIOLOGI",
+      "is_panel": false,
+      "source_note": "Bone Mineral Densitometry (BMD / Densitas Tulang)"
+    },
+    {
+      "kode": "penunjang-diagnostik-radiologi-pencitraan-pencitraan-khusus-3",
+      "nama": "Panoramic & Cephalometri (Gigi)",
+      "group": "penunjang-diagnostik-radiologi-pencitraan-pencitraan-khusus",
+      "jenis_order": "RADIOLOGI",
+      "is_panel": false,
+      "source_note": "Panoramic & Cephalometri (Gigi)"
+    },
+    {
+      "kode": "penunjang-diagnostik-elektrofisiologi-kardiologi-1",
+      "nama": "Elektrokardiogram (EKG 12-Lead)",
+      "group": "penunjang-diagnostik-elektrofisiologi-kardiologi",
+      "jenis_order": "EKG",
+      "is_panel": false,
+      "source_note": "Elektrokardiogram (EKG 12-Lead)"
+    },
+    {
+      "kode": "penunjang-diagnostik-elektrofisiologi-kardiologi-2",
+      "nama": "Treadmill Test (Uji Latih Jantung)",
+      "group": "penunjang-diagnostik-elektrofisiologi-kardiologi",
+      "jenis_order": "LAINNYA",
+      "is_panel": false,
+      "source_note": "Treadmill Test (Uji Latih Jantung)"
+    },
+    {
+      "kode": "penunjang-diagnostik-elektrofisiologi-kardiologi-3",
+      "nama": "Holter Monitoring (24 Jam / 48 Jam)",
+      "group": "penunjang-diagnostik-elektrofisiologi-kardiologi",
+      "jenis_order": "LAINNYA",
+      "is_panel": false,
+      "source_note": "Holter Monitoring (24 Jam / 48 Jam)"
+    },
+    {
+      "kode": "penunjang-diagnostik-elektrofisiologi-neurologi-1",
+      "nama": "Elektroensefalogram (EEG)",
+      "group": "penunjang-diagnostik-elektrofisiologi-neurologi",
+      "jenis_order": "LAINNYA",
+      "is_panel": false,
+      "source_note": "Elektroensefalogram (EEG)"
+    },
+    {
+      "kode": "penunjang-diagnostik-elektrofisiologi-neurologi-2",
+      "nama": "Elektromiografi (EMG) & Kecepatan Hantar Saraf (KHS)",
+      "group": "penunjang-diagnostik-elektrofisiologi-neurologi",
+      "jenis_order": "LAINNYA",
+      "is_panel": false,
+      "source_note": "Elektromiografi (EMG) & Kecepatan Hantar Saraf (KHS)"
+    },
+    {
+      "kode": "penunjang-diagnostik-elektrofisiologi-neurologi-3",
+      "nama": "Transcranial Doppler (TCD)",
+      "group": "penunjang-diagnostik-elektrofisiologi-neurologi",
+      "jenis_order": "LAINNYA",
+      "is_panel": false,
+      "source_note": "Transcranial Doppler (TCD)"
+    },
+    {
+      "kode": "penunjang-diagnostik-elektrofisiologi-pulmonologi-tht-1",
+      "nama": "Spirometri (Uji Fungsi Paru)",
+      "group": "penunjang-diagnostik-elektrofisiologi-pulmonologi-tht",
+      "jenis_order": "LAINNYA",
+      "is_panel": false,
+      "source_note": "Spirometri (Uji Fungsi Paru)"
+    },
+    {
+      "kode": "penunjang-diagnostik-elektrofisiologi-pulmonologi-tht-2",
+      "nama": "Audiometri Nada Murni & Timpanometri",
+      "group": "penunjang-diagnostik-elektrofisiologi-pulmonologi-tht",
+      "jenis_order": "LAINNYA",
+      "is_panel": false,
+      "source_note": "Audiometri Nada Murni & Timpanometri"
+    },
+    {
+      "kode": "penunjang-diagnostik-elektrofisiologi-pulmonologi-tht-3",
+      "nama": "BERA (Brainstem Evoked Response Audiometry)",
+      "group": "penunjang-diagnostik-elektrofisiologi-pulmonologi-tht",
+      "jenis_order": "LAINNYA",
+      "is_panel": false,
+      "source_note": "BERA (Brainstem Evoked Response Audiometry)"
+    },
+    {
+      "kode": "penunjang-diagnostik-endoskopi-teropong-saluran-saluran-cerna-1",
+      "nama": "EGD / Gastroskopi (Saluran Cerna Atas)",
+      "group": "penunjang-diagnostik-endoskopi-teropong-saluran-saluran-cerna",
+      "jenis_order": "LAINNYA",
+      "is_panel": false,
+      "source_note": "EGD / Gastroskopi (Saluran Cerna Atas)"
+    },
+    {
+      "kode": "penunjang-diagnostik-endoskopi-teropong-saluran-saluran-cerna-2",
+      "nama": "Kolonoskopi (Saluran Cerna Bawah)",
+      "group": "penunjang-diagnostik-endoskopi-teropong-saluran-saluran-cerna",
+      "jenis_order": "LAINNYA",
+      "is_panel": false,
+      "source_note": "Kolonoskopi (Saluran Cerna Bawah)"
+    },
+    {
+      "kode": "penunjang-diagnostik-endoskopi-teropong-saluran-saluran-cerna-3",
+      "nama": "Rektosigmoidoskopi",
+      "group": "penunjang-diagnostik-endoskopi-teropong-saluran-saluran-cerna",
+      "jenis_order": "LAINNYA",
+      "is_panel": false,
+      "source_note": "Rektosigmoidoskopi"
+    },
+    {
+      "kode": "penunjang-diagnostik-endoskopi-teropong-saluran-saluran-cerna-4",
+      "nama": "ERCP (Endoscopic Retrograde Cholangiopancreatography)",
+      "group": "penunjang-diagnostik-endoskopi-teropong-saluran-saluran-cerna",
+      "jenis_order": "LAINNYA",
+      "is_panel": false,
+      "source_note": "ERCP (Endoscopic Retrograde Cholangiopancreatography)"
+    },
+    {
+      "kode": "penunjang-diagnostik-endoskopi-teropong-saluran-saluran-napas-tht-1",
+      "nama": "Bronkoskopi",
+      "group": "penunjang-diagnostik-endoskopi-teropong-saluran-saluran-napas-tht",
+      "jenis_order": "LAINNYA",
+      "is_panel": false,
+      "source_note": "Bronkoskopi"
+    },
+    {
+      "kode": "penunjang-diagnostik-endoskopi-teropong-saluran-saluran-napas-tht-2",
+      "nama": "Nasofaringolaringoskopi (NFL)",
+      "group": "penunjang-diagnostik-endoskopi-teropong-saluran-saluran-napas-tht",
+      "jenis_order": "LAINNYA",
+      "is_panel": false,
+      "source_note": "Nasofaringolaringoskopi (NFL)"
+    },
+    {
+      "kode": "penunjang-diagnostik-endoskopi-teropong-saluran-saluran-kemih-kandungan-1",
+      "nama": "Sistoskopi & Ureteroskopi",
+      "group": "penunjang-diagnostik-endoskopi-teropong-saluran-saluran-kemih-kandungan",
+      "jenis_order": "LAINNYA",
+      "is_panel": false,
+      "source_note": "Sistoskopi & Ureteroskopi"
+    },
+    {
+      "kode": "penunjang-diagnostik-endoskopi-teropong-saluran-saluran-kemih-kandungan-2",
+      "nama": "Histeroskopi & Laparoskopi Diagnostik",
+      "group": "penunjang-diagnostik-endoskopi-teropong-saluran-saluran-kemih-kandungan",
+      "jenis_order": "LAINNYA",
+      "is_panel": false,
+      "source_note": "Histeroskopi & Laparoskopi Diagnostik"
+    },
+    {
+      "kode": "penunjang-diagnostik-kedokteran-nuklir-sidik-organ-pet-1",
+      "nama": "Sidik Tulang (Bone Scan)",
+      "group": "penunjang-diagnostik-kedokteran-nuklir-sidik-organ-pet",
+      "jenis_order": "LAINNYA",
+      "is_panel": false,
+      "source_note": "Sidik Tulang (Bone Scan)"
+    },
+    {
+      "kode": "penunjang-diagnostik-kedokteran-nuklir-sidik-organ-pet-2",
+      "nama": "Sidik Tiroid (Thyroid Scan)",
+      "group": "penunjang-diagnostik-kedokteran-nuklir-sidik-organ-pet",
+      "jenis_order": "LAINNYA",
+      "is_panel": false,
+      "source_note": "Sidik Tiroid (Thyroid Scan)"
+    },
+    {
+      "kode": "penunjang-diagnostik-kedokteran-nuklir-sidik-organ-pet-3",
+      "nama": "Renogram (Sidik Ginjal)",
+      "group": "penunjang-diagnostik-kedokteran-nuklir-sidik-organ-pet",
+      "jenis_order": "LAINNYA",
+      "is_panel": false,
+      "source_note": "Renogram (Sidik Ginjal)"
+    },
+    {
+      "kode": "penunjang-diagnostik-kedokteran-nuklir-sidik-organ-pet-4",
+      "nama": "PET-CT Scan Onkologi / Kardiologi",
+      "group": "penunjang-diagnostik-kedokteran-nuklir-sidik-organ-pet",
+      "jenis_order": "LAINNYA",
+      "is_panel": false,
+      "source_note": "PET-CT Scan Onkologi / Kardiologi"
+    }
+  ]
+}

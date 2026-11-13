@@ -19,14 +19,16 @@ def clinical_snapshot(visit, workflow):
     fields = sorted({name for _, names in STEPS.values() for name in names})
     patient = {key:getattr(visit.pasien,key) for key in ('no_rm','nama_lengkap','tanggal_lahir','jenis_kelamin')}
     snapshot = {
-        'schema_version':1, 'patient':patient,
+        'schema_version':2, 'patient':patient,
         'visit':{name:getattr(visit,name) for name in fields},
         'no_kunjungan':visit.no_kunjungan, 'origin_unit_id':workflow.origin_unit_id,
         'diagnosis_provenance':visit.diagnosis_provenance, 'exemptions':workflow.exemptions,
+        'diagnoses':list(visit.diagnoses.order_by('pk').values('id','kode','nama','mode','active','is_primary','provenance','updated_by_id','created_at','updated_at')),
         'observations':list(workflow.observations.order_by('pk').values('id','phase','observed_at','recorded_by_id','data','corrects_id')),
-        'orders':list(visit.order_penunjang.order_by('pk').values('id','jenis','nama_pemeriksaan','prioritas','status','hasil_pemeriksaan','is_critical_value','critical_value_catatan')),
+        'orders':list(visit.order_penunjang.order_by('pk').values('id','jenis','nama_pemeriksaan','prioritas','status','hasil_pemeriksaan','is_critical_value','critical_value_catatan','catalogue_snapshot','preparation','ordered_by_id','created_at','catatan_klinis','dokter_pengirim','destination_id','result_recorded_by_id','result_recorded_at','batch_id')),
         'cppt':list(visit.cppt.order_by('pk').values('id','profesi','nama_ppa','tanggal','subjektif','objektif','asesmen','plan','created_by_id','verifikasi_dpjp')),
-        'actions':list(visit.tindakan_asesmen.order_by('pk').values('id','jenis','kode','nama','execution_status','execution_team','performed_by_id','performed_at','quantity','tarif_acuan','tarif','catatan_tarif','billing_item_id','standard_item_id','ep_status','ep_catatan')),
+        'actions':list(visit.tindakan_asesmen.order_by('pk').values('id','jenis','kode','nama','execution_status','execution_team','performed_by_id','performed_at','quantity','tarif_acuan','tarif','catatan_tarif','billing_item_id','standard_item_id','ep_status','ep_catatan','lokasi_anatomis','catatan_klinis','recorded_at','assistance_provenance')),
+        'prescriptions':[{'id':rx.pk,'no_resep':rx.no_resep,'doctor_id':rx.dokter_peresep_id,'items':list(rx.items.order_by('pk').values('nama_obat','aturan_pakai','product_snapshot','regimen','quantity_decimal','reference_price','quantity_reason','kind'))} for rx in visit.resep_list.order_by('pk')],
         'attachments':list(visit.lampiran_asesmen.order_by('pk').values('id','jenis','nama_asli','file','diunggah_pada','diunggah_oleh_id')),
     }
     return json.loads(json.dumps(snapshot, cls=DjangoJSONEncoder))
@@ -56,6 +58,7 @@ def sign(visit, workflow, user, data):
 
 
 def missing_sections(visit, workflow):
+    from pasien.physical_exam import exam_present
     def measured(phase):
         observation = workflow.observations.filter(phase=phase).order_by('-observed_at','-pk').first()
         return bool(observation and any(value is not None and value != '' for value in observation.data.values()))
@@ -65,7 +68,7 @@ def missing_sections(visit, workflow):
         'primary_survey': bool(visit.fisik_airway.strip()),
         'initial_vitals': measured('INITIAL'),
         'screening': bool(visit.skrining_alergi_status not in ('','BELUM') and visit.skrining_gizi_mst is not None and visit.skrining_jatuh_skor is not None),
-        'physical_exam': bool(visit.fisik_lokalis or visit.fisik_head_to_toe or visit.secondary_survey_detail),
+        'physical_exam': exam_present(visit.fisik_head_to_toe,visit.secondary_survey_detail,visit.fisik_lokalis),
         'diagnosis': bool(visit.diagnosa_masuk.strip()),
         'nursing': bool(visit.diagnosa_keperawatan_sdki.strip() and visit.luaran_keperawatan_slki.strip() and visit.intervensi_keperawatan_siki.strip()),
         'investigations':visit.order_penunjang.exists(),

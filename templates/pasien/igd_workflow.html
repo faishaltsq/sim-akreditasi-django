@@ -25,6 +25,7 @@
   <span>Alergi: {% if pasien.has_alergi %}{{ pasien.alergi_obat }} {{ pasien.alergi_lain }}{% else %}Belum terdokumentasi — bukan pernyataan tidak ada alergi{% endif %}</span>
 </div></div>
 <p class="text-muted">Simpan Draft hanya menyimpan dokumentasi. Order, pelaksanaan, persetujuan klinis dan finalisasi merupakan aksi terpisah.</p>
+{% if stale_signatures %}<div class="alert alert-warning">Persetujuan perlu ditinjau ulang: isi atau format asesmen berubah. Tinjau data terkini lalu berikan persetujuan kembali sebelum finalisasi.</div>{% endif %}
 {% if latest_revision %}<div class="alert alert-success">Dokumentasi FINAL, revisi {{ latest_revision.revision }}. <a href="{% url 'pasien:igd_workflow_resume' kunjungan.pk %}">Lihat snapshot resume</a>. Koreksi dicatat melalui addendum; order ditampilkan sesuai keadaan operasional terkini.</div>{% endif %}
 <p><a href="{% url 'pasien:igd_workflow_records' %}">Rekam Final & Addendum IGD</a></p>
 <div class="igd-layout">
@@ -39,10 +40,12 @@
   <div id="igd-errors" class="alert alert-danger mt-2" role="alert" hidden tabindex="-1"></div>
   <form id="igd-step-form" method="post" action="{% url 'pasien:igd_workflow_draft' kunjungan.pk step %}" data-version="{{ version }}" data-step="{{ step }}">
     {% csrf_token %}
+    {% if step == 6 %}{% include 'pasien/_igd_physical_exam_form.html' %}{% elif step == 8 %}{% include 'pasien/_igd_step8_fields.html' %}{% else %}
     {% for field in form %}{% if field.is_hidden %}{{ field }}{% else %}<div class="my-3">{{ field.label_tag }}{{ field }}{% if field.help_text %}<div class="form-text">{{ field.help_text }}</div>{% endif %}{{ field.errors }}</div>{% endif %}{% endfor %}
+    {% endif %}
     {% include 'pasien/_igd_clinical_widgets.html' %}
     {% if step == 4 or step == 10 %}<input id="igd-corrects" name="corrects_id" type="hidden" value=""><label for="observed-at">Waktu pengukuran (WIB; kosong = waktu simpan, atau waktu asli untuk koreksi)</label><input id="observed-at" type="datetime-local" step="1" class="form-control" {% if readonly %}disabled{% endif %} data-observed-at>{% endif %}
-    {% if step == 8 and not readonly %}<div class="card card-body my-3"><h3 class="h6">Bantuan AI — kandidat untuk ditinjau</h3><label for="igd-ai-query">Istilah keluhan tambahan</label><input id="igd-ai-query" class="form-control" maxlength="4000"><button type="button" id="igd-ai-request" class="btn btn-outline-primary mt-2">Minta Saran AI</button><div id="igd-ai-results" class="mt-2" aria-live="polite"></div><input id="igd-ai-ticket" type="hidden" value=""></div><p class="form-text">Manual menerima teks bebas. Master memvalidasi katalog dan pemetaan SDKI → SLKI → SIKI. AI baru diterapkan setelah kandidat diterima dan draft disimpan.</p>{% endif %}
+
     {% if step == 1 %}<p class="text-muted">Koreksi identitas dan perubahan penjamin dilakukan melalui admisi dengan tinjauan tarif. Identitas tidak ditimpa melalui formulir klinis.</p>{% endif %}
     {% if step == 2 %}<p class="form-text">Pilih sistem dan warna secara eksplisit. ATS dan ESI tidak dikonversi otomatis; kategori 5 bukan DOA.</p>{% endif %}
     {% if step == 9 %}<p>Catatan CPPT dan tagihan yang sudah tercatat ditampilkan di bawah. Navigasi langkah ini tidak mencatat pelaksanaan baru.</p>{% endif %}
@@ -54,6 +57,10 @@
       <a class="btn btn-outline-secondary" href="{% url 'pasien:igd_dashboard' %}">Dashboard IGD</a>
     </div>
   </form>
+  {% include 'pasien/_igd_ancillary_order.html' %}
+  {% include 'pasien/_igd_diagnosis_plan.html' %}
+  {% if step == 8 %}<div class="btn-group my-2" role="group" aria-label="Kategori tata laksana"><button type="button" class="btn btn-outline-primary" data-care-tab="actions" aria-pressed="true">Tindakan Klinis</button><button type="button" class="btn btn-outline-primary" data-care-tab="medications" aria-pressed="false">Terapi / Obat</button></div>{% endif %}
+  {% include 'pasien/_igd_medication_composer.html' %}
   {% include 'pasien/_igd_workflow_operations.html' %}
   {% if step == 4 or step == 10 %}<h3 class="h6 mt-4">Riwayat Pengukuran</h3>
   {% for observation in observations %}<article class="card mb-2"><div class="card-body"><strong>{{ observation.get_phase_display }}</strong> · {{ observation.observed_at|date:'d M Y H:i:s' }} · Petugas #{{ observation.recorded_by_id }}{% if observation.corrects_id %} · Koreksi observasi #{{ observation.corrects_id }}{% endif %}<dl>{% for name,value in observation.data.items %}<dt>{{ name }}</dt><dd>{{ value|default_if_none:'Belum diukur' }}</dd>{% endfor %}</dl>
@@ -61,4 +68,4 @@
   </div></article>{% empty %}<p>Belum ada observasi bertimestamp. Nilai historis belum dianggap pengukuran baru sampai dikonfirmasi dan disimpan.</p>{% endfor %}{% endif %}
 </section></div></div>
 {% endblock %}
-{% block extra_js %}<script src="{% static 'js/igd-assessment-workflow.js' %}"></script><script src="{% static 'js/igd-clinical-controls.js' %}"></script>{% endblock %}
+{% block extra_js %}<script src="{% static 'js/igd-assessment-workflow.js' %}"></script><script src="{% static 'js/igd-clinical-controls.js' %}"></script><script src="{% static 'js/igd-physical-exam.js' %}"></script>{% if step == 8 %}<script src="{% static 'js/igd-diagnosis-plan.js' %}"></script>{% endif %}{% if step == 7 or step == 8 %}<script src="{% static 'js/igd-clinical-expansion.js' %}"></script>{% endif %}{% endblock %}

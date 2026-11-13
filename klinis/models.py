@@ -16,6 +16,9 @@ RISIKO_CHOICES = [
 ]
 
 
+from .expansion_models import (KategoriPenunjang, ItemPenunjang, KelasTerapiObat, GenerikObat, ProdukFarmasi, KomposisiProdukFarmasi, KeanggotaanFormularium, MedicationPolicy)
+
+
 class KelompokLayanan(models.Model):
     kode = models.CharField('Kode', max_length=30, unique=True)
     nama = models.CharField('Nama Kelompok Layanan', max_length=120)

@@ -1,0 +1,16 @@
+{% for component in planning_components %}
+<section class="card card-body my-3" data-planning-component="{{ component.key }}">
+  <h3 class="h6">{{ component.label }}</h3>
+  {{ component.field.label_tag }}{{ component.field }}
+  <label for="mode-{{ component.key }}">Metode input</label>
+  <select id="mode-{{ component.key }}" class="form-select" data-component-mode="{{ component.key }}" data-field="{{ component.field.name }}" {% if not can_sign_nursing or readonly %}disabled{% endif %}>
+    <option value="MANUAL" {% if component.mode == 'MANUAL' %}selected{% endif %}>Manual</option><option value="MASTER" {% if component.mode == 'MASTER' %}selected{% endif %}>Master</option><option value="AI" {% if component.mode == 'AI' %}selected{% endif %}>Bantuan AI</option>
+  </select>
+  {% if can_sign_nursing and not readonly %}
+  <label for="search-{{ component.key }}">Cari master {{ component.label }}</label><input id="search-{{ component.key }}" class="form-control" data-component-query="{{ component.key }}" data-type="{{ component.catalogue_type }}" maxlength="200">
+  <select aria-label="Hasil master {{ component.label }}" class="form-select" data-component-options="{{ component.key }}"><option value="">— Cari kode atau nama —</option></select>
+  <button type="button" class="btn btn-outline-primary mt-2" data-component-ai="{{ component.key }}">Minta Bantuan AI {{ component.label }}</button>
+  <div data-component-results="{{ component.key }}" aria-live="polite"></div>
+  {% endif %}
+</section>
+{% endfor %}

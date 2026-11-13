@@ -1,0 +1,71 @@
+{
+  "synthetic": true,
+  "viewports": [
+    {
+      "width": 1366,
+      "diagnosis_primary_switch": true,
+      "layout": {
+        "width": 1366,
+        "documentWidth": 1366
+      }
+    },
+    {
+      "width": 768,
+      "diagnosis_primary_switch": true,
+      "layout": {
+        "width": 768,
+        "documentWidth": 768
+      }
+    },
+    {
+      "width": 375,
+      "diagnosis_primary_switch": true,
+      "layout": {
+        "width": 375,
+        "documentWidth": 375
+      }
+    }
+  ],
+  "journeys": [
+    {
+      "kind": "ancillary",
+      "viewport": 1366,
+      "basket_retained_on_parent_change": true
+    },
+    {
+      "kind": "ancillary",
+      "viewport": 768,
+      "basket_retained_on_parent_change": true
+    },
+    {
+      "kind": "ancillary",
+      "viewport": 375,
+      "basket_retained_on_parent_change": true
+    },
+    {
+      "kind": "assigned_lab_result",
+      "ordered_process_complete": true
+    },
+    {
+      "kind": "nursing",
+      "independent_modes_persisted": true
+    },
+    {
+      "kind": "prescription",
+      "id": 7,
+      "draft_submit_dispense_complete": true,
+      "completion_replay": true
+    },
+    {
+      "kind": "ppra",
+      "held_then_independent_review": true,
+      "prescription_id": 8
+    },
+    {
+      "kind": "final_snapshot",
+      "revision_id": 3,
+      "prescription_printed": true
+    }
+  ],
+  "page_errors": []
+}

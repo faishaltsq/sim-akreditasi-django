@@ -60,7 +60,7 @@ def get_visit(pk, user, *, write=False, lock=False):
 @transaction.atomic
 def save_step(pk, user, step, payload, version):
     visit, workflow = get_visit(pk, user, write=True, lock=True)
-    if step not in STEPS or set(payload) - set(STEPS[step][1]) - ({'ai_ticket'} if step == 8 else set()) - {'observed_at','corrects_id'}:
+    if step not in STEPS or set(payload) - set(STEPS[step][1]) - ({'ai_ticket', 'component_modes', 'component_tickets'} if step == 8 else set()) - {'observed_at','corrects_id'}:
         raise WorkflowValidation({'__all__': ['Field tidak dimiliki langkah ini.']})
     if 'observed_at' in payload and step not in (4, 10):
         raise WorkflowValidation({'observed_at': ['Waktu pengukuran hanya untuk langkah TTV.']})
@@ -89,6 +89,8 @@ def save_step(pk, user, step, payload, version):
         raise WorkflowValidation({'__all__': ['Tidak ada perubahan untuk disimpan.']})
     provenance = None
     if step == 8:
+        if 'diagnosa_masuk' in payload and visit.diagnoses.exists() and payload['diagnosa_masuk'] != visit.diagnosa_masuk:
+            raise WorkflowValidation({'diagnosa_masuk': ['Gunakan daftar diagnosis terstruktur untuk mengubah diagnosis medis.']})
         from .igd_planning import validate_planning
         payload, provenance = validate_planning(visit,user,payload,expected)
     if 'penjamin' in payload and payload['penjamin'] != visit.penjamin:
@@ -115,6 +117,10 @@ def save_step(pk, user, step, payload, version):
     if workflow is None:
         workflow = IgdAssessmentWorkflow.objects.create(kunjungan=visit, origin_unit=visit.unit_kerja)
     changed = [name for name in payload if name in fields]
+    if step == 6 and 'secondary_survey_detail' in payload:
+        for name in ('secondary_survey_detail','fisik_head_to_toe'):
+            if name not in changed:
+                changed.append(name)
     if step in (4,10) and any(name in payload for name in ('gcs_e','gcs_v','gcs_m')) and all(form.cleaned_data.get(name) is not None for name in ('gcs_e','gcs_v','gcs_m')):
         visit.ttv_gcs = form.cleaned_data['ttv_gcs']
         if 'ttv_gcs' not in changed:

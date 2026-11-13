@@ -1,0 +1,22 @@
+<div id="igd-physical-exam" data-readonly="{% if readonly %}true{% else %}false{% endif %}" data-has-legacy="{% if physical_exam.has_legacy %}true{% else %}false{% endif %}">
+{{ form.fisik_head_to_toe }}{{ form.secondary_survey_detail }}{{ form.penanda_anatomi }}
+{{ physical_exam.catalogue|json_script:"igd-exam-catalogue" }}
+{% if not readonly %}<button id="igd-exam-normal" type="button" class="btn btn-outline-primary my-3">Semua Normal — bagian kosong yang telah diperiksa</button><p class="form-text">Aksi draft eksplisit; temuan abnormal, catatan dan data historis tidak ditimpa. Keadaan umum, kesadaran dan genitalia tidak diisi massal. Tinjau sebelum menyimpan.</p>{% endif %}
+{% for organ in physical_exam.sections %}
+<fieldset data-exam-section="{{ organ.key }}" class="card card-body my-3" {% if readonly %}disabled{% endif %}>
+<legend class="h6">{{ forloop.counter }}. {{ organ.label }}</legend>
+{% if organ.kind == 'general' %}
+{% if readonly %}<p>{{ organ.text }}</p>{% endif %}
+<div class="my-2">{{ form.keadaan_umum.label_tag }}{{ form.keadaan_umum }}</div><div class="my-2">{{ form.kesadaran.label_tag }}{{ form.kesadaran }}</div>
+<p class="form-text">GCS existing (bukan pengukuran baru): {{ physical_gcs|default:'Belum tercatat' }}. Lihat waktu dan komponen E/V/M di langkah 4/10. Pemilihan kesadaran tidak membuat GCS 15 otomatis.</p>
+{% else %}
+<label for="exam-{{ organ.key }}-status">Status pemeriksaan</label><select id="exam-{{ organ.key }}-status" data-exam-status class="form-select"><option value="UNASSESSED" {% if not organ.value.status or organ.value.status == 'UNASSESSED' %}selected{% endif %}>Belum dikaji</option><option value="EXAMINED" {% if organ.value.status == 'EXAMINED' %}selected{% endif %}>Diperiksa</option><option value="NOT_EXAMINED" {% if organ.value.status == 'NOT_EXAMINED' %}selected{% endif %}>Tidak diperiksa</option></select>
+<div data-exam-choices class="my-2">{% for option in organ.options %}<div class="form-check"><input id="exam-{{ organ.key }}-{{ option.code }}" type="checkbox" class="form-check-input" value="{{ option.code }}" {% if option.selected %}checked{% endif %}><label class="form-check-label" for="exam-{{ organ.key }}-{{ option.code }}">{{ option.label }}</label></div>{% endfor %}</div>
+<div data-exam-note-wrap><label for="exam-{{ organ.key }}-note">Keterangan / detail tambahan</label><textarea id="exam-{{ organ.key }}-note" data-exam-note class="form-control" maxlength="2000" rows="2">{{ organ.value.note }}</textarea><p class="form-text">{{ organ.hint }}</p></div>
+<div data-exam-reason-wrap><label for="exam-{{ organ.key }}-reason">Alasan tidak diperiksa</label><textarea id="exam-{{ organ.key }}-reason" data-exam-reason class="form-control" maxlength="2000" rows="2">{{ organ.value.reason }}</textarea></div>
+{% endif %}</fieldset>
+{% endfor %}
+<label for="igd-exam-summary">Ringkasan Secondary Survey (otomatis, diverifikasi server)</label><textarea id="igd-exam-summary" class="form-control" readonly rows="8">{{ physical_exam.summary }}</textarea>
+{% if physical_exam.legacy %}<details class="card card-body my-3" open><summary>Data pemeriksaan historis — belum diklasifikasikan ulang</summary><p>Data lama tetap ditampilkan; bukan pilihan normal otomatis. Pilih temuan terstruktur hanya setelah ditinjau.</p>{% for item in physical_exam.legacy %}<article class="my-2"><strong>{{ item.label }}</strong> <small>({{ item.source }})</small><div class="text-break" style="white-space:pre-wrap">{{ item.text }}</div></article>{% endfor %}</details>{% endif %}
+<div class="my-3">{{ form.fisik_lokalis.label_tag }}{{ form.fisik_lokalis }}{{ form.fisik_lokalis.errors }}</div>
+</div>

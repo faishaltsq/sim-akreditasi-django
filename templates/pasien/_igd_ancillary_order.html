@@ -1,0 +1,20 @@
+{% if step == 7 and can_sign_medical and not readonly %}
+<section id="igd-ancillary" class="card card-body my-3" data-catalogue="{% url 'pasien:igd_penunjang_catalogue' kunjungan.pk %}">
+  <h3 class="h6">Order Penunjang — Pilihan Bertingkat</h3>
+  <form id="ancillary-form" method="post" action="{% url 'pasien:igd_workflow_action' kunjungan.pk %}" data-action="{% url 'pasien:igd_workflow_action' kunjungan.pk %}">
+    {% csrf_token %}
+    <div class="row g-2">{% for level in cascade_levels %}<div class="col-12 col-md-6"><label for="anc-level-{{ level.number }}">{{ level.label }}</label><select id="anc-level-{{ level.number }}" class="form-select" data-anc-level="{{ level.number }}" {% if level.number > 1 %}disabled{% endif %}><option value="">— Pilih {{ level.label }} —</option></select></div>{% endfor %}</div>
+    <button id="anc-next-page" class="btn btn-link" type="button" hidden>Muat pilihan berikutnya</button>
+    <label for="anc-indication" class="mt-2">Indikasi klinis / diagnosis kerja</label><textarea id="anc-indication" class="form-control" maxlength="4000" required></textarea>
+    <label for="anc-diagnosis">Diagnosis terstruktur (opsional untuk diagnosis sementara manual)</label><select id="anc-diagnosis" class="form-select"><option value="">— Indikasi manual —</option>{% for row in active_diagnoses %}<option value="{{ row.id }}">{{ row.kode }} {{ row.nama }}</option>{% endfor %}</select>
+    <label for="anc-priority">Prioritas</label><select id="anc-priority" class="form-select"><option value="RUTIN">Rutin</option><option value="CITO">CITO / Darurat</option></select>
+    <div class="row g-2">{% for prep in preparation_fields %}<div class="col-12 col-md-4"><label for="anc-{{ prep.key }}">{{ prep.label }}</label><select id="anc-{{ prep.key }}" data-anc-prep="{{ prep.key }}" class="form-select"><option value="UNKNOWN">Belum diketahui</option><option value="YES">Ya</option><option value="NO">Tidak</option><option value="NA">Tidak berlaku</option></select></div>{% endfor %}</div>
+    <label for="anc-site">Lokasi sampel / regio</label><input id="anc-site" class="form-control" maxlength="500">
+    <div id="anc-variants" class="my-2"></div>
+    <button type="button" id="anc-add" class="btn btn-outline-primary my-2">Tambah ke Daftar Order</button>
+    <ul id="anc-basket" class="list-group mb-2"></ul>
+    <button type="submit" class="btn btn-primary">Kirim Semua Order Terpilih</button>
+    <p id="anc-status" role="status" aria-live="polite"></p>
+  </form>
+</section>
+{% endif %}

@@ -13,17 +13,22 @@ class IgdWorkflowIntegrationTest(fixtures.IgdWorkflowTest):
 
     def test_order_submission_is_idempotent(self):
         key = str(uuid4())
-        first = self.action('order', {'jenis':'LAB','nama_pemeriksaan':'Darah lengkap','prioritas':'CITO'}, key=key)
-        repeated = self.action('order', {'jenis':'LAB','nama_pemeriksaan':'Darah lengkap','prioritas':'CITO'}, key=key)
+        first = self.action('order', {'jenis':'LAB','nama_pemeriksaan':'Darah lengkap','prioritas':'CITO','catatan_klinis':'Indikasi klinis synthetic'}, key=key)
+        repeated = self.action('order', {'jenis':'LAB','nama_pemeriksaan':'Darah lengkap','prioritas':'CITO','catatan_klinis':'Indikasi klinis synthetic'}, key=key)
         self.assertEqual(first['order_id'], repeated['order_id'])
         self.assertEqual(OrderPenunjang.objects.filter(kunjungan=self.visit).count(), 1)
         with self.assertRaises(ValueError):
-            self.action('order', {'jenis':'LAB','nama_pemeriksaan':'Order berbeda','prioritas':'CITO'}, key=key)
+            self.action('order', {'jenis':'LAB','nama_pemeriksaan':'Order berbeda','prioritas':'CITO','catatan_klinis':'Indikasi klinis synthetic'}, key=key)
 
     def test_draft_does_not_send_order(self):
         from pasien.services.igd_assessment_workflow import save_step
         save_step(self.visit.pk, self.user, 7, {'penunjang_ekg':'Hasil eksternal'}, 0)
         self.assertFalse(OrderPenunjang.objects.filter(kunjungan=self.visit).exists())
+
+    def test_manual_order_requires_clinical_indication(self):
+        with self.assertRaises(ValueError):
+            self.action('order',{'jenis':'LAB','nama_pemeriksaan':'Synthetic manual','prioritas':'CITO'})
+        self.assertFalse(self.visit.order_penunjang.exists())
 
     def test_plan_then_execute_links_cppt_and_one_bill(self):
         from pasien.models import TindakanAsesmen, BillingItem, CPPT
@@ -66,7 +71,7 @@ class IgdWorkflowIntegrationTest(fixtures.IgdWorkflowTest):
     @override_settings(IGD_WORKFLOW_ENABLED=True)
     def test_http_order_and_scoped_catalogue(self):
         url = reverse('pasien:igd_workflow_action',args=[self.visit.pk])
-        response = self.client.post(url,json.dumps({'operation':'order','fields':{'jenis':'EKG','nama_pemeriksaan':'EKG 12 lead','prioritas':'CITO'},'version':0,'request_id':str(uuid4())}),content_type='application/json')
+        response = self.client.post(url,json.dumps({'operation':'order','fields':{'jenis':'EKG','nama_pemeriksaan':'EKG 12 lead','prioritas':'CITO','catatan_klinis':'Indikasi klinis synthetic'},'version':0,'request_id':str(uuid4())}),content_type='application/json')
         self.assertEqual(response.status_code,200)
         self.assertEqual(OrderPenunjang.objects.get(kunjungan=self.visit).jenis,'EKG')
         response = self.client.get(reverse('pasien:igd_workflow_catalogue',args=[self.visit.pk])+'?type=ICD10&q=nyeri')
@@ -74,7 +79,7 @@ class IgdWorkflowIntegrationTest(fixtures.IgdWorkflowTest):
         self.assertIn('results',response.json())
 
     def test_result_is_scoped_and_explicitly_recorded(self):
-        order = self.action('order',{'jenis':'EKG','nama_pemeriksaan':'EKG uji','prioritas':'RUTIN'})
+        order = self.action('order',{'jenis':'EKG','nama_pemeriksaan':'EKG uji','prioritas':'RUTIN','catatan_klinis':'Indikasi klinis synthetic'})
         result = self.action('order_result',{'order_id':order['order_id'],'status':'SELESAI','hasil_pemeriksaan':'Hasil eksternal terverifikasi'},order['version'])
         record = OrderPenunjang.objects.get(pk=order['order_id'])
         self.assertEqual(record.status,'SELESAI')

@@ -23,6 +23,8 @@
     for (const [name, value] of data.entries()) {
       if (name !== 'csrfmiddlewaretoken' && name !== 'intent' && !name.startsWith('initial-')) fields[name] = value;
     }
+    const componentModes=[...form.querySelectorAll('[data-component-mode]:not(:disabled)')];
+    if(componentModes.length){fields.component_modes=Object.fromEntries(componentModes.map(e=>[e.dataset.componentMode,e.value]));fields.component_tickets=Object.fromEntries(componentModes.filter(e=>e.dataset.ticket).map(e=>[e.dataset.componentMode,e.dataset.ticket]));}
     const observed = form.querySelector('[data-observed-at]')?.value;
     if (observed) fields.observed_at = observed;
     const ticket = document.getElementById('igd-ai-ticket');

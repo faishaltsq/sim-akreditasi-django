@@ -1,0 +1,47 @@
+{% if step == 8 %}
+<section id="igd-medications" class="card card-body my-3" data-catalogue="{% url 'pasien:igd_medication_catalogue' kunjungan.pk %}">
+  <h3 class="h6">Terapi / Obat — Peresepan</h3>
+  {% if can_sign_medical and not readonly %}
+  <form id="medication-form" method="post" action="{% url 'pasien:igd_workflow_action' kunjungan.pk %}" data-action="{% url 'pasien:igd_workflow_action' kunjungan.pk %}">
+    {% csrf_token %}
+    <label for="rx-kind">1. Jenis peresepan</label><select id="rx-kind" class="form-select"><option value="OBAT">Obat Jadi (Non-Racikan)</option><option value="RACIKAN">Obat Racikan</option><option value="BMHP">Alat Kesehatan & BMHP</option></select>
+    <label for="rx-formulary">Tipe formularium</label><select id="rx-formulary" class="form-select"><option value="RS">Formularium RS / Umum</option><option value="FORNAS">Fornas / BPJS — restriksi tetap diverifikasi</option></select>
+    <label for="rx-class">2. Kelas terapi / kelompok BMHP</label><select id="rx-class" class="form-select" data-rx-level="class"><option value="">— Pilih kelompok —</option></select>
+    <label for="rx-generic">3. Generik, kekuatan & sediaan / spesifikasi BMHP</label><select id="rx-generic" class="form-select" data-rx-level="generic" disabled><option value="">— Pilih generik —</option></select>
+    <label for="rx-product">4. Produk / merek tersedia pada master</label><select id="rx-product" class="form-select" data-rx-level="product" disabled><option value="">— Pilih produk —</option></select>
+    <button id="rx-next-page" class="btn btn-link" type="button" hidden>Muat pilihan berikutnya</button>
+    <p id="rx-product-info" role="status" class="my-2"></p>
+    <div id="rx-regimen" class="row g-2">
+      <div class="col-12 col-md-4"><label for="rx-frequency">Frekuensi</label><select id="rx-frequency" class="form-select"><option value="FIXED">Kali per hari</option><option value="INTERVAL">Tiap N jam</option><option value="PRN">Bila perlu / PRN</option><option value="VARIABLE">Dosis bertahap / variabel</option></select></div>
+      <div class="col-6 col-md-4"><label for="rx-rate">Kali per hari / interval jam</label><input id="rx-rate" class="form-control" type="number" step="any" min="0.01"></div>
+      <div class="col-6 col-md-4"><label for="rx-dose">Dosis per pemberian</label><input id="rx-dose" class="form-control" type="number" step="any" min="0.0001"></div>
+      <div class="col-6 col-md-4"><label for="rx-dose-unit">Satuan dosis</label><input id="rx-dose-unit" class="form-control" maxlength="30" placeholder="tablet / mL / mg / unit"></div>
+      <div class="col-6 col-md-4"><label for="rx-duration">Durasi (hari)</label><input id="rx-duration" class="form-control" type="number" step="any" min="0.01"></div>
+      <div class="col-12 col-md-4"><label for="rx-route">Rute pemberian</label><select id="rx-route" class="form-select"><option value="">— Pilih rute sesuai produk —</option></select></div>
+      <div class="col-12 col-md-6"><label for="rx-timing">Waktu pemberian</label><select id="rx-timing" class="form-select"><option value="">— Belum ditentukan —</option><option value="AC">Sebelum makan</option><option value="PC">Sesudah makan</option><option value="DC">Saat makan</option><option value="PAGI">Pagi</option><option value="MALAM">Malam</option></select></div>
+      <div class="col-12 col-md-6"><label for="rx-prn">Indikasi PRN / instruksi tambahan</label><input id="rx-prn" class="form-control" maxlength="2000"></div>
+      <div class="col-12"><label for="rx-max">Batas pemberian per hari (PRN)</label><input id="rx-max" class="form-control" type="number" min="1" max="24"></div>
+    </div>
+    <details id="rx-compound" class="my-2"><summary>Komponen Racikan</summary><label for="rx-component-amount">Jumlah komponen yang sedang dipilih</label><input id="rx-component-amount" class="form-control" type="number" step="any" min="0.0001"><label for="rx-component-unit">Satuan komponen</label><input id="rx-component-unit" class="form-control" maxlength="30"><button type="button" id="rx-add-component" class="btn btn-outline-secondary my-2">Tambahkan Produk Terpilih sebagai Komponen</button><ul id="rx-components"></ul><label for="rx-compound-form">Bentuk akhir racikan</label><select id="rx-compound-form" class="form-select"><option value="PUYER">Puyer</option><option value="KAPSUL">Kapsul</option><option value="SALEP">Salep</option></select><label for="rx-compound-instructions">Instruksi peracikan</label><textarea id="rx-compound-instructions" class="form-control" maxlength="2000"></textarea></details>
+    <label for="rx-quantity">Jumlah total (kosong = kalkulasi server jika didukung)</label><input id="rx-quantity" class="form-control" type="number" step="any" min="0.0001">
+    <label for="rx-quantity-reason">Alasan jumlah manual / penyesuaian / racikan</label><textarea id="rx-quantity-reason" class="form-control" maxlength="2000"></textarea>
+    <p class="form-text">PRN, racikan, BMHP, dosis variabel atau konversi yang belum tersedia memerlukan jumlah manual beralasan. Tidak ada kalkulasi mg ke tablet tanpa master konversi.</p>
+    <button type="button" id="rx-add-line" class="btn btn-outline-primary my-2">Tambah ke Draft Resep</button><ul id="rx-lines" class="list-group"></ul>
+    <label for="rx-serving-unit" class="mt-2">Depo farmasi tujuan</label><select id="rx-serving-unit" class="form-select" required><option value="">— Pilih depo yang ditugaskan —</option>{% for unit in pharmacy_units %}<option value="{{ unit.pk }}">{{ unit.name }}</option>{% endfor %}</select>
+    <input type="hidden" id="rx-edit-id" value=""><button type="submit" class="btn btn-primary my-2">Simpan Draft Resep — Belum Dikirim</button><button type="reset" class="btn btn-outline-secondary">Resep Baru / Kosongkan Isian</button>
+    <p id="rx-status" role="status" aria-live="polite"></p>
+  </form>
+  {% endif %}
+  {% if readonly and latest_revision %}<h4 class="h6 mt-3">Resep Saat Ditandatangani</h4>{% for rx in latest_revision.snapshot.prescriptions %}<article>{{ rx.no_resep }}<ul>{% for row in rx.items %}<li>{{ row.nama_obat }} · {{ row.quantity_decimal|default_if_none:'Jumlah historis tidak tersedia' }} {{ row.product_snapshot.unit }} · {{ row.regimen }}</li>{% endfor %}</ul></article>{% empty %}<p>Resep tidak tersedia pada snapshot ini.</p>{% endfor %}{% endif %}
+  <h4 class="h6 mt-3">Resep Tercatat pada Episode Ini</h4>
+  {% for rx in prescriptions %}<article class="border rounded p-2 mb-2"><strong>{{ rx.no_resep }}</strong> · {{ rx.get_status_display }} · Depo {{ rx.serving_unit.name|default:'Belum ditetapkan' }}
+    {% if rx.financial_pending %}<p class="text-danger">Data harga/jumlah memerlukan rekonsiliasi billing.</p>{% endif %}
+    <ul>{% for row in rx.items.all %}<li>{{ row.nama_obat }} · {{ row.quantity_decimal|default_if_none:row.jumlah }} {{ row.product_snapshot.unit }} · {{ row.aturan_pakai }} · Harga {{ row.reference_price|default_if_none:'belum ditetapkan' }}{% for flag in row.product_snapshot.flags %}<span class="badge bg-danger">{{ flag }}</span>{% endfor %}</li>{% endfor %}</ul>
+    {% for risk in rx.safety_findings %}<p class="{% if risk.blocking %}text-danger{% endif %}">{{ risk.code }} — {{ risk.message }}</p>{% endfor %}
+    {% if rx.status == 'DRAFT' and can_sign_medical and not readonly %}
+      {{ rx.draft_payload|json_script:rx.payload_script_id }}<button type="button" class="btn btn-outline-secondary" data-rx-edit="{{ rx.pk }}" data-payload="{{ rx.payload_script_id }}">Edit Draft</button>
+      <form method="post" action="{% url 'pasien:igd_workflow_action' kunjungan.pk %}" data-rx-submit="{{ rx.pk }}" data-action="{% url 'pasien:igd_workflow_action' kunjungan.pk %}" class="mt-2">{% csrf_token %}{% for risk in rx.safety_findings %}{% if risk.requires_ack %}<label for="ack-{{ rx.pk }}-{{ forloop.counter }}">Alasan konfirmasi {{ risk.code }}</label><textarea id="ack-{{ rx.pk }}-{{ forloop.counter }}" data-risk-code="{{ risk.code }}" class="form-control" minlength="5" maxlength="2000" required></textarea>{% endif %}{% endfor %}<button type="submit" class="btn btn-outline-primary">Tinjau Risiko & Kirim ke Farmasi</button></form>
+    {% endif %}
+  </article>{% empty %}<p>Belum ada resep. Master yang belum direview tidak ditawarkan sebagai produk aktif.</p>{% endfor %}
+</section>
+{% endif %}

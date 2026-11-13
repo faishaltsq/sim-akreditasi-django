@@ -18,7 +18,7 @@ STEPS = {
     5: ('Biopsikososial, Spiritual & Skrining', ('status_psikososial', 'status_spiritual',
         'status_emosional', 'hambatan_komunikasi', 'kebutuhan_spiritual', 'skrining_gizi_mst',
         'metode_risiko_jatuh', 'skrining_jatuh_skor', 'skrining_jatuh_grade', 'skrining_jatuh_detail', 'hambatan_edukasi', 'skrining_gizi_detail')),
-    6: ('Pemeriksaan Fisik Lengkap', ('fisik_head_to_toe', 'secondary_survey_detail', 'fisik_lokalis', 'penanda_anatomi')),
+    6: ('Pemeriksaan Fisik Lengkap', ('keadaan_umum', 'kesadaran', 'fisik_head_to_toe', 'secondary_survey_detail', 'fisik_lokalis', 'penanda_anatomi')),
     7: ('Pemeriksaan Penunjang — Order & Hasil', ('penunjang_ekg', 'penunjang_hasil_kritis')),
     8: ('Penetapan Diagnosis & Rencana', ('diagnosa_masuk', 'diagnosa_keperawatan_sdki',
         'luaran_keperawatan_slki', 'intervensi_keperawatan_siki', 'tatalaksana_resusitasi', 'tatalaksana_terapi', 'diagnosis_mode')),
@@ -41,6 +41,14 @@ class StepForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.original_triage_category = self.instance.triase_kategori
+        from .physical_exam import GENERAL_CHOICES
+        for name, choices in GENERAL_CHOICES.items():
+            if name in self.fields:
+                original = getattr(self.instance,name) or ''
+                options = [('', 'Belum dikaji')] + [(value,value) for value in choices]
+                if original and original not in choices:
+                    options.append((original,'Historis: '+original))
+                self.fields[name] = forms.ChoiceField(choices=options,required=False,label=self.fields[name].label)
         for name, field in self.fields.items():
             field.required = False
             field.widget.attrs['class'] = 'form-select' if isinstance(field.widget, forms.Select) else 'form-control'
@@ -52,6 +60,14 @@ class StepForm(forms.ModelForm):
 
     def clean(self):
         cleaned = super().clean()
+        if 'secondary_survey_detail' in self.fields and 'secondary_survey_detail' in cleaned and 'fisik_head_to_toe' in cleaned:
+            from .physical_exam import prepare_exam
+            try:
+                cleaned['secondary_survey_detail'],cleaned['fisik_head_to_toe'] = prepare_exam(
+                    self.instance.secondary_survey_detail or {},self.instance.fisik_head_to_toe or {},
+                    cleaned['secondary_survey_detail'] or {},cleaned['fisik_head_to_toe'] or {})
+            except ValidationError as exc:
+                self.add_error('secondary_survey_detail',exc)
         for name, (minimum, maximum) in BOUNDS.items():
             value = cleaned.get(name)
             if value is not None and not minimum <= value <= maximum:

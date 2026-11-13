@@ -1,0 +1,8 @@
+{
+  "checks": [
+    "Lainnya empty note rejected400 without losing checks; corrected save200",
+    "general state, mixed findings, marker and localis persist across reload",
+    "final read after transfer to RANAP retains historical exam and readonly"
+  ],
+  "page_errors": []
+}

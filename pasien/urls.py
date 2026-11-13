@@ -2,10 +2,17 @@ from django.urls import path
 from . import views
 from . import apm_views
 from . import igd_workflow_views
+from . import pharmacy_views
+from . import ancillary_views
 
 app_name = 'pasien'
 
 urlpatterns = [
+    path('penunjang/', ancillary_views.worklist, name='ancillary_worklist'),
+    path('penunjang/<int:pk>/hasil/', ancillary_views.update_result, name='ancillary_result'),
+    path('kunjungan/<int:pk>/asesmen-igd/katalog-penunjang/', pharmacy_views.ancillary_catalogue, name='igd_penunjang_catalogue'),
+    path('kunjungan/<int:pk>/asesmen-igd/katalog-obat/', pharmacy_views.medication_catalogue, name='igd_medication_catalogue'),
+    path('farmasi/ppra/<int:pk>/', pharmacy_views.ppra_decision, name='ppra_decision'),
     path('igd/rekam-final/', igd_workflow_views.igd_workflow_records, name='igd_workflow_records'),
     path('kunjungan/<int:pk>/asesmen-igd/', igd_workflow_views.igd_workflow, name='igd_workflow'),
     path('kunjungan/<int:pk>/asesmen-igd/langkah/<int:step>/draft/', igd_workflow_views.igd_workflow_draft, name='igd_workflow_draft'),

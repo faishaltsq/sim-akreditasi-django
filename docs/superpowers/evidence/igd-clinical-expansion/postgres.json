@@ -1,0 +1,141 @@
+{
+  "vendor": "postgresql",
+  "cases": [
+    {
+      "case": "competing_primary",
+      "outcomes": [
+        {
+          "ok": false,
+          "type": "WorkflowConflict",
+          "error": "Konflik versi: muat ulang episode."
+        },
+        {
+          "ok": true,
+          "result": {
+            "diagnosis_ids": [
+              4
+            ],
+            "version": 1,
+            "replayed": false
+          }
+        }
+      ],
+      "primary_count": 1
+    },
+    {
+      "case": "same_key_order_batch",
+      "outcomes": [
+        {
+          "ok": true,
+          "result": {
+            "order_ids": [
+              4
+            ],
+            "batch_id": "c5d9bd1e-ecf6-4668-b9e9-8d4c6c578881",
+            "version": 2,
+            "replayed": false
+          }
+        },
+        {
+          "ok": true,
+          "result": {
+            "batch_id": "c5d9bd1e-ecf6-4668-b9e9-8d4c6c578881",
+            "order_ids": [
+              4
+            ],
+            "version": 2,
+            "replayed": true
+          }
+        }
+      ],
+      "orders": 1
+    },
+    {
+      "case": "plan_and_retrospective_execution",
+      "cppt": 4,
+      "billing": 7
+    },
+    {
+      "case": "two_submissions_same_key",
+      "outcomes": [
+        {
+          "ok": true,
+          "result": {
+            "prescription_id": 4,
+            "prescription_version": 2,
+            "held": false,
+            "findings": [],
+            "version": 6,
+            "replayed": false
+          }
+        },
+        {
+          "ok": true,
+          "result": {
+            "held": false,
+            "findings": [],
+            "prescription_id": 4,
+            "prescription_version": 2,
+            "version": 6,
+            "replayed": true
+          }
+        }
+      ],
+      "safety_reviews": 1
+    },
+    {
+      "case": "concurrent_dispensing",
+      "outcomes": [
+        {
+          "ok": true,
+          "result": {
+            "version": 3,
+            "prescription_id": 4,
+            "financial_pending": false
+          }
+        },
+        {
+          "ok": true,
+          "result": {
+            "prescription_id": 4,
+            "version": 3,
+            "financial_pending": false
+          }
+        }
+      ]
+    },
+    {
+      "case": "concurrent_selesai",
+      "outcomes": [
+        {
+          "ok": true,
+          "result": {
+            "prescription_id": 4,
+            "version": 4,
+            "financial_pending": false
+          }
+        },
+        {
+          "ok": true,
+          "result": {
+            "version": 4,
+            "prescription_id": 4,
+            "financial_pending": false
+          }
+        }
+      ]
+    },
+    {
+      "case": "billing_and_stale_version",
+      "farmasi_rows": 1,
+      "quantity": "3.00",
+      "stale_rejected": true
+    },
+    {
+      "case": "final_snapshot_late_result_addendum",
+      "revision_id": 6,
+      "original_digest_unchanged": true,
+      "revisions": 2
+    }
+  ]
+}

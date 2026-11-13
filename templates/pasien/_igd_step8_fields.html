@@ -1,0 +1,6 @@
+{% for field in form %}
+  {% if field.name != 'diagnosa_keperawatan_sdki' and field.name != 'luaran_keperawatan_slki' and field.name != 'intervensi_keperawatan_siki' and field.name != 'diagnosis_mode' %}
+    {% if field.is_hidden %}{{ field }}{% else %}<div class="my-3">{{ field.label_tag }}{{ field }}{{ field.errors }}</div>{% endif %}
+  {% endif %}
+{% endfor %}
+{% include 'pasien/_igd_planning_components.html' %}

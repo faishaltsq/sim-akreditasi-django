@@ -1,0 +1,57 @@
+{
+  "synthetic_database": true,
+  "diagnoses": {
+    "desktop": {
+      "active": 2,
+      "primary": 38,
+      "compatibility_projection_matches": true
+    },
+    "tablet": {
+      "active": 2,
+      "primary": 40,
+      "compatibility_projection_matches": true
+    },
+    "mobile": {
+      "active": 2,
+      "primary": 42,
+      "compatibility_projection_matches": true
+    }
+  },
+  "orders": {
+    "desktop": {
+      "id": 18,
+      "status": "SELESAI",
+      "destination": 157,
+      "frozen_catalogue": true
+    },
+    "tablet": {
+      "id": 19,
+      "status": "ORDERED",
+      "destination": 157,
+      "frozen_catalogue": true
+    },
+    "mobile": {
+      "id": 20,
+      "status": "ORDERED",
+      "destination": 157,
+      "frozen_catalogue": true
+    }
+  },
+  "nursing_modes": {
+    "sdki": "MASTER",
+    "slki": "MANUAL",
+    "siki": "MASTER"
+  },
+  "pharmacy": {
+    "status": "SELESAI",
+    "billing_rows": 1,
+    "quantity": "6.00",
+    "operations": 2,
+    "financial_pending": false
+  },
+  "ppra": {
+    "status": "DIKIRIM",
+    "approved_reviews": 1
+  },
+  "final_print_byte_identical_after_catalogue_name_price_flag_change": true
+}

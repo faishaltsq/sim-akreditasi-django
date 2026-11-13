@@ -1,0 +1,196 @@
+{
+  "verified_at": "2026-11-13T16:43:06.914268+07:00",
+  "scope": "Local synthetic verification only; not production activation",
+  "head": "112a7b3357168ec53aac6cb4c6670b8bcab86f66",
+  "full_regression": {
+    "tests": 574,
+    "seconds": 307.945,
+    "result": "OK",
+    "log": "clinical-delivery-regression.log"
+  },
+  "post_format_focused": {
+    "tests": 14,
+    "seconds": 10.043,
+    "result": "OK",
+    "log": "clinical-postformat-gate.log"
+  },
+  "post_suite_change": "One trailing space removed outside an HTML attribute; original bytes reconstructed and hash-checked; focused render/RBAC tests passed.",
+  "source_sha256": {
+    "klinis/data/medication_catalogue.json": "9f54ca80714062cdead872716b446d1815a1fbf0754b2540e369ce00e5be5f33",
+    "klinis/data/penunjang_catalogue.json": "6cac82d67287c6350c021ff39db3520f9dd3903a5e880f7f38c6dad0c0763531",
+    "klinis/expansion_admin.py": "30e94a1dec77d1ef5f68c20f32e79877289eb81a1e0708521a47717b4435f922",
+    "klinis/expansion_models.py": "4614c562532e813839156a324988ba09a8d7f3501b9e868b7ff901e7ce044894",
+    "klinis/management/commands/import_medication_catalogue.py": "e7ada04e9384edaf03d38a273619b9af61b928f4a3c122431930548489268e16",
+    "klinis/management/commands/import_penunjang_catalogue.py": "fd2c9e83b22c28b067e975e2e3c66958b1b07f181cb3d08e4b3ec586e8c7b231",
+    "klinis/migrations/0003_clinical_expansion.py": "9ce1af3dc10b4a9fc19d0b655e2ce05cb015621b9c45ed4dcff1cf2e56f61931",
+    "klinis/services/ai_igd_targets.py": "e16bc411618085a32116fd12fa2a78a29da0532bd71fd3bb2dcad578ea57d2cf",
+    "klinis/services/catalogue_import.py": "f8008bcda0d1101dc911811c8cab046792a8f773573c6aea8a9e5851cfaf78e3",
+    "klinis/services/medication_catalogue.py": "95951815fab818882a70644964ffede7ae9a5904a89dfa0390a4057f7cca7d60",
+    "klinis/services/penunjang_catalogue.py": "5e665736e0c69660ed96c22e0b1c38258b3729ac81d9afffb676556549380013",
+    "pasien/ancillary_views.py": "0781d973e7a620a22675404a4d10eff81c581c95811b05936869c8ed3d6ec4f1",
+    "pasien/expansion_admin.py": "07ab625af67428d60f525814e010573ffd03d652092b3f8cc727189905194ac7",
+    "pasien/expansion_models.py": "eb44e77ac245a21d277e8c8bd88c12c612d5159c5f6c3d682ac8e4ea8888a7e6",
+    "pasien/migrations/0026_diagnosis_lines.py": "cb35a468a5a53d1d6eaf51b6337493087438d8fc519ca91128e65f816a80a934",
+    "pasien/migrations/0027_clinical_expansion.py": "046d8d3b0ff05272509e995eb8b76e3e3a46a842dd2924be9d1e618fe36c6e4f",
+    "pasien/pharmacy_views.py": "3615d469fd4b67c0741ee49596b25f8275b1685e463caad961bfce015072c421",
+    "pasien/physical_exam.py": "6963834c8f7f8cb2027cc56d6151efa87118d831e5df9f096b0f362a57f48cb7",
+    "pasien/services/igd_diagnoses.py": "2571262d17b261bf262705b288ba3cb4b0c193e6fc642759af8bb2e57fd9e10c",
+    "pasien/services/igd_planning_components.py": "a9b7fbf64050a23c9390f03e8b353afbd782a036b0dab6b21ab9ab009d435a2a",
+    "pasien/services/medication_safety.py": "04b2a39e83e815e7e076012347727622e885507a249782d0d4b1aba62ee9fc3b",
+    "pasien/services/penunjang_orders.py": "5eaa3f209704b972af0ce15d7c66239f537d1df96c12c536888887e42e383bac",
+    "pasien/services/penunjang_results.py": "61ec95bcd7db6ad52e7be9cef804ee786a5c9129f5d05591da611c4bca404be1",
+    "pasien/services/ppra_review.py": "fd35ba409043c659f51e36a450bb4722fc857951bf612790b4ff122592665d8f",
+    "pasien/services/prescriptions.py": "910369fe2311918eecd6e63eea0a1bec9fbdcb8de094c56817e609f955a16d46",
+    "pasien/tests_clinical_expansion.py": "780f218235d05601e0e21224ebac91c2fb2cbd790408527ad39ba6cc220a8d2d",
+    "pasien/tests_clinical_expansion_safety.py": "2556111d89efe09efd4ca7e3b2c8b75cf792cb3bcc392e39a565051b70fbd550",
+    "pasien/tests_igd_diagnosis_lines.py": "c5f211e6291a0321fd470304b599b3357afb4cb64acf61ee3d54175c75d23541",
+    "pasien/tests_igd_physical_exam.py": "7c97d1242073d4365bafe1322641e3f41b73d4d75c6a0f406860689e958640b1",
+    "pasien/tests_igd_target_ai.py": "9ed8c518e09872f2b525ad60badb575b8588ec4cdcd90a95f763195854ea172d",
+    "pasien/tests_penunjang_results.py": "89c6b7065ac669bf84cf6263da402ab7a1ef15639ed041cc50f3972eae605467",
+    "qa/clinical_expansion_browser.py": "2f2ef8e66d17b30c3eb65deb16bd6317b5f3491292337457cdd897f9e13712cd",
+    "qa/clinical_expansion_browser_race.py": "15d4207a4ba86df2da58d90065358e0ee1ea93278a46b5b71e7dfc4d799bc52d",
+    "qa/clinical_expansion_concurrency.py": "f24b492ab54b9a49d67ec1cbd90c34caa8a4a4a66427761569b6522828bd9df4",
+    "static/js/igd-clinical-expansion.js": "2e917053124abbf7e6e1568a6ea19c2e2d392be968cd6bdee42c7b9c176fa776",
+    "static/js/igd-diagnosis-plan.js": "ecf7767fedcdaf96fdcef5a819f4df0f982f1d89516321efc1c5d3464820d52a",
+    "static/js/igd-physical-exam.js": "1b1317ea2f611fb447adf21679b1821df53eb37f4d235d9e11185e9b2d105af2",
+    "templates/pasien/_igd_ancillary_order.html": "d0d2675f3aae186aed72c23f97eef52669e9100a020add7ec1b7ac3db8ae58af",
+    "templates/pasien/_igd_diagnosis_plan.html": "54da5a05f4129852349ebe2af44c401255d9c14f6fb0a104dab19dc25e5bc5d5",
+    "templates/pasien/_igd_medication_composer.html": "d963ceb91c836a7ac6611fade165dcc2716b3ca13c49f343eabba72c92249bea",
+    "templates/pasien/_igd_physical_exam_form.html": "11c115aa6e39b9756024cd0b9529bfb6dc9532635c84130577ba2a21268be609",
+    "templates/pasien/_igd_physical_exam_readonly.html": "c9deff544d539ae858e6d51a28318188cb88f8507e1e4be258b903e0d6678b71",
+    "templates/pasien/_igd_planning_components.html": "c70bbfc2d7942e36490b97d1da3d60ec2a63d2963fa71a91b8e5df1b5a0ce952",
+    "templates/pasien/_igd_step8_fields.html": "7d9d0cba146332a8662f216b3557f236332d559dab27551acc84f35d8546d3c5",
+    "klinis/admin.py": "7d7f6575e084f8f7d378be6b867d56da74d109c0302ba117ca9848cb6af0e39a",
+    "klinis/models.py": "73c31b7a2ac549ac7919f368162f94ad6f11fb06b2d8eee4aa785c16850e4cd9",
+    "pasien/admin.py": "62c874571a3e045f8dcb45fc42d8e24e57c79c999782e8e2ec3935769429c812",
+    "pasien/forms_igd_operations.py": "cf759043b211d36c2ddd74efa0aba65d68d308a8318337e43da5a419eb98c6ba",
+    "pasien/forms_igd_workflow.py": "3c878c124e8a40aa629d4b998ea5161138e9354f14c8ddbaa598b065529ea35c",
+    "pasien/igd_workflow_views.py": "6519a4a8429b2a36550a7442d79fd49a6f89749add2a7b4967876a919452018b",
+    "pasien/models.py": "12e710487568685781bd38bd20cebcc1a08e510428c554b5246bf1485ed9554e",
+    "pasien/services/igd_actions.py": "ffb629ea71fbad736acbf33ed84a85d62a47f61ca3469dcaa05e761f10e93839",
+    "pasien/services/igd_assessment_workflow.py": "9dabb2f5e65c151fde643e6ee8fd566bf7a6c5287232fc23917106a47a2a84cd",
+    "pasien/services/igd_finalization.py": "6cd0190c5ea513dcebd66ba93cf3fb903762a77ded581f550aa9fe1684fcf860",
+    "pasien/services/igd_planning.py": "6000047c0c7a86fe837601deff0c1a11a6fd716de2f5112a99438394b2078c28",
+    "pasien/tests_igd_workflow_ai.py": "c051c5a3a7f6450b7d7f082494fade47daf6b6b4555c4374f9e3caf8072312d1",
+    "pasien/tests_igd_workflow_integration.py": "be49354c5537815ad58b1123044e819c92d7ea54714a362439ec70678e40350e",
+    "pasien/urls.py": "e259e1397f5073b07f51142b79d7779946ed7b9634dc1fd46761468783a8d93d",
+    "pasien/views.py": "aaad53f69092a047865155af99c12547e4939c97504b115c8c6c043a2ce1a8de",
+    "static/js/igd-assessment-workflow.js": "e0b39ae5b02a8a0ea799193d50d898b0a123bc3c7b25b33be5cc0ff3e495458d",
+    "static/js/igd-clinical-controls.js": "350a0e596b0883e3f03ba2bbb0149f5752e5aa1224c9f73e7b518949097106a1",
+    "templates/pasien/_igd_clinical_widgets.html": "390484d679782bc42e91daa40a81fedd7ee73e1c2427d7ed14729ea5da5f648e",
+    "templates/pasien/_igd_workflow_operations.html": "9837ef412aa4738f008af9b1e01cc94c61a54c033a11581569f4a7d3e0efac26",
+    "templates/pasien/cetak_asesmen_medis_igd.html": "0ff16b45b1523ed79774b720056d2774d9268631d88c390a2cd21a7dc7279bf1",
+    "templates/pasien/cetak_permintaan_lab.html": "853754b2014787f395cccbdb857b77f653e63bcb71ba762637f877c77f5d3c01",
+    "templates/pasien/farmasi_antrean.html": "edf69b42bba853e998788d52b2a7a0c0815a615489eefe3047200470225023a4",
+    "templates/pasien/igd_workflow.html": "702eee0aff3011bf91655a5fca23fc506b405677e87c7948016e6006f0e8c500",
+    "templates/pasien/igd_workflow_resume.html": "19ee2108755d94402dadc2531f381e78828bd3dc03b9687c9f43e4d956f63e46",
+    "templates/pasien/laboratorium_dashboard.html": "b0ea7b93a1400e3a8d0ca8c96f85699ff6e5b7524dc250039a7a45197b93344b"
+  },
+  "browser_journeys": 8,
+  "browser_widths": [
+    1366,
+    768,
+    375
+  ],
+  "postgres_version": "PostgreSQL 17.11 on x86_64-pc-linux-musl, compiled by gcc (Alpine 15.2.0) 15.2.0, 64-bit",
+  "postgres_migrations_readback": [
+    "klinis.0003_clinical_expansion",
+    "pasien.0026_diagnosis_lines",
+    "pasien.0027_clinical_expansion"
+  ],
+  "postgres_scenarios": 8,
+  "migration_operations": {
+    "klinis/migrations/0003_clinical_expansion.py": [
+      "CreateModel",
+      "CreateModel",
+      "CreateModel",
+      "CreateModel",
+      "CreateModel",
+      "CreateModel",
+      "CreateModel",
+      "CreateModel"
+    ],
+    "pasien/migrations/0026_diagnosis_lines.py": [
+      "CreateModel"
+    ],
+    "pasien/migrations/0027_clinical_expansion.py": [
+      "AddField",
+      "AddField",
+      "AddField",
+      "AddField",
+      "AddField",
+      "AddField",
+      "AddField",
+      "AddField",
+      "AddField",
+      "AddField",
+      "AddField",
+      "AddField",
+      "AddField",
+      "AddField",
+      "AddField",
+      "AddField",
+      "AddField",
+      "AddField",
+      "AddField",
+      "AddField",
+      "AddField",
+      "AddField",
+      "AddField",
+      "AddField",
+      "CreateModel",
+      "CreateModel",
+      "CreateModel",
+      "CreateModel",
+      "CreateModel",
+      "CreateModel"
+    ]
+  },
+  "checks": {
+    ".venv/Scripts/python.exe manage.py check": {
+      "exit_code": 0,
+      "stdout": "System check identified no issues (1 silenced)."
+    },
+    ".venv/Scripts/python.exe manage.py makemigrations --check --dry-run": {
+      "exit_code": 0,
+      "stdout": "No changes detected"
+    },
+    "node --check static/js/igd-clinical-expansion.js": {
+      "exit_code": 0,
+      "stdout": ""
+    },
+    "node --check static/js/igd-diagnosis-plan.js": {
+      "exit_code": 0,
+      "stdout": ""
+    },
+    "git -c core.safecrlf=false diff --check": {
+      "exit_code": 0,
+      "stdout": ""
+    }
+  },
+  "hashed_assets": {
+    "js/igd-clinical-expansion.js": "js/igd-clinical-expansion.2dc33daf8a22.js",
+    "js/igd-diagnosis-plan.js": "js/igd-diagnosis-plan.75af40d0d3c1.js"
+  },
+  "staging_catalogues": {
+    "medication_catalogue.json": {
+      "source": "Tambahkan diagnosa medis tindakan klinis dan obat.docx",
+      "sha256": "606835a388b009c9d123e22e13f9f6c26f0ed02fb51d9aee1928c0adb664bf4f",
+      "version": "DOCX-2026-11-13-STAGING",
+      "counts": {
+        "classes": 9,
+        "generics": 59,
+        "products": 59
+      }
+    },
+    "penunjang_catalogue.json": {
+      "source": "Pemeriksaan Penunjang untuk aplikasi ARima dengan alur cascading dropdown.docx",
+      "sha256": "a42f2b704625b6ff187bce787090909dd3bb0da1c6cfe7b9614c8a6c0433c69f",
+      "version": "DOCX-2026-11-13-STAGING",
+      "counts": {
+        "nodes": 38,
+        "items": 94
+      }
+    }
+  }
+}

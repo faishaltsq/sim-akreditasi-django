@@ -105,11 +105,7 @@
   }
   questionnaire('.morse-answer', 'skrining_jatuh_detail', 'skrining_jatuh_skor', 'skrining_jatuh_grade');
   questionnaire('.mst-answer', 'skrining_gizi_detail', 'skrining_gizi_mst');
-  document.querySelectorAll('.organ-finding').forEach(input => input.addEventListener('input', () => {
-    const findings = readJson('fisik_head_to_toe', {});
-    findings[input.dataset.key] = input.value;
-    writeJson('fisik_head_to_toe', findings);
-  }));
+
   const editor = document.getElementById('igd-body-editor');
   if (editor) {
     let markers = readJson('penanda_anatomi', []);
@@ -151,7 +147,7 @@
   document.querySelectorAll('[data-edit-plan]').forEach(button=>button.addEventListener('click',()=>{
     const form=document.getElementById('plan_action-form'); if (!form) return;
     form.elements.namedItem('action_id').value=button.dataset.editPlan;
-    for (const name of ['jenis','kode','nama','quantity','tarif','catatan_tarif','standard_item','ep_status','ep_catatan']) {
+    for (const name of ['jenis','kode','nama','quantity','tarif','catatan_tarif','standard_item','ep_status','ep_catatan','lokasi_anatomis','catatan_klinis','mode']) {
       const input=form.elements.namedItem(name); if(input) input.value=button.dataset[name] || '';
     }
     form.scrollIntoView({behavior:'smooth',block:'start'}); changed(form);

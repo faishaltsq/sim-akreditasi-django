@@ -11,7 +11,7 @@ from django.db.models import Max
 from django.utils import timezone
 
 from akreditasi.models import AuditLog
-from pasien.forms_igd_operations import InvestigationForm, CpptForm, ActionPlanForm, ActionIdForm
+from pasien.forms_igd_operations import InvestigationForm, CpptForm, ActionPlanForm, ActionIdForm, ActionExecutionForm
 from pasien.models import IgdAssessmentWorkflow, IgdWorkflowAction, OrderPenunjang, TindakanAsesmen, BillingItem, CPPT
 from .igd_assessment_workflow import get_visit, authorize_visit, WorkflowConflict, WorkflowValidation
 
@@ -38,7 +38,7 @@ def digest(value):
 def order(visit, workflow, user, data):
     require_doctor(user)
     values = validate(InvestigationForm, data)
-    record = OrderPenunjang.objects.create(kunjungan=visit, dokter_pengirim=user.get_full_name() or user.username, **values)
+    record = OrderPenunjang.objects.create(kunjungan=visit, ordered_by=user, dokter_pengirim=user.get_full_name() or user.username, **values)
     return {'order_id': record.pk}
 
 
@@ -83,7 +83,21 @@ def plan_action(visit, workflow, user, data):
     line.nama = values['nama'] or reference.nama
     line.icd9 = reference if jenis == 'ICD9' else None
     line.siki = reference if jenis == 'SIKI' else None
-    line.sumber_data = 'MASTER' if reference else 'MANUAL'
+    mode=values['mode'] or ('MASTER' if reference else 'MANUAL')
+    if mode=='MASTER' and reference is None:
+        raise WorkflowValidation({'mode':['Mode Master memerlukan kode katalog.']})
+    if mode=='AI':
+        from django.core import signing
+        try:
+            claim=signing.loads(values['ai_ticket'],salt='igd-ai-target',max_age=900)
+            if claim['target']!=('siki' if jenis=='SIKI' else 'procedure') or claim['visit']!=visit.pk or claim['user']!=user.pk or claim['version']!=workflow.version or line.kode not in claim['codes'] or reference is None:
+                raise ValueError('binding')
+        except (signing.BadSignature,ValueError,KeyError,TypeError) as exc:
+            raise WorkflowValidation({'ai_ticket':['Kandidat AI tidak sesuai tindakan/versi.']}) from exc
+    line.sumber_data = mode
+    line.lokasi_anatomis=values['lokasi_anatomis'] if 'lokasi_anatomis' in data else line.lokasi_anatomis
+    line.catatan_klinis=values['catatan_klinis'] if 'catatan_klinis' in data else line.catatan_klinis
+    line.assistance_provenance={'mode':mode,'accepted_by':user.pk,'accepted_at':timezone.now().isoformat()}
     line.execution_team = team
     line.tarif_penjamin = visit.penjamin
     line.quantity = values['quantity'] or Decimal('1')
@@ -117,7 +131,11 @@ def plan_action(visit, workflow, user, data):
 
 
 def execute(visit, workflow, user, data):
-    values = validate(ActionIdForm, data)
+    values = validate(ActionExecutionForm, data)
+    occurred=values['occurred_at'] or timezone.now()
+    now=timezone.now()
+    if occurred>now or ((now-occurred).total_seconds()>60 and len(values['retrospective_reason'].strip())<5):
+        raise WorkflowValidation({'occurred_at':['Waktu aktual tidak boleh di masa depan; pencatatan retrospektif memerlukan alasan.']})
     line = TindakanAsesmen.objects.filter(kunjungan=visit, pk=values['action_id']).first()
     if line is None:
         raise WorkflowValidation({'action_id':['Tindakan tidak ditemukan pada kunjungan ini.']})
@@ -133,7 +151,10 @@ def execute(visit, workflow, user, data):
     if line.tarif_efektif is not None and line.tarif_efektif > 0:
         line.billing_item = BillingItem.objects.create(kunjungan=visit, kategori='JASA_MEDIS', nama_item=line.nama,
             kode_icd=line.kode, sumber='ASESMEN', kuantitas=line.quantity, harga_satuan=line.tarif_efektif, dicatat_oleh=user)
-    line.execution_status, line.performed_by, line.performed_at = 'PERFORMED', user, timezone.now()
+    line.execution_status, line.performed_by, line.performed_at = 'PERFORMED', user, occurred
+    line.recorded_at=now
+    if values['retrospective_reason']:
+        line.catatan_klinis += '\nPencatatan retrospektif: '+values['retrospective_reason']
     line.execution_cppt_id = note['cppt_id']
     line.save()
     return {'action_id':line.pk, 'cppt_id':line.execution_cppt_id, 'billing_id':line.billing_item_id}
@@ -154,20 +175,20 @@ def cancel_action(visit, workflow, user, data):
 
 
 def order_result(visit, workflow, user, data):
-    from pasien.forms_igd_operations import InvestigationResultForm
-    require_doctor(user)
-    values = validate(InvestigationResultForm,data)
-    record = visit.order_penunjang.filter(pk=values.pop('order_id')).first()
+    from .penunjang_results import record_result
+    values=dict(data);order_id=values.pop('order_id',None)
+    correction_reason=values.pop('correction_reason','')
+    record = visit.order_penunjang.filter(pk=order_id).first()
     if record is None:
         raise WorkflowValidation({'order_id':['Order tidak ditemukan pada episode ini.']})
-    for name,value in values.items():
-        setattr(record,name,value)
-    record.result_recorded_by, record.result_recorded_at = user, timezone.now()
-    record.save()
-    return {'order_id':record.pk,'late_result':workflow.status=='FINAL'}
+    return record_result(record.pk,user,values,requesting=True,manage_workflow=False,correction_reason=correction_reason)
 
 
-HANDLERS = {'order': order, 'cppt': cppt, 'plan_action': plan_action, 'execute': execute, 'cancel_action': cancel_action, 'order_result':order_result}
+from .igd_diagnoses import set_diagnoses
+from .penunjang_orders import order_batch
+from .prescriptions import save_prescription, submit_prescription
+
+HANDLERS = {'order_batch':order_batch, 'prescription_save':save_prescription, 'prescription_submit':submit_prescription, 'diagnosis_set': set_diagnoses, 'order': order, 'cppt': cppt, 'plan_action': plan_action, 'execute': execute, 'cancel_action': cancel_action, 'order_result':order_result}
 
 
 @transaction.atomic

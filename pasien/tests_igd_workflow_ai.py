@@ -50,7 +50,9 @@ class IgdAiTest(fixtures.IgdWorkflowTest):
         from django.urls import reverse
         from pasien.services.igd_assessment_workflow import save_step
         self.enable_ai()
-        workflow = save_step(self.visit.pk,self.user,8,{'diagnosis_mode':'MANUAL','diagnosa_keperawatan_sdki':'Diagnosis keperawatan manual'},0)
+        self.visit.diagnosa_keperawatan_sdki='Diagnosis keperawatan manual'
+        self.visit.save(update_fields=['diagnosa_keperawatan_sdki'])
+        workflow = save_step(self.visit.pk,self.user,8,{'diagnosis_mode':'MANUAL'},0)
         with override_settings(IGD_WORKFLOW_ENABLED=True):
             with patch('klinis.services.ai_igd._call_deepseek',return_value={'success':True,'data':{'medical':[{'kode':'QA.TEST'}],'nursing':[]}}):
                 response = self.client.post(reverse('pasien:igd_workflow_ai',args=[self.visit.pk]),json.dumps({'query':'nyeri'}),content_type='application/json')

@@ -143,32 +143,7 @@
 
 <!-- VI. SECONDARY SURVEY -->
 <div class="section-title">VI. SECONDARY SURVEY: PEMERIKSAAN FISIK LENGKAP</div>
-<table class="table table-bordered table-form mb-1">
-  <tr><th style="width:15%;">1. MATA</th>
-    <td>Konjungtiva: {{ kunjungan.secondary_survey_detail.mata.konjungtiva|default:"Normal" }} | Sklera: {{ kunjungan.secondary_survey_detail.mata.sklera|default:"Normal" }} | Pupil: {{ kunjungan.secondary_survey_detail.mata.pupil|default:"Isokor" }} | RC: {{ kunjungan.secondary_survey_detail.mata.refleks_cahaya|default:"(+/+)" }}</td>
-  </tr>
-  <tr><th>2. THT</th>
-    <td>Telinga: {{ kunjungan.secondary_survey_detail.tht.telinga_lapang|default:"Lapang" }} | Hidung: NCH {{ kunjungan.secondary_survey_detail.tht.napas_cuping|default:"Tidak" }} | Mukosa Bibir: {{ kunjungan.secondary_survey_detail.tht.mukosa_bibir|default:"Lembap" }} | Faring: {{ kunjungan.secondary_survey_detail.tht.faring|default:"Tenang" }}</td>
-  </tr>
-  <tr><th>3. Kepala & Leher</th>
-    <td>Kepala: {{ kunjungan.secondary_survey_detail.kepala_leher.kepala|default:"Normosefali" }} | JVP: {{ kunjungan.secondary_survey_detail.kepala_leher.jvp|default:"Normal" }} | KGB: {{ kunjungan.secondary_survey_detail.kepala_leher.kgb|default:"Tidak Ada Pembesaran" }} | Kaku Kuduk: {{ kunjungan.secondary_survey_detail.kepala_leher.kaku_kuduk|default:"(-)" }}</td>
-  </tr>
-  <tr><th>4. Thorax</th>
-    <td>Paru: {{ kunjungan.secondary_survey_detail.thorax.paru_auskultasi|default:"Vesikuler (+/+)" }} Wh: {{ kunjungan.secondary_survey_detail.thorax.paru_wheezing|default:"(-/-)" }} Rh: {{ kunjungan.secondary_survey_detail.thorax.paru_ronkhi|default:"(-/-)" }} | Jantung: {{ kunjungan.secondary_survey_detail.thorax.jantung_bunyi|default:"S1-S2 Reguler" }} Murmur: {{ kunjungan.secondary_survey_detail.thorax.jantung_murmur|default:"(-)" }}</td>
-  </tr>
-  <tr><th>5. Abdomen</th>
-    <td>{{ kunjungan.secondary_survey_detail.abdomen.inspeksi|default:"Datar" }} | BU: {{ kunjungan.secondary_survey_detail.abdomen.bising_usus|default:"Normal" }} | Palpasi: {{ kunjungan.secondary_survey_detail.abdomen.palpasi|default:"Supel" }} | NT: {{ kunjungan.secondary_survey_detail.abdomen.nyeri_tekan|default:"Tidak Ada" }} | Perkusi: {{ kunjungan.secondary_survey_detail.abdomen.perkusi|default:"Timpani" }}</td>
-  </tr>
-  <tr><th>6. Ekstremitas</th>
-    <td>Akral: {{ kunjungan.secondary_survey_detail.ekstremitas.akral|default:"Hangat" }} | CRT: {{ kunjungan.secondary_survey_detail.ekstremitas.crt|default:"< 2 Detik" }} | Edema Atas: {{ kunjungan.secondary_survey_detail.ekstremitas.edema_atas|default:"(-/-)" }} Bawah: {{ kunjungan.secondary_survey_detail.ekstremitas.edema_bawah|default:"(-/-)" }} | Motorik: {{ kunjungan.secondary_survey_detail.ekstremitas.motorik_atas|default:"5/5" }} / {{ kunjungan.secondary_survey_detail.ekstremitas.motorik_bawah|default:"5/5" }}</td>
-  </tr>
-  <tr><th>7. Genitalia &amp; Anus</th>
-    <td>Kondisi: {{ kunjungan.secondary_survey_detail.genitalia.kondisi|default:"Tidak Diperiksa (Atas Indikasi)" }} | Kateter Urin: {{ kunjungan.secondary_survey_detail.genitalia.kateter|default:"Tidak Terpasang" }}</td>
-  </tr>
-  <tr><th>8. Integumen &amp; Kulit</th>
-    <td>Turgor: {{ kunjungan.secondary_survey_detail.kulit.turgor|default:"Cepat Kembali (Normal)" }} | Integritas Jaringan: {{ kunjungan.secondary_survey_detail.kulit.integritas|default:"Utuh / Normal" }}</td>
-  </tr>
-</table>
+{% include 'pasien/_igd_physical_exam_readonly.html' %}
 
 <!-- VII. PEMERIKSAAN PENUNJANG -->
 <div class="section-title">VII. PEMERIKSAAN PENUNJANG IGD</div>

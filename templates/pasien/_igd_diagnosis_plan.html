@@ -1,0 +1,29 @@
+{% if step == 8 %}
+<section id="igd-diagnoses" class="card card-body my-3" aria-labelledby="diagnosis-heading" data-action="{% url 'pasien:igd_workflow_action' kunjungan.pk %}">
+  {{ diagnosis_lines|json_script:"igd-diagnosis-data" }}
+  <h3 id="diagnosis-heading" class="h6">Diagnosis Medis — Utama & Sekunder</h3>
+  <p class="form-text">Diagnosis Utama diproyeksikan ke kolom kompatibilitas. Diagnosis Sekunder disimpan sebagai baris terpisah.</p>
+  {% if not diagnosis_lines and legacy_medical_diagnosis %}<p>Diagnosis historis belum diadopsi: {{ legacy_medical_diagnosis }}</p>{% endif %}
+  {% for item in diagnosis_lines %}{% if item.active %}
+  <article class="border rounded p-2 mb-2" data-diagnosis-row="{{ item.id }}">
+    <strong>{% if item.is_primary %}Diagnosis Utama{% else %}Diagnosis Sekunder{% endif %}</strong>
+    <p>{{ item.kode }} {{ item.nama }}</p><small>{{ item.mode }}</small>
+    {% if can_sign_medical and not readonly %}<button type="button" class="btn btn-sm btn-outline-primary" data-diagnosis-edit="{{ item.id }}">Edit / Jadikan Utama</button><button type="button" class="btn btn-sm btn-outline-secondary" data-diagnosis-cancel="{{ item.id }}">Batalkan Diagnosis</button>{% endif %}
+  </article>
+  {% endif %}{% empty %}<p>Belum ada baris diagnosis terstruktur. Diagnosis lama tetap tersedia sampai ditinjau dokter.</p>{% endfor %}
+  {% if can_sign_medical and not readonly %}
+  <form id="igd-diagnosis-form" method="post" action="{% url 'pasien:igd_workflow_action' kunjungan.pk %}">
+    {% csrf_token %}
+    <label for="diagnosis-mode">Metode input</label>
+    <select id="diagnosis-mode" name="mode" class="form-select"><option value="MANUAL">Manual</option><option value="MASTER">Master ICD-10</option><option value="AI">Bantuan AI</option></select>
+    <label for="diagnosis-code">Kode ICD-10 (mode Master)</label><input id="diagnosis-code" name="code" class="form-control" maxlength="10" list="diagnosis-codes"><datalist id="diagnosis-codes"></datalist>
+    <label for="diagnosis-text">Diagnosis manual / istilah pencarian master</label><textarea id="diagnosis-text" name="text" class="form-control" maxlength="2000" rows="2"></textarea>
+    <label class="d-block my-2"><input id="diagnosis-primary" type="checkbox" name="primary"> Diagnosis Utama</label>
+    <p class="form-text">Memilih diagnosis utama baru memindahkan penanda utama secara atomik. Pembatalan mempertahankan riwayat.</p>
+    <button type="button" id="diagnosis-ai-request" class="btn btn-outline-primary my-2">Minta Kandidat AI Medis</button><div id="diagnosis-ai-results" aria-live="polite"></div>
+    <button type="submit" class="btn btn-outline-primary">Simpan Diagnosis</button>
+    <button type="reset" class="btn btn-outline-secondary">Kosongkan Isian Baru</button>
+  </form>
+  {% endif %}
+</section>
+{% endif %}

@@ -1,0 +1,10 @@
+{
+  "delayed_real_response_discarded": true,
+  "keyboard_parent_selection": true,
+  "patient_data_in_persistent_storage": false,
+  "storage_keys": {
+    "local": [],
+    "session": []
+  },
+  "page_errors": []
+}

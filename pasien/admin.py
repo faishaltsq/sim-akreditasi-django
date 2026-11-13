@@ -1,4 +1,5 @@
 from django.contrib import admin
+from . import expansion_admin
 from .models import (
     Pasien, Ruangan, Bed, KunjunganPasien, AsesmenRisikoKlinis,
     CPPT, BillingItem, DischargeRecord, ResepElektronik, ResepDetail,
@@ -64,6 +65,15 @@ class ResepDetailInline(admin.TabularInline):
 
 @admin.register(ResepElektronik)
 class ResepElektronikAdmin(admin.ModelAdmin):
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
     list_display = ['no_resep', 'kunjungan', 'jenis_resep', 'status', 'tanggal_resep', 'dokter_peresep']
     list_filter = ['status', 'jenis_resep']
     search_fields = ['no_resep', 'kunjungan__pasien__nama_lengkap']

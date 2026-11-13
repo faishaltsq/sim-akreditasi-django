@@ -37,8 +37,16 @@ def igd_workflow(request, pk):
             raise ValueError
     except (ValueError, TypeError):
         return HttpResponseBadRequest('Langkah tidak valid.')
-    form = form_for_step(step, instance=visit)
-    if workflow and step in (4, 10):
+    revision = workflow.revisions.order_by('-revision').first() if workflow else None
+    historical = revision.snapshot.get('visit',{}) if revision and workflow.status == 'FINAL' else None
+    form_visit = visit
+    if historical is not None:
+        import copy
+        form_visit = copy.copy(visit)
+        for name in STEPS[step][1]:
+            setattr(form_visit,name,historical.get(name))
+    form = form_for_step(step, instance=form_visit)
+    if workflow and step in (4, 10) and historical is None:
         phase = 'INITIAL' if step == 4 else 'EVALUATION'
         observation = workflow.observations.filter(phase=phase).order_by('-observed_at', '-pk').first()
         if observation:
@@ -48,21 +56,33 @@ def igd_workflow(request, pk):
     readonly = bool((workflow and workflow.status == 'FINAL') or visit.jenis_kunjungan != 'IGD'
                     or visit.status in ('PULANG','RUJUK','MENINGGAL','BATAL')
                     or not settings.IGD_WORKFLOW_ENABLED or profile.role == 'ASESOR' or profile.profesi not in CLINICAL_PROFESSIONS)
+    if step == 8:
+        form.fields['diagnosa_masuk'].widget=forms.HiddenInput()
+        form.fields['diagnosa_masuk'].disabled=True
+        for name in ('diagnosa_keperawatan_sdki','luaran_keperawatan_slki','intervensi_keperawatan_siki'):
+            if profile.profesi not in ('PERAWAT','BIDAN'):
+                form.fields[name].disabled=True
+        if profile.profesi not in ('DOKTER_UMUM','DOKTER_SPESIALIS'):
+            for name in ('tatalaksana_resusitasi','tatalaksana_terapi'):
+                form.fields[name].disabled=True
     if readonly:
         for field in form.fields.values():
             field.disabled = True
-    revision = workflow.revisions.order_by('-revision').first() if workflow else None
-    historical = revision.snapshot.get('visit',{}) if revision and workflow.status == 'FINAL' else None
     if historical is not None:
         for name in form.fields:
-            if name in historical and not (step in (4,10) and name in VITAL_FIELDS):
-                form.initial[name] = historical[name]
+            form.initial[name] = historical.get(name)
+        if step in (4,10):
+            phase = 'INITIAL' if step == 4 else 'EVALUATION'
+            saved = [o for o in revision.snapshot.get('observations',[]) if o['phase']==phase]
+            if saved:
+                latest = max(saved,key=lambda o:(o['observed_at'],o['id']))
+                form.initial.update(latest['data'])
     observations = workflow.observations.all() if workflow else []
     from .forms_igd_operations import InvestigationForm, CpptForm, ActionPlanForm, SignatureForm, FinalizationForm, AddendumForm
     from .services.igd_finalization import missing_sections
-    from akreditasi.models import StandardItem, Framework
+    from akreditasi.models import StandardItem, Framework, UnitKerja
     from .models import Bed, POLIKLINIK_CHOICES
-    for name in ('fisik_head_to_toe','penanda_anatomi','skrining_jatuh_detail','skrining_gizi_detail'):
+    for name in ('fisik_head_to_toe','secondary_survey_detail','penanda_anatomi','skrining_jatuh_detail','skrining_gizi_detail'):
         if name in form.fields:
             form.fields[name].widget = forms.HiddenInput()
     if 'disposisi_kontrol_poli' in form.fields:
@@ -70,6 +90,7 @@ def igd_workflow(request, pk):
     if 'waktu_kematian' in form.fields:
         form.fields['waktu_kematian'].widget = forms.DateTimeInput(format='%Y-%m-%dT%H:%M',attrs={'type':'datetime-local','class':'form-control'})
     order_form, cppt_form, plan_form = InvestigationForm(auto_id='order_%s'), CpptForm(auto_id='cppt_%s'), ActionPlanForm(auto_id='plan_%s')
+    plan_form.fields['jenis'].choices=[('SIKI','SIKI (Keperawatan)'),('BEBAS','Manual')] if profile.profesi in ('PERAWAT','BIDAN') else [('ICD9','ICD-9 (Medis)'),('BEBAS','Manual')]
     ep_items = StandardItem.objects.filter(category__framework=Framework.active()).order_by('code')
     plan_form.fields['standard_item'].widget = forms.Select(choices=[('','— EP belum dipilih —'),*[(r.pk,f'{r.code} — {r.sub_title}') for r in ep_items]],attrs={'class':'form-select'})
     final_form = FinalizationForm(auto_id='final_%s')
@@ -95,6 +116,31 @@ def igd_workflow(request, pk):
     signature_form.fields['section'].choices = section_choices
     addendum_form.fields['section'].choices = section_choices
     exemption_labels = [('triage','Triase'),('anamnesis','Anamnesis'),('primary_survey','Primary Survey'),('initial_vitals','TTV Awal'),('screening','Skrining'),('physical_exam','Pemeriksaan Fisik'),('diagnosis','Diagnosis'),('nursing','3S Keperawatan'),('investigations','Penunjang'),('care','Pelaksanaan Asuhan'),('evaluation','Evaluasi Akhir')]
+    from .physical_exam import exam_context
+    physical_source = historical if historical is not None else {name:getattr(visit,name) for name in ('fisik_head_to_toe','secondary_survey_detail','keadaan_umum','kesadaran','ttv_gcs')}
+    physical_exam = exam_context(physical_source.get('fisik_head_to_toe'),physical_source.get('secondary_survey_detail'),physical_source)
+    stale_signatures = False
+    if workflow and workflow.status == 'DRAFT' and workflow.signatures:
+        from .services.igd_finalization import clinical_snapshot
+        from .services.igd_actions import digest
+        fingerprint = digest(clinical_snapshot(visit,workflow))
+        stale_signatures = any(value.get('content_digest')!=fingerprint for value in workflow.signatures.values())
+    from .models import ResepElektronik, PharmacyServiceGrant
+    from .services.medication_safety import evaluate_prescription
+    prescriptions=list(visit.resep_list.select_related('serving_unit').prefetch_related('items__components').all()) if historical is None else []
+    for rx in prescriptions:
+        rx.safety_findings=evaluate_prescription(rx)
+        rx.payload_script_id=f'rx-payload-{rx.pk}'
+        rx.draft_payload={'serving_unit_id':rx.serving_unit_id,'lines':[]}
+        for row in rx.items.all():
+            if not row.product_id:
+                continue
+            line={'label':row.nama_obat,'product_id':row.product_id,'kind':row.kind,'regimen':row.regimen,'quantity':str(row.quantity_decimal),'quantity_reason':row.quantity_reason,'formulary':row.product_snapshot.get('formulary',{}).get('type','RS')}
+            if row.kind=='RACIKAN':
+                line.update(components=[{'product_id':c.produk_id,'amount':str(c.amount),'unit':c.unit} for c in row.components.all()],compound_instructions=row.product_snapshot.get('compound_instructions',''),compound_form=row.bentuk_sediaan)
+            rx.draft_payload['lines'].append(line)
+    stored_modes=(revision.snapshot.get('diagnosis_provenance',{}) if historical is not None else visit.diagnosis_provenance).get('components',{})
+    planning_components=[{'key':key,'label':label,'catalogue_type':kind,'field':form[field],'mode':stored_modes.get(key,{}).get('mode','MANUAL')} for key,label,kind,field in [('sdki','Diagnosis Keperawatan (SDKI)','SDKI','diagnosa_keperawatan_sdki'),('slki','Luaran Keperawatan (SLKI)','SLKI','luaran_keperawatan_slki'),('siki','Intervensi Keperawatan (SIKI)','SIKI','intervensi_keperawatan_siki')]] if step==8 else []
     return render(request, 'pasien/igd_workflow.html', {
         'kunjungan': visit, 'pasien': visit.pasien, 'workflow': workflow,
         'version': workflow.version if workflow else 0,
@@ -106,6 +152,7 @@ def igd_workflow(request, pk):
         'signature_form':signature_form,'final_form':final_form,'addendum_form':addendum_form,
         'exemption_fields':[{'key':key,'label':label,'reason':workflow.exemptions.get(key,'') if workflow else ''} for key,label in exemption_labels],
         'clinical_actions':actions,'action_totals':totals,'rollout_enabled':settings.IGD_WORKFLOW_ENABLED,
+        'diagnosis_lines':revision.snapshot.get('diagnoses', []) if historical is not None else list(visit.diagnoses.order_by('pk').values('id','kode','nama','mode','active','is_primary')),
         'can_sign_medical':profile.profesi in ('DOKTER_UMUM','DOKTER_SPESIALIS') and profile.role!='ASESOR',
         'can_sign_nursing':profile.profesi in ('PERAWAT','BIDAN') and profile.role!='ASESOR',
         'missing_sections':missing_sections(visit,workflow) if workflow else [],
@@ -115,6 +162,14 @@ def igd_workflow(request, pk):
         'markers':historical.get('penanda_anatomi',[]) if historical is not None else visit.penanda_anatomi,
         'attachments':visit.lampiran_asesmen.all(),
         'latest_revision':revision,
+        'planning_components':planning_components,'prescriptions':prescriptions,
+        'legacy_medical_diagnosis':historical.get('diagnosa_masuk','') if historical is not None else visit.diagnosa_masuk,
+        'pharmacy_units':UnitKerja.objects.filter(pk__in=PharmacyServiceGrant.objects.values('unit_id')).order_by('name'),
+        'active_diagnoses':visit.diagnoses.filter(active=True),
+        'cascade_levels':[{'number':1,'label':'Kategori Utama'},{'number':2,'label':'Instalasi'},{'number':3,'label':'Kelompok'},{'number':4,'label':'Item Pemeriksaan'}],
+        'preparation_fields':[{'key':'fasting','label':'Status puasa'},{'key':'pregnancy','label':'Kehamilan'},{'key':'contrast_allergy','label':'Alergi kontras'}],
+        'physical_exam':physical_exam,'physical_gcs':physical_source.get('ttv_gcs'),
+        'stale_signatures':stale_signatures,
     })
 
 
@@ -196,10 +251,18 @@ def igd_workflow_ai(request,pk):
     visit, workflow = get_visit(pk,request.user,write=True)
     try:
         data = json.loads(request.body)
-        if not isinstance(data,dict) or set(data)-{'query'} or not isinstance(data.get('query',''),str) or len(data.get('query',''))>4000:
+        if not isinstance(data,dict) or set(data)-{'query','target','sdki_code','slki_codes'} or not isinstance(data.get('query',''),str) or len(data.get('query',''))>4000:
             raise ValueError
     except (ValueError,TypeError,UnicodeDecodeError):
         return JsonResponse({'success':False,'error':'Kueri saran tidak valid.'},status=400)
+    if 'target' in data:
+        from klinis.services.ai_igd_targets import generate_target
+        if data.get('target') not in ('medical','procedure','sdki','slki','siki') or not isinstance(data.get('sdki_code',''),str) or len(data.get('sdki_code',''))>20 or not isinstance(data.get('slki_codes',[]),list) or len(data.get('slki_codes',[]))>30 or any(not isinstance(code,str) or len(code)>20 for code in data.get('slki_codes',[])):
+            return JsonResponse({'success':False,'error':'Target/konteks AI tidak valid.'},status=400)
+        result=generate_target(visit,request.user,data['target'],data.get('query',''),data.get('sdki_code',''),data.get('slki_codes',[]))
+        if result['success']:
+            result['ticket']=signing.dumps({'visit':visit.pk,'user':request.user.pk,'version':workflow.version if workflow else 0,'target':data['target'],'codes':[r['kode'] for r in result['candidates']]},salt='igd-ai-target',compress=True)
+        return JsonResponse(result,status=200 if result['success'] else 503)
     from klinis.services.ai_igd import generate_igd_suggestions
     result = generate_igd_suggestions(visit,request.user,data.get('query',''))
     if result['success']:
@@ -215,10 +278,10 @@ def igd_workflow_ai(request,pk):
 def igd_workflow_catalogue(request,pk):
     require_rollout()
     get_visit(pk,request.user)
-    from klinis.models import MasterIcd10, MasterIcd9, SdkiDiagnosis, SikiIntervensi, Pemetaan3S
+    from klinis.models import MasterIcd10, MasterIcd9, SdkiDiagnosis, SlkiLuaran, SikiIntervensi, Pemetaan3S
     q = request.GET.get('q','')[:100]
     kind = request.GET.get('type','ICD10')
-    models = {'ICD10':MasterIcd10,'ICD9':MasterIcd9,'SDKI':SdkiDiagnosis,'SIKI':SikiIntervensi}
+    models = {'ICD10':MasterIcd10,'ICD9':MasterIcd9,'SDKI':SdkiDiagnosis,'SLKI':SlkiLuaran,'SIKI':SikiIntervensi}
     if kind not in models:
         return JsonResponse({'error':'Jenis katalog tidak valid.'},status=400)
     rows = list(models[kind].objects.filter(Q(kode__icontains=q)|Q(nama__icontains=q)).order_by('kode').values('kode','nama')[:30])
@@ -248,8 +311,11 @@ def igd_workflow_resume(request,pk):
         raise Http404
     from .services.igd_actions import digest
     from .models import KunjunganPasien
-    sections = [{'number':number,'title':title,'rows':[{'label':KunjunganPasien._meta.get_field(name).verbose_name,'value':revision.snapshot.get('visit',{}).get(name)} for name in names]} for number,(title,names) in STEPS.items() if names]
-    return render(request,'pasien/igd_workflow_resume.html',{'record':revision,'snapshot':revision.snapshot,'workflow':workflow,'sections':sections,'record_digest':digest(revision.snapshot)})
+    sections = [{'number':number,'title':title,'rows':[{'label':KunjunganPasien._meta.get_field(name).verbose_name,'value':revision.snapshot.get('visit',{}).get(name)} for name in names]} for number,(title,names) in STEPS.items() if names and number!=6]
+    from .physical_exam import exam_context
+    saved = revision.snapshot.get('visit',{})
+    physical_exam = exam_context(saved.get('fisik_head_to_toe'),saved.get('secondary_survey_detail'),saved)
+    return render(request,'pasien/igd_workflow_resume.html',{'record':revision,'snapshot':revision.snapshot,'workflow':workflow,'sections':sections,'record_digest':digest(revision.snapshot),'physical_exam':physical_exam})
 
 
 @login_required

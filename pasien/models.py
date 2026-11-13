@@ -12,6 +12,9 @@ from django.core.exceptions import ValidationError
 
 # ── 1. Master Pasien ─────────────────────────────────────────────────────────
 
+from .expansion_models import (KomponenRacikan, AlergiPasienTerstruktur, MedicationSafetyReview, PpraReviewRequest, PrescriptionOperation, PharmacyServiceGrant)
+
+
 class Pasien(models.Model):
     JENIS_KELAMIN = [('L', 'Laki-laki'), ('P', 'Perempuan')]
     GOLDAR = [('A', 'A'), ('B', 'B'), ('AB', 'AB'), ('O', 'O'), ('-', 'Tidak Diketahui')]
@@ -888,6 +891,13 @@ class DischargeRecord(models.Model):
 # ── 7b. Order Penunjang (Laboratorium & Radiologi) ───────────────────────────
 
 class OrderPenunjang(models.Model):
+    catalogue_item = models.ForeignKey('klinis.ItemPenunjang', null=True, blank=True, on_delete=models.PROTECT)
+    catalogue_snapshot = models.JSONField(default=dict, blank=True)
+    batch_id = models.UUIDField(null=True, blank=True)
+    preparation = models.JSONField(default=dict, blank=True)
+    diagnosis = models.ForeignKey('DiagnosisKunjungan', null=True, blank=True, on_delete=models.PROTECT)
+    ordered_by = models.ForeignKey(User, null=True, blank=True, on_delete=models.PROTECT, related_name='+')
+    destination = models.ForeignKey('akreditasi.UnitKerja', null=True, blank=True, on_delete=models.PROTECT, related_name='+')
     JENIS_CHOICES = [
         ('LAB',       'Laboratorium'),
         ('RADIOLOGI', 'Radiologi / Imaging'),
@@ -932,6 +942,11 @@ class OrderPenunjang(models.Model):
 # ── 8. E-Prescribing & Farmasi ────────────────────────────────────────────────
 
 class ResepElektronik(models.Model):
+    version = models.PositiveIntegerField(default=0)
+    serving_unit = models.ForeignKey('akreditasi.UnitKerja', null=True, blank=True, on_delete=models.PROTECT, related_name='+')
+    submitted_snapshot = models.JSONField(default=dict, blank=True)
+    policy_version = models.CharField(max_length=100, blank=True)
+    financial_pending = models.BooleanField(default=False)
     STATUS_RESEP = [
         ('DRAFT',       'Draft Dokter'),
         ('DIKIRIM',     'Terkirim ke Farmasi'),
@@ -967,10 +982,18 @@ class ResepElektronik(models.Model):
 
     @property
     def total_biaya(self):
-        return sum(item.subtotal for item in self.items.all())
+        return sum((item.subtotal for item in self.items.all() if item.subtotal is not None), 0)
 
 
 class ResepDetail(models.Model):
+    product = models.ForeignKey('klinis.ProdukFarmasi', null=True, blank=True, on_delete=models.PROTECT)
+    product_snapshot = models.JSONField(default=dict, blank=True)
+    regimen = models.JSONField(default=dict, blank=True)
+    quantity_decimal = models.DecimalField(max_digits=12, decimal_places=4, null=True, blank=True)
+    reference_price = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    quantity_reason = models.TextField(blank=True)
+    kind = models.CharField(max_length=8, blank=True)
+    billing_item = models.OneToOneField('BillingItem', null=True, blank=True, on_delete=models.PROTECT, related_name='prescription_detail')
     BENTUK_SEDIAAN = [
         ('TABLET',  'Tablet / Kaplet'),
         ('KAPSUL',  'Kapsul'),
@@ -999,6 +1022,8 @@ class ResepDetail(models.Model):
 
     @property
     def subtotal(self):
+        if self.product_id:
+            return self.quantity_decimal * self.reference_price if self.quantity_decimal is not None and self.reference_price is not None else None
         return self.jumlah * self.harga_satuan
 
 
@@ -1208,6 +1233,10 @@ class LampiranAsesmen(models.Model):
 # ── 13. Baris Tindakan Asesmen (tarif editable + EP per item) ─────────────────
 
 class TindakanAsesmen(models.Model):
+    lokasi_anatomis = models.CharField(max_length=200, blank=True)
+    catatan_klinis = models.TextField(blank=True)
+    recorded_at = models.DateTimeField(null=True, blank=True)
+    assistance_provenance = models.JSONField(default=dict, blank=True)
     JENIS = [
         ('ICD9', 'ICD-9-CM'),
         ('SIKI', 'SIKI'),
@@ -1278,6 +1307,24 @@ class TindakanAsesmen(models.Model):
 
 
 # ── 12. Anjungan Pendaftaran Mandiri (APM) & Antrean Online ──────────────────
+
+class DiagnosisKunjungan(models.Model):
+    kunjungan = models.ForeignKey(KunjunganPasien, on_delete=models.PROTECT, related_name='diagnoses')
+    icd10 = models.ForeignKey('klinis.MasterIcd10', null=True, blank=True, on_delete=models.PROTECT)
+    kode = models.CharField(max_length=10, blank=True)
+    nama = models.CharField(max_length=2000)
+    mode = models.CharField(max_length=6, choices=[('MANUAL', 'Manual'), ('MASTER', 'Master'), ('AI', 'AI')])
+    is_primary = models.BooleanField(default=False)
+    active = models.BooleanField(default=True)
+    provenance = models.JSONField(default=dict, blank=True)
+    updated_by = models.ForeignKey(User, null=True, on_delete=models.SET_NULL, related_name='+')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['pk']
+        constraints = [models.UniqueConstraint(fields=['kunjungan'], condition=models.Q(active=True, is_primary=True), name='unique_active_primary_diagnosis')]
+
 
 class IgdAssessmentWorkflow(models.Model):
     signatures = models.JSONField(default=dict, blank=True)

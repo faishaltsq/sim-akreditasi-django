@@ -13,6 +13,7 @@ from django.conf import settings
 from pathlib import Path
 import re
 from .decorators import require_patient_module, get_unit_scope, scope_kunjungan_qs, scope_pasien_qs
+from .physical_exam import exam_context
 from .unit_scope import (
     boleh_detail_kunjungan, can_read_kunjungan, can_read_pasien,
 )
@@ -697,155 +698,27 @@ def resume_pdf(request, kunjungan_pk):
 
 @login_required
 def resep_buat(request, kunjungan_pk):
-    """Dokter membuat resep elektronik dari kunjungan detail."""
-    kunjungan = get_object_or_404(KunjunganPasien, pk=kunjungan_pk)
-    if request.method == 'POST':
-        jenis_resep = request.POST.get('jenis_resep', 'RAWAT_INAP')
-        catatan_dokter = request.POST.get('catatan_dokter', '').strip()
-
-        # Nomor resep unik
-        today_str = timezone.now().strftime('%Y%m%d')
-        count = ResepElektronik.objects.filter(no_resep__startswith=f'RSP-{today_str}').count() + 1
-        no_resep = f'RSP-{today_str}-{count:04d}'
-
-        resep = ResepElektronik.objects.create(
-            no_resep=no_resep,
-            kunjungan=kunjungan,
-            dokter_peresep=request.user,
-            jenis_resep=jenis_resep,
-            status='DIKIRIM',
-            catatan_dokter=catatan_dokter,
-        )
-
-        # Simpan list obat
-        nama_obat_list = request.POST.getlist('nama_obat[]')
-        sediaan_list = request.POST.getlist('bentuk_sediaan[]')
-        dosis_list = request.POST.getlist('dosis[]')
-        aturan_list = request.POST.getlist('aturan_pakai[]')
-        jumlah_list = request.POST.getlist('jumlah[]')
-        harga_list = request.POST.getlist('harga_satuan[]')
-
-        items_created = 0
-        for i in range(len(nama_obat_list)):
-            nama = nama_obat_list[i].strip()
-            if not nama:
-                continue
-            sediaan = sediaan_list[i] if i < len(sediaan_list) else 'TABLET'
-            dosis = dosis_list[i] if i < len(dosis_list) else '-'
-            aturan = aturan_list[i] if i < len(aturan_list) else 'Sesuai Petunjuk'
-            try:
-                jml = max(int(jumlah_list[i]), 1)
-            except (IndexError, ValueError):
-                jml = 1
-            try:
-                hrg = max(float(harga_list[i]), 0)
-            except (IndexError, ValueError):
-                hrg = 0
-
-            ResepDetail.objects.create(
-                resep=resep,
-                nama_obat=nama,
-                bentuk_sediaan=sediaan,
-                dosis=dosis,
-                aturan_pakai=aturan,
-                jumlah=jml,
-                harga_satuan=hrg,
-            )
-            items_created += 1
-
-        if items_created == 0:
-            resep.delete()
-            messages.error(request, 'Resep gagal dibuat: minimal harus ada 1 obat yang dimasukkan.')
-        else:
-            messages.success(request, f'Resep {no_resep} berhasil dikirim ke Farmasi ({items_created} obat).')
-
-    return redirect('pasien:kunjungan_detail', pk=kunjungan_pk)
+    """Legacy entry delegates IGD prescribing to the validated composer."""
+    from .services.igd_assessment_workflow import get_visit
+    from .services.prescriptions import require_prescriber
+    require_prescriber(request.user)
+    visit, workflow = get_visit(kunjungan_pk,request.user,write=request.method=='POST')
+    if request.method=='POST':
+        return HttpResponseBadRequest('Gunakan komposer resep terstruktur pada langkah 8; resep tidak dikirim melalui payload nama/harga bebas.')
+    return redirect(reverse('pasien:igd_workflow',args=[visit.pk])+'?step=8')
 
 
 @login_required
 @require_patient_module('farmasi')
 def farmasi_antrean(request):
-    """Halaman operasional Farmasi/Depo: Antrean Resep, Telaah, Dispensing & Penyerahan."""
-    status_filter = request.GET.get('status', 'AKTIF')
-    q = request.GET.get('q', '').strip()
-
-    resep_qs = ResepElektronik.objects.select_related('kunjungan__pasien', 'dokter_peresep', 'apoteker').prefetch_related('items')
-
-    if status_filter == 'AKTIF':
-        resep_qs = resep_qs.filter(status__in=['DIKIRIM', 'DISPENSING'])
-    elif status_filter in ['DIKIRIM', 'DISPENSING', 'SELESAI', 'BATAL']:
-        resep_qs = resep_qs.filter(status=status_filter)
-
-    if q:
-        resep_qs = resep_qs.filter(
-            Q(no_resep__icontains=q) |
-            Q(kunjungan__pasien__nama_lengkap__icontains=q) |
-            Q(kunjungan__pasien__no_rm__icontains=q)
-        )
-
-    counts = {
-        'total': ResepElektronik.objects.count(),
-        'dikirim': ResepElektronik.objects.filter(status='DIKIRIM').count(),
-        'dispensing': ResepElektronik.objects.filter(status='DISPENSING').count(),
-        'selesai': ResepElektronik.objects.filter(status='SELESAI').count(),
-    }
-
-    context = {
-        'resep_list': resep_qs[:50],
-        'status_filter': status_filter,
-        'q': q,
-        'counts': counts,
-    }
-    return render(request, 'pasien/farmasi_antrean.html', context)
+    from .pharmacy_views import worklist
+    return worklist(request)
 
 
 @login_required
 def resep_update_status(request, resep_pk):
-    """Apoteker memproses status resep: DISPENSING, SELESAI, BATAL.
-    Saat SELESAI, otomatis membuat BillingItem 'FARMASI' ke tagihan kunjungan!
-    """
-    resep = get_object_or_404(ResepElektronik, pk=resep_pk)
-    if request.method == 'POST':
-        aksi = request.POST.get('aksi')
-        catatan_apoteker = request.POST.get('catatan_apoteker', '').strip()
-        if catatan_apoteker:
-            resep.catatan_apoteker = catatan_apoteker
-
-        if aksi == 'dispensing':
-            resep.status = 'DISPENSING'
-            resep.apoteker = request.user
-            resep.save(update_fields=['status', 'apoteker', 'catatan_apoteker'])
-            messages.info(request, f'Resep {resep.no_resep} sedang dalam proses dispensing/peracikan.')
-
-        elif aksi == 'selesai':
-            resep.status = 'SELESAI'
-            resep.apoteker = request.user
-            resep.waktu_selesai = timezone.now()
-            resep.save(update_fields=['status', 'apoteker', 'waktu_selesai', 'catatan_apoteker'])
-
-            # Otomatis catat ke BillingItem kunjungan pasien
-            total_nominal = 0
-            for item in resep.items.all():
-                if item.harga_satuan > 0:
-                    BillingItem.objects.create(
-                        kunjungan=resep.kunjungan,
-                        kategori='OBAT',
-                        nama_item=f'Obat: {item.nama_obat} ({item.dosis})',
-                        kuantitas=item.jumlah,
-                        harga_satuan=item.harga_satuan,
-                        dicatat_oleh=request.user,
-                    )
-                    total_nominal += item.subtotal
-
-            messages.success(request, f'Resep {resep.no_resep} selesai diserahkan. Otomatis masuk tagihan billing: Rp {total_nominal:,.0f}')
-
-        elif aksi == 'batal':
-            resep.status = 'BATAL'
-            resep.save(update_fields=['status', 'catatan_apoteker'])
-            messages.warning(request, f'Resep {resep.no_resep} telah dibatalkan.')
-
-    next_url = request.POST.get('next') or request.META.get('HTTP_REFERER') or 'pasien:farmasi_antrean'
-    return redirect(next_url)
+    from .pharmacy_views import pharmacy_transition
+    return pharmacy_transition(request,resep_pk)
 
 
 # ── GAP 5: SatuSehat Kemenkes & QR Scanner Views ──────────────────────────────
@@ -1928,45 +1801,15 @@ def cetak_general_consent(request, pk):
 @login_required
 @require_patient_module('laboratorium')
 def laboratorium_dashboard(request):
-    """Dashboard Worklist Laboratorium: order penunjang, nilai kritis, verifikasi hasil."""
-    status_filter = request.GET.get('status', '')
-    orders_qs = OrderPenunjang.objects.filter(
-        jenis='LAB'
-    ).select_related('kunjungan__pasien').order_by('-created_at')
-
-    if status_filter:
-        orders_qs = orders_qs.filter(status=status_filter)
-
-    try:
-        critical_orders = list(OrderPenunjang.objects.filter(
-            jenis='LAB', is_critical_value=True
-        ).exclude(status='SELESAI').select_related('kunjungan__pasien'))
-    except Exception:
-        critical_orders = []
-
-    return render(request, 'pasien/laboratorium_dashboard.html', {
-        'orders': orders_qs[:100],
-        'critical_orders': critical_orders,
-        'total_pending': orders_qs.filter(status='ORDERED').count(),
-        'total_proses': orders_qs.filter(status='PROSES').count(),
-        'total_selesai': orders_qs.filter(status='SELESAI').count(),
-        'status_filter': status_filter,
-    })
+    from .ancillary_views import worklist
+    return worklist(request,kind='LAB')
 
 
 @login_required
 @require_patient_module('laboratorium')
 def order_penunjang_update(request, pk):
-    """Update status, hasil, dan flag critical value order penunjang Lab."""
-    order = get_object_or_404(OrderPenunjang, pk=pk)
-    if request.method == 'POST':
-        order.status = request.POST.get('status', order.status)
-        order.hasil_pemeriksaan = request.POST.get('hasil_pemeriksaan', order.hasil_pemeriksaan)
-        order.is_critical_value = request.POST.get('is_critical_value') == '1'
-        order.critical_value_catatan = request.POST.get('critical_value_catatan', '')
-        order.save()
-        messages.success(request, f'Order #{order.pk} ({order.nama_pemeriksaan}) berhasil diperbarui.')
-    return redirect(request.META.get('HTTP_REFERER', reverse('pasien:laboratorium_dashboard')))
+    from .ancillary_views import update_result
+    return update_result(request,pk,kind='LAB')
 
 
 
@@ -3234,6 +3077,7 @@ def cetak_asesmen_medis_igd(request, pk):
         'news_score': news_score,
         'news_category': news_cat,
         'printed_at': timezone.now(),
+        'physical_exam':exam_context(k.fisik_head_to_toe,k.secondary_survey_detail,{'keadaan_umum':k.keadaan_umum,'kesadaran':k.kesadaran}),
     })
 
 

@@ -1,0 +1,882 @@
+{
+  "source": "Tambahkan diagnosa medis tindakan klinis dan obat.docx",
+  "sha256": "606835a388b009c9d123e22e13f9f6c26f0ed02fb51d9aee1928c0adb664bf4f",
+  "version": "DOCX-2026-11-13-STAGING",
+  "classes": [
+    {
+      "kode": "analgesik-antipiretik",
+      "nama": "Analgesik & Antipiretik",
+      "kind": "OBAT"
+    },
+    {
+      "kode": "antibiotik-antimikroba",
+      "nama": "Antibiotik & Antimikroba",
+      "kind": "OBAT"
+    },
+    {
+      "kode": "kardiovaskular-antihipertensi",
+      "nama": "Kardiovaskular & Antihipertensi",
+      "kind": "OBAT"
+    },
+    {
+      "kode": "antidiabetes-endokrin",
+      "nama": "Antidiabetes & Endokrin",
+      "kind": "OBAT"
+    },
+    {
+      "kode": "saluran-pencernaan-gi",
+      "nama": "Saluran Pencernaan (GI)",
+      "kind": "OBAT"
+    },
+    {
+      "kode": "saluran-pernapasan-alergi",
+      "nama": "Saluran Pernapasan & Alergi",
+      "kind": "OBAT"
+    },
+    {
+      "kode": "saraf-pusat-psikotropika",
+      "nama": "Saraf Pusat & Psikotropika",
+      "kind": "OBAT"
+    },
+    {
+      "kode": "cairan-infus-elektrolit-pekat",
+      "nama": "Cairan Infus & Elektrolit Pekat",
+      "kind": "OBAT"
+    },
+    {
+      "kode": "bmhp",
+      "nama": "Alat Kesehatan & BMHP",
+      "kind": "BMHP"
+    }
+  ],
+  "generics": [
+    {
+      "kode": "analgesik-antipiretik-1",
+      "nama": "Paracetamol 500 mg / 1000 mg",
+      "kelas": "analgesik-antipiretik",
+      "bentuk": "REVIEW",
+      "dispense_unit": "REVIEW"
+    },
+    {
+      "kode": "analgesik-antipiretik-2",
+      "nama": "Ibuprofen 200 mg / 400 mg",
+      "kelas": "analgesik-antipiretik",
+      "bentuk": "REVIEW",
+      "dispense_unit": "REVIEW"
+    },
+    {
+      "kode": "analgesik-antipiretik-3",
+      "nama": "Asam Mefenamat 500 mg",
+      "kelas": "analgesik-antipiretik",
+      "bentuk": "REVIEW",
+      "dispense_unit": "REVIEW"
+    },
+    {
+      "kode": "analgesik-antipiretik-4",
+      "nama": "Ketorolac 30 mg/mL",
+      "kelas": "analgesik-antipiretik",
+      "bentuk": "REVIEW",
+      "dispense_unit": "REVIEW"
+    },
+    {
+      "kode": "analgesik-antipiretik-5",
+      "nama": "Tramadol 50 mg / 100 mg",
+      "kelas": "analgesik-antipiretik",
+      "bentuk": "REVIEW",
+      "dispense_unit": "REVIEW"
+    },
+    {
+      "kode": "analgesik-antipiretik-6",
+      "nama": "Morfin HCl 10 mg/mL",
+      "kelas": "analgesik-antipiretik",
+      "bentuk": "REVIEW",
+      "dispense_unit": "REVIEW"
+    },
+    {
+      "kode": "antibiotik-antimikroba-1",
+      "nama": "Amoxicillin 500 mg",
+      "kelas": "antibiotik-antimikroba",
+      "bentuk": "REVIEW",
+      "dispense_unit": "REVIEW"
+    },
+    {
+      "kode": "antibiotik-antimikroba-2",
+      "nama": "Co-Amoxiclav 625 mg",
+      "kelas": "antibiotik-antimikroba",
+      "bentuk": "REVIEW",
+      "dispense_unit": "REVIEW"
+    },
+    {
+      "kode": "antibiotik-antimikroba-3",
+      "nama": "Cefadroxil 500 mg",
+      "kelas": "antibiotik-antimikroba",
+      "bentuk": "REVIEW",
+      "dispense_unit": "REVIEW"
+    },
+    {
+      "kode": "antibiotik-antimikroba-4",
+      "nama": "Cefixime 100 mg / 200 mg",
+      "kelas": "antibiotik-antimikroba",
+      "bentuk": "REVIEW",
+      "dispense_unit": "REVIEW"
+    },
+    {
+      "kode": "antibiotik-antimikroba-5",
+      "nama": "Ceftriaxone 1 g",
+      "kelas": "antibiotik-antimikroba",
+      "bentuk": "REVIEW",
+      "dispense_unit": "REVIEW"
+    },
+    {
+      "kode": "antibiotik-antimikroba-6",
+      "nama": "Ciprofloxacin 500 mg",
+      "kelas": "antibiotik-antimikroba",
+      "bentuk": "REVIEW",
+      "dispense_unit": "REVIEW"
+    },
+    {
+      "kode": "antibiotik-antimikroba-7",
+      "nama": "Levofloxacin 500 mg / 750 mg",
+      "kelas": "antibiotik-antimikroba",
+      "bentuk": "REVIEW",
+      "dispense_unit": "REVIEW"
+    },
+    {
+      "kode": "antibiotik-antimikroba-8",
+      "nama": "Azithromycin 500 mg",
+      "kelas": "antibiotik-antimikroba",
+      "bentuk": "REVIEW",
+      "dispense_unit": "REVIEW"
+    },
+    {
+      "kode": "antibiotik-antimikroba-9",
+      "nama": "Metronidazole 500 mg",
+      "kelas": "antibiotik-antimikroba",
+      "bentuk": "REVIEW",
+      "dispense_unit": "REVIEW"
+    },
+    {
+      "kode": "kardiovaskular-antihipertensi-1",
+      "nama": "Amlodipine 5 mg / 10 mg",
+      "kelas": "kardiovaskular-antihipertensi",
+      "bentuk": "REVIEW",
+      "dispense_unit": "REVIEW"
+    },
+    {
+      "kode": "kardiovaskular-antihipertensi-2",
+      "nama": "Candesartan 8 mg / 16 mg",
+      "kelas": "kardiovaskular-antihipertensi",
+      "bentuk": "REVIEW",
+      "dispense_unit": "REVIEW"
+    },
+    {
+      "kode": "kardiovaskular-antihipertensi-3",
+      "nama": "Valsartan 80 mg / 160 mg",
+      "kelas": "kardiovaskular-antihipertensi",
+      "bentuk": "REVIEW",
+      "dispense_unit": "REVIEW"
+    },
+    {
+      "kode": "kardiovaskular-antihipertensi-4",
+      "nama": "Captopril 12,5 mg / 25 mg",
+      "kelas": "kardiovaskular-antihipertensi",
+      "bentuk": "REVIEW",
+      "dispense_unit": "REVIEW"
+    },
+    {
+      "kode": "kardiovaskular-antihipertensi-5",
+      "nama": "Bisoprolol 2,5 mg / 5 mg",
+      "kelas": "kardiovaskular-antihipertensi",
+      "bentuk": "REVIEW",
+      "dispense_unit": "REVIEW"
+    },
+    {
+      "kode": "kardiovaskular-antihipertensi-6",
+      "nama": "Furosemide 40 mg / 20 mg/2mL",
+      "kelas": "kardiovaskular-antihipertensi",
+      "bentuk": "REVIEW",
+      "dispense_unit": "REVIEW"
+    },
+    {
+      "kode": "kardiovaskular-antihipertensi-7",
+      "nama": "Spironolactone 25 mg / 100 mg",
+      "kelas": "kardiovaskular-antihipertensi",
+      "bentuk": "REVIEW",
+      "dispense_unit": "REVIEW"
+    },
+    {
+      "kode": "kardiovaskular-antihipertensi-8",
+      "nama": "Digoxin 0,25 mg",
+      "kelas": "kardiovaskular-antihipertensi",
+      "bentuk": "REVIEW",
+      "dispense_unit": "REVIEW"
+    },
+    {
+      "kode": "kardiovaskular-antihipertensi-9",
+      "nama": "Isosorbide Dinitrate (ISDN) 5 mg",
+      "kelas": "kardiovaskular-antihipertensi",
+      "bentuk": "REVIEW",
+      "dispense_unit": "REVIEW"
+    },
+    {
+      "kode": "antidiabetes-endokrin-1",
+      "nama": "Metformin 500 mg / 850 mg",
+      "kelas": "antidiabetes-endokrin",
+      "bentuk": "REVIEW",
+      "dispense_unit": "REVIEW"
+    },
+    {
+      "kode": "antidiabetes-endokrin-2",
+      "nama": "Glimepiride 1 / 2 / 3 / 4 mg",
+      "kelas": "antidiabetes-endokrin",
+      "bentuk": "REVIEW",
+      "dispense_unit": "REVIEW"
+    },
+    {
+      "kode": "antidiabetes-endokrin-3",
+      "nama": "Gliclazide 60 mg / 80 mg",
+      "kelas": "antidiabetes-endokrin",
+      "bentuk": "REVIEW",
+      "dispense_unit": "REVIEW"
+    },
+    {
+      "kode": "antidiabetes-endokrin-4",
+      "nama": "Acarbose 50 mg / 100 mg",
+      "kelas": "antidiabetes-endokrin",
+      "bentuk": "REVIEW",
+      "dispense_unit": "REVIEW"
+    },
+    {
+      "kode": "antidiabetes-endokrin-5",
+      "nama": "Insulin Aspart (Rapid Acting)",
+      "kelas": "antidiabetes-endokrin",
+      "bentuk": "REVIEW",
+      "dispense_unit": "REVIEW"
+    },
+    {
+      "kode": "antidiabetes-endokrin-6",
+      "nama": "Insulin Glargine (Long Acting)",
+      "kelas": "antidiabetes-endokrin",
+      "bentuk": "REVIEW",
+      "dispense_unit": "REVIEW"
+    },
+    {
+      "kode": "antidiabetes-endokrin-7",
+      "nama": "Levothyroxine 50 mcg / 100 mcg",
+      "kelas": "antidiabetes-endokrin",
+      "bentuk": "REVIEW",
+      "dispense_unit": "REVIEW"
+    },
+    {
+      "kode": "saluran-pencernaan-gi-1",
+      "nama": "Omeprazole 20 mg / 40 mg",
+      "kelas": "saluran-pencernaan-gi",
+      "bentuk": "REVIEW",
+      "dispense_unit": "REVIEW"
+    },
+    {
+      "kode": "saluran-pencernaan-gi-2",
+      "nama": "Lansoprazole 30 mg",
+      "kelas": "saluran-pencernaan-gi",
+      "bentuk": "REVIEW",
+      "dispense_unit": "REVIEW"
+    },
+    {
+      "kode": "saluran-pencernaan-gi-3",
+      "nama": "Pantoprazole 40 mg",
+      "kelas": "saluran-pencernaan-gi",
+      "bentuk": "REVIEW",
+      "dispense_unit": "REVIEW"
+    },
+    {
+      "kode": "saluran-pencernaan-gi-4",
+      "nama": "Ranitidine 150 mg / 50 mg/2mL",
+      "kelas": "saluran-pencernaan-gi",
+      "bentuk": "REVIEW",
+      "dispense_unit": "REVIEW"
+    },
+    {
+      "kode": "saluran-pencernaan-gi-5",
+      "nama": "Ondansetron 4 mg / 8 mg",
+      "kelas": "saluran-pencernaan-gi",
+      "bentuk": "REVIEW",
+      "dispense_unit": "REVIEW"
+    },
+    {
+      "kode": "saluran-pencernaan-gi-6",
+      "nama": "Sucralfate 500 mg/5mL",
+      "kelas": "saluran-pencernaan-gi",
+      "bentuk": "REVIEW",
+      "dispense_unit": "REVIEW"
+    },
+    {
+      "kode": "saluran-pencernaan-gi-7",
+      "nama": "Domperidone 10 mg",
+      "kelas": "saluran-pencernaan-gi",
+      "bentuk": "REVIEW",
+      "dispense_unit": "REVIEW"
+    },
+    {
+      "kode": "saluran-pernapasan-alergi-1",
+      "nama": "Salbutamol 2 / 4 mg / Nebul 2,5 mg",
+      "kelas": "saluran-pernapasan-alergi",
+      "bentuk": "REVIEW",
+      "dispense_unit": "REVIEW"
+    },
+    {
+      "kode": "saluran-pernapasan-alergi-2",
+      "nama": "Budesonide Nebul 0,25 / 0,5 mg",
+      "kelas": "saluran-pernapasan-alergi",
+      "bentuk": "REVIEW",
+      "dispense_unit": "REVIEW"
+    },
+    {
+      "kode": "saluran-pernapasan-alergi-3",
+      "nama": "N-Acetylcysteine 200 / 600 mg",
+      "kelas": "saluran-pernapasan-alergi",
+      "bentuk": "REVIEW",
+      "dispense_unit": "REVIEW"
+    },
+    {
+      "kode": "saluran-pernapasan-alergi-4",
+      "nama": "Ambroxol 30 mg",
+      "kelas": "saluran-pernapasan-alergi",
+      "bentuk": "REVIEW",
+      "dispense_unit": "REVIEW"
+    },
+    {
+      "kode": "saluran-pernapasan-alergi-5",
+      "nama": "Cetirizine 10 mg",
+      "kelas": "saluran-pernapasan-alergi",
+      "bentuk": "REVIEW",
+      "dispense_unit": "REVIEW"
+    },
+    {
+      "kode": "saluran-pernapasan-alergi-6",
+      "nama": "Loratadine 10 mg",
+      "kelas": "saluran-pernapasan-alergi",
+      "bentuk": "REVIEW",
+      "dispense_unit": "REVIEW"
+    },
+    {
+      "kode": "saluran-pernapasan-alergi-7",
+      "nama": "Methylprednisolone 4 / 16 / 125 mg",
+      "kelas": "saluran-pernapasan-alergi",
+      "bentuk": "REVIEW",
+      "dispense_unit": "REVIEW"
+    },
+    {
+      "kode": "saluran-pernapasan-alergi-8",
+      "nama": "Dexamethasone 0,5 mg / 5 mg/mL",
+      "kelas": "saluran-pernapasan-alergi",
+      "bentuk": "REVIEW",
+      "dispense_unit": "REVIEW"
+    },
+    {
+      "kode": "saraf-pusat-psikotropika-1",
+      "nama": "Diazepam 2 / 5 mg / 10 mg/2mL",
+      "kelas": "saraf-pusat-psikotropika",
+      "bentuk": "REVIEW",
+      "dispense_unit": "REVIEW"
+    },
+    {
+      "kode": "saraf-pusat-psikotropika-2",
+      "nama": "Alprazolam 0,5 mg / 1 mg",
+      "kelas": "saraf-pusat-psikotropika",
+      "bentuk": "REVIEW",
+      "dispense_unit": "REVIEW"
+    },
+    {
+      "kode": "saraf-pusat-psikotropika-3",
+      "nama": "Phenytoin 100 mg / 50 mg/mL",
+      "kelas": "saraf-pusat-psikotropika",
+      "bentuk": "REVIEW",
+      "dispense_unit": "REVIEW"
+    },
+    {
+      "kode": "saraf-pusat-psikotropika-4",
+      "nama": "Gabapentin 100 mg / 300 mg",
+      "kelas": "saraf-pusat-psikotropika",
+      "bentuk": "REVIEW",
+      "dispense_unit": "REVIEW"
+    },
+    {
+      "kode": "saraf-pusat-psikotropika-5",
+      "nama": "Mecobalamin 500 mcg",
+      "kelas": "saraf-pusat-psikotropika",
+      "bentuk": "REVIEW",
+      "dispense_unit": "REVIEW"
+    },
+    {
+      "kode": "saraf-pusat-psikotropika-6",
+      "nama": "Citicoline 500 mg / 1000 mg",
+      "kelas": "saraf-pusat-psikotropika",
+      "bentuk": "REVIEW",
+      "dispense_unit": "REVIEW"
+    },
+    {
+      "kode": "cairan-infus-elektrolit-pekat-1",
+      "nama": "NaCl 0,9% 500 mL",
+      "kelas": "cairan-infus-elektrolit-pekat",
+      "bentuk": "REVIEW",
+      "dispense_unit": "REVIEW"
+    },
+    {
+      "kode": "cairan-infus-elektrolit-pekat-2",
+      "nama": "Ringer Laktat (RL) 500 mL",
+      "kelas": "cairan-infus-elektrolit-pekat",
+      "bentuk": "REVIEW",
+      "dispense_unit": "REVIEW"
+    },
+    {
+      "kode": "cairan-infus-elektrolit-pekat-3",
+      "nama": "Dextrose 5% / 10% 500 mL",
+      "kelas": "cairan-infus-elektrolit-pekat",
+      "bentuk": "REVIEW",
+      "dispense_unit": "REVIEW"
+    },
+    {
+      "kode": "cairan-infus-elektrolit-pekat-4",
+      "nama": "Kalium Klorida (KCl) 7,46% 25 mL",
+      "kelas": "cairan-infus-elektrolit-pekat",
+      "bentuk": "REVIEW",
+      "dispense_unit": "REVIEW"
+    },
+    {
+      "kode": "cairan-infus-elektrolit-pekat-5",
+      "nama": "Natrium Bikarbonat (Meylon) 8,4%",
+      "kelas": "cairan-infus-elektrolit-pekat",
+      "bentuk": "REVIEW",
+      "dispense_unit": "REVIEW"
+    },
+    {
+      "kode": "cairan-infus-elektrolit-pekat-6",
+      "nama": "MgSO4 20% / 40% 25 mL",
+      "kelas": "cairan-infus-elektrolit-pekat",
+      "bentuk": "REVIEW",
+      "dispense_unit": "REVIEW"
+    },
+    {
+      "kode": "cairan-infus-elektrolit-pekat-7",
+      "nama": "NaCl 3% 500 mL",
+      "kelas": "cairan-infus-elektrolit-pekat",
+      "bentuk": "REVIEW",
+      "dispense_unit": "REVIEW"
+    }
+  ],
+  "products": [
+    {
+      "kode": "analgesik-antipiretik-1",
+      "nama": "Sanmol, Panadol (Tab/Sirup/Infus)",
+      "generik": "analgesik-antipiretik-1",
+      "kind": "OBAT",
+      "source_note": "{\"generic\": \"Paracetamol 500 mg / 1000 mg\", \"example_brand\": \"Sanmol, Panadol (Tab/Sirup/Infus)\", \"example_flag\": \"Normal\"}"
+    },
+    {
+      "kode": "analgesik-antipiretik-2",
+      "nama": "Proris, Bufect (Tab/Suspensi)",
+      "generik": "analgesik-antipiretik-2",
+      "kind": "OBAT",
+      "source_note": "{\"generic\": \"Ibuprofen 200 mg / 400 mg\", \"example_brand\": \"Proris, Bufect (Tab/Suspensi)\", \"example_flag\": \"Normal\"}"
+    },
+    {
+      "kode": "analgesik-antipiretik-3",
+      "nama": "Ponstan, Mefinal (Kaplet)",
+      "generik": "analgesik-antipiretik-3",
+      "kind": "OBAT",
+      "source_note": "{\"generic\": \"Asam Mefenamat 500 mg\", \"example_brand\": \"Ponstan, Mefinal (Kaplet)\", \"example_flag\": \"Normal\"}"
+    },
+    {
+      "kode": "analgesik-antipiretik-4",
+      "nama": "Torasic, Remopain (Injeksi)",
+      "generik": "analgesik-antipiretik-4",
+      "kind": "OBAT",
+      "source_note": "{\"generic\": \"Ketorolac 30 mg/mL\", \"example_brand\": \"Torasic, Remopain (Injeksi)\", \"example_flag\": \"LASA\"}"
+    },
+    {
+      "kode": "analgesik-antipiretik-5",
+      "nama": "Tradosik, Dolgesik (Kapsul/Injeksi)",
+      "generik": "analgesik-antipiretik-5",
+      "kind": "OBAT",
+      "source_note": "{\"generic\": \"Tramadol 50 mg / 100 mg\", \"example_brand\": \"Tradosik, Dolgesik (Kapsul/Injeksi)\", \"example_flag\": \"LASA / OOT\"}"
+    },
+    {
+      "kode": "analgesik-antipiretik-6",
+      "nama": "MST Continus, Morfina (Tab/Injeksi)",
+      "generik": "analgesik-antipiretik-6",
+      "kind": "OBAT",
+      "source_note": "{\"generic\": \"Morfin HCl 10 mg/mL\", \"example_brand\": \"MST Continus, Morfina (Tab/Injeksi)\", \"example_flag\": \"Narkotika / High Alert\"}"
+    },
+    {
+      "kode": "antibiotik-antimikroba-1",
+      "nama": "Amoxsan, Kalmoxicillin (Kaplet/Sirup)",
+      "generik": "antibiotik-antimikroba-1",
+      "kind": "OBAT",
+      "source_note": "{\"generic\": \"Amoxicillin 500 mg\", \"example_brand\": \"Amoxsan, Kalmoxicillin (Kaplet/Sirup)\", \"example_flag\": \"Normal (PPRA)\"}"
+    },
+    {
+      "kode": "antibiotik-antimikroba-2",
+      "nama": "Claneksi, Augmentin (Kaplet/Injeksi)",
+      "generik": "antibiotik-antimikroba-2",
+      "kind": "OBAT",
+      "source_note": "{\"generic\": \"Co-Amoxiclav 625 mg\", \"example_brand\": \"Claneksi, Augmentin (Kaplet/Injeksi)\", \"example_flag\": \"Normal (PPRA)\"}"
+    },
+    {
+      "kode": "antibiotik-antimikroba-3",
+      "nama": "Cefat, Lapicef (Kapsul/Sirup)",
+      "generik": "antibiotik-antimikroba-3",
+      "kind": "OBAT",
+      "source_note": "{\"generic\": \"Cefadroxil 500 mg\", \"example_brand\": \"Cefat, Lapicef (Kapsul/Sirup)\", \"example_flag\": \"LASA\"}"
+    },
+    {
+      "kode": "antibiotik-antimikroba-4",
+      "nama": "Cefspan, Sporetik (Kapsul/Sirup)",
+      "generik": "antibiotik-antimikroba-4",
+      "kind": "OBAT",
+      "source_note": "{\"generic\": \"Cefixime 100 mg / 200 mg\", \"example_brand\": \"Cefspan, Sporetik (Kapsul/Sirup)\", \"example_flag\": \"LASA\"}"
+    },
+    {
+      "kode": "antibiotik-antimikroba-5",
+      "nama": "Terfacef, Broadced (Serbuk Injeksi)",
+      "generik": "antibiotik-antimikroba-5",
+      "kind": "OBAT",
+      "source_note": "{\"generic\": \"Ceftriaxone 1 g\", \"example_brand\": \"Terfacef, Broadced (Serbuk Injeksi)\", \"example_flag\": \"LASA (PPRA)\"}"
+    },
+    {
+      "kode": "antibiotik-antimikroba-6",
+      "nama": "Baquinor, Ciproxin (Tablet/Infus)",
+      "generik": "antibiotik-antimikroba-6",
+      "kind": "OBAT",
+      "source_note": "{\"generic\": \"Ciprofloxacin 500 mg\", \"example_brand\": \"Baquinor, Ciproxin (Tablet/Infus)\", \"example_flag\": \"LASA\"}"
+    },
+    {
+      "kode": "antibiotik-antimikroba-7",
+      "nama": "Cravit, Levocin (Tablet/Infus)",
+      "generik": "antibiotik-antimikroba-7",
+      "kind": "OBAT",
+      "source_note": "{\"generic\": \"Levofloxacin 500 mg / 750 mg\", \"example_brand\": \"Cravit, Levocin (Tablet/Infus)\", \"example_flag\": \"LASA\"}"
+    },
+    {
+      "kode": "antibiotik-antimikroba-8",
+      "nama": "Zithromax, Azomax (Kaplet/Infus)",
+      "generik": "antibiotik-antimikroba-8",
+      "kind": "OBAT",
+      "source_note": "{\"generic\": \"Azithromycin 500 mg\", \"example_brand\": \"Zithromax, Azomax (Kaplet/Infus)\", \"example_flag\": \"Normal\"}"
+    },
+    {
+      "kode": "antibiotik-antimikroba-9",
+      "nama": "Flagyl, Trichodazol (Tablet/Infus)",
+      "generik": "antibiotik-antimikroba-9",
+      "kind": "OBAT",
+      "source_note": "{\"generic\": \"Metronidazole 500 mg\", \"example_brand\": \"Flagyl, Trichodazol (Tablet/Infus)\", \"example_flag\": \"Normal\"}"
+    },
+    {
+      "kode": "kardiovaskular-antihipertensi-1",
+      "nama": "Norvask, Tensivask (Tablet)",
+      "generik": "kardiovaskular-antihipertensi-1",
+      "kind": "OBAT",
+      "source_note": "{\"generic\": \"Amlodipine 5 mg / 10 mg\", \"example_brand\": \"Norvask, Tensivask (Tablet)\", \"example_flag\": \"LASA (Kekuatan)\"}"
+    },
+    {
+      "kode": "kardiovaskular-antihipertensi-2",
+      "nama": "Blopress, Canderin (Tablet)",
+      "generik": "kardiovaskular-antihipertensi-2",
+      "kind": "OBAT",
+      "source_note": "{\"generic\": \"Candesartan 8 mg / 16 mg\", \"example_brand\": \"Blopress, Canderin (Tablet)\", \"example_flag\": \"LASA (Kekuatan)\"}"
+    },
+    {
+      "kode": "kardiovaskular-antihipertensi-3",
+      "nama": "Diovan, Valsartan (Tablet)",
+      "generik": "kardiovaskular-antihipertensi-3",
+      "kind": "OBAT",
+      "source_note": "{\"generic\": \"Valsartan 80 mg / 160 mg\", \"example_brand\": \"Diovan, Valsartan (Tablet)\", \"example_flag\": \"LASA (Kekuatan)\"}"
+    },
+    {
+      "kode": "kardiovaskular-antihipertensi-4",
+      "nama": "Tensicap, Farmoten (Tablet)",
+      "generik": "kardiovaskular-antihipertensi-4",
+      "kind": "OBAT",
+      "source_note": "{\"generic\": \"Captopril 12,5 mg / 25 mg\", \"example_brand\": \"Tensicap, Farmoten (Tablet)\", \"example_flag\": \"LASA (Kekuatan)\"}"
+    },
+    {
+      "kode": "kardiovaskular-antihipertensi-5",
+      "nama": "Concor, B-Beta (Tablet)",
+      "generik": "kardiovaskular-antihipertensi-5",
+      "kind": "OBAT",
+      "source_note": "{\"generic\": \"Bisoprolol 2,5 mg / 5 mg\", \"example_brand\": \"Concor, B-Beta (Tablet)\", \"example_flag\": \"LASA (Kekuatan)\"}"
+    },
+    {
+      "kode": "kardiovaskular-antihipertensi-6",
+      "nama": "Lasix, Farsix (Tablet/Injeksi)",
+      "generik": "kardiovaskular-antihipertensi-6",
+      "kind": "OBAT",
+      "source_note": "{\"generic\": \"Furosemide 40 mg / 20 mg/2mL\", \"example_brand\": \"Lasix, Farsix (Tablet/Injeksi)\", \"example_flag\": \"Normal\"}"
+    },
+    {
+      "kode": "kardiovaskular-antihipertensi-7",
+      "nama": "Aldactone, Spirola (Tablet)",
+      "generik": "kardiovaskular-antihipertensi-7",
+      "kind": "OBAT",
+      "source_note": "{\"generic\": \"Spironolactone 25 mg / 100 mg\", \"example_brand\": \"Aldactone, Spirola (Tablet)\", \"example_flag\": \"LASA (Kekuatan)\"}"
+    },
+    {
+      "kode": "kardiovaskular-antihipertensi-8",
+      "nama": "Fargoxin (Tablet/Injeksi)",
+      "generik": "kardiovaskular-antihipertensi-8",
+      "kind": "OBAT",
+      "source_note": "{\"generic\": \"Digoxin 0,25 mg\", \"example_brand\": \"Fargoxin (Tablet/Injeksi)\", \"example_flag\": \"High Alert (Indeks Terapi Sempit)\"}"
+    },
+    {
+      "kode": "kardiovaskular-antihipertensi-9",
+      "nama": "Cedocard, Farsorbid (Tab Sublingual/Inj)",
+      "generik": "kardiovaskular-antihipertensi-9",
+      "kind": "OBAT",
+      "source_note": "{\"generic\": \"Isosorbide Dinitrate (ISDN) 5 mg\", \"example_brand\": \"Cedocard, Farsorbid (Tab Sublingual/Inj)\", \"example_flag\": \"High Alert (Vasodilator)\"}"
+    },
+    {
+      "kode": "antidiabetes-endokrin-1",
+      "nama": "Glucophage, Forbetes (Tablet)",
+      "generik": "antidiabetes-endokrin-1",
+      "kind": "OBAT",
+      "source_note": "{\"generic\": \"Metformin 500 mg / 850 mg\", \"example_brand\": \"Glucophage, Forbetes (Tablet)\", \"example_flag\": \"LASA\"}"
+    },
+    {
+      "kode": "antidiabetes-endokrin-2",
+      "nama": "Amaryl, Gluvas (Tablet)",
+      "generik": "antidiabetes-endokrin-2",
+      "kind": "OBAT",
+      "source_note": "{\"generic\": \"Glimepiride 1 / 2 / 3 / 4 mg\", \"example_brand\": \"Amaryl, Gluvas (Tablet)\", \"example_flag\": \"High Alert / LASA\"}"
+    },
+    {
+      "kode": "antidiabetes-endokrin-3",
+      "nama": "Diamicron MR (Tablet)",
+      "generik": "antidiabetes-endokrin-3",
+      "kind": "OBAT",
+      "source_note": "{\"generic\": \"Gliclazide 60 mg / 80 mg\", \"example_brand\": \"Diamicron MR (Tablet)\", \"example_flag\": \"High Alert\"}"
+    },
+    {
+      "kode": "antidiabetes-endokrin-4",
+      "nama": "Glucobay, Eclid (Tablet)",
+      "generik": "antidiabetes-endokrin-4",
+      "kind": "OBAT",
+      "source_note": "{\"generic\": \"Acarbose 50 mg / 100 mg\", \"example_brand\": \"Glucobay, Eclid (Tablet)\", \"example_flag\": \"LASA\"}"
+    },
+    {
+      "kode": "antidiabetes-endokrin-5",
+      "nama": "Novorapid FlexPen (Injeksi SC)",
+      "generik": "antidiabetes-endokrin-5",
+      "kind": "OBAT",
+      "source_note": "{\"generic\": \"Insulin Aspart (Rapid Acting)\", \"example_brand\": \"Novorapid FlexPen (Injeksi SC)\", \"example_flag\": \"High Alert\"}"
+    },
+    {
+      "kode": "antidiabetes-endokrin-6",
+      "nama": "Lantus SoloStar (Injeksi SC)",
+      "generik": "antidiabetes-endokrin-6",
+      "kind": "OBAT",
+      "source_note": "{\"generic\": \"Insulin Glargine (Long Acting)\", \"example_brand\": \"Lantus SoloStar (Injeksi SC)\", \"example_flag\": \"High Alert\"}"
+    },
+    {
+      "kode": "antidiabetes-endokrin-7",
+      "nama": "Euthyrox (Tablet)",
+      "generik": "antidiabetes-endokrin-7",
+      "kind": "OBAT",
+      "source_note": "{\"generic\": \"Levothyroxine 50 mcg / 100 mcg\", \"example_brand\": \"Euthyrox (Tablet)\", \"example_flag\": \"LASA (Kekuatan)\"}"
+    },
+    {
+      "kode": "saluran-pencernaan-gi-1",
+      "nama": "Losec, OMZ (Kapsul/Injeksi)",
+      "generik": "saluran-pencernaan-gi-1",
+      "kind": "OBAT",
+      "source_note": "{\"generic\": \"Omeprazole 20 mg / 40 mg\", \"example_brand\": \"Losec, OMZ (Kapsul/Injeksi)\", \"example_flag\": \"LASA\"}"
+    },
+    {
+      "kode": "saluran-pencernaan-gi-2",
+      "nama": "Prosogan, Lasgan (Kapsul/Injeksi)",
+      "generik": "saluran-pencernaan-gi-2",
+      "kind": "OBAT",
+      "source_note": "{\"generic\": \"Lansoprazole 30 mg\", \"example_brand\": \"Prosogan, Lasgan (Kapsul/Injeksi)\", \"example_flag\": \"LASA\"}"
+    },
+    {
+      "kode": "saluran-pencernaan-gi-3",
+      "nama": "Pantozol, Topazol (Tablet/Injeksi)",
+      "generik": "saluran-pencernaan-gi-3",
+      "kind": "OBAT",
+      "source_note": "{\"generic\": \"Pantoprazole 40 mg\", \"example_brand\": \"Pantozol, Topazol (Tablet/Injeksi)\", \"example_flag\": \"LASA\"}"
+    },
+    {
+      "kode": "saluran-pencernaan-gi-4",
+      "nama": "Acran, Rantin (Tablet/Injeksi)",
+      "generik": "saluran-pencernaan-gi-4",
+      "kind": "OBAT",
+      "source_note": "{\"generic\": \"Ranitidine 150 mg / 50 mg/2mL\", \"example_brand\": \"Acran, Rantin (Tablet/Injeksi)\", \"example_flag\": \"Normal\"}"
+    },
+    {
+      "kode": "saluran-pencernaan-gi-5",
+      "nama": "Zofran, Narfoz (Tablet/Injeksi)",
+      "generik": "saluran-pencernaan-gi-5",
+      "kind": "OBAT",
+      "source_note": "{\"generic\": \"Ondansetron 4 mg / 8 mg\", \"example_brand\": \"Zofran, Narfoz (Tablet/Injeksi)\", \"example_flag\": \"LASA (Kekuatan)\"}"
+    },
+    {
+      "kode": "saluran-pencernaan-gi-6",
+      "nama": "Inpepsa, Ulsafate (Suspensi)",
+      "generik": "saluran-pencernaan-gi-6",
+      "kind": "OBAT",
+      "source_note": "{\"generic\": \"Sucralfate 500 mg/5mL\", \"example_brand\": \"Inpepsa, Ulsafate (Suspensi)\", \"example_flag\": \"Normal\"}"
+    },
+    {
+      "kode": "saluran-pencernaan-gi-7",
+      "nama": "Vometa, Motilium (Tablet/Suspensi)",
+      "generik": "saluran-pencernaan-gi-7",
+      "kind": "OBAT",
+      "source_note": "{\"generic\": \"Domperidone 10 mg\", \"example_brand\": \"Vometa, Motilium (Tablet/Suspensi)\", \"example_flag\": \"Normal\"}"
+    },
+    {
+      "kode": "saluran-pernapasan-alergi-1",
+      "nama": "Ventolin (Tablet/Nebules/Inhaler)",
+      "generik": "saluran-pernapasan-alergi-1",
+      "kind": "OBAT",
+      "source_note": "{\"generic\": \"Salbutamol 2 / 4 mg / Nebul 2,5 mg\", \"example_brand\": \"Ventolin (Tablet/Nebules/Inhaler)\", \"example_flag\": \"LASA\"}"
+    },
+    {
+      "kode": "saluran-pernapasan-alergi-2",
+      "nama": "Pulmicort Respules (Cairan Inhalasi)",
+      "generik": "saluran-pernapasan-alergi-2",
+      "kind": "OBAT",
+      "source_note": "{\"generic\": \"Budesonide Nebul 0,25 / 0,5 mg\", \"example_brand\": \"Pulmicort Respules (Cairan Inhalasi)\", \"example_flag\": \"LASA (Kekuatan)\"}"
+    },
+    {
+      "kode": "saluran-pernapasan-alergi-3",
+      "nama": "Fluimucil, Nytex (Kapsul/Effervescent)",
+      "generik": "saluran-pernapasan-alergi-3",
+      "kind": "OBAT",
+      "source_note": "{\"generic\": \"N-Acetylcysteine 200 / 600 mg\", \"example_brand\": \"Fluimucil, Nytex (Kapsul/Effervescent)\", \"example_flag\": \"LASA\"}"
+    },
+    {
+      "kode": "saluran-pernapasan-alergi-4",
+      "nama": "Epexol, Mucopect (Tablet/Sirup)",
+      "generik": "saluran-pernapasan-alergi-4",
+      "kind": "OBAT",
+      "source_note": "{\"generic\": \"Ambroxol 30 mg\", \"example_brand\": \"Epexol, Mucopect (Tablet/Sirup)\", \"example_flag\": \"Normal\"}"
+    },
+    {
+      "kode": "saluran-pernapasan-alergi-5",
+      "nama": "Incidal-OD, Ryzen (Tablet/Sirup)",
+      "generik": "saluran-pernapasan-alergi-5",
+      "kind": "OBAT",
+      "source_note": "{\"generic\": \"Cetirizine 10 mg\", \"example_brand\": \"Incidal-OD, Ryzen (Tablet/Sirup)\", \"example_flag\": \"Normal\"}"
+    },
+    {
+      "kode": "saluran-pernapasan-alergi-6",
+      "nama": "Claritin, Alloris (Tablet)",
+      "generik": "saluran-pernapasan-alergi-6",
+      "kind": "OBAT",
+      "source_note": "{\"generic\": \"Loratadine 10 mg\", \"example_brand\": \"Claritin, Alloris (Tablet)\", \"example_flag\": \"Normal\"}"
+    },
+    {
+      "kode": "saluran-pernapasan-alergi-7",
+      "nama": "Medixon, Lameson (Tablet/Injeksi)",
+      "generik": "saluran-pernapasan-alergi-7",
+      "kind": "OBAT",
+      "source_note": "{\"generic\": \"Methylprednisolone 4 / 16 / 125 mg\", \"example_brand\": \"Medixon, Lameson (Tablet/Injeksi)\", \"example_flag\": \"LASA (Kekuatan)\"}"
+    },
+    {
+      "kode": "saluran-pernapasan-alergi-8",
+      "nama": "Kalmethasone, Cortidex (Tablet/Injeksi)",
+      "generik": "saluran-pernapasan-alergi-8",
+      "kind": "OBAT",
+      "source_note": "{\"generic\": \"Dexamethasone 0,5 mg / 5 mg/mL\", \"example_brand\": \"Kalmethasone, Cortidex (Tablet/Injeksi)\", \"example_flag\": \"Normal\"}"
+    },
+    {
+      "kode": "saraf-pusat-psikotropika-1",
+      "nama": "Valisanbe, Stesolid (Tab/Inj/Rectal)",
+      "generik": "saraf-pusat-psikotropika-1",
+      "kind": "OBAT",
+      "source_note": "{\"generic\": \"Diazepam 2 / 5 mg / 10 mg/2mL\", \"example_brand\": \"Valisanbe, Stesolid (Tab/Inj/Rectal)\", \"example_flag\": \"Psikotropika\"}"
+    },
+    {
+      "kode": "saraf-pusat-psikotropika-2",
+      "nama": "Xanax, Zypraz (Tablet)",
+      "generik": "saraf-pusat-psikotropika-2",
+      "kind": "OBAT",
+      "source_note": "{\"generic\": \"Alprazolam 0,5 mg / 1 mg\", \"example_brand\": \"Xanax, Zypraz (Tablet)\", \"example_flag\": \"Psikotropika\"}"
+    },
+    {
+      "kode": "saraf-pusat-psikotropika-3",
+      "nama": "Dilantin, Kutoin (Kapsul/Injeksi)",
+      "generik": "saraf-pusat-psikotropika-3",
+      "kind": "OBAT",
+      "source_note": "{\"generic\": \"Phenytoin 100 mg / 50 mg/mL\", \"example_brand\": \"Dilantin, Kutoin (Kapsul/Injeksi)\", \"example_flag\": \"High Alert (Antikonvulsan)\"}"
+    },
+    {
+      "kode": "saraf-pusat-psikotropika-4",
+      "nama": "Neurontin, Alpentin (Kapsul)",
+      "generik": "saraf-pusat-psikotropika-4",
+      "kind": "OBAT",
+      "source_note": "{\"generic\": \"Gabapentin 100 mg / 300 mg\", \"example_brand\": \"Neurontin, Alpentin (Kapsul)\", \"example_flag\": \"LASA (Kekuatan)\"}"
+    },
+    {
+      "kode": "saraf-pusat-psikotropika-5",
+      "nama": "Methycobal, Lapibal (Kapsul/Injeksi)",
+      "generik": "saraf-pusat-psikotropika-5",
+      "kind": "OBAT",
+      "source_note": "{\"generic\": \"Mecobalamin 500 mcg\", \"example_brand\": \"Methycobal, Lapibal (Kapsul/Injeksi)\", \"example_flag\": \"Normal\"}"
+    },
+    {
+      "kode": "saraf-pusat-psikotropika-6",
+      "nama": "Brainact, Nicholin (Kaplet/Injeksi)",
+      "generik": "saraf-pusat-psikotropika-6",
+      "kind": "OBAT",
+      "source_note": "{\"generic\": \"Citicoline 500 mg / 1000 mg\", \"example_brand\": \"Brainact, Nicholin (Kaplet/Injeksi)\", \"example_flag\": \"LASA (Kekuatan)\"}"
+    },
+    {
+      "kode": "cairan-infus-elektrolit-pekat-1",
+      "nama": "Otsu-NS, Wida NS (Infus)",
+      "generik": "cairan-infus-elektrolit-pekat-1",
+      "kind": "OBAT",
+      "source_note": "{\"generic\": \"NaCl 0,9% 500 mL\", \"example_brand\": \"Otsu-NS, Wida NS (Infus)\", \"example_flag\": \"Normal\"}"
+    },
+    {
+      "kode": "cairan-infus-elektrolit-pekat-2",
+      "nama": "Otsu-RL, Wida RL (Infus)",
+      "generik": "cairan-infus-elektrolit-pekat-2",
+      "kind": "OBAT",
+      "source_note": "{\"generic\": \"Ringer Laktat (RL) 500 mL\", \"example_brand\": \"Otsu-RL, Wida RL (Infus)\", \"example_flag\": \"Normal\"}"
+    },
+    {
+      "kode": "cairan-infus-elektrolit-pekat-3",
+      "nama": "Otsu-D5, Wida D5 (Infus)",
+      "generik": "cairan-infus-elektrolit-pekat-3",
+      "kind": "OBAT",
+      "source_note": "{\"generic\": \"Dextrose 5% / 10% 500 mL\", \"example_brand\": \"Otsu-D5, Wida D5 (Infus)\", \"example_flag\": \"LASA (Konsentrasi)\"}"
+    },
+    {
+      "kode": "cairan-infus-elektrolit-pekat-4",
+      "nama": "Otsu-KCl 7,46% (Vial/Flacon)",
+      "generik": "cairan-infus-elektrolit-pekat-4",
+      "kind": "OBAT",
+      "source_note": "{\"generic\": \"Kalium Klorida (KCl) 7,46% 25 mL\", \"example_brand\": \"Otsu-KCl 7,46% (Vial/Flacon)\", \"example_flag\": \"HIGH ALERT (Elektrolit Pekat)\"}"
+    },
+    {
+      "kode": "cairan-infus-elektrolit-pekat-5",
+      "nama": "Meylon 8,4% (Vial)",
+      "generik": "cairan-infus-elektrolit-pekat-5",
+      "kind": "OBAT",
+      "source_note": "{\"generic\": \"Natrium Bikarbonat (Meylon) 8,4%\", \"example_brand\": \"Meylon 8,4% (Vial)\", \"example_flag\": \"HIGH ALERT (Elektrolit Pekat)\"}"
+    },
+    {
+      "kode": "cairan-infus-elektrolit-pekat-6",
+      "nama": "Otsu-MgSO4 (Flacon)",
+      "generik": "cairan-infus-elektrolit-pekat-6",
+      "kind": "OBAT",
+      "source_note": "{\"generic\": \"MgSO4 20% / 40% 25 mL\", \"example_brand\": \"Otsu-MgSO4 (Flacon)\", \"example_flag\": \"HIGH ALERT (Elektrolit Pekat)\"}"
+    },
+    {
+      "kode": "cairan-infus-elektrolit-pekat-7",
+      "nama": "Otsu-Salin 3% (Infus)",
+      "generik": "cairan-infus-elektrolit-pekat-7",
+      "kind": "OBAT",
+      "source_note": "{\"generic\": \"NaCl 3% 500 mL\", \"example_brand\": \"Otsu-Salin 3% (Infus)\", \"example_flag\": \"HIGH ALERT (Elektrolit Pekat)\"}"
+    }
+  ]
+}

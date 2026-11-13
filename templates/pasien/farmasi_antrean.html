@@ -26,6 +26,11 @@
         </div>
     </div>
 
+    {% if ppra_requests %}<section class="card card-body mb-3" aria-labelledby="ppra-heading"><h2 id="ppra-heading" class="h5">Tinjauan PPRA Menunggu Keputusan</h2>
+    {% for review in ppra_requests %}<article class="border rounded p-3 mb-2"><h3 class="h6">{{ review.resep.no_resep }}</h3><p>Kebijakan {{ review.policy_version }} · Permintaan {{ review.requested_at }}</p>
+    <ul>{% for item in review.resep.items.all %}<li>{{ item.nama_obat }} · {{ item.aturan_pakai }}</li>{% endfor %}</ul>
+    <form method="post" action="{% url 'pasien:ppra_decision' review.pk %}">{% csrf_token %}<input type="hidden" name="digest" value="{{ review.digest }}"><label for="ppra-decision-{{ review.pk }}">Keputusan PPRA</label><select id="ppra-decision-{{ review.pk }}" name="decision" class="form-select" required><option value="">— Pilih keputusan —</option><option value="APPROVED">Disetujui</option><option value="REJECTED">Ditolak</option></select><label for="ppra-reason-{{ review.pk }}">Alasan keputusan PPRA</label><textarea id="ppra-reason-{{ review.pk }}" name="reason" class="form-control" minlength="5" maxlength="2000" required></textarea><button type="submit" class="btn btn-outline-primary mt-2">Simpan Keputusan PPRA</button></form></article>{% endfor %}</section>{% endif %}
+
     <!-- STAT CARDS -->
     <div class="row g-3 mb-4">
         <div class="col-6 col-md-3">
@@ -199,7 +204,7 @@
                                 {% elif r.status == 'DISPENSING' %}
                                     <span class="badge bg-info">Dispensing</span>
                                 {% elif r.status == 'SELESAI' %}
-                                    <span class="badge bg-success">Selesai</span>
+                                    <span class="badge bg-success">Selesai</span>{% if r.financial_pending %}<p class="text-danger mb-0">Data harga/jumlah memerlukan rekonsiliasi billing.</p>{% endif %}
                                 {% elif r.status == 'BATAL' %}
                                     <span class="badge bg-secondary">Batal</span>
                                 {% endif %}
@@ -212,20 +217,20 @@
                                     {% if r.status == 'DIKIRIM' %}
                                     <form method="post" action="{% url 'pasien:resep_update_status' resep_pk=r.pk %}" class="d-inline">
                                         {% csrf_token %}
-                                        <input type="hidden" name="aksi" value="dispensing">
+                                        <input type="hidden" name="aksi" value="dispensing"><input type="hidden" name="version" value="{{ r.version }}"><input type="hidden" name="request_id" value="{{ r.operation_key }}">
                                         <input type="hidden" name="next" value="{{ request.path }}?status={{ status_filter }}{% if q %}&q={{ q }}{% endif %}">
                                         <button type="submit" class="btn btn-sm btn-primary fw-semibold"
                                                 style="background:var(--primary);border-color:var(--primary);font-size:.75rem;">
-                                            <i class="bi bi-capsule me-1"></i>Proses
+                                            <i class="bi bi-capsule me-1" aria-hidden="true"></i>Proses
                                         </button>
                                     </form>
                                     {% elif r.status == 'DISPENSING' %}
                                     <form method="post" action="{% url 'pasien:resep_update_status' resep_pk=r.pk %}" class="d-inline">
                                         {% csrf_token %}
-                                        <input type="hidden" name="aksi" value="selesai">
+                                        <input type="hidden" name="aksi" value="selesai"><input type="hidden" name="version" value="{{ r.version }}"><input type="hidden" name="request_id" value="{{ r.operation_key }}">
                                         <input type="hidden" name="next" value="{{ request.path }}?status={{ status_filter }}{% if q %}&q={{ q }}{% endif %}">
                                         <button type="submit" class="btn btn-sm btn-success fw-semibold" style="font-size:.75rem;">
-                                            <i class="bi bi-check2-circle me-1"></i>Selesaikan
+                                            <i class="bi bi-check2-circle me-1" aria-hidden="true"></i>Selesaikan
                                         </button>
                                     </form>
                                     <button type="button" class="btn btn-sm btn-outline-secondary fw-semibold"
@@ -274,13 +279,13 @@
                                             <tbody>
                                                 {% for item in r.items.all %}
                                                 <tr>
-                                                    <td class="fw-semibold">{{ item.nama_obat }}</td>
+                                                    <td class="fw-semibold">{{ item.nama_obat }}{% for flag in item.product_snapshot.flags %}<span class="badge bg-danger ms-1">{{ flag }}</span>{% endfor %}</td>
                                                     <td>{{ item.bentuk_sediaan }}</td>
                                                     <td>{{ item.dosis }}</td>
                                                     <td>{{ item.aturan_pakai }}</td>
-                                                    <td class="text-center font-monospace">{{ item.jumlah }}</td>
-                                                    <td class="text-end font-monospace">{{ item.harga_satuan|rupiah }}</td>
-                                                    <td class="text-end font-monospace fw-bold" style="color:var(--primary);">{{ item.subtotal|rupiah }}</td>
+                                                    <td class="text-center font-monospace">{% if item.quantity_decimal != None %}{{ item.quantity_decimal }} {{ item.product_snapshot.unit }}{% else %}{{ item.jumlah }}{% endif %}</td>
+                                                    <td class="text-end font-monospace">{% if item.product_id and item.reference_price == None %}Tarif belum ditetapkan{% else %}{{ item.harga_satuan|rupiah }}{% endif %}</td>
+                                                    <td class="text-end font-monospace fw-bold" style="color:var(--primary);">{% if item.subtotal == None %}Belum diketahui{% else %}{{ item.subtotal|rupiah }}{% endif %}</td>
                                                 </tr>
                                                 {% empty %}
                                                 <tr><td colspan="7" class="text-center text-muted">Tidak ada item obat.</td></tr>
@@ -319,11 +324,11 @@
                                         </div>
                                         <form method="post" action="{% url 'pasien:resep_update_status' resep_pk=r.pk %}" id="formBatal{{ r.pk }}">
                                             {% csrf_token %}
-                                            <input type="hidden" name="aksi" value="batal">
+                                            <input type="hidden" name="aksi" value="batal"><input type="hidden" name="version" value="{{ r.version }}"><input type="hidden" name="request_id" value="{{ r.operation_key }}">
                                             <input type="hidden" name="next" value="{{ request.path }}?status={{ status_filter }}{% if q %}&q={{ q }}{% endif %}">
                                             <div class="mb-3">
-                                                <label class="form-label fw-semibold" style="font-size:.82rem;">Alasan Pembatalan (opsional)</label>
-                                                <textarea name="catatan_apoteker" rows="3"
+                                                <label class="form-label fw-semibold" style="font-size:.82rem;">Alasan Pembatalan (wajib)</label>
+                                                <textarea name="reason" rows="3" required minlength="5" maxlength="2000"
                                                           class="form-control form-control-sm"
                                                           placeholder="Tulis alasan pembatalan resep..."
                                                           style="font-size:.82rem;"></textarea>
@@ -355,6 +360,6 @@
             {% endif %}
         </div>
     </div>
-
+    {% if page_obj.has_other_pages %}<nav aria-label="Halaman antrean resep" class="my-3">{% if page_obj.has_previous %}<a class="btn btn-outline-secondary" href="?page={{ page_obj.previous_page_number }}&status={{ status_filter|urlencode }}&q={{ q|urlencode }}">Sebelumnya</a>{% endif %}<span>Halaman {{ page_obj.number }} dari {{ page_obj.paginator.num_pages }}</span>{% if page_obj.has_next %}<a class="btn btn-outline-secondary" href="?page={{ page_obj.next_page_number }}&status={{ status_filter|urlencode }}&q={{ q|urlencode }}">Berikutnya</a>{% endif %}</nav>{% endif %}
 </div>
 {% endblock %}

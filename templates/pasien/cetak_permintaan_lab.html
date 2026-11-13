@@ -79,7 +79,9 @@
   </tr>
 </table>
 
-{% if order and order.parameter_list %}
+{% if order.catalogue_snapshot %}
+<section><div class="section-title">Pemeriksaan Terpilih — Data Saat Order</div><p>{% for node in order.catalogue_snapshot.path %}{{ node.nama }} / {% endfor %}<strong>{{ order.nama_pemeriksaan }}</strong></p><p>Kode lokal {{ order.catalogue_snapshot.kode }} · Versi {{ order.catalogue_snapshot.source_version }} · Pengirim {{ order.dokter_pengirim }}</p><dl>{% for key,value in order.preparation.items %}<dt>{{ key }}</dt><dd>{{ value }}</dd>{% empty %}<dt>Persiapan</dt><dd>Tidak dicatat</dd>{% endfor %}</dl></section>
+{% elif order and order.parameter_list %}
 <!-- PARAMETER YANG DIPILIH -->
 <div class="section-title">PARAMETER PEMERIKSAAN YANG DIMINTA</div>
 <table class="table table-bordered table-sm mb-2">

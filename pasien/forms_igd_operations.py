@@ -20,7 +20,7 @@ class InvestigationForm(OperationForm):
     jenis = forms.ChoiceField(choices=[('LAB','Laboratorium'),('RADIOLOGI','Radiologi / CT'),('EKG','EKG'),('LAINNYA','Lainnya')])
     nama_pemeriksaan = forms.CharField(max_length=255)
     prioritas = forms.ChoiceField(choices=[('RUTIN','Rutin'),('CITO','CITO')])
-    catatan_klinis = forms.CharField(required=False, max_length=4000, widget=forms.Textarea)
+    catatan_klinis = forms.CharField(label='Indikasi klinis / diagnosis kerja (manual)', max_length=4000, widget=forms.Textarea)
 
 
 class CpptForm(OperationForm):
@@ -37,6 +37,10 @@ class CpptForm(OperationForm):
 
 
 class ActionPlanForm(OperationForm):
+    mode = forms.ChoiceField(required=False, choices=[('MANUAL','Manual'),('MASTER','Master'),('AI','AI')])
+    ai_ticket = forms.CharField(required=False, widget=forms.HiddenInput)
+    lokasi_anatomis = forms.CharField(required=False,max_length=200)
+    catatan_klinis = forms.CharField(required=False,max_length=2000,widget=forms.Textarea)
     action_id = forms.IntegerField(required=False, min_value=1, widget=forms.HiddenInput)
     jenis = forms.ChoiceField(choices=[('ICD9','ICD-9 (Medis)'),('SIKI','SIKI (Keperawatan)'),('BEBAS','Manual')])
     kode = forms.CharField(required=False, max_length=20)
@@ -51,6 +55,11 @@ class ActionPlanForm(OperationForm):
 
 class ActionIdForm(OperationForm):
     action_id = forms.IntegerField(min_value=1)
+
+
+class ActionExecutionForm(ActionIdForm):
+    occurred_at = forms.DateTimeField(required=False)
+    retrospective_reason = forms.CharField(required=False,max_length=2000)
 
 
 class SignatureForm(OperationForm):

@@ -1,0 +1,75 @@
+{
+  "journeys": [
+    "eleven-groups; unique fields; typed spaces; normal preserves abnormal/genital/general; canonical summary; two saves/reloads",
+    "legacy-only visible; bulk normal does not classify history",
+    "final legacy and readonly; no normal shortcut",
+    "final resume print uses historical examination"
+  ],
+  "layouts": [
+    {
+      "case": "new",
+      "width": 375,
+      "scroll": 375,
+      "root": 347
+    },
+    {
+      "case": "new",
+      "width": 768,
+      "scroll": 768,
+      "root": 194
+    },
+    {
+      "case": "new",
+      "width": 1366,
+      "scroll": 1366,
+      "root": 784
+    },
+    {
+      "case": "legacy",
+      "width": 375,
+      "scroll": 375,
+      "root": 347
+    },
+    {
+      "case": "legacy",
+      "width": 768,
+      "scroll": 768,
+      "root": 194
+    },
+    {
+      "case": "legacy",
+      "width": 1366,
+      "scroll": 1366,
+      "root": 784
+    },
+    {
+      "case": "final",
+      "width": 375,
+      "scroll": 375,
+      "root": 347
+    },
+    {
+      "case": "final",
+      "width": 768,
+      "scroll": 768,
+      "root": 194
+    },
+    {
+      "case": "final",
+      "width": 1366,
+      "scroll": 1366,
+      "root": 784
+    }
+  ],
+  "errors": [],
+  "extended": {
+    "checks": [
+      "two-tab stale conflict409 retains unsaved note",
+      "cancel replacing abnormal preserves selection and note",
+      "not-examined reason persisted; HTML note stays text after reload",
+      "summary keyboard focus and tab reachable",
+      "normal shortcut never creates GCS in initial or evaluation"
+    ],
+    "page_errors": []
+  }
+}

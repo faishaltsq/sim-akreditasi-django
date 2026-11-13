@@ -1,0 +1,3 @@
+<table class="table table-bordered"><tbody>{% for organ in physical_exam.sections %}<tr><th>{{ organ.label }}</th><td style="white-space:pre-wrap;overflow-wrap:anywhere">{{ organ.text }}</td></tr>{% endfor %}</tbody></table>
+{% if physical_exam.legacy %}<h3>Temuan historis yang dipertahankan</h3>{% for item in physical_exam.legacy %}<article><strong>{{ item.label }}</strong> ({{ item.source }})<p style="white-space:pre-wrap;overflow-wrap:anywhere">{{ item.text }}</p></article>{% endfor %}{% endif %}
+{% if physical_exam.summary %}<h3>Ringkasan Secondary Survey</h3><p style="white-space:pre-wrap;overflow-wrap:anywhere">{{ physical_exam.summary }}</p>{% endif %}

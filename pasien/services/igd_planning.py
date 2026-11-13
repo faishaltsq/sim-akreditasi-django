@@ -9,6 +9,16 @@ def code_of(value):
 
 
 def validate_planning(visit, user, payload, version):
+    from django.core.exceptions import PermissionDenied
+    nursing={'diagnosa_keperawatan_sdki','luaran_keperawatan_slki','intervensi_keperawatan_siki'}
+    for field in nursing | {'diagnosa_masuk','tatalaksana_resusitasi','tatalaksana_terapi'}:
+        if field in payload and payload[field]!=getattr(visit,field):
+            allowed={'PERAWAT','BIDAN'} if field in nursing else {'DOKTER_UMUM','DOKTER_SPESIALIS'}
+            if user.profile.profesi not in allowed:
+                raise PermissionDenied('Perubahan komponen tidak sesuai profesi.')
+    if 'component_modes' in payload or visit.diagnosis_provenance.get('schema_version') == 2:
+        from .igd_planning_components import validate_components
+        return validate_components(visit,user,payload,version)
     values = dict(payload)
     mode = values.get('diagnosis_mode',visit.diagnosis_mode)
     diagnosis_fields = ('diagnosa_masuk','diagnosa_keperawatan_sdki','luaran_keperawatan_slki','intervensi_keperawatan_siki')

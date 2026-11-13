@@ -7,26 +7,27 @@
 <div class="container-fluid px-3 pt-2 pb-5">
 
   <!-- Header -->
-  <div class="d-flex align-items-center justify-content-between mb-3">
+  <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3">
     <div>
-      <h5 class="mb-0 fw-bold"><i class="bi bi-moisture text-warning me-2"></i>Dashboard Laboratorium & LIS</h5>
-      <small class="text-muted">Worklist Order Penunjang Lab — Nilai Kritis & Verifikasi Hasil</small>
+      <h5 class="mb-0 fw-bold">Worklist Penunjang — {{ kind|default:'LAB' }}</h5>
+      <small class="text-muted">Layanan tujuan terotorisasi — Nilai Kritis & Verifikasi Hasil</small>
     </div>
-    <div class="d-flex gap-2">
-      <a href="?status=ORDERED" class="btn btn-sm {% if status_filter == 'ORDERED' %}btn-warning{% else %}btn-outline-warning{% endif %}">
+    <div class="d-flex gap-2 flex-wrap">
+      <a href="?jenis={{ kind }}&status=ORDERED" class="btn btn-sm {% if status_filter == 'ORDERED' %}btn-warning{% else %}btn-outline-warning{% endif %}">
         <i class="bi bi-hourglass-split"></i> Pending <span class="badge bg-danger ms-1">{{ total_pending }}</span>
       </a>
-      <a href="?status=PROSES" class="btn btn-sm {% if status_filter == 'PROSES' %}btn-primary{% else %}btn-outline-primary{% endif %}">
+      <a href="?jenis={{ kind }}&status=PROSES" class="btn btn-sm {% if status_filter == 'PROSES' %}btn-primary{% else %}btn-outline-primary{% endif %}">
         <i class="bi bi-arrow-repeat"></i> Proses <span class="badge bg-secondary ms-1">{{ total_proses }}</span>
       </a>
-      <a href="?status=SELESAI" class="btn btn-sm {% if status_filter == 'SELESAI' %}btn-success{% else %}btn-outline-success{% endif %}">
+      <a href="?jenis={{ kind }}&status=SELESAI" class="btn btn-sm {% if status_filter == 'SELESAI' %}btn-success{% else %}btn-outline-success{% endif %}">
         <i class="bi bi-check-circle"></i> Selesai <span class="badge bg-success ms-1">{{ total_selesai }}</span>
       </a>
-      <a href="?" class="btn btn-sm btn-outline-secondary">Semua</a>
+      <a href="?jenis={{ kind }}" class="btn btn-sm btn-outline-secondary">Semua Status</a>
     </div>
   </div>
 
   <!-- Banner Nilai Kritis -->
+  <nav aria-label="Jenis layanan penunjang" class="mb-3"><a href="{% url 'pasien:ancillary_worklist' %}?jenis=LAB">Laboratorium</a> · <a href="{% url 'pasien:ancillary_worklist' %}?jenis=RADIOLOGI">Radiologi</a> · <a href="{% url 'pasien:ancillary_worklist' %}?jenis=EKG">EKG</a> · <a href="{% url 'pasien:ancillary_worklist' %}?jenis=LAINNYA">Penunjang Lain</a></nav>
   {% if critical_orders %}
   <div class="alert alert-danger border-danger d-flex align-items-start gap-2 mb-3 py-2" role="alert">
     <i class="bi bi-exclamation-triangle-fill fs-5 mt-1 flex-shrink-0"></i>
@@ -37,12 +38,12 @@
         <li>
           <strong>{{ o.kunjungan.pasien.nama_lengkap }}</strong> — {{ o.nama_pemeriksaan }}
           {% if o.critical_value_catatan %}<span class="text-danger"> ({{ o.critical_value_catatan }})</span>{% endif %}
-          <a href="#update-{{ o.pk }}" data-bs-toggle="modal" data-bs-target="#updateModal" 
+          {% if o.can_record_result %}<a href="#update-{{ o.pk }}" data-bs-toggle="modal" data-bs-target="#updateModal"
              data-order-id="{{ o.pk }}" data-order-nama="{{ o.nama_pemeriksaan }}"
              data-order-status="{{ o.status }}" data-order-hasil="{{ o.hasil_pemeriksaan }}"
              data-order-critical="{{ o.is_critical_value|yesno:'1,0' }}"
              data-order-catatan="{{ o.critical_value_catatan }}"
-             class="btn btn-xs btn-outline-danger ms-2 py-0 px-1" style="font-size:0.7rem;">Update</a>
+             class="btn btn-xs btn-outline-danger ms-2 py-0 px-1" style="font-size:0.7rem;">Update</a>{% endif %}
         </li>
         {% endfor %}
       </ul>
@@ -52,7 +53,7 @@
 
   <!-- Tabel Worklist -->
   <div class="card border-0 shadow-sm">
-    <div class="card-body p-0">
+    <div class="card-body p-0 table-responsive">
       <table class="table table-hover table-sm mb-0 align-middle">
         <thead class="table-light">
           <tr>
@@ -104,7 +105,7 @@
             </td>
             <td class="text-muted" style="font-size:0.75rem;">{{ o.created_at|date:"d/m H:i" }}</td>
             <td>
-              <button type="button" class="btn btn-xs btn-outline-primary py-0 px-2"
+              {% if o.can_record_result %}<button type="button" aria-label="Ubah hasil {{ o.nama_pemeriksaan }}" class="btn btn-xs btn-outline-primary py-0 px-2"
                       style="font-size:0.72rem;"
                       data-bs-toggle="modal" data-bs-target="#updateModal"
                       data-order-id="{{ o.pk }}"
@@ -114,7 +115,7 @@
                       data-order-critical="{{ o.is_critical_value|yesno:'1,0' }}"
                       data-order-catatan="{{ o.critical_value_catatan }}">
                 <i class="bi bi-pencil-square"></i>
-              </button>
+              </button>{% endif %}
             </td>
           </tr>
           {% empty %}
@@ -125,13 +126,14 @@
     </div>
   </div>
 
+  {% if page_obj.has_other_pages %}<nav aria-label="Halaman worklist" class="my-3">{% if page_obj.has_previous %}<a href="?jenis={{ kind }}&status={{ status_filter }}&page={{ page_obj.previous_page_number }}">Sebelumnya</a>{% endif %} <span>Halaman {{ page_obj.number }} dari {{ page_obj.paginator.num_pages }}</span> {% if page_obj.has_next %}<a href="?jenis={{ kind }}&status={{ status_filter }}&page={{ page_obj.next_page_number }}">Berikutnya</a>{% endif %}</nav>{% endif %}
 </div>
 
 <!-- Modal Update Order -->
 <div class="modal fade" id="updateModal" tabindex="-1" aria-labelledby="updateModalLabel" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered">
     <div class="modal-content">
-      <form id="updateOrderForm" method="post" action="">
+      <form id="updateOrderForm" method="post" action="" data-endpoint="{% url 'pasien:ancillary_result' 0 %}">
         {% csrf_token %}
         <div class="modal-header py-2">
           <h6 class="modal-title" id="updateModalLabel"><i class="bi bi-clipboard2-pulse-fill text-warning me-1"></i> Update Hasil Lab</h6>
@@ -139,9 +141,11 @@
         </div>
         <div class="modal-body">
           <p class="fw-semibold mb-2" id="updateOrderNama"></p>
+          <input name="expected_state" id="updateExpectedState" type="hidden">
+          <label for="updateCorrectionReason">Alasan koreksi hasil selesai</label><textarea id="updateCorrectionReason" name="correction_reason" class="form-control" minlength="8" maxlength="2000"></textarea>
 
           <div class="mb-3">
-            <label class="form-label form-label-sm">Status Order</label>
+            <label for="updateStatus" class="form-label form-label-sm">Status Order</label>
             <select name="status" class="form-select form-select-sm" id="updateStatus">
               <option value="ORDERED">Pending / Terkirim</option>
               <option value="PROSES">Dalam Pemeriksaan</option>
@@ -150,7 +154,7 @@
           </div>
 
           <div class="mb-3">
-            <label class="form-label form-label-sm">Hasil Pemeriksaan</label>
+            <label for="updateHasil" class="form-label form-label-sm">Hasil Pemeriksaan</label>
             <textarea name="hasil_pemeriksaan" class="form-control form-control-sm" id="updateHasil" rows="3"
                       placeholder="Isi nilai hasil, satuan, rentang normal..."></textarea>
           </div>
@@ -173,7 +177,7 @@
         </div>
         <div class="modal-footer py-2">
           <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal">Batal</button>
-          <button type="submit" class="btn btn-sm btn-primary"><i class="bi bi-check-lg me-1"></i>Simpan</button>
+          <button type="submit" class="btn btn-sm btn-primary"><i class="bi bi-check-lg me-1" aria-hidden="true"></i>Simpan</button>
         </div>
       </form>
     </div>
@@ -185,7 +189,9 @@ const updateModal = document.getElementById('updateModal');
 updateModal.addEventListener('show.bs.modal', function(e) {
   const btn = e.relatedTarget;
   const pk = btn.dataset.orderId;
-  document.getElementById('updateOrderForm').action = `/pasien/order-penunjang/${pk}/update/`;
+  document.getElementById('updateOrderForm').action = document.getElementById('updateOrderForm').dataset.endpoint.replace('/0/',`/${pk}/`);
+  document.getElementById('updateExpectedState').value=btn.dataset.orderStatus;
+  document.getElementById('updateCorrectionReason').value='';
   document.getElementById('updateOrderNama').textContent = btn.dataset.orderNama;
   document.getElementById('updateStatus').value = btn.dataset.orderStatus;
   document.getElementById('updateHasil').value = btn.dataset.orderHasil;

@@ -1,0 +1,64 @@
+{
+  "baseline_commit": "112a7b3357168ec53aac6cb4c6670b8bcab86f66",
+  "scope": "uncommitted working tree; local verification only",
+  "source_fingerprint": "682ac46fe572b7bc8f90049031792b9d5d4ec9db2c58c5e40cf380acf2817c8a",
+  "source_sha256": {
+    "pasien/physical_exam.py": "6963834c8f7f8cb2027cc56d6151efa87118d831e5df9f096b0f362a57f48cb7",
+    "pasien/tests_igd_physical_exam.py": "7c97d1242073d4365bafe1322641e3f41b73d4d75c6a0f406860689e958640b1",
+    "pasien/forms_igd_workflow.py": "3c878c124e8a40aa629d4b998ea5161138e9354f14c8ddbaa598b065529ea35c",
+    "pasien/igd_workflow_views.py": "3af2b9da2d443fdb8d3ec4904243b3c4f606c36d9062fc0d290e492f888b3002",
+    "pasien/services/igd_assessment_workflow.py": "92b38f246954fdfcd65b5b864b2620181bd14553d48776db639c76a22f4d1594",
+    "pasien/services/igd_finalization.py": "f0986edb76698836255d9583855c122d5e4adcbab4e739b7e3a0f5732813d9d7",
+    "pasien/views.py": "cf5924eb728d9c8d2677b8fa5af6f4828529fa7dd6596eb583a25d4462aa6f1f",
+    "static/js/igd-clinical-controls.js": "ddfa52dca2f6f9d9d906dd46141938a9d9a2bb5adc512f2a529dc72082e041f9",
+    "static/js/igd-physical-exam.js": "1b1317ea2f611fb447adf21679b1821df53eb37f4d235d9e11185e9b2d105af2",
+    "templates/pasien/igd_workflow.html": "093dd966c2e59be733922f761673c231ba7b7e7c2a17fc3ba39e386cb4041dc5",
+    "templates/pasien/_igd_clinical_widgets.html": "390484d679782bc42e91daa40a81fedd7ee73e1c2427d7ed14729ea5da5f648e",
+    "templates/pasien/_igd_physical_exam_form.html": "11c115aa6e39b9756024cd0b9529bfb6dc9532635c84130577ba2a21268be609",
+    "templates/pasien/_igd_physical_exam_readonly.html": "c9deff544d539ae858e6d51a28318188cb88f8507e1e4be258b903e0d6678b71",
+    "templates/pasien/igd_workflow_resume.html": "11472b8266f99774514d975d1582804cc862281e28fec970319ff173402db547",
+    "templates/pasien/cetak_asesmen_medis_igd.html": "0ff16b45b1523ed79774b720056d2774d9268631d88c390a2cd21a7dc7279bf1"
+  },
+  "regression": {
+    "labels": [
+      "klinis",
+      "pasien"
+    ],
+    "tests": 429,
+    "runtime_seconds": 277.169,
+    "exit_code": 0
+  },
+  "catalogue_probe_count": 65,
+  "layout_checks": 9,
+  "browser_page_errors": [],
+  "assets": [
+    {
+      "source": "js/igd-physical-exam.js",
+      "hashed": "js/igd-physical-exam.e74ab8ea78ae.js",
+      "sha256": "1b1317ea2f611fb447adf21679b1821df53eb37f4d235d9e11185e9b2d105af2",
+      "byte_and_gzip_verified": true
+    },
+    {
+      "source": "js/igd-clinical-controls.js",
+      "hashed": "js/igd-clinical-controls.4251d42de04d.js",
+      "sha256": "ddfa52dca2f6f9d9d906dd46141938a9d9a2bb5adc512f2a529dc72082e041f9",
+      "byte_and_gzip_verified": true
+    },
+    {
+      "source": "js/igd-assessment-workflow.js",
+      "hashed": "js/igd-assessment-workflow.7a96516e9f96.js",
+      "sha256": "e3156100582ade25ccb1b0daa3a157ab2489a897809a3592147afb93b80c52d1",
+      "byte_and_gzip_verified": true
+    }
+  ],
+  "django_check": "passed",
+  "migration_drift": "none",
+  "node_syntax": "passed",
+  "diff_check": "passed",
+  "qa_port_closed": true,
+  "delegation": "failed_provider403; direct implementation and self-review",
+  "production_writes": false,
+  "committed": false,
+  "pushed": false,
+  "deployed": false
+}
