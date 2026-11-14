@@ -141,17 +141,21 @@ class EditTests(DokumenKredensialUIBase):
         self.assertIn('Saya anggota aktif PPNI.', text)
         self.assertIn('PPNI', text)
 
-    def test_another_employees_draft_is_404(self):
-        DrafDokumenKredensial.objects.create(
+    def test_another_employees_draft_is_invisible(self):
+        """User A never sees user B's draft — edit auto-creates A's own draft."""
+        other_draft = DrafDokumenKredensial.objects.create(
             pegawai=self.other_pegawai, jenis='CV', created_by=self.other_user,
         )
         self.client.force_login(self.user)
-        for name in ('dokumen_kredensial_edit', 'dokumen_kredensial_finalize',
-                     'dokumen_kredensial_download'):
-            with self.subTest(view=name):
-                method = self.client.post if name != 'dokumen_kredensial_edit' else self.client.get
-                response = method(reverse(f'sdm:{name}', args=['CV']))
-                self.assertEqual(response.status_code, 404)
+        # Edit auto-creates caller's own draft (since 46ba56e), never returns other's.
+        response = self.client.get(reverse('sdm:dokumen_kredensial_edit', args=['CV']))
+        self.assertEqual(response.status_code, 200)
+        own_draft = DrafDokumenKredensial.objects.get(pegawai=self.pegawai, jenis='CV')
+        self.assertNotEqual(own_draft.pk, other_draft.pk)
+        # Finalize without draft still 404 for download (no finalized version yet).
+        response = self.client.get(reverse('sdm:dokumen_kredensial_download', args=['CV']))
+        # Redirects to edit because no finalized version exists.
+        self.assertEqual(response.status_code, 302)
 
     def test_download_never_returns_another_employees_pdf(self):
         session, storage = self._storage()

@@ -614,7 +614,10 @@ class AuditKatalogRkkTests(TestCase):
         self.assertIn('DOKTER_GIGI', text)
 
     def test_audit_reports_missing_profession(self):
-        # Tanpa seed, semua profesi dokumen dilaporkan hilang.
+        # Migration 0065 seeds professions with protected FKs; cascade-delete children first.
+        KatalogTindakan.objects.all().delete()
+        MasterJenjangProfesi.objects.all().delete()
+        MasterProfesiPegawai.objects.all().delete()
         out = StringIO()
         call_command('audit_katalog_rkk', stdout=out)
         text = out.getvalue()
@@ -622,6 +625,10 @@ class AuditKatalogRkkTests(TestCase):
         self.assertIn('profesi tidak ada', text)
 
     def test_audit_strict_exits_nonzero_on_gap(self):
+        # Migration 0065 seeds professions with protected FKs; cascade-delete children first.
+        KatalogTindakan.objects.all().delete()
+        MasterJenjangProfesi.objects.all().delete()
+        MasterProfesiPegawai.objects.all().delete()
         with self.assertRaises(SystemExit) as ctx:
             call_command('audit_katalog_rkk', '--strict', stdout=StringIO())
         self.assertEqual(ctx.exception.code, 1)

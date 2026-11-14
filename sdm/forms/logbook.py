@@ -171,8 +171,11 @@ class KoreksiLogbookTahunanForm(forms.ModelForm):
             profesi_id = getattr(employee, 'profesi_master_id', None)
             if profesi_id is None and getattr(employee, 'jenjang_master', None) is not None:
                 profesi_id = employee.jenjang_master.profesi_id
-            qs = KatalogTindakan.objects.filter(is_active=True)
             if profesi_id:
-                qs = qs.filter(jenjang__profesi_id=profesi_id)
+                qs = KatalogTindakan.objects.filter(is_active=True, jenjang__profesi_id=profesi_id)
+            else:
+                qs = KatalogTindakan.objects.none()
             self.fields['katalog_tindakan'].queryset = qs.select_related('jenjang').order_by('jenjang__urutan', 'kode')
+        else:
+            self.fields['katalog_tindakan'].queryset = KatalogTindakan.objects.none()
 

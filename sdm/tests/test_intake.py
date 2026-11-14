@@ -260,7 +260,11 @@ class IntakeFinalizationTests(TestCase):
         self.assertEqual(assignment.unit_induk, self.root)
 
     def test_empty_profession_master_does_not_block_intake(self):
-        from sdm.models import MasterProfesiPegawai
+        from sdm.models import KatalogTindakan, MasterJenjangProfesi, MasterProfesiPegawai
+        # Migration 0065 seeds professions with protected FKs; cascade-delete children first.
+        KatalogTindakan.objects.all().delete()
+        MasterJenjangProfesi.objects.all().delete()
+        MasterProfesiPegawai.objects.all().delete()
         self.assertEqual(MasterProfesiPegawai.objects.count(), 0)
         draft = self._draft()
         employee = finalize_staff_intake(
