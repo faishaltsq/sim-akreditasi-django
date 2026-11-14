@@ -2,6 +2,7 @@ from django.urls import path
 from . import views
 from . import apm_views
 from . import igd_workflow_views
+from . import professional_views
 from . import pharmacy_views
 from . import ancillary_views
 
@@ -17,6 +18,9 @@ urlpatterns = [
     path('kunjungan/<int:pk>/asesmen-igd/', igd_workflow_views.igd_workflow, name='igd_workflow'),
     path('kunjungan/<int:pk>/asesmen-igd/langkah/<int:step>/draft/', igd_workflow_views.igd_workflow_draft, name='igd_workflow_draft'),
     path('kunjungan/<int:pk>/asesmen-igd/aksi/', igd_workflow_views.igd_workflow_action, name='igd_workflow_action'),
+    path('kunjungan/<int:pk>/asesmen-igd/profesional/katalog/', professional_views.igd_professional_catalogue, name='igd_professional_catalogue'),
+    path('kunjungan/<int:pk>/asesmen-igd/profesional/tarif/', professional_views.igd_professional_quote, name='igd_professional_quote'),
+    path('kunjungan/<int:pk>/asesmen-igd/profesional/void/', professional_views.igd_professional_void, name='igd_professional_void'),
     path('kunjungan/<int:pk>/asesmen-igd/finalisasi/', igd_workflow_views.igd_workflow_finalize, name='igd_workflow_finalize'),
     path('kunjungan/<int:pk>/asesmen-igd/addendum/', igd_workflow_views.igd_workflow_addendum, name='igd_workflow_addendum'),
     path('kunjungan/<int:pk>/asesmen-igd/saran-ai/', igd_workflow_views.igd_workflow_ai, name='igd_workflow_ai'),

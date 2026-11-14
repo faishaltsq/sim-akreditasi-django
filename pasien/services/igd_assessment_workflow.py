@@ -174,6 +174,10 @@ def legacy_workflow_guard(view):
         with transaction.atomic():
             visit = KunjunganPasien.objects.select_for_update().filter(pk=pk).first()
             workflow = IgdAssessmentWorkflow.objects.filter(kunjungan=visit).first() if visit else None
+            from django.conf import settings
+            if visit and visit.jenis_kunjungan=='IGD' and getattr(settings,'IGD_PROFESSIONAL_CARE_ENABLED',False) and view.__name__ in {'cppt_tambah','igd_cppt_quick_add','igd_eksekusi_tindakan'}:
+                authorize_visit(visit,request.user,workflow=workflow)
+                return JsonResponse({'success':False,'error':'Gunakan pelaksanaan dan CPPT profesional yang tervalidasi.'},status=409)
             if workflow:
                 later_care = {'cppt_tambah','order_penunjang_buat','order_lab_create','discharge_proses','kunjungan_disposisi','asesmen_lampiran_upload'}
                 if workflow.status == 'FINAL' and visit.jenis_kunjungan in ('RANAP','RAJAL') and view.__name__ in later_care:

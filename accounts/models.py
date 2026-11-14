@@ -122,6 +122,7 @@ class UserProfile(models.Model):
         ('', '— Pilih Profesi —'),
         ('DOKTER_SPESIALIS', 'Dokter Spesialis'),
         ('DOKTER_UMUM', 'Dokter Umum'),
+        ('DOKTER_GIGI', 'Dokter Gigi'),
         ('PERAWAT', 'Perawat'),
         ('BIDAN', 'Bidan'),
         ('APOTEKER', 'Apoteker'),

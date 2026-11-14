@@ -110,6 +110,7 @@ class PrivilegeSnapshot(models.Model):
         related_name='privilege_snapshots',
         verbose_name='Kode Aksi',
     )
+    revoked_at = models.DateTimeField(null=True,blank=True)
     valid_from = models.DateField('Berlaku Mulai')
     valid_until = models.DateField('Berlaku Sampai', null=True, blank=True)
     granted_by = models.ForeignKey(

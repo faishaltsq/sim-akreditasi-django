@@ -61,11 +61,12 @@
   {% include 'pasien/_igd_diagnosis_plan.html' %}
   {% if step == 8 %}<div class="btn-group my-2" role="group" aria-label="Kategori tata laksana"><button type="button" class="btn btn-outline-primary" data-care-tab="actions" aria-pressed="true">Tindakan Klinis</button><button type="button" class="btn btn-outline-primary" data-care-tab="medications" aria-pressed="false">Terapi / Obat</button></div>{% endif %}
   {% include 'pasien/_igd_medication_composer.html' %}
-  {% include 'pasien/_igd_workflow_operations.html' %}
+  {% if not professional_show or step != 9 %}{% include 'pasien/_igd_workflow_operations.html' %}{% endif %}
+  {% include 'pasien/_igd_professional_execution.html' %}
   {% if step == 4 or step == 10 %}<h3 class="h6 mt-4">Riwayat Pengukuran</h3>
   {% for observation in observations %}<article class="card mb-2"><div class="card-body"><strong>{{ observation.get_phase_display }}</strong> · {{ observation.observed_at|date:'d M Y H:i:s' }} · Petugas #{{ observation.recorded_by_id }}{% if observation.corrects_id %} · Koreksi observasi #{{ observation.corrects_id }}{% endif %}<dl>{% for name,value in observation.data.items %}<dt>{{ name }}</dt><dd>{{ value|default_if_none:'Belum diukur' }}</dd>{% endfor %}</dl>
   {% if not readonly %}{% if step == 4 and observation.phase == 'INITIAL' or step == 10 and observation.phase == 'EVALUATION' %}{{ observation.data|json_script }}<button type="button" class="btn btn-outline-secondary" data-correction="{{ observation.pk }}">Koreksi Pengukuran Ini</button>{% endif %}{% endif %}
   </div></article>{% empty %}<p>Belum ada observasi bertimestamp. Nilai historis belum dianggap pengukuran baru sampai dikonfirmasi dan disimpan.</p>{% endfor %}{% endif %}
 </section></div></div>
 {% endblock %}
-{% block extra_js %}<script src="{% static 'js/igd-assessment-workflow.js' %}"></script><script src="{% static 'js/igd-clinical-controls.js' %}"></script><script src="{% static 'js/igd-physical-exam.js' %}"></script>{% if step == 8 %}<script src="{% static 'js/igd-diagnosis-plan.js' %}"></script>{% endif %}{% if step == 7 or step == 8 %}<script src="{% static 'js/igd-clinical-expansion.js' %}"></script>{% endif %}{% endblock %}
+{% block extra_js %}<script src="{% static 'js/igd-assessment-workflow.js' %}"></script><script src="{% static 'js/igd-clinical-controls.js' %}"></script><script src="{% static 'js/igd-physical-exam.js' %}"></script>{% if step == 8 %}<script src="{% static 'js/igd-diagnosis-plan.js' %}"></script>{% endif %}{% if step == 7 or step == 8 %}<script src="{% static 'js/igd-clinical-expansion.js' %}"></script>{% endif %}{% if step == 9 %}<script src="{% static 'js/igd-professional-execution.js' %}"></script><script src="{% static 'js/igd-professional-cppt.js' %}"></script>{% endif %}{% endblock %}

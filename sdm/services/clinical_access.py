@@ -27,6 +27,7 @@ def effective_privileges(employee, *, unit, at=None):
     snapshots = PrivilegeSnapshot.objects.filter(
         pegawai=employee,
         unit_kerja_id=unit_id,
+        revoked_at__isnull=True,
         valid_from__lte=at,
     ).filter(
         Q(valid_until__isnull=True) | Q(valid_until__gte=at)
@@ -153,7 +154,8 @@ def revoke_spk(*, actor, employee, unit, action_codes, at=None, reason=''):
         )
         for snapshot in snapshots:
             snapshot.valid_until = at
-            snapshot.save(update_fields=['valid_until'])
+            snapshot.revoked_at = timezone.now()
+            snapshot.save(update_fields=['valid_until','revoked_at'])
 
     PeristiwaSDM.objects.create(
         actor=actor,

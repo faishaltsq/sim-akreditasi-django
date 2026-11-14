@@ -5,6 +5,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.db import transaction
 from django.db.models import Count, Avg, Sum, Q, F
+from django.db.models.functions import Round
 from django.http import HttpResponse, HttpResponseBadRequest, JsonResponse, FileResponse
 from django.views.decorators.http import require_POST
 from django.core.exceptions import PermissionDenied
@@ -2881,8 +2882,8 @@ def asesmen_rekap(request):
         .prefetch_related('korelasi_ep__standard_item', 'lampiran_asesmen')
         .annotate(
             tarif_asesmen=Sum(
-                F('billing__kuantitas') * F('billing__harga_satuan'),
-                filter=Q(billing__sumber='ASESMEN')
+                Round(F('billing__kuantitas') * F('billing__harga_satuan'),2),
+                filter=Q(billing__sumber__in=['ASESMEN','PROFESI'],billing__is_void=False)
             )
         )
         .order_by('-tanggal_masuk')
@@ -2947,9 +2948,9 @@ def asesmen_detail(request, pk):
     if not can_read_kunjungan(k, profile):
         raise PermissionDenied("Anda tidak memiliki akses ke kunjungan unit lain.")
 
-    billing_asesmen = k.billing.filter(sumber='ASESMEN')
+    billing_asesmen = k.billing.filter(sumber__in=['ASESMEN','PROFESI'],is_void=False)
     total_tarif = billing_asesmen.aggregate(
-        total=Sum(F('kuantitas') * F('harga_satuan'))
+        total=Sum(Round(F('kuantitas') * F('harga_satuan'),2))
     )['total'] or 0
 
     return render(request, 'pasien/asesmen_detail.html', {

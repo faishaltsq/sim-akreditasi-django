@@ -3,6 +3,7 @@ Modul Manajemen Pasien MonsisKami (ARIMA System)
 Tahap 1–5: Pendaftaran → Pelayanan → Ranap → Billing → Discharge
 """
 from django.db import models
+from decimal import Decimal, ROUND_HALF_UP
 from django.utils import timezone
 from django.contrib.auth.models import User
 from django.core.validators import MinValueValidator, MaxValueValidator
@@ -775,6 +776,13 @@ class AsesmenRisikoKlinis(models.Model):
 # ── 5. CPPT (Catatan Perkembangan Pasien Terintegrasi) ───────────────────────
 
 class CPPT(models.Model):
+    format_code = models.CharField(max_length=9, choices=[('SOAP','SOAP'),('ADIME','ADIME'),('SPIRITUAL','Spiritual')], default='SOAP')
+    structured_content = models.JSONField(default=dict, blank=True)
+    professional_snapshot = models.JSONField(default=dict, blank=True, encoder=DjangoJSONEncoder)
+    status = models.CharField(max_length=6, choices=[('LEGACY','Historis'),('DRAFT','Draft'),('SIGNED','Ditandatangani')], default='LEGACY')
+    version = models.PositiveIntegerField(default=1)
+    recorded_by = models.ForeignKey(User, null=True, blank=True, on_delete=models.PROTECT, related_name='+')
+    source_action = models.OneToOneField('pasien.TindakanAsesmen', null=True, blank=True, on_delete=models.PROTECT, related_name='professional_note')
     PROFESI = [
         ('DOKTER',   'Dokter / DPJP'),
         ('PERAWAT',  'Perawat'),
@@ -787,7 +795,7 @@ class CPPT(models.Model):
 
     kunjungan      = models.ForeignKey(KunjunganPasien, on_delete=models.CASCADE, related_name='cppt')
     profesi        = models.CharField('Profesi PPA', max_length=10, choices=PROFESI)
-    nama_ppa       = models.CharField('Nama PPA', max_length=150)
+    nama_ppa       = models.CharField('Nama PPA', max_length=200)
     tanggal        = models.DateTimeField('Tanggal & Jam')
     subjektif      = models.TextField('S — Subjektif (Keluhan)')
     objektif       = models.TextField('O — Objektif (Pemeriksaan)')
@@ -805,10 +813,23 @@ class CPPT(models.Model):
     def __str__(self):
         return f'CPPT [{self.get_profesi_display()}] — {self.kunjungan.pasien.nama_lengkap} {self.tanggal.strftime("%d/%m/%Y %H:%M")}'
 
+    def save(self,*args,**kwargs):
+        controlled=kwargs.pop('professional_update',False)
+        if self.pk and not controlled and type(self).objects.filter(pk=self.pk,status='SIGNED').exists():
+            raise ValidationError('CPPT bertanda tangan hanya dapat dikoreksi melalui revisi.')
+        return super().save(*args,**kwargs)
+
+    def delete(self,*args,**kwargs):
+        if self.status!='LEGACY':
+            raise ValidationError('CPPT profesional dipertahankan sebagai riwayat.')
+        return super().delete(*args,**kwargs)
+
 
 # ── 6. Billing ───────────────────────────────────────────────────────────────
 
 class BillingItem(models.Model):
+    is_void = models.BooleanField(default=False)
+    professional_price_snapshot = models.JSONField(default=dict,blank=True,encoder=DjangoJSONEncoder)
     KATEGORI = [
         ('JASA_MEDIS',  'Jasa Medis / Tindakan'),
         ('OBAT',        'Obat & BMHP'),
@@ -819,7 +840,7 @@ class BillingItem(models.Model):
         ('LAINNYA',     'Lainnya'),
     ]
 
-    SUMBER = [('MANUAL', 'Input Manual'), ('ASESMEN', 'Otomatis dari Asesmen')]
+    SUMBER = [('MANUAL', 'Input Manual'), ('ASESMEN', 'Otomatis dari Asesmen'), ('FARMASI','Farmasi'), ('PROFESI','Pelaksanaan profesional')]
 
     kunjungan  = models.ForeignKey(KunjunganPasien, on_delete=models.CASCADE, related_name='billing')
     kategori   = models.CharField('Kategori', max_length=15, choices=KATEGORI)
@@ -841,7 +862,20 @@ class BillingItem(models.Model):
 
     @property
     def subtotal(self):
-        return self.kuantitas * self.harga_satuan
+        return Decimal('0') if self.is_void else (self.kuantitas * self.harga_satuan).quantize(Decimal('.01'),rounding=ROUND_HALF_UP)
+
+    def save(self,*args,**kwargs):
+        controlled=kwargs.pop('professional_update',False)
+        if self.pk:
+            original=type(self).objects.get(pk=self.pk)
+            if original.professional_price_snapshot and not controlled:
+                raise ValidationError('Tagihan profesional hanya dapat dikoreksi melalui void beralasan.')
+        return super().save(*args,**kwargs)
+
+    def delete(self,*args,**kwargs):
+        if self.professional_price_snapshot:
+            raise ValidationError('Tagihan profesional dipertahankan sebagai riwayat.')
+        return super().delete(*args,**kwargs)
 
 
 # ── 7. Discharge / Pulang ────────────────────────────────────────────────────
@@ -1233,6 +1267,10 @@ class LampiranAsesmen(models.Model):
 # ── 13. Baris Tindakan Asesmen (tarif editable + EP per item) ─────────────────
 
 class TindakanAsesmen(models.Model):
+    professional_service = models.ForeignKey('klinis.LayananProfesional',null=True,blank=True,on_delete=models.PROTECT)
+    professional_snapshot = models.JSONField(default=dict,blank=True,encoder=DjangoJSONEncoder)
+    price_snapshot = models.JSONField(default=dict,blank=True,encoder=DjangoJSONEncoder)
+    financial_status = models.CharField(max_length=7,blank=True,choices=[('POSTED','Ditagihkan'),('FREE','Gratis disetujui'),('PENDING','Tarif belum ditetapkan'),('VOID','Tagihan dibatalkan')])
     lokasi_anatomis = models.CharField(max_length=200, blank=True)
     catatan_klinis = models.TextField(blank=True)
     recorded_at = models.DateTimeField(null=True, blank=True)
@@ -1305,6 +1343,12 @@ class TindakanAsesmen(models.Model):
     def ep_lengkap(self):
         return self.standard_item_id is None or self.ep_status in ('TERPENUHI', 'NA')
 
+    def save(self,*args,**kwargs):
+        controlled=kwargs.pop('professional_update',False)
+        if self.pk and not controlled and type(self).objects.filter(pk=self.pk,execution_status='PERFORMED',professional_service__isnull=False).exists():
+            raise ValidationError('Pelaksanaan profesional tidak dapat ditimpa melalui writer umum.')
+        return super().save(*args,**kwargs)
+
 
 # ── 12. Anjungan Pendaftaran Mandiri (APM) & Antrean Online ──────────────────
 
@@ -1324,6 +1368,9 @@ class DiagnosisKunjungan(models.Model):
     class Meta:
         ordering = ['pk']
         constraints = [models.UniqueConstraint(fields=['kunjungan'], condition=models.Q(active=True, is_primary=True), name='unique_active_primary_diagnosis')]
+
+
+from .professional_care_models import CpptRevision, PenugasanDpjpEpisode, VerifikasiCppt, PembatalanTagihan
 
 
 class IgdAssessmentWorkflow(models.Model):

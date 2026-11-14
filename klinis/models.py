@@ -1,4 +1,5 @@
 from django.db import models
+from .professional_care_models import LayananProfesional, PemetaanKewenanganLayanan, TarifLayananProfesi, ProfessionalCareGrant, BatasanKewenanganProfesional
 
 # Pilihan lokal untuk menghindari dependensi sirkular ke pasien
 TRIASE_CHOICES = [

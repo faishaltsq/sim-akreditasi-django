@@ -2,6 +2,7 @@
 import copy
 import json
 from django.core.exceptions import PermissionDenied
+from django.conf import settings
 from django.core.serializers.json import DjangoJSONEncoder
 from django.utils import timezone
 
@@ -31,6 +32,9 @@ def clinical_snapshot(visit, workflow):
         'prescriptions':[{'id':rx.pk,'no_resep':rx.no_resep,'doctor_id':rx.dokter_peresep_id,'items':list(rx.items.order_by('pk').values('nama_obat','aturan_pakai','product_snapshot','regimen','quantity_decimal','reference_price','quantity_reason','kind'))} for rx in visit.resep_list.order_by('pk')],
         'attachments':list(visit.lampiran_asesmen.order_by('pk').values('id','jenis','nama_asli','file','diunggah_pada','diunggah_oleh_id')),
     }
+    if getattr(settings,'IGD_PROFESSIONAL_CARE_ENABLED',False) or visit.cppt.exclude(status='LEGACY').exists():
+        from .professional_presentation import snapshot_professional_care
+        snapshot['professional_care']=snapshot_professional_care(visit)
     return json.loads(json.dumps(snapshot, cls=DjangoJSONEncoder))
 
 
@@ -72,7 +76,7 @@ def missing_sections(visit, workflow):
         'diagnosis': bool(visit.diagnosa_masuk.strip()),
         'nursing': bool(visit.diagnosa_keperawatan_sdki.strip() and visit.luaran_keperawatan_slki.strip() and visit.intervensi_keperawatan_siki.strip()),
         'investigations':visit.order_penunjang.exists(),
-        'care':visit.cppt.exists(),
+        'care':visit.cppt.filter(status='SIGNED').exists() if getattr(settings,'IGD_PROFESSIONAL_CARE_ENABLED',False) else visit.cppt.exists(),
         'evaluation':bool(visit.disposisi_kondisi_akhir and visit.evaluasi_respon_terapi.strip() and measured('EVALUATION')),
     }
     return [name for name,present in checks.items() if not present and name not in workflow.exemptions]

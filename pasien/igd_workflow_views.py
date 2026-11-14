@@ -3,7 +3,7 @@ import json
 from django.conf import settings
 from django import forms
 from django.core import signing
-from django.core.exceptions import PermissionDenied
+from django.core.exceptions import PermissionDenied, ValidationError, ObjectDoesNotExist
 from django.db.models import Q
 from django.shortcuts import get_object_or_404
 from akreditasi.security_utils import rate_limit
@@ -141,7 +141,9 @@ def igd_workflow(request, pk):
             rx.draft_payload['lines'].append(line)
     stored_modes=(revision.snapshot.get('diagnosis_provenance',{}) if historical is not None else visit.diagnosis_provenance).get('components',{})
     planning_components=[{'key':key,'label':label,'catalogue_type':kind,'field':form[field],'mode':stored_modes.get(key,{}).get('mode','MANUAL')} for key,label,kind,field in [('sdki','Diagnosis Keperawatan (SDKI)','SDKI','diagnosa_keperawatan_sdki'),('slki','Luaran Keperawatan (SLKI)','SLKI','luaran_keperawatan_slki'),('siki','Intervensi Keperawatan (SIKI)','SIKI','intervensi_keperawatan_siki')]] if step==8 else []
+    from .services.professional_presentation import professional_panel_context
     return render(request, 'pasien/igd_workflow.html', {
+        **(professional_panel_context(visit,workflow,request.user,revision) if step==9 else {}),
         'kunjungan': visit, 'pasien': visit.pasien, 'workflow': workflow,
         'version': workflow.version if workflow else 0,
         'steps': [{'number': n, 'title': title} for n, (title, fields) in STEPS.items()],
@@ -218,6 +220,10 @@ def _action_response(request, pk, forced=None):
         return JsonResponse({'success':False,'error':str(exc),'fields':exc.errors},status=400)
     except (ValueError,TypeError,UnicodeDecodeError):
         return JsonResponse({'success':False,'error':'Payload aksi tidak valid.'},status=400)
+    except ValidationError as exc:
+        return JsonResponse({'success':False,'error':' '.join(exc.messages)},status=400)
+    except ObjectDoesNotExist:
+        return JsonResponse({'success':False,'error':'Objek tidak ditemukan pada lingkup ini.'},status=404)
     return JsonResponse({'success':True,**result})
 
 
@@ -315,7 +321,8 @@ def igd_workflow_resume(request,pk):
     from .physical_exam import exam_context
     saved = revision.snapshot.get('visit',{})
     physical_exam = exam_context(saved.get('fisik_head_to_toe'),saved.get('secondary_survey_detail'),saved)
-    return render(request,'pasien/igd_workflow_resume.html',{'record':revision,'snapshot':revision.snapshot,'workflow':workflow,'sections':sections,'record_digest':digest(revision.snapshot),'physical_exam':physical_exam})
+    from .services.professional_presentation import professional_panel_context
+    return render(request,'pasien/igd_workflow_resume.html',{**professional_panel_context(visit,workflow,request.user,revision),'record':revision,'snapshot':revision.snapshot,'workflow':workflow,'sections':sections,'record_digest':digest(revision.snapshot),'physical_exam':physical_exam})
 
 
 @login_required

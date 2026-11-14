@@ -1,5 +1,6 @@
 from django.contrib import admin
 from . import expansion_admin
+from . import professional_admin
 from .models import (
     Pasien, Ruangan, Bed, KunjunganPasien, AsesmenRisikoKlinis,
     CPPT, BillingItem, DischargeRecord, ResepElektronik, ResepDetail,
@@ -13,6 +14,12 @@ class KorelasiEpAsesmenInline(admin.TabularInline):
 
 class TindakanAsesmenInline(admin.TabularInline):
     model = TindakanAsesmen
+    def _protected(self,obj):
+        from django.conf import settings
+        return obj and (obj.tindakan_asesmen.filter(professional_service__isnull=False).exists() or obj.jenis_kunjungan=='IGD' and getattr(settings,'IGD_PROFESSIONAL_CARE_ENABLED',False))
+    def has_change_permission(self,request,obj=None):return not self._protected(obj) and super().has_change_permission(request,obj)
+    def has_add_permission(self,request,obj=None):return not self._protected(obj) and super().has_add_permission(request,obj)
+    def has_delete_permission(self,request,obj=None):return not self._protected(obj) and super().has_delete_permission(request,obj)
     extra = 0
     fields = ['urutan', 'jenis', 'kode', 'nama', 'sumber_data', 'tarif_acuan', 'tarif',
               'catatan_tarif', 'standard_item', 'ep_status']

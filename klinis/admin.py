@@ -1,5 +1,6 @@
 from django.contrib import admin
 from . import expansion_admin
+from . import professional_admin
 from .models import (
     KelompokLayanan,
     MasterIcd10,

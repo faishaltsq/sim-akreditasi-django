@@ -193,13 +193,18 @@ HANDLERS = {'order_batch':order_batch, 'prescription_save':save_prescription, 'p
 
 @transaction.atomic
 def perform_action(pk, user, operation, payload, version, request_id, attachment=None):
+    from django.conf import settings
+    from .professional_execution import PRO_OPERATIONS, authorize_professional_operation, dispatch_professional
+    professional=operation in PRO_OPERATIONS
+    if getattr(settings,'IGD_PROFESSIONAL_CARE_ENABLED',False) and operation in {'execute','cppt'}:
+        raise WorkflowValidation({'operation':['Gunakan operasi pelaksanaan/CPPT profesional yang tervalidasi.']})
     if operation == 'attachment':
         from .igd_attachments import store_attachment
         HANDLERS['attachment'] = store_attachment
     if operation in ('sign','finalize','addendum'):
         from .igd_finalization import sign, finalize, addendum
         HANDLERS.update(sign=sign, finalize=finalize, addendum=addendum)
-    if operation not in HANDLERS or not isinstance(payload, dict):
+    if (operation not in HANDLERS and not professional) or not isinstance(payload, dict):
         raise WorkflowValidation({'__all__':['Aksi/payload tidak valid.']})
     try:
         key = UUID(str(request_id))
@@ -207,7 +212,9 @@ def perform_action(pk, user, operation, payload, version, request_id, attachment
     except (ValueError, TypeError) as exc:
         raise WorkflowValidation({'request_id':['ID permintaan atau payload tidak valid.']}) from exc
     visit, workflow = get_visit(pk, user, lock=True)
-    if user.profile.profesi not in DOCTORS | NURSES or user.profile.role == 'ASESOR':
+    if professional:
+        authorize_professional_operation(operation,visit,workflow,user,payload)
+    elif user.profile.profesi not in DOCTORS | NURSES or user.profile.role == 'ASESOR':
         raise PermissionDenied('Aksi klinis memerlukan profesi klinis yang berwenang.')
     if workflow:
         previous = workflow.actions.filter(request_id=key).first()
@@ -215,7 +222,7 @@ def perform_action(pk, user, operation, payload, version, request_id, attachment
             if previous.digest != fingerprint or previous.actor_id != user.pk:
                 raise WorkflowConflict('ID permintaan sudah dipakai untuk aksi berbeda.')
             return {**previous.result, 'version':workflow.version, 'replayed':True}
-    if operation != 'addendum' and not (operation == 'order_result' and workflow and workflow.status == 'FINAL'):
+    if not professional and operation != 'addendum' and not (operation == 'order_result' and workflow and workflow.status == 'FINAL'):
         authorize_visit(visit, user, write=True, workflow=workflow)
     if workflow and workflow.status == 'FINAL' and operation not in ('addendum','order_result'):
         raise WorkflowConflict('Dokumentasi final tidak dapat ditimpa; gunakan addendum.')
@@ -226,7 +233,7 @@ def perform_action(pk, user, operation, payload, version, request_id, attachment
         raise WorkflowConflict('Konflik versi: muat ulang episode.') from exc
     if workflow is None:
         workflow = IgdAssessmentWorkflow.objects.create(kunjungan=visit, origin_unit=visit.unit_kerja)
-    result = HANDLERS[operation](visit, workflow, user, payload, attachment) if operation == 'attachment' else HANDLERS[operation](visit, workflow, user, payload)
+    result = dispatch_professional(operation,visit,workflow,user,payload,key) if professional else HANDLERS[operation](visit, workflow, user, payload, attachment) if operation == 'attachment' else HANDLERS[operation](visit, workflow, user, payload)
     if operation not in ('sign','finalize','addendum') and workflow.status != 'FINAL':
         workflow.signatures = {}
     workflow.version += 1

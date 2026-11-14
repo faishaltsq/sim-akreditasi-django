@@ -1,0 +1,194 @@
+{
+  "migrations": [
+    {
+      "path": "accounts/migrations/0009_dental_professional_identity.py",
+      "operations": [
+        {
+          "operation": "AlterField",
+          "target": "userprofile"
+        }
+      ]
+    },
+    {
+      "path": "klinis/migrations/0004_professional_care.py",
+      "operations": [
+        {
+          "operation": "CreateModel",
+          "target": "LayananProfesional"
+        },
+        {
+          "operation": "CreateModel",
+          "target": "PemetaanKewenanganLayanan"
+        },
+        {
+          "operation": "CreateModel",
+          "target": "ProfessionalCareGrant"
+        },
+        {
+          "operation": "CreateModel",
+          "target": "TarifLayananProfesi"
+        }
+      ]
+    },
+    {
+      "path": "klinis/migrations/0005_reviewed_individual_limits.py",
+      "operations": [
+        {
+          "operation": "CreateModel",
+          "target": "BatasanKewenanganProfesional"
+        }
+      ]
+    },
+    {
+      "path": "klinis/migrations/0006_professional_configuration_rls.py",
+      "operations": [
+        {
+          "operation": "RunPython",
+          "target": null
+        }
+      ]
+    },
+    {
+      "path": "pasien/migrations/0028_professional_cppt.py",
+      "operations": [
+        {
+          "operation": "AddField",
+          "target": "cppt"
+        },
+        {
+          "operation": "AddField",
+          "target": "cppt"
+        },
+        {
+          "operation": "AddField",
+          "target": "cppt"
+        },
+        {
+          "operation": "AddField",
+          "target": "cppt"
+        },
+        {
+          "operation": "AddField",
+          "target": "cppt"
+        },
+        {
+          "operation": "AddField",
+          "target": "cppt"
+        },
+        {
+          "operation": "AddField",
+          "target": "cppt"
+        },
+        {
+          "operation": "CreateModel",
+          "target": "CpptRevision"
+        },
+        {
+          "operation": "CreateModel",
+          "target": "PenugasanDpjpEpisode"
+        },
+        {
+          "operation": "CreateModel",
+          "target": "VerifikasiCppt"
+        },
+        {
+          "operation": "AddConstraint",
+          "target": "cpptrevision"
+        },
+        {
+          "operation": "AddConstraint",
+          "target": "penugasandpjpepisode"
+        }
+      ]
+    },
+    {
+      "path": "pasien/migrations/0029_professional_execution.py",
+      "operations": [
+        {
+          "operation": "AddField",
+          "target": "billingitem"
+        },
+        {
+          "operation": "AddField",
+          "target": "billingitem"
+        },
+        {
+          "operation": "AddField",
+          "target": "tindakanasesmen"
+        },
+        {
+          "operation": "AddField",
+          "target": "tindakanasesmen"
+        },
+        {
+          "operation": "AddField",
+          "target": "tindakanasesmen"
+        },
+        {
+          "operation": "AddField",
+          "target": "tindakanasesmen"
+        },
+        {
+          "operation": "CreateModel",
+          "target": "PembatalanTagihan"
+        }
+      ]
+    },
+    {
+      "path": "pasien/migrations/0030_professional_billing_source.py",
+      "operations": [
+        {
+          "operation": "AlterField",
+          "target": "billingitem"
+        }
+      ]
+    },
+    {
+      "path": "pasien/migrations/0031_professional_verification_evidence.py",
+      "operations": [
+        {
+          "operation": "AddField",
+          "target": "verifikasicppt"
+        },
+        {
+          "operation": "AddField",
+          "target": "verifikasicppt"
+        },
+        {
+          "operation": "AlterField",
+          "target": "cppt"
+        }
+      ]
+    },
+    {
+      "path": "pasien/migrations/0032_professional_evidence_rls.py",
+      "operations": [
+        {
+          "operation": "RunPython",
+          "target": null
+        }
+      ]
+    },
+    {
+      "path": "sdm/migrations/0067_privilege_revocation_timestamp.py",
+      "operations": [
+        {
+          "operation": "AddField",
+          "target": "privilegesnapshot"
+        }
+      ]
+    }
+  ],
+  "assets": [
+    {
+      "path": "js/igd-professional-execution.js",
+      "hashed_path": "js/igd-professional-execution.8f40a3c2ed30.js",
+      "sha256": "9158485b991a0a93a442a6b2d4450e4a9ae951c543866defddc55740c46e1bd6"
+    },
+    {
+      "path": "js/igd-professional-cppt.js",
+      "hashed_path": "js/igd-professional-cppt.4ce224664d37.js",
+      "sha256": "0cd55d4e4e890e7aec8e979a39952280d16a3f1cf004ee8be7c3d7a416744632"
+    }
+  ]
+}

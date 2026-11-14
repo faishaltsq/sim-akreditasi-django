@@ -1,0 +1,17 @@
+{% if professional_can_edit %}
+<form id="professional-cppt-form" class="professional-form my-3" method="post">{% csrf_token %}
+<h4 class="h6">CPPT — catatan klinis penulis</h4>
+<p>Gunakan layanan terpilih pada panel pelaksanaan. Identitas penulis berasal dari akun HC, bukan teks yang diketik.</p>
+<input type="hidden" id="professional-note-id"><input type="hidden" id="professional-note-version">
+<label for="professional-note-format">Format catatan</label><select id="professional-note-format" class="form-select"><option value="SOAP">SOAP</option><option value="ADIME">ADIME</option><option value="SPIRITUAL">Spiritual</option></select>
+{% for format in professional_note_formats %}<fieldset data-professional-format="{{ format.code }}" {% if format.code != 'SOAP' %}hidden{% endif %}><legend class="h6 mt-2">{{ format.code }}</legend>{% for field in format.fields %}<label class="d-block mt-2" for="professional-{{ format.code }}-{{ field.key }}">{{ field.label }}</label><textarea id="professional-{{ format.code }}-{{ field.key }}" class="form-control" data-note-field="{{ field.key }}" rows="2" maxlength="10000"></textarea><label class="d-block mt-1" for="professional-{{ format.code }}-{{ field.key }}-reason">Alasan jika tidak tercatat</label><input id="professional-{{ format.code }}-{{ field.key }}-reason" class="form-control" data-note-reason="{{ field.key }}" maxlength="1000">{% endfor %}</fieldset>{% endfor %}
+<label for="professional-note-reason" class="mt-2">Alasan koreksi catatan bertanda tangan</label><input id="professional-note-reason" class="form-control" maxlength="2000">
+<button type="submit" class="btn btn-primary mt-2">Simpan Draft / Koreksi Beralasan</button><button type="button" id="professional-note-new" class="btn btn-outline-secondary mt-2">Catatan Baru</button>
+</form>
+{% endif %}
+<h4 class="h6 mt-3">CPPT tercatat</h4>
+{% for note in professional_notes %}<article class="border rounded p-3 mb-3" data-professional-note="{{ note.id }}"><h5 class="h6">{{ note.author_name }} · {{ note.format_code }} · {{ note.status }}</h5><p>{{ note.professional_snapshot.profession_name }} / {{ note.professional_snapshot.grade_name }} · waktu aktual {{ note.actual_at }} · dicatat {{ note.recorded_at }}</p>{% if note.event_log %}<p>Log kejadian (bukan asesmen klinis): {{ note.event_log }}</p>{% endif %}<dl>{% for field in note.fields %}<dt>{{ field.label }}</dt><dd style="white-space:pre-wrap;overflow-wrap:anywhere">{{ field.value }}</dd>{% endfor %}</dl>
+{% if note.verification %}<p>Verifikasi aplikasi: akun #{{ note.verification.verifier_id }} · {{ note.verification.at }} · terikat revisi isi ini.</p>{% elif note.historical_unattributed %}<p>Verifikasi historis tanpa identitas/digest; bukan verifikasi aplikasi baru.</p>{% else %}<p>Revisi saat ini belum diverifikasi DPJP.</p>{% endif %}
+{% if note.can_edit %}<button type="button" class="btn btn-outline-primary my-1" data-professional-edit="{{ note.id }}">{% if note.status == 'SIGNED' %}Koreksi Beralasan{% else %}Lengkapi Draft{% endif %}</button>{% if note.status == 'DRAFT' %}<button type="button" class="btn btn-outline-success my-1" data-professional-sign="{{ note.id }}">Tandatangani Catatan Saya</button>{% endif %}{% endif %}
+{% if note.can_verify %}<button type="button" class="btn btn-outline-primary my-1" data-professional-verify="{{ note.id }}">Verifikasi Sebagai DPJP Ditugaskan</button>{% endif %}
+</article>{% empty %}<p>Belum ada catatan; metadata historis yang tidak disnapshot tidak diambil dari data live.</p>{% endfor %}
