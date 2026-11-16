@@ -1,4 +1,5 @@
 import json
+import re
 
 from django.conf import settings
 from django import forms
@@ -13,10 +14,16 @@ from django.shortcuts import render
 from django.views.decorators.http import require_GET, require_POST
 from django.views.decorators.cache import never_cache
 
-from .forms_igd_workflow import STEPS, VITAL_FIELDS, form_for_step
+from .forms_igd_workflow import STEPS, VITAL_FIELDS, LEGACY_STEP8_FIELDS, form_for_step, snapshot_visit_fields
 from .services.igd_assessment_workflow import (
     CLINICAL_PROFESSIONS, WorkflowConflict, WorkflowValidation, get_visit, save_step,
 )
+
+
+def legacy_step8_notes(source):
+    from .models import KunjunganPasien
+    return [{'label':KunjunganPasien._meta.get_field(name).verbose_name,'value':source.get(name)}
+            for name in LEGACY_STEP8_FIELDS if source.get(name)]
 
 
 def require_rollout():
@@ -62,9 +69,6 @@ def igd_workflow(request, pk):
         for name in ('diagnosa_keperawatan_sdki','luaran_keperawatan_slki','intervensi_keperawatan_siki'):
             if profile.profesi not in ('PERAWAT','BIDAN'):
                 form.fields[name].disabled=True
-        if profile.profesi not in ('DOKTER_UMUM','DOKTER_SPESIALIS'):
-            for name in ('tatalaksana_resusitasi','tatalaksana_terapi'):
-                form.fields[name].disabled=True
     if readonly:
         for field in form.fields.values():
             field.disabled = True
@@ -90,6 +94,9 @@ def igd_workflow(request, pk):
     if 'waktu_kematian' in form.fields:
         form.fields['waktu_kematian'].widget = forms.DateTimeInput(format='%Y-%m-%dT%H:%M',attrs={'type':'datetime-local','class':'form-control'})
     order_form, cppt_form, plan_form = InvestigationForm(auto_id='order_%s'), CpptForm(auto_id='cppt_%s'), ActionPlanForm(auto_id='plan_%s')
+    plan_form.fields['mode'].widget.attrs['data-mode-select'] = ''
+    plan_form.initial['mode'] = 'MANUAL'
+    plan_form.initial['jenis'] = 'BEBAS'
     plan_form.fields['jenis'].choices=[('SIKI','SIKI (Keperawatan)'),('BEBAS','Manual')] if profile.profesi in ('PERAWAT','BIDAN') else [('ICD9','ICD-9 (Medis)'),('BEBAS','Manual')]
     ep_items = StandardItem.objects.filter(category__framework=Framework.active()).order_by('code')
     plan_form.fields['standard_item'].widget = forms.Select(choices=[('','— EP belum dipilih —'),*[(r.pk,f'{r.code} — {r.sub_title}') for r in ep_items]],attrs={'class':'form-select'})
@@ -142,7 +149,10 @@ def igd_workflow(request, pk):
     stored_modes=(revision.snapshot.get('diagnosis_provenance',{}) if historical is not None else visit.diagnosis_provenance).get('components',{})
     planning_components=[{'key':key,'label':label,'catalogue_type':kind,'field':form[field],'mode':stored_modes.get(key,{}).get('mode','MANUAL')} for key,label,kind,field in [('sdki','Diagnosis Keperawatan (SDKI)','SDKI','diagnosa_keperawatan_sdki'),('slki','Luaran Keperawatan (SLKI)','SLKI','luaran_keperawatan_slki'),('siki','Intervensi Keperawatan (SIKI)','SIKI','intervensi_keperawatan_siki')]] if step==8 else []
     from .services.professional_presentation import professional_panel_context
+    from klinis.services.igd_recommendation_context import build_igd_recommendation_context
+    recommendation_context = build_igd_recommendation_context(visit) if step == 8 and historical is None else None
     return render(request, 'pasien/igd_workflow.html', {
+        'recommendation_context': recommendation_context,
         **(professional_panel_context(visit,workflow,request.user,revision) if step==9 else {}),
         'kunjungan': visit, 'pasien': visit.pasien, 'workflow': workflow,
         'version': workflow.version if workflow else 0,
@@ -165,6 +175,7 @@ def igd_workflow(request, pk):
         'attachments':visit.lampiran_asesmen.all(),
         'latest_revision':revision,
         'planning_components':planning_components,'prescriptions':prescriptions,
+        'legacy_step8_notes':legacy_step8_notes(historical if historical is not None else {name:getattr(visit,name) for name in LEGACY_STEP8_FIELDS}) if step == 8 else [],
         'legacy_medical_diagnosis':historical.get('diagnosa_masuk','') if historical is not None else visit.diagnosa_masuk,
         'pharmacy_units':UnitKerja.objects.filter(pk__in=PharmacyServiceGrant.objects.values('unit_id')).order_by('name'),
         'active_diagnoses':visit.diagnoses.filter(active=True),
@@ -283,13 +294,32 @@ def igd_workflow_ai(request,pk):
 @never_cache
 def igd_workflow_catalogue(request,pk):
     require_rollout()
-    get_visit(pk,request.user)
+    visit, _ = get_visit(pk,request.user)
     from klinis.models import MasterIcd10, MasterIcd9, SdkiDiagnosis, SlkiLuaran, SikiIntervensi, Pemetaan3S
     q = request.GET.get('q','')[:100]
     kind = request.GET.get('type','ICD10')
+    diagnosis_id = request.GET.get('diagnosis_id')
     models = {'ICD10':MasterIcd10,'ICD9':MasterIcd9,'SDKI':SdkiDiagnosis,'SLKI':SlkiLuaran,'SIKI':SikiIntervensi}
     if kind not in models:
         return JsonResponse({'error':'Jenis katalog tidak valid.'},status=400)
+    if kind == 'ICD9' and diagnosis_id is not None:
+        # Pemetaan tindakan dari diagnosis ICD-10 tersimpan -> saran Master kasus.
+        from .models import DiagnosisKunjungan
+        raw = request.GET.get('diagnosis_id','')
+        if not isinstance(raw,str) or not re.fullmatch(r'\d{1,10}', raw):
+            return JsonResponse({'error':'ID diagnosis tidak valid.'},status=400)
+        diagnosis_id = int(raw)
+        if diagnosis_id < 1:
+            return JsonResponse({'error':'ID diagnosis tidak valid.'},status=400)
+        diagnosis = DiagnosisKunjungan.objects.filter(pk=diagnosis_id, kunjungan_id=pk, active=True).first()
+        if diagnosis is None:
+            return JsonResponse({'error':'Diagnosis tidak ditemukan pada kunjungan ini.'},status=404)
+        if not diagnosis.kode:
+            return JsonResponse({'results': [], 'mapping_available': False, 'source': 'KASUS_MASTER'})
+        from klinis.services.saran import tindakan_untuk_diagnosis
+        mapping_available = bool(tindakan_untuk_diagnosis(visit, diagnosis.kode, limit=1))
+        q_filtered = tindakan_untuk_diagnosis(visit, diagnosis.kode, query=q, limit=30)
+        return JsonResponse({'results': q_filtered, 'mapping_available': mapping_available, 'source': 'KASUS_MASTER'})
     rows = list(models[kind].objects.filter(Q(kode__icontains=q)|Q(nama__icontains=q)).order_by('kode').values('kode','nama')[:30])
     if kind == 'SDKI':
         for row in rows:
@@ -317,12 +347,12 @@ def igd_workflow_resume(request,pk):
         raise Http404
     from .services.igd_actions import digest
     from .models import KunjunganPasien
-    sections = [{'number':number,'title':title,'rows':[{'label':KunjunganPasien._meta.get_field(name).verbose_name,'value':revision.snapshot.get('visit',{}).get(name)} for name in names]} for number,(title,names) in STEPS.items() if names and number!=6]
+    saved = {name:revision.snapshot.get('visit',{}).get(name) for name in snapshot_visit_fields()}
+    sections = [{'number':number,'title':title,'rows':[{'label':KunjunganPasien._meta.get_field(name).verbose_name,'value':saved.get(name)} for name in names]} for number,(title,names) in STEPS.items() if names and number!=6]
     from .physical_exam import exam_context
-    saved = revision.snapshot.get('visit',{})
     physical_exam = exam_context(saved.get('fisik_head_to_toe'),saved.get('secondary_survey_detail'),saved)
     from .services.professional_presentation import professional_panel_context
-    return render(request,'pasien/igd_workflow_resume.html',{**professional_panel_context(visit,workflow,request.user,revision),'record':revision,'snapshot':revision.snapshot,'workflow':workflow,'sections':sections,'record_digest':digest(revision.snapshot),'physical_exam':physical_exam})
+    return render(request,'pasien/igd_workflow_resume.html',{**professional_panel_context(visit,workflow,request.user,revision),'record':revision,'snapshot':revision.snapshot,'workflow':workflow,'sections':sections,'legacy_step8_notes':legacy_step8_notes(saved),'record_digest':digest(revision.snapshot),'physical_exam':physical_exam})
 
 
 @login_required

@@ -1,6 +1,10 @@
+<section id="igd-nursing-plan" aria-labelledby="igd-nursing-heading">
+<h3 id="igd-nursing-heading" class="h6 mt-4">Rencana Asuhan Keperawatan — SDKI, SLKI & SIKI</h3>
+<p class="form-text">Simpan Draft menyimpan komponen keperawatan secara terpisah dari diagnosis medis, rencana tindakan dan resep.</p>
 {% for field in form %}
   {% if field.name != 'diagnosa_keperawatan_sdki' and field.name != 'luaran_keperawatan_slki' and field.name != 'intervensi_keperawatan_siki' and field.name != 'diagnosis_mode' %}
     {% if field.is_hidden %}{{ field }}{% else %}<div class="my-3">{{ field.label_tag }}{{ field }}{{ field.errors }}</div>{% endif %}
   {% endif %}
 {% endfor %}
 {% include 'pasien/_igd_planning_components.html' %}
+</section>

@@ -3,6 +3,33 @@
   const root = document.getElementById('igd-workflow');
   const main = document.getElementById('igd-step-form');
   if (!root || !main) return;
+  const modeControls = [...root.querySelectorAll('[data-mode-control]')];
+  function syncModes() {
+    modeControls.forEach(control => {
+      const select = control.querySelector('[data-mode-select]');
+      control.querySelectorAll('[data-mode-value]').forEach(button => {
+        button.disabled = select.disabled;
+        button.setAttribute('aria-pressed', String(button.dataset.modeValue === select.value));
+      });
+    });
+  }
+  modeControls.forEach(control => {
+    const select = control.querySelector('[data-mode-select]');
+    const segments = control.querySelector('[data-mode-segments]');
+    if (!select || !segments) return;
+    control.querySelectorAll('[data-mode-value]').forEach(button => button.addEventListener('click', () => {
+      if (select.disabled) return;
+      select.value = button.dataset.modeValue;
+      select.dispatchEvent(new Event('change', { bubbles: true }));
+    }));
+    select.addEventListener('change', syncModes);
+    select.form?.addEventListener('reset', () => window.setTimeout(syncModes, 0));
+    segments.hidden = false;
+    select.hidden = true;
+    control.querySelector('label[for]')?.removeAttribute('for');
+  });
+  document.addEventListener('igd:modes-updated', syncModes);
+  syncModes();
   const errors = document.getElementById('igd-errors');
   const status = document.getElementById('igd-save-status');
   const dirtyForms = new Set();
@@ -11,7 +38,7 @@
   const csrf = () => main.querySelector('[name=csrfmiddlewaretoken]').value;
   const version = () => Number(main.dataset.version);
   function message(text) { errors.textContent = text; errors.hidden = false; errors.focus(); }
-  function changed(element = main) { element.dispatchEvent(new Event('input', { bubbles: true })); }
+  function changed(element = main) { element.dispatchEvent(new Event('input', { bubbles: true })); document.dispatchEvent(new Event('igd:modes-updated')); }
   function jsonField(name) { return main.elements.namedItem(name); }
   function readJson(name, fallback) {
     try { return JSON.parse(jsonField(name)?.value || JSON.stringify(fallback)) ?? fallback; }
@@ -181,7 +208,7 @@
   const sdki=main.elements.namedItem('diagnosa_keperawatan_sdki'); bindCatalogue(sdki,'SDKI');
   if (sdki && !sdki.disabled) {
     const button=document.createElement('button'); button.type='button'; button.className='btn btn-outline-primary mt-2'; button.id='igd-apply-3s'; button.textContent='Gunakan Pemetaan SDKI → SLKI → SIKI'; sdki.after(button);
-    button.addEventListener('click',async()=>{ try { const code=sdki.value.split(' — ')[0].trim(); const row=(await catalogue('SDKI',code)).find(r=>r.kode===code); if(!row) throw new Error('Pilih kode SDKI dari master terlebih dahulu.'); main.elements.namedItem('luaran_keperawatan_slki').value=row.slki.join('\n'); main.elements.namedItem('intervensi_keperawatan_siki').value=row.siki.join('\n'); changed(sdki); } catch(error){message(error.message);} });
+    button.addEventListener('click',async()=>{ try { const code=sdki.value.split(' — ')[0].trim(); const row=(await catalogue('SDKI',code)).find(r=>r.kode===code); if(!row) throw new Error('Pilih kode SDKI dari master terlebih dahulu.'); main.elements.namedItem('luaran_keperawatan_slki').value=row.slki.join('\n'); main.elements.namedItem('intervensi_keperawatan_siki').value=row.siki.join('\n'); document.querySelectorAll('[data-component-mode]').forEach(mode=>{mode.value='MASTER';delete mode.dataset.ticket;}); changed(sdki); } catch(error){message(error.message);} });
   }
   const planForm=document.getElementById('plan_action-form');
   if (planForm) {

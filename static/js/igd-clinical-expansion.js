@@ -9,10 +9,11 @@
   const csrf=()=>main.querySelector('[name=csrfmiddlewaretoken]').value;
   const codeOf=value=>String(value || '').split(' — ')[0].trim();
   function error(message) { errors.textContent=message; errors.hidden=false; errors.focus(); }
-  function changed() { main.dispatchEvent(new Event('input',{bubbles:true})); }
+  function changed() { main.dispatchEvent(new Event('input',{bubbles:true})); document.dispatchEvent(new Event('igd:modes-updated')); }
   function option(value,label) { const node=document.createElement('option'); node.value=String(value); node.textContent=label; return node; }
   async function json(url,body) {
     const controller=new AbortController(); const timer=setTimeout(()=>controller.abort(),30000);
+    timer.unref?.();
     try {
       const response=await fetch(url,{method:body?'POST':'GET',credentials:'same-origin',cache:'no-store',signal:controller.signal,
         headers:body?{'Content-Type':'application/json','X-CSRFToken':csrf()}:{},body:body?JSON.stringify(body):undefined});
@@ -36,13 +37,38 @@
   window.addEventListener('beforeunload',event=>{if (!leaving && (busy || dirty.size)) {event.preventDefault();event.returnValue='';}});
   function watch(form) { form.addEventListener('input',()=>dirty.add(form));form.addEventListener('change',()=>dirty.add(form)); }
 
+  const actionForm=document.getElementById('plan_action-form');
+  if(actionForm){
+    const field=name=>actionForm.elements.namedItem(name);
+    const source=document.getElementById('igd-action-source'),diagnosis=document.getElementById('igd-action-diagnosis');
+    const query=document.getElementById('igd-action-query'),results=document.getElementById('igd-action-results'),status=document.getElementById('igd-action-mapping-status');
+    let generation=0,timer;
+    function syncActionMode(){field('jenis').value=field('mode').value==='MANUAL'?'BEBAS':actionForm.dataset.masterKind;if(field('mode').value!=='AI')field('ai_ticket').value='';}
+    field('mode').addEventListener('change',syncActionMode);syncActionMode();
+    async function loadActions(token){
+      results.replaceChildren();
+      if(source.value==='DIAGNOSIS' && actionForm.dataset.masterKind==='ICD9' && !diagnosis.value){status.textContent='Pilih diagnosis atau gunakan katalog global.';return;}
+      const url=new URL(root.dataset.catalogue,location.origin);url.searchParams.set('type',actionForm.dataset.masterKind);url.searchParams.set('q',query.value);
+      if(source.value==='DIAGNOSIS' && actionForm.dataset.masterKind==='ICD9')url.searchParams.set('diagnosis_id',diagnosis.value);
+      try{const response=await json(url);if(token!==generation)return;
+        status.textContent=response.results.length?'Pilih saran untuk mengisi rencana, lalu simpan secara eksplisit.':response.mapping_available===false?'Belum ada pemetaan tindakan untuk diagnosis ini.':'Tidak ada hasil untuk pencarian ini.';
+        response.results.forEach(row=>{const pick=document.createElement('button');pick.type='button';pick.className='btn btn-outline-primary d-block my-1';pick.textContent=`${row.kode} — ${row.nama}`;pick.addEventListener('click',()=>{if(token!==generation)return;field('mode').value='MASTER';syncActionMode();field('kode').value=row.kode;field('nama').value=row.nama;actionForm.dispatchEvent(new Event('input',{bubbles:true}));document.dispatchEvent(new Event('igd:modes-updated'));});results.append(pick);});
+      }catch(e){if(token===generation)status.textContent=e.message;}
+    }
+    function schedule(){const token=++generation;clearTimeout(timer);results.replaceChildren();timer=setTimeout(()=>loadActions(token),250);}
+    source.addEventListener('change',schedule);diagnosis.addEventListener('change',schedule);query.addEventListener('input',schedule);schedule();
+  }
+
   document.querySelectorAll('[data-planning-component]').forEach(card=>{
     const key=card.dataset.planningComponent, mode=card.querySelector('[data-component-mode]');
     if (!mode || mode.disabled) return;
     const field=main.elements.namedItem(mode.dataset.field);
     const search=card.querySelector('[data-component-query]'), choices=card.querySelector('[data-component-options]');
     let generation=0,timer;
-    field.addEventListener('input',()=>{if(mode.value==='AI'){mode.value='MANUAL';delete mode.dataset.ticket;}});
+    let aiGeneration=0;
+    const dependencyState=()=>JSON.stringify([mode.value,field.value,main.elements.namedItem('diagnosa_keperawatan_sdki')?.value,main.elements.namedItem('luaran_keperawatan_slki')?.value]);
+    mode.addEventListener('change',()=>{++aiGeneration;if(mode.value!=='AI')delete mode.dataset.ticket;});
+    field.addEventListener('input',()=>{++aiGeneration;if(mode.value==='AI'){mode.value='MANUAL';delete mode.dataset.ticket;document.dispatchEvent(new Event('igd:modes-updated'));}});
     search.addEventListener('input',()=>{
       const token=++generation;clearTimeout(timer);
       timer=setTimeout(async()=>{try{const url=new URL(root.dataset.catalogue,location.origin);url.searchParams.set('type',search.dataset.type);url.searchParams.set('q',search.value);
@@ -51,12 +77,13 @@
     });
     choices.addEventListener('change',()=>{if(!choices.value)return;field.value=choices.value;mode.value='MASTER';delete mode.dataset.ticket;changed();});
     card.querySelector('[data-component-ai]').addEventListener('click',async event=>{
-      const button=event.currentTarget,target=card.querySelector('[data-component-results]');button.disabled=true;target.textContent='Meminta kandidat…';
+      const button=event.currentTarget,target=card.querySelector('[data-component-results]'),token=++aiGeneration,state=dependencyState();button.disabled=true;target.textContent='Meminta kandidat…';
       try {
         const response=await json(root.dataset.ai,{target:key,query:search.value,
           sdki_code:codeOf(main.elements.namedItem('diagnosa_keperawatan_sdki')?.value),
           slki_codes:String(main.elements.namedItem('luaran_keperawatan_slki')?.value || '').split('\n').filter(Boolean).map(codeOf)});
-        target.replaceChildren();response.candidates.forEach(row=>{const pick=document.createElement('button');pick.type='button';pick.className='btn btn-outline-primary d-block my-1';pick.textContent=`Gunakan ${row.kode} — ${row.nama}`;pick.addEventListener('click',()=>{field.value=`${row.kode} — ${row.nama}`;mode.value='AI';mode.dataset.ticket=response.ticket;changed();});target.append(pick);});
+        if(token!==aiGeneration || state!==dependencyState()){target.replaceChildren();return;}
+        target.replaceChildren();response.candidates.forEach(row=>{const pick=document.createElement('button');pick.type='button';pick.className='btn btn-outline-primary d-block my-1';pick.textContent=`Gunakan ${row.kode} — ${row.nama}`;pick.addEventListener('click',()=>{if(token!==aiGeneration || state!==dependencyState())return;field.value=`${row.kode} — ${row.nama}`;mode.value='AI';mode.dataset.ticket=response.ticket;changed();});target.append(pick);});
       }catch(e){target.textContent=e.message;}finally{button.disabled=false;}
     });
   });
@@ -156,6 +183,6 @@
 
   document.querySelector('[data-procedure-ai]')?.addEventListener('click',async event=>{
     const button=event.currentTarget,form=document.getElementById('plan_action-form'),target=document.getElementById('procedure-ai-results');if(!form)return;button.disabled=true;target.textContent='Meminta kandidat tindakan…';
-    try {const result=await json(root.dataset.ai,{target:button.dataset.procedureAi,query:main.elements.namedItem('diagnosa_masuk')?.value || '',sdki_code:codeOf(main.elements.namedItem('diagnosa_keperawatan_sdki')?.value),slki_codes:String(main.elements.namedItem('luaran_keperawatan_slki')?.value || '').split('\n').filter(Boolean).map(codeOf)});target.replaceChildren();result.candidates.forEach(row=>{const pick=document.createElement('button');pick.type='button';pick.className='btn btn-outline-primary my-1';pick.textContent=`Gunakan ${row.kode} — ${row.nama}`;pick.addEventListener('click',()=>{form.elements.namedItem('jenis').value=button.dataset.procedureAi==='siki'?'SIKI':'ICD9';form.elements.namedItem('kode').value=row.kode;form.elements.namedItem('nama').value=row.nama;form.elements.namedItem('mode').value='AI';form.elements.namedItem('ai_ticket').value=result.ticket;form.dispatchEvent(new Event('input',{bubbles:true}));});target.append(pick);});}catch(e){target.textContent=e.message;}finally{button.disabled=false;}
+    try {const result=await json(root.dataset.ai,{target:button.dataset.procedureAi,query:main.elements.namedItem('diagnosa_masuk')?.value || '',sdki_code:codeOf(main.elements.namedItem('diagnosa_keperawatan_sdki')?.value),slki_codes:String(main.elements.namedItem('luaran_keperawatan_slki')?.value || '').split('\n').filter(Boolean).map(codeOf)});target.replaceChildren();result.candidates.forEach(row=>{const pick=document.createElement('button');pick.type='button';pick.className='btn btn-outline-primary my-1';pick.textContent=`Gunakan ${row.kode} — ${row.nama}`;pick.addEventListener('click',()=>{form.elements.namedItem('jenis').value=button.dataset.procedureAi==='siki'?'SIKI':'ICD9';form.elements.namedItem('kode').value=row.kode;form.elements.namedItem('nama').value=row.nama;form.elements.namedItem('mode').value='AI';document.dispatchEvent(new Event('igd:modes-updated'));form.elements.namedItem('ai_ticket').value=result.ticket;form.dispatchEvent(new Event('input',{bubbles:true}));});target.append(pick);});}catch(e){target.textContent=e.message;}finally{button.disabled=false;}
   });
 })();

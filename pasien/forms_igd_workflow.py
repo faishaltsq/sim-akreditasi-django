@@ -21,13 +21,21 @@ STEPS = {
     6: ('Pemeriksaan Fisik Lengkap', ('keadaan_umum', 'kesadaran', 'fisik_head_to_toe', 'secondary_survey_detail', 'fisik_lokalis', 'penanda_anatomi')),
     7: ('Pemeriksaan Penunjang — Order & Hasil', ('penunjang_ekg', 'penunjang_hasil_kritis')),
     8: ('Penetapan Diagnosis & Rencana', ('diagnosa_masuk', 'diagnosa_keperawatan_sdki',
-        'luaran_keperawatan_slki', 'intervensi_keperawatan_siki', 'tatalaksana_resusitasi', 'tatalaksana_terapi', 'diagnosis_mode')),
+        'luaran_keperawatan_slki', 'intervensi_keperawatan_siki', 'diagnosis_mode')),
     9: ('Pelaksanaan Asuhan — CPPT & Billing', ()),
     10: ('Evaluasi Akhir IGD', ('disposisi_kondisi_akhir', 'evaluasi_respon_terapi', *VITAL_FIELDS)),
     11: ('Disposisi & Resume Keluar', ('disposisi_tindak_lanjut', 'disposisi_ruang_rawat',
          'disposisi_kontrol_poli', 'disposisi_kontrol_tgl', 'disposisi_rujuk_rs', 'disposisi_rujuk_alasan',
          'sbar_situation', 'sbar_background', 'sbar_assessment', 'sbar_recommendation', 'waktu_kematian', 'penyebab_kematian')),
 }
+
+LEGACY_STEP8_FIELDS = ('tatalaksana_resusitasi', 'tatalaksana_terapi')
+
+
+def snapshot_visit_fields():
+    return sorted({name for _, names in STEPS.values() for name in names}
+                  | set(LEGACY_STEP8_FIELDS))
+
 
 BOUNDS = {
     'ttv_sistole': (0, 350), 'ttv_diastole': (0, 250), 'ttv_nadi': (0, 350),

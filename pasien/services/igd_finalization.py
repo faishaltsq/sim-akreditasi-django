@@ -7,7 +7,7 @@ from django.core.serializers.json import DjangoJSONEncoder
 from django.utils import timezone
 
 from akreditasi.models import UnitKerja
-from pasien.forms_igd_workflow import STEPS
+from pasien.forms_igd_workflow import snapshot_visit_fields
 from pasien.forms_igd_operations import SignatureForm, FinalizationForm, AddendumForm
 from pasien.models import Bed, IgdAssessmentRevision, DischargeRecord, POLIKLINIK_CHOICES
 from .igd_actions import validate, digest, require_doctor, DOCTORS, NURSES
@@ -17,7 +17,7 @@ EXEMPTIONS = {'triage','anamnesis','primary_survey','initial_vitals','screening'
 
 
 def clinical_snapshot(visit, workflow):
-    fields = sorted({name for _, names in STEPS.values() for name in names})
+    fields = snapshot_visit_fields()
     patient = {key:getattr(visit.pasien,key) for key in ('no_rm','nama_lengkap','tanggal_lahir','jenis_kelamin')}
     snapshot = {
         'schema_version':2, 'patient':patient,

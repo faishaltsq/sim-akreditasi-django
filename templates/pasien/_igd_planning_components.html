@@ -2,10 +2,14 @@
 <section class="card card-body my-3" data-planning-component="{{ component.key }}">
   <h3 class="h6">{{ component.label }}</h3>
   {{ component.field.label_tag }}{{ component.field }}
-  <label for="mode-{{ component.key }}">Metode input</label>
-  <select id="mode-{{ component.key }}" class="form-select" data-component-mode="{{ component.key }}" data-field="{{ component.field.name }}" {% if not can_sign_nursing or readonly %}disabled{% endif %}>
-    <option value="MANUAL" {% if component.mode == 'MANUAL' %}selected{% endif %}>Manual</option><option value="MASTER" {% if component.mode == 'MASTER' %}selected{% endif %}>Master</option><option value="AI" {% if component.mode == 'AI' %}selected{% endif %}>Bantuan AI</option>
-  </select>
+  <div data-mode-control>
+    <label for="mode-{{ component.key }}">Metode input {{ component.label }}</label>
+    <select id="mode-{{ component.key }}" class="form-select" data-mode-select data-component-mode="{{ component.key }}" data-field="{{ component.field.name }}" {% if not can_sign_nursing or readonly %}disabled{% endif %}>
+      <option value="MANUAL" {% if component.mode == 'MANUAL' %}selected{% endif %}>Manual</option><option value="MASTER" {% if component.mode == 'MASTER' %}selected{% endif %}>Master</option><option value="AI" {% if component.mode == 'AI' %}selected{% endif %}>Bantuan AI</option>
+    </select>
+    <div class="btn-group my-2" role="group" aria-label="Metode input {{ component.label }}" data-mode-segments hidden><button type="button" class="btn btn-outline-primary" data-mode-value="MANUAL" aria-pressed="{% if component.mode == 'MANUAL' %}true{% else %}false{% endif %}">Manual</button><button type="button" class="btn btn-outline-primary" data-mode-value="MASTER" aria-pressed="{% if component.mode == 'MASTER' %}true{% else %}false{% endif %}">Master</button><button type="button" class="btn btn-outline-primary" data-mode-value="AI" aria-pressed="{% if component.mode == 'AI' %}true{% else %}false{% endif %}">AI</button></div>
+    <noscript><p class="form-text">Metode ditampilkan melalui pilihan standar; simpan keperawatan memerlukan JavaScript.</p></noscript>
+  </div>
   {% if can_sign_nursing and not readonly %}
   <label for="search-{{ component.key }}">Cari master {{ component.label }}</label><input id="search-{{ component.key }}" class="form-control" data-component-query="{{ component.key }}" data-type="{{ component.catalogue_type }}" maxlength="200">
   <select aria-label="Hasil master {{ component.label }}" class="form-select" data-component-options="{{ component.key }}"><option value="">— Cari kode atau nama —</option></select>

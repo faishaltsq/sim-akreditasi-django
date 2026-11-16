@@ -14,7 +14,8 @@
 .igd-content {min-width:0}.igd-content textarea {max-width:100%}.igd-content .errorlist {color:#b91c1c}
 .igd-content fieldset,.body-map-layout>div{min-width:0}@media(max-width:991px){.igd-content .body-map-layout{grid-template-columns:minmax(0,1fr)}}
 .igd-operation{margin:1rem 0}.igd-operation label{display:block}.igd-operation input:not([type=hidden]):not([type=checkbox]),.igd-operation select,.igd-operation textarea{max-width:100%}.body-map-layout{display:grid;grid-template-columns:minmax(120px,200px) minmax(0,1fr);gap:1rem;margin-top:1rem}#igd-body-map{width:100%;max-height:360px;cursor:crosshair}.igd-marker-row{display:flex;gap:.4rem;flex-wrap:wrap;align-items:center}.igd-marker-row span{flex:1;overflow-wrap:anywhere}.igd-action-summary{overflow-wrap:anywhere}@media(max-width:767px){.body-map-layout{grid-template-columns:minmax(0,1fr)}#igd-body-map{max-height:300px}}
-@media(max-width:767px){.igd-layout{grid-template-columns:minmax(0,1fr)}.igd-steps{display:none}.igd-mobile-nav{display:block}.igd-actions .btn{flex:1 1 120px}}
+@media(max-width:991px){.igd-layout{grid-template-columns:minmax(0,1fr)}.igd-steps{display:none}.igd-mobile-nav{display:block}}
+@media(max-width:767px){.igd-actions .btn{flex:1 1 120px}}
 </style>
 {% endblock %}
 {% block content %}
@@ -38,6 +39,15 @@
   <h2 id="igd-step-title" class="h5">{{ step }}. {{ step_title }}</h2>
   <div id="igd-save-status" role="status" aria-live="polite">Versi <span id="igd-version-label">{{ version }}</span>{% if workflow %} · {{ workflow.updated_at|date:"d M Y H:i" }}{% endif %}</div>
   <div id="igd-errors" class="alert alert-danger mt-2" role="alert" hidden tabindex="-1"></div>
+  {% if step == 8 %}
+  {% if recommendation_context %}<aside class="card card-body my-2"><h3 class="h6">Dasar saran</h3>{% for key, evidence in recommendation_context.evidence.items %}<p>Langkah {{ evidence.source_step }}: {% if evidence.available %}Data tersedia{% else %}Belum tersedia / belum dikaji{% endif %}{% if evidence.observed_at %} · {{ evidence.observed_at }}{% endif %}</p>{% endfor %}{% for result in recommendation_context.investigations %}<p>Penunjang: {{ result.status }} · {% if result.available %}Hasil tersedia{% else %}Belum ada hasil yang dapat dipakai{% endif %}</p>{% empty %}<p>Belum ada hasil penunjang.</p>{% endfor %}</aside>{% endif %}
+  {% include 'pasien/_igd_diagnosis_plan.html' %}
+  <div class="my-2"><h3 class="h6" id="igd-care-heading">Kategori tata laksana</h3><div class="btn-group" role="group" aria-labelledby="igd-care-heading"><button type="button" class="btn btn-outline-primary" data-care-tab="actions" aria-controls="igd-action-panel" aria-pressed="true">Tindakan Klinis</button><button type="button" class="btn btn-outline-primary" data-care-tab="medications" aria-controls="igd-medications" aria-pressed="false">Terapi / Obat</button></div></div>
+  <noscript><p class="form-text">JavaScript tidak aktif: kedua kategori ditampilkan untuk dibaca. Penyimpanan diagnosis, tindakan, obat dan keperawatan memerlukan JavaScript.</p></noscript>
+  {% include 'pasien/_igd_workflow_operations.html' %}
+  {% include 'pasien/_igd_medication_composer.html' %}
+  {% if legacy_step8_notes %}<aside id="igd-step8-history" class="card card-body my-3" aria-labelledby="igd-step8-history-heading"><h3 id="igd-step8-history-heading" class="h6">Catatan tata laksana historis — hanya baca</h3><dl>{% for note in legacy_step8_notes %}<dt>{{ note.label }}</dt><dd>{{ note.value|linebreaksbr }}</dd>{% endfor %}</dl></aside>{% endif %}
+  {% endif %}
   <form id="igd-step-form" method="post" action="{% url 'pasien:igd_workflow_draft' kunjungan.pk step %}" data-version="{{ version }}" data-step="{{ step }}">
     {% csrf_token %}
     {% if step == 6 %}{% include 'pasien/_igd_physical_exam_form.html' %}{% elif step == 8 %}{% include 'pasien/_igd_step8_fields.html' %}{% else %}
@@ -58,10 +68,10 @@
     </div>
   </form>
   {% include 'pasien/_igd_ancillary_order.html' %}
-  {% include 'pasien/_igd_diagnosis_plan.html' %}
-  {% if step == 8 %}<div class="btn-group my-2" role="group" aria-label="Kategori tata laksana"><button type="button" class="btn btn-outline-primary" data-care-tab="actions" aria-pressed="true">Tindakan Klinis</button><button type="button" class="btn btn-outline-primary" data-care-tab="medications" aria-pressed="false">Terapi / Obat</button></div>{% endif %}
+  {% if step != 8 %}
   {% include 'pasien/_igd_medication_composer.html' %}
   {% if not professional_show or step != 9 %}{% include 'pasien/_igd_workflow_operations.html' %}{% endif %}
+  {% endif %}
   {% include 'pasien/_igd_professional_execution.html' %}
   {% if step == 4 or step == 10 %}<h3 class="h6 mt-4">Riwayat Pengukuran</h3>
   {% for observation in observations %}<article class="card mb-2"><div class="card-body"><strong>{{ observation.get_phase_display }}</strong> · {{ observation.observed_at|date:'d M Y H:i:s' }} · Petugas #{{ observation.recorded_by_id }}{% if observation.corrects_id %} · Koreksi observasi #{{ observation.corrects_id }}{% endif %}<dl>{% for name,value in observation.data.items %}<dt>{{ name }}</dt><dd>{{ value|default_if_none:'Belum diukur' }}</dd>{% endfor %}</dl>

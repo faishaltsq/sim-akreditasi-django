@@ -23,6 +23,8 @@ def generate_target(visit,user,target,query='',sdki_code='',slki_codes=None):
         return empty
     qs=MODELS[target].objects.all()
     if target in ('slki','siki'):
+        if not sdki_code or (target=='siki' and not slki_codes):
+            return empty
         maps=Pemetaan3S.objects.filter(sdki__kode=sdki_code)
         if target=='siki' and slki_codes:
             maps=maps.filter(slki__kode__in=slki_codes)
@@ -30,18 +32,14 @@ def generate_target(visit,user,target,query='',sdki_code='',slki_codes=None):
     records=list(qs.order_by('kode').values('kode','nama'))
     if not records:
         return empty
+    from .igd_recommendation_context import build_igd_recommendation_context
+    assessment = build_igd_recommendation_context(visit)
     vocabulary={w for r in records for w in TOKEN.findall(r['nama'].lower())}
     identity=set(TOKEN.findall(visit.pasien.nama_lengkap.lower()))
-    evidence={}
-    fields={'complaint':visit.anamnesis_rps,'physical':json.dumps([visit.fisik_head_to_toe,visit.secondary_survey_detail,visit.fisik_lokalis]),
-        'investigations':' '.join(visit.order_penunjang.values_list('hasil_pemeriksaan',flat=True)),'diagnosis':visit.diagnosa_masuk}
-    for key,text in fields.items():
-        evidence[key]={'terms':sorted((set(TOKEN.findall(str(text)[:12000].lower()))&vocabulary)-identity)[:40],
-            'available':bool(text and text!='[{}, {}, ""]')}
-    terms=set(TOKEN.findall((query+' '+visit.anamnesis_rps).lower()))&vocabulary-identity
+    terms=set(TOKEN.findall(json.dumps(assessment, default=str).lower()))&vocabulary-identity
     ranked=sorted(records,key=lambda r:(-len(set(TOKEN.findall(r['nama'].lower()))&terms),r['kode']))[:40]
     known={r['kode']:r for r in ranked}
-    context={'target':target,'evidence':evidence,'clinical_terms':sorted(terms)[:40],
+    context={'target':target,'assessment':assessment,'clinical_terms':sorted(terms)[:40],
         'vitals':{k:getattr(visit,k) for k in ('ttv_sistole','ttv_diastole','ttv_nadi','ttv_rr','ttv_suhu','ttv_spo2')},
         'triage':{'scale':visit.triase_skala,'category':visit.triase_kategori},'sdki_code':sdki_code,'slki_codes':slki_codes or [],'candidate_catalogue':ranked}
     try:

@@ -73,7 +73,7 @@
   panel.querySelectorAll('[data-diagnosis-edit]').forEach(button=>button.addEventListener('click',()=>{
     const row=records.find(item=>item.id===Number(button.dataset.diagnosisEdit));
     if(!row)return; form.dataset.editId=String(row.id); delete form.dataset.requestId; delete form.dataset.aiTicket;
-    form.elements.namedItem('mode').value=row.mode;code.value=row.kode;text.value=row.nama;
+    form.elements.namedItem('mode').value=row.mode;document.dispatchEvent(new Event('igd:modes-updated'));code.value=row.kode;text.value=row.nama;
     form.elements.namedItem('primary').checked=row.is_primary;dirty=true;form.scrollIntoView({block:'start'});
   }));
   document.getElementById('diagnosis-ai-request').addEventListener('click',async event=>{
@@ -81,7 +81,7 @@
     try {
       const response=await fetch(root.dataset.ai,{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json','X-CSRFToken':form.querySelector('[name=csrfmiddlewaretoken]').value},body:JSON.stringify({target:'medical',query:text.value})});
       const result=await response.json();if(!response.ok || !result.success)throw new Error(result.error || 'AI tidak tersedia.');target.replaceChildren();
-      result.candidates.forEach(row=>{const pick=document.createElement('button');pick.type='button';pick.className='btn btn-outline-primary my-1';pick.textContent=`Gunakan ${row.kode} — ${row.nama}`;pick.addEventListener('click',()=>{form.elements.namedItem('mode').value='AI';code.value=row.kode;text.value=row.nama;form.dataset.aiTicket=result.ticket;delete form.dataset.requestId;dirty=true;});target.append(pick);});
+      result.candidates.forEach(row=>{const pick=document.createElement('button');pick.type='button';pick.className='btn btn-outline-primary my-1';pick.textContent=`Gunakan ${row.kode} — ${row.nama}`;pick.addEventListener('click',()=>{form.elements.namedItem('mode').value='AI';document.dispatchEvent(new Event('igd:modes-updated'));code.value=row.kode;text.value=row.nama;form.dataset.aiTicket=result.ticket;delete form.dataset.requestId;dirty=true;});target.append(pick);});
     }catch(e){target.textContent=e.message;}finally{button.disabled=false;}
   });
   text.addEventListener('input', () => {

@@ -14,8 +14,12 @@
   {% if can_sign_medical and not readonly %}
   <form id="igd-diagnosis-form" method="post" action="{% url 'pasien:igd_workflow_action' kunjungan.pk %}">
     {% csrf_token %}
-    <label for="diagnosis-mode">Metode input</label>
-    <select id="diagnosis-mode" name="mode" class="form-select"><option value="MANUAL">Manual</option><option value="MASTER">Master ICD-10</option><option value="AI">Bantuan AI</option></select>
+    <div data-mode-control>
+      <label for="diagnosis-mode">Metode input diagnosis medis</label>
+      <select id="diagnosis-mode" name="mode" class="form-select" data-mode-select><option value="MANUAL">Manual</option><option value="MASTER">Master ICD-10</option><option value="AI">Bantuan AI</option></select>
+      <div class="btn-group my-2" role="group" aria-label="Metode input diagnosis medis" data-mode-segments hidden><button type="button" class="btn btn-outline-primary" data-mode-value="MANUAL" aria-pressed="true">Manual</button><button type="button" class="btn btn-outline-primary" data-mode-value="MASTER" aria-pressed="false">Master</button><button type="button" class="btn btn-outline-primary" data-mode-value="AI" aria-pressed="false">AI</button></div>
+      <noscript><p class="form-text">Metode ditampilkan melalui pilihan standar; simpan diagnosis memerlukan JavaScript.</p></noscript>
+    </div>
     <label for="diagnosis-code">Kode ICD-10 (mode Master)</label><input id="diagnosis-code" name="code" class="form-control" maxlength="10" list="diagnosis-codes"><datalist id="diagnosis-codes"></datalist>
     <label for="diagnosis-text">Diagnosis manual / istilah pencarian master</label><textarea id="diagnosis-text" name="text" class="form-control" maxlength="2000" rows="2"></textarea>
     <label class="d-block my-2"><input id="diagnosis-primary" type="checkbox" name="primary"> Diagnosis Utama</label>

@@ -80,7 +80,7 @@ def plan_action(visit, workflow, user, data):
         line = TindakanAsesmen(kunjungan=visit, urutan=sequence, execution_status='PLANNED')
     before = {name:getattr(line,name) for name in ('tarif','tarif_acuan','quantity','tarif_penjamin','catatan_tarif')}
     line.jenis, line.kode = jenis, values['kode']
-    line.nama = values['nama'] or reference.nama
+    line.nama = reference.nama if reference else values['nama']
     line.icd9 = reference if jenis == 'ICD9' else None
     line.siki = reference if jenis == 'SIKI' else None
     mode=values['mode'] or ('MASTER' if reference else 'MANUAL')
