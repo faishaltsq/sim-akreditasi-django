@@ -42,6 +42,7 @@ def build_igd_recommendation_context(visit):
     for order in visit.order_penunjang.order_by('pk')[:30]:
         result = clean(order.hasil_pemeriksaan) if order.status == 'SELESAI' else None
         investigations.append({'source_step': 7, 'status': order.status,
+                               'nama': clean(order.nama_pemeriksaan), 'prioritas': order.prioritas,
                                'available': bool(result), 'result': result,
                                'observed_at': order.result_recorded_at.isoformat() if order.result_recorded_at else None})
     return {'schema_version': 1, 'evidence': evidence, 'investigations': investigations}

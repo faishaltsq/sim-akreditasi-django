@@ -1,0 +1,75 @@
+{
+  "version": "DOCX-2026-11-13-STAGING",
+  "note": "Sidecar aktivasi katalog penunjang IGD. Menentukan unit pelaksana dan atribut persiapan wajib per kelompok tingkat 3. Aturan dicocokkan dengan prefix kode kelompok; prefix terpanjang menang.",
+  "destination_units": {
+    "LAB": "LAB-BDRS",
+    "PA": "LAB-BDRS",
+    "BDRS": "LAB-BDRS",
+    "RAD": "RAD",
+    "EKG": "IGD",
+    "ENDO": "IGD",
+    "NUKLIR": "RAD"
+  },
+  "rules": [
+    {
+      "prefix": "laboratorium-laboratorium-klinik-",
+      "unit": "LAB",
+      "required": ["specimen"]
+    },
+    {
+      "prefix": "laboratorium-patologi-anatomi-",
+      "unit": "PA",
+      "required": ["specimen"]
+    },
+    {
+      "prefix": "laboratorium-bank-darah-bdrs-",
+      "unit": "BDRS",
+      "required": ["specimen"]
+    },
+    {
+      "prefix": "laboratorium-rujukan-luar-",
+      "unit": "LAB",
+      "required": ["specimen", "external_destination"]
+    },
+    {
+      "prefix": "laboratorium-lainnya-",
+      "unit": "LAB",
+      "required": ["specimen"]
+    },
+    {
+      "prefix": "penunjang-diagnostik-radiologi-pencitraan-ct-scan",
+      "unit": "RAD",
+      "required": ["contrast", "pregnancy"]
+    },
+    {
+      "prefix": "penunjang-diagnostik-radiologi-pencitraan-mri",
+      "unit": "RAD",
+      "required": ["contrast", "pregnancy"]
+    },
+    {
+      "prefix": "penunjang-diagnostik-radiologi-pencitraan-pencitraan-khusus",
+      "unit": "RAD",
+      "required": ["contrast"]
+    },
+    {
+      "prefix": "penunjang-diagnostik-radiologi-pencitraan-",
+      "unit": "RAD",
+      "required": []
+    },
+    {
+      "prefix": "penunjang-diagnostik-elektrofisiologi-",
+      "unit": "EKG",
+      "required": []
+    },
+    {
+      "prefix": "penunjang-diagnostik-endoskopi-teropong-saluran-",
+      "unit": "ENDO",
+      "required": ["fasting"]
+    },
+    {
+      "prefix": "penunjang-diagnostik-kedokteran-nuklir-",
+      "unit": "NUKLIR",
+      "required": ["pregnancy"]
+    }
+  ]
+}

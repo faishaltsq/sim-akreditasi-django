@@ -85,7 +85,7 @@ def save_step(pk, user, step, payload, version):
         raise WorkflowConflict('Nomor versi tidak valid.') from exc
     if expected != (workflow.version if workflow else 0):
         raise WorkflowConflict('Konflik versi: muat ulang draft terbaru sebelum menyimpan.')
-    if not payload:
+    if not payload and STEPS[step][1]:
         raise WorkflowValidation({'__all__': ['Tidak ada perubahan untuk disimpan.']})
     provenance = None
     if step == 8:

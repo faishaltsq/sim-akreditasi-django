@@ -14,16 +14,20 @@ from django.shortcuts import render
 from django.views.decorators.http import require_GET, require_POST
 from django.views.decorators.cache import never_cache
 
-from .forms_igd_workflow import STEPS, VITAL_FIELDS, LEGACY_STEP8_FIELDS, form_for_step, snapshot_visit_fields
+from .forms_igd_workflow import STEPS, VITAL_FIELDS, LEGACY_STEP7_FIELDS, LEGACY_STEP8_FIELDS, form_for_step, snapshot_visit_fields
 from .services.igd_assessment_workflow import (
     CLINICAL_PROFESSIONS, WorkflowConflict, WorkflowValidation, get_visit, save_step,
 )
 
 
-def legacy_step8_notes(source):
+def legacy_notes(source, names):
     from .models import KunjunganPasien
     return [{'label':KunjunganPasien._meta.get_field(name).verbose_name,'value':source.get(name)}
-            for name in LEGACY_STEP8_FIELDS if source.get(name)]
+            for name in names if source.get(name)]
+
+
+def legacy_step8_notes(source):
+    return legacy_notes(source, LEGACY_STEP8_FIELDS)
 
 
 def require_rollout():
@@ -176,11 +180,22 @@ def igd_workflow(request, pk):
         'latest_revision':revision,
         'planning_components':planning_components,'prescriptions':prescriptions,
         'legacy_step8_notes':legacy_step8_notes(historical if historical is not None else {name:getattr(visit,name) for name in LEGACY_STEP8_FIELDS}) if step == 8 else [],
+        'legacy_step7_notes':legacy_notes(historical if historical is not None else {name:getattr(visit,name) for name in LEGACY_STEP7_FIELDS}, LEGACY_STEP7_FIELDS) if step == 7 else [],
         'legacy_medical_diagnosis':historical.get('diagnosa_masuk','') if historical is not None else visit.diagnosa_masuk,
         'pharmacy_units':UnitKerja.objects.filter(pk__in=PharmacyServiceGrant.objects.values('unit_id')).order_by('name'),
         'active_diagnoses':visit.diagnoses.filter(active=True),
         'cascade_levels':[{'number':1,'label':'Kategori Utama'},{'number':2,'label':'Instalasi'},{'number':3,'label':'Kelompok'},{'number':4,'label':'Item Pemeriksaan'}],
-        'preparation_fields':[{'key':'fasting','label':'Status puasa'},{'key':'pregnancy','label':'Kehamilan'},{'key':'contrast_allergy','label':'Alergi kontras'}],
+        'preparation_fields':[
+            {'key':'fasting','label':'Status puasa','kind':'select','choices':[('UNKNOWN','Belum diketahui'),('YES','Ya'),('NO','Tidak'),('NA','Tidak relevan')]},
+            {'key':'pregnancy','label':'Status kehamilan','kind':'select','choices':[('UNKNOWN','Belum diketahui'),('YES','Hamil'),('NO','Tidak hamil'),('NA','Tidak relevan')]},
+            {'key':'contrast_allergy','label':'Alergi kontras','kind':'select','choices':[('UNKNOWN','Belum diketahui'),('YES','Ada'),('NO','Tidak ada'),('NA','Tidak relevan')]},
+            {'key':'specimen','label':'Spesimen','kind':'text'},
+            {'key':'site','label':'Lokasi pemeriksaan','kind':'text'},
+            {'key':'region','label':'Regio tubuh','kind':'text'},
+            {'key':'side','label':'Sisi','kind':'select','choices':[('','—'),('DEXTER','Kanan'),('SINISTER','Kiri'),('BILATERAL','Bilateral'),('NA','Tidak relevan')]},
+            {'key':'contrast','label':'Kontras','kind':'select','choices':[('','—'),('POLOS','Tanpa kontras'),('KONTRAS','Dengan kontras'),('NA','Tidak relevan')]},
+            {'key':'external_destination','label':'Tujuan rujukan luar','kind':'text'},
+        ],
         'physical_exam':physical_exam,'physical_gcs':physical_source.get('ttv_gcs'),
         'stale_signatures':stale_signatures,
     })
@@ -352,7 +367,7 @@ def igd_workflow_resume(request,pk):
     from .physical_exam import exam_context
     physical_exam = exam_context(saved.get('fisik_head_to_toe'),saved.get('secondary_survey_detail'),saved)
     from .services.professional_presentation import professional_panel_context
-    return render(request,'pasien/igd_workflow_resume.html',{**professional_panel_context(visit,workflow,request.user,revision),'record':revision,'snapshot':revision.snapshot,'workflow':workflow,'sections':sections,'legacy_step8_notes':legacy_step8_notes(saved),'record_digest':digest(revision.snapshot),'physical_exam':physical_exam})
+    return render(request,'pasien/igd_workflow_resume.html',{**professional_panel_context(visit,workflow,request.user,revision),'record':revision,'snapshot':revision.snapshot,'workflow':workflow,'sections':sections,'legacy_step8_notes':legacy_step8_notes(saved),'legacy_step7_notes':legacy_notes(saved, LEGACY_STEP7_FIELDS),'record_digest':digest(revision.snapshot),'physical_exam':physical_exam})
 
 
 @login_required

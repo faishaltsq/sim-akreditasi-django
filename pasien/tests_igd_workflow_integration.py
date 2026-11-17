@@ -22,8 +22,117 @@ class IgdWorkflowIntegrationTest(fixtures.IgdWorkflowTest):
 
     def test_draft_does_not_send_order(self):
         from pasien.services.igd_assessment_workflow import save_step
-        save_step(self.visit.pk, self.user, 7, {'penunjang_ekg':'Hasil eksternal'}, 0)
+        save_step(self.visit.pk, self.user, 7, {}, 0)
         self.assertFalse(OrderPenunjang.objects.filter(kunjungan=self.visit).exists())
+
+    def test_step7_draft_rejects_retired_fields(self):
+        from pasien.services.igd_assessment_workflow import WorkflowValidation, save_step
+        with self.assertRaises(WorkflowValidation):
+            save_step(self.visit.pk, self.user, 7, {'penunjang_ekg': 'Hasil eksternal'}, 0)
+        self.visit.refresh_from_db()
+        self.assertFalse(self.visit.penunjang_ekg)
+
+    def test_snapshot_keeps_retired_penunjang_fields(self):
+        from pasien.models import IgdAssessmentWorkflow
+        from pasien.services.igd_assessment_workflow import save_step
+        from pasien.services.igd_finalization import clinical_snapshot
+        self.visit.penunjang_ekg = 'EKG irama sinus'
+        self.visit.penunjang_hasil_kritis = 'Troponin meningkat'
+        self.visit.save(update_fields=['penunjang_ekg', 'penunjang_hasil_kritis'])
+        save_step(self.visit.pk, self.user, 7, {}, 0)
+        workflow = IgdAssessmentWorkflow.objects.get(kunjungan=self.visit)
+        snapshot = clinical_snapshot(self.visit, workflow)
+        self.assertEqual(snapshot['visit']['penunjang_ekg'], 'EKG irama sinus')
+        self.assertEqual(snapshot['visit']['penunjang_hasil_kritis'], 'Troponin meningkat')
+
+    def make_catalogue_item(self, kode='uji-lab-klinik-hematologi-1', required=('specimen',), variants=None):
+        from klinis.models import ItemPenunjang, KategoriPenunjang
+        l1, _ = KategoriPenunjang.objects.get_or_create(kode='uji-laboratorium', defaults={'nama': 'Uji Laboratorium', 'level': 1})
+        l2, _ = KategoriPenunjang.objects.get_or_create(kode='uji-laboratorium-klinik', defaults={'nama': 'Uji Klinik', 'level': 2, 'parent': l1})
+        l3, _ = KategoriPenunjang.objects.get_or_create(kode='uji-laboratorium-klinik-hematologi', defaults={'nama': 'Uji Hematologi', 'level': 3, 'parent': l2})
+        return ItemPenunjang.objects.create(
+            kode=kode, nama='Pemeriksaan uji katalog', group=l3, jenis_order='LAB',
+            destination=self.unit, active=True, source_version='UJI-2026-11-17',
+            reviewed_by=self.user, preparation_schema={'required': list(required)},
+            variants=variants or {})
+
+    @override_settings(IGD_WORKFLOW_ENABLED=True)
+    def test_step7_has_no_legacy_menus(self):
+        response = self.client.get(reverse('pasien:igd_workflow', args=[self.visit.pk]) + '?step=7')
+        self.assertEqual(response.status_code, 200)
+        html = response.content.decode()
+        for retired in ('Catat hasil / pembaruan operasional', 'Lampiran Hasil / Dokumen', 'Unggah Lampiran', 'igd-upload-form'):
+            self.assertNotIn(retired, html)
+        self.assertIn('id="igd-ancillary"', html)
+        self.assertIn('data-anc-level="4"', html)
+
+    @override_settings(IGD_WORKFLOW_ENABLED=True)
+    def test_step7_renders_cascade(self):
+        html = self.client.get(reverse('pasien:igd_workflow', args=[self.visit.pk]) + '?step=7').content.decode()
+        for number in (1, 2, 3, 4):
+            self.assertIn(f'id="anc-level-{number}"', html)
+        for key in ('fasting', 'pregnancy', 'contrast_allergy', 'specimen', 'site', 'region',
+                    'side', 'contrast', 'external_destination'):
+            self.assertIn(f'id="anc-{key}"', html)
+        self.assertIn('id="anc-basket"', html)
+        self.assertIn('Kirim Semua Order Terpilih', html)
+
+    @override_settings(IGD_WORKFLOW_ENABLED=True)
+    def test_step7_has_no_save_buttons(self):
+        html = self.client.get(reverse('pasien:igd_workflow', args=[self.visit.pk]) + '?step=7').content.decode()
+        self.assertNotIn('value="save"', html)
+        self.assertNotIn('value="next"', html)
+        self.assertIn('Lanjut ke Penetapan Diagnosis', html)
+
+    @override_settings(IGD_WORKFLOW_ENABLED=True)
+    def test_step7_draft_empty_payload_accepted(self):
+        response = self.client.post(
+            reverse('pasien:igd_workflow_draft', args=[self.visit.pk, 7]),
+            json.dumps({'fields': {}, 'version': 0}), content_type='application/json')
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()['step'], 7)
+
+    def test_cascade_payload_carries_nine_keys(self):
+        item = self.make_catalogue_item(required=('specimen', 'external_destination'))
+        preparation = {'fasting': 'UNKNOWN', 'pregnancy': 'UNKNOWN', 'contrast_allergy': 'UNKNOWN',
+                       'specimen': 'DARAH VENA', 'site': 'Sela iga 4', 'region': 'Toraks',
+                       'side': 'DEXTER', 'contrast': 'POLOS', 'external_destination': 'RS Rujukan Uji'}
+        result = self.action('order_batch', {'items': [{'item_id': item.pk, 'prioritas': 'CITO',
+                                                        'indication': 'Indikasi klinis synthetic',
+                                                        'preparation': preparation}]})
+        order = OrderPenunjang.objects.get(pk=result['order_ids'][0])
+        self.assertEqual(set(order.preparation), set(preparation))
+        self.assertEqual(order.preparation['external_destination'], 'RS Rujukan Uji')
+        self.assertEqual(order.destination, self.unit)
+
+    def test_catalogue_requires_specimen_is_orderable(self):
+        from klinis.services.penunjang_catalogue import list_choices
+        item = self.make_catalogue_item()
+        result = list_choices(self.user, parent_id=item.group_id)
+        self.assertEqual([row['kode'] for row in result['results']], [item.kode])
+        self.assertEqual(result['results'][0]['preparation_schema']['required'], ['specimen'])
+        self.assertEqual(result['results'][0]['path'][-1]['kode'], item.group.kode)
+
+    def test_variant_must_match_catalogue(self):
+        item = self.make_catalogue_item(required=(), variants={'specimen': ['SERUM', 'PLASMA']})
+        with self.assertRaises(ValueError):
+            self.action('order_batch', {'items': [{'item_id': item.pk, 'prioritas': 'RUTIN',
+                                                   'indication': 'Indikasi klinis synthetic',
+                                                   'preparation': {'specimen': 'URIN'}}]})
+
+    def test_empty_branch_hidden_from_cascade(self):
+        from klinis.models import KategoriPenunjang
+        from klinis.services.penunjang_catalogue import list_choices
+        item = self.make_catalogue_item()
+        empty = KategoriPenunjang.objects.create(kode='uji-laboratorium-klinik-kosong', nama='Kelompok Kosong',
+                                                 level=3, parent=item.group.parent)
+        with override_settings(IGD_PENUNJANG_HIDE_EMPTY_BRANCHES=True):
+            hidden = [row['kode'] for row in list_choices(self.user, parent_id=item.group.parent_id)['results']]
+        with override_settings(IGD_PENUNJANG_HIDE_EMPTY_BRANCHES=False):
+            shown = [row['kode'] for row in list_choices(self.user, parent_id=item.group.parent_id)['results']]
+        self.assertIn(item.group.kode, hidden)
+        self.assertNotIn(empty.kode, hidden)
+        self.assertIn(empty.kode, shown)
 
     def test_manual_order_requires_clinical_indication(self):
         with self.assertRaises(ValueError):

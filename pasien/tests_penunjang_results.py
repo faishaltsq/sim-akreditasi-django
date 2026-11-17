@@ -50,6 +50,19 @@ class ResultBoundaryTest(legacy.LaboratoriumViewTest):
         with self.assertRaises(PermissionDenied):
             record_result(self.order.pk,actor,{'status':'SELESAI','hasil_pemeriksaan':'Forged'})
 
+    def test_igd_doctor_records_ekg_result_routed_to_igd_unit(self):
+        unit_igd=UnitKerja.objects.get_or_create(code='IGD',defaults={'name':'IGD','level':2})[0]
+        doctor=User.objects.create_user('ekg_reader',password='fixture-only')
+        UserProfile.objects.create(user=doctor,role='STAF_NAKES',profesi='DOKTER_UMUM',unit_kerja=unit_igd)
+        order=OrderPenunjang.objects.create(kunjungan=self.kunjungan,jenis='EKG',nama_pemeriksaan='EKG 12 lead synthetic',destination=unit_igd)
+        self.client.force_login(doctor)
+        response=self.client.get(reverse('pasien:ancillary_worklist')+'?jenis=EKG')
+        self.assertContains(response,'EKG 12 lead synthetic')
+        record_result(order.pk,doctor,{'status':'SELESAI','hasil_pemeriksaan':'Irama sinus, HR 78'})
+        order.refresh_from_db()
+        self.assertEqual(order.status,'SELESAI')
+        self.assertEqual(order.result_recorded_by,doctor)
+
     def test_more_than_fifty_orders_are_reachable(self):
         OrderPenunjang.objects.bulk_create([OrderPenunjang(kunjungan=self.kunjungan,jenis='LAB',nama_pemeriksaan=f'Paged synthetic {i}') for i in range(51)])
         self.client.force_login(self.lab_user)

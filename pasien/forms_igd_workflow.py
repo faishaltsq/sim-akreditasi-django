@@ -19,7 +19,7 @@ STEPS = {
         'status_emosional', 'hambatan_komunikasi', 'kebutuhan_spiritual', 'skrining_gizi_mst',
         'metode_risiko_jatuh', 'skrining_jatuh_skor', 'skrining_jatuh_grade', 'skrining_jatuh_detail', 'hambatan_edukasi', 'skrining_gizi_detail')),
     6: ('Pemeriksaan Fisik Lengkap', ('keadaan_umum', 'kesadaran', 'fisik_head_to_toe', 'secondary_survey_detail', 'fisik_lokalis', 'penanda_anatomi')),
-    7: ('Pemeriksaan Penunjang — Order & Hasil', ('penunjang_ekg', 'penunjang_hasil_kritis')),
+    7: ('Pemeriksaan Penunjang', ()),
     8: ('Penetapan Diagnosis & Rencana', ('diagnosa_masuk', 'diagnosa_keperawatan_sdki',
         'luaran_keperawatan_slki', 'intervensi_keperawatan_siki', 'diagnosis_mode')),
     9: ('Pelaksanaan Asuhan — CPPT & Billing', ()),
@@ -30,11 +30,13 @@ STEPS = {
 }
 
 LEGACY_STEP8_FIELDS = ('tatalaksana_resusitasi', 'tatalaksana_terapi')
+# Field pensiun: tetap disimpan, tetap masuk snapshot, tidak lagi ditulis lewat draft.
+LEGACY_STEP7_FIELDS = ('penunjang_ekg', 'penunjang_hasil_kritis')
 
 
 def snapshot_visit_fields():
     return sorted({name for _, names in STEPS.values() for name in names}
-                  | set(LEGACY_STEP8_FIELDS))
+                  | set(LEGACY_STEP8_FIELDS) | set(LEGACY_STEP7_FIELDS))
 
 
 BOUNDS = {

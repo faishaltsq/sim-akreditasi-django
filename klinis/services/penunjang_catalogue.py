@@ -1,6 +1,12 @@
+from django.conf import settings
 from django.core.exceptions import ValidationError
-from django.db.models import Q
+from django.db.models import Exists, OuterRef, Q
 from klinis.models import KategoriPenunjang, ItemPenunjang
+
+
+def orderable_items():
+    return ItemPenunjang.objects.filter(active=True, reviewed_by__isnull=False,
+                                        destination__isnull=False).exclude(source_version='')
 
 
 def item_snapshot(item):
@@ -51,8 +57,12 @@ def list_choices(user, *, parent_id=None, query='', page=1):
                 raise ValueError('Induk pemeriksaan tidak aktif.')
             node=node.parent
         leaf=parent.level==3
-        qs=(ItemPenunjang.objects.filter(group=parent,active=True,reviewed_by__isnull=False,destination__isnull=False).exclude(source_version='') if leaf
+        qs=(orderable_items().filter(group=parent) if leaf
             else KategoriPenunjang.objects.filter(parent=parent,active=True))
+        if parent.level==2 and getattr(settings,'IGD_PENUNJANG_HIDE_EMPTY_BRANCHES',False):
+            # Sembunyikan kelompok tanpa item yang benar-benar bisa di-order.
+            branch=orderable_items().filter(group=OuterRef('pk'))
+            qs=qs.annotate(_orderable=Exists(branch)).filter(_orderable=True)
     if query:
         qs=qs.filter(Q(kode__icontains=query)|Q(nama__icontains=query))
     rows=list(qs.order_by('kode')[(page-1)*50:page*50+1])

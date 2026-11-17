@@ -108,10 +108,18 @@
         more.hidden=!result.has_more;status.textContent=result.results.length?'Pilih pemeriksaan lalu tambahkan ke daftar.':'Belum ada item aktif/review pada cabang ini.';
       }catch(e){status.textContent=e.message;}
     }
+    function markRequired(item) {
+      const required=new Set((item && item.preparation_schema && item.preparation_schema.required) || []);
+      ancillary.querySelectorAll('[data-anc-prep],[data-anc-text]').forEach(field=>{
+        const key=field.dataset.ancPrep||field.dataset.ancText,label=field.closest('div').querySelector('label');
+        if(label)label.textContent=field.dataset.ancLabel+(required.has(key)?' *':'');
+        field.required=required.has(key);
+      });
+    }
     selects.forEach((select,index)=>select.addEventListener('change',()=>{
       ++generation;selects.slice(index+1).forEach(child=>{child.replaceChildren(option('','— Pilih induk dahulu —'));child.disabled=true;});
       if(index<3 && select.value)load(index+1,select.value);
-      if(index===3){const box=document.getElementById('anc-variants');box.replaceChildren();const row=rows.get(select.value);if(row)Object.entries(row.variants || {}).forEach(([key,values])=>{const label=document.createElement('label');label.textContent=key;const choice=document.createElement('select');choice.className='form-select';choice.dataset.ancVariant=key;choice.append(option('','— Pilih varian —'));values.forEach(v=>choice.append(option(v,v)));box.append(label,choice);});}
+      if(index===3){const box=document.getElementById('anc-variants');box.replaceChildren();const row=rows.get(select.value);if(row)Object.entries(row.variants || {}).forEach(([key,values])=>{const label=document.createElement('label');label.textContent=key;const choice=document.createElement('select');choice.className='form-select';choice.dataset.ancVariant=key;choice.append(option('','— Pilih varian —'));values.forEach(v=>choice.append(option(v,v)));box.append(label,choice);});markRequired(row);}
     }));
     more.addEventListener('click',()=>load(last.level,last.parent,last.page+1,true));
     function render() {
@@ -121,9 +129,12 @@
       const item=rows.get(selects[3].value),indication=document.getElementById('anc-indication').value.trim();
       if(!item || !indication){error('Pilih item dan isi indikasi klinis.');return;}
       if(basket.some(row=>row.payload.item_id===item.id)){error('Item sudah ada pada daftar ini.');return;}
-      const preparation=Object.fromEntries([...ancillary.querySelectorAll('[data-anc-prep]')].map(e=>[e.dataset.ancPrep,e.value]));
-      if(document.getElementById('anc-site').value)preparation.site=document.getElementById('anc-site').value;
-      ancillary.querySelectorAll('[data-anc-variant]').forEach(e=>{preparation[e.dataset.ancVariant]=e.value;});
+      const preparation={};
+      ancillary.querySelectorAll('[data-anc-prep]').forEach(e=>{if(e.value)preparation[e.dataset.ancPrep]=e.value;});
+      ancillary.querySelectorAll('[data-anc-text]').forEach(e=>{const v=e.value.trim();if(v)preparation[e.dataset.ancText]=v;});
+      ancillary.querySelectorAll('[data-anc-variant]').forEach(e=>{if(e.value)preparation[e.dataset.ancVariant]=e.value;});
+      const missing=((item.preparation_schema && item.preparation_schema.required) || []).filter(key=>!preparation[key]);
+      if(missing.length){error('Lengkapi persiapan wajib: '+missing.map(key=>{const field=ancillary.querySelector('[data-anc-prep="'+key+'"],[data-anc-text="'+key+'"]');return field?field.dataset.ancLabel:key;}).join(', ')+'.');return;}
       const payload={item_id:item.id,prioritas:document.getElementById('anc-priority').value,indication,preparation};
       const diagnosis=document.getElementById('anc-diagnosis').value;if(diagnosis)payload.diagnosis_id=Number(diagnosis);
       basket.push({label:[...item.path.map(n=>n.nama),item.nama].join(' / '),payload});dirty.add(form);render();
