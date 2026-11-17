@@ -7,6 +7,7 @@ KEAMANAN:
 - Data medis sensitif (No RM, NIK, nama pasien) disanitasi sebelum dikirim ke API eksternal.
 - Setiap panggilan dicatat ke AuditLog.
 """
+import base64
 import re
 import json
 import time
@@ -70,13 +71,48 @@ def sanitize_hospital_prompt(text: str) -> str:
     return cleaned.strip()
 
 
+# ── GAMBAR → DATA URL ────────────────────────────────────────────────────
+
+_IMAGE_SIGNATURES = (
+    (b'\x89PNG\r\n\x1a\n', 'image/png'),
+    (b'\xff\xd8\xff', 'image/jpeg'),
+    (b'GIF87a', 'image/gif'),
+    (b'GIF89a', 'image/gif'),
+)
+
+
+def build_image_data_url(image_bytes: bytes) -> str:
+    """Bungkus byte gambar jadi data URL dengan MIME sesuai isi berkas.
+
+    Label MIME yang salah (mis. PNG diberi label image/jpeg) membuat sebagian
+    penyedia menolak permintaan, jadi tipenya dideteksi dari magic bytes.
+    """
+    if not image_bytes:
+        return ''
+    for signature, mime in _IMAGE_SIGNATURES:
+        if image_bytes.startswith(signature):
+            break
+    else:
+        if image_bytes[:4] == b'RIFF' and image_bytes[8:12] == b'WEBP':
+            mime = 'image/webp'
+        else:
+            mime = 'image/jpeg'
+    return f'data:{mime};base64,' + base64.b64encode(image_bytes).decode('ascii')
+
+
 # ── CORE API CALLER ──────────────────────────────────────────────────────
 
 def _call_deepseek(prompt: str, system_prompt: str = SYSTEM_PROMPT_RS,
                    model: str = None, temperature: float = None,
-                   max_tokens: int = None, timeout: int = None) -> dict:
+                   max_tokens: int = None, timeout: int = None,
+                   image_data_url: str = None) -> dict:
     """
     Panggil DeepSeek API dari backend. API Key TIDAK pernah bocor ke frontend.
+
+    ``image_data_url`` mengirim gambar sebagai content part ``image_url``.
+    Gambar TIDAK boleh disisipkan ke dalam teks prompt: model hanya menerima
+    piksel lewat content part, sehingga data URL di dalam teks akan terbaca
+    sebagai token sampah dan hasil ekstraksi selalu kosong.
 
     Returns:
         dict: {'success': bool, 'data': dict|None, 'error': str|None}
@@ -100,11 +136,18 @@ def _call_deepseek(prompt: str, system_prompt: str = SYSTEM_PROMPT_RS,
         'Content-Type': 'application/json',
     }
 
+    user_content = prompt
+    if image_data_url:
+        user_content = [
+            {'type': 'text', 'text': prompt},
+            {'type': 'image_url', 'image_url': {'url': image_data_url}},
+        ]
+
     payload = {
         'model': _model,
         'messages': [
             {'role': 'system', 'content': system_prompt},
-            {'role': 'user', 'content': prompt},
+            {'role': 'user', 'content': user_content},
         ],
         'temperature': _temp,
         'max_tokens': _max_tok,

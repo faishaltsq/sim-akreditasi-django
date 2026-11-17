@@ -5,10 +5,9 @@ fields are suggestions only — persistence still flows through
 validate_personal_data, so a bad read fails exactly where a manual typo would,
 and the operator reviews everything before saving (spec: Verifikasi Pengguna).
 """
-import base64
 import re
 
-from akreditasi.ai_service import _call_deepseek
+from akreditasi.ai_service import _call_deepseek, build_image_data_url
 
 KTP_OCR_FIELDS = (
     'nik', 'nama_lengkap', 'tempat_lahir', 'tanggal_lahir', 'gender', 'alamat',
@@ -57,17 +56,17 @@ def extract_ktp_fields(image_bytes: bytes, *, actor) -> dict:
     fields = {key: '' for key in KTP_OCR_FIELDS}
     if not image_bytes or _ai_disabled():
         return fields
-    data_url = 'data:image/jpeg;base64,' + base64.b64encode(image_bytes).decode()
     prompt = (
-        f'Gambar KTP (data URL): {data_url}\n'
-        'Baca KTP Indonesia di atas dan kembalikan JSON persis dengan kunci: '
+        'Baca KTP Indonesia pada gambar yang dilampirkan dan kembalikan JSON '
+        'persis dengan kunci: '
         '{"nik": str, "nama": str, "ttl": str, "gender": str, "alamat": str}. '
         'nik = 16 digit NIK. ttl = "Tempat, DD-MM-YYYY". gender = "L" atau "P". '
         'alamat = satu baris lengkap termasuk RT/RW, Kelurahan, Kecamatan, '
         'Kabupaten/Kota, Provinsi. Gunakan "" untuk bagian tidak terbaca.'
     )
     result = _call_deepseek(prompt, system_prompt=SYSTEM_PROMPT,
-                            temperature=0.0, max_tokens=600)
+                            temperature=0.0, max_tokens=600, timeout=90,
+                            image_data_url=build_image_data_url(image_bytes))
     if not result.get('success') or not isinstance(result.get('data'), dict):
         return fields
     data = result['data']

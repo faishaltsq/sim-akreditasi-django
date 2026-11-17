@@ -3,10 +3,9 @@
 Extracts demographic data into structured patient registration fields.
 Complies with STARKES SKP 1 (Two-Identifier Verification) and MRMIK standards.
 """
-import base64
 import re
 from datetime import date
-from akreditasi.ai_service import _call_deepseek
+from akreditasi.ai_service import _call_deepseek, build_image_data_url
 from pasien.services.ktp_validator import (
     parse_flexible_date,
     decode_nik,
@@ -105,10 +104,8 @@ def extract_ktp_pasien(image_bytes: bytes) -> dict:
     # 1. Primary path: DeepSeek Vision if enabled
     if not _ai_disabled():
         try:
-            data_url = 'data:image/jpeg;base64,' + base64.b64encode(image_bytes).decode('utf-8')
             prompt = (
-                f"Gambar KTP (data URL): {data_url}\n"
-                "Baca gambar KTP Indonesia di atas dengan teliti. "
+                "Baca gambar KTP Indonesia yang dilampirkan dengan teliti. "
                 "Kembalikan JSON dengan format persis:\n"
                 "{\n"
                 '  "nik": "16 digit angka",\n'
@@ -128,7 +125,9 @@ def extract_ktp_pasien(image_bytes: bytes) -> dict:
                 '  "pekerjaan": "PEKERJAAN"\n'
                 "}"
             )
-            ai_res = _call_deepseek(prompt, system_prompt=SYSTEM_PROMPT, temperature=0.0, max_tokens=700)
+            ai_res = _call_deepseek(prompt, system_prompt=SYSTEM_PROMPT, temperature=0.0,
+                                    max_tokens=700, timeout=90,
+                                    image_data_url=build_image_data_url(image_bytes))
             if ai_res.get('success') and isinstance(ai_res.get('data'), dict):
                 d = ai_res['data']
                 nik_raw = re.sub(r'\D', '', str(d.get('nik') or ''))
