@@ -1904,12 +1904,16 @@
                         const tgl = document.getElementById('tglLahirBaru');
                         if (tgl && !tgl.value) tgl.value = s.tglLahir;
                     }
-                    if (s.sex === 'L') {
-                        const jkL = document.getElementById('jkL');
-                        if (jkL) jkL.checked = true;
-                    } else if (s.sex === 'P') {
-                        const jkP = document.getElementById('jkP');
-                        if (jkP) jkP.checked = true;
+                    // Jangan timpa jenis kelamin hasil scan KTP: bridging NIK
+                    // (turunan digit tanggal) bisa berbeda dari kartu fisik.
+                    if (!window.__jkDariKtp) {
+                        if (s.sex === 'L') {
+                            const jkL = document.getElementById('jkL');
+                            if (jkL) jkL.checked = true;
+                        } else if (s.sex === 'P') {
+                            const jkP = document.getElementById('jkP');
+                            if (jkP) jkP.checked = true;
+                        }
                     }
                     if (s.noKartu) {
                         const bpjs = document.getElementById('bpjsBaruInput');
@@ -2446,9 +2450,11 @@
         if (d.jenis_kelamin === 'L') {
             const jkL = document.getElementById('jkL');
             if (jkL) jkL.checked = true;
+            window.__jkDariKtp = true;
         } else if (d.jenis_kelamin === 'P') {
             const jkP = document.getElementById('jkP');
             if (jkP) jkP.checked = true;
+            window.__jkDariKtp = true;
         }
 
         // Golongan Darah
