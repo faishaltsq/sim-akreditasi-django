@@ -2209,7 +2209,7 @@
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                'X-CSRFToken': ktpCsrfToken(),
                 'X-Requested-With': 'XMLHttpRequest'
             },
             body: JSON.stringify({ foto_ktp_base64: dataUrl })
@@ -2301,6 +2301,16 @@
 
     // r.json() melempar error pada 413/429/HTML, dan catch lama menelan pesannya
     // sehingga operator hanya melihat form kosong tanpa penjelasan.
+    // CSRF_COOKIE_HTTPONLY=True, jadi token hanya bisa dibaca dari hidden
+    // input hasil {% csrf_token %}; querySelector mentah akan melempar
+    // TypeError dan membuat overlay loading menggantung tanpa pesan.
+    function ktpCsrfToken() {
+        const el = document.querySelector('input[name=csrfmiddlewaretoken]');
+        if (el && el.value) return el.value;
+        const m = document.cookie.match(/(?:^|;\s*)csrftoken=([^;]+)/);
+        return m ? decodeURIComponent(m[1]) : '';
+    }
+
     function readOcrResponse(r) {
         return r.text().then(function (text) {
             try {
@@ -2337,7 +2347,7 @@
                 fetch('{% url "pasien:api_ocr_ktp" %}', {
                     method: 'POST',
                     headers: {
-                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                        'X-CSRFToken': ktpCsrfToken(),
                         'X-Requested-With': 'XMLHttpRequest'
                     },
                     body: formData
