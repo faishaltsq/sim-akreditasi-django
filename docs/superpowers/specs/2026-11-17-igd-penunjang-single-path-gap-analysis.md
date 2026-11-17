@@ -287,3 +287,42 @@ preparation.specimen=Sputum`, and the step-8 link advancing to `?step=8` with no
 Step 8 renders that order by name:
 `Penunjang: Tes Cepat Molekuler (TCM / GeneXpert TBC) — ORDERED · Belum ada hasil yang dapat dipakai`.
 
+### 8.4 Production deployment (2026-11-17)
+
+Production Supabase (`gwaeuzbbdawbekrmrvfd`, project `sim-akreditasi`) was inspected read-only
+before deploying, because the workspace cannot resolve a production connection string:
+`.env` has `DATABASE_URL=""`, `.env.production.local` and `vercel env pull` both return
+`[SENSITIVE]` placeholders, and `railway` is unauthenticated.
+
+```
+klinis_itempenunjang                      → 94 items
+active AND reviewed_by_id AND destination → 94   (0 without reviewer, 0 without destination)
+destinations                              → IGD 21, LAB-BDRS 49, RAD-IMAGING 24
+latest klinis migration                   → 0006_professional_configuration_rls (== HEAD)
+```
+
+Production was therefore already fully activated and its schema matched HEAD, so the deployment
+could not leave IGD without an order path.
+
+```
+git push origin master   → 9c94821..a0adff0
+vercel ls                → sim-akreditasi-django-m5gfr1iud  Ready  Production  40s
+vercel alias ls          → arima.web.id → m5gfr1iud
+https://arima.web.id/accounts/login/                    → 200 (csrf + username/password inputs)
+https://arima.web.id/pasien/kunjungan/1/asesmen-igd/?step=7 → 302 to login (auth intact)
+```
+
+**Deployment defect found and fixed:** Vercel serves the tracked `staticfiles/` tree, and
+`vercel.json` runs no `collectstatic`. The first deploy therefore shipped the pre-change
+`igd-clinical-expansion.js` (21,372 bytes, no `markRequired`, no preparation validation) while the
+source was 22,277 bytes. Fix: `manage.py collectstatic --noinput`, commit
+`staticfiles/js/igd-clinical-expansion.js`, its `.gz`, the new hashed artifact
+`igd-clinical-expansion.87cf6ad0d8fb.js` and `staticfiles.json`; push `a0adff0..0dd1592`.
+After redeploy the live asset contains `markRequired` (×2) and `Lengkapi persiapan wajib`, and the
+hashed URL answers 200.
+
+Not verified: the authenticated step-7 screen on production. No production credential exists in this
+workspace and none was guessed, so the cascade proof remains the disposable-database browser run plus
+the 60/71/28 green suites.
+
+
