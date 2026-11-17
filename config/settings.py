@@ -197,11 +197,30 @@ WSGI_APPLICATION = 'config.wsgi.application'
 
 DATABASE_URL = os.environ.get('DATABASE_URL')
 if DATABASE_URL:
+    # Supabase's session-mode pooler (port 5432) caps concurrent clients at 15,
+    # and Vercel opens a connection per concurrent function invocation. A modest
+    # burst therefore exhausts the pool and *every* page answers 500 with
+    # "EMAXCONNSESSION max clients reached in session mode". The transaction
+    # pooler (port 6543) multiplexes connections instead, which is what a
+    # serverless runtime needs. Rewritten here rather than in the environment so
+    # the secret stays in Vercel and local runs are unaffected.
+    _tx_pooler = bool(
+        os.environ.get('VERCEL')
+        and 'pooler.supabase.com' in DATABASE_URL
+        and ':5432/' in DATABASE_URL
+    )
+    if _tx_pooler:
+        DATABASE_URL = DATABASE_URL.replace(':5432/', ':6543/', 1)
+
     conn_age = 0 if os.environ.get('VERCEL') else 600
     db_config = dj_database_url.parse(DATABASE_URL, conn_max_age=conn_age)
     if DATABASE_URL.startswith('postgres') and 'railway' not in DATABASE_URL:
-        db_config['OPTIONS'] = {'sslmode': 'require'}
+        db_config['OPTIONS'] = {'sslmode': 'require', 'connect_timeout': 10}
     DATABASES = {'default': db_config}
+
+    # Transaction pooling forbids server-side cursors: the cursor's session may
+    # not be the one serving the next statement.
+    DISABLE_SERVER_SIDE_CURSORS = _tx_pooler
 else:
     DATABASES = {
         'default': {

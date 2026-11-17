@@ -40,7 +40,16 @@ def _auto_migrate():
     """
     from django.db import DatabaseError
 
-    pending = _pending_migrations()
+    try:
+        pending = _pending_migrations()
+    except Exception as exc:  # pragma: no cover - pool exhaustion, network blip
+        # A cold start that cannot reach the database must not take the whole
+        # app down: importing this module is what serves *every* route, so an
+        # exception here turns a transient connection error into a site-wide
+        # 500. Skip the check and let the request path surface its own error.
+        logger.warning('Auto-migrate skipped, database unavailable: %s', exc)
+        return
+
     if not pending:
         return
 

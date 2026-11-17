@@ -17,6 +17,33 @@ _CATALOGUE_IDENTITY_KEY = 'sidebar_catalogue_identity'
 _CATALOGUE_IDENTITY_TTL = 60
 
 
+def _cache_get(key, default=None):
+    """Read the cache without letting a cache outage break page rendering.
+
+    The cache backend is the database, so a pool exhaustion or a locked table
+    turns every cache read into a 500 on *every* page that renders the sidebar.
+    Degrading to a cache miss is always better than a dead site.
+    """
+    try:
+        return cache.get(key, default)
+    except Exception:
+        return default
+
+
+def _cache_set(key, value, timeout):
+    try:
+        cache.set(key, value, timeout)
+    except Exception:
+        pass
+
+
+def _cache_delete(key):
+    try:
+        cache.delete(key)
+    except Exception:
+        pass
+
+
 def invalidate_catalogue_caches():
     """Drop the sidebar's catalogue identity so the next request re-resolves it.
 
@@ -27,12 +54,12 @@ def invalidate_catalogue_caches():
     # The per-pokja aggregates are keyed on the catalogue identity, so dropping
     # the identity alone is not enough: the stale stats would still be served
     # from their own key until their 5-minute TTL expires.
-    identity = cache.get(_CATALOGUE_IDENTITY_KEY)
-    cache.delete(_CATALOGUE_IDENTITY_KEY)
+    identity = _cache_get(_CATALOGUE_IDENTITY_KEY)
+    _cache_delete(_CATALOGUE_IDENTITY_KEY)
     if identity is not None:
-        cache.delete(f'sidebar_stats:{identity}')
-    cache.delete('sidebar_rs_profile')
-    cache.delete('sidebar_sys_config')
+        _cache_delete(f'sidebar_stats:{identity}')
+    _cache_delete('sidebar_rs_profile')
+    _cache_delete('sidebar_sys_config')
 
 
 def _catalogue_identity():
@@ -42,13 +69,13 @@ def _catalogue_identity():
     is far too expensive for the per-request sidebar path. The resolved identity
     is therefore cached; a warm request performs no catalogue query at all.
     """
-    identity = cache.get(_CATALOGUE_IDENTITY_KEY)
+    identity = _cache_get(_CATALOGUE_IDENTITY_KEY)
     if identity is not None:
         return identity
 
     active = Framework.active()
     identity = f'{active.pk}:{active.edition}:{active.version}' if active else 'none'
-    cache.set(_CATALOGUE_IDENTITY_KEY, identity, _CATALOGUE_IDENTITY_TTL)
+    _cache_set(_CATALOGUE_IDENTITY_KEY, identity, _CATALOGUE_IDENTITY_TTL)
     return identity
 
 
@@ -59,9 +86,9 @@ def sidebar_context(request):
     # performs no catalogue lookups at all.
     version_key = _catalogue_identity()
 
-    framework = cache.get(f'sidebar_framework:{version_key}')
-    categories = cache.get(f'sidebar_categories:{version_key}')
-    categories_by_kelompok = cache.get(f'sidebar_categories_by_kelompok:{version_key}')
+    framework = _cache_get(f'sidebar_framework:{version_key}')
+    categories = _cache_get(f'sidebar_categories:{version_key}')
+    categories_by_kelompok = _cache_get(f'sidebar_categories_by_kelompok:{version_key}')
 
     if framework is None or categories is None:
         framework = Framework.active() if version_key != 'none' else None
@@ -84,9 +111,9 @@ def sidebar_context(request):
                         'count': len(k_cats),
                     }
 
-        cache.set(f'sidebar_framework:{version_key}', framework, _SIDEBAR_CACHE_TTL)
-        cache.set(f'sidebar_categories:{version_key}', categories, _SIDEBAR_CACHE_TTL)
-        cache.set(
+        _cache_set(f'sidebar_framework:{version_key}', framework, _SIDEBAR_CACHE_TTL)
+        _cache_set(f'sidebar_categories:{version_key}', categories, _SIDEBAR_CACHE_TTL)
+        _cache_set(
             f'sidebar_categories_by_kelompok:{version_key}',
             categories_by_kelompok, _SIDEBAR_CACHE_TTL,
         )
@@ -102,7 +129,7 @@ def sidebar_context(request):
         # they belong in the same 5-minute cache as the category list itself.
         # Recomputing them per request added 3 queries to every warm page.
         stats_key = f'sidebar_stats:{version_key}'
-        stats = cache.get(stats_key)
+        stats = _cache_get(stats_key)
         if stats is None:
             sums = {
                 row['standard_item__category']: (row['s'] or 0)
@@ -124,7 +151,7 @@ def sidebar_context(request):
                 .values('standard_item__category').annotate(n=Count('id'))
             }
             stats = (sums, counts, done)
-            cache.set(stats_key, stats, _SIDEBAR_CACHE_TTL)
+            _cache_set(stats_key, stats, _SIDEBAR_CACHE_TTL)
         sums, counts, done = stats
         for c in categories:
             c._pre_total = sums.get(c.id, 0)
@@ -132,19 +159,19 @@ def sidebar_context(request):
             c._pre_ep_total = counts.get(c.id, 0)
             c._pre_ep_selesai = done.get(c.id, 0)
 
-    rs_profile = cache.get('sidebar_rs_profile')
+    rs_profile = _cache_get('sidebar_rs_profile')
     if rs_profile is None:
         try:
             rs_profile = RumahSakitProfile.get_default()
-            cache.set('sidebar_rs_profile', rs_profile, _SIDEBAR_CACHE_TTL)
+            _cache_set('sidebar_rs_profile', rs_profile, _SIDEBAR_CACHE_TTL)
         except Exception:
             pass
 
-    sys_config = cache.get('sidebar_sys_config')
+    sys_config = _cache_get('sidebar_sys_config')
     if sys_config is None:
         try:
             sys_config = SystemConfig.get_solo()
-            cache.set('sidebar_sys_config', sys_config, _SIDEBAR_CACHE_TTL)
+            _cache_set('sidebar_sys_config', sys_config, _SIDEBAR_CACHE_TTL)
         except Exception:
             pass
 
