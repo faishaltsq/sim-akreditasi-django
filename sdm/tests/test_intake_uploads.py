@@ -341,12 +341,16 @@ class KtpOcrAutoFillTests(TestCase):
             },
         )
 
-    def _patched(self, ocr_return=None, ocr_side_effect=None):
+    def _patched(self, ocr_return=None, ocr_side_effect=None, ocr_error=''):
+        # The view calls extract_ktp_fields_detailed -> (fields, error) so a
+        # failed read can be reported instead of silently blanking the form.
+        fields = ocr_return if ocr_return is not None else {}
         return (
             patch('sdm.intake_views.get_private_storage',
                   return_value=self.storage),
-            patch('sdm.intake_views.extract_ktp_fields',
-                  return_value=ocr_return, side_effect=ocr_side_effect),
+            patch('sdm.intake_views.extract_ktp_fields_detailed',
+                  return_value=(fields, ocr_error),
+                  side_effect=ocr_side_effect),
         )
 
     def test_ktp_upload_writes_ocr_fields_into_draft_step1(self):
@@ -410,3 +414,21 @@ class KtpOcrAutoFillTests(TestCase):
             ).count(),
             1,
         )
+
+    def test_ocr_error_reason_is_shown_to_the_operator(self):
+        """A blank form with no explanation is what made OCR look broken."""
+        from django.contrib.messages import get_messages
+        storage_patch, ocr_patch = self._patched(
+            ocr_return={'nik': ''},
+            ocr_error='API Key DeepSeek belum dikonfigurasi.',
+        )
+        with storage_patch, ocr_patch:
+            response = self._post_step5()
+        self.assertEqual(response.status_code, 302)
+        texts = [str(m) for m in get_messages(response.wsgi_request)]
+        self.assertTrue(
+            any('API Key DeepSeek belum dikonfigurasi' in t for t in texts),
+            texts,
+        )
+        self.draft.refresh_from_db()
+        self.assertEqual(self.draft.draft_data['1'].get('nama_depan'), 'Budi')

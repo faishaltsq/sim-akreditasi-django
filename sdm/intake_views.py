@@ -31,7 +31,7 @@ from sdm.services.intake import (
     remove_intake_attachment,
     stage_intake_attachment,
 )
-from sdm.services.ktp_ocr import extract_ktp_fields
+from sdm.services.ktp_ocr import extract_ktp_fields, extract_ktp_fields_detailed
 
 
 STEP_FORMS = {
@@ -65,11 +65,23 @@ def _run_ktp_ocr(request, draft, storage_key):
     """
     try:
         data = get_private_storage().fetch_object(storage_key)
-        fields = extract_ktp_fields(data, actor=request.user)
     except Exception:
         messages.warning(
             request,
-            'KTP tersimpan, namun pembacaan otomatis (OCR) tidak berhasil. '
+            'KTP tersimpan, namun berkas tidak dapat dibaca dari penyimpanan. '
+            'Lengkapi data identitas secara manual.',
+        )
+        return
+
+    fields, ocr_error = {}, ''
+    try:
+        fields, ocr_error = extract_ktp_fields_detailed(data, actor=request.user)
+    except Exception as exc:
+        ocr_error = f'kesalahan internal ({exc.__class__.__name__})'
+    if ocr_error:
+        messages.warning(
+            request,
+            f'KTP tersimpan, namun pembacaan otomatis (OCR) tidak berhasil: {ocr_error} '
             'Lengkapi data identitas secara manual.',
         )
         return

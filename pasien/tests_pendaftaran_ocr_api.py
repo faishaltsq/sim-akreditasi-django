@@ -130,3 +130,108 @@ class PendaftaranOcrApiTest(TestCase):
         # Verify foto_ktp is stored
         self.assertTrue(bool(p.foto_ktp))
         self.assertIn('pasien/ktp/', p.foto_ktp.name)
+
+    # --- camera path + visible failures -----------------------------------
+    # The template's webcam capture posts {"foto_ktp_base64": ...}; the view
+    # used to read only "image_base64", so every camera scan returned 400
+    # "Berkas gambar KTP tidak ditemukan" while file upload worked.
+
+    KTP_AI_PAYLOAD = {
+        'success': True,
+        'data': {
+            'nik': '3273016508900002',
+            'nama': 'Siti Rahmawati',
+            'tempat_lahir': 'Bandung',
+            'tanggal_lahir': '1990-08-25',
+            'gender': 'P',
+            'golongan_darah': 'O',
+            'alamat': 'Jl. Riau No. 123',
+            'rt_rw': '004/002',
+            'kelurahan': 'Cihapit',
+            'kecamatan': 'Bandung Wetan',
+            'kota_kabupaten': 'Kota Bandung',
+            'provinsi': 'Jawa Barat',
+            'agama': 'ISLAM',
+            'status_perkawinan': 'MENIKAH',
+            'pekerjaan': 'Wiraswasta',
+        },
+        'error': None,
+    }
+
+    @mock.patch.object(ktp_ocr, '_call_deepseek')
+    def test_webcam_json_foto_ktp_base64_is_accepted(self, mock_ai):
+        import base64
+        self._enable_ai()
+        mock_ai.return_value = self.KTP_AI_PAYLOAD
+        data_url = 'data:image/jpeg;base64,' + base64.b64encode(b'\xff\xd8webcamktp').decode()
+        res = self.client.post(
+            reverse('pasien:api_ocr_ktp'),
+            data=json.dumps({'foto_ktp_base64': data_url}),
+            content_type='application/json',
+            HTTP_X_REQUESTED_WITH='XMLHttpRequest',
+        )
+        self.assertEqual(res.status_code, 200)
+        body = res.json()
+        self.assertTrue(body['success'], body)
+        self.assertEqual(body['data']['nik'], '3273016508900002')
+        self.assertTrue(mock_ai.called)
+
+    @mock.patch.object(ktp_ocr, '_call_deepseek')
+    def test_webcam_json_image_base64_still_accepted(self, mock_ai):
+        import base64
+        self._enable_ai()
+        mock_ai.return_value = self.KTP_AI_PAYLOAD
+        data_url = 'data:image/jpeg;base64,' + base64.b64encode(b'\xff\xd8webcamktp').decode()
+        res = self.client.post(
+            reverse('pasien:api_ocr_ktp'),
+            data=json.dumps({'image_base64': data_url}),
+            content_type='application/json',
+            HTTP_X_REQUESTED_WITH='XMLHttpRequest',
+        )
+        self.assertEqual(res.status_code, 200)
+        self.assertTrue(res.json()['success'])
+
+    @mock.patch.object(ktp_ocr, '_call_deepseek')
+    def test_provider_error_is_surfaced_not_swallowed(self, mock_ai):
+        self._enable_ai()
+        mock_ai.return_value = {'success': False, 'data': None,
+                                'error': 'DeepSeek HTTP 401: Authentication Fails'}
+        res = self.client.post(
+            reverse('pasien:api_ocr_ktp'),
+            {'foto_ktp': SimpleUploadedFile('ktp.jpg', b'\xff\xd8ktp', content_type='image/jpeg')},
+        )
+        self.assertEqual(res.status_code, 200)
+        body = res.json()
+        self.assertFalse(body['success'])
+        self.assertIn('401', body['error'])
+
+    @mock.patch.object(ktp_ocr, '_call_deepseek')
+    def test_unreadable_image_reports_no_text_found(self, mock_ai):
+        self._enable_ai()
+        mock_ai.return_value = {'success': True, 'data': {'nik': '', 'nama': ''}, 'error': None}
+        res = self.client.post(
+            reverse('pasien:api_ocr_ktp'),
+            {'foto_ktp': SimpleUploadedFile('ktp.jpg', b'\xff\xd8ktp', content_type='image/jpeg')},
+        )
+        body = res.json()
+        self.assertFalse(body['success'])
+        self.assertIn('Tidak ada teks KTP', body['error'])
+
+    def test_disabled_ai_reports_configuration_reason(self):
+        from akreditasi.system_models import SystemConfig
+        config = SystemConfig.get_solo()
+        config.ai_enabled = False
+        config.ai_api_key = ''
+        config.save()
+        res = self.client.post(
+            reverse('pasien:api_ocr_ktp'),
+            {'foto_ktp': SimpleUploadedFile('ktp.jpg', b'\xff\xd8ktp', content_type='image/jpeg')},
+        )
+        body = res.json()
+        self.assertFalse(body['success'])
+        self.assertIn('AI', body['error'])
+
+    def test_missing_image_returns_400_with_hint(self):
+        res = self.client.post(reverse('pasien:api_ocr_ktp'), {})
+        self.assertEqual(res.status_code, 400)
+        self.assertIn('foto_ktp', res.json()['error'])

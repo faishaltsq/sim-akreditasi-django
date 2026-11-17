@@ -94,3 +94,40 @@ class ExtractKtpFieldsTests(TestCase):
         ktp_ocr.extract_ktp_fields(png, actor=None)
 
         self.assertTrue(ai.call_args.kwargs['image_data_url'].startswith('data:image/png;base64,'))
+
+    # --- detailed variant: the caller must be able to say why --------------
+
+    @mock.patch.object(ktp_ocr, '_call_deepseek')
+    def test_detailed_surfaces_provider_error(self, ai):
+        self._enable_ai()
+        ai.return_value = {'success': False, 'data': None, 'error': 'DeepSeek HTTP 401: Authentication Fails'}
+        fields, error = ktp_ocr.extract_ktp_fields_detailed(b'\xff\xd8\xffstub', actor=None)
+        self.assertEqual(fields, {key: '' for key in ktp_ocr.KTP_OCR_FIELDS})
+        self.assertIn('401', error)
+
+    @mock.patch.object(ktp_ocr, '_call_deepseek')
+    def test_detailed_reports_blank_read_as_unreadable(self, ai):
+        self._enable_ai()
+        ai.return_value = self._ai({'nik': '', 'nama': ''})
+        fields, error = ktp_ocr.extract_ktp_fields_detailed(b'\xff\xd8\xffstub', actor=None)
+        self.assertEqual(fields, {key: '' for key in ktp_ocr.KTP_OCR_FIELDS})
+        self.assertIn('Tidak ada teks KTP', error)
+
+    @mock.patch.object(ktp_ocr, '_call_deepseek')
+    def test_detailed_reports_missing_api_key(self, ai):
+        from akreditasi.system_models import SystemConfig
+        config = SystemConfig.get_solo()
+        config.ai_enabled = True
+        config.ai_api_key = ''
+        config.save()
+        fields, error = ktp_ocr.extract_ktp_fields_detailed(b'\xff\xd8\xffstub', actor=None)
+        ai.assert_not_called()
+        self.assertIn('API Key', error)
+
+    @mock.patch.object(ktp_ocr, '_call_deepseek')
+    def test_detailed_success_returns_no_error(self, ai):
+        self._enable_ai()
+        ai.return_value = self._ai({'nik': '3204012509880003', 'nama': 'Rina'})
+        fields, error = ktp_ocr.extract_ktp_fields_detailed(b'\xff\xd8\xffstub', actor=None)
+        self.assertEqual(error, '')
+        self.assertEqual(fields['nik'], '3204012509880003')

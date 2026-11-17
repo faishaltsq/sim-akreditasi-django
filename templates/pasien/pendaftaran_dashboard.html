@@ -2186,8 +2186,13 @@
         const canvas = document.getElementById('ktpWebcamCanvas');
         if (!video || !canvas) return;
 
-        canvas.width = video.videoWidth || 640;
-        canvas.height = video.videoHeight || 480;
+        // Batasi sisi terpanjang 1600 px: cukup untuk OCR, jauh di bawah
+        // batas body request Vercel (4.5 MB).
+        const vw = video.videoWidth || 640;
+        const vh = video.videoHeight || 480;
+        const scale = Math.min(1, 1600 / Math.max(vw, vh));
+        canvas.width = Math.round(vw * scale);
+        canvas.height = Math.round(vh * scale);
         const ctx = canvas.getContext('2d');
         ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
         const dataUrl = canvas.toDataURL('image/jpeg', 0.88);
@@ -2209,7 +2214,7 @@
             },
             body: JSON.stringify({ foto_ktp_base64: dataUrl })
         })
-        .then(r => r.json())
+        .then(readOcrResponse)
         .then(data => {
             if (loading) loading.classList.add('d-none');
             const modalEl = document.getElementById('modalScanKtp');
@@ -2227,6 +2232,7 @@
         .catch(err => {
             if (loading) loading.classList.add('d-none');
             console.error('Error OCR webcam:', err);
+            alert('OCR KTP gagal dihubungi: ' + err.message);
             showKtpThumbnail(dataUrl, 'Foto KTP Tersimpan');
         });
     }
@@ -2265,54 +2271,101 @@
         uploadKtpFileToOcr(file);
     }
 
+    // Kompres di browser: foto HP 4-6 MB melewati batas body request Vercel
+    // (4.5 MB), jadi OCR gagal sebelum sempat jalan. 1600 px cukup untuk KTP.
+    function compressKtpImage(file, maxDim = 1600, quality = 0.85) {
+        return new Promise(function (resolve) {
+            if (!file || !/^image\//.test(file.type || '')) return resolve(file);
+            const url = URL.createObjectURL(file);
+            const img = new Image();
+            img.onload = function () {
+                const scale = Math.min(1, maxDim / Math.max(img.width, img.height));
+                if (scale === 1 && file.size < 1.5 * 1024 * 1024) {
+                    URL.revokeObjectURL(url);
+                    return resolve(file);
+                }
+                const canvas = document.createElement('canvas');
+                canvas.width = Math.round(img.width * scale);
+                canvas.height = Math.round(img.height * scale);
+                canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+                canvas.toBlob(function (blob) {
+                    URL.revokeObjectURL(url);
+                    if (!blob) return resolve(file);
+                    resolve(new File([blob], 'ktp.jpg', { type: 'image/jpeg' }));
+                }, 'image/jpeg', quality);
+            };
+            img.onerror = function () { URL.revokeObjectURL(url); resolve(file); };
+            img.src = url;
+        });
+    }
+
+    // r.json() melempar error pada 413/429/HTML, dan catch lama menelan pesannya
+    // sehingga operator hanya melihat form kosong tanpa penjelasan.
+    function readOcrResponse(r) {
+        return r.text().then(function (text) {
+            try {
+                const parsed = JSON.parse(text);
+                if (parsed && typeof parsed === 'object') return parsed;
+            } catch (e) { /* bukan JSON */ }
+            if (r.status === 413) return { success: false, error: 'Foto terlalu besar untuk diunggah. Perkecil foto lalu ulangi.' };
+            if (r.status === 429) return { success: false, error: 'Terlalu banyak permintaan. Tunggu 1 menit lalu ulangi.' };
+            if (r.status === 403) return { success: false, error: 'Akses ditolak: akun Anda tidak punya wewenang modul pendaftaran.' };
+            if (r.status === 504 || r.status === 502) return { success: false, error: 'Server kehabisan waktu memproses OCR. Coba lagi.' };
+            return { success: false, error: 'Server membalas HTTP ' + r.status + '. Coba lagi atau isi manual.' };
+        });
+    }
+
     function uploadKtpFileToOcr(file) {
         const loading = document.getElementById('ktpOcrLoading');
         if (loading) loading.classList.remove('d-none');
 
-        // Update input file form
-        const mainInput = document.getElementById('fotoKtpInput');
-        if (mainInput && typeof DataTransfer !== 'undefined') {
-            const dt = new DataTransfer();
-            dt.items.add(file);
-            mainInput.files = dt.files;
-        }
+        compressKtpImage(file).then(function (prepared) {
+            // Simpan versi terkompresi ke form agar unggahan simpan juga ringan
+            const mainInput = document.getElementById('fotoKtpInput');
+            if (mainInput && typeof DataTransfer !== 'undefined') {
+                const dt = new DataTransfer();
+                dt.items.add(prepared);
+                mainInput.files = dt.files;
+            }
 
-        const formData = new FormData();
-        formData.append('foto_ktp', file);
+            const formData = new FormData();
+            formData.append('foto_ktp', prepared);
 
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            const fileDataUrl = e.target.result;
-            fetch('{% url "pasien:api_ocr_ktp" %}', {
-                method: 'POST',
-                headers: {
-                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
-                    'X-Requested-With': 'XMLHttpRequest'
-                },
-                body: formData
-            })
-            .then(r => r.json())
-            .then(data => {
-                if (loading) loading.classList.add('d-none');
-                const modalEl = document.getElementById('modalScanKtp');
-                if (modalEl && typeof bootstrap !== 'undefined') {
-                    const modal = bootstrap.Modal.getInstance(modalEl);
-                    if (modal) modal.hide();
-                }
-                if (data.success && data.data) {
-                    applyOcrResult(data.data, fileDataUrl);
-                } else {
-                    alert('OCR KTP: ' + (data.error || 'Gagal mengekstrak data e-KTP. Mohon verifikasi manual.'));
-                    showKtpThumbnail(fileDataUrl, 'Foto KTP Tersimpan (Isi Manual)');
-                }
-            })
-            .catch(err => {
-                if (loading) loading.classList.add('d-none');
-                console.error('Error OCR file:', err);
-                showKtpThumbnail(fileDataUrl, 'Foto KTP Tersimpan');
-            });
-        };
-        reader.readAsDataURL(file);
+            const reader = new FileReader();
+            reader.onload = function (e) {
+                const fileDataUrl = e.target.result;
+                fetch('{% url "pasien:api_ocr_ktp" %}', {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    body: formData
+                })
+                .then(readOcrResponse)
+                .then(data => {
+                    if (loading) loading.classList.add('d-none');
+                    const modalEl = document.getElementById('modalScanKtp');
+                    if (modalEl && typeof bootstrap !== 'undefined') {
+                        const modal = bootstrap.Modal.getInstance(modalEl);
+                        if (modal) modal.hide();
+                    }
+                    if (data.success && data.data) {
+                        applyOcrResult(data.data, fileDataUrl);
+                    } else {
+                        alert('OCR KTP: ' + (data.error || 'Gagal mengekstrak data e-KTP. Mohon verifikasi manual.'));
+                        showKtpThumbnail(fileDataUrl, 'Foto KTP Tersimpan (Isi Manual)');
+                    }
+                })
+                .catch(err => {
+                    if (loading) loading.classList.add('d-none');
+                    console.error('Error OCR file:', err);
+                    alert('OCR KTP gagal dihubungi: ' + err.message);
+                    showKtpThumbnail(fileDataUrl, 'Foto KTP Tersimpan');
+                });
+            };
+            reader.readAsDataURL(prepared);
+        });
     }
 
     function showKtpThumbnail(imgUrl, title) {

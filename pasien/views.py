@@ -892,6 +892,66 @@ def api_cek_nik(request):
     return JsonResponse(resp)
 
 
+_KTP_MAX_BYTES = 8 * 1024 * 1024
+_KTP_BASE64_KEYS = ('foto_ktp_base64', 'image_base64', 'foto_ktp', 'image', 'file')
+
+
+def _decode_ktp_base64(raw):
+    """Decode a data URL or bare base64 string into bytes, or None."""
+    import base64
+    import binascii
+    if not raw or not isinstance(raw, str):
+        return None
+    payload = raw.strip()
+    if payload.startswith('data:') and ',' in payload:
+        payload = payload.split(',', 1)[1]
+    payload = ''.join(payload.split())
+    payload += '=' * (-len(payload) % 4)
+    try:
+        return base64.b64decode(payload, validate=False)
+    except (binascii.Error, ValueError):
+        return None
+
+
+def _ktp_image_bytes_from_request(request):
+    """Return ``(image_bytes, error)`` for every upload shape the UI can send.
+
+    The camera path posts ``{"foto_ktp_base64": "data:image/jpeg;base64,..."}``
+    while the file path posts multipart ``foto_ktp``. Accepting only
+    ``image_base64`` silently broke the camera scan with a 400.
+    """
+    for field in ('foto_ktp', 'image', 'file', 'ktp'):
+        upload = request.FILES.get(field)
+        if upload is not None:
+            data = upload.read()
+            if not data:
+                return None, 'Berkas gambar KTP kosong.'
+            if len(data) > _KTP_MAX_BYTES:
+                return None, 'Ukuran gambar KTP terlalu besar (maks 8 MB). Perkecil foto lalu ulangi.'
+            return data, ''
+
+    payload = {}
+    if request.content_type == 'application/json':
+        import json
+        try:
+            payload = json.loads(request.body or b'{}')
+        except Exception:
+            return None, 'Body JSON tidak valid.'
+        if not isinstance(payload, dict):
+            return None, 'Body JSON harus berupa objek.'
+    else:
+        payload = request.POST
+
+    for key in _KTP_BASE64_KEYS:
+        data = _decode_ktp_base64(payload.get(key))
+        if data:
+            if len(data) > _KTP_MAX_BYTES:
+                return None, 'Ukuran gambar KTP terlalu besar (maks 8 MB). Perkecil foto lalu ulangi.'
+            return data, ''
+
+    return None, 'Berkas gambar KTP tidak ditemukan. Kirim multipart "foto_ktp" atau JSON "foto_ktp_base64".'
+
+
 @login_required
 @require_patient_module('pendaftaran')
 def api_ocr_ktp(request):
@@ -902,34 +962,19 @@ def api_ocr_ktp(request):
     if request.method != 'POST':
         return JsonResponse({'success': False, 'error': 'Method not allowed'}, status=405)
 
-    image_bytes = None
-    if 'foto_ktp' in request.FILES:
-        image_bytes = request.FILES['foto_ktp'].read()
-    else:
-        b64_data = request.POST.get('image_base64')
-        if not b64_data and request.content_type == 'application/json':
-            import json
-            try:
-                body = json.loads(request.body)
-                b64_data = body.get('image_base64')
-            except Exception:
-                pass
-        if b64_data:
-            import base64
-            if ',' in b64_data:
-                b64_data = b64_data.split(',', 1)[1]
-            try:
-                image_bytes = base64.b64decode(b64_data)
-            except Exception:
-                pass
-
+    image_bytes, extract_error = _ktp_image_bytes_from_request(request)
     if not image_bytes:
-        return JsonResponse({'success': False, 'error': 'Berkas gambar KTP tidak ditemukan'}, status=400)
+        return JsonResponse({'success': False, 'error': extract_error}, status=400)
 
-    from .services.ktp_ocr import extract_ktp_pasien
+    from .services.ktp_ocr import extract_ktp_pasien_detailed
     from .services.ktp_validator import decode_nik
 
-    data = extract_ktp_pasien(image_bytes)
+    data, ocr_error = extract_ktp_pasien_detailed(image_bytes)
+    if ocr_error:
+        # 200 + success=False so the browser shows the reason instead of a
+        # silent blank form (the old behaviour hid every failure mode).
+        return JsonResponse({'success': False, 'error': ocr_error, 'data': data})
+
     nik = data.get('nik', '')
     profile = getattr(request.user, 'profile', None)
     qs = scope_pasien_qs(Pasien.objects.all(), profile)
