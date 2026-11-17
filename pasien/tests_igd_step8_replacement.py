@@ -12,7 +12,7 @@ from django.test import override_settings
 from django.urls import reverse
 
 from accounts.models import UserProfile
-from pasien.forms_igd_workflow import LEGACY_STEP8_FIELDS, STEPS, snapshot_visit_fields
+from pasien.forms_igd_workflow import LEGACY_STEP7_FIELDS, LEGACY_STEP8_FIELDS, STEPS, snapshot_visit_fields
 from pasien.models import IgdAssessmentRevision, IgdAssessmentWorkflow
 from pasien.services.igd_actions import digest, perform_action
 from pasien.services.igd_finalization import EXEMPTIONS, clinical_snapshot
@@ -205,7 +205,8 @@ class Step8ReplacementTest(IgdWorkflowTest):
         self.historical_notes()
         workflow = IgdAssessmentWorkflow.objects.create(kunjungan=self.visit, origin_unit=self.unit,
             exemptions={name: 'Tidak diindikasikan pada kasus sintetis' for name in EXEMPTIONS})
-        previous_fields = sorted({name for _, names in STEPS.values() for name in names} | {'tatalaksana_resusitasi', 'tatalaksana_terapi'})
+        previous_fields = sorted({name for _, names in STEPS.values() for name in names}
+                                 | set(LEGACY_STEP8_FIELDS) | set(LEGACY_STEP7_FIELDS))
         with patch('pasien.services.igd_finalization.snapshot_visit_fields', return_value=previous_fields):
             previous = clinical_snapshot(self.visit, workflow)
             signed = perform_action(self.visit.pk, self.user, 'sign', {'section': 'MEDIS'}, 0, str(uuid4()))

@@ -362,8 +362,23 @@ def igd_workflow_resume(request,pk):
         raise Http404
     from .services.igd_actions import digest
     from .models import KunjunganPasien
-    saved = {name:revision.snapshot.get('visit',{}).get(name) for name in snapshot_visit_fields()}
-    sections = [{'number':number,'title':title,'rows':[{'label':KunjunganPasien._meta.get_field(name).verbose_name,'value':saved.get(name)} for name in names]} for number,(title,names) in STEPS.items() if names and number!=6]
+    snapshot_visit = revision.snapshot.get('visit',{}) or {}
+    # Jangan padding field yang tidak tercatat di snapshot: "tidak ada di
+    # snapshot" harus tetap bisa dibedakan dari "dicatat kosong", karena
+    # partial pemeriksaan fisik membedakan keduanya.
+    saved = {name:snapshot_visit[name] for name in snapshot_visit_fields() if name in snapshot_visit}
+    sections = []
+    for number,(title,names) in STEPS.items():
+        if number==6:
+            # Pemeriksaan fisik punya partial sendiri (data terstruktur, bukan
+            # field datar). Tandai eksplisit: nomor langkah bergeser setiap kali
+            # alur IGD ditata ulang, dan penanda berbasis nomor sudah pernah
+            # membuat blok ini hilang dari resume.
+            sections.append({'number':number,'title':title,'rows':[],'is_physical_exam':True})
+            continue
+        if not names:
+            continue
+        sections.append({'number':number,'title':title,'is_physical_exam':False,'rows':[{'label':KunjunganPasien._meta.get_field(name).verbose_name,'value':saved.get(name)} for name in names]})
     from .physical_exam import exam_context
     physical_exam = exam_context(saved.get('fisik_head_to_toe'),saved.get('secondary_survey_detail'),saved)
     from .services.professional_presentation import professional_panel_context
