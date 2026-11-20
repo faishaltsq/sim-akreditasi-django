@@ -1,0 +1,9 @@
+{
+  "_contract": "Antrean Online RS v2 POST /antrean/updatewaktu. taskid 3 = check-in APM / mulai waktu tunggu poli. 'waktu' dalam epoch milidetik.",
+  "metadata": { "code": 200, "message": "Ok" },
+  "response": {
+    "kodebooking": "APM-20261008-0001",
+    "taskid": 3,
+    "waktu": 1791455700000
+  }
+}

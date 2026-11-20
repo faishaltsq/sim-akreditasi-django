@@ -1,0 +1,15 @@
+{
+  "_contract": "Antrean Online RS v2 POST /antrean/add sukses. kodebooking yang dipakai pada updatewaktu WAJIB berasal dari respons ini.",
+  "metadata": { "code": 200, "message": "Ok" },
+  "response": {
+    "kodebooking": "APM-20261008-0001",
+    "nomorantrean": "JTG-005",
+    "angkaantrean": 5,
+    "estimasidilayani": 1791456000000,
+    "namapoli": "JANTUNG",
+    "namadokter": "dr. Faisal, Sp.JP",
+    "sisaantrean": 3,
+    "antreanpanggil": "JTG-002",
+    "keterangan": ""
+  }
+}

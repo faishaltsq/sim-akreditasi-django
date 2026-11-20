@@ -35,7 +35,9 @@
 
     <div class="box">
         <table class="sep-table">
-            <tr><td class="label">No. SEP</td><td class="separator">:</td><td><strong style="font-size:12pt; font-family:monospace;">{{ no_sep }}</strong></td></tr>
+            <tr><td class="label">No. SEP</td><td class="separator">:</td><td><strong style="font-size:12pt; font-family:monospace;">{{ no_sep }}</strong>
+                {% if sep_simulasi %}<span style="color:#b00020; font-weight:bold;"> *** SIMULASI — BUKAN SEP BPJS ***</span>{% endif %}
+            </td></tr>
             <tr><td class="label">Tgl. SEP</td><td class="separator">:</td><td>{{ k.tanggal_masuk|date:"d/m/Y" }}</td></tr>
         </table>
     </div>

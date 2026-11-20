@@ -16,12 +16,25 @@
 <div id="message" role="alert" hidden></div>
 <section id="welcome" class="panel">
 <h2>Silakan pilih layanan</h2>
+<button type="button" id="igd-start" class="emergency entry" style="width:100%;margin-bottom:18px;min-height:104px;font-size:clamp(20px,3vw,30px)">GAWAT DARURAT — IGD Fast-Track</button>
+<p class="muted" style="margin-top:0">Kondisi gawat darurat tidak perlu rujukan, antrean poli, maupun verifikasi biometrik. Petugas akan langsung melakukan triase IGD.</p>
 <div class="grid">
 <button type="button" class="entry" data-start="BARU">Pasien Baru</button>
 <button type="button" class="entry" data-start="LAMA">Pasien Lama</button>
 <button type="button" class="entry" id="open-checkin">Check-In Barcode</button>
 </div>
-<p class="muted">Untuk IGD, pilih identitas pasien lalu tekan layanan IGD Fast-Track.</p>
+</section>
+<section id="emergency" class="panel" hidden>
+<h2>Registrasi Darurat IGD</h2>
+<p class="muted">Cukup isi nama pasien. Data lain dapat dilengkapi petugas setelah pasien ditangani.</p>
+<form id="emergency-form">
+{% csrf_token %}
+<label>Nama pasien<input name="nama_lengkap" required autocomplete="off" maxlength="200"></label>
+<label>Nomor WhatsApp (opsional)<input name="no_wa" type="tel" autocomplete="off"></label>
+<label>NIK / No. BPJS (opsional)<input name="no_bpjs" inputmode="numeric" autocomplete="off"></label>
+<div class="actions"><button type="submit" class="emergency">Daftarkan Sekarang</button><button type="button" class="secondary" data-home>Kembali</button></div>
+</form>
+<p id="emergency-result" aria-live="polite"></p>
 </section>
 <section id="identity" class="panel" hidden>
 <h2>1. Identitas pasien</h2>
@@ -46,7 +59,6 @@
 </section>
 <section id="service" class="panel" hidden>
 <h2>2. Pilih layanan dan dokter</h2>
-<button type="button" id="igd" class="emergency">IGD Fast-Track — Lewati antrean poli</button>
 <label>Poliklinik<select id="clinic"><option value="">Pilih poliklinik</option>{% for poli in daftar_poli %}<option value="{{ poli.kode }}">{{ poli.nama }}</option>{% endfor %}</select></label>
 <div id="doctors" class="grid" aria-live="polite"></div>
 <div class="actions"><button type="button" class="secondary" id="back-identity">Kembali ke identitas</button></div>
@@ -66,17 +78,20 @@
 <section id="checkin" class="panel" hidden>
 <h2>Check-In Barcode</h2>
 <form id="checkin-form"><label>Nama lengkap<input id="checkin-name" required autocomplete="off"></label><label>Tanggal lahir<input id="checkin-dob" type="date" required></label><label>Kode booking — pindai dengan scanner atau ketik manual<input id="booking" required autocomplete="off"></label><button type="submit">Konfirmasi Check-In</button><button type="button" class="secondary" data-home>Kembali</button></form>
+<div class="actions"><button type="button" class="secondary" id="bio-verify">Verifikasi Biometrik (poli wajib biometrik)</button></div>
+<p id="bio-result" aria-live="polite"></p>
 <p id="checkin-result" aria-live="polite"></p>
 </section>
 </main>
 <script>
 'use strict';
-const urls = {lookup: "{% url 'pasien:apm_api_cari_pasien' %}", schedule: "{% url 'pasien:apm_api_jadwal_dokter' %}", register: "{% url 'pasien:apm_api_daftar' %}", checkin: "{% url 'pasien:apm_api_checkin' %}"};
+const urls = {lookup: "{% url 'pasien:apm_api_cari_pasien' %}", schedule: "{% url 'pasien:apm_api_jadwal_dokter' %}", register: "{% url 'pasien:apm_api_daftar' %}", checkin: "{% url 'pasien:apm_api_checkin' %}", igd: "{% url 'pasien:apm_api_igd_fasttrack' %}", biometrik: "{% url 'pasien:apm_api_biometrik' %}", reset: "{% url 'pasien:apm_api_sesi_reset' %}"};
+const IDLE_DETIK = {{ idle_timeout|default:90 }};
 const $ = id => document.getElementById(id);
 let state = {}, resetTimer, scheduleRequest = 0;
-function show(id) { ['welcome','identity','service','confirm','ticket','checkin'].forEach(name => $(name).hidden = name !== id); $('message').hidden = true; window.scrollTo(0,0); }
+function show(id) { ['welcome','emergency','identity','service','confirm','ticket','checkin'].forEach(name => $(name).hidden = name !== id); $('message').hidden = true; window.scrollTo(0,0); }
 function message(text) { $('message').textContent = text; $('message').hidden = false; }
-function home() { clearInterval(resetTimer); state = {}; scheduleRequest++; $('identity-form').reset(); $('checkin-form').reset(); $('clinic').value = ''; $('insurance').value = 'UMUM'; $('lookup').value = ''; ['found','doctors','ticket-detail','queue','checkin-result'].forEach(id => $(id).replaceChildren()); $('receipt').removeAttribute('href'); show('welcome'); }
+function home() { clearInterval(resetTimer); state = {}; scheduleRequest++; $('identity-form').reset(); $('checkin-form').reset(); $('emergency-form').reset(); $('clinic').value = ''; $('insurance').value = 'UMUM'; $('lookup').value = ''; ['found','doctors','ticket-detail','queue','checkin-result','emergency-result'].forEach(id => $(id).replaceChildren()); $('receipt').removeAttribute('href'); show('welcome'); }
 async function api(url, data) {
     const options = data ? {method:'POST', headers:{'Content-Type':'application/json','X-CSRFToken':document.querySelector('[name=csrfmiddlewaretoken]').value},body:JSON.stringify(data)} : {};
     const response = await fetch(url, {...options, cache:'no-store'});
@@ -103,7 +118,18 @@ $('identity-form').onsubmit = event => {event.preventDefault(); if(state.tipe_pa
 $('back-identity').onclick = () => show('identity');
 $('back-service').onclick = () => show('service');
 function confirmService() { $('summary').textContent = state.jenis_layanan === 'IGD' ? 'IGD Fast-Track — Dokter Jaga IGD' : state.doctorName; show('confirm'); }
-$('igd').onclick = () => {state.jenis_layanan = 'IGD'; delete state.jadwal_id; delete state.poliklinik; confirmService();};
+$('igd-start').onclick = () => {show('emergency'); $('emergency-form').querySelector('[name=nama_lengkap]').focus();};
+$('emergency-form').onsubmit = async event => {
+    event.preventDefault();
+    const button = event.target.querySelector('[type=submit]'); button.disabled = true;
+    try {
+        const form = Object.fromEntries(new FormData(event.target));
+        const data = await api(urls.igd, form);
+        $('emergency-result').textContent = data.message + ' (Nomor antrean: ' + data.nomor_antrean + ')';
+        event.target.reset();
+        clearInterval(resetTimer); resetTimer = setTimeout(home, 30000);
+    } catch(error) {message(error.message);} finally {button.disabled = false;}
+};
 $('clinic').onchange = async () => {
     const requestId = ++scheduleRequest; $('doctors').replaceChildren();
     if (!$('clinic').value) return;
@@ -130,6 +156,28 @@ $('register').onclick = async () => {
         let seconds=60; $('countdown').textContent=seconds; clearInterval(resetTimer); resetTimer=setInterval(() => {$('countdown').textContent=--seconds;if(seconds<=0)home();},1000);
     } catch(error) {message(error.message);} finally {$('register').disabled=false;}
 };
+$('bio-verify').onclick = async () => {
+    const tombol = $('bio-verify'); tombol.disabled = true;
+    try {
+        const data = await api(urls.biometrik, {
+            kode: $('booking').value.trim(),
+            nama_lengkap: $('checkin-name').value,
+            tanggal_lahir: $('checkin-dob').value,
+            metode: 'FINGERPRINT'
+        });
+        $('bio-result').textContent = data.message;
+    } catch(error) {$('bio-result').textContent = error.message;} finally {tombol.disabled = false;}
+};
+let idleTimer;
+function resetIdle() {
+    clearTimeout(idleTimer);
+    idleTimer = setTimeout(() => {
+        fetch(urls.reset, {method: 'POST', headers: {'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value}}).catch(() => {});
+        home();
+    }, IDLE_DETIK * 1000);
+}
+['click', 'keydown', 'touchstart'].forEach(nama => document.addEventListener(nama, resetIdle, {passive: true}));
+resetIdle();
 $('checkin-form').onsubmit = async event => {
     event.preventDefault(); const button=event.target.querySelector('[type=submit]'); button.disabled=true;
     try {const data=await api(urls.checkin,{kode:$('booking').value.trim(),nama_lengkap:$('checkin-name').value,tanggal_lahir:$('checkin-dob').value});$('checkin-result').textContent=data.message;$('booking').value='';clearInterval(resetTimer);resetTimer=setTimeout(home,30000);}

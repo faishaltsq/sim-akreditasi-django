@@ -1664,11 +1664,25 @@ def cetak_gelang(request, pk):
 
 @login_required
 def cetak_sep(request, pk):
-    """Printable BPJS Surat Eligibilitas Peserta (SEP)."""
+    """Printable BPJS Surat Eligibilitas Peserta (SEP).
+
+    Nomor SEP hanya boleh berasal dari respons VClaim yang tersimpan di
+    ``KunjunganPasien.no_sep``. Sistem tidak pernah merekayasa nomor SEP.
+    """
     k = get_object_or_404(KunjunganPasien.objects.select_related('pasien'), pk=pk)
-    today_str = timezone.localdate().strftime('%Y%m%d')
-    no_sep = f"0123R001{today_str}000{k.pk}"
-    return render(request, 'pasien/cetak_sep.html', {'k': k, 'p': k.pasien, 'no_sep': no_sep})
+    if not k.no_sep:
+        return HttpResponse(
+            'SEP belum diterbitkan untuk kunjungan ini. Terbitkan SEP melalui bridging '
+            'VClaim terlebih dahulu — nomor SEP tidak boleh direkayasa.',
+            status=409,
+            content_type='text/plain; charset=utf-8',
+        )
+    return render(request, 'pasien/cetak_sep.html', {
+        'k': k,
+        'p': k.pasien,
+        'no_sep': k.no_sep,
+        'sep_simulasi': k.sep_mode != 'LIVE',
+    })
 
 
 @login_required

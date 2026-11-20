@@ -1,0 +1,24 @@
+{
+  "_contract": "VClaim GET /Peserta/nokartu/{noKartu}/tgl/{tgl} — peserta aktif. statusPeserta.keterangan dipakai untuk aturan TIDAK_AKTIF.",
+  "metaData": { "code": "200", "message": "OK" },
+  "response": {
+    "peserta": {
+      "noKartu": "0001234567890",
+      "nik": "3201234567890001",
+      "nama": "PASIEN UJI",
+      "pisa": "1234567890",
+      "sex": "L",
+      "tglLahir": "1990-05-15",
+      "tglMulaiAktif": "2015-01-01",
+      "tglAkhirBerlaku": "2099-12-31",
+      "kdProviderPst": { "kdProvider": "0401B001", "nmProvider": "Puskesmas Uji" },
+      "kdProviderGigi": { "kdProvider": "", "nmProvider": "" },
+      "jnsKelas": { "nama": "Kelas 3", "kode": "3" },
+      "jnsPeserta": { "nama": "Pekerja Penerima Upah", "kode": "1" },
+      "golDarah": "O",
+      "noHP": "628123456789",
+      "statusPeserta": { "keterangan": "AKTIF", "kode": "0" },
+      "hakKelas": { "keterangan": "Kelas 3", "kode": "3" }
+    }
+  }
+}

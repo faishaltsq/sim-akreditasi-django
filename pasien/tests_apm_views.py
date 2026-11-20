@@ -45,6 +45,8 @@ class ApmViewsTest(TestCase):
         self.assertEqual(data['jadwal'][0]['nama_dokter'], 'dr. Faisal, Sp.JP')
 
     def test_api_daftar_pasien_lama_rajal(self):
+        # Sejak plan 2026-11-19 Phase 4, jalur BPJS rawat jalan wajib rujukan valid,
+        # sehingga pendaftaran tanpa rujukan diuji di tests_apm_rujukan_gate.py.
         payload = {
             'tipe_pasien': 'LAMA',
             'nama_lengkap': 'Pasien Lama',
@@ -54,7 +56,7 @@ class ApmViewsTest(TestCase):
             'jenis_layanan': 'RAJAL',
             'poliklinik': 'POLI_JANTUNG',
             'jadwal_id': self.jadwal.pk,
-            'penjamin': 'BPJS'
+            'penjamin': 'UMUM'
         }
         res = self.client.post(reverse('pasien:apm_api_daftar'), payload)
         self.assertEqual(res.status_code, 200)

@@ -1,6 +1,7 @@
 from django.urls import path
 from . import views
 from . import apm_views
+from . import mobile_views
 from . import igd_workflow_views
 from . import professional_views
 from . import pharmacy_views
@@ -124,11 +125,23 @@ urlpatterns = [
     path('apm/api/jadwal-dokter/', apm_views.apm_api_jadwal_dokter, name='apm_api_jadwal_dokter'),
     path('apm/api/daftar/', apm_views.apm_api_daftar, name='apm_api_daftar'),
     path('apm/api/checkin/', apm_views.apm_api_checkin, name='apm_api_checkin'),
+    path('apm/api/igd-fasttrack/', apm_views.apm_api_igd_fasttrack, name='apm_api_igd_fasttrack'),
+    path('apm/api/rujukan/validasi/', apm_views.apm_api_rujukan_validasi, name='apm_api_rujukan_validasi'),
+    path('apm/api/biometrik/', apm_views.apm_api_biometrik, name='apm_api_biometrik'),
+    path('apm/api/sesi/reset/', apm_views.apm_api_sesi_reset, name='apm_api_sesi_reset'),
+    path('apm/indikator/', apm_views.apm_indikator_view, name='apm_indikator'),
     path('apm/batal/', apm_views.apm_batal_mandiri, name='apm_batal_mandiri'),
     path('apm/struk/<int:pk>/', apm_views.apm_cetak_struk, name='apm_cetak_struk'),
     # ── Papan Display Antrean TV & Audio TTS ──
     path('antrean/display/', apm_views.antrean_display_board, name='antrean_display_board'),
     path('antrean/display/api/', apm_views.antrean_display_api, name='antrean_display_api'),
+    # ── Portal Mobile Tanpa Login (dari rumah) ──
+    path('mandiri/', mobile_views.mandiri_beranda, name='mandiri_beranda'),
+    path('mandiri/verifikasi/', mobile_views.mandiri_verifikasi, name='mandiri_verifikasi'),
+    path('mandiri/jadwal/', mobile_views.mandiri_jadwal, name='mandiri_jadwal'),
+    path('mandiri/booking/', mobile_views.mandiri_booking, name='mandiri_booking'),
+    path('mandiri/tiket/', mobile_views.mandiri_tiket, name='mandiri_tiket'),
+    path('mandiri/qr/', mobile_views.mandiri_qr, name='mandiri_qr'),
 ]
 
 # Writer lama tidak boleh menimpa episode yang sudah memakai draft berversi.

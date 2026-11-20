@@ -2,7 +2,9 @@ from django.test import TestCase
 from django.utils import timezone
 from datetime import date, time
 from pasien.models import Pasien, KunjunganPasien, WhatsAppLog
-from pasien.services.whatsapp import format_tiket_wa, kirim_pesan_wa
+from pasien.services.whatsapp import (
+    format_konfirmasi_booking, format_tiket_wa, kirim_pesan_wa,
+)
 
 class ApmWhatsAppTest(TestCase):
     def setUp(self):
@@ -28,17 +30,21 @@ class ApmWhatsAppTest(TestCase):
 
     def test_verbatim_ticket_format(self):
         msg = format_tiket_wa(self.kunjungan, base_url='https://arima.rs')
-        self.assertIn('BUKTI PENDAFTARAN MANDIRI (APM)', msg)
-        self.assertIn('No. Rekam Medis: RM-98230001', msg)
-        self.assertIn('Nama Pasien: Tn. Ahmad', msg)
-        self.assertIn('Tujuan Poli: Poli Spesialis Jantung', msg)
-        self.assertIn('Dokter DPJP: dr. Faisal, Sp.JP', msg)
-        self.assertIn('No. Antrean Poli: B-014', msg)
-        self.assertIn('Estimasi Waktu Pemeriksaan: 10:30 WIB', msg)
-        self.assertIn('HIMBAUAN PENTING:', msg)
-        self.assertIn('10:00 WIB', msg) # 30 mins before
-        self.assertIn('09:30 WIB', msg) # 60 mins before
+        self.assertIn('Bukti Pendaftaran Rawat Jalan Mandiri', msg)
+        self.assertIn('Yth. *Tn.***', msg)
+        self.assertIn('No. Antrean Poli: *B-014*', msg)
+        self.assertIn('Layanan poli spesialis: *Poli Spesialis Jantung*', msg)
+        self.assertIn('Oleh dokter: *dr. Faisal, Sp.JP*', msg)
+        self.assertIn('estimasi pemeriksaan pukul *10:30 WIB*', msg)
+        self.assertIn('dianjurkan tiba pukul *10:00 WIB*', msg)
+        self.assertIn('Scan QR Check-In', msg)
         self.assertIn('https://arima.rs/pasien/apm/batal/?token=TRX-998231', msg)
+
+    def test_alias_menghasilkan_templat_1(self):
+        self.assertEqual(
+            format_tiket_wa(self.kunjungan, base_url='https://arima.rs'),
+            format_konfirmasi_booking(self.kunjungan, base_url='https://arima.rs'),
+        )
 
     def test_kirim_pesan_wa_simulated(self):
         res = kirim_pesan_wa(

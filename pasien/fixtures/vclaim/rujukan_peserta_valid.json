@@ -1,0 +1,25 @@
+{
+  "_contract": "VClaim 2.x GET /Rujukan/Peserta/{noRujukan}. 'response' di sini SUDAH didekripsi; API asli mengirim string terenkripsi (XOR key + base64) yang harus dibuka sebelum dipakai. Semua identifier sintetis.",
+  "metaData": { "code": "200", "message": "OK" },
+  "response": {
+    "rujukan": {
+      "noRujukan": "0123456789012345678",
+      "noKartu": "0001234567890",
+      "tglRujukan": "2026-10-01",
+      "tglRencanaKunjungan": "2026-10-08",
+      "ppkDirujuk": "0123R001",
+      "nmPpkDirujuk": "RSU Uji Tipe B",
+      "jnsPelayanan": "2",
+      "kelasRawat": "3",
+      "diagnosa": { "kode": "I10", "nama": "Essential (primary) hypertension" },
+      "poliRujukan": { "kode": "JTG", "nama": "JANTUNG" },
+      "ppkRujukan": "0401B001",
+      "nmPpkRujukan": "Puskesmas Uji",
+      "catatan": "Rujukan poli jantung",
+      "tglUpdate": "2026-10-01 09:15:00",
+      "flagProcedure": "",
+      "kdPenunjang": "",
+      "assesmentPel": ""
+    }
+  }
+}

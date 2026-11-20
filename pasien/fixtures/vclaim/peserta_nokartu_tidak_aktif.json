@@ -1,0 +1,17 @@
+{
+  "_contract": "VClaim GET /Peserta/nokartu/{noKartu}/tgl/{tgl} — peserta nonaktif (mis. tunggakan). Memetakan ke status TIDAK_AKTIF dan memblokir booking BPJS.",
+  "metaData": { "code": "200", "message": "OK" },
+  "response": {
+    "peserta": {
+      "noKartu": "0001234567891",
+      "nik": "3201234567890002",
+      "nama": "PASIEN NONAKTIF",
+      "sex": "P",
+      "tglLahir": "1985-02-20",
+      "kdProviderPst": { "kdProvider": "0401B001", "nmProvider": "Puskesmas Uji" },
+      "jnsPeserta": { "nama": "Pekerja Penerima Upah", "kode": "1" },
+      "statusPeserta": { "keterangan": "TIDAK AKTIF", "kode": "1" },
+      "hakKelas": { "keterangan": "Kelas 3", "kode": "3" }
+    }
+  }
+}

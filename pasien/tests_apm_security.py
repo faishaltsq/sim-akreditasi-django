@@ -133,7 +133,10 @@ class ApmIdentityVerificationTest(TestCase):
             visit.refresh_from_db()
             self.assertEqual(visit.waktu_checkin, original_time)
             self.assertEqual(visit.status_antrean, 'DIPANGGIL')
-            update.assert_called_once()
+            # Sejak Phase 8, Task ID 3 hanya dikirim setelah SEP benar-benar terbit.
+            # Kunjungan ini tidak punya jadwal BPJS/rujukan, sehingga SEP gagal
+            # (fail-closed) dan Task ID 3 tidak boleh terkirim.
+            update.assert_not_called()
 
     def test_rejected_schedule_does_not_leave_patient_or_phone_changes(self):
         url = reverse('pasien:apm_api_daftar')

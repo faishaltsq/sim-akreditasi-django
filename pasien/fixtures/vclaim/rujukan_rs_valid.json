@@ -1,0 +1,22 @@
+{
+  "_contract": "VClaim GET /Rujukan/RS/Peserta/{noRujukan} — rujukan antar-FKRTL/RS. Dipakai sebagai fallback bila /Rujukan/Peserta mengembalikan response kosong.",
+  "metaData": { "code": "200", "message": "OK" },
+  "response": {
+    "rujukan": {
+      "noRujukan": "0987654321098765432",
+      "noKartu": "0001234567890",
+      "tglRujukan": "2026-10-05",
+      "tglRencanaKunjungan": "2026-10-06",
+      "ppkDirujuk": "0123R001",
+      "nmPpkDirujuk": "RSU Uji Tipe B",
+      "jnsPelayanan": "1",
+      "kelasRawat": "2",
+      "diagnosa": { "kode": "I50.0", "nama": "Congestive heart failure" },
+      "poliRujukan": { "kode": "JTG", "nama": "JANTUNG" },
+      "ppkRujukan": "0111R002",
+      "nmPpkRujukan": "RS Pengirim Uji",
+      "catatan": "Rujukan rawat inap",
+      "tglUpdate": "2026-10-05 14:02:00"
+    }
+  }
+}

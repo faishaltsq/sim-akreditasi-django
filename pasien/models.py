@@ -2,6 +2,8 @@
 Modul Manajemen Pasien MonsisKami (ARIMA System)
 Tahap 1–5: Pendaftaran → Pelayanan → Ranap → Billing → Discharge
 """
+import datetime
+
 from django.db import models
 from decimal import Decimal, ROUND_HALF_UP
 from django.utils import timezone
@@ -50,7 +52,7 @@ class Pasien(models.Model):
     nik                 = models.CharField('NIK', max_length=16, blank=True)
     nama_lengkap        = models.CharField('Nama Lengkap', max_length=200)
     tempat_lahir        = models.CharField('Tempat Lahir', max_length=100, blank=True)
-    tanggal_lahir       = models.DateField('Tanggal Lahir')
+    tanggal_lahir       = models.DateField('Tanggal Lahir', null=True, blank=True)
     jenis_kelamin       = models.CharField('Jenis Kelamin', max_length=1, choices=JENIS_KELAMIN)
     agama               = models.CharField('Agama', max_length=20, choices=AGAMA_CHOICES, blank=True)
     status_perkawinan   = models.CharField('Status Perkawinan', max_length=20, choices=STATUS_KAWIN_CHOICES, blank=True)
@@ -386,6 +388,38 @@ class KunjunganPasien(models.Model):
     is_noshow          = models.BooleanField('Tercatat No-Show', default=False)
     wa_notifikasi_sent = models.BooleanField('Notifikasi WA Terkirim', default=False)
 
+    # ── APM-BPJS Multi-Kanal (PRD APM-BPJS revisi) ──
+    SEP_MODE_CHOICES = [
+        ('BELUM', 'Belum Diterbitkan'),
+        ('LIVE', 'Terbit via VClaim'),
+        ('SIMULASI', 'Simulasi (Kredensial Belum Ada)'),
+        ('GAGAL', 'Gagal Terbit'),
+    ]
+    BIOMETRIK_STATUS_CHOICES = [
+        ('TIDAK_WAJIB', 'Tidak Wajib Biometrik'),
+        ('MENUNGGU', 'Menunggu Verifikasi Biometrik'),
+        ('VALID', 'Biometrik Valid'),
+        ('GAGAL', 'Biometrik Gagal'),
+        ('ESKALASI', 'Eskalasi Helpdesk BPJS'),
+    ]
+
+    tanggal_kunjungan     = models.DateField('Tanggal Kunjungan (Booking)', null=True, blank=True, db_index=True)
+    rujukan               = models.ForeignKey(
+        'RujukanBpjs', on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='kunjungan', verbose_name='Rujukan BPJS',
+    )
+    no_sep                = models.CharField('Nomor SEP', max_length=40, blank=True, db_index=True)
+    sep_terbit_pada       = models.DateTimeField('SEP Terbit Pada', null=True, blank=True)
+    sep_mode              = models.CharField('Mode Penerbitan SEP', max_length=10, choices=SEP_MODE_CHOICES, default='BELUM')
+    no_referensi_antrean  = models.CharField('Kode Booking Antrean BPJS', max_length=40, blank=True)
+    estimasi_versi        = models.PositiveSmallIntegerField('Versi Estimasi Waktu', default=0)
+    delta_geser_menit     = models.SmallIntegerField('Delta Geser Jadwal (Menit)', default=0)
+    biometrik_status      = models.CharField(
+        'Status Biometrik', max_length=20, choices=BIOMETRIK_STATUS_CHOICES, default='TIDAK_WAJIB',
+    )
+    registrasi_mulai_at   = models.DateTimeField('Registrasi Mulai', null=True, blank=True)
+    registrasi_selesai_at = models.DateTimeField('Registrasi Selesai', null=True, blank=True)
+
     # ── Tanda-Tanda Vital (TTV) ──
     ttv_sistole     = models.PositiveSmallIntegerField('Tekanan Darah Sistole (mmHg)', null=True, blank=True)
     ttv_diastole    = models.PositiveSmallIntegerField('Tekanan Darah Diastole (mmHg)', null=True, blank=True)
@@ -541,6 +575,13 @@ class KunjunganPasien(models.Model):
         verbose_name = 'Kunjungan Pasien'
         verbose_name_plural = 'Kunjungan Pasien'
         ordering = ['-tanggal_masuk']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['no_sep'],
+                condition=models.Q(no_sep__gt=''),
+                name='uniq_sep_per_visit',
+            ),
+        ]
 
     def __str__(self):
         return f'[{self.no_kunjungan}] {self.pasien.nama_lengkap} ({self.get_jenis_kunjungan_display()})'
@@ -716,6 +757,22 @@ class KunjunganPasien(models.Model):
             )
 
     def save(self, *args, **kwargs):
+        if not self.tanggal_kunjungan and self.tanggal_masuk:
+            masuk = self.tanggal_masuk
+            if isinstance(masuk, datetime.datetime):
+                self.tanggal_kunjungan = (
+                    masuk.date() if timezone.is_naive(masuk) else timezone.localtime(masuk).date()
+                )
+            elif isinstance(masuk, datetime.date):
+                self.tanggal_kunjungan = masuk
+            elif isinstance(masuk, str):
+                from django.utils.dateparse import parse_date, parse_datetime
+
+                terurai = parse_datetime(masuk) or parse_date(masuk)
+                if isinstance(terurai, datetime.datetime):
+                    self.tanggal_kunjungan = terurai.date()
+                elif isinstance(terurai, datetime.date):
+                    self.tanggal_kunjungan = terurai
         if self.jenis_kunjungan == 'IGD':
             self.poliklinik = 'IGD'
             if not self.unit_kerja_id or getattr(self.unit_kerja, 'code', None) != 'IGD':
@@ -1472,6 +1529,10 @@ class JadwalDokterPoli(models.Model):
     foto_dokter             = models.FileField('Foto Dokter', upload_to='dokter/foto/%Y/', blank=True, null=True)
     foto_url                = models.URLField('URL Foto Avatar Dokter', blank=True)
     keterangan              = models.TextField('Keterangan / Pengumuman', blank=True)
+    kode_poli_bpjs          = models.CharField('Kode Poli BPJS', max_length=10, blank=True,
+                                               help_text='Kode poli VClaim/Antrean Online, mis. JTG, INT, MTA')
+    kode_dokter_bpjs        = models.PositiveBigIntegerField('Kode Dokter BPJS', null=True, blank=True,
+                                                             help_text='Kode dokter numerik pada Antrean Online BPJS')
     created_at              = models.DateTimeField(auto_now_add=True)
     updated_at              = models.DateTimeField(auto_now=True)
 
@@ -1521,19 +1582,35 @@ class JadwalDokterPoli(models.Model):
             return candidate
         return None
 
-    def hitung_estimasi_jam(self, urutan=None):
-        import datetime
+    def hitung_estimasi_jam(self, urutan=None, delta_geser_menit=0):
+        from pasien.services.estimasi import hitung_estimasi
         if urutan is None:
             urutan = self.get_terdaftar_hari_ini() + 1
-        minutes_offset = (max(1, urutan) - 1) * self.durasi_per_pasien_menit
-        base_dt = datetime.datetime.combine(datetime.date.today(), self.jam_mulai)
-        est_dt = base_dt + datetime.timedelta(minutes=minutes_offset)
-        return est_dt.time()
+        return hitung_estimasi(
+            t_mulai=self.jam_mulai,
+            n=max(1, urutan),
+            d_rata=self.durasi_per_pasien_menit,
+            delta_geser=delta_geser_menit,
+        ).t_periksa
+
+    @property
+    def jam_praktek_bpjs(self):
+        """Format jampraktek Antrean Online BPJS: 'HH:MM-HH:MM'."""
+        return f"{self.jam_mulai.strftime('%H:%M')}-{self.jam_selesai.strftime('%H:%M')}"
+
+    @property
+    def siap_bridging_bpjs(self):
+        """Jadwal hanya boleh dipakai kanal BPJS bila kode poli & dokter BPJS terisi."""
+        return bool(self.kode_poli_bpjs and self.kode_dokter_bpjs)
 
 
 class WhatsAppLog(models.Model):
     JENIS_PILIHAN = [
         ('TIKET_APM', 'Tiket Pendaftaran APM'),
+        ('KONFIRMASI_BOOKING', 'Konfirmasi Booking Mobile (Pra Check-In)'),
+        ('CHECKIN_SEP', 'Konfirmasi Check-In & Penerbitan SEP'),
+        ('PERGESERAN_JADWAL', 'Pemberitahuan Pergeseran Estimasi Waktu'),
+        ('ESKALASI_BIOMETRIK', 'Eskalasi Biometrik ke Helpdesk BPJS'),
         ('REMINDER_H1', 'Pengingat H-1 Antrean'),
         ('BATAL_APM', 'Konfirmasi Pembatalan APM'),
         ('NOTIFIKASI_IGD', 'Alert Fast-Track IGD'),
@@ -1542,6 +1619,7 @@ class WhatsAppLog(models.Model):
     STATUS_PILIHAN = [
         ('SENT', 'Terkirim'),
         ('FAILED', 'Gagal'),
+        ('THROTTLED', 'Ditahan Rate Limit'),
         ('SIMULASI', 'Simulasi / Dummy'),
     ]
 
@@ -1551,6 +1629,12 @@ class WhatsAppLog(models.Model):
     status       = models.CharField('Status Pengiriman', max_length=20, choices=STATUS_PILIHAN, default='SIMULASI')
     kunjungan    = models.ForeignKey(KunjunganPasien, on_delete=models.SET_NULL, null=True, blank=True, related_name='wa_logs')
     response_api = models.JSONField('Response Gateway API', default=dict, blank=True)
+    provider     = models.CharField('Provider Gateway', max_length=20, blank=True)
+    percobaan    = models.PositiveSmallIntegerField('Percobaan Ke-', default=1)
+    idempotency_key = models.CharField(
+        'Kunci Idempotensi', max_length=120, null=True, blank=True, unique=True,
+        help_text='Cegah pesan ganda untuk kunjungan/jenis/versi estimasi yang sama',
+    )
     created_at   = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -1596,6 +1680,290 @@ class AntreanBpjsTaskLog(models.Model):
         return f"[{self.kunjungan.no_kunjungan}] Task {self.task_id}: {self.nama_task} ({self.status_kirim})"
 
 
+# ── APM-BPJS Multi-Kanal: Rujukan, Konfigurasi Dinamis, Log Risiko & Biometrik ──
 
 
+class RujukanBpjs(models.Model):
+    """Hasil validasi rujukan BPJS (VClaim Rujukan/Peserta) untuk seorang pasien."""
 
+    BATAS_HARI = 90
+
+    JENIS_CHOICES = [
+        ('FKTP', 'Rujukan FKTP'),
+        ('ANTAR_FKRTL', 'Rujukan Antar FKRTL'),
+        ('KONTROL', 'Surat Kontrol / Rujukan Lanjutan'),
+        ('RS', 'Rujukan Internal RS'),
+    ]
+    STATUS_CHOICES = [
+        ('BELUM_DIVALIDASI', 'Belum Divalidasi'),
+        ('VALID', 'Valid'),
+        ('KEDALUWARSA', 'Kedaluwarsa (> 90 Hari)'),
+        ('BEDA_PPK', 'Beda Kode PPK Tujuan'),
+        ('TIDAK_DITEMUKAN', 'Tidak Ditemukan di VClaim'),
+        ('TIDAK_AKTIF', 'Peserta Tidak Aktif'),
+    ]
+    KANAL_CHOICES = [
+        ('MOBILE', 'Mobile (dari rumah)'),
+        ('KIOSK', 'Kiosk APM'),
+        ('LOKET', 'Loket Admisi'),
+        ('SISTEM', 'Sistem / Bridging'),
+    ]
+
+    pasien                  = models.ForeignKey(Pasien, on_delete=models.CASCADE, related_name='rujukan_bpjs')
+    no_rujukan              = models.CharField('Nomor Rujukan (19 digit)', max_length=32, unique=True)
+    jenis_rujukan           = models.CharField('Jenis Rujukan', max_length=15, choices=JENIS_CHOICES, default='FKTP')
+    tgl_rujukan             = models.DateField('Tanggal Terbit Rujukan', null=True, blank=True)
+    tgl_kunjungan_rencana   = models.DateField('Tanggal Kunjungan Rencana', null=True, blank=True)
+    ppk_rujukan             = models.CharField('Kode PPK Perujuk', max_length=20, blank=True)
+    nama_ppk_rujukan        = models.CharField('Nama PPK Perujuk', max_length=150, blank=True)
+    ppk_tujuan              = models.CharField('Kode PPK Tujuan (di VClaim)', max_length=20, blank=True)
+    poli_tujuan_bpjs        = models.CharField('Kode Poli Tujuan BPJS', max_length=10, blank=True)
+    diagnosa_awal           = models.CharField('Diagnosa Awal (ICD-10)', max_length=10, blank=True)
+    nama_diagnosa_awal      = models.CharField('Nama Diagnosa Awal', max_length=200, blank=True)
+    ditemukan_di_vclaim     = models.BooleanField('Ditemukan di VClaim', default=True)
+    status_validasi         = models.CharField(
+        'Status Validasi', max_length=20, choices=STATUS_CHOICES, default='BELUM_DIVALIDASI', db_index=True,
+    )
+    alasan_tolak            = models.TextField('Alasan Penolakan', blank=True)
+    raw_response            = models.JSONField('Response VClaim', default=dict, blank=True)
+    divalidasi_pada         = models.DateTimeField('Divalidasi Pada', null=True, blank=True)
+    divalidasi_oleh_kanal   = models.CharField('Kanal Validasi', max_length=10, choices=KANAL_CHOICES, default='SISTEM')
+    created_at              = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = 'Rujukan BPJS'
+        verbose_name_plural = 'Rujukan BPJS'
+        ordering = ['-tgl_rujukan', '-pk']
+        indexes = [models.Index(fields=['pasien', 'status_validasi'], name='rujukan_pasien_status_idx')]
+
+    def __str__(self):
+        return f'Rujukan {self.no_rujukan} — {self.pasien.nama_lengkap} ({self.get_status_validasi_display()})'
+
+    def masa_berlaku_hari(self, tanggal_acuan=None):
+        """Selisih hari antara tanggal acuan dan tanggal terbit rujukan (None bila data kurang)."""
+        acuan = tanggal_acuan or self.tgl_kunjungan_rencana or timezone.localdate()
+        if not self.tgl_rujukan or not acuan:
+            return None
+        return (acuan - self.tgl_rujukan).days
+
+    def status_dari_aturan(self, *, ppk_rs='', peserta_aktif=True, tanggal_acuan=None):
+        """Urutan presedensi baku: TIDAK_DITEMUKAN → TIDAK_AKTIF → BEDA_PPK → KEDALUWARSA → VALID.
+
+        Urutan ini diuji oleh ``test_beda_ppk_menang_atas_kedaluwarsa`` dan
+        ``test_peserta_tidak_aktif_menang_atas_beda_ppk``; jangan diubah tanpa memperbarui tes.
+        """
+        if not self.ditemukan_di_vclaim:
+            return 'TIDAK_DITEMUKAN'
+        if not peserta_aktif:
+            return 'TIDAK_AKTIF'
+        ppk_tujuan = (self.ppk_tujuan or '').strip().casefold()
+        ppk_target = str(ppk_rs or '').strip().casefold()
+        if ppk_tujuan and ppk_target and ppk_tujuan != ppk_target:
+            return 'BEDA_PPK'
+        masa = self.masa_berlaku_hari(tanggal_acuan)
+        if masa is None or masa > self.BATAS_HARI:
+            return 'KEDALUWARSA'
+        return 'VALID'
+
+
+class KonfigurasiApm(models.Model):
+    """Konfigurasi operasional APM (satu baris per deployment RS), bukan hardcode."""
+
+    WA_PROVIDER_CHOICES = [
+        ('FONNTE', 'Fonnte'),
+        ('WABA', 'WhatsApp Business Cloud API'),
+        ('SIMULASI', 'Simulasi (Log Saja)'),
+    ]
+
+    t_buka_rs                = models.TimeField('Jam Buka Pendaftaran RS', default=datetime.time(7, 0))
+    buffer_tiba_menit        = models.PositiveSmallIntegerField(
+        'Buffer Anjuran Tiba (Menit)', default=30,
+        validators=[MinValueValidator(0), MaxValueValidator(120)],
+    )
+    ambang_geser_notif_menit = models.PositiveSmallIntegerField(
+        'Ambang Pergeseran untuk Notifikasi (Menit)', default=15,
+        validators=[MinValueValidator(1), MaxValueValidator(240)],
+    )
+    idle_timeout_detik       = models.PositiveSmallIntegerField(
+        'Idle Timeout Kiosk (Detik)', default=90,
+        validators=[MinValueValidator(60), MaxValueValidator(90)],
+    )
+    biometrik_maks_percobaan = models.PositiveSmallIntegerField(
+        'Maksimal Percobaan Biometrik', default=3,
+        validators=[MinValueValidator(1), MaxValueValidator(10)],
+    )
+    booking_hari_ke_depan    = models.PositiveSmallIntegerField(
+        'Batas Booking ke Depan (Hari)', default=0,
+        validators=[MinValueValidator(0), MaxValueValidator(30)],
+    )
+    wa_provider              = models.CharField('Provider WhatsApp', max_length=10, choices=WA_PROVIDER_CHOICES, default='FONNTE')
+    wa_retry_maks            = models.PositiveSmallIntegerField(
+        'Retry Maksimal WhatsApp', default=3,
+        validators=[MinValueValidator(0), MaxValueValidator(5)],
+    )
+    updated_at               = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = 'Konfigurasi APM'
+        verbose_name_plural = 'Konfigurasi APM'
+
+    def __str__(self):
+        return f'Konfigurasi APM (buka {self.t_buka_rs.strftime("%H:%M")}, idle {self.idle_timeout_detik}s)'
+
+    @classmethod
+    def get_solo(cls):
+        obj = cls.objects.order_by('pk').first()
+        return obj or cls.objects.create()
+
+
+class KonfigurasiBiometrikPoli(models.Model):
+    """Aturan wajib biometrik per poliklinik beserta pengecualian usia/status peserta."""
+
+    poliklinik                 = models.CharField(
+        'Poliklinik', max_length=100, choices=POLIKLINIK_CHOICES, unique=True,
+    )
+    wajib_biometrik            = models.BooleanField('Wajib Biometrik', default=True)
+    usia_min_pengecualian      = models.PositiveSmallIntegerField(
+        'Usia < (tahun) Dikecualikan', null=True, blank=True,
+        validators=[MinValueValidator(0), MaxValueValidator(150)],
+    )
+    usia_max_pengecualian      = models.PositiveSmallIntegerField(
+        'Usia > (tahun) Dikecualikan', null=True, blank=True,
+        validators=[MinValueValidator(0), MaxValueValidator(150)],
+    )
+    pengecualian_status_peserta = models.JSONField('Status Peserta Dikecualikan', default=list, blank=True)
+    aktif                      = models.BooleanField('Aturan Aktif', default=True)
+    updated_at                 = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = 'Konfigurasi Biometrik Poli'
+        verbose_name_plural = 'Konfigurasi Biometrik Poli'
+        ordering = ['poliklinik']
+
+    def __str__(self):
+        return f'{self.get_poliklinik_display()} — {"wajib" if self.wajib_biometrik else "tidak wajib"}'
+
+    def is_exempt(self, *, usia=None, status_peserta=''):
+        if usia is not None:
+            if self.usia_min_pengecualian is not None and usia < self.usia_min_pengecualian:
+                return True
+            if self.usia_max_pengecualian is not None and usia > self.usia_max_pengecualian:
+                return True
+        status = str(status_peserta or '').strip().casefold()
+        if status:
+            daftar = [str(item).strip().casefold() for item in (self.pengecualian_status_peserta or [])]
+            if status in daftar:
+                return True
+        return False
+
+    def mewajibkan(self, *, usia=None, status_peserta=''):
+        return bool(self.aktif and self.wajib_biometrik and not self.is_exempt(usia=usia, status_peserta=status_peserta))
+
+
+class AppendOnlyModel(models.Model):
+    """Baris bukti/audit: sekali tersimpan tidak boleh diubah (append-only)."""
+
+    class Meta:
+        abstract = True
+
+    def save(self, *args, **kwargs):
+        if not self._state.adding:
+            raise ValidationError(
+                f'{self.__class__.__name__} bersifat append-only: baris yang sudah tercatat tidak boleh diubah.'
+            )
+        return super().save(*args, **kwargs)
+
+
+class LogBiometrik(AppendOnlyModel):
+    """Jejak setiap percobaan verifikasi biometrik di kiosk (LOG_BIOMETRIK)."""
+
+    METODE_CHOICES = [('FINGERPRINT', 'Sidik Jari'), ('FACE', 'Face Recognition')]
+    HASIL_CHOICES = [
+        ('VALID', 'Valid'),
+        ('GAGAL', 'Gagal'),
+        ('ESKALASI', 'Eskalasi Helpdesk'),
+        ('ERROR', 'Error Perangkat'),
+    ]
+    MODE_CHOICES = [('SIMULASI', 'Simulasi'), ('DEVICE', 'Perangkat Fisik')]
+
+    kunjungan    = models.ForeignKey(
+        KunjunganPasien, on_delete=models.SET_NULL, null=True, blank=True, related_name='log_biometrik',
+    )
+    percobaan_ke = models.PositiveSmallIntegerField('Percobaan Ke-')
+    metode       = models.CharField('Metode', max_length=15, choices=METODE_CHOICES, default='FINGERPRINT')
+    hasil        = models.CharField('Hasil', max_length=10, choices=HASIL_CHOICES, default='GAGAL')
+    skor         = models.DecimalField('Skor Kecocokan', max_digits=5, decimal_places=2, null=True, blank=True)
+    perangkat_id = models.CharField('ID Perangkat', max_length=60, blank=True)
+    mode         = models.CharField('Mode Verifikasi', max_length=10, choices=MODE_CHOICES, default='SIMULASI')
+    detail       = models.JSONField('Detail', default=dict, blank=True)
+    created_at   = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = 'Log Biometrik APM'
+        verbose_name_plural = 'Log Biometrik APM'
+        ordering = ['-created_at', '-pk']
+
+    def __str__(self):
+        return f'Biometrik #{self.percobaan_ke} — {self.hasil} ({self.mode})'
+
+
+class LogRisikoApm(AppendOnlyModel):
+    """Pencatatan risiko otomatis kanal APM ke risk register ARima (RSK-APM-01..04)."""
+
+    KODE_CHOICES = [
+        ('RSK-APM-01', 'RSK-APM-01 — Penundaan Penanganan Gawat Darurat (Klinis & Keselamatan)'),
+        ('RSK-APM-02', 'RSK-APM-02 — Ketidaklayakan Rujukan & Pending Klaim (Finansial & Kepatuhan)'),
+        ('RSK-APM-03', 'RSK-APM-03 — Kegagalan Validasi Biometrik & Hambatan Antrean (Operasional)'),
+        ('RSK-APM-04', 'RSK-APM-04 — Gangguan Bridging & Kebocoran Data Publik (Sistem & Privasi)'),
+    ]
+    KANAL_CHOICES = [
+        ('MOBILE', 'Mobile (dari rumah)'),
+        ('KIOSK', 'Kiosk APM'),
+        ('LOKET', 'Loket Admisi'),
+        ('SISTEM', 'Sistem / Terjadwal'),
+    ]
+    SEVERITY_CHOICES = [
+        ('RENDAH', 'Rendah'),
+        ('SEDANG', 'Sedang'),
+        ('TINGGI', 'Tinggi'),
+        ('KRITIS', 'Kritis'),
+    ]
+
+    kode_risiko = models.CharField('Kode Risiko', max_length=20, choices=KODE_CHOICES, db_index=True)
+    kanal       = models.CharField('Kanal', max_length=10, choices=KANAL_CHOICES, default='SISTEM')
+    pemicu      = models.CharField('Pemicu', max_length=40)
+    severity    = models.CharField('Severity', max_length=10, choices=SEVERITY_CHOICES, default='SEDANG')
+    kunjungan   = models.ForeignKey(
+        KunjunganPasien, on_delete=models.SET_NULL, null=True, blank=True, related_name='log_risiko_apm',
+    )
+    detail      = models.JSONField('Detail Kejadian', default=dict, blank=True)
+    created_at  = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = 'Log Risiko APM'
+        verbose_name_plural = 'Log Risiko APM'
+        ordering = ['-created_at', '-pk']
+        indexes = [models.Index(fields=['kode_risiko', 'created_at'], name='log_risiko_kode_waktu_idx')]
+
+    def __str__(self):
+        return f'{self.kode_risiko} [{self.kanal}] {self.pemicu}'
+
+
+class ThrottleCounter(models.Model):
+    """Penghitung rate limit kanal publik (portabel SQLite & PostgreSQL)."""
+
+    scope = models.CharField('Cakupan', max_length=40)
+    key = models.CharField('Kunci', max_length=120)
+    window_start = models.DateTimeField('Awal Jendela')
+    count = models.PositiveIntegerField('Jumlah', default=0)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = 'Penghitung Rate Limit'
+        verbose_name_plural = 'Penghitung Rate Limit'
+        constraints = [
+            models.UniqueConstraint(fields=['scope', 'key'], name='uniq_throttle_scope_key'),
+        ]
+
+    def __str__(self):
+        return f'{self.scope}:{self.key} = {self.count}'

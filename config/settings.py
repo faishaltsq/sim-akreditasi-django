@@ -329,6 +329,11 @@ BPJS_CONS_ID = os.environ.get('BPJS_CONS_ID', '')
 BPJS_SECRET_KEY = os.environ.get('BPJS_SECRET_KEY', '')
 BPJS_USER_KEY = os.environ.get('BPJS_USER_KEY', '')
 BPJS_KODE_PPK = os.environ.get('BPJS_KODE_PPK', '0000000')
+# Mode simulasi bridging hanya untuk pengembangan. Produksi WAJIB 'False' agar
+# kegagalan bridging fail-closed (tidak menerbitkan SEP/antrean palsu).
+BPJS_ALLOW_SIMULATION = os.environ.get(
+    'BPJS_ALLOW_SIMULATION', 'True' if DEBUG else 'False',
+).lower() in ('true', '1', 'yes')
 
 # Canonical public origin used to build account-activation links. It must be
 # set explicitly in production: deriving a token URL from ALLOWED_HOSTS or the

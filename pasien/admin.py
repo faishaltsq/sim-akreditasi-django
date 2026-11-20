@@ -1,6 +1,7 @@
 from django.contrib import admin
 from . import expansion_admin
 from . import professional_admin
+from . import apm_admin
 from .models import (
     Pasien, Ruangan, Bed, KunjunganPasien, AsesmenRisikoKlinis,
     CPPT, BillingItem, DischargeRecord, ResepElektronik, ResepDetail,

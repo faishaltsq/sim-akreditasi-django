@@ -1,0 +1,5 @@
+{
+  "_contract": "VClaim POST /SEP/2.0/insert gagal (mis. rujukan sudah dipakai / poli tidak cocok). Klien WAJIB melempar BridgingError(meta_code=400) dan TIDAK boleh mencetak SEP.",
+  "metaData": { "code": "400", "message": "Rujukan Sudah Digunakan" },
+  "response": null
+}

@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pilih Jadwal — {{ rs.nama|default:"RS ARima" }}</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#f2f6fb;color:#12263a;font:17px/1.5 system-ui,sans-serif}
+header{background:#123552;color:#fff;padding:18px}main{max-width:640px;margin:0 auto;padding:18px}
+h1{font-size:1.25rem;margin:0 0 12px}.card{background:#fff;border-radius:14px;padding:16px;margin:12px 0;box-shadow:0 4px 16px #12355214}
+.row{display:flex;justify-content:space-between;gap:10px;align-items:baseline}.poli{font-weight:700}.muted{color:#54677b;font-size:.88rem}
+label{display:block;font-weight:600;margin:10px 0 4px}input,select{width:100%;font:inherit;padding:11px;border:1px solid #9aabbd;border-radius:9px}
+button{width:100%;font:inherit;font-weight:700;padding:13px;margin-top:12px;border:0;border-radius:10px;background:#155ba0;color:#fff}
+.error{background:#fdecec;color:#8a1c1c;border-radius:10px;padding:12px;margin:12px 0}
+.sisa{background:#e8f3ff;color:#0f4b86;border-radius:999px;padding:2px 10px;font-size:.8rem;font-weight:700}
+</style>
+</head>
+<body>
+<header><strong>{{ rs.nama|default:"Rumah Sakit ARima" }}</strong><div class="muted" style="color:#cfe0f2">{{ pasien.nama_lengkap }} — {{ pasien.no_rm }}</div></header>
+<main>
+<h1>Pilih jadwal dokter</h1>
+{% if error %}<div class="error" role="alert">{{ error }}{% if jalur_alternatif %}<div class="muted">Jalur alternatif: {{ jalur_alternatif }}</div>{% endif %}</div>{% endif %}
+{% for item in daftar %}
+<form class="card" method="post" action="{% url 'pasien:mandiri_booking' %}">
+{% csrf_token %}
+<input type="hidden" name="token" value="{{ token }}">
+<input type="hidden" name="jadwal_id" value="{{ item.jadwal.pk }}">
+<input type="hidden" name="poliklinik" value="{{ item.jadwal.poliklinik }}">
+<div class="row"><span class="poli">{{ item.label_poli }}</span><span class="sisa">Sisa {{ item.sisa }}</span></div>
+<div>{{ item.jadwal.nama_dokter }}</div>
+<div class="muted">{{ item.jadwal.jam_mulai|time:"H:i" }}–{{ item.jadwal.jam_selesai|time:"H:i" }} · {{ item.jadwal.durasi_per_pasien_menit }} menit/pasien</div>
+<label>Penjamin</label>
+<select name="penjamin"><option value="UMUM">Umum</option><option value="BPJS">BPJS Kesehatan</option><option value="ASURANSI">Asuransi</option></select>
+<label>Nomor rujukan (wajib untuk BPJS, 19 digit)</label>
+<input name="no_rujukan" inputmode="numeric" maxlength="23" autocomplete="off">
+<button type="submit">Daftar di {{ item.label_poli }}</button>
+</form>
+{% empty %}
+<div class="card">Belum ada jadwal dokter dengan kuota tersedia hari ini.</div>
+{% endfor %}
+</main>
+</body>
+</html>

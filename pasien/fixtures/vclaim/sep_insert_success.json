@@ -1,0 +1,27 @@
+{
+  "_contract": "VClaim POST /SEP/2.0/insert sukses. 'noSep' adalah SATU-SATUNYA sumber nomor SEP yang boleh dicetak; jangan pernah merekayasa nomor.",
+  "metaData": { "code": "200", "message": "OK" },
+  "response": {
+    "sep": {
+      "noSep": "0123R0011026V000123",
+      "tglSep": "2026-10-08",
+      "tglPlgSep": "2026-10-08",
+      "peserta": {
+        "noKartu": "0001234567890",
+        "nama": "PASIEN UJI",
+        "tglLahir": "1990-05-15",
+        "jnsPeserta": "Pekerja Penerima Upah",
+        "kelasRawat": "3",
+        "noMr": "RM-APM-001"
+      },
+      "jnsPelayanan": "2",
+      "poli": "JANTUNG",
+      "diagnosa": "I10",
+      "noRujukan": "0123456789012345678",
+      "ppkRujukan": "0401B001",
+      "ppkPelayanan": "0123R001",
+      "catatan": "SEP terbit via APM ARima",
+      "dpjp": "dr. Faisal, Sp.JP"
+    }
+  }
+}

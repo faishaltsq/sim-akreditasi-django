@@ -1,0 +1,5 @@
+{
+  "_contract": "VClaim GET /Rujukan/Peserta/{noRujukan} untuk nomor yang tidak terdaftar. Klien WAJIB melempar BridgingError(meta_code=201), bukan mengembalikan rujukan kosong yang dianggap valid.",
+  "metaData": { "code": "201", "message": "Rujukan Tidak Ditemukan" },
+  "response": null
+}

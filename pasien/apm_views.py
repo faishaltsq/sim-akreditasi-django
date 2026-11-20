@@ -2,6 +2,7 @@ import json
 import uuid
 import datetime
 from urllib.parse import urlencode
+from django.contrib.auth.decorators import login_required
 from django.core import signing
 from django.views.decorators.cache import never_cache
 from django.shortcuts import render, get_object_or_404
@@ -12,8 +13,21 @@ from django.db import transaction
 from django.db.models import Q
 from django.urls import reverse
 
-from pasien.models import Pasien, KunjunganPasien, JadwalDokterPoli, POLIKLINIK_CHOICES
-from pasien.services.whatsapp import format_tiket_wa, format_notifikasi_igd, kirim_pesan_wa
+from pasien.models import (
+    Pasien, KunjunganPasien, JadwalDokterPoli, POLIKLINIK_CHOICES, LogBiometrik, LogRisikoApm,
+    KonfigurasiApm, RujukanBpjs,
+)
+from pasien.services.rujukan import (
+    BridgingError, KODE_RISIKO_PER_STATUS, RujukanFormatError,
+    evaluate_rujukan, validasi_rujukan_lengkap,
+)
+from pasien.services.pendaftaran import daftarkan, payload_sukses
+from pasien.mobile_views import baca_qr_checkin
+from pasien.services.masking import mask_nama
+from pasien.services.throttle import kunci_ip, kunci_ip_identitas, throttle
+from pasien.services.whatsapp import (
+    format_tiket_wa, format_notifikasi_igd, kirim_pesan_wa, kirim_templat,
+)
 from pasien.services.bpjs_antrean import update_task_id
 from akreditasi.models import RumahSakitProfile
 from pasien.services.ktp_validator import parse_flexible_date
@@ -48,12 +62,14 @@ def apm_kiosk_view(request):
     context = {
         'rs': rs,
         'daftar_poli': daftar_poli,
+        'idle_timeout': KonfigurasiApm.get_solo().idle_timeout_detik,
     }
     return render(request, 'pasien/apm/kiosk.html', context)
 
 
 @never_cache
 @require_http_methods(["GET", "POST"])
+@throttle('cari-pasien', limit=30, window_detik=60)
 def apm_api_cari_pasien(request):
     """Resolve a patient only after matching name and date of birth."""
     if request.content_type == 'application/json':
@@ -76,7 +92,7 @@ def apm_api_cari_pasien(request):
         return JsonResponse({'found': False, 'message': 'Data identitas tidak cocok atau tidak ditemukan.'})
     return JsonResponse({
         'found': True,
-        'pasien': {'no_rm': pasien.no_rm, 'nama_lengkap': pasien.nama_lengkap},
+        'pasien': {'no_rm': pasien.no_rm, 'nama_lengkap': mask_nama(pasien.nama_lengkap)},
     })
 
 
@@ -116,9 +132,10 @@ def apm_api_jadwal_dokter(request):
 @never_cache
 @require_http_methods(["POST"])
 def apm_api_daftar(request):
-    """
-    Endpoint Registrasi Kunjungan Mandiri (APM) - Rajal atau Fast-Track IGD.
-    Menjamin kuota tidak race condition via transaction.atomic().
+    """Endpoint registrasi kunjungan mandiri (kiosk).
+
+    Logika lengkap ada di :func:`pasien.services.pendaftaran.daftarkan` supaya
+    portal mobile memakai jalur yang sama (satu penulis data).
     """
     if request.content_type == 'application/json':
         try:
@@ -128,176 +145,15 @@ def apm_api_daftar(request):
     else:
         data = request.POST.dict()
 
-    text_fields = (
-        'tipe_pasien', 'jenis_layanan', 'no_wa', 'penjamin', 'nama_lengkap',
-        'nik', 'tanggal_lahir', 'jenis_kelamin', 'alamat', 'no_bpjs', 'no_rm', 'poliklinik',
+    kunjungan, error = daftarkan(
+        data, kanal='KIOSK', base_url=request.build_absolute_uri('/')[:-1],
     )
-    if not isinstance(data, dict) or not data or any(not isinstance(data.get(key, ''), str) for key in text_fields):
-        return JsonResponse({'success': False, 'message': 'Format data pendaftaran tidak valid.'}, status=400)
-    jadwal_id = data.get('jadwal_id')
-    if jadwal_id is not None and (isinstance(jadwal_id, bool) or not str(jadwal_id).isdigit() or len(str(jadwal_id)) > 18):
-        return JsonResponse({'success': False, 'message': 'Jadwal dokter tidak valid.'}, status=400)
-    tipe_pasien = data.get('tipe_pasien', 'LAMA').upper()
-    jenis_layanan = data.get('jenis_layanan', 'RAJAL').upper()
-    no_wa = (data.get('no_wa') or '').strip()
-    penjamin = (data.get('penjamin') or 'UMUM').upper()
-    if tipe_pasien not in ('BARU', 'LAMA') or jenis_layanan not in ('IGD', 'RAJAL') or penjamin not in ('UMUM', 'BPJS', 'ASURANSI'):
-        return JsonResponse({'success': False, 'message': 'Pilihan layanan tidak valid.'}, status=400)
-
-    with transaction.atomic():
-        jadwal = None
-        if jenis_layanan == 'RAJAL':
-            schedules = JadwalDokterPoli.objects.select_for_update()
-            if jadwal_id:
-                jadwal = schedules.filter(pk=jadwal_id).first()
-            elif data.get('poliklinik'):
-                jadwal = schedules.filter(poliklinik=data['poliklinik'], status_ketersediaan='BUKA').first()
-            if not jadwal:
-                return JsonResponse({'success': False, 'message': 'Jadwal dokter tidak ditemukan.'}, status=400)
-            estimasi_jam = jadwal.get_next_estimasi_jam()
-            if not jadwal.is_tersedia(timezone.localdate()) or estimasi_jam is None:
-                return JsonResponse({'success': False, 'message': 'Mohon maaf, kuota dokter untuk hari ini sudah penuh.'}, status=400)
-        # 1. Resolusi Pasien
-        if tipe_pasien == 'BARU':
-            nama = data.get('nama_lengkap', '').strip()
-            nik = (data.get('nik') or '').strip()
-            tgl_lahir_str = data.get('tanggal_lahir')
-            jk = data.get('jenis_kelamin', 'L')
-            alamat = data.get('alamat', '')
-            no_bpjs = data.get('no_bpjs', '')
-
-            if not nama or not tgl_lahir_str:
-                return JsonResponse({'success': False, 'message': 'Nama lengkap dan tanggal lahir wajib diisi.'}, status=400)
-
-            # Jika NIK sudah ada, reuse pasien
-            if nik:
-                pasien = Pasien.objects.filter(nik=nik).first()
-            else:
-                pasien = None
-
-            if pasien and not _matches_identity(pasien, data):
-                return JsonResponse({'success': False, 'message': 'Verifikasi identitas pasien gagal.'}, status=403)
-
-            tgl_lahir = parse_flexible_date(tgl_lahir_str, prefer='DMY')
-            if not tgl_lahir or tgl_lahir > timezone.localdate():
-                return JsonResponse({'success': False, 'message': 'Tanggal lahir tidak valid.'}, status=400)
-
-            if not pasien:
-                # Generate No RM Baru: RM-YYYYMMDD-XXXX
-                today_str = timezone.localdate().strftime('%Y%m%d')
-                count_today = Pasien.objects.filter(no_rm__startswith=f"RM-{today_str}").count() + 1
-                new_no_rm = f"RM-{today_str}-{count_today:04d}"
-
-                pasien = Pasien.objects.create(
-                    no_rm=new_no_rm,
-                    nama_lengkap=nama,
-                    nik=nik,
-                    tanggal_lahir=tgl_lahir,
-                    jenis_kelamin=jk,
-                    alamat=alamat,
-                    no_hp=no_wa,
-                    no_bpjs=no_bpjs
-                )
-        else: # Pasien LAMA
-            no_rm = data.get('no_rm', '').strip()
-            nik = data.get('nik', '').strip()
-            no_bpjs = data.get('no_bpjs', '').strip()
-
-            pasien = Pasien.objects.filter(
-                Q(no_rm__iexact=no_rm) |
-                (Q(nik=nik) if nik else Q(pk__isnull=True)) |
-                (Q(no_bpjs=no_bpjs) if no_bpjs else Q(pk__isnull=True))
-            ).first()
-
-            if not pasien:
-                return JsonResponse({'success': False, 'message': 'Data pasien lama tidak ditemukan.'}, status=404)
-
-            if not _matches_identity(pasien, data):
-                return JsonResponse({'success': False, 'message': 'Verifikasi identitas pasien gagal.'}, status=403)
-
-            if no_wa and pasien.no_hp != no_wa:
-                pasien.no_hp = no_wa
-                pasien.save(update_fields=['no_hp'])
-
-        # 2. Generate Booking & Token Batal
-        now = timezone.now()
-        today_date = timezone.localdate()
-        random_suffix = uuid.uuid4().hex[:4].upper()
-        no_kunjungan = f"REG-APM-{now.strftime('%Y%m%d%H%M%S')}-{random_suffix}"
-        token_batal = uuid.uuid4().hex[:12].upper()
-        kode_booking = f"APM-{today_date.strftime('%Y%m%d')}-{random_suffix}"
-
-        # 3. Alur Pelayanan: IGD vs RAJAL
-        if jenis_layanan == 'IGD':
-            nomor_antrean = allocate_queue_number('IGD', tanggal=today_date)
-            estimasi_jam = timezone.localtime().time()
-
-            kunjungan = KunjunganPasien.objects.create(
-                pasien=pasien,
-                no_kunjungan=no_kunjungan,
-                jenis_kunjungan='IGD',
-                tanggal_masuk=now,
-                poliklinik='IGD',
-                dpjp='Dokter Jaga IGD',
-                nomor_antrean=nomor_antrean,
-                penjamin=penjamin,
-                flag_khusus='MERAH', # Fast-Track Emergency Priority
-                status_antrean='MENUNGGU',
-                kode_booking=kode_booking,
-                token_batal=token_batal,
-                estimasi_pelayanan=estimasi_jam,
-                is_apm=True
-            )
-
-            # Notifikasi WhatsApp IGD Emergency
-            if no_wa or pasien.no_hp:
-                msg_igd = format_notifikasi_igd(kunjungan)
-                kirim_pesan_wa(no_wa or pasien.no_hp, msg_igd, jenis_pesan='NOTIFIKASI_IGD', kunjungan=kunjungan)
-
-        else: # RAJAL
-            nomor_antrean = allocate_queue_number('RAJAL', jadwal.poliklinik, tanggal=today_date)
-
-            kunjungan = KunjunganPasien.objects.create(
-                pasien=pasien,
-                no_kunjungan=no_kunjungan,
-                jenis_kunjungan='RAJAL',
-                tanggal_masuk=now,
-                poliklinik=jadwal.poliklinik,
-                dpjp=jadwal.nama_dokter,
-                nomor_antrean=nomor_antrean,
-                penjamin=penjamin,
-                status_antrean='MENUNGGU',
-                kode_booking=kode_booking,
-                token_batal=token_batal,
-                estimasi_pelayanan=estimasi_jam,
-                is_apm=True
-            )
-
-            # Catat Task ID 1 (Mulai Waktu Tunggu Admisi) jika BPJS
-            if penjamin == 'BPJS':
-                update_task_id(kunjungan, 1)
-
-            # Kirim Tiket Digital WhatsApp
-            target_wa = no_wa or pasien.no_hp
-            if target_wa:
-                wa_body = format_tiket_wa(kunjungan, base_url=request.build_absolute_uri('/')[:-1])
-                kirim_pesan_wa(target_wa, wa_body, jenis_pesan='TIKET_APM', kunjungan=kunjungan)
-
-    return JsonResponse({
-        'success': True,
-        'kunjungan_id': kunjungan.id,
-        'no_kunjungan': kunjungan.no_kunjungan,
-        'nomor_antrean': kunjungan.nomor_antrean,
-        'jenis_kunjungan': kunjungan.jenis_kunjungan,
-        'kode_booking': kunjungan.kode_booking,
-        'token_batal': kunjungan.token_batal,
-        'estimasi_pelayanan': kunjungan.estimasi_pelayanan.strftime('%H:%M') if kunjungan.estimasi_pelayanan else '',
-        'dpjp': kunjungan.dpjp,
-        'poliklinik': dict(POLIKLINIK_CHOICES).get(kunjungan.poliklinik, kunjungan.poliklinik) if hasattr(kunjungan, 'get_poliklinik_display') else kunjungan.poliklinik,
-        'struk_url': reverse('pasien:apm_cetak_struk', kwargs={'pk': kunjungan.pk}) + '?' + urlencode({
-            'access': signing.dumps(kunjungan.pk, salt='apm-receipt'),
-        })
+    if error:
+        return JsonResponse(error['payload'], status=error['status'])
+    struk_url = reverse('pasien:apm_cetak_struk', kwargs={'pk': kunjungan.pk}) + '?' + urlencode({
+        'access': signing.dumps(kunjungan.pk, salt='apm-receipt'),
     })
+    return JsonResponse(payload_sukses(kunjungan, struk_url=struk_url))
 
 
 @never_cache
@@ -317,6 +173,9 @@ def apm_api_checkin(request):
     kode = data.get('kode', '').strip()
     if not kode:
         return JsonResponse({'success': False, 'message': 'Kode barcode/booking tidak boleh kosong.'}, status=400)
+    kode_qr = baca_qr_checkin(kode)
+    if kode_qr:
+        kode = kode_qr
     clean_kode = kode.replace('-', '').replace(' ', '')
     candidates = KunjunganPasien.objects.select_for_update().select_related('pasien').filter(
         Q(kode_booking__iexact=kode) | Q(no_kunjungan__iexact=kode) |
@@ -328,17 +187,37 @@ def apm_api_checkin(request):
     if len(visits) != 1 or not _matches_identity(visits[0].pasien, data):
         return JsonResponse({'success': False, 'message': 'Booking atau verifikasi identitas tidak valid.'}, status=403)
     kunjungan = visits[0]
+    estimasi_baru = None
+    sep_info = None
     if not kunjungan.is_checkin:
         if kunjungan.status_antrean != 'MENUNGGU' or kunjungan.is_noshow:
             return JsonResponse({'success': False, 'message': 'Status kunjungan tidak mengizinkan check-in.'}, status=409)
+        from pasien.services.biometrik import wajib_biometrik
+
+        if wajib_biometrik(kunjungan) and kunjungan.biometrik_status != 'VALID':
+            if kunjungan.biometrik_status == 'TIDAK_WAJIB':
+                kunjungan.biometrik_status = 'MENUNGGU'
+                kunjungan.save(update_fields=['biometrik_status'])
+            return JsonResponse({
+                'success': False,
+                'status': 'BIOMETRIK_BELUM_VALID',
+                'message': (
+                    'Poli tujuan mewajibkan verifikasi sidik jari / face recognition. '
+                    'Selesaikan verifikasi biometrik di kiosk sebelum SEP dicetak.'
+                ),
+            }, status=409)
         kunjungan.is_checkin = True
         kunjungan.waktu_checkin = timezone.now()
         kunjungan.save(update_fields=['is_checkin', 'waktu_checkin'])
         if kunjungan.penjamin == 'BPJS':
-            update_task_id(kunjungan, 3)
+            sep_info = _proses_bpjs_checkin(kunjungan)
+        estimasi_baru = _reestimasi_jika_terlambat(kunjungan)
     return JsonResponse({
         'success': True,
         'message': f"Check-In Berhasil! Selamat datang, {kunjungan.pasien.nama_lengkap}. Silakan menuju ruang tunggu {dict(POLIKLINIK_CHOICES).get(kunjungan.poliklinik, kunjungan.poliklinik)}.",
+        'terlambat': estimasi_baru is not None,
+        'estimasi_baru': estimasi_baru,
+        'sep': sep_info,
         'kunjungan': {
             'id': kunjungan.id,
             'nama_pasien': kunjungan.pasien.nama_lengkap,
@@ -472,6 +351,415 @@ def apm_cetak_struk(request, pk):
         'content_width': paper_width - 2,
         'qr_svg': qr_svg,
     })
+    response['Cache-Control'] = 'no-store'
+    return response
+
+
+@never_cache
+@require_http_methods(["POST"])
+@throttle('rujukan-validasi', limit=10, window_detik=600)
+def apm_api_rujukan_validasi(request):
+    """Validasi rujukan sebelum booking (BL-02). Identitas dua-faktor tetap wajib."""
+    if request.content_type == 'application/json':
+        try:
+            data = json.loads(request.body)
+        except (ValueError, UnicodeDecodeError):
+            data = {}
+    else:
+        data = request.POST
+
+    if not isinstance(data, dict) or not all(
+        isinstance(data.get(key, ''), str)
+        for key in ('identitas', 'nama_lengkap', 'tanggal_lahir', 'no_rujukan')
+    ):
+        return JsonResponse({'success': False, 'message': 'Format data tidak valid.'}, status=400)
+
+    identitas = data.get('identitas', '').strip()
+    nomor_rujukan = data.get('no_rujukan', '').strip()
+    if not identitas or not data.get('nama_lengkap', '').strip() or not data.get('tanggal_lahir', '').strip() or not nomor_rujukan:
+        return JsonResponse({
+            'success': False,
+            'message': 'Isi identitas, nama lengkap, tanggal lahir, dan nomor rujukan.',
+        }, status=400)
+
+    bersih = identitas.replace('-', '').replace(' ', '').replace('.', '')
+    pasien = Pasien.objects.filter(
+        Q(nik=bersih) | Q(no_bpjs=bersih) | Q(no_rm__iexact=identitas)
+    ).first()
+    if not pasien or not _matches_identity(pasien, data):
+        return JsonResponse({
+            'success': False, 'message': 'Data identitas tidak cocok atau tidak ditemukan.',
+        }, status=403)
+
+    try:
+        rujukan, hasil = validasi_rujukan_lengkap(
+            nomor_rujukan, pasien, kanal='KIOSK', tanggal_kunjungan=timezone.localdate(),
+        )
+    except RujukanFormatError as exc:
+        return JsonResponse({'success': False, 'status': 'FORMAT_RUJUKAN', 'message': str(exc)}, status=400)
+    except BridgingError as exc:
+        LogRisikoApm.objects.create(
+            kode_risiko='RSK-APM-04', kanal='KIOSK', pemicu='BRIDGING_TIMEOUT',
+            severity='TINGGI', detail={'status': exc.status, 'pesan': str(exc)},
+        )
+        return JsonResponse({
+            'success': False,
+            'status': 'BRIDGING_DOWN',
+            'message': 'Layanan validasi rujukan BPJS sedang terganggu. Silakan menuju loket admisi.',
+            'jalur_alternatif': 'LOKET_ADMISI',
+        }, status=503)
+
+    return JsonResponse({
+        'success': True,
+        'pasien': {'no_rm': pasien.no_rm, 'nama_lengkap': mask_nama(pasien.nama_lengkap)},
+        'rujukan': {
+            'no_rujukan': rujukan.no_rujukan,
+            'tgl_rujukan': rujukan.tgl_rujukan.isoformat() if rujukan.tgl_rujukan else None,
+            'masa_berlaku_hari': rujukan.masa_berlaku_hari(),
+            'ppk_rujukan': rujukan.ppk_rujukan,
+            'nama_ppk_rujukan': rujukan.nama_ppk_rujukan,
+            'ppk_tujuan': rujukan.ppk_tujuan,
+            'poli_tujuan_bpjs': rujukan.poli_tujuan_bpjs,
+            'diagnosa_awal': rujukan.diagnosa_awal,
+            'nama_diagnosa_awal': rujukan.nama_diagnosa_awal,
+        },
+        **hasil.as_dict(),
+    })
+
+
+@never_cache
+@require_http_methods(["POST"])
+def apm_api_igd_fasttrack(request):
+    """IGD Fast-Track (BL-01): identitas minimal, tanpa rujukan/biometrik/jadwal.
+
+    PRD mensyaratkan pendaftaran darurat tidak tertahan administrasi. Karena itu
+    endpoint ini hanya mewajibkan nama, melewati seluruh validasi rawat jalan,
+    mencatat RSK-APM-01, dan mengembalikan durasi registrasi untuk target <= 2 menit.
+    """
+    mulai = timezone.now()
+    if request.content_type == 'application/json':
+        try:
+            data = json.loads(request.body)
+        except (ValueError, UnicodeDecodeError):
+            data = {}
+    else:
+        data = request.POST.dict()
+
+    if not isinstance(data, dict):
+        return JsonResponse({'success': False, 'message': 'Format data tidak valid.'}, status=400)
+    for key in ('nama_lengkap', 'nik', 'no_bpjs', 'no_wa', 'alamat'):
+        if not isinstance(data.get(key, ''), str):
+            return JsonResponse({'success': False, 'message': 'Format data tidak valid.'}, status=400)
+
+    nama = ' '.join((data.get('nama_lengkap') or '').split())
+    if not nama:
+        return JsonResponse({
+            'success': False,
+            'message': 'Nama pasien wajib diisi untuk memulai penanganan darurat.',
+        }, status=400)
+
+    nik = (data.get('nik') or '').strip()
+    no_bpjs = (data.get('no_bpjs') or '').strip()
+    no_wa = (data.get('no_wa') or '').strip()
+    alamat = (data.get('alamat') or '').strip()
+
+    with transaction.atomic():
+        pasien = None
+        identitas_terverifikasi = False
+        if nik:
+            pasien = Pasien.objects.filter(nik=nik).first()
+        if not pasien and no_bpjs:
+            pasien = Pasien.objects.filter(no_bpjs=no_bpjs).first()
+        if pasien:
+            identitas_terverifikasi = (
+                ' '.join(pasien.nama_lengkap.split()).casefold() == nama.casefold()
+            )
+
+        if not pasien:
+            today_str = timezone.localdate().strftime('%Y%m%d')
+            urutan = Pasien.objects.filter(no_rm__startswith=f'RM-IGD-{today_str}').count() + 1
+            pasien = Pasien.objects.create(
+                no_rm=f'RM-IGD-{today_str}-{urutan:04d}',
+                nama_lengkap=nama,
+                nik=nik,
+                no_bpjs=no_bpjs,
+                no_hp=no_wa,
+                alamat=alamat,
+                jenis_kelamin='',
+            )
+
+        now = timezone.now()
+        suffix = uuid.uuid4().hex[:4].upper()
+        nomor_antrean = allocate_queue_number('IGD', tanggal=timezone.localdate())
+        kunjungan = KunjunganPasien.objects.create(
+            pasien=pasien,
+            no_kunjungan=f'REG-IGD-{now.strftime("%Y%m%d%H%M%S")}-{suffix}',
+            jenis_kunjungan='IGD',
+            tanggal_masuk=now,
+            poliklinik='IGD',
+            dpjp='Dokter Jaga IGD',
+            nomor_antrean=nomor_antrean,
+            penjamin='BPJS' if (no_bpjs or pasien.no_bpjs) else 'UMUM',
+            flag_khusus='KRITIS',
+            triage='MERAH',
+            status_antrean='MENUNGGU',
+            kode_booking=f'IGD-{timezone.localdate():%Y%m%d}-{suffix}',
+            token_batal=uuid.uuid4().hex[:12].upper(),
+            estimasi_pelayanan=timezone.localtime().time(),
+            is_apm=True,
+            catatan_admisi=(
+                'REGISTRASI_DARURAT_IDENTITAS_MINIMAL'
+                if not identitas_terverifikasi else 'REGISTRASI_DARURAT'
+            ),
+            registrasi_mulai_at=mulai,
+        )
+
+        LogRisikoApm.objects.create(
+            kode_risiko='RSK-APM-01',
+            kanal='KIOSK',
+            pemicu='IGD_FASTTRACK',
+            severity='KRITIS',
+            kunjungan=kunjungan,
+            detail={
+                'identitas_terverifikasi': identitas_terverifikasi,
+                'waktu_mulai': mulai.isoformat(),
+            },
+        )
+
+        target_wa = no_wa or pasien.no_hp
+        if target_wa:
+            kirim_pesan_wa(
+                target_wa, format_notifikasi_igd(kunjungan),
+                jenis_pesan='NOTIFIKASI_IGD', kunjungan=kunjungan,
+            )
+
+        selesai = timezone.now()
+        durasi = (selesai - mulai).total_seconds()
+        KunjunganPasien.objects.filter(pk=kunjungan.pk).update(registrasi_selesai_at=selesai)
+
+    return JsonResponse({
+        'success': True,
+        'jenis_kunjungan': 'IGD',
+        'triage': 'MERAH',
+        'nomor_antrean': kunjungan.nomor_antrean,
+        'kode_booking': kunjungan.kode_booking,
+        'nama_pasien': kunjungan.pasien.nama_lengkap,
+        'no_rm': kunjungan.pasien.no_rm,
+        'durasi_registrasi_detik': round(durasi, 2),
+        'target_terpenuhi': durasi <= 120,
+        'message': (
+            f'Registrasi darurat selesai dalam {durasi:.1f} detik. '
+            f'Nomor antrean IGD {kunjungan.nomor_antrean} — segera menuju triase IGD.'
+        ),
+        'struk_url': reverse('pasien:apm_cetak_struk', kwargs={'pk': kunjungan.pk}) + '?' + urlencode({
+            'access': signing.dumps(kunjungan.pk, salt='apm-receipt'),
+        }),
+    })
+
+
+def _reestimasi_jika_terlambat(kunjungan):
+    """Pasien yang check-in melewati estimasi dijadwalkan ulang ke antrean aktif terakhir."""
+    import datetime as _datetime
+
+    from pasien.services.estimasi import EstimasiError, estimasi_kunjungan
+    from pasien.models import KonfigurasiApm
+
+    if not kunjungan.estimasi_pelayanan:
+        return None
+    sekarang = timezone.localtime()
+    target = _datetime.datetime.combine(sekarang.date(), kunjungan.estimasi_pelayanan)
+    if sekarang.replace(tzinfo=None) <= target:
+        return None
+
+    jadwal = JadwalDokterPoli.objects.filter(
+        nama_dokter=kunjungan.dpjp, poliklinik=kunjungan.poliklinik,
+    ).first()
+    if not jadwal:
+        return None
+
+    tanggal = kunjungan.tanggal_kunjungan or sekarang.date()
+    antrean_aktif = KunjunganPasien.objects.filter(
+        tanggal_kunjungan=tanggal, jenis_kunjungan='RAJAL',
+        dpjp=kunjungan.dpjp, poliklinik=kunjungan.poliklinik,
+        status_antrean__in=('MENUNGGU', 'DIPANGGIL', 'SEDANG_DILAYANI'),
+    ).exclude(status='BATAL').count()
+
+    konf = KonfigurasiApm.get_solo()
+    try:
+        estimasi = estimasi_kunjungan(
+            kunjungan, konfigurasi=konf, urutan=max(1, antrean_aktif),
+        )
+    except EstimasiError:
+        return None
+
+    kunjungan.estimasi_pelayanan = estimasi.t_periksa
+    kunjungan.estimasi_versi = kunjungan.estimasi_versi + 1
+    kunjungan.save(update_fields=['estimasi_pelayanan', 'estimasi_versi'])
+    kirim_templat(kunjungan, 'PERGESERAN_JADWAL')
+    return {
+        't_periksa': estimasi.t_periksa.strftime('%H:%M'),
+        't_tiba': estimasi.t_tiba.strftime('%H:%M'),
+        'versi': kunjungan.estimasi_versi,
+    }
+
+
+def _proses_bpjs_checkin(kunjungan):
+    """Antrean Online → SEP → Task ID 3 → Templat 2. Gagal bridging = fail-closed."""
+    from pasien.services.bpjs_vclaim import BridgingError, daftar_antrean_bpjs, terbitkan_sep
+
+    try:
+        daftar_antrean_bpjs(kunjungan)
+        terbitkan_sep(kunjungan)
+    except BridgingError as exc:
+        LogRisikoApm.objects.create(
+            kode_risiko='RSK-APM-04', kanal='KIOSK', pemicu='BRIDGING_TIMEOUT',
+            severity='TINGGI', kunjungan=kunjungan,
+            detail={'status': exc.status, 'pesan': str(exc)},
+        )
+        kunjungan.refresh_from_db()
+        if not kunjungan.no_sep:
+            kunjungan.sep_mode = 'GAGAL'
+            kunjungan.save(update_fields=['sep_mode'])
+        return {
+            'success': False,
+            'status': exc.status,
+            'message': (
+                'SEP belum dapat diterbitkan karena layanan BPJS terganggu. '
+                'Silakan menuju loket admisi — jangan mencetak SEP dari kiosk.'
+            ),
+            'jalur_alternatif': 'LOKET_ADMISI',
+        }
+
+    update_task_id(kunjungan, 3)
+    kirim_templat(kunjungan, 'CHECKIN_SEP')
+    return {
+        'success': True,
+        'no_sep': kunjungan.no_sep,
+        'sep_mode': kunjungan.sep_mode,
+        'kodebooking': kunjungan.no_referensi_antrean,
+    }
+
+
+@never_cache
+@require_http_methods(["POST"])
+def apm_api_biometrik(request):
+    """Verifikasi biometrik kiosk + eskalasi 3x gagal (BL-08 / BL-09)."""
+    from pasien.services.biometrik import (
+        BiometricGateway, batas_percobaan, nomor_tiket_helpdesk, wajib_biometrik,
+    )
+    from pasien.services.bpjs_vclaim import simulation_allowed
+
+    if request.content_type == 'application/json':
+        try:
+            data = json.loads(request.body)
+        except (ValueError, UnicodeDecodeError):
+            data = {}
+    else:
+        data = request.POST
+    if not isinstance(data, dict) or not isinstance(data.get('kode', ''), str):
+        return JsonResponse({'success': False, 'message': 'Format data tidak valid.'}, status=400)
+
+    kode = data.get('kode', '').strip()
+    if not kode:
+        return JsonResponse({'success': False, 'message': 'Kode booking wajib diisi.'}, status=400)
+
+    kunjungan = KunjunganPasien.objects.select_related('pasien').filter(
+        Q(kode_booking__iexact=kode) | Q(no_kunjungan__iexact=kode),
+        tanggal_masuk__date=timezone.localdate(), is_apm=True,
+    ).exclude(status='BATAL').first()
+    if not kunjungan or not _matches_identity(kunjungan.pasien, data):
+        return JsonResponse({'success': False, 'message': 'Booking atau verifikasi identitas tidak valid.'}, status=403)
+
+    if not wajib_biometrik(kunjungan):
+        kunjungan.biometrik_status = 'TIDAK_WAJIB'
+        kunjungan.save(update_fields=['biometrik_status'])
+        return JsonResponse({'success': True, 'status': 'TIDAK_WAJIB', 'message': 'Poli ini tidak mewajibkan biometrik.'})
+
+    batas = batas_percobaan()
+    percobaan = LogBiometrik.objects.filter(kunjungan=kunjungan).count() + 1
+    metode = (data.get('metode') or 'FINGERPRINT').upper()
+    if metode not in ('FINGERPRINT', 'FACE'):
+        metode = 'FINGERPRINT'
+    simulasi_valid = True
+    if simulation_allowed() and str(data.get('simulasi_valid', '1')) in ('0', 'false', 'False'):
+        simulasi_valid = False
+
+    gateway = BiometricGateway(mode='SIMULASI')
+    hasil = gateway.verify(
+        kunjungan=kunjungan, percobaan=percobaan, metode=metode,
+        simulasi_valid=simulasi_valid, perangkat_id=(data.get('perangkat_id') or '')[:60],
+    )
+
+    if hasil['valid']:
+        kunjungan.biometrik_status = 'VALID'
+        kunjungan.save(update_fields=['biometrik_status'])
+        return JsonResponse({
+            'success': True, 'status': 'VALID', 'mode': hasil['mode'], 'percobaan': percobaan,
+            'message': 'Verifikasi biometrik berhasil. Lanjutkan check-in untuk mencetak SEP.',
+        })
+
+    sisa = max(0, batas - percobaan)
+    if percobaan >= batas:
+        tiket = nomor_tiket_helpdesk()
+        LogBiometrik.objects.create(
+            kunjungan=kunjungan, percobaan_ke=percobaan, metode=metode, hasil='ESKALASI',
+            mode='SIMULASI', detail={'tiket_helpdesk': tiket},
+        )
+        LogRisikoApm.objects.create(
+            kode_risiko='RSK-APM-03', kanal='KIOSK', pemicu='BIOMETRIK_GAGAL_3X',
+            severity='TINGGI', kunjungan=kunjungan,
+            detail={'percobaan': percobaan, 'tiket_helpdesk': tiket},
+        )
+        kunjungan.biometrik_status = 'ESKALASI'
+        kunjungan.save(update_fields=['biometrik_status'])
+        if kunjungan.pasien.no_hp:
+            kirim_pesan_wa(
+                kunjungan.pasien.no_hp,
+                f'Tiket Antrean Prioritas Helpdesk BPJS: *{tiket}*. '
+                f'Mohon menuju meja helpdesk BPJS untuk verifikasi manual.',
+                jenis_pesan='ESKALASI_BIOMETRIK', kunjungan=kunjungan,
+            )
+        return JsonResponse({
+            'success': False, 'status': 'ESKALASI', 'tiket_helpdesk': tiket,
+            'message': (
+                f'Verifikasi biometrik gagal {percobaan}x. Silakan menuju helpdesk BPJS '
+                f'dengan tiket prioritas {tiket}.'
+            ),
+        }, status=409)
+
+    kunjungan.biometrik_status = 'GAGAL'
+    kunjungan.save(update_fields=['biometrik_status'])
+    return JsonResponse({
+        'success': False, 'status': 'GAGAL', 'percobaan': percobaan, 'sisa_percobaan': sisa,
+        'mode': hasil['mode'],
+        'message': f'Verifikasi biometrik gagal. Sisa percobaan: {sisa}.',
+    }, status=200)
+
+
+@never_cache
+@require_http_methods(["POST"])
+def apm_api_sesi_reset(request):
+    """Bersihkan sesi layar publik (dipanggil idle timer kiosk)."""
+    response = HttpResponse(status=204)
+    response['Cache-Control'] = 'no-store'
+    return response
+
+
+@login_required
+def apm_indikator_view(request):
+    """Indikator mutu APM untuk staf (JSON) — konsumen dasbor mutu ARima."""
+    from pasien.services.indikator import hitung_indikator
+
+    tahun = request.GET.get('tahun')
+    bulan = request.GET.get('bulan')
+    try:
+        data = hitung_indikator(
+            int(tahun) if tahun else None,
+            int(bulan) if bulan else None,
+        )
+    except (TypeError, ValueError):
+        return JsonResponse({'success': False, 'message': 'Parameter tahun/bulan tidak valid.'}, status=400)
+    response = JsonResponse({'success': True, 'indikator': data})
     response['Cache-Control'] = 'no-store'
     return response
 
