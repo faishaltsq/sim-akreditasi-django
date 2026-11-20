@@ -48,6 +48,7 @@ def _matches_identity(pasien, data):
 
 
 
+@never_cache
 def apm_kiosk_view(request):
     """Layar Utama Kiosk Touchscreen Anjungan Pendaftaran Mandiri (APM)"""
     rs = RumahSakitProfile.objects.first()
