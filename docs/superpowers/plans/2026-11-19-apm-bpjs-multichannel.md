@@ -59,6 +59,30 @@
 
 ---
 
+## Production verification (2026-11-20, Vercel + Supabase `sim-akreditasi`)
+
+Deploy = `git push origin master` → Vercel production build (~31 s). `config/wsgi.py:_auto_migrate()` applies pending migrations on cold start, so migrations 0033–0036 landed without a manual step (`django_migrations` verified via Supabase).
+
+Live checks against `https://sim-akreditasi-django.vercel.app`:
+
+| Check | Result |
+|---|---|
+| `GET /pasien/apm/` | 200, `Cache-Control: no-store`, berisi tombol IGD + biometrik + `IDLE_DETIK = 90` |
+| `GET /pasien/mandiri/` | 200, form verifikasi tampil |
+| `GET /pasien/apm/api/jadwal-dokter/` | 200, 4 jadwal (JTG/ANA/INT/THT) setelah seed |
+| `GET /pasien/apm/indikator/` | 302 (staf-only) |
+| `GET /pasien/apm/api/sesi/reset/`, `/api/biometrik/` | 405 (POST-only) |
+| `GET /admin-sikai-7f3d/login/` | 200 |
+| `POST /apm/api/igd-fasttrack/` | 200, `IGD-001`/`IGD-002`, triage MERAH, 0.11 s |
+| Mobile: verifikasi → booking UMUM | 302 → tiket 200, antrean `ANK-001`, QR SVG 78 KB |
+| Mobile: booking BPJS tanpa rujukan | 409 `RUJUKAN_WAJIB` + `RSK-APM-02` |
+| Mobile: booking BPJS + rujukan dummy | 302; check-in 200 dengan `sep.success=false`, `NOT_CONFIGURED`, jalur `LOKET_ADMISI`, `sep_mode='GAGAL'` (fail-closed terbukti di produksi) |
+| Biometrik: booking POLI_THT → check-in | 409 `BIOMETRIK_BELUM_VALID` → verifikasi `VALID` (mode SIMULASI) → check-in 200, `THT-001` |
+
+Data seed produksi (dummy): 4 jadwal dokter dengan kode poli/dokter BPJS, 4 aturan wajib biometrik (THT, MATA, JANTUNG, REHAB_MEDIK), `KonfigurasiApm` diset eksplisit (07:00 / 30 / 15 / 90 s / 3x / FONNTE / retry 3). Belum ada kredensial `BPJS_*` maupun `FONNTE_TOKEN` di Vercel, sehingga seluruh jalur bridging/WA berjalan simulasi dan SEP sengaja tidak terbit.
+
+---
+
 ## Phase 0 — Baseline & safety net (no behaviour change)
 
 ### 0.1 Record the baseline
