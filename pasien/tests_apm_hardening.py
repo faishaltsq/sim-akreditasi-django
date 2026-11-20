@@ -16,6 +16,31 @@ from pasien.services.indikator import hitung_indikator
 from pasien.services.throttle import cek
 
 
+class AdminRegistrationTest(TestCase):
+    def test_semua_model_apm_terdaftar_di_admin(self):
+        from django.contrib import admin
+
+        from pasien.models import (
+            AntreanBpjsTaskLog, JadwalDokterPoli, KonfigurasiApm, KonfigurasiBiometrikPoli,
+            LogBiometrik, LogRisikoApm, RujukanBpjs, WhatsAppLog,
+        )
+
+        for model in (
+            JadwalDokterPoli, RujukanBpjs, KonfigurasiApm, KonfigurasiBiometrikPoli,
+            LogBiometrik, LogRisikoApm, WhatsAppLog, AntreanBpjsTaskLog,
+        ):
+            self.assertIn(model, admin.site._registry, f'{model.__name__} belum terdaftar di admin')
+
+    def test_jadwal_dokter_bisa_diubah_dari_admin(self):
+        from django.contrib import admin
+
+        from pasien.models import JadwalDokterPoli
+
+        model_admin = admin.site._registry[JadwalDokterPoli]
+        self.assertIn('kode_poli_bpjs', model_admin.list_display)
+        self.assertIn('kode_dokter_bpjs', model_admin.list_display)
+
+
 class ThrottleTest(TestCase):
     def test_batas_terlampaui(self):
         for _ in range(3):

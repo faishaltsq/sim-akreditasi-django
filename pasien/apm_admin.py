@@ -2,12 +2,42 @@
 from django.contrib import admin
 
 from .models import (
+    AntreanBpjsTaskLog,
+    JadwalDokterPoli,
     KonfigurasiApm,
     KonfigurasiBiometrikPoli,
     LogBiometrik,
     LogRisikoApm,
     RujukanBpjs,
+    WhatsAppLog,
 )
+
+
+@admin.register(JadwalDokterPoli)
+class JadwalDokterPoliAdmin(admin.ModelAdmin):
+    list_display = [
+        'nama_dokter', 'poliklinik', 'hari_praktik', 'jam_mulai', 'jam_selesai',
+        'kuota_maksimal', 'durasi_per_pasien_menit', 'status_ketersediaan',
+        'kode_poli_bpjs', 'kode_dokter_bpjs',
+    ]
+    list_filter = ['poliklinik', 'status_ketersediaan', 'hari_praktik']
+    list_editable = ['status_ketersediaan', 'kuota_maksimal']
+    search_fields = ['nama_dokter', 'gelar']
+    fieldsets = (
+        ('Identitas Dokter', {'fields': ('nama_dokter', 'gelar', 'foto_dokter', 'foto_url')}),
+        ('Jadwal & Kuota', {'fields': (
+            'poliklinik', 'hari_praktik', 'jam_mulai', 'jam_selesai',
+            'kuota_maksimal', 'durasi_per_pasien_menit', 'status_ketersediaan',
+        )}),
+        ('Kode Bridging BPJS', {
+            'fields': ('kode_poli_bpjs', 'kode_dokter_bpjs'),
+            'description': (
+                'Wajib diisi agar pendaftaran BPJS bisa menerbitkan SEP dan antrean. '
+                'Tanpa kode ini sistem menolak dengan MAPPING_MISSING (by design).'
+            ),
+        }),
+        ('Publikasi', {'fields': ('keterangan',)}),
+    )
 
 
 @admin.register(RujukanBpjs)
@@ -71,3 +101,20 @@ class LogRisikoApmAdmin(AppendOnlyAdminMixin, admin.ModelAdmin):
     search_fields = ['pemicu', 'kunjungan__no_kunjungan', 'kunjungan__pasien__nama_lengkap']
     readonly_fields = [field.name for field in LogRisikoApm._meta.fields]
     date_hierarchy = 'created_at'
+
+
+@admin.register(WhatsAppLog)
+class WhatsAppLogAdmin(AppendOnlyAdminMixin, admin.ModelAdmin):
+    list_display = ['created_at', 'jenis_pesan', 'status', 'provider', 'percobaan', 'nomor_tujuan']
+    list_filter = ['jenis_pesan', 'status', 'provider']
+    search_fields = ['nomor_tujuan', 'kunjungan__no_kunjungan']
+    readonly_fields = [field.name for field in WhatsAppLog._meta.fields]
+    date_hierarchy = 'created_at'
+
+
+@admin.register(AntreanBpjsTaskLog)
+class AntreanBpjsTaskLogAdmin(AppendOnlyAdminMixin, admin.ModelAdmin):
+    list_display = ['kunjungan', 'task_id', 'nama_task', 'waktu', 'status_kirim']
+    list_filter = ['task_id', 'status_kirim']
+    search_fields = ['kunjungan__no_kunjungan']
+    readonly_fields = [field.name for field in AntreanBpjsTaskLog._meta.fields]
