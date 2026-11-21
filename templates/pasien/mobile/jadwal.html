@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Pilih Jadwal — {{ rs.nama|default:"RS ARima" }}</title>
+<title>Pilih Jadwal — {{ rs.name|default:"RS Monsiskami Arima" }}</title>
 <style>
 *{box-sizing:border-box}body{margin:0;background:#f2f6fb;color:#12263a;font:17px/1.5 system-ui,sans-serif}
 header{background:#123552;color:#fff;padding:18px}main{max-width:640px;margin:0 auto;padding:18px}
@@ -16,7 +16,7 @@ button{width:100%;font:inherit;font-weight:700;padding:13px;margin-top:12px;bord
 </style>
 </head>
 <body>
-<header><strong>{{ rs.nama|default:"Rumah Sakit ARima" }}</strong><div class="muted" style="color:#cfe0f2">{{ pasien.nama_lengkap }} — {{ pasien.no_rm }}</div></header>
+<header><strong>{{ rs.name|default:"RS Monsiskami Arima" }}</strong><div class="muted" style="color:#cfe0f2">{{ pasien.nama_lengkap }} — {{ pasien.no_rm }}</div></header>
 <main>
 <h1>Pilih jadwal dokter</h1>
 {% if error %}<div class="error" role="alert">{{ error }}{% if jalur_alternatif %}<div class="muted">Jalur alternatif: {{ jalur_alternatif }}</div>{% endif %}</div>{% endif %}

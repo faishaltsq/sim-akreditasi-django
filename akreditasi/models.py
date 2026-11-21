@@ -487,9 +487,9 @@ class RumahSakitProfile(models.Model):
         obj, created = cls.objects.get_or_create(
             id=1,
             defaults={
-                'name': 'RS MonsisKami',
+                'name': 'RS Monsiskami Arima',
                 'tipe': 'Rumah Sakit Tipe B',
-                'kota': 'Jakarta',
+                'kota': 'Kebumen',
                 'akreditasi_tahun': 2026,
                 'visi': DEFAULT_VISI,
                 'misi': DEFAULT_MISI,

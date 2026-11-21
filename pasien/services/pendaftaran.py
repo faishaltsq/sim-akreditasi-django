@@ -92,9 +92,20 @@ def daftarkan(data, *, kanal='KIOSK', base_url=''):
         if not nama or not tgl_lahir_str:
             return None, _galat('Nama lengkap dan tanggal lahir wajib diisi.')
 
+        if nik and (not nik.isdigit() or len(nik) != 16):
+            return None, _galat(
+                f'NIK harus 16 digit angka (yang dikirim {len(nik)} digit). '
+                'Periksa kembali NIK pada KTP, atau kosongkan bila pasien belum membawa KTP.'
+            )
+
         pasien = Pasien.objects.filter(nik=nik).first() if nik else None
         if pasien and not _matches_identity(pasien, data):
-            return None, _galat('Verifikasi identitas pasien gagal.', http_status=403)
+            return None, _galat(
+                'NIK ini sudah terdaftar dengan nama atau tanggal lahir yang berbeda. '
+                'Periksa kembali ejaan nama dan tanggal lahir, atau gunakan pilihan "Pasien Lama" '
+                'lalu cari dengan nomor rekam medis.',
+                http_status=403,
+            )
 
         tgl_lahir = parse_flexible_date(tgl_lahir_str, prefer='DMY')
         if not tgl_lahir or tgl_lahir > timezone.localdate():

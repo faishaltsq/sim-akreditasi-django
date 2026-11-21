@@ -46,7 +46,7 @@ def _nama_rs():
     from akreditasi.models import RumahSakitProfile
 
     profil = RumahSakitProfile.objects.first()
-    return (profil.name if profil and profil.name else 'Rumah Sakit ARima')
+    return (profil.name if profil and profil.name else 'RS Monsiskami Arima')
 
 
 def normalisasi_nomor(nomor):
