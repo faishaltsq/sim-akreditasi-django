@@ -73,6 +73,7 @@ class HitungEstimasiTest(TestCase):
 class ModelDelegationTest(TestCase):
     def test_model_memakai_service_yang_sama(self):
         jadwal = JadwalDokterPoli.objects.create(
+            hari_praktik='Setiap hari',
             nama_dokter='dr. Uji', poliklinik='POLI_JANTUNG',
             jam_mulai=waktu(8), jam_selesai=waktu(12), durasi_per_pasien_menit=15,
         )
@@ -91,6 +92,7 @@ class RecomputeTest(TestCase):
             no_hp='081200001111',
         )
         self.jadwal = JadwalDokterPoli.objects.create(
+            hari_praktik='Setiap hari',
             nama_dokter='dr. Faisal, Sp.JP', poliklinik='POLI_JANTUNG',
             jam_mulai=waktu(8), jam_selesai=waktu(12), durasi_per_pasien_menit=10,
             kode_poli_bpjs='JTG', kode_dokter_bpjs=12345,
@@ -171,6 +173,7 @@ class EstimasiKunjunganTest(TestCase):
             tanggal_lahir=datetime.date(1985, 1, 1), jenis_kelamin='P', no_hp='081200002222',
         )
         self.jadwal = JadwalDokterPoli.objects.create(
+            hari_praktik='Setiap hari',
             nama_dokter='dr. Indah, Sp.P', poliklinik='POLI_PARU',
             jam_mulai=waktu(9), jam_selesai=waktu(13), durasi_per_pasien_menit=15,
         )
@@ -202,6 +205,7 @@ class CheckinTerlambatTest(TestCase):
             tanggal_lahir=datetime.date(1980, 2, 2), jenis_kelamin='L', no_hp='081200003333',
         )
         self.jadwal = JadwalDokterPoli.objects.create(
+            hari_praktik='Setiap hari',
             nama_dokter='dr. Faisal, Sp.JP', poliklinik='POLI_JANTUNG',
             jam_mulai=waktu(8), jam_selesai=waktu(12), durasi_per_pasien_menit=10,
         )

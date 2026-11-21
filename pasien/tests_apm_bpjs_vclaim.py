@@ -52,6 +52,7 @@ def buat_kunjungan_bpjs(suffix='001', **jadwal_kwargs):
         no_hp='08123456789', no_bpjs='0001234567890', nik='3201234567890001',
     )
     jadwal = JadwalDokterPoli.objects.create(
+            hari_praktik='Setiap hari',
         nama_dokter='dr. Faisal, Sp.JP', poliklinik='POLI_JANTUNG',
         jam_mulai=datetime.time(8, 0), jam_selesai=datetime.time(12, 0),
         kode_poli_bpjs=jadwal_kwargs.pop('kode_poli_bpjs', 'JTG'),

@@ -203,9 +203,10 @@ $('clinic').onchange = async () => {
             button.type = 'button'; button.disabled = !doctor.is_tersedia; button.setAttribute('aria-pressed', 'false');
             const nama = document.createElement('strong'); nama.textContent = doctor.nama_dokter;
             const meta = document.createElement('span'); meta.className = 'meta';
+            const alasan = doctor.alasan_tidak_tersedia || '';
             meta.textContent = doctor.jam_mulai + '–' + doctor.jam_selesai + ' · Sisa kuota: ' + doctor.sisa_kuota +
                 (doctor.hari_praktik ? ' · Praktik: ' + doctor.hari_praktik : '') +
-                (doctor.is_tersedia ? '' : ' · TIDAK TERSEDIA');
+                (alasan ? ' · ' + alasan.charAt(0).toUpperCase() + alasan.slice(1) : '');
             const pick = document.createElement('span'); pick.className = 'pick'; pick.textContent = '●';
             button.append(pick, nama, meta);
             button.onclick = () => pilihDokter(button, doctor);
@@ -213,7 +214,7 @@ $('clinic').onchange = async () => {
             if (!pertama && doctor.is_tersedia) pertama = button;
         });
         if (pertama) pertama.click();
-        else $('doctors').insertAdjacentText('afterbegin', 'Semua dokter di poliklinik ini sedang penuh atau tutup hari ini. ');
+        else $('doctors').insertAdjacentText('afterbegin', 'Tidak ada dokter yang bisa melayani hari ini (tidak praktik atau kuota penuh). Silakan pilih poliklinik lain.');
     } catch(error) {if (requestId === scheduleRequest) message(error.message);}
 };
 $('register').onclick = async () => {

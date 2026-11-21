@@ -15,6 +15,7 @@ class ApmQueueAllocationTest(TestCase):
             tanggal_lahir=date(1990, 1, 1), jenis_kelamin='L',
         )
         self.doctor = JadwalDokterPoli.objects.create(
+            hari_praktik='Setiap hari',
             nama_dokter='dr. Pertama', poliklinik='POLI_JANTUNG',
             jam_mulai=time(12), jam_selesai=time(16), kuota_maksimal=2,
             durasi_per_pasien_menit=15, status_ketersediaan='BUKA',
@@ -48,6 +49,7 @@ class ApmQueueAllocationTest(TestCase):
 
     def test_same_clinic_different_doctors_use_distinct_queue_numbers(self):
         second_doctor = JadwalDokterPoli.objects.create(
+            hari_praktik='Setiap hari',
             nama_dokter='dr. Kedua', poliklinik='POLI_JANTUNG',
             jam_mulai=time(12), jam_selesai=time(16), kuota_maksimal=2,
             status_ketersediaan='BUKA',

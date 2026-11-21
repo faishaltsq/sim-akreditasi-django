@@ -27,6 +27,7 @@ class Base(TestCase):
     def setUp(self):
         self.pasien = siapkan_pasien('0001')
         self.jadwal = JadwalDokterPoli.objects.create(
+            hari_praktik='Setiap hari',
             nama_dokter='dr. Faisal, Sp.JP', poliklinik='POLI_JANTUNG',
             jam_mulai=datetime.time(8, 0), jam_selesai=datetime.time(12, 0),
             kuota_maksimal=20, status_ketersediaan='BUKA',

@@ -109,6 +109,7 @@ def apm_api_jadwal_dokter(request):
 
     hasil = []
     for j in qs:
+        alasan = j.alasan_tidak_tersedia()
         hasil.append({
             'id': j.id,
             'nama_dokter': j.nama_dokter,
@@ -122,7 +123,9 @@ def apm_api_jadwal_dokter(request):
             'sisa_kuota': j.get_sisa_kuota(),
             'durasi_per_pasien_menit': j.durasi_per_pasien_menit,
             'status_ketersediaan': j.status_ketersediaan,
-            'is_tersedia': j.is_tersedia(),
+            'praktik_hari_ini': j.praktik_pada(),
+            'is_tersedia': not alasan,
+            'alasan_tidak_tersedia': alasan,
             'foto_url': j.foto_url or (j.foto_dokter.url if j.foto_dokter else ''),
             'keterangan': j.keterangan,
         })

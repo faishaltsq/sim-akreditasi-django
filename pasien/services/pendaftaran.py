@@ -78,7 +78,15 @@ def daftarkan(data, *, kanal='KIOSK', base_url=''):
         if not jadwal:
             return None, _galat('Jadwal dokter tidak ditemukan.')
         estimasi_jam = jadwal.get_next_estimasi_jam()
-        if not jadwal.is_tersedia(timezone.localdate()) or estimasi_jam is None:
+        hari_ini = timezone.localdate()
+        if not jadwal.praktik_pada(hari_ini):
+            return None, _galat(
+                f'Mohon maaf, {jadwal.nama_dokter} tidak praktik hari ini '
+                f'(jadwal praktik: {jadwal.hari_praktik}). Silakan pilih dokter atau poliklinik lain.'
+            )
+        if jadwal.status_ketersediaan == 'LIBUR':
+            return None, _galat(f'Mohon maaf, jadwal {jadwal.nama_dokter} sedang libur / tutup.')
+        if not jadwal.is_tersedia(hari_ini) or estimasi_jam is None:
             return None, _galat('Mohon maaf, kuota dokter untuk hari ini sudah penuh.')
 
     if tipe_pasien == 'BARU':

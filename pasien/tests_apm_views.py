@@ -17,6 +17,7 @@ class ApmViewsTest(TestCase):
             no_hp='081234567890'
         )
         self.jadwal = JadwalDokterPoli.objects.create(
+            hari_praktik='Setiap hari',
             nama_dokter='dr. Faisal, Sp.JP',
             poliklinik='POLI_JANTUNG',
             jam_mulai=time(8, 0),

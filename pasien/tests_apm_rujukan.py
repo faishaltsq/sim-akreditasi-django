@@ -273,6 +273,7 @@ class LogAppendOnlyTest(TestCase):
 class JadwalDokterMappingTest(TestCase):
     def test_kode_bpjs_kosong_secara_default(self):
         j = JadwalDokterPoli.objects.create(
+            hari_praktik='Setiap hari',
             nama_dokter='dr. Uji', poliklinik='POLI_JANTUNG',
             jam_mulai=datetime.time(8, 0), jam_selesai=datetime.time(12, 0),
         )
@@ -282,6 +283,7 @@ class JadwalDokterMappingTest(TestCase):
 
     def test_jam_praktek_format_bpjs(self):
         j = JadwalDokterPoli.objects.create(
+            hari_praktik='Setiap hari',
             nama_dokter='dr. Uji', poliklinik='POLI_JANTUNG',
             jam_mulai=datetime.time(8, 0), jam_selesai=datetime.time(12, 30),
             kode_poli_bpjs='JTG', kode_dokter_bpjs=12345,

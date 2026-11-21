@@ -215,6 +215,7 @@ class BookingGateTest(TestCase):
     def setUp(self):
         self.pasien = buat_pasien('B01')
         self.jadwal = JadwalDokterPoli.objects.create(
+            hari_praktik='Setiap hari',
             nama_dokter='dr. Faisal, Sp.JP', poliklinik='POLI_JANTUNG',
             jam_mulai=datetime.time(8, 0), jam_selesai=datetime.time(12, 0),
             kuota_maksimal=10, status_ketersediaan='BUKA',

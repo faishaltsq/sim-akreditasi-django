@@ -36,6 +36,7 @@ class KioskBrandingTest(TestCase):
 
     def test_papan_antrean_dan_struk_memakai_nama_rs_dari_profil(self):
         jadwal = JadwalDokterPoli.objects.create(
+            hari_praktik='Setiap hari',
             nama_dokter='dr. Faisal, Sp.JP', poliklinik='POLI_JANTUNG',
             jam_mulai=datetime.time(8, 0), jam_selesai=datetime.time(12, 0),
             kuota_maksimal=10, status_ketersediaan='BUKA',
@@ -95,7 +96,7 @@ class DaftarKioskAlurTest(TestCase):
     def setUp(self):
         self.jadwal = JadwalDokterPoli.objects.create(
             nama_dokter='dr. Faisal, Sp.JP', poliklinik='POLI_JANTUNG',
-            hari_praktik='Senin - Jumat',
+            hari_praktik='Setiap hari',
             jam_mulai=datetime.time(8, 0), jam_selesai=datetime.time(12, 0),
             kuota_maksimal=20, status_ketersediaan='BUKA',
             kode_poli_bpjs='JTG', kode_dokter_bpjs=12345,

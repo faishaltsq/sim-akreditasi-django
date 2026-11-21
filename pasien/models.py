@@ -1520,6 +1520,58 @@ class AntreanHarianCounter(models.Model):
         ]
 
 
+HARI_INDONESIA = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu']
+
+_ALIAS_HARI = {
+    'senin': 0, 'sen': 0,
+    'selasa': 1, 'sel': 1,
+    'rabu': 2, 'rab': 2,
+    'kamis': 3, 'kam': 3,
+    'jumat': 4, 'jumaat': 4, "jum'at": 4, 'jum': 4,
+    'sabtu': 5, 'sab': 5,
+    'minggu': 6, 'min': 6, 'ahad': 6,
+}
+
+
+def parse_hari_praktik(teks):
+    """Ubah teks hari praktik menjadi himpunan indeks hari (0=Senin .. 6=Minggu).
+
+    Mendukung rentang ("Senin - Jumat", "Senin s/d Kamis"), daftar
+    ("Senin, Rabu, Jumat"), dan penanda "Setiap hari". Teks kosong atau tidak
+    dikenali dianggap praktik setiap hari supaya data lama tidak memblokir
+    pendaftaran pasien.
+    """
+    semua = set(range(7))
+    if not teks or not str(teks).strip():
+        return semua
+    teks = str(teks).lower().replace('s/d', '-').replace('s.d.', '-')
+    teks = teks.replace('–', '-').replace('—', '-')
+    if 'setiap hari' in teks or 'hari kerja' in teks or 'senin-minggu' in teks.replace(' ', ''):
+        return semua
+    hasil = set()
+    for potongan in teks.replace(' dan ', ',').split(','):
+        potongan = potongan.strip()
+        if not potongan:
+            continue
+        if '-' in potongan:
+            awal, _, akhir = potongan.partition('-')
+            mulai = _ALIAS_HARI.get(awal.strip())
+            selesai = _ALIAS_HARI.get(akhir.strip())
+            if mulai is None or selesai is None:
+                continue
+            posisi = mulai
+            for _ in range(7):
+                hasil.add(posisi)
+                if posisi == selesai:
+                    break
+                posisi = (posisi + 1) % 7
+        else:
+            hari = _ALIAS_HARI.get(potongan)
+            if hari is not None:
+                hasil.add(hari)
+    return hasil or semua
+
+
 class JadwalDokterPoli(models.Model):
     STATUS_CHOICES = [
         ('BUKA', 'Buka / Kuota Tersedia'),
@@ -1568,10 +1620,28 @@ class JadwalDokterPoli(models.Model):
         terdaftar = self.get_terdaftar_hari_ini(tanggal)
         return max(0, self.kuota_maksimal - terdaftar)
 
-    def is_tersedia(self, tanggal=None):
+    def praktik_pada(self, tanggal=None):
+        """True bila dokter memang punya jadwal praktik pada tanggal tersebut."""
+        from django.utils import timezone
+        tanggal = tanggal or timezone.localdate()
+        return tanggal.weekday() in parse_hari_praktik(self.hari_praktik)
+
+    def alasan_tidak_tersedia(self, tanggal=None):
+        """Alasan singkat (huruf kecil) kenapa dokter tidak bisa didaftari hari itu."""
+        if self.status_ketersediaan == 'LIBUR':
+            return 'sedang libur / tutup.'
+        if self.status_ketersediaan == 'PENUH':
+            return 'kuota dokter sudah penuh.'
         if self.status_ketersediaan != 'BUKA':
-            return False
-        return self.get_sisa_kuota(tanggal) > 0
+            return 'jadwal dokter belum dibuka untuk pendaftaran.'
+        if not self.praktik_pada(tanggal):
+            return f'tidak praktik hari ini (jadwal praktik: {self.hari_praktik}).'
+        if self.get_sisa_kuota(tanggal) <= 0:
+            return 'kuota dokter untuk hari ini sudah penuh.'
+        return ''
+
+    def is_tersedia(self, tanggal=None):
+        return not self.alasan_tidak_tersedia(tanggal)
 
     def get_next_estimasi_jam(self, tanggal=None):
         from django.utils import timezone
