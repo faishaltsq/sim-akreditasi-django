@@ -92,7 +92,7 @@
         <div class="nomor-antrean">{{ kunjungan.nomor_antrean }}</div>
 
         <div style="font-size: 13px; font-weight: bold;">
-            {{ kunjungan.get_poliklinik_display|default:kunjungan.poliklinik }}
+            {{ kunjungan.poliklinik_label }}
         </div>
         <div style="font-size: 11px; margin-bottom: 4px;">{{ kunjungan.dpjp|default:"Dokter Jaga Poli" }}</div>
     </div>

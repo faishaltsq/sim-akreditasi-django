@@ -587,6 +587,16 @@ class KunjunganPasien(models.Model):
         return f'[{self.no_kunjungan}] {self.pasien.nama_lengkap} ({self.get_jenis_kunjungan_display()})'
 
     @property
+    def poliklinik_label(self):
+        """Nama poliklinik yang enak dibaca.
+
+        Field ``poliklinik`` sengaja tanpa ``choices`` supaya unit non-poli
+        (mis. IGD) tetap bisa disimpan, jadi ``get_poliklinik_display()``
+        mengembalikan kode mentah. Properti ini yang dipakai template.
+        """
+        return dict(POLIKLINIK_CHOICES).get(self.poliklinik, self.poliklinik)
+
+    @property
     def lama_rawat(self):
         """Length of Stay dalam hari."""
         from django.utils import timezone

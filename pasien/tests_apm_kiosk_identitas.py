@@ -63,6 +63,8 @@ class KioskBrandingTest(TestCase):
         )
         self.assertEqual(struk.status_code, 200)
         self.assertContains(struk, NAMA_RS)
+        self.assertContains(struk, 'Poli Jantung &amp; Pembuluh Darah')
+        self.assertNotContains(struk, 'POLI_JANTUNG')
 
 
 class KioskFormulirIdentitasTest(TestCase):
