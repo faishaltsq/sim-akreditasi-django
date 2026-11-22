@@ -1,4 +1,5 @@
 import json
+import secrets
 import uuid
 import datetime
 from urllib.parse import urlencode
@@ -237,13 +238,48 @@ def apm_api_checkin(request):
     })
 
 
+# ── Kebijakan pembatalan mandiri APM (T-60) ──────────────────────────────────
+STATUS_DILAYANI = ('SELESAI', 'PULANG', 'RUJUK', 'MENINGGAL')
+ANTREAN_DILAYANI = ('DIPANGGIL', 'SEDANG_DILAYANI', 'SELESAI')
+PESAN_SUDAH_DILAYANI = (
+    'Kunjungan tidak dapat dibatalkan karena pasien sedang atau telah dilayani. '
+    'Silakan hubungi petugas loket pendaftaran bila memerlukan perubahan jadwal.'
+)
+PESAN_PERLU_LOKET = (
+    'Pembatalan mandiri tidak tersedia untuk kunjungan ini karena estimasi waktu '
+    'pelayanan belum tercatat atau kunjungan bersifat gawat darurat (IGD). '
+    'Silakan hubungi petugas loket pendaftaran untuk melakukan pembatalan.'
+)
+
+
+def _selisih_menit_ke_estimasi(kunjungan):
+    """Selisih menit menuju estimasi pelayanan, atau ``None`` bila tidak dapat dihitung.
+
+    Tidak ada nilai default: estimasi yang belum tercatat berarti kebijakan T-60
+    tidak dapat dievaluasi, sehingga pembatalan mandiri harus ditolak (fail-closed).
+    """
+    if not kunjungan.estimasi_pelayanan:
+        return None
+    now_dt = timezone.localtime()
+    visit_local_dt = timezone.localtime(kunjungan.tanggal_masuk)
+    est_datetime = datetime.datetime.combine(visit_local_dt.date(), kunjungan.estimasi_pelayanan)
+    est_dt = timezone.make_aware(est_datetime, timezone.get_current_timezone())
+    if est_dt < visit_local_dt - datetime.timedelta(hours=12):
+        est_dt += datetime.timedelta(days=1)
+    return (est_dt - now_dt).total_seconds() / 60
+
+
 @never_cache
 @require_http_methods(["GET", "POST"])
+@throttle('batal-mandiri', limit=10, window_detik=60)
 def apm_batal_mandiri(request):
     """
     Pembatalan Janji Mandiri oleh Pasien via Token WhatsApp dengan Aturan T-60.
     - >= 60 menit sebelum estimasi: Batal diterima, kuota dilepas.
     - < 60 menit sebelum estimasi: Batal ditolak, tercatat sebagai No-Show.
+    - Kunjungan yang sedang/telah dilayani: ditolak (bukan No-Show).
+    - Kunjungan IGD atau tanpa estimasi: ditolak, diarahkan ke petugas loket.
+    - Kunjungan yang sudah BATAL: sukses idempoten tanpa efek samping.
     """
     token = (request.POST.get('token') or request.GET.get('token') or '').strip()
     if not token:
@@ -251,33 +287,59 @@ def apm_batal_mandiri(request):
             'error': 'Token pembatalan tidak ditemukan dalam permintaan.'
         })
 
-    kunjungan = KunjunganPasien.objects.filter(token_batal=token).first()
+    kunjungan = KunjunganPasien.objects.select_related('pasien').filter(token_batal=token).first()
     if not kunjungan:
         return render(request, 'pasien/apm/batal.html', {
             'error': 'Data pendaftaran dengan token tersebut tidak ditemukan.'
         })
 
-    # Hitung selisih waktu dalam menit
-    now_dt = timezone.localtime()
-    if kunjungan.estimasi_pelayanan:
-        visit_local_dt = timezone.localtime(kunjungan.tanggal_masuk)
-        est_datetime = datetime.datetime.combine(visit_local_dt.date(), kunjungan.estimasi_pelayanan)
-        est_dt = timezone.make_aware(est_datetime, timezone.get_current_timezone())
-        if est_dt < visit_local_dt - datetime.timedelta(hours=12):
-            est_dt += datetime.timedelta(days=1)
-        selisih_menit = (est_dt - now_dt).total_seconds() / 60
-    else:
-        selisih_menit = 120 # Default allow jika estimasi belum tercatat
+    is_ajax = (
+        request.headers.get('x-requested-with') == 'XMLHttpRequest'
+        or request.content_type == 'application/json'
+        or 'application/json' in request.headers.get('accept', '')
+    )
+
+    def _tolak(message, *, http_status=409, **extra):
+        if is_ajax:
+            return JsonResponse({'success': False, 'message': message, **extra}, status=http_status)
+        return render(request, 'pasien/apm/batal.html', {
+            'kunjungan': kunjungan,
+            'rejected': True,
+            'message': message,
+            **extra,
+        })
+
+    # F-06: permintaan ulang untuk kunjungan yang sudah batal = sukses idempoten.
+    # Tidak mengirim WhatsApp lagi dan tidak menulis entri audit baru.
+    if kunjungan.status == 'BATAL':
+        msg_sudah = (
+            f"Pendaftaran nomor {kunjungan.nomor_antrean} sudah dibatalkan sebelumnya. "
+            f"Tidak ada perubahan tambahan pada sistem."
+        )
+        if is_ajax:
+            return JsonResponse({'success': True, 'already_cancelled': True, 'message': msg_sudah})
+        return render(request, 'pasien/apm/batal.html', {
+            'kunjungan': kunjungan,
+            'success': True,
+            'already_cancelled': True,
+            'message': msg_sudah,
+        })
+
+    # F-04: pasien sedang dipanggil / sedang dilayani / sudah selesai tidak boleh
+    # membatalkan sendiri — kuota & status klinis sudah dipakai.
+    if kunjungan.status in STATUS_DILAYANI or kunjungan.status_antrean in ANTREAN_DILAYANI:
+        return _tolak(PESAN_SUDAH_DILAYANI, alasan='SUDAH_DILAYANI')
+
+    # F-05: IGD atau estimasi belum tercatat tidak punya patokan T-60 → arahkan ke loket.
+    selisih_menit = (
+        None if kunjungan.jenis_kunjungan == 'IGD' else _selisih_menit_ke_estimasi(kunjungan)
+    )
+    if selisih_menit is None:
+        return _tolak(PESAN_PERLU_LOKET, alasan='PERLU_LOKET')
 
     can_cancel = selisih_menit >= 60
 
     if request.method == 'POST':
-        is_ajax = (
-            request.headers.get('x-requested-with') == 'XMLHttpRequest'
-            or request.content_type == 'application/json'
-            or 'application/json' in request.headers.get('accept', '')
-        )
-
         if not can_cancel:
             # Kebijakan No-Show dikunci
             kunjungan.is_noshow = True
@@ -296,9 +358,25 @@ def apm_batal_mandiri(request):
                 'message': msg_tolak
             })
 
-        # Pembatalan Berhasil
+        # Pembatalan Berhasil — compare-and-set supaya dua permintaan bersamaan
+        # tidak mengirim WhatsApp ganda (idempotensi di level database).
+        diperbarui = KunjunganPasien.objects.filter(pk=kunjungan.pk).exclude(
+            status='BATAL',
+        ).update(status='BATAL')
         kunjungan.status = 'BATAL'
-        kunjungan.save(update_fields=['status'])
+        if not diperbarui:
+            msg_sudah = (
+                f"Pendaftaran nomor {kunjungan.nomor_antrean} sudah dibatalkan sebelumnya. "
+                f"Tidak ada perubahan tambahan pada sistem."
+            )
+            if is_ajax:
+                return JsonResponse({'success': True, 'already_cancelled': True, 'message': msg_sudah})
+            return render(request, 'pasien/apm/batal.html', {
+                'kunjungan': kunjungan,
+                'success': True,
+                'already_cancelled': True,
+                'message': msg_sudah,
+            })
 
         msg_sukses = f"Pendaftaran nomor {kunjungan.nomor_antrean} ({kunjungan.pasien.nama_lengkap}) berhasil dibatalkan. Kuota dokter telah dilepaskan."
         
@@ -532,7 +610,7 @@ def apm_api_igd_fasttrack(request):
             triage='MERAH',
             status_antrean='MENUNGGU',
             kode_booking=f'IGD-{timezone.localdate():%Y%m%d}-{suffix}',
-            token_batal=uuid.uuid4().hex[:12].upper(),
+            token_batal=secrets.token_urlsafe(32),
             estimasi_pelayanan=timezone.localtime().time(),
             is_apm=True,
             catatan_admisi=(
