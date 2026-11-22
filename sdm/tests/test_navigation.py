@@ -53,11 +53,11 @@ class NavigationTests(TestCase):
             HcGrant.objects.create(user=user, capability=cap, unit_kerja=self.root)
         return user
 
-    def test_ten_groups_render_for_manager(self):
+    def test_eleven_groups_render_for_manager(self):
         tree = navigation_tree(self.manager)
         keys = [g.key for g in tree]
         expected = [
-            'dasbor', 'perencanaan', 'database', 'presensi',
+            'dasbor', 'perencanaan', 'database', 'presensi', 'jadwal_praktek',
             'kredensial', 'kinerja', 'uraian_tugas', 'k3', 'portal', 'laporan',
         ]
         self.assertEqual(keys, expected)

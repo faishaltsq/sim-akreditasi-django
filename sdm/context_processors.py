@@ -79,6 +79,7 @@ def hc_navigation(request):
         request._hc_navigation_cache = {
             'nav_kredensial_pribadi': pribadi,
             'nav_pegawai': 'can_view_hc' in capabilities,
+            'nav_jadwal': 'can_view_hc' in capabilities,
             'nav_formasi': 'can_plan_hc_workforce' in capabilities,
             'nav_rekrutmen': 'can_manage_hc_recruitment' in capabilities,
             'nav_kredensial': 'can_review_hc_credentials' in capabilities,

@@ -1,0 +1,131 @@
+{% extends "base.html" %}
+
+{% block title %}Jadwal Harian — ARIMA{% endblock %}
+{% block page_title %}Jadwal Efektif Harian{% endblock %}
+{% block page_subtitle %}Acuan operasional pendaftaran, kuota, ketepatan waktu, dan dokter pengganti{% endblock %}
+{% block extra_css %}{% include "sdm/_responsive.html" %}{% endblock %}
+
+{% block content %}
+<div class="container-fluid p-0">
+    <section class="page-header-box mb-3">
+        <div>
+            <span class="badge text-bg-light text-dark border mb-2">Mutu Rawat Jalan — Indikator Ketepatan Waktu</span>
+            <h1 class="page-title h4 mb-1">Jadwal Efektif Harian</h1>
+            <p class="page-subtitle text-muted mb-0">
+                Dibentuk otomatis dari pola rutin pada tanggal terpilih; perubahan cuti/pengganti tampil di sini.
+            </p>
+        </div>
+    </section>
+
+    {% include "sdm/_navigasi.html" %}
+    {% include "sdm/jadwal_praktek/_nav.html" with subnav='harian' %}
+
+    <form method="get" class="card border shadow-sm mb-3" role="search" aria-label="Pilih tanggal jadwal">
+        <div class="card-body row g-2 align-items-end">
+            <div class="col-12 col-md-4">
+                <label class="form-label small fw-semibold" for="jp-tanggal">Tanggal</label>
+                <input type="date" id="jp-tanggal" name="tanggal" class="form-control form-control-sm"
+                       value="{{ tanggal|date:'Y-m-d' }}">
+            </div>
+            <div class="col-12 col-md-3">
+                <button type="submit" class="btn btn-sm btn-primary w-100">Tampilkan</button>
+            </div>
+            <div class="col-12 col-md-5 text-md-end">
+                {% if jumlah_dibentuk %}
+                <span class="badge text-bg-info">{{ jumlah_dibentuk }} sesi baru dibentuk dari pola rutin</span>
+                {% endif %}
+                <a class="btn btn-sm btn-outline-secondary" href="{% url 'sdm:jadwal_praktek_izin_create' %}">
+                    <i class="bi bi-person-dash me-1"></i>Ajukan Izin
+                </a>
+            </div>
+        </div>
+    </form>
+
+    <div class="card border shadow-sm">
+        <div class="card-header bg-white d-flex justify-content-between align-items-center">
+            <span class="fw-semibold small">{{ tanggal|date:"l, d F Y" }}</span>
+            <span class="badge text-bg-light text-dark border">{{ jadwal_harian|length }} sesi</span>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-sm align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th scope="col">Unit</th>
+                        <th scope="col">Dokter Rencana</th>
+                        <th scope="col">Dokter Efektif</th>
+                        <th scope="col">Jam Rencana</th>
+                        <th scope="col">Jam Aktual</th>
+                        <th scope="col" class="text-center">Kuota (JKN / Non / Terpakai)</th>
+                        <th scope="col">Status Sesi</th>
+                        <th scope="col" class="text-center">Keterlambatan</th>
+                        <th scope="col">Aksi</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for jadwal in jadwal_harian %}
+                    <tr>
+                        <td>{{ jadwal.unit_kerja.code }}</td>
+                        <td>{{ jadwal.dokter_rencana.nama_lengkap }}</td>
+                        <td>
+                            {{ jadwal.dokter_efektif.nama_lengkap }}
+                            {% if jadwal.dokter_pengganti %}
+                            <span class="badge text-bg-info ms-1">Pengganti</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-nowrap">
+                            {{ jadwal.jam_mulai_rencana|time:"H:i" }}–{{ jadwal.jam_selesai_rencana|time:"H:i" }}
+                        </td>
+                        <td class="text-nowrap">{{ jadwal.jam_mulai_aktual|time:"H:i"|default:"—" }}</td>
+                        <td class="text-center">
+                            {{ jadwal.kuota_jkn }} / {{ jadwal.kuota_non_jkn }} / {{ jadwal.terpakai_total }}
+                            <span class="text-muted small d-block">sisa {{ jadwal.sisa_kuota }}</span>
+                        </td>
+                        <td>
+                            {% if jadwal.status_sesi == 'AKTIF' %}
+                            <span class="badge text-bg-success">Aktif</span>
+                            {% elif jadwal.status_sesi == 'MUNDUR' %}
+                            <span class="badge text-bg-warning text-dark">Mundur</span>
+                            {% elif jadwal.status_sesi == 'DIGANTIKAN' %}
+                            <span class="badge text-bg-info">Digantikan</span>
+                            {% else %}
+                            <span class="badge text-bg-danger">Batal / Libur</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-center">
+                            {% if jadwal.keterlambatan_menit is None %}
+                            <span class="text-muted">—</span>
+                            {% elif jadwal.keterlambatan_menit == 0 %}
+                            <span class="badge text-bg-success">Tepat waktu</span>
+                            {% else %}
+                            <span class="badge text-bg-warning text-dark">+{{ jadwal.keterlambatan_menit }} menit</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if can_manage %}
+                            <form method="post" class="d-flex gap-1"
+                                  action="{% url 'sdm:jadwal_praktek_catat_jam' jadwal.pk %}">
+                                {% csrf_token %}
+                                <input type="hidden" name="next"
+                                       value="{% url 'sdm:jadwal_praktek_harian' %}?tanggal={{ tanggal|date:'Y-m-d' }}">
+                                <input type="time" name="jam_mulai_aktual" class="form-control form-control-sm"
+                                       style="max-width:110px" aria-label="Jam mulai aktual" required>
+                                <button type="submit" class="btn btn-sm btn-outline-primary">Catat</button>
+                            </form>
+                            {% else %}
+                            <span class="text-muted small">—</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="9" class="text-center text-muted py-4">
+                            Tidak ada sesi jadwal pada tanggal ini. Pastikan pola jadwal rutin untuk hari tersebut sudah dibuat.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,6 +1,6 @@
 """Human Capital navigation registry (Task A2).
 
-Single source of truth for the ten-group HC navigation tree. Consumed by the
+Single source of truth for the eleven-group HC navigation tree. Consumed by the
 context processor, dashboard cards, and _navigasi partial. Uses the same
 authorization resolver as object access, so menu visibility is never the
 enforcement boundary.
@@ -17,6 +17,7 @@ GROUP_ICONS = {
     'perencanaan': 'bi-diagram-3-fill',
     'database': 'bi-people-fill',
     'presensi': 'bi-clock-fill',
+    'jadwal_praktek': 'bi-calendar2-week-fill',
     'kredensial': 'bi-award-fill',
     'kinerja': 'bi-bar-chart-line-fill',
     'uraian_tugas': 'bi-file-text-fill',
@@ -79,7 +80,7 @@ from django.core.exceptions import PermissionDenied  # noqa: E402
 
 
 def navigation_tree(user, *, unit=None, employee=None):
-    """Return the ten-group HC navigation tree filtered by authorization."""
+    """Return the eleven-group HC navigation tree filtered by authorization."""
     if not getattr(user, 'is_authenticated', False) or not getattr(user, 'is_active', False):
         return []
 
@@ -156,6 +157,22 @@ def navigation_tree(user, *, unit=None, employee=None):
             items=[
                 item('presensi_jadwal', 'Jadwal Dinas, Presensi & Koreksi', capability='can_view_hc'),
                 item('presensi_jam_efektif', 'Jam Efektif & Ekspor Remunerasi', capability='can_export_hc'),
+            ],
+        ),
+        NavGroup(
+            key='jadwal_praktek',
+            label='Jadwal Praktek Dokter',
+            icon=GROUP_ICONS['jadwal_praktek'],
+            items=[
+                item('jadwal_praktek_rutin', 'Pola Jadwal Rutin & Legalitas',
+                     url_name='jadwal_praktek_list',
+                     capability='can_view_hc'),
+                item('jadwal_praktek_harian', 'Jadwal Efektif Harian & Ketepatan Waktu',
+                     url_name='jadwal_praktek_harian',
+                     capability='can_view_hc'),
+                item('jadwal_praktek_izin', 'Cuti, Izin & Dokter Pengganti',
+                     url_name='jadwal_praktek_izin_list',
+                     capability='can_view_hc'),
             ],
         ),
         NavGroup(

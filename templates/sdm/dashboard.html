@@ -120,6 +120,118 @@
         {% endfor %}
     </div>
 
+    <div class="row g-3 mb-3">
+        <div class="col-12">
+            <div class="card border shadow-sm">
+                <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                    <h2 class="h6 mb-0">Distribusi Pegawai per Rumpun Ketenagaan</h2>
+                    <span class="badge text-bg-light text-dark border">STARKES 2024 — KPS</span>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        {% for rumpun in pola_distribusi_rumpun %}
+                        <div class="col-6 col-lg-3">
+                            <div class="border rounded p-3 h-100">
+                                <p class="small text-muted mb-1">{{ rumpun.label }}</p>
+                                <p class="h4 mb-1">{{ rumpun.jumlah }}</p>
+                                <div class="progress" style="height:6px" role="progressbar"
+                                     aria-valuenow="{{ rumpun.persen }}" aria-valuemin="0" aria-valuemax="100"
+                                     aria-label="Porsi {{ rumpun.label }}">
+                                    <div class="progress-bar" style="width: {{ rumpun.persen }}%"></div>
+                                </div>
+                                <p class="small text-muted mt-1 mb-0">{{ rumpun.persen }}% dari total terklasifikasi</p>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card border shadow-sm mb-3">
+        <div class="card-header bg-white d-flex justify-content-between align-items-center">
+            <h2 class="h6 mb-0">Peta Pemenuhan Pola Ketenagaan (Medis &amp; Non-Medis)</h2>
+            <div class="d-flex align-items-center gap-2">
+                {% if pola_ada_data %}
+                <span class="badge text-bg-light text-dark border">
+                    Standar {{ pola_total_standar }} FTE · Eksisting {{ pola_total_eksisting }} FTE
+                </span>
+                <span class="badge {% if pola_jumlah_kritis %}text-bg-danger{% else %}text-bg-success{% endif %}">
+                    {{ pola_jumlah_kritis }} unit defisit kritis
+                </span>
+                {% endif %}
+                <a class="btn btn-sm btn-outline-secondary" href="{% url 'sdm:formasi_peta' %}">Kelola Formasi</a>
+                {% if can_export_pola %}
+                <a class="btn btn-sm btn-outline-primary" href="{% url 'sdm:pola_ketenagaan_sk_pdf' %}{% if selected_unit %}?unit={{ selected_unit }}{% endif %}">
+                    <i class="bi bi-file-earmark-pdf me-1"></i>Unduh SK Pola Ketenagaan
+                </a>
+                {% endif %}
+            </div>
+        </div>
+        {% if pola_ada_data %}
+        <div class="table-responsive">
+            <table class="table table-sm align-middle mb-0">
+                <caption class="visually-hidden">Selisih FTE standar terhadap eksisting per unit dan profesi, dikelompokkan per rumpun tenaga</caption>
+                <thead class="table-light">
+                    <tr>
+                        <th scope="col">Unit</th>
+                        <th scope="col">Rumpun</th>
+                        <th scope="col">Profesi</th>
+                        <th scope="col" class="text-center">Standar</th>
+                        <th scope="col" class="text-center">Eksisting</th>
+                        <th scope="col" class="text-center">Gap</th>
+                        <th scope="col">Status Kecukupan</th>
+                        <th scope="col" class="text-end">Aksi Risiko</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in pola_baris %}
+                    <tr>
+                        <td class="small">{{ row.unit_kode }}</td>
+                        <td class="small">{{ row.rumpun_label }}</td>
+                        <td class="small">{{ row.profesi }}</td>
+                        <td class="text-center">{{ row.standar_fte }}</td>
+                        <td class="text-center">{{ row.eksisting_fte }}</td>
+                        <td class="text-center fw-semibold {% if row.gap_fte < 0 %}text-danger{% elif row.gap_fte > 0 %}text-primary{% endif %}">
+                            {% if row.gap_fte > 0 %}+{% endif %}{{ row.gap_fte }}
+                        </td>
+                        <td>
+                            <span class="badge text-bg-{{ row.badge }}">{{ row.status }}</span>
+                        </td>
+                        <td class="text-end">
+                            {% if can_manage_pola and row.gap_fte < 0 %}
+                            <form method="post" class="d-inline"
+                                  action="{% url 'sdm:pola_ketenagaan_eskalasi' row.formasi_id %}">
+                                {% csrf_token %}
+                                <button type="submit"
+                                        class="btn btn-sm {% if row.badge == 'danger' %}btn-danger{% else %}btn-outline-danger{% endif %}">
+                                    <i class="bi bi-exclamation-triangle me-1"></i>Eskalasi
+                                </button>
+                            </form>
+                            {% else %}
+                            <span class="text-muted small">Terkendali</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <div class="card-footer bg-white small text-muted">
+            Defisit kritis menandakan selisih di bawah −1 FTE; wajib dieskalasi ke Risk Register sebagai risiko kekurangan staf (KPS &amp; TKRS).
+        </div>
+        {% else %}
+        <div class="card-body">
+            <p class="text-muted mb-1">Belum ada hasil formasi yang disetujui untuk lingkup ini.</p>
+            <p class="small text-muted mb-0">
+                Gap pola ketenagaan dihitung dari <em>Rencana Formasi</em> berstatus disetujui, sehingga angka pada laporan
+                tidak berubah ketika asumsi beban kerja direvisi.
+            </p>
+        </div>
+        {% endif %}
+    </div>
+
     <div class="row g-3">
         <div class="col-12 col-lg-7">
             <div class="card border shadow-sm h-100">

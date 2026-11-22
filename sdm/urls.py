@@ -3,6 +3,7 @@ from django.urls import include, path
 from sdm import views
 from sdm import import_views
 from sdm import intake_views
+from sdm import jadwal_views
 from sdm import portal_views
 from sdm import rekrutmen_portal_views
 
@@ -460,6 +461,38 @@ urlpatterns = [
     ),
     path('saya/ajukan/', portal_views.portal_request_create, name='portal_request_create'),
     path('saya/ajukan/<uuid:request_id>/batal/', portal_views.portal_request_cancel, name='portal_request_cancel'),
+    # ── Jadwal Praktek Dokter (HC) ──
+    path('jadwal-praktek/', jadwal_views.jadwal_list, name='jadwal_praktek_list'),
+    path('jadwal-praktek/baru/', jadwal_views.jadwal_create, name='jadwal_praktek_create'),
+    path('jadwal-praktek/harian/', jadwal_views.jadwal_harian, name='jadwal_praktek_harian'),
+    path(
+        'jadwal-praktek/harian/<uuid:jadwal_id>/catat-jam/',
+        jadwal_views.jadwal_catat_jam,
+        name='jadwal_praktek_catat_jam',
+    ),
+    path('jadwal-praktek/izin/', jadwal_views.izin_list, name='jadwal_praktek_izin_list'),
+    path('jadwal-praktek/izin/baru/', jadwal_views.izin_create, name='jadwal_praktek_izin_create'),
+    path(
+        'jadwal-praktek/izin/<uuid:izin_id>/setujui/',
+        jadwal_views.izin_approve,
+        name='jadwal_praktek_izin_approve',
+    ),
+    path(
+        'jadwal-praktek/izin/<uuid:izin_id>/tolak/',
+        jadwal_views.izin_tolak,
+        name='jadwal_praktek_izin_tolak',
+    ),
+    # ── Pola Ketenagaan: eskalasi risiko & dokumen SK ──
+    path(
+        'pola-ketenagaan/eskalasi/<uuid:formasi_id>/',
+        jadwal_views.pola_eskalasi,
+        name='pola_ketenagaan_eskalasi',
+    ),
+    path(
+        'pola-ketenagaan/sk.pdf',
+        jadwal_views.pola_sk_pdf,
+        name='pola_ketenagaan_sk_pdf',
+    ),
     path('analitik/', views.analitik_dashboard, name='analitik_dashboard'),
     path('analitik/ekspor/', views.analitik_export, name='analitik_export'),
     path(

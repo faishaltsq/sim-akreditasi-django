@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+
+{% block title %}Izin & Dokter Pengganti — ARIMA{% endblock %}
+{% block page_title %}Cuti, Izin &amp; Dokter Pengganti{% endblock %}
+{% block page_subtitle %}Persetujuan izin mengunci slot jadwal dan menandai pasien terdampak{% endblock %}
+{% block extra_css %}{% include "sdm/_responsive.html" %}{% endblock %}
+
+{% block content %}
+<div class="container-fluid p-0">
+    <section class="page-header-box mb-3">
+        <div>
+            <span class="badge text-bg-light text-dark border mb-2">Kontinuitas Layanan &amp; Hak Pasien</span>
+            <h1 class="page-title h4 mb-1">Pengajuan Izin Dokter</h1>
+            <p class="page-subtitle text-muted mb-0">
+                Izin disetujui otomatis mengubah sesi terdampak menjadi Digantikan (ada pengganti) atau Batal.
+            </p>
+        </div>
+    </section>
+
+    {% include "sdm/_navigasi.html" %}
+    {% include "sdm/jadwal_praktek/_nav.html" with subnav='izin' %}
+
+    <div class="d-flex justify-content-end mb-3">
+        {% if can_manage %}
+        <a class="btn btn-sm btn-success" href="{% url 'sdm:jadwal_praktek_izin_create' %}">
+            <i class="bi bi-plus-lg me-1"></i>Pengajuan Izin Baru
+        </a>
+        {% endif %}
+    </div>
+
+    <div class="card border shadow-sm">
+        <div class="card-header bg-white d-flex justify-content-between align-items-center">
+            <span class="fw-semibold small">Daftar Pengajuan</span>
+            <span class="badge text-bg-light text-dark border">{{ izin_list|length }} pengajuan</span>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-sm align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th scope="col">Dokter</th>
+                        <th scope="col">Jenis</th>
+                        <th scope="col">Periode</th>
+                        <th scope="col">Usulan Pengganti</th>
+                        <th scope="col">Status</th>
+                        <th scope="col">Diputuskan</th>
+                        <th scope="col">Aksi</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for izin in izin_list %}
+                    <tr>
+                        <td>{{ izin.dokter.nama_lengkap }}</td>
+                        <td>{{ izin.get_jenis_display }}</td>
+                        <td class="text-nowrap">
+                            {{ izin.tanggal_mulai|date:"d-m-Y" }} – {{ izin.tanggal_selesai|date:"d-m-Y" }}
+                        </td>
+                        <td>{{ izin.dokter_pengganti.nama_lengkap|default:"—" }}</td>
+                        <td>
+                            {% if izin.status == 'DISETUJUI' %}
+                            <span class="badge text-bg-success">Disetujui</span>
+                            {% elif izin.status == 'DITOLAK' %}
+                            <span class="badge text-bg-danger">Ditolak</span>
+                            {% else %}
+                            <span class="badge text-bg-warning text-dark">Menunggu</span>
+                            {% endif %}
+                        </td>
+                        <td class="small text-muted">
+                            {% if izin.disetujui_oleh %}
+                            {{ izin.disetujui_oleh.get_username }}
+                            {% if izin.disetujui_pada %}<span class="d-block">{{ izin.disetujui_pada|date:"d-m-Y H:i" }}</span>{% endif %}
+                            {% else %}—{% endif %}
+                        </td>
+                        <td>
+                            {% if can_manage and izin.status == 'MENUNGGU' %}
+                            <div class="d-flex gap-1">
+                                <form method="post" action="{% url 'sdm:jadwal_praktek_izin_approve' izin.pk %}">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-sm btn-outline-success">Setujui</button>
+                                </form>
+                                <form method="post" action="{% url 'sdm:jadwal_praktek_izin_tolak' izin.pk %}">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-sm btn-outline-danger">Tolak</button>
+                                </form>
+                            </div>
+                            {% else %}
+                            <span class="text-muted small">—</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="7" class="text-center text-muted py-4">
+                            Belum ada pengajuan izin dokter.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -95,6 +95,13 @@ from .intake import (
     RiwayatPendidikanPegawai,
     UrutanNomorPegawai,
 )
+from .jadwal_praktek import (
+    JadwalPraktekHarian,
+    JadwalPraktekRutin,
+    LogAuditJadwal,
+    PengajuanIzinDokter,
+    TindakLanjutPasienJadwal,
+)
 from .ujian import (
     JadwalWawancara,
     JawabanUjian,
@@ -138,6 +145,11 @@ __all__ = [
     'KonfirmasiOffering',
     'Lamaran',
     'JadwalWawancara',
+    'JadwalPraktekHarian',
+    'JadwalPraktekRutin',
+    'LogAuditJadwal',
+    'PengajuanIzinDokter',
+    'TindakLanjutPasienJadwal',
     'ScorecardWawancara',
     'JawabanUjian',
     'PaketSoal',

@@ -1120,8 +1120,17 @@ def dashboard(request):
     status = request.GET.get('status', '')
     metrics = _cached_dashboard(request.user, unit, profesi, status)
     cache.set('hc-dashboard-nav:' + str(request.user.pk), True, 120)
+    from sdm.services.pola_ketenagaan import hitung_ringkasan_pola
+    pola = hitung_ringkasan_pola(request.user, unit=unit)
     return render(request, 'sdm/dashboard.html', {
         **metrics,
+        **pola,
+        'can_export_pola': visible_units(
+            request.user, capability='can_export_hc'
+        ).exists(),
+        'can_manage_pola': visible_units(
+            request.user, capability='can_plan_hc_workforce'
+        ).exists(),
         'unit_options': visible_units(request.user).order_by('level', 'order', 'code'),
         'selected_unit': str(unit.pk) if unit else '',
         'profession_choices': (

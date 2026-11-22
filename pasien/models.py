@@ -1595,6 +1595,11 @@ class JadwalDokterPoli(models.Model):
                                                help_text='Kode poli VClaim/Antrean Online, mis. JTG, INT, MTA')
     kode_dokter_bpjs        = models.PositiveBigIntegerField('Kode Dokter BPJS', null=True, blank=True,
                                                              help_text='Kode dokter numerik pada Antrean Online BPJS')
+    pegawai                 = models.ForeignKey(
+        'sdm.Pegawai', on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='jadwal_apm', verbose_name='Pegawai HC',
+        help_text='Tautan ke master pegawai Human Capital; kosong untuk jadwal lama.',
+    )
     created_at              = models.DateTimeField(auto_now_add=True)
     updated_at              = models.DateTimeField(auto_now=True)
 

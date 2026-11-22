@@ -3,6 +3,7 @@
         <a class="btn btn-sm btn-outline-secondary" href="{% url 'sdm:dashboard' %}">Dasbor</a>
         {% if perms %}{% endif %}
         {% if nav_pegawai %}<a class="btn btn-sm btn-outline-secondary" href="{% url 'sdm:pegawai_list' %}">Direktori</a>{% endif %}
+        {% if nav_jadwal %}<a class="btn btn-sm btn-outline-secondary" href="{% url 'sdm:jadwal_praktek_list' %}">Jadwal Praktek</a>{% endif %}
         {% if nav_formasi %}<a class="btn btn-sm btn-outline-secondary" href="{% url 'sdm:formasi_list' %}">Formasi</a>{% endif %}
         {% if nav_rekrutmen %}<a class="btn btn-sm btn-outline-secondary" href="{% url 'sdm:rekrutmen_list' %}">Rekrutmen</a>{% endif %}
         {% if nav_kredensial %}<a class="btn btn-sm btn-outline-secondary" href="{% url 'sdm:kredensial_list' %}">Kredensial</a>{% endif %}
