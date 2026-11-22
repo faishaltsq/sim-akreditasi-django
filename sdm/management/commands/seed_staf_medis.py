@@ -17,7 +17,7 @@ Pembuatan SPK memerlukan akun pelaku (``issued_by``/``decided_by`` wajib).
 Bila tidak ada pengguna yang cocok, bagian kredensial dilewati dengan peringatan
 alih-alih membuat jejak audit palsu.
 """
-from datetime import date
+from datetime import date, time, timedelta
 
 from django.contrib.auth import get_user_model
 from django.core.management.base import BaseCommand
@@ -28,10 +28,12 @@ from sdm.models import (
     AktivitasBebanKerja,
     HasilFormasi,
     IzinProfesiPegawai,
+    JadwalPraktekRutin,
     JamKerjaEfektif,
     KeputusanKredensial,
     MasterProfesiPegawai,
     Pegawai,
+    PengajuanIzinDokter,
     PengajuanKredensial,
     PenempatanPegawai,
     PenugasanKlinis,
@@ -174,6 +176,10 @@ class Command(BaseCommand):
             '--demo-formasi', action='store_true',
             help='Buat JKE + rencana/hasil formasi demo per rumpun.',
         )
+        parser.add_argument(
+            '--demo-jadwal', action='store_true',
+            help='Buat pola jadwal praktek dummy + jadwal harian 7 hari ke depan.',
+        )
 
     def handle(self, *args, **options):
         aktor = self._resolve_actor(options['user'])
@@ -191,10 +197,17 @@ class Command(BaseCommand):
                 lewati_izin=options['skip_izin'],
             )
             formasi = self._seed_formasi(aktor) if options['demo_formasi'] else 0
+            jadwal = (0, 0)
+            if options['demo_jadwal']:
+                jadwal = self._seed_jadwal(aktor)
 
         pesan = f'Selesai. {dibuat} pegawai baru dibuat, sisanya sudah ada.'
         if options['demo_formasi']:
             pesan += f' {formasi} rencana formasi demo dibuat.'
+        if options['demo_jadwal']:
+            pesan += (
+                f' {jadwal[0]} pola jadwal rutin + {jadwal[1]} sesi jadwal harian dibuat.'
+            )
         self.stdout.write(self.style.SUCCESS(pesan))
 
     # ── helpers ────────────────────────────────────────────────────────────
@@ -381,6 +394,67 @@ class Command(BaseCommand):
             return
         HasilFormasi.objects.filter(rencana__in=demo).delete()
         demo.delete()
+
+    def _seed_jadwal(self, aktor):
+        """Pola jadwal rutin dummy + jadwal harian 7 hari ke depan.
+
+        Setiap dokter hanya mendapat satu slot sehingga tidak ada bentrok dokter,
+        dan ruang praktek diberi nama unik per dokter supaya pemeriksaan bentrok
+        ruangan tidak menolak seed-nya sendiri.
+        """
+        from sdm.services.jadwal_praktek import generate_jadwal_harian
+
+        dokter_qs = Pegawai.objects.filter(
+            data_origin='DEMO', kategori='PPA', status='AKTIF',
+        ).order_by('nama_lengkap')
+
+        dibuat = 0
+        for i, dokter in enumerate(dokter_qs[:14]):
+            penempatan = PenempatanPegawai.objects.filter(
+                pegawai=dokter,
+            ).select_related('unit_kerja').first()
+            if penempatan is None:
+                continue
+            hari = i % 5
+            if i % 2 == 0:
+                jam_mulai, jam_selesai = time(8, 0), time(12, 0)
+            else:
+                jam_mulai, jam_selesai = time(13, 0), time(16, 0)
+            _, created = JadwalPraktekRutin.objects.get_or_create(
+                dokter=dokter,
+                unit_kerja=penempatan.unit_kerja,
+                hari=hari,
+                jam_mulai=jam_mulai,
+                defaults={
+                    'jam_selesai': jam_selesai,
+                    'ruang_praktek': f'R-{dokter.pk.hex[:4].upper()}',
+                    'durasi_per_pasien_menit': 15,
+                    'kuota_jkn': 20,
+                    'kuota_non_jkn': 10,
+                    'batas_daftar_menit': 60,
+                    'created_by': aktor,
+                },
+            )
+            if created:
+                dibuat += 1
+
+        hari_ini = date.today()
+        sesi = 0
+        for offset in range(7):
+            sesi += generate_jadwal_harian(hari_ini + timedelta(days=offset))
+
+        # Satu pengajuan izin menunggu supaya halaman izin tidak kosong.
+        dokter_izin = dokter_qs.first()
+        if dokter_izin is not None:
+            target = hari_ini + timedelta(days=3)
+            PengajuanIzinDokter.objects.get_or_create(
+                dokter=dokter_izin,
+                jenis='CUTI',
+                tanggal_mulai=target,
+                tanggal_selesai=target,
+                defaults={'catatan': 'Data dummy: cuti tahunan menunggu persetujuan.'},
+            )
+        return dibuat, sesi
 
     def _seed_formasi(self, aktor):
         """Buat JKE + rencana formasi + hasil formasi demo per rumpun."""
