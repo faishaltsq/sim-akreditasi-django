@@ -68,10 +68,31 @@
                 <div class="display-4 text-success mb-2">✓</div>
                 <h5 class="fw-bold text-success">Pembatalan Berhasil</h5>
                 <p class="small mb-3">{{ message }}</p>
+                {% if not already_cancelled %}
                 <div class="text-muted small">Notifikasi konfirmasi pembatalan telah dikirimkan ke nomor WhatsApp Anda.</div>
+                {% endif %}
             </div>
             <div class="text-center mt-3">
                 <a href="/pasien/apm/" class="btn btn-primary">Daftar Janji Baru</a>
+            </div>
+        {% elif alasan == 'PERLU_LOKET' %}
+            <div class="alert alert-warning text-center py-4" role="alert">
+                <div class="display-4 text-warning mb-2">ℹ️</div>
+                <h5 class="fw-bold">Pembatalan Mandiri Tidak Tersedia</h5>
+                <p class="small mb-3">{{ message }}</p>
+                <p class="small text-muted mb-0">Petugas loket dapat memproses pembatalan sesuai kebijakan rumah sakit.</p>
+            </div>
+            <div class="text-center mt-3">
+                <a href="/" class="btn btn-secondary btn-sm">Kembali ke Beranda</a>
+            </div>
+        {% elif alasan == 'SUDAH_DILAYANI' %}
+            <div class="alert alert-danger text-center py-4" role="alert">
+                <div class="display-4 text-danger mb-2">⚠️</div>
+                <h5 class="fw-bold text-danger">Pembatalan Ditolak</h5>
+                <p class="small mb-3">{{ message }}</p>
+            </div>
+            <div class="text-center mt-3">
+                <a href="/" class="btn btn-secondary btn-sm">Kembali ke Beranda</a>
             </div>
         {% elif rejected %}
             <div class="alert alert-danger text-center py-4" role="alert">

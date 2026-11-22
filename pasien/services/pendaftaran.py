@@ -3,6 +3,7 @@
 Dipisahkan dari ``apm_views`` agar kiosk dan portal mobile tidak punya dua
 implementasi resolusi pasien/gerbang rujukan (plan 2026-11-19 Phase 6).
 """
+import secrets
 import uuid
 
 from django.db import transaction
@@ -153,7 +154,7 @@ def daftarkan(data, *, kanal='KIOSK', base_url=''):
     now = timezone.now()
     today_date = timezone.localdate()
     suffix = uuid.uuid4().hex[:4].upper()
-    token_batal = uuid.uuid4().hex[:12].upper()
+    token_batal = secrets.token_urlsafe(32)
     kode_booking = f'APM-{today_date:%Y%m%d}-{suffix}'
 
     if jenis_layanan == 'IGD':
