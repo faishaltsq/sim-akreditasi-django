@@ -5,7 +5,7 @@ from . import apm_admin
 from .models import (
     Pasien, Ruangan, Bed, KunjunganPasien, AsesmenRisikoKlinis,
     CPPT, BillingItem, DischargeRecord, ResepElektronik, ResepDetail,
-    KorelasiEpAsesmen, LampiranAsesmen, TindakanAsesmen
+    KorelasiEpAsesmen, LampiranAsesmen, TindakanAsesmen, ApmAksesStruk
 )
 
 class KorelasiEpAsesmenInline(admin.TabularInline):
@@ -86,3 +86,23 @@ class ResepElektronikAdmin(admin.ModelAdmin):
     list_filter = ['status', 'jenis_resep']
     search_fields = ['no_resep', 'kunjungan__pasien__nama_lengkap']
     inlines = [ResepDetailInline]
+
+
+@admin.register(ApmAksesStruk)
+class ApmAksesStrukAdmin(admin.ModelAdmin):
+    """Jejak audit pembukaan struk APM — hanya baca."""
+
+    list_display = ['dibuat', 'hasil', 'kunjungan', 'diminta_pk', 'ip']
+    list_filter = ['hasil', 'dibuat']
+    search_fields = ['ip', 'kunjungan__nomor_antrean', 'kunjungan__pasien__nama_lengkap']
+    date_hierarchy = 'dibuat'
+    ordering = ['-dibuat']
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False

@@ -158,11 +158,30 @@ $('identity-form').onsubmit = event => {
 };
 $('back-identity').onclick = () => show('identity');
 $('back-service').onclick = () => show('service');
+function maskNik(nik) {
+    nik = (nik || '').trim();
+    if (!nik) return '—';
+    if (nik.length <= 8) return '****';
+    return nik.slice(0, 4) + '*'.repeat(nik.length - 8) + nik.slice(-4);
+}
+function maskWa(nomor) {
+    nomor = (nomor || '').trim();
+    if (!nomor) return '—';
+    if (nomor.length <= 6) return '*'.repeat(nomor.length);
+    return nomor.slice(0, 4) + '*'.repeat(nomor.length - 8) + nomor.slice(-4);
+}
+function identitasRingkas() {
+    const nama = (state.nama_lengkap || '').trim();
+    return (nama ? 'Pasien: ' + nama : '') +
+        (state.nik ? '\nNIK: ' + maskNik(state.nik) : '') +
+        (state.no_wa ? '\nWhatsApp: ' + maskWa(state.no_wa) : '');
+}
 function confirmService() {
-    if (state.jenis_layanan === 'IGD') { $('summary').textContent = 'IGD Fast-Track — Dokter Jaga IGD'; }
+    const ringkas = identitasRingkas();
+    if (state.jenis_layanan === 'IGD') { $('summary').textContent = 'IGD Fast-Track — Dokter Jaga IGD' + (ringkas ? '\n' + ringkas : ''); }
     else {
         const poli = $('clinic').selectedOptions.length ? $('clinic').selectedOptions[0].textContent : '';
-        $('summary').textContent = 'Poliklinik: ' + poli + '\nDokter: ' + (state.doctorName || '-') + (state.estimasi ? '\nEstimasi layanan: ' + state.estimasi + ' WIB' : '');
+        $('summary').textContent = 'Poliklinik: ' + poli + '\nDokter: ' + (state.doctorName || '-') + (state.estimasi ? '\nEstimasi layanan: ' + state.estimasi + ' WIB' : '') + (ringkas ? '\n' + ringkas : '');
         $('summary').style.whiteSpace = 'pre-line';
     }
     show('confirm');

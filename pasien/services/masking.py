@@ -19,4 +19,19 @@ def mask_no_bpjs(no_bpjs):
     return '*' * (len(bersih) - 4) + bersih[-4:]
 
 
-__all__ = ['mask_nama', 'mask_nik', 'mask_no_bpjs', 'mask_nomor', 'mask_sep']
+def mask_nama_papan(nama):
+    """Nama untuk papan antrean TV: nama depan + inisial, mis. ``Basirun S.``
+
+    Pasien tetap mengenali namanya sendiri, sementara orang lain di ruang tunggu
+    tidak memperoleh nama lengkap.
+    """
+    teks = ' '.join(str(nama or '').split())
+    if not teks:
+        return '-'
+    bagian = teks.split(' ')
+    if len(bagian) == 1:
+        return bagian[0]
+    return f'{bagian[0]} {bagian[1][0]}.'
+
+
+__all__ = ['mask_nama', 'mask_nik', 'mask_nama_papan', 'mask_no_bpjs', 'mask_nomor', 'mask_sep']

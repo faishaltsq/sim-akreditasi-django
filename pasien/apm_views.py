@@ -15,7 +15,7 @@ from django.urls import reverse
 
 from pasien.models import (
     Pasien, KunjunganPasien, JadwalDokterPoli, POLIKLINIK_CHOICES, LogBiometrik, LogRisikoApm,
-    KonfigurasiApm, RujukanBpjs,
+    KonfigurasiApm, RujukanBpjs, ApmAksesStruk,
 )
 from pasien.services.rujukan import (
     BridgingError, KODE_RISIKO_PER_STATUS, RujukanFormatError,
@@ -23,7 +23,7 @@ from pasien.services.rujukan import (
 )
 from pasien.services.pendaftaran import daftarkan, payload_sukses
 from pasien.mobile_views import baca_qr_checkin
-from pasien.services.masking import mask_nama
+from pasien.services.masking import mask_nama, mask_nama_papan
 from pasien.services.throttle import kunci_ip, kunci_ip_identitas, throttle
 from pasien.services.whatsapp import (
     format_tiket_wa, format_notifikasi_igd, kirim_pesan_wa, kirim_templat,
@@ -70,7 +70,7 @@ def apm_kiosk_view(request):
 
 @never_cache
 @require_http_methods(["GET", "POST"])
-@throttle('cari-pasien', limit=30, window_detik=60)
+@throttle('cari-pasien', limit=10, window_detik=60)
 def apm_api_cari_pasien(request):
     """Resolve a patient only after matching name and date of birth."""
     if request.content_type == 'application/json':
@@ -86,6 +86,9 @@ def apm_api_cari_pasien(request):
     clean_q = q.replace('-', '').replace(' ', '').replace('.', '')
     if not clean_q or not data.get('nama_lengkap', '').strip() or not parse_flexible_date(data.get('tanggal_lahir', ''), prefer='DMY'):
         return JsonResponse({'found': False, 'message': 'Isi identitas, nama lengkap, dan tanggal lahir.'}, status=400)
+    if len(clean_q) < 4:
+        # Identitas terlalu pendek = tebakan, bukan pencarian. Tolak lebih awal.
+        return JsonResponse({'found': False, 'message': 'Identitas terlalu pendek. Isi NIK, No. BPJS, atau No. RM lengkap.'}, status=400)
     pasien = Pasien.objects.filter(
         Q(nik=clean_q) | Q(no_bpjs=clean_q) | Q(no_rm__iexact=q) | Q(no_rm__iexact=clean_q)
     ).first()
@@ -326,15 +329,36 @@ def apm_batal_mandiri(request):
 
 @never_cache
 @require_http_methods(["GET"])
+@throttle('cetak-struk', limit=20, window_detik=60)
 def apm_cetak_struk(request, pk):
-    """Cetak Struk Thermal POS (80mm/58mm) Bukti Antrean APM"""
+    """Cetak Struk Thermal POS (80mm/58mm) Bukti Antrean APM.
+
+    Akses memakai token bertanda tangan berumur pendek (15 menit) dan setiap
+    pembukaan — berhasil maupun ditolak — dicatat di :class:`ApmAksesStruk`
+    supaya ada jejak audit siapa membuka data pasien.
+    """
+    diminta_pk = None
+    try:
+        diminta_pk = int(pk)
+    except (TypeError, ValueError):
+        pass
     try:
         allowed_pk = signing.loads(request.GET.get('access', ''), salt='apm-receipt', max_age=900)
     except signing.BadSignature:
         allowed_pk = None
     if allowed_pk != pk:
+        ApmAksesStruk.objects.create(
+            kunjungan=None, diminta_pk=diminta_pk, hasil='DITOLAK',
+            ip=(request.META.get('REMOTE_ADDR') or '')[:120],
+            user_agent=(request.META.get('HTTP_USER_AGENT') or '')[:255],
+        )
         return HttpResponse('Akses struk tidak valid atau kedaluwarsa.', status=403)
     kunjungan = get_object_or_404(KunjunganPasien, pk=pk)
+    ApmAksesStruk.objects.create(
+        kunjungan=kunjungan, diminta_pk=diminta_pk, hasil='OK',
+        ip=(request.META.get('REMOTE_ADDR') or '')[:120],
+        user_agent=(request.META.get('HTTP_USER_AGENT') or '')[:255],
+    )
     from reportlab.graphics.barcode.qr import QrCodeWidget
     from reportlab.graphics.shapes import Drawing
     from reportlab.graphics import renderSVG
@@ -802,7 +826,7 @@ def antrean_display_api(request):
             antrean_per_poli[p_code]['total_antre'] += 1
             if k.status_antrean == 'DIPANGGIL':
                 antrean_per_poli[p_code]['nomor_sekarang'] = k.nomor_antrean
-                antrean_per_poli[p_code]['nama_pasien'] = k.pasien.nama_lengkap
+                antrean_per_poli[p_code]['nama_pasien'] = mask_nama_papan(k.pasien.nama_lengkap)
                 antrean_per_poli[p_code]['dpjp'] = k.dpjp
             elif k.status_antrean == 'MENUNGGU':
                 antrean_per_poli[p_code]['sisa_antre'] += 1

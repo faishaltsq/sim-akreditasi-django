@@ -2029,6 +2029,33 @@ class LogRisikoApm(AppendOnlyModel):
         return f'{self.kode_risiko} [{self.kanal}] {self.pemicu}'
 
 
+class ApmAksesStruk(models.Model):
+    """Jejak audit pembukaan struk APM (BL-10: akuntabilitas akses data pasien)."""
+
+    HASIL_CHOICES = [
+        ('OK', 'Berhasil'),
+        ('DITOLAK', 'Token tidak valid / kedaluwarsa'),
+    ]
+
+    kunjungan = models.ForeignKey(
+        'KunjunganPasien', on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='akses_struk', verbose_name='Kunjungan',
+    )
+    diminta_pk = models.IntegerField('PK yang diminta', null=True, blank=True)
+    hasil = models.CharField('Hasil', max_length=12, choices=HASIL_CHOICES, default='OK')
+    ip = models.CharField('IP', max_length=120, blank=True)
+    user_agent = models.CharField('User-Agent', max_length=255, blank=True)
+    dibuat = models.DateTimeField('Dibuat', auto_now_add=True, db_index=True)
+
+    class Meta:
+        verbose_name = 'Akses Struk APM'
+        verbose_name_plural = 'Akses Struk APM'
+        ordering = ['-dibuat']
+
+    def __str__(self):
+        return f'{self.get_hasil_display()} · kunjungan={self.kunjungan_id or "-"} · {self.ip or "-"}'
+
+
 class ThrottleCounter(models.Model):
     """Penghitung rate limit kanal publik (portabel SQLite & PostgreSQL)."""
 
