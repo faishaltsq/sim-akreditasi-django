@@ -11,8 +11,22 @@ from akreditasi.models import AuditLog
 from pasien.forms_igd_workflow import STEPS, VITAL_FIELDS, form_for_step
 from pasien.models import IgdAssessmentWorkflow, IgdVitalObservation, KunjunganPasien
 from pasien.unit_scope import can_read_kunjungan, get_unit_scope
+from pasien.workflow_schemas import (
+    RAJAL_JANTUNG_SCHEMA_KEY, RAJAL_JANTUNG_STEPS, STEP_SCHEMAS,
+)
+from .poli_rbac import authorize_step, can_write, episode_dpjp
 
 CLINICAL_PROFESSIONS = {'DOKTER_UMUM', 'DOKTER_SPESIALIS', 'PERAWAT', 'BIDAN'}
+
+IGD_SERVICE_LINE = 'IGD'
+RAJAL_JANTUNG_SERVICE_LINE = 'RAJAL_JANTUNG'
+POLI_JANTUNG_UNIT_CODE = 'POLI-JANTUNG'
+#: Modul yang boleh membuka episode POLI-JANTUNG. ``farmasi`` ikut karena
+#: matriks ADR-11 memberi Farmasi wewenang menulis langkah 9, sedangkan
+#: ``get_allowed_patient_modules`` memetakan profesi apoteker/TTK ke modul
+#: ``farmasi`` dan bukan ``rajal``. Wewenang per langkah tetap ditentukan
+#: matriks; gerbang modul hanya mencegah peran di luar tim (lab, admisi).
+RAJAL_JANTUNG_MODULES = {'rajal', 'farmasi'}
 
 
 class WorkflowConflict(ValueError):
@@ -25,7 +39,56 @@ class WorkflowValidation(ValueError):
         super().__init__('Data langkah belum valid.')
 
 
-def authorize_visit(visit, user, *, write=False, workflow=None):
+def resolve_service_line(visit, workflow, service_line=None):
+    """Tentukan jalur layanan tanpa menebak: eksplisit > workflow > IGD."""
+    if service_line is not None:
+        if service_line not in STEP_SCHEMAS:
+            raise PermissionDenied('Jalur layanan tidak dikenal.')
+        if workflow is not None and workflow.service_line != service_line:
+            raise PermissionDenied('Jalur layanan episode tidak sesuai.')
+        return service_line
+    if workflow is not None:
+        return workflow.service_line
+    return IGD_SERVICE_LINE
+
+def require_rajal_jantung_episode(visit):
+    """Episode harus rawat jalan pada unit POLI-JANTUNG."""
+    if visit.jenis_kunjungan != 'RAJAL':
+        raise PermissionDenied('Asesmen POLI-JANTUNG hanya untuk episode rawat jalan.')
+    if not visit.unit_kerja_id or visit.unit_kerja.code != POLI_JANTUNG_UNIT_CODE:
+        raise PermissionDenied('Episode bukan pada unit POLI-JANTUNG.')
+
+def _authorize_rajal_visit(visit, user, *, write, workflow):
+    profile = getattr(user, 'profile', None)
+    if not user.is_authenticated or profile is None:
+        raise PermissionDenied('Profil pengguna diperlukan.')
+    modules = profile.get_allowed_patient_modules()
+    if not user.is_superuser and not (RAJAL_JANTUNG_MODULES & modules):
+        raise PermissionDenied('Akses modul rawat jalan diperlukan.')
+    scope = get_unit_scope(profile)
+    historical_units = {workflow.origin_unit_id} if workflow and workflow.origin_unit_id else set()
+    origin_access = workflow is not None and (scope is None or any(u.pk in historical_units for u in scope))
+    readable = can_read_kunjungan(visit, profile)
+    if not readable and not (origin_access and not write):
+        if not (origin_access and write and workflow is not None and workflow.status == 'FINAL'):
+            raise PermissionDenied('Kunjungan di luar lingkup unit Anda.')
+    if write:
+        if not can_write(visit, user):
+            raise PermissionDenied('Penyimpanan klinis memerlukan peran asesmen POLI-JANTUNG.')
+        # Episode FINAL tidak lagi aktif sehingga lolos dari scope baca; penulisan
+        # draft harus berakhir 409 "gunakan addendum", bukan 403 yang menyamarkan
+        # sebabnya. Matriks per langkah tetap ditegakkan di _save_rajal_step.
+        if workflow is not None and workflow.status == 'FINAL':
+            return
+        if visit.status in ('PULANG', 'RUJUK', 'MENINGGAL', 'BATAL'):
+            raise PermissionDenied('Episode yang sudah ditutup hanya dapat dibaca.')
+        # ADR-11 butir 4: tanpa DPJP aktif, episode tidak boleh masuk langkah klinis.
+        episode_dpjp(visit)
+
+def authorize_visit(visit, user, *, write=False, workflow=None, service_line=None):
+    line = resolve_service_line(visit, workflow, service_line)
+    if line == RAJAL_JANTUNG_SERVICE_LINE:
+        return _authorize_rajal_visit(visit, user, write=write, workflow=workflow)
     profile = getattr(user, 'profile', None)
     if not user.is_authenticated or profile is None:
         raise PermissionDenied('Profil pengguna diperlukan.')
@@ -47,19 +110,24 @@ def authorize_visit(visit, user, *, write=False, workflow=None):
         raise PermissionDenied('Episode yang sudah ditutup hanya dapat dibaca.')
 
 
-def get_visit(pk, user, *, write=False, lock=False):
+def get_visit(pk, user, *, write=False, lock=False, service_line=None):
     qs = KunjunganPasien.objects.select_for_update() if lock else KunjunganPasien.objects.all()
     visit = get_object_or_404(qs, pk=pk)
     workflow = IgdAssessmentWorkflow.objects.filter(kunjungan=visit).first()
-    if visit.jenis_kunjungan != 'IGD' and workflow is None:
+    line = resolve_service_line(visit, workflow, service_line)
+    if line == RAJAL_JANTUNG_SERVICE_LINE:
+        require_rajal_jantung_episode(visit)
+    elif visit.jenis_kunjungan != 'IGD' and workflow is None:
         raise PermissionDenied('Alur ini hanya untuk episode IGD.')
-    authorize_visit(visit, user, write=write, workflow=workflow)
+    authorize_visit(visit, user, write=write, workflow=workflow, service_line=line)
     return visit, workflow
 
 
 @transaction.atomic
-def save_step(pk, user, step, payload, version):
-    visit, workflow = get_visit(pk, user, write=True, lock=True)
+def save_step(pk, user, step, payload, version, *, service_line=None):
+    visit, workflow = get_visit(pk, user, write=True, lock=True, service_line=service_line)
+    if resolve_service_line(visit, workflow, service_line) == RAJAL_JANTUNG_SERVICE_LINE:
+        return _save_rajal_step(visit, workflow, user, step, payload, version)
     if step not in STEPS or set(payload) - set(STEPS[step][1]) - ({'ai_ticket', 'component_modes', 'component_tickets'} if step == 8 else set()) - {'observed_at','corrects_id'}:
         raise WorkflowValidation({'__all__': ['Field tidak dimiliki langkah ini.']})
     if 'observed_at' in payload and step not in (4, 10):
