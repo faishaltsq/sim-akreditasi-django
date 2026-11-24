@@ -13,7 +13,11 @@ from django.utils import timezone
 from akreditasi.models import AuditLog
 from pasien.forms_igd_operations import InvestigationForm, CpptForm, ActionPlanForm, ActionIdForm, ActionExecutionForm
 from pasien.models import IgdAssessmentWorkflow, IgdWorkflowAction, OrderPenunjang, TindakanAsesmen, BillingItem, CPPT
-from .igd_assessment_workflow import get_visit, authorize_visit, WorkflowConflict, WorkflowValidation
+from .igd_assessment_workflow import (
+    RAJAL_JANTUNG_SCHEMA_KEY, RAJAL_JANTUNG_SERVICE_LINE, get_visit, authorize_visit,
+    resolve_service_line, WorkflowConflict, WorkflowValidation,
+)
+from .poli_rbac import can_write
 
 DOCTORS = {'DOKTER_UMUM', 'DOKTER_SPESIALIS'}
 NURSES = {'PERAWAT', 'BIDAN'}
@@ -192,7 +196,7 @@ HANDLERS = {'order_batch':order_batch, 'prescription_save':save_prescription, 'p
 
 
 @transaction.atomic
-def perform_action(pk, user, operation, payload, version, request_id, attachment=None):
+def perform_action(pk, user, operation, payload, version, request_id, attachment=None, *, service_line=None):
     from django.conf import settings
     from .professional_execution import PRO_OPERATIONS, authorize_professional_operation, dispatch_professional
     professional=operation in PRO_OPERATIONS
@@ -211,9 +215,12 @@ def perform_action(pk, user, operation, payload, version, request_id, attachment
         fingerprint = digest({'operation':operation,'payload':payload})
     except (ValueError, TypeError) as exc:
         raise WorkflowValidation({'request_id':['ID permintaan atau payload tidak valid.']}) from exc
-    visit, workflow = get_visit(pk, user, lock=True)
+    visit, workflow = get_visit(pk, user, lock=True, service_line=service_line)
     if professional:
         authorize_professional_operation(operation,visit,workflow,user,payload)
+    elif resolve_service_line(visit, workflow, service_line) == RAJAL_JANTUNG_SERVICE_LINE:
+        if not can_write(visit, user):
+            raise PermissionDenied('Aksi klinis memerlukan peran asesmen POLI-JANTUNG.')
     elif user.profile.profesi not in DOCTORS | NURSES or user.profile.role == 'ASESOR':
         raise PermissionDenied('Aksi klinis memerlukan profesi klinis yang berwenang.')
     if workflow:
@@ -223,7 +230,7 @@ def perform_action(pk, user, operation, payload, version, request_id, attachment
                 raise WorkflowConflict('ID permintaan sudah dipakai untuk aksi berbeda.')
             return {**previous.result, 'version':workflow.version, 'replayed':True}
     if not professional and operation != 'addendum' and not (operation == 'order_result' and workflow and workflow.status == 'FINAL'):
-        authorize_visit(visit, user, write=True, workflow=workflow)
+        authorize_visit(visit, user, write=True, workflow=workflow, service_line=service_line)
     if workflow and workflow.status == 'FINAL' and operation not in ('addendum','order_result'):
         raise WorkflowConflict('Dokumentasi final tidak dapat ditimpa; gunakan addendum.')
     try:
@@ -232,7 +239,11 @@ def perform_action(pk, user, operation, payload, version, request_id, attachment
     except (TypeError, ValueError) as exc:
         raise WorkflowConflict('Konflik versi: muat ulang episode.') from exc
     if workflow is None:
-        workflow = IgdAssessmentWorkflow.objects.create(kunjungan=visit, origin_unit=visit.unit_kerja)
+        line = resolve_service_line(visit, None, service_line)
+        workflow = IgdAssessmentWorkflow.objects.create(
+            kunjungan=visit, origin_unit=visit.unit_kerja, service_line=line,
+            schema_key=RAJAL_JANTUNG_SCHEMA_KEY if line == RAJAL_JANTUNG_SERVICE_LINE else '',
+        )
     result = dispatch_professional(operation,visit,workflow,user,payload,key) if professional else HANDLERS[operation](visit, workflow, user, payload, attachment) if operation == 'attachment' else HANDLERS[operation](visit, workflow, user, payload)
     if operation not in ('sign','finalize','addendum') and workflow.status != 'FINAL':
         workflow.signatures = {}

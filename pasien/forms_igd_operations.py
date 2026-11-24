@@ -79,6 +79,14 @@ class FinalizationForm(OperationForm):
     paps_nama_penolak = forms.CharField(required=False, max_length=150)
 
 
+class RajalFinalizationForm(OperationForm):
+    """Penutupan episode rawat jalan: kondisi akhir berasal dari langkah 10 (DPJP)."""
+    resume = forms.CharField(max_length=20000, widget=forms.Textarea)
+    edukasi = forms.CharField(required=False, max_length=10000, widget=forms.Textarea)
+    obat = forms.CharField(required=False, max_length=10000, widget=forms.Textarea)
+    kontrol = forms.DateField(required=False, widget=forms.DateInput(attrs={'type':'date'}))
+
+
 class AddendumForm(OperationForm):
     section = forms.ChoiceField(choices=[('MEDIS','Medis'),('KEPERAWATAN','Keperawatan')])
     reason = forms.CharField(min_length=8, max_length=2000, widget=forms.Textarea)

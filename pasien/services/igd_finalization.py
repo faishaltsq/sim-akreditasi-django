@@ -8,12 +8,19 @@ from django.utils import timezone
 
 from akreditasi.models import UnitKerja
 from pasien.forms_igd_workflow import snapshot_visit_fields
-from pasien.forms_igd_operations import SignatureForm, FinalizationForm, AddendumForm
+from pasien.forms_igd_operations import SignatureForm, FinalizationForm, AddendumForm, RajalFinalizationForm
 from pasien.models import Bed, IgdAssessmentRevision, DischargeRecord, POLIKLINIK_CHOICES
+from pasien.workflow_schemas import KONDISI_AKHIR_CHOICES, RAJAL_JANTUNG_STEP_NUMBERS
 from .igd_actions import validate, digest, require_doctor, DOCTORS, NURSES
-from .igd_assessment_workflow import WorkflowConflict, WorkflowValidation
+from .igd_assessment_workflow import RAJAL_JANTUNG_SERVICE_LINE, WorkflowConflict, WorkflowValidation
+from .poli_rbac import require_dpjp
 
 EXEMPTIONS = {'triage','anamnesis','primary_survey','initial_vitals','screening','physical_exam','diagnosis','nursing','investigations','care','evaluation'}
+#: Kunci pengecualian langkah RAJAL_JANTUNG (``step_1`` … ``step_10``).
+RAJAL_EXEMPTIONS = frozenset(f'step_{number}' for number in RAJAL_JANTUNG_STEP_NUMBERS)
+
+def _is_rajal(workflow):
+    return workflow is not None and workflow.service_line == RAJAL_JANTUNG_SERVICE_LINE
 
 
 def clinical_snapshot(visit, workflow):
@@ -32,6 +39,12 @@ def clinical_snapshot(visit, workflow):
         'prescriptions':[{'id':rx.pk,'no_resep':rx.no_resep,'doctor_id':rx.dokter_peresep_id,'items':list(rx.items.order_by('pk').values('nama_obat','aturan_pakai','product_snapshot','regimen','quantity_decimal','reference_price','quantity_reason','kind'))} for rx in visit.resep_list.order_by('pk')],
         'attachments':list(visit.lampiran_asesmen.order_by('pk').values('id','jenis','nama_asli','file','diunggah_pada','diunggah_oleh_id')),
     }
+    if _is_rajal(workflow):
+        # ADR-9 butir 4: digest tanda tangan wajib mencakup nilai JSON yang diisi
+        # klinisi. Bentuk snapshot rajal karena itu berbeda (schema_version 3);
+        # snapshot IGD tetap schema_version 2 tanpa draft_payload.
+        snapshot['schema_version'] = 3
+        snapshot['draft_payload'] = workflow.draft_payload or {}
     if getattr(settings,'IGD_PROFESSIONAL_CARE_ENABLED',False) or visit.cppt.exclude(status='LEGACY').exists():
         from .professional_presentation import snapshot_professional_care
         snapshot['professional_care']=snapshot_professional_care(visit)
@@ -41,13 +54,19 @@ def clinical_snapshot(visit, workflow):
 def sign(visit, workflow, user, data):
     values = validate(SignatureForm, data)
     section = values['section']
-    if section == 'MEDIS':
+    if _is_rajal(workflow):
+        # ADR-11: hanya DPJP yang menandatangani penutupan klinis rawat jalan.
+        require_dpjp(user, visit)
+        if section != 'MEDIS':
+            raise PermissionDenied('Tanda tangan asesmen POLI-JANTUNG hanya oleh DPJP (bagian medis).')
+    elif section == 'MEDIS':
         require_doctor(user)
     elif user.profile.profesi not in NURSES:
         raise PermissionDenied('Tanda tangan keperawatan hanya untuk perawat/bidan.')
     exemptions = values['exemptions']
     if exemptions is not None:
-        if not isinstance(exemptions,dict) or set(exemptions) - EXEMPTIONS or any(not isinstance(v,str) or not 5 <= len(v.strip()) <= 2000 for v in exemptions.values()):
+        allowed = RAJAL_EXEMPTIONS if _is_rajal(workflow) else EXEMPTIONS
+        if not isinstance(exemptions,dict) or set(exemptions) - allowed or any(not isinstance(v,str) or not 5 <= len(v.strip()) <= 2000 for v in exemptions.values()):
             raise WorkflowValidation({'exemptions':['Gunakan objek alasan minimal lima karakter per bagian yang tidak dapat dinilai.']})
         if section != 'MEDIS' and exemptions != workflow.exemptions:
             raise PermissionDenied('Perubahan pengecualian episode memerlukan dokter.')
@@ -61,7 +80,32 @@ def sign(visit, workflow, user, data):
     return {'signed_section':section}
 
 
+def missing_rajal_sections(workflow):
+    """Kelengkapan episode RAJAL_JANTUNG: tiap langkah wajib punya satu nilai.
+
+    Sengaja **tidak** memakai ``physical_exam.exam_present`` — pemeriksaan fisik
+    IGD bertingkat per regio, sedangkan kerangka rajal (F1) belum punya bentuk
+    itu. Kelengkapan di sini berarti "setiap langkah punya minimal satu nilai
+    terisi", ditambah kondisi akhir wajib pada langkah 10. F2/F3 dapat
+    memperketat pemeriksaan per langkah tanpa mengubah kontrak ini.
+    """
+    draft = workflow.draft_payload or {}
+    exemptions = workflow.exemptions or {}
+    missing = []
+    for number in RAJAL_JANTUNG_STEP_NUMBERS:
+        key = f'step_{number}'
+        if key in exemptions:
+            continue
+        values = draft.get(str(number)) or {}
+        if not any(value not in (None, '', [], {}) for value in values.values()):
+            missing.append(key)
+    if not (draft.get('10') or {}).get('kondisi_akhir_rajal') and 'step_10' not in exemptions and 'step_10' not in missing:
+        missing.append('step_10')
+    return missing
+
 def missing_sections(visit, workflow):
+    if _is_rajal(workflow):
+        return missing_rajal_sections(workflow)
     from pasien.physical_exam import exam_present
     def measured(phase):
         observation = workflow.observations.filter(phase=phase).order_by('-observed_at','-pk').first()
@@ -152,7 +196,41 @@ def apply_disposition(visit, user, values):
     visit.save()
 
 
+def _finalize_rajal(visit, workflow, user, data):
+    """Tutup episode rawat jalan jantung: DPJP-only, kondisi akhir dari langkah 10."""
+    require_dpjp(user, visit)
+    values = validate(RajalFinalizationForm, data)
+    snapshot = clinical_snapshot(visit, workflow)
+    fingerprint = digest(snapshot)
+    errors = missing_rajal_sections(workflow)
+    signature = workflow.signatures.get('MEDIS', {})
+    if signature.get('content_digest') != fingerprint:
+        errors.append('Tanda tangan MEDIS untuk data terkini')
+    if errors:
+        raise WorkflowValidation({'finalisasi': errors})
+    kondisi = (workflow.draft_payload or {}).get('10', {}).get('kondisi_akhir_rajal')
+    if kondisi not in KONDISI_AKHIR_CHOICES:
+        raise WorkflowValidation({'finalisasi': ['Kondisi akhir rawat jalan wajib dipilih pada langkah 10.']})
+    visit.discharge_patient(kondisi=kondisi, resume=values['resume'], user=user,
+                            edukasi=values['edukasi'], obat=values['obat'], kontrol=values['kontrol'])
+    record = visit.discharge
+    record.status_clearance = 'PROSES'
+    record.save(update_fields=['status_clearance'])
+    visit.status_antrean = 'SELESAI'
+    if kondisi == 'RUJUK':
+        visit.status = 'RUJUK'
+    visit.save(update_fields=['status', 'status_antrean'])
+    snapshot['signatures'] = copy.deepcopy(workflow.signatures)
+    snapshot['disposition'] = {'kondisi_akhir': kondisi, 'resume': values['resume'],
+                               'status_after': visit.status, 'service_after': visit.jenis_kunjungan,
+                               'finalized_by': user.pk, 'finalized_at': timezone.now().isoformat()}
+    revision = IgdAssessmentRevision.objects.create(workflow=workflow, revision=1, snapshot=snapshot, signed_by=user)
+    workflow.status, workflow.finalized_by, workflow.finalized_at, workflow.last_step = 'FINAL', user, timezone.now(), 10
+    return {'revision_id': revision.pk, 'kondisi_akhir': kondisi}
+
 def finalize(visit, workflow, user, data):
+    if _is_rajal(workflow):
+        return _finalize_rajal(visit, workflow, user, data)
     require_doctor(user)
     values = validate(FinalizationForm,data)
     snapshot = clinical_snapshot(visit,workflow)
@@ -178,7 +256,11 @@ def addendum(visit, workflow, user, data):
     values = validate(AddendumForm,data)
     if workflow.status != 'FINAL':
         raise WorkflowConflict('Addendum hanya untuk dokumentasi final.')
-    if values['section'] == 'MEDIS':
+    if _is_rajal(workflow):
+        require_dpjp(user, visit)
+        if values['section'] != 'MEDIS':
+            raise PermissionDenied('Addendum asesmen POLI-JANTUNG hanya oleh DPJP (bagian medis).')
+    elif values['section'] == 'MEDIS':
         require_doctor(user)
     elif user.profile.profesi not in NURSES:
         raise PermissionDenied('Addendum keperawatan memerlukan perawat/bidan.')
