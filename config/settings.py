@@ -46,6 +46,10 @@ if not SECRET_KEY:
 DEBUG = os.environ.get('DJANGO_DEBUG', 'False' if IS_PRODUCTION else 'True').lower() in ('true', '1')
 IGD_WORKFLOW_ENABLED = os.environ.get('IGD_WORKFLOW_ENABLED', 'false').lower() in ('true', '1')
 IGD_PROFESSIONAL_CARE_ENABLED = os.environ.get('IGD_PROFESSIONAL_CARE_ENABLED', 'false').lower() in ('true', '1')
+# Flag rilis modul RME Poliklinik Jantung — terpisah dari flag IGD (ADR-8).
+# View POLI-JANTUNG wajib memeriksa nilai ini secara eksplisit; jangan lewat
+# require_rollout() yang hanya membaca IGD_WORKFLOW_ENABLED.
+POLI_JANTUNG_WORKFLOW_ENABLED = os.environ.get('POLI_JANTUNG_WORKFLOW_ENABLED', 'false').lower() in ('true', '1')
 # Sembunyikan kelompok penunjang tanpa item yang bisa di-order pada menu bertingkat IGD.
 IGD_PENUNJANG_HIDE_EMPTY_BRANCHES = os.environ.get('IGD_PENUNJANG_HIDE_EMPTY_BRANCHES', 'true').lower() in ('true', '1')
 
