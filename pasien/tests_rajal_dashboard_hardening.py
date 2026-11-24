@@ -228,3 +228,48 @@ class PoliCountsTest(_RajalFixture):
         self.assertEqual(res.status_code, 200)
         no_kunjungan = {k.no_kunjungan for k in res.context['pasien_rajal_list']}
         self.assertEqual(no_kunjungan, {'KJ-POLI-ANAK-01', 'KJ-POLI-ANAK-02'})
+
+
+class RajalScopeTest(_RajalFixture):
+    """F0.5 — dasbor rajal dibatasi unit kerja profil."""
+
+    def setUp(self):
+        super().setUp()
+        self.unit_anak = UnitKerja.objects.get_or_create(
+            code='POLI-ANAK', defaults={'name': 'Poliklinik Anak', 'level': 4})[0]
+        self.kunjungan_jantung = self._kunjungan(
+            no='KJ-SCOPE-JANTUNG-01', poliklinik='POLI_JANTUNG')
+        self.kunjungan_anak = self._kunjungan(
+            no='KJ-SCOPE-ANAK-01', poliklinik='POLI_ANAK')
+
+    def _lihat(self, username):
+        self.assertTrue(self.client.login(
+            username=username, password=self.password))
+        res = self.client.get(reverse('pasien:rajal_dashboard'))
+        self.assertEqual(res.status_code, 200)
+        return {k.no_kunjungan for k in res.context['pasien_rajal_list']}
+
+    def _lihat_counts(self, username):
+        self.assertTrue(self.client.login(
+            username=username, password=self.password))
+        res = self.client.get(reverse('pasien:rajal_dashboard'))
+        self.assertEqual(res.status_code, 200)
+        return res.context['poli_counts']
+
+    def test_perawat_poli_jantung_hanya_melihat_unitnya(self):
+        self.assertEqual(self._lihat('dokter.jantung'), {'KJ-SCOPE-JANTUNG-01'})
+
+    def test_perawat_poli_anak_hanya_melihat_unitnya(self):
+        self._user('perawat.anak', self.unit_anak, profesi='PERAWAT')
+        self.assertEqual(self._lihat('perawat.anak'), {'KJ-SCOPE-ANAK-01'})
+
+    def test_admin_rs_melihat_semua(self):
+        self._user('admin.rs', self.unit_jantung, role='ADMIN_RS')
+        self.assertEqual(
+            self._lihat('admin.rs'),
+            {'KJ-SCOPE-JANTUNG-01', 'KJ-SCOPE-ANAK-01'})
+
+    def test_hitungan_poli_ikut_dibatasi_unit(self):
+        """Poli di luar scope tidak membocorkan jumlah pasiennya."""
+        self.assertEqual(
+            self._lihat_counts('dokter.jantung')['POLI_ANAK']['count'], 0)

@@ -1282,10 +1282,11 @@ def igd_status_update(request, pk):
 def rajal_dashboard(request):
     """Dedicated Outpatient Clinics (Poli Rawat Jalan) Dashboard."""
     poli_filter = request.GET.get('poli', '')
-    base_qs = KunjunganPasien.objects.filter(
+    profile = getattr(request.user, 'profile', None)
+    base_qs = scope_kunjungan_qs(KunjunganPasien.objects.filter(
         jenis_kunjungan='RAJAL',
         status__in=['DAFTAR', 'ASESMEN']
-    ).select_related('pasien', 'unit_kerja', 'bed__ruangan')
+    ), profile).select_related('pasien', 'unit_kerja', 'bed__ruangan')
 
     # Hitungan per poli memakai kode unit (``akreditasi.layanan_unit``), bukan
     # potongan label: ``poliklinik`` berisi campuran label pilihan
