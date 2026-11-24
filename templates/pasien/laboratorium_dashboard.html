@@ -13,14 +13,17 @@
       <small class="text-muted">Layanan tujuan terotorisasi — Nilai Kritis & Verifikasi Hasil</small>
     </div>
     <div class="d-flex gap-2 flex-wrap">
-      <a href="?jenis={{ kind }}&status=ORDERED" class="btn btn-sm {% if status_filter == 'ORDERED' %}btn-warning{% else %}btn-outline-warning{% endif %}">
-        <i class="bi bi-hourglass-split"></i> Pending <span class="badge bg-danger ms-1">{{ total_pending }}</span>
+      <a href="?jenis={{ kind }}&status=DRAFT" class="btn btn-sm {% if status_filter == 'DRAFT' %}btn-secondary{% else %}btn-outline-secondary{% endif %}">
+        <i class="bi bi-file-earmark"></i> Draft <span class="badge bg-secondary ms-1">{{ total_draft }}</span>
       </a>
-      <a href="?jenis={{ kind }}&status=PROSES" class="btn btn-sm {% if status_filter == 'PROSES' %}btn-primary{% else %}btn-outline-primary{% endif %}">
-        <i class="bi bi-arrow-repeat"></i> Proses <span class="badge bg-secondary ms-1">{{ total_proses }}</span>
+      <a href="?jenis={{ kind }}&status=DIPROSES" class="btn btn-sm {% if status_filter == 'DIPROSES' %}btn-primary{% else %}btn-outline-primary{% endif %}">
+        <i class="bi bi-arrow-repeat"></i> Diproses <span class="badge bg-secondary ms-1">{{ total_diproses }}</span>
       </a>
       <a href="?jenis={{ kind }}&status=SELESAI" class="btn btn-sm {% if status_filter == 'SELESAI' %}btn-success{% else %}btn-outline-success{% endif %}">
         <i class="bi bi-check-circle"></i> Selesai <span class="badge bg-success ms-1">{{ total_selesai }}</span>
+      </a>
+      <a href="?jenis={{ kind }}&status=BATAL" class="btn btn-sm {% if status_filter == 'BATAL' %}btn-danger{% else %}btn-outline-danger{% endif %}">
+        <i class="bi bi-x-circle"></i> Batal <span class="badge bg-danger ms-1">{{ total_batal }}</span>
       </a>
       <a href="?jenis={{ kind }}" class="btn btn-sm btn-outline-secondary">Semua Status</a>
     </div>
@@ -64,6 +67,7 @@
             <th>Prioritas</th>
             <th>Status</th>
             <th>Critical</th>
+            <th>Pelaporan Kritis</th>
             <th>Waktu Order</th>
             <th style="width:80px;">Aksi</th>
           </tr>
@@ -88,12 +92,14 @@
               {% endif %}
             </td>
             <td>
-              {% if o.status == 'ORDERED' %}
-                <span class="badge bg-warning text-dark">Pending</span>
-              {% elif o.status == 'PROSES' %}
-                <span class="badge bg-primary">Proses</span>
-              {% else %}
+              {% if o.status == 'DRAFT' %}
+                <span class="badge bg-secondary">Draft</span>
+              {% elif o.status == 'DIPROSES' %}
+                <span class="badge bg-primary">Diproses</span>
+              {% elif o.status == 'SELESAI' %}
                 <span class="badge bg-success">Selesai</span>
+              {% else %}
+                <span class="badge bg-danger">Batal</span>
               {% endif %}
             </td>
             <td class="text-center">
@@ -101,6 +107,24 @@
               <i class="bi bi-exclamation-triangle-fill text-danger" title="{{ o.critical_value_catatan }}"></i>
               {% else %}
               <span class="text-muted">—</span>
+              {% endif %}
+            </td>
+            <td style="font-size:0.72rem;">
+              {% if o.is_critical_value %}
+                <div>Temu: {{ o.critical_found_at|date:"d/m H:i"|default:"—" }}</div>
+                <div>Lapor: {{ o.critical_reported_at|date:"d/m H:i"|default:"—" }}
+                  {% if o.critical_reported_to %}<span class="text-muted">→ {{ o.critical_reported_to }}</span>{% endif %}</div>
+                <div>Read-back: {{ o.critical_readback_at|date:"d/m H:i"|default:"—" }}
+                  {% if o.critical_readback_by %}<span class="text-muted">oleh {{ o.critical_readback_by.get_full_name|default:o.critical_readback_by.username }}</span>{% endif %}</div>
+                {% if o.critical_sla_status == 'PATUH' %}
+                <span class="badge bg-success">SLA PATUH — {{ o.critical_sla_menit }} menit</span>
+                {% elif o.critical_sla_status == 'TERLAMBAT' %}
+                <span class="badge bg-danger">SLA TERLAMBAT — {{ o.critical_sla_menit }} menit</span>
+                {% else %}
+                <span class="badge bg-warning text-dark">SLA belum lengkap</span>
+                {% endif %}
+              {% else %}
+                <span class="text-muted">—</span>
               {% endif %}
             </td>
             <td class="text-muted" style="font-size:0.75rem;">{{ o.created_at|date:"d/m H:i" }}</td>
@@ -119,7 +143,7 @@
             </td>
           </tr>
           {% empty %}
-          <tr><td colspan="9" class="text-center text-muted py-4">Tidak ada order laboratorium{% if status_filter %} dengan status ini{% endif %}.</td></tr>
+          <tr><td colspan="10" class="text-center text-muted py-4">Tidak ada order laboratorium{% if status_filter %} dengan status ini{% endif %}.</td></tr>
           {% endfor %}
         </tbody>
       </table>
@@ -147,8 +171,7 @@
           <div class="mb-3">
             <label for="updateStatus" class="form-label form-label-sm">Status Order</label>
             <select name="status" class="form-select form-select-sm" id="updateStatus">
-              <option value="ORDERED">Pending / Terkirim</option>
-              <option value="PROSES">Dalam Pemeriksaan</option>
+              <option value="DIPROSES">Diproses / Dalam Pemeriksaan</option>
               <option value="SELESAI">Selesai / Hasil Tersedia</option>
             </select>
           </div>
@@ -157,6 +180,17 @@
             <label for="updateHasil" class="form-label form-label-sm">Hasil Pemeriksaan</label>
             <textarea name="hasil_pemeriksaan" class="form-control form-control-sm" id="updateHasil" rows="3"
                       placeholder="Isi nilai hasil, satuan, rentang normal..."></textarea>
+          </div>
+
+          <div class="mb-3">
+            <label for="updateInterpretasi" class="form-label form-label-sm">Interpretasi Klinis (wajib bila selesai)</label>
+            <textarea name="interpretasi" class="form-control form-control-sm" id="updateInterpretasi" rows="2"
+                      placeholder="Contoh: Sinus rhythm normal / HFrEF / Iskemia anterior"></textarea>
+          </div>
+
+          <div class="mb-3">
+            <label for="updateLvef" class="form-label form-label-sm">LVEF (%) — khusus ekokardiografi</label>
+            <input type="number" name="lvef" id="updateLvef" class="form-control form-control-sm" min="0" max="100">
           </div>
 
           <div class="mb-2">
@@ -173,6 +207,31 @@
             <label class="form-label form-label-sm">Catatan Nilai Kritis</label>
             <input type="text" name="critical_value_catatan" class="form-control form-control-sm" 
                    id="updateCatatan" placeholder="Contoh: Hb 5.2 g/dL — krisis">
+
+            <div class="row g-2 mt-2">
+              <div class="col-6">
+                <label class="form-label form-label-sm" for="updateFoundAt">Jam temuan</label>
+                <input type="datetime-local" name="critical_found_at" id="updateFoundAt" class="form-control form-control-sm">
+              </div>
+              <div class="col-6">
+                <label class="form-label form-label-sm" for="updateReportedAt">Jam lapor ke DPJP</label>
+                <input type="datetime-local" name="critical_reported_at" id="updateReportedAt" class="form-control form-control-sm">
+              </div>
+              <div class="col-6">
+                <label class="form-label form-label-sm" for="updateReportedTo">Penerima laporan</label>
+                <input type="text" name="critical_reported_to" id="updateReportedTo" class="form-control form-control-sm"
+                       maxlength="150" placeholder="Nama DPJP penerima">
+              </div>
+              <div class="col-6">
+                <label class="form-label form-label-sm" for="updateReadbackAt">Jam read-back</label>
+                <input type="datetime-local" name="critical_readback_at" id="updateReadbackAt" class="form-control form-control-sm">
+              </div>
+              <div class="col-12">
+                <label class="form-label form-label-sm" for="updateReadbackBy">ID akun verifikator read-back</label>
+                <input type="number" name="critical_readback_by" id="updateReadbackBy" class="form-control form-control-sm" min="1">
+                <div class="form-text" style="font-size:0.7rem;">Laporan ≤ 30 menit dihitung dari jam temuan ke jam lapor (S7-L1-05).</div>
+              </div>
+            </div>
           </div>
         </div>
         <div class="modal-footer py-2">

@@ -1219,25 +1219,57 @@ class OrderPenunjang(models.Model):
         ('RUTIN', 'Rutin'),
     ]
     STATUS_CHOICES = [
-        ('ORDERED', 'Terkirim'),
-        ('PROSES',  'Dalam Pemeriksaan'),
-        ('SELESAI', 'Selesai / Hasil Tersedia'),
+        ('DRAFT',    'Draft — belum dikirim'),
+        ('DIPROSES', 'Diproses / Dalam Pemeriksaan'),
+        ('SELESAI',  'Selesai / Hasil Tersedia'),
+        ('BATAL',    'Dibatalkan'),
     ]
+    #: Transisi status yang sah (ADR-5). Status yang sama selalu sah — koreksi
+    #: hasil tidak berpindah status. Mundur dari SELESAI ditolak; koreksi hasil
+    #: selesai hanya lewat alasan koreksi, bukan transisi status.
+    STATUS_TRANSITIONS = {
+        'DRAFT':    ('DIPROSES', 'BATAL'),
+        'DIPROSES': ('SELESAI', 'BATAL'),
+        'SELESAI':  (),
+        'BATAL':    (),
+    }
 
     kunjungan         = models.ForeignKey(KunjunganPasien, on_delete=models.CASCADE, related_name='order_penunjang')
     jenis             = models.CharField('Jenis Penunjang', max_length=15, choices=JENIS_CHOICES)
     nama_pemeriksaan  = models.CharField('Nama Pemeriksaan / Tindakan', max_length=255)
     catatan_klinis    = models.TextField('Catatan Klinis / Indikasi', blank=True)
     prioritas         = models.CharField('Prioritas', max_length=10, choices=PRIORITAS_CHOICES, default='RUTIN')
-    status            = models.CharField('Status Order', max_length=15, choices=STATUS_CHOICES, default='ORDERED')
+    status            = models.CharField('Status Order', max_length=15, choices=STATUS_CHOICES, default='DIPROSES')
     dokter_pengirim        = models.CharField('Dokter Pengirim', max_length=150, blank=True)
     hasil_pemeriksaan      = models.TextField('Hasil Pemeriksaan', blank=True)
+    #: F4.3 (S7-L1-02/S7-L1-04): interpretasi klinis dan LVEF disimpan terpisah
+    #: dari status. Status menjawab "sudah selesai atau belum"; kolom ini
+    #: menjawab "apa maknanya". Menggabungkan keduanya membuat hasil yang sudah
+    #: terbaca tidak dapat dibedakan dari order yang belum dikerjakan.
+    interpretasi           = models.TextField('Interpretasi Klinis', blank=True)
+    lvef                   = models.PositiveSmallIntegerField(
+        'LVEF (%)', null=True, blank=True,
+        help_text='Fraksi ejeksi ventrikel kiri, persen (0–100).')
     result_recorded_by = models.ForeignKey(User, null=True, blank=True, on_delete=models.SET_NULL, related_name='+')
     result_recorded_at = models.DateTimeField(null=True, blank=True)
     is_critical_value      = models.BooleanField('Critical Value Alert', default=False)
     critical_value_catatan = models.CharField('Catatan Nilai Kritis', max_length=200, blank=True)
+    #: F4.4 (S7-L1-05, SKP 2/PP): jejak pelaporan nilai kritis. Jam temuan dan
+    #: jam lapor dipisah karena SLA diukur di antara keduanya; penerima dan
+    #: read-back membuktikan laporan benar-benar diterima dan dipahami.
+    critical_found_at      = models.DateTimeField('Jam Temuan Nilai Kritis', null=True, blank=True)
+    critical_reported_at   = models.DateTimeField('Jam Lapor ke DPJP', null=True, blank=True)
+    critical_reported_to   = models.CharField('Penerima Laporan', max_length=150, blank=True)
+    critical_readback_at   = models.DateTimeField('Jam Read-back', null=True, blank=True)
+    critical_readback_by   = models.ForeignKey(
+        User, null=True, blank=True, on_delete=models.PROTECT, related_name='+',
+        verbose_name='Verifikator Read-back')
     parameter_list         = models.JSONField('Daftar Parameter Pemeriksaan', default=list, blank=True)
     kondisi_sampel         = models.CharField('Kondisi Sampel', max_length=30, blank=True, help_text='Puasa / Tidak Puasa / Hamil')
+    #: F4.6: tautan tagihan order. Satu order paling banyak satu baris; PROTECT
+    #: menahan penghapusan baris tagihan yang sudah menjadi bukti penagihan.
+    billing_item           = models.OneToOneField(
+        'BillingItem', null=True, blank=True, on_delete=models.PROTECT, related_name='order_penunjang')
     created_at             = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -1248,6 +1280,52 @@ class OrderPenunjang(models.Model):
     def __str__(self):
         return f'[{self.get_jenis_display()}] {self.nama_pemeriksaan} — {self.kunjungan.pasien.nama_lengkap}'
 
+    def can_transition_to(self, new_status):
+        """True bila status boleh berpindah ke ``new_status`` (ADR-5).
+
+        Status yang sama selalu sah. Selain itu hanya transisi pada
+        ``STATUS_TRANSITIONS`` — jadi ``SELESAI → DIPROSES`` ditolak.
+        """
+        if new_status == self.status:
+            return True
+        return new_status in self.STATUS_TRANSITIONS.get(self.status, ())
+
+    #: Batas waktu pelaporan nilai kritis ke DPJP (S7-L1-05, menit).
+    CRITICAL_REPORT_SLA_MINUTES = 30
+
+    @property
+    def critical_sla_menit(self):
+        """Selisih jam temuan → jam lapor dalam menit, atau ``None``.
+
+        ``None`` berarti SLA belum dapat dinilai: bukan nilai kritis, atau
+        salah satu jam belum dicatat. Tidak pernah mengembalikan 0 sebagai
+        pengganti "belum ada".
+        """
+        if not self.is_critical_value:
+            return None
+        if self.critical_found_at is None or self.critical_reported_at is None:
+            return None
+        return int((self.critical_reported_at - self.critical_found_at).total_seconds() // 60)
+
+    @property
+    def critical_sla_status(self):
+        """``PATUH`` / ``TERLAMBAT`` / ``None`` untuk laporan nilai kritis."""
+        menit = self.critical_sla_menit
+        if menit is None:
+            return None
+        return 'PATUH' if menit <= self.CRITICAL_REPORT_SLA_MINUTES else 'TERLAMBAT'
+
+    @property
+    def critical_reporting_missing(self):
+        """Nama kolom pelaporan kritis yang masih kosong (F4.4)."""
+        required = {
+            'critical_found_at': self.critical_found_at,
+            'critical_reported_at': self.critical_reported_at,
+            'critical_reported_to': (self.critical_reported_to or '').strip(),
+            'critical_readback_at': self.critical_readback_at,
+            'critical_readback_by': self.critical_readback_by_id,
+        }
+        return [name for name, value in required.items() if not value]
 
 # ── 8. E-Prescribing & Farmasi ────────────────────────────────────────────────
 

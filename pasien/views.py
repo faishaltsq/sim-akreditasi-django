@@ -3320,7 +3320,7 @@ def order_lab_create(request, pk):
                 nama_pemeriksaan=item.nama,
                 catatan_klinis=catatan_klinis,
                 prioritas=prioritas,
-                status='ORDERED',
+                status='DIPROSES',
                 dokter_pengirim=dokter_pengirim,
                 ordered_by=request.user,
                 destination_id=item.destination_id,

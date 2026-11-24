@@ -51,4 +51,8 @@ def order_batch(visit, workflow, user, data):
             preparation=preparation,diagnosis=diagnosis,ordered_by=user,destination_id=item.destination_id,
             dokter_pengirim=user.get_full_name() or user.username))
     orders=[OrderPenunjang.objects.create(**fields) for fields in prepared]
+    # F4.6: tagihan diturunkan dari order katalog. Item tanpa TarifPenunjang
+    # tidak menagih (ADR-4/ADR-10) — order tetap sah, tagihan menyusul.
+    from .penunjang_billing import charge_batch
+    charge_batch([row.pk for row in orders], user)
     return {'order_ids':[row.pk for row in orders],'batch_id':str(batch)}

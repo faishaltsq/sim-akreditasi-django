@@ -95,15 +95,48 @@ class AddendumForm(OperationForm):
 
 class InvestigationResultForm(OperationForm):
     order_id = forms.IntegerField(min_value=1)
-    status = forms.ChoiceField(choices=[('PROSES','Dalam proses'),('SELESAI','Hasil tersedia')])
+    #: F4.2 (ADR-5): empat status order; form hasil hanya menulis dua yang
+    #: bermakna bagi unit pelaksana — DRAFT dan BATAL ditulis oleh pemesan.
+    status = forms.ChoiceField(choices=[('DIPROSES','Dalam proses'),('SELESAI','Hasil tersedia')])
     hasil_pemeriksaan = forms.CharField(required=False,max_length=20000,widget=forms.Textarea)
+    #: F4.3: interpretasi klinis + LVEF terpisah dari status.
+    interpretasi = forms.CharField(required=False,max_length=20000,widget=forms.Textarea)
+    lvef = forms.IntegerField(required=False,min_value=0,max_value=100,label='LVEF (%)')
     is_critical_value = forms.BooleanField(required=False)
     critical_value_catatan = forms.CharField(required=False,max_length=200)
+    #: F4.4: jejak pelaporan nilai kritis. Wajib lengkap bila is_critical_value.
+    critical_found_at = forms.DateTimeField(required=False)
+    critical_reported_at = forms.DateTimeField(required=False)
+    critical_reported_to = forms.CharField(required=False,max_length=150)
+    critical_readback_at = forms.DateTimeField(required=False)
+    critical_readback_by = forms.IntegerField(required=False,min_value=1)
 
     def clean(self):
         values = super().clean()
         if values.get('status') == 'SELESAI' and not values.get('hasil_pemeriksaan'):
             self.add_error('hasil_pemeriksaan','Hasil wajib sebelum status selesai.')
+        # F4.3: hasil terbaca wajib punya interpretasi klinis; angka hasil saja
+        # tidak menjawab pertanyaan klinis dan tidak dapat diaudit sebagai tafsir.
+        if values.get('status') == 'SELESAI' and not (values.get('interpretasi') or '').strip():
+            self.add_error('interpretasi','Interpretasi klinis wajib sebelum status selesai.')
         if values.get('is_critical_value') and not values.get('critical_value_catatan'):
             self.add_error('critical_value_catatan','Catatan hasil kritis wajib.')
+        # F4.4 (S7-L1-05): nilai kritis tanpa jejak pelaporan bukan laporan —
+        # tidak ada bukti DPJP menerima, tidak ada bukti read-back.
+        if values.get('is_critical_value'):
+            for name, label in (
+                ('critical_found_at', 'Jam temuan'),
+                ('critical_reported_at', 'Jam lapor ke DPJP'),
+                ('critical_reported_to', 'Penerima laporan'),
+                ('critical_readback_at', 'Jam read-back'),
+                ('critical_readback_by', 'Verifikator read-back'),
+            ):
+                if not values.get(name):
+                    self.add_error(name, f'{label} wajib untuk nilai kritis.')
+            found, reported = values.get('critical_found_at'), values.get('critical_reported_at')
+            if found and reported and reported < found:
+                self.add_error('critical_reported_at','Jam lapor tidak boleh sebelum jam temuan.')
+            readback = values.get('critical_readback_at')
+            if reported and readback and readback < reported:
+                self.add_error('critical_readback_at','Read-back tidak boleh sebelum jam lapor.')
         return values

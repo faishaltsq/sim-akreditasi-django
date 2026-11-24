@@ -102,7 +102,7 @@ class AsesmenRekapBaseTest(TestCase):
             jenis='LAB',
             nama_pemeriksaan='Troponin I CITO',
             prioritas='CITO',
-            status='ORDERED',
+            status='DIPROSES',
         )
         self.client.login(username='dokter_igd', password='password123')
 

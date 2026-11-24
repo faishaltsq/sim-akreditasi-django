@@ -1,5 +1,6 @@
 """Shared result boundary for requesting clinicians and assigned performing services."""
 import json
+from django.contrib.auth import get_user_model
 from django.core.exceptions import PermissionDenied
 from django.core.serializers.json import DjangoJSONEncoder
 from django.db import transaction
@@ -12,6 +13,7 @@ from .igd_assessment_workflow import authorize_visit, WorkflowConflict, Workflow
 
 DOCTORS={'DOKTER_UMUM','DOKTER_SPESIALIS'}
 PERFORMERS=DOCTORS|{'ANALIS_LAB','RADIOGRAFER'}
+User=get_user_model()
 
 
 def service_units(actor):
@@ -57,9 +59,22 @@ def record_result(order_id,actor,data,*,requesting=False,manage_workflow=True,ex
     values=form.cleaned_data;values.pop('order_id')
     if expected_state is not None and order.status!=expected_state:
         raise WorkflowConflict('Status hasil berubah; muat ulang worklist.')
-    if order.status=='PROSES' and values['status'] not in ('PROSES','SELESAI'):
-        raise WorkflowConflict('Status hasil tidak boleh mundur.')
-    fields=('status','hasil_pemeriksaan','is_critical_value','critical_value_catatan')
+    # F4.4: form membawa id verifikator; simpan objeknya supaya FK PROTECT
+    # menahan penghapusan akun yang membuktikan read-back.
+    verifier_id=values.pop('critical_readback_by',None)
+    verifier=None
+    if verifier_id:
+        verifier=User.objects.filter(pk=verifier_id,is_active=True).first()
+        if verifier is None:
+            raise WorkflowValidation({'critical_readback_by':['Verifikator read-back tidak dikenal.']})
+    values['critical_readback_by']=verifier
+    if not order.can_transition_to(values['status']):
+        raise WorkflowConflict(
+            f"Status order tidak boleh berpindah dari {order.get_status_display()} "
+            f"ke {dict(OrderPenunjang.STATUS_CHOICES)[values['status']]}.")
+    fields=('status','hasil_pemeriksaan','interpretasi','lvef','is_critical_value','critical_value_catatan',
+            'critical_found_at','critical_reported_at','critical_reported_to','critical_readback_at',
+            'critical_readback_by')
     before={field:getattr(order,field) for field in fields}
     if values==before:
         return {'order_id':order.pk,'late_result':bool(workflow and workflow.status=='FINAL')}
@@ -74,6 +89,11 @@ def record_result(order_id,actor,data,*,requesting=False,manage_workflow=True,ex
         if workflow.status!='FINAL':
             workflow.signatures={}
         workflow.updated_by=actor;workflow.save(update_fields=['version','signatures','updated_by','updated_at'])
+    # AuditLog menyimpan JSON: FK ditulis sebagai id, bukan objek model.
+    def _audit(value):
+        return getattr(value, 'pk', value)
     AuditLog.objects.create(user=actor,aksi='UPDATE',model_name='OrderPenunjang',object_repr=f'Order #{order.pk}',
-        detail=json.dumps({'before':before,'after':values,'correction_reason':correction_reason,'recorded_at':order.result_recorded_at},cls=DjangoJSONEncoder))
+        detail=json.dumps({'before':{k:_audit(v) for k,v in before.items()},
+                           'after':{k:_audit(v) for k,v in values.items()},
+                           'correction_reason':correction_reason,'recorded_at':order.result_recorded_at},cls=DjangoJSONEncoder))
     return {'order_id':order.pk,'late_result':bool(workflow and workflow.status=='FINAL')}
