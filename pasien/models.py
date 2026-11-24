@@ -386,6 +386,34 @@ def imt_kategori(imt):
         return 'OBESITAS_I'
     return 'OBESITAS_II'
 
+def indeks_brinkman(batang_per_hari, tahun):
+    """Indeks Brinkman = ``batang/hari × lama merokok (tahun)``; angka mentah.
+
+    Matriks (S3-L2-03) hanya menyebut **komponen input** — "estimasi batang/hari
+    dan lama merokok untuk kalkulasi Indeks Brinkman" — dan tidak menuliskan
+    rumus maupun batas klasifikasinya (AMBIGU-03). Perkalian ini adalah rumus
+    yang dipakai rencana F3.2 sebagai kriteria terima (20 batang × 15 tahun →
+    300; 5 × 4 → 20), bukan karangan modul ini.
+
+    **Batas ringan/sedang/berat sengaja tidak ada di sini.** AMBIGU-03 belum
+    ditutup Komite Medis, jadi fungsi ini mengembalikan angka mentah dan tidak
+    pernah mengembalikan kategori. Menambah band di sini berarti mengarang
+    klasifikasi klinis.
+
+    ``None`` bila salah satu komponen tidak diisi; nilai negatif atau bukan
+    angka juga ``None`` — input rusak tidak boleh menjadi angka bermakna.
+    """
+    if batang_per_hari is None or tahun is None:
+        return None
+    try:
+        batang = float(batang_per_hari)
+        lama = float(tahun)
+    except (TypeError, ValueError):
+        return None
+    if batang < 0 or lama < 0:
+        return None
+    return round(batang * lama, 2)
+
 
 def ttv_alerts(*, sistole=None, diastole=None, nadi=None, spo2=None, skala_nyeri=None):
     """Alert TTV dari satu tempat (matriks §9a).

@@ -406,6 +406,17 @@ Prasyarat: F2, M1.
 | F3.6 | Penanda anatomi memakai validasi yang sudah ada (maks 100, koordinat 0–1) | `pasien/forms_igd_workflow.py:91-99` | 101 marker → error; marker di luar 0..1 → error |
 | F3.7 | Biopsikososial/spiritual + dukungan sosial terstruktur | skema langkah → `draft_payload` | POST → kunci `dukungan_sosial` tersimpan; kosong → tidak wajib |
 
+> **Status F3 (2026-11-24).** Ketujuh butir tersedia di `pasien/workflow_schemas.py`
+> dan dibuktikan `pasien/tests_poli_layer2.py` (34 tes). Dua hal sengaja
+> **tidak** diisi karena matriks tidak memberinya, dan keduanya dilaporkan
+> sebagai **AMBIGU-17** (pemetaan obat → kelompok kontraindikasi, dan daftar
+> lokasi katup): `PREGNANCY_CONTRA` menyala dari `class_code`/`ingredient_code`
+> katalog, bukan dari daftar molekul karangan; `murmur_lokasi` disimpan sebagai
+> teks bebas, bukan pilihan. **AMBIGU-03 tetap terbuka**: `indeks_brinkman()`
+> mengembalikan angka mentah dan tidak punya band ringan/sedang/berat.
+> Catatan penempatan: `onset_gejala`/`pemicu_gejala` dipasang di **Langkah 2**
+> karena matriks menempatkannya di S2-L2-01/S2-L2-02, bukan di Langkah 3.
+
 ### F4 — Langkah 7 penunjang
 
 Tujuan: order 3 tingkat dari UI, status 4 nilai, nilai kritis ber-read-back, billing otomatis.
@@ -570,6 +581,7 @@ Cabang paralel yang sah: **F4 ∥ F2** setelah F1 (F4 hanya butuh F0.8/F0.9 + gu
 | AMBIGU-14 | NIK wajib atau opsional | Opsional bila pasien tanpa NIK (neonatus/asing), wajib bila ada; validasi 16 digit saat diisi | Rekam Medis | Pendaftaran macet atau NIK palsu |
 | AMBIGU-15 | Label menu "Diagnosis & Rencana (AI)" vs judul resmi | Pakai judul resmi di navigasi; "(AI)" hanya badge fitur | Kepala Unit | Navigasi tidak cocok dengan dokumen akreditasi |
 | AMBIGU-16 | Satu tombol SOAP ke dua target | Aturan eksplisit: langkah 1–6 belum lengkap → step 2; lengkap → step 8 | Kepala Unit | Petugas masuk ke form salah |
+| **AMBIGU-17** — **baru, dari F3** | Matriks §9a menyebut kelompok obat kontraindikasi kehamilan (ACEi, ARB, ARNI, Statin, Warfarin) tetapi **tidak** memberi pemetaan produk → kelompok. Katalog formularium hari ini hanya punya kelas kasar `kardiovaskular-antihipertensi` yang mencampur kelimanya (`klinis` master: Amlodipine, Candesartan, Valsartan, Captopril, Bisoprolol, Furosemide, Spironolactone, Digoxin, ISDN). Selain itu S6-L1-03 meminta "lokasi katup" tanpa mendaftar lokasi mana pun | **Pertanyaan persis:** (a) apakah master farmasi harus menambah kelas per-zat `ACEI`/`ARB`/`ARNI`/`STATIN`/`WARFARIN` (atau atribut `pregnancy_contra`) sehingga aturan menyala dari data, atau Komite Medis menetapkan daftar molekul yang dianggap milik tiap kelompok? (b) lokasi katup mana yang harus tersedia sebagai pilihan: Aorta, Pulmonal, Trikuspid, Mitral/apeks, atau daftar lain? | Komite Medis + Farmasi (a); Kepala Unit (b) | (a) sampai dijawab, `PREGNANCY_CONTRA` hanya menyala bila katalog menamai kelas/zat dengan nama kelompok matriks — produk ACEi di kelas kasar **tidak** akan memblokir; (b) `murmur_lokasi` disimpan sebagai teks bebas sehingga tidak dapat diagregasi |
 
 **Urutan keputusan (memblokir fase, bukan sekadar saran).**
 

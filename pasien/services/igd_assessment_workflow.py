@@ -226,6 +226,29 @@ def save_step(pk, user, step, payload, version, *, service_line=None):
                             detail=f'Draft langkah {step}; versi {workflow.version}; field: {", ".join(sorted(payload))}')
     return workflow
 
+def _expand_group_keys(payload):
+    """Ubah kunci bertitik menjadi dict bersarang sebelum validasi.
+
+    Formulir merender sub-field ``group`` sebagai ``fisik_kardio.murmur_derajat``
+    karena HTML tidak punya objek bersarang. Skema tetap menerima bentuk dict
+    (``{'fisik_kardio': {'murmur_derajat': '2/6'}}``), jadi kedua bentuk masuk
+    lewat jalur yang sama dan hanya ada satu aturan validasi.
+    """
+    expanded = {}
+    for name, value in payload.items():
+        if isinstance(name, str) and '.' in name:
+            parent, child = name.split('.', 1)
+            bucket = expanded.get(parent)
+            if not isinstance(bucket, dict):
+                bucket = {}
+                expanded[parent] = bucket
+            bucket[child] = value
+        elif isinstance(value, dict) and isinstance(expanded.get(name), dict):
+            expanded[name] = {**expanded[name], **value}
+        else:
+            expanded[name] = value
+    return expanded
+
 def _save_rajal_step(visit, workflow, user, step, payload, version):
     """Simpan satu langkah RAJAL_JANTUNG ke ``draft_payload`` (ADR-9).
 
@@ -239,6 +262,7 @@ def _save_rajal_step(visit, workflow, user, step, payload, version):
         raise WorkflowValidation({'__all__': ['Langkah tidak valid.']})
     if not isinstance(payload, dict):
         raise WorkflowValidation({'__all__': ['Payload langkah harus objek.']})
+    payload = _expand_group_keys(payload)
     if set(payload) - set(spec.field_names):
         raise WorkflowValidation({'__all__': ['Field tidak dimiliki langkah ini.']})
     authorize_step(user, visit, step, 'fill')

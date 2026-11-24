@@ -1,10 +1,10 @@
 """Formulir per langkah: hanya field yang dimiliki langkah itu yang boleh ditulis."""
-import math
 from django import forms
 from django.core.exceptions import ValidationError
 from django.forms import modelform_factory
 
 from .models import KunjunganPasien
+from .anatomy_markers import validate_markers
 from .triage import validate_triage
 from .workflow_schemas import STEP_SCHEMAS, VITAL_FIELDS
 
@@ -120,20 +120,11 @@ class StepForm(forms.ModelForm):
                     self.add_error(name, 'Isi harus berupa objek JSON.')
         markers = cleaned.get('penanda_anatomi')
         if 'penanda_anatomi' in cleaned:
-            if markers is None:
-                cleaned['penanda_anatomi'] = []
-            elif not isinstance(markers, list) or len(markers) > 100:
-                self.add_error('penanda_anatomi', 'Maksimal 100 penanda dalam daftar.')
+            markers, marker_error = validate_markers(markers)
+            if marker_error:
+                self.add_error('penanda_anatomi', marker_error)
             else:
-                for marker in markers:
-                    valid = (isinstance(marker, dict) and set(marker) == {'side','x','y','label','kind'}
-                             and marker.get('side') in ('FRONT','BACK') and marker.get('kind') in ('LUKA','NYERI','LAINNYA')
-                             and isinstance(marker.get('label'), str) and 0 < len(marker['label']) <= 200)
-                    if valid:
-                        valid = all(type(marker.get(k)) in (int,float) and math.isfinite(marker[k]) and 0 <= marker[k] <= 1 for k in ('x','y'))
-                    if not valid:
-                        self.add_error('penanda_anatomi', 'Koordinat/label penanda tidak valid.')
-                        break
+                cleaned['penanda_anatomi'] = markers
         morse = cleaned.get('skrining_jatuh_detail')
         weights = MORSE_WEIGHTS
         if morse:

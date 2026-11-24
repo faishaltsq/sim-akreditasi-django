@@ -93,12 +93,34 @@ def _field_view(item, values):
     from pasien.workflow_schemas import STEP_LABELS
 
     labels = STEP_LABELS.get(item.name, {})
-    return {
+    value = values.get(item.name, '')
+    view = {
         'name': item.name, 'kind': item.kind, 'label': item.label or item.name,
         'choices': [{'value': code, 'label': labels.get(code, code)} for code in item.choices],
         'minimum': item.minimum, 'maximum': item.maximum,
-        'value': values.get(item.name, ''),
+        'value': value,
     }
+    if item.kind == 'multiselect':
+        selected = value if isinstance(value, list) else []
+        view['selected'] = selected
+        view['choices'] = [
+            {'value': code, 'label': labels.get(code, code), 'checked': code in selected}
+            for code in item.choices
+        ]
+    elif item.kind == 'group':
+        # Sub-field dirender sebagai ``<induk>.<anak>``; layanan menyatukannya
+        # kembali menjadi dict sebelum validasi.
+        group_values = value if isinstance(value, dict) else {}
+        view['children'] = [
+            _field_view(child, group_values) | {'name': f'{item.name}.{child.name}'}
+            for child in item.children
+        ]
+    elif item.kind == 'markers':
+        import json
+        markers = value if isinstance(value, list) else []
+        view['value'] = markers
+        view['json'] = json.dumps(markers) if markers else ''
+    return view
 
 
 def _clinical_context(visit, values):
@@ -107,9 +129,12 @@ def _clinical_context(visit, values):
     Dihitung dari ``draft_payload`` langkah 4/5 yang sedang dibuka, bukan dari
     kolom model: jalur rajal tidak menyimpan TTV ke ``KunjunganPasien``.
     """
-    from pasien.models import hitung_imt, hitung_map, imt_kategori, map_kategori, ttv_alerts
+    from pasien.models import (
+        hitung_imt, hitung_map, imt_kategori, indeks_brinkman, map_kategori, ttv_alerts,
+    )
     from pasien.clinical_thresholds import hipertensi_threshold_source
     from pasien.forms_igd_workflow import MORSE_SEDANG_MIN, MORSE_TINGGI_MIN, MST_BERISIKO_MIN
+    from pasien.services.pregnancy_safety import PREGNANCY_CONTRA_CLASSES, pregnancy_status
     from pasien.workflow_schemas import STEP_LABELS
 
     sistole, diastole = values.get('ttv_sistole'), values.get('ttv_diastole')
@@ -117,6 +142,11 @@ def _clinical_context(visit, values):
     imt = hitung_imt(berat, tinggi)
     morse = values.get('skrining_jatuh_skor')
     mst = values.get('skrining_gizi_mst')
+    # F3: nilai langkah 3 ditampilkan di panel untuk semua langkah, bukan hanya
+    # saat langkah 3 dibuka — peringatan kehamilan harus terlihat saat menulis.
+    workflow = getattr(visit, 'igd_workflow', None)
+    step3 = ((workflow.draft_payload or {}).get('3') or {}) if workflow else {}
+    kehamilan = pregnancy_status(visit)
     return {
         'map_value': hitung_map(sistole, diastole),
         'map_kategori': map_kategori(sistole, diastole),
@@ -138,6 +168,25 @@ def _clinical_context(visit, values):
         ),
         'red_flag_label': STEP_LABELS['red_flag_kardio'].get(visit.red_flag_kardio, ''),
         'door_to_ecg': visit.door_to_ecg_indicator(),
+        # F3.2: indeks Brinkman sebagai angka mentah; klasifikasi masih
+        # AMBIGU-03 sehingga tidak ada band yang ditampilkan.
+        'brinkman': indeks_brinkman(
+            step3.get('batang_per_hari'), step3.get('tahun_merokok'),
+        ),
+        'brinkman_komponen': (
+            step3.get('batang_per_hari'), step3.get('tahun_merokok'),
+        ),
+        # F3.3: peringatan kontraindikasi — kelompoknya disebut apa adanya.
+        'kehamilan_label': STEP_LABELS['status_kehamilan_menyusui'].get(kehamilan, ''),
+        'kehamilan_kontraindikasi': list(PREGNANCY_CONTRA_CLASSES) if kehamilan else [],
+        'kehamilan_status': kehamilan,
+        # F3.4: rekonsiliasi obat rutin tampil di panel kanan.
+        'kepatuhan_obat_label': STEP_LABELS['kepatuhan_obat'].get(step3.get('kepatuhan_obat') or '', ''),
+        'obat_rutin_labels': [
+            STEP_LABELS['obat_rutin'].get(code, code)
+            for code in (step3.get('obat_rutin') or [])
+        ],
+        'obat_rutin_terakhir': step3.get('obat_rutin_terakhir') or '',
     }
 
 

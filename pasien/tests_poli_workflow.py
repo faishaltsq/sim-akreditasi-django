@@ -149,7 +149,12 @@ class SchemaRegistryTest(PoliFixture):
             self.assertEqual(spec.number, number)
             self.assertTrue(spec.title)
             for item in spec.fields:
-                self.assertIn(item.kind, {'text', 'select', 'number', 'boolean'})
+                # F3 menambah tiga bentuk di luar F1: daftar pilihan ganda,
+                # dict bersarang, dan daftar penanda tervalidasi.
+                self.assertIn(
+                    item.kind,
+                    {'text', 'select', 'number', 'boolean', 'multiselect', 'group', 'markers'},
+                )
 
     def test_rajal_rejects_unknown_key(self):
         with self.assertRaises(WorkflowValidation) as ctx:

@@ -171,6 +171,147 @@ BUNYI_NAPAS_LABELS = {
     'WHEEZING': 'Wheezing / Lainnya',
 }
 
+# ── Lapis 2 kardiologi langkah 2–6 (F3, matriks S2-L2..S6-L2) ───────────────
+# Setiap daftar di bawah adalah salinan opsi matriks apa adanya; urutannya
+# dipertahankan supaya layar dan dokumen sumber dapat dibandingkan langsung.
+
+#: S2-L2-01 — Langkah 2 Lapis 2 (matriks menempatkannya di Langkah 2, bukan 3).
+ONSET_GEJALA_CHOICES = ('LT_30_MENIT', '30M_6J', '6J_24J', '24J_7H', 'GT_7H_KRONIS')
+ONSET_GEJALA_LABELS = {
+    'LT_30_MENIT': '< 30 Menit',
+    '30M_6J': '30 Menit – 6 Jam',
+    '6J_24J': '> 6 – 24 Jam',
+    '24J_7H': '> 24 Jam – 7 Hari',
+    'GT_7H_KRONIS': '> 7 Hari / Kronis',
+}
+
+#: S2-L2-02.
+PEMICU_GEJALA_CHOICES = (
+    'AKTIVITAS_RINGAN', 'AKTIVITAS_SEDANG_BERAT', 'ISTIRAHAT',
+    'STRES_SUHU_DINGIN', 'TIDAK_MENENTU',
+)
+PEMICU_GEJALA_LABELS = {
+    'AKTIVITAS_RINGAN': 'Aktivitas Ringan',
+    'AKTIVITAS_SEDANG_BERAT': 'Aktivitas Sedang/Berat',
+    'ISTIRAHAT': 'Saat Istirahat',
+    'STRES_SUHU_DINGIN': 'Stres Emosional / Suhu Dingin',
+    'TIDAK_MENENTU': 'Tidak Menentu',
+}
+
+#: S3-L2-01 — multi-select.
+RIWAYAT_JANTUNG_CHOICES = (
+    'TIDAK_ADA', 'PJK', 'PCI_STENT_CABG', 'GAGAL_JANTUNG',
+    'ARITMIA_AF', 'PENYAKIT_KATUP', 'PENYAKIT_BAWAAN',
+)
+RIWAYAT_JANTUNG_LABELS = {
+    'TIDAK_ADA': 'Tidak Ada',
+    'PJK': 'Penyakit Jantung Koroner (PJK / CAD)',
+    'PCI_STENT_CABG': 'Riwayat PCI / Stent / CABG',
+    'GAGAL_JANTUNG': 'Gagal Jantung (HF)',
+    'ARITMIA_AF': 'Aritmia / Fibrilasi Atrium (AF)',
+    'PENYAKIT_KATUP': 'Penyakit Katup Jantung',
+    'PENYAKIT_BAWAAN': 'Penyakit Jantung Bawaan',
+}
+
+#: S3-L2-02 — multi-select.
+FAKTOR_RISIKO_CHOICES = (
+    'HIPERTENSI', 'DIABETES_MELITUS', 'DISLIPIDEMIA',
+    'RIWAYAT_KELUARGA_DINI', 'OBESITAS',
+)
+FAKTOR_RISIKO_LABELS = {
+    'HIPERTENSI': 'Hipertensi',
+    'DIABETES_MELITUS': 'Diabetes Melitus',
+    'DISLIPIDEMIA': 'Dislipidemia',
+    'RIWAYAT_KELUARGA_DINI': 'Riwayat Keluarga Penyakit Jantung Dini',
+    'OBESITAS': 'Obesitas',
+}
+
+#: S3-L2-03.
+STATUS_MEROKOK_CHOICES = ('TIDAK_PERNAH', 'MANTAN', 'AKTIF')
+STATUS_MEROKOK_LABELS = {
+    'TIDAK_PERNAH': 'Tidak Pernah Merokok',
+    'MANTAN': 'Mantan Perokok',
+    'AKTIF': 'Perokok Aktif',
+}
+
+#: S3-L2-04 — "Hamil (Trimester I/II/III)" adalah SATU opsi pada matriks, bukan
+#: tiga; trimester tidak dipecah karena sumber tidak memecahnya.
+STATUS_KEHAMILAN_CHOICES = ('TIDAK_BERLAKU', 'TIDAK_HAMIL_TIDAK_MENYUSUI', 'HAMIL', 'MENYUSUI')
+STATUS_KEHAMILAN_LABELS = {
+    'TIDAK_BERLAKU': 'Tidak Berlaku',
+    'TIDAK_HAMIL_TIDAK_MENYUSUI': 'Tidak Hamil / Tidak Menyusui',
+    'HAMIL': 'Hamil (Trimester I/II/III)',
+    'MENYUSUI': 'Menyusui',
+}
+#: Status yang memicu peringatan kontraindikasi (matriks §9a).
+KEHAMILAN_KONTRAINDIKASI = ('HAMIL', 'MENYUSUI')
+
+#: S3-L2-05 — kepatuhan obat rutin.
+KEPATUHAN_OBAT_CHOICES = ('ADA_PATUH', 'ADA_TIDAK_PATUH', 'TIDAK_ADA', 'TIDAK_TAHU')
+KEPATUHAN_OBAT_LABELS = {
+    'ADA_PATUH': 'Ada & Patuh',
+    'ADA_TIDAK_PATUH': 'Ada & Tidak Patuh',
+    'TIDAK_ADA': 'Tidak Ada',
+    'TIDAK_TAHU': 'Tidak Tahu',
+}
+#: S3-L2-05 — kelompok obat rutin yang disebut matriks apa adanya.
+OBAT_RUTIN_CHOICES = (
+    'ANTIPLATELET', 'ANTIKOAGULAN', 'NITRAT', 'ANTIHIPERTENSI',
+    'OBAT_GAGAL_JANTUNG', 'STATIN',
+)
+OBAT_RUTIN_LABELS = {
+    'ANTIPLATELET': 'Antiplatelet',
+    'ANTIKOAGULAN': 'Antikoagulan',
+    'NITRAT': 'Nitrat',
+    'ANTIHIPERTENSI': 'Antihipertensi',
+    'OBAT_GAGAL_JANTUNG': 'Obat Gagal Jantung',
+    'STATIN': 'Statin',
+}
+
+#: S5-L2-01.
+KONDISI_PSIKOLOGIS_CHOICES = (
+    'TENANG_KOOPERATIF', 'CEMAS_RINGAN_SEDANG', 'CEMAS_BERAT_PANIK', 'DEPRESI_MENARIK_DIRI',
+)
+KONDISI_PSIKOLOGIS_LABELS = {
+    'TENANG_KOOPERATIF': 'Tenang / Kooperatif',
+    'CEMAS_RINGAN_SEDANG': 'Cemas Ringan–Sedang',
+    'CEMAS_BERAT_PANIK': 'Cemas Berat / Panik',
+    'DEPRESI_MENARIK_DIRI': 'Depresi / Menarik Diri',
+}
+
+#: S5-L2-03 — dropdown + kolom keterangan.
+KEBUTUHAN_SPIRITUAL_CHOICES = ('TIDAK_ADA', 'ADA')
+KEBUTUHAN_SPIRITUAL_LABELS = {
+    'TIDAK_ADA': 'Tidak Ada Kebutuhan Khusus',
+    'ADA': 'Ada Kebutuhan Khusus',
+}
+
+#: S6-L1-03 — derajat murmur 1/6–6/6, satu-satunya bagian yang matriks enumerasi.
+MURMUR_DERAJAT_CHOICES = ('1/6', '2/6', '3/6', '4/6', '5/6', '6/6')
+MURMUR_DERAJAT_LABELS = {code: code for code in MURMUR_DERAJAT_CHOICES}
+
+#: S6-L2-01 — JVP, nilai baku v2.1.
+JVP_CHOICES = ('TIDAK_MENINGKAT', 'MENINGKAT')
+JVP_LABELS = {
+    'TIDAK_MENINGKAT': 'Tidak Meningkat (5 + 0 s.d. 2 cmH2O)',
+    'MENINGKAT': 'Meningkat (5 + >= 3 cmH2O)',
+}
+
+#: S6-L2-02 — edema ekstremitas bawah / sakral.
+EDEMA_CHOICES = ('TIDAK_ADA', 'PRETIBIAL_RINGAN', 'TUNGKAI_JELAS_ANASARKA')
+EDEMA_LABELS = {
+    'TIDAK_ADA': 'Tidak Ada Edema',
+    'PRETIBIAL_RINGAN': 'Edema Pretibial Ringan (+1/+2)',
+    'TUNGKAI_JELAS_ANASARKA': 'Edema Tungkai Jelas (+3/+4) / Anasarka',
+}
+
+#: S6-L2-04 — perfusi & pulsasi perifer (CRT ikut di dalam opsinya).
+PERFUSI_PERIFER_CHOICES = ('AKRAL_HANGAT_CRT_NORMAL', 'AKRAL_DINGIN_CRT_MEMANJANG')
+PERFUSI_PERIFER_LABELS = {
+    'AKRAL_HANGAT_CRT_NORMAL': 'Akral Hangat, CRT < 2 detik, Pulsasi Kuat',
+    'AKRAL_DINGIN_CRT_MEMANJANG': 'Akral Dingin / CRT >= 3 detik / Pulsasi Melemah',
+}
+
 #: Pemetaan kode → label untuk seluruh langkah; dipakai template dan API draft
 #: supaya nilai mentah tidak pernah tampil sebagai kode di layar.
 STEP_LABELS = {
@@ -188,6 +329,20 @@ STEP_LABELS = {
     'iktus_kordis': IKTUS_KORDIS_LABELS,
     'bunyi_jantung': BUNYI_JANTUNG_LABELS,
     'bunyi_napas': BUNYI_NAPAS_LABELS,
+    'onset_gejala': ONSET_GEJALA_LABELS,
+    'pemicu_gejala': PEMICU_GEJALA_LABELS,
+    'riwayat_jantung': RIWAYAT_JANTUNG_LABELS,
+    'faktor_risiko_kardio': FAKTOR_RISIKO_LABELS,
+    'status_merokok': STATUS_MEROKOK_LABELS,
+    'status_kehamilan_menyusui': STATUS_KEHAMILAN_LABELS,
+    'kepatuhan_obat': KEPATUHAN_OBAT_LABELS,
+    'obat_rutin': OBAT_RUTIN_LABELS,
+    'kondisi_psikologis': KONDISI_PSIKOLOGIS_LABELS,
+    'kebutuhan_spiritual': KEBUTUHAN_SPIRITUAL_LABELS,
+    'murmur_derajat': MURMUR_DERAJAT_LABELS,
+    'jvp': JVP_LABELS,
+    'edema_ekstremitas': EDEMA_LABELS,
+    'perfusi_perifer': PERFUSI_PERIFER_LABELS,
 }
 
 
@@ -202,6 +357,8 @@ class StepField:
     minimum: float | None = None
     maximum: float | None = None
     max_length: int = 4000
+    #: Hanya untuk ``kind='group'``: sub-field yang membentuk satu dict.
+    children: tuple = ()
 
     def clean(self, value):
         """Return ``(cleaned, error)``; ``error`` is a message or ``None``."""
@@ -217,6 +374,37 @@ class StepField:
             if value not in self.choices:
                 return None, f'Pilihan harus salah satu dari: {", ".join(self.choices)}.'
             return value, None
+        if self.kind == 'multiselect':
+            if not isinstance(value, list):
+                return None, 'Nilai harus berupa daftar pilihan.'
+            if len(set(value)) != len(value):
+                return None, 'Pilihan tidak boleh berulang.'
+            unknown = [code for code in value if code not in self.choices]
+            if unknown:
+                return None, f'Pilihan harus salah satu dari: {", ".join(self.choices)}.'
+            return value, None
+        if self.kind == 'markers':
+            from .anatomy_markers import validate_markers
+            markers, error = validate_markers(value)
+            return (None, error) if error else (markers, None)
+        if self.kind == 'group':
+            if not isinstance(value, dict):
+                return None, 'Nilai harus berupa objek.'
+            unknown = sorted(set(value) - {child.name for child in self.children})
+            if unknown:
+                return None, f'Bagian tidak dikenal: {", ".join(unknown)}.'
+            cleaned, problems = {}, []
+            for child in self.children:
+                if child.name not in value:
+                    continue
+                child_value, error = child.clean(value[child.name])
+                if error:
+                    problems.append(f'{child.name}: {error}')
+                elif child_value is not None:
+                    cleaned[child.name] = child_value
+            if problems:
+                return None, ' '.join(problems)
+            return cleaned, None
         if self.kind == 'number':
             if isinstance(value, bool) or not isinstance(value, (int, float)):
                 return None, 'Nilai harus berupa angka.'
@@ -282,12 +470,27 @@ RAJAL_JANTUNG_STEPS = {
         StepField('mobilitas_datang', 'select', label='Mobilitas datang', choices=MOBILITAS_DATANG_CHOICES),
         StepField('red_flag_kardio', 'select', label='Red flag kardiovaskular', choices=RED_FLAG_CHOICES),
         StepField('alur_awal', 'select', label='Keputusan alur awal', choices=ALUR_AWAL_CHOICES),
+        # S2-L2-01/S2-L2-02 — matriks menempatkan keduanya di Langkah 2 Lapis 2.
+        StepField('onset_gejala', 'select', label='Waktu onset gejala utama', choices=ONSET_GEJALA_CHOICES),
+        StepField('pemicu_gejala', 'select', label='Pemicu gejala', choices=PEMICU_GEJALA_CHOICES),
     )),
     3: StepSpec(3, 'Anamnesis & Riwayat', (
         StepField('anamnesis_rps', 'text', label='Riwayat penyakit sekarang'),
         StepField('keluhan_utama_kardio', 'select', label='Keluhan utama kardiovaskular', choices=KELUHAN_UTAMA_CHOICES),
         StepField('nyeri_karakteristik_kardio', 'select', label='Karakteristik nyeri dada', choices=NYERI_KARAKTERISTIK_CHOICES),
         StepField('nyeri_penjalaran', 'select', label='Penjalaran nyeri', choices=NYERI_PENJALARAN_CHOICES),
+        StepField('riwayat_jantung', 'multiselect', label='Riwayat penyakit jantung sebelumnya', choices=RIWAYAT_JANTUNG_CHOICES),
+        StepField('faktor_risiko_kardio', 'multiselect', label='Faktor risiko kardiovaskular', choices=FAKTOR_RISIKO_CHOICES),
+        StepField('status_merokok', 'select', label='Status merokok', choices=STATUS_MEROKOK_CHOICES),
+        # Batas angka tidak ada pada matriks (S3-L2-03 hanya menyebut "estimasi
+        # batang/hari dan lama merokok"), jadi tidak ada minimum/maksimum yang
+        # dikarang di sini.
+        StepField('batang_per_hari', 'number', label='Estimasi batang/hari'),
+        StepField('tahun_merokok', 'number', label='Lama merokok (tahun)'),
+        StepField('status_kehamilan_menyusui', 'select', label='Status kehamilan & menyusui', choices=STATUS_KEHAMILAN_CHOICES),
+        StepField('kepatuhan_obat', 'select', label='Riwayat obat rutin kardiovaskular (kepatuhan)', choices=KEPATUHAN_OBAT_CHOICES),
+        StepField('obat_rutin', 'multiselect', label='Kelompok obat rutin', choices=OBAT_RUTIN_CHOICES),
+        StepField('obat_rutin_terakhir', 'text', label='Waktu konsumsi dosis terakhir', max_length=200),
     )),
     4: StepSpec(4, 'Tanda-Tanda Vital', (
         _vital('ttv_sistole', 0, 350, 'Sistole'),
@@ -306,6 +509,10 @@ RAJAL_JANTUNG_STEPS = {
         _vital('skrining_jatuh_skor', 0, 125, 'Skor Morse'),
         StepField('status_fungsional', 'select', label='Status fungsional', choices=STATUS_FUNGSIONAL_CHOICES),
         StepField('dukungan_sosial', 'select', label='Dukungan sosial & keluarga', choices=DUKUNGAN_SOSIAL_CHOICES),
+        # S5-L2-01, S5-L2-03 — aspek psikologis & spiritual (F3.7).
+        StepField('kondisi_psikologis', 'select', label='Kondisi psikologis / kecemasan', choices=KONDISI_PSIKOLOGIS_CHOICES),
+        StepField('kebutuhan_spiritual', 'select', label='Kebutuhan spiritual / nilai budaya khusus', choices=KEBUTUHAN_SPIRITUAL_CHOICES),
+        StepField('keterangan_spiritual', 'text', label='Keterangan pendampingan rohani/budaya', max_length=500),
     )),
     6: StepSpec(6, 'Pemeriksaan Fisik', (
         StepField('keadaan_umum', 'text', label='Keadaan umum'),
@@ -313,6 +520,20 @@ RAJAL_JANTUNG_STEPS = {
         StepField('iktus_kordis', 'select', label='Iktus kordis', choices=IKTUS_KORDIS_CHOICES),
         StepField('bunyi_jantung', 'select', label='Bunyi jantung & bunyi tambahan', choices=BUNYI_JANTUNG_CHOICES),
         StepField('bunyi_napas', 'select', label='Bunyi napas paru', choices=BUNYI_NAPAS_CHOICES),
+        # F3.5: satu dict ``fisik_kardio`` berisi sub-pemeriksaan kardio
+        # terstruktur. Derajat murmur adalah satu-satunya bagian yang
+        # dienumerasi matriks; lokasi katup tidak, jadi disimpan sebagai teks
+        # bebas (AMBIGU-17).
+        StepField('fisik_kardio', 'group', label='Pemeriksaan fisik kardiovaskular', children=(
+            StepField('murmur_derajat', 'select', label='Derajat murmur', choices=MURMUR_DERAJAT_CHOICES),
+            StepField('murmur_lokasi', 'text', label='Lokasi murmur / katup', max_length=200),
+            StepField('jvp', 'select', label='Tekanan vena jugularis (JVP)', choices=JVP_CHOICES),
+            StepField('edema_ekstremitas', 'select', label='Edema ekstremitas bawah / sakral', choices=EDEMA_CHOICES),
+            StepField('perfusi_perifer', 'select', label='Perfusi & pulsasi perifer', choices=PERFUSI_PERIFER_CHOICES),
+        )),
+        # F3.6: penanda anatomi memakai validasi yang sama dengan jalur IGD
+        # (maks 100, koordinat 0–1), disimpan di payload — bukan kolom baru.
+        StepField('penanda_anatomi', 'markers', label='Penanda anatomi'),
     )),
     7: StepSpec(7, 'Pemeriksaan Penunjang', (
         StepField('penunjang_catatan', 'text', label='Catatan penunjang'),

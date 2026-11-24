@@ -4,12 +4,14 @@ name: Clinical Regression Gate
 #
 # PENTING — suite ini HIJAU hari ini dan HARUS tetap hijau.
 # Baseline terukur (Python 3.12.10, Django 6.1, SQLite):
-#   Ran 358 tests in 94.6s
+#   Ran 421 tests in 172.8s
 #   OK (skipped=9)
-# 245 di antaranya adalah suite IGD/asuhan profesional yang sudah ada; 113
+# 245 di antaranya adalah suite IGD/asuhan profesional yang sudah ada; 176
 # sisanya modul POLI-JANTUNG: F1 (pasien.tests_poli_workflow 33,
-# pasien.tests_poli_rbac 21), F0.11 (pasien.tests_poli_dpjp 18), dan F2
-# (pasien.tests_poli_layer1 41).
+# pasien.tests_poli_rbac 21), F0.11 (pasien.tests_poli_dpjp 18), F2
+# (pasien.tests_poli_layer1 41), F3 (pasien.tests_poli_layer2 34), P1
+# (pasien.tests_poli_routing 6), P2 (pasien.tests_clinical_thresholds 11),
+# P3 (pasien.tests_poli_no_doctor 6), dan P4 (pasien.tests_seed_dokter_demo 6).
 # Tidak ada `continue-on-error` dan tidak ada `|| true` di berkas ini. Jalur
 # merah HARUS berarti regresi nyata, bukan tes yang dilewati diam-diam.
 #
@@ -93,13 +95,18 @@ jobs:
             pasien.tests_poli_rbac \
             pasien.tests_poli_dpjp \
             pasien.tests_poli_layer1 \
+            pasien.tests_poli_layer2 \
+            pasien.tests_poli_routing \
+            pasien.tests_poli_no_doctor \
+            pasien.tests_clinical_thresholds \
+            pasien.tests_seed_dokter_demo \
             --parallel 1 --verbosity 2 2>&1 | tee /tmp/clinical-regression.log
       # Django's test runner has no JUnit output and pytest is not a dependency,
       # so the honest structured artifact is the verbosity-2 log itself. Namun
       # log saja bisa "hijau kosong": modul yang di-rename bisa berhenti
       # mengoleksi tes tanpa ada yang menyadarinya. Langkah ini mencetak jumlah
       # tes yang benar-benar terkoleksi dan menolak run kosong, sehingga
-      # gerbang yang lolos selalu berarti 299 tes benar-benar dieksekusi.
+      # gerbang yang lolos selalu berarti 421 tes benar-benar dieksekusi.
       - name: Verify collected test count
         run: |
           set -euo pipefail
@@ -118,7 +125,7 @@ jobs:
             echo "### Clinical regression gate"
             echo ""
             echo "- Koleksi: ${found_line}"
-            echo "- Baseline: 358 tes, OK (skipped=9), ~95s lokal"
+            echo "- Baseline: 421 tes, OK (skipped=9), ~173s lokal"
           } >> "$GITHUB_STEP_SUMMARY"
           if [ "$found_count" -eq 0 ]; then
             echo "::error::0 tes terkoleksi. Label modul berubah atau hilang — gerbang tidak boleh hijau."

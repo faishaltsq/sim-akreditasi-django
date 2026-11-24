@@ -16,6 +16,9 @@
 .poli-field label{display:block;font-weight:600;margin-bottom:.25rem}
 .poli-field input,.poli-field select,.poli-field textarea{width:100%;max-width:36rem;padding:.4rem .5rem;border:1px solid var(--bs-border-color,#cbd5e1);border-radius:.4rem}
 .poli-field textarea{min-height:5rem}
+.poli-multi{border:1px solid var(--bs-border-color,#cbd5e1);border-radius:.4rem;padding:.5rem .6rem;margin:0;max-width:36rem}
+.poli-check{display:flex;align-items:center;gap:.45rem;font-weight:400;margin:.15rem 0}
+.poli-check input{width:auto;max-width:none}
 .poli-actions{display:flex;flex-wrap:wrap;gap:.5rem;margin-top:1rem}
 .poli-panel{background:var(--bs-tertiary-bg,#f8fafc);border:1px solid var(--bs-border-color,#e2e8f0);border-radius:.5rem;padding:.85rem;font-size:.85rem}
 .poli-panel dt{font-weight:600;margin-top:.5rem}
@@ -92,6 +95,39 @@
           <option value="{{ choice.value }}"{% if item.value == choice.value %} selected{% endif %}>{{ choice.label }}</option>
           {% endfor %}
         </select>
+        {% elif item.kind == 'multiselect' %}
+        <fieldset class="poli-multi" id="poli-field-{{ item.name }}">
+          <legend class="visually-hidden">{{ item.label }}</legend>
+          {% for choice in item.choices %}
+          <label class="poli-check">
+            <input type="checkbox" name="{{ item.name }}" value="{{ choice.value }}"{% if choice.checked %} checked{% endif %}{% if readonly %} disabled{% endif %}>
+            {{ choice.label }}
+          </label>
+          {% endfor %}
+        </fieldset>
+        {% elif item.kind == 'group' %}
+        <fieldset class="poli-multi" id="poli-field-{{ item.name }}">
+          <legend class="visually-hidden">{{ item.label }}</legend>
+          {% for child in item.children %}
+          <div class="poli-field">
+            <label for="poli-field-{{ child.name }}">{{ child.label }}</label>
+            {% if child.kind == 'select' %}
+            <select id="poli-field-{{ child.name }}" name="{{ child.name }}"{% if readonly %} disabled{% endif %}>
+              <option value="">— Pilih —</option>
+              {% for choice in child.choices %}
+              <option value="{{ choice.value }}"{% if child.value == choice.value %} selected{% endif %}>{{ choice.label }}</option>
+              {% endfor %}
+            </select>
+            {% else %}
+            <input type="text" id="poli-field-{{ child.name }}" name="{{ child.name }}" value="{{ child.value }}"{% if readonly %} disabled{% endif %}>
+            {% endif %}
+          </div>
+          {% endfor %}
+        </fieldset>
+        {% elif item.kind == 'markers' %}
+        <textarea id="poli-field-{{ item.name }}" name="{{ item.name }}" data-poli-json="1"
+                  placeholder='[{"side":"FRONT","x":0.42,"y":0.55,"kind":"NYERI","label":"Nyeri prekordial"}]'{% if readonly %} disabled{% endif %}>{{ item.json }}</textarea>
+        <small class="text-muted d-block">Daftar JSON penanda: maksimal 100, koordinat x/y 0–1, side FRONT/BACK, kind LUKA/NYERI/LAINNYA.</small>
         {% elif item.kind == 'number' %}
         <input type="number" id="poli-field-{{ item.name }}" name="{{ item.name }}"
                value="{{ item.value }}"{% if item.minimum is not None %} min="{{ item.minimum }}"{% endif %}{% if item.maximum is not None %} max="{{ item.maximum }}"{% endif %}{% if readonly %} disabled{% endif %}>
@@ -179,6 +215,31 @@
         {% if clinical.door_to_ecg.status == 'PATUH' %}PATUH — {{ clinical.door_to_ecg.minutes }} menit
         {% elif clinical.door_to_ecg.status == 'TERLAMBAT' %}TERLAMBAT — {{ clinical.door_to_ecg.minutes }} menit
         {% else %}Belum ada order EKG{% endif %}
+      </dd>
+      {% endif %}
+      {% if clinical.kehamilan_status %}
+      <dt>Kontraindikasi kehamilan</dt>
+      <dd>
+        <span class="badge bg-danger">Peringatan</span>
+        {{ clinical.kehamilan_label }} — hindari
+        {% for group in clinical.kehamilan_kontraindikasi %}{{ group }}{% if not forloop.last %}, {% endif %}{% endfor %}.
+        <small class="text-muted d-block">Sumber: matriks §9a; pemetaan produk ke kelompok bergantung kelas/zat di katalog (AMBIGU-17).</small>
+      </dd>
+      {% endif %}
+      {% if clinical.brinkman is not None %}
+      <dt>Indeks Brinkman</dt>
+      <dd>{{ clinical.brinkman }} <small class="text-muted">(batang/hari × tahun; klasifikasi belum ditetapkan — AMBIGU-03)</small></dd>
+      {% endif %}
+      {% if clinical.kepatuhan_obat_label or clinical.obat_rutin_labels %}
+      <dt>Obat rutin</dt>
+      <dd>
+        {{ clinical.kepatuhan_obat_label|default:"—" }}
+        {% if clinical.obat_rutin_labels %}
+        <small class="text-muted d-block">{% for obat in clinical.obat_rutin_labels %}{{ obat }}{% if not forloop.last %}, {% endif %}{% endfor %}</small>
+        {% endif %}
+        {% if clinical.obat_rutin_terakhir %}
+        <small class="text-muted d-block">Dosis terakhir: {{ clinical.obat_rutin_terakhir }}</small>
+        {% endif %}
       </dd>
       {% endif %}
     </dl>

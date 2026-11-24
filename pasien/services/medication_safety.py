@@ -59,4 +59,9 @@ def evaluate_prescription(prescription, policy=None):
         add('DUPLICATE_INGREDIENT','Zat aktif berulang pada resep ini.',review=True)
     if any(cls and n>1 for cls,n in Counter(classes).items()):
         add('THERAPY_OVERLAP','Kelas terapi berulang; verifikasi tujuan kombinasi.',review=True)
+    # F3.3 (matriks §9a): status kehamilan/menyusui dari draft langkah 3.
+    from .pregnancy_safety import pregnancy_findings
+    for finding in pregnancy_findings(visit, [row.product_snapshot for row in rows]):
+        add(finding['code'], finding['message'], blocking=finding['blocking'],
+            review=finding['requires_ack'])
     return findings

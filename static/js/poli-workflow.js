@@ -58,14 +58,44 @@
     });
   }
 
+  function assign(payload, name, value) {
+    // ``fisik_kardio.murmur_derajat`` → payload.fisik_kardio.murmur_derajat;
+    // layanan menyatukan dict ini kembali sebelum validasi.
+    var parts = name.split('.');
+    var target = payload;
+    for (var i = 0; i < parts.length - 1; i += 1) {
+      if (!target[parts[i]] || typeof target[parts[i]] !== 'object') target[parts[i]] = {};
+      target = target[parts[i]];
+    }
+    target[parts[parts.length - 1]] = value;
+  }
+
   function collectFields(form) {
     var payload = {};
+    var checked = {};
     Array.prototype.forEach.call(form.querySelectorAll('[name]'), function (field) {
       if (field.disabled) return;
+      if (field.type === 'checkbox') {
+        // Multi-select: satu kunci berisi daftar nilai yang dicentang.
+        if (!field.checked) return;
+        if (!checked[field.name]) { checked[field.name] = []; assign(payload, field.name, checked[field.name]); }
+        checked[field.name].push(field.value);
+        return;
+      }
+      if (field.hasAttribute('data-poli-json')) {
+        var raw = field.value.trim();
+        if (!raw) { assign(payload, field.name, []); return; }
+        try {
+          assign(payload, field.name, JSON.parse(raw));
+        } catch (error) {
+          assign(payload, field.name, raw);
+        }
+        return;
+      }
       if (field.type === 'number') {
-        payload[field.name] = field.value === '' ? null : Number(field.value);
+        assign(payload, field.name, field.value === '' ? null : Number(field.value));
       } else {
-        payload[field.name] = field.value;
+        assign(payload, field.name, field.value);
       }
     });
     return payload;
