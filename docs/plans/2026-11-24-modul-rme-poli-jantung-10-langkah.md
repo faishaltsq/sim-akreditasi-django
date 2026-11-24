@@ -190,6 +190,35 @@ Penanda artefak: **(baru)** = berkas/tes/route/kolom/fungsi yang **belum ada** d
 
 ---
 
+### ADR-11 — Finalisasi klinis hanya DPJP; penyiapan administratif oleh peran lain
+
+**Konteks.** Spesifikasi 10 langkah menempatkan "verifikasi akhir" di tangan perawat sekaligus menuntut tanda tangan DPJP, dan AMBIGU-05 mencatat kontradiksi itu sebagai penghambat F1. Tanpa keputusan, matriks peran × langkah di F1.10 dan guard `authorize_visit` di F1.4 akan dibangun dua kali. Keputusan produk sudah diambil: **penutupan klinis adalah milik DPJP**, sedangkan langkah penyiapan bersifat administratif dan boleh dikerjakan peran non-DPJP.
+
+**Keputusan.**
+1. **Finalisasi klinis hanya DPJP.** Hanya dokter penanggung jawab pelayanan (DPJP) episode yang boleh menutup asesmen klinis, menetapkan kondisi akhir rawat jalan, dan menandatangani resume pulang.
+2. **Finalisasi administratif dan langkah penyiapan** (registrasi, triase, pemesanan penunjang, penugasan) milik perawat dan peran non-DPJP sesuai matriks peran × 10 langkah (F1.10).
+3. **Perawat tidak boleh menutup langkah klinis; DPJP tidak boleh melompati langkah administratif yang belum lengkap.** Keduanya ditegakkan di server, bukan hanya di template.
+4. **Bila episode belum punya DPJP, episode tidak boleh masuk langkah klinis mana pun** — penerusan F0.3.
+
+**Mengapa `require_doctor` tidak cukup.** `require_doctor` (`pasien/services/igd_actions.py:29-31`) hanya memeriksa `user.profile.profesi in {'DOKTER_UMUM','DOKTER_SPESIALIS'}`. Itu menerima **dokter mana pun** — dokter unit lain, dokter tanpa penugasan, dokter yang bukan DPJP episode ini. ADR-11 butir 1 menuntut predikat yang lebih kuat, dan `require_doctor` tetap dipakai apa adanya untuk jalur IGD agar perilakunya tidak bergeser.
+
+**Sumber otoritas yang dipakai: `PenugasanDpjpEpisode`.** Pola yang sudah ada di `verification_authority` (`pasien/services/professional_cppt.py:138-155`) dipakai ulang dalam bentuk ringkas: `pasien/services/poli_rbac.py` memanggil `PenugasanDpjpEpisode` yang `visit=episode`, `unit_id=visit.unit_kerja_id`, `is_active=True`, dan `valid_from <= hari ini <= valid_until`. Kolom teks bebas `KunjunganPasien.dpjp` (`pasien/models.py:334`) **tidak** dipakai sebagai otoritas — ia tidak dapat diverifikasi, tidak punya masa berlaku, dan tidak terikat akun.
+
+**Alternatif ditolak.**
+- (a) Memakai `visit.dpjp` (string) sebagai penanda DPJP — satu-satunya jaminan adalah `full_name` yang diketik petugas pendaftaran; tidak mengikat akun, tidak punya masa berlaku, dan tidak dapat diaudit. Ini akan membuat "DPJP-only" hanya sekuat teks bebas.
+- (b) Memakai `verification_authority` penuh (PrivilegeSnapshot + mandat `verify_cppt` + penugasan) — memerlukan `Pegawai` HC terverifikasi dan kredensial per unit yang belum tentu ada untuk poli baru; F1 akan gagal di instalasi tanpa data kredensial lengkap. Kredensial tetap wajib untuk **verifikasi CPPT** (F6), bukan untuk menutup asesmen episode.
+- (c) Menerima dokter mana pun lewat `require_doctor` — melanggar ADR-11 butir 1.
+
+**Konsekuensi.**
+- Episode POLI-JANTUNG wajib punya **tepat satu** penugasan DPJP aktif sebelum langkah apa pun dapat diisi. Penugasan ganda juga ditolak: ambigu berarti tidak ada DPJP yang dapat dipertanggungjawabkan. Penegakan ada di `episode_dpjp()` (`pasien/services/poli_rbac.py`), dipanggil `authorize_visit` untuk setiap penulisan.
+- Matriks peran ditegakkan `authorize_step()`/`require_dpjp()` di jalur layanan (`save_step`, `sign`, `finalize`, `addendum`), sehingga penolakan muncul sebagai `PermissionDenied` → HTTP 403, bukan sebagai field `disabled` di template.
+- Langkah 8 dan 10 hanya dapat diisi DPJP; langkah 9 (pelaksanaan asuhan) terbuka untuk Farmasi, Gizi, dan Fisioterapi; Kasir/Rekam Medis hanya membaca.
+- F6 (verifikasi CPPT ≤24 jam) tetap memakai `verification_authority` penuh — ADR ini tidak melonggarkan syarat kredensial verifikasi, hanya menetapkan siapa yang boleh menutup asesmen.
+
+**Cara migrasi.** Tidak ada migrasi data. Penugasan DPJP per episode dibuat oleh alur penjadwalan/admisi yang sudah ada; episode tanpa penugasan ditolak sejak langkah pertama, bukan setelah asesmen terisi.
+
+---
+
 ## 4. Delta model data
 
 | Model | Field/Relasi baru | Tipe | Default | Alasan | Fase |
@@ -260,12 +289,12 @@ Prasyarat: F0.6, F0.10.
 | F1.2 | Pindahkan `STEPS` ke `STEP_SCHEMAS` dengan entri `IGD` identik byte-per-byte | `pasien/forms_igd_workflow.py:12-27` → registri baru | Test pembanding: `STEP_SCHEMAS['IGD'] == STEPS_LAMA` (snapshot literal) |
 | F1.3 | Tambah entri `RAJAL_JANTUNG` 10 langkah sebagai spesifikasi `(nama, kind, pilihan/rentang)`, bukan field model | registri skema | Test: kunci di luar spesifikasi ditolak (`WorkflowValidation`); nilai di luar pilihan ditolak |
 | F1.4 | Parameterkan `authorize_visit` (modul `igd`/`rajal`, `jenis_kunjungan`, unit `POLI-JANTUNG`) | `pasien/services/igd_assessment_workflow.py:28-49` | Kunjungan RAJAL unit lain → 403; RAJAL `POLI-JANTUNG` + profesi klinis → 200 |
-| F1.5 | `get_visit`/`save_step` memilih skema dari `service_line`; jalur RAJAL menulis `draft_payload` + sinkron kolom `red_flag_*` | `pasien/services/igd_assessment_workflow.py:50-160` | Simpan langkah 1 lalu langkah 2 → `version` 1 lalu 2, `draft_payload` berisi kunci langkah; jalur IGD tetap menulis kolom model; versi basi → `WorkflowConflict` (409) |
+| F1.5 | `get_visit`/`save_step` memilih skema dari `service_line`; jalur RAJAL menulis `draft_payload` tanpa menyentuh kolom `KunjunganPasien` (sinkron `red_flag_*` baru ada di F2 setelah kolomnya lahir) | `pasien/services/igd_assessment_workflow.py:50-160` | Simpan langkah 1 lalu langkah 2 → `version` 1 lalu 2, `draft_payload` berisi kunci langkah; jalur IGD tetap menulis kolom model; versi basi → `WorkflowConflict` (409) |
 | F1.6 | Route `/kunjungan/<pk>/asesmen-poli/` + `?step=` + draft JSON, memakai view/service yang sama | route **baru** di `pasien/urls.py`, `pasien/igd_workflow_views.py:41-230` | GET step 1..10 → 200; step 11 → 400; POST draft → JSON `version` naik |
 | F1.7 | Template navigasi kiri 10 langkah + panel evaluasi kanan (versi/waktu), mode baca saat FINAL | `templates/pasien/poli_workflow.html` (**baru**), `static/js/poli-workflow.js` (**baru**) | Browser QA: 10 tautan bernomor, `aria-current` pindah sesuai `?step=`; FINAL → semua field `disabled` |
 | F1.8 | Finalisasi + kunci + addendum lewat `perform_action` (`sign`/`finalize`/`addendum`) | `pasien/services/igd_finalization.py:41-190` | Finalisasi → `status='FINAL'`, `IgdAssessmentRevision` v1; addendum → v2 tanpa mengubah v1; simpan draft setelah FINAL → 409 |
 | F1.9 | Tutup **hanya** `order_penunjang_buat` untuk episode RAJAL_JANTUNG ber-workflow; `cppt_tambah` dan `rajal_soap_simpan` **tetap terbuka** sampai F6.1 (butuh pengecualian eksplisit — guard menutup semua anggota daftar, `:181-192`) | `pasien/urls.py:150-161`, `pasien/services/igd_assessment_workflow.py:181-192` | (a) episode ber-workflow: `order_penunjang_buat` → 409; (b) **gate rilis**: episode POLI-JANTUNG ber-workflow masih dapat menulis CPPT lewat `cppt_tambah` dan SOAP lewat `rajal_soap_simpan` (200/302, 1 baris `CPPT`), dan order penunjang lewat jalur baru F4.1/F4.6; (c) episode tanpa workflow → semua jalur lama tetap jalan |
-| F1.10 | RBAC per peran (perawat isi 1–6, DPJP penuh + verifikasi, farmasi/gizi CPPT saja, kasir baca billing) | `pasien/services/igd_assessment_workflow.py:28-49`, `accounts/models.py:236-300` | 4 akun uji: perawat → step 7–10 403; DPJP → semua 200; apoteker → step 9 CPPT 200, step 1 403; kasir → baca billing 200, tulis 403 |
+| F1.10 | RBAC per peran (6 peran × 10 langkah, ADR-11): perawat isi 1–7 & 9, DPJP penuh + verifikasi, farmasi/gizi/fisioterapi langkah 9 (gizi juga 5), kasir baca saja; DPJP-only untuk `sign`/`finalize`/`addendum` | `pasien/services/poli_rbac.py` (**baru**), `pasien/services/igd_assessment_workflow.py:28-49` | `pasien/tests_poli_rbac.py`: tiap peran × tiap langkah diuji HTTP (403 vs 200), dokter non-DPJP ditolak pada `sign`/`finalize`, episode tanpa DPJP tidak dapat mengisi langkah mana pun |
 | F1.11 | Idempotensi: replay `request_id` sama mengembalikan hasil identik | `pasien/services/igd_actions.py:219-224` | Kirim aksi 2× dengan `request_id` sama → `replayed=True`, `IgdWorkflowAction` tetap 1 baris |
 
 ### F2 — Langkah 1–6 Lapis 1 + nilai turunan + red flag
