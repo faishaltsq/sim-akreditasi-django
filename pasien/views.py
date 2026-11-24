@@ -1062,6 +1062,22 @@ def pendaftaran_route(request, pk):
                     poli_key = request.POST.get('poliklinik', '')
                     k.jenis_kunjungan = 'RAJAL'
                     k.poliklinik = poli_dict.get(poli_key, poli_key)
+                    # Stempel unit dibaca dari ``poli_key`` (KODE, mis.
+                    # 'POLI_JANTUNG') — bukan dari ``k.poliklinik`` yang sudah
+                    # berisi LABEL dan karena itu tidak pernah cocok dengan
+                    # kunci ``POLI_UNIT_CODE``. Tanpa stempel ini episode rajal
+                    # tidak punya unit, sehingga ``require_rajal_jantung_episode``
+                    # menolak setiap langkah klinis POLI-JANTUNG.
+                    from akreditasi.layanan_unit import POLI_UNIT_CODE
+                    from akreditasi.models import UnitKerja
+                    rajal_unit_code = POLI_UNIT_CODE.get(poli_key)
+                    # ``POLI_UNIT_CODE['POLI_UMUM'] is None``: poliklinik itu
+                    # memang belum punya unit kerja, jadi unit dibiarkan kosong
+                    # alih-alih menebak unit lain.
+                    if rajal_unit_code:
+                        rajal_unit = UnitKerja.objects.filter(code=rajal_unit_code).first()
+                        if rajal_unit:
+                            k.unit_kerja = rajal_unit
                     k.flag_khusus = flag
                     k.status = 'DAFTAR'
                     k.status_antrean = 'MENUNGGU'
