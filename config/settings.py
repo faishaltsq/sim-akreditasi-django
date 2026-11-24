@@ -343,3 +343,12 @@ BPJS_ALLOW_SIMULATION = os.environ.get(
 # set explicitly in production: deriving a token URL from ALLOWED_HOSTS or the
 # request Host header lets a spoofed host reach an emailed credential link.
 PUBLIC_BASE_URL = os.environ.get('PUBLIC_BASE_URL', '')
+
+# Ambang batas normal → hipertensi derajat 1–2 (ADR-14). Angka ini TIDAK
+# bersumber dari matriks spesifikasi — matriks hanya berangka untuk krisis
+# (>=180/120) dan hipotensi (sistolik <90) — sehingga statusnya default
+# operasional JNC/PERHI yang belum diratifikasi Komite Medis. Ubah di sini
+# (atau lewat environment dengan nama yang sama) tanpa menyentuh logika
+# kategori; `pasien/clinical_thresholds.py` yang membacanya.
+CLINICAL_HT_SISTOLE = int(os.environ.get('CLINICAL_HT_SISTOLE', '140'))
+CLINICAL_HT_DIASTOLE = int(os.environ.get('CLINICAL_HT_DIASTOLE', '90'))

@@ -16,6 +16,7 @@ from django.core.exceptions import ValidationError
 # ── 1. Master Pasien ─────────────────────────────────────────────────────────
 
 from .expansion_models import (KomponenRacikan, AlergiPasienTerstruktur, MedicationSafetyReview, PpraReviewRequest, PrescriptionOperation, PharmacyServiceGrant)
+from .clinical_thresholds import hipertensi_thresholds
 
 
 class Pasien(models.Model):
@@ -310,14 +311,10 @@ IMT_OVERWEIGHT_MAX = 24.9
 IMT_OBESITAS_I_MAX = 29.9
 
 #: Ambang kategori tekanan darah. Krisis (>=180/120) dan hipotensi (S<90)
-#: berangka pada sumber; batas normal vs hipertensi derajat 1-2 TIDAK berangka
-#: pada sumber (AMBIGU-01). Nilai di bawah adalah rekomendasi default §8 plan
-#: (JNC/PERHI), bukan keputusan klinis yang sudah disetujui Komite Medis:
-#: normal <140/90, hipertensi derajat 1-2 >=140/90. Bila Komite Medis menetapkan
-#: angka lain, ubah konstanta ini saja — tidak ada aturan lain yang bergantung
-#: pada nilai mentahnya.
-HT_SISTOLE = 140
-HT_DIASTOLE = 90
+#: berangka pada sumber, sehingga tetap literal di sini. Batas normal vs
+#: hipertensi derajat 1-2 TIDAK berangka pada sumber (AMBIGU-01) dan karena itu
+#: bukan konstanta modul: nilainya dibaca dari konfigurasi lewat
+#: ``pasien.clinical_thresholds`` (ADR-14), dengan default operasional 140/90.
 KRISIS_SISTOLE = 180
 KRISIS_DIASTOLE = 120
 HIPOTENSI_SISTOLE = 90
@@ -339,14 +336,20 @@ def hitung_map(sistole, diastole):
 
 
 def map_kategori(sistole, diastole):
-    """Kategori tekanan darah: ``NORMAL``/``HIPERTENSI``/``KRISIS``/``HIPOTENSI``."""
+    """Kategori tekanan darah: ``NORMAL``/``HIPERTENSI``/``KRISIS``/``HIPOTENSI``.
+
+    Batas normal → hipertensi derajat 1–2 dibaca dari
+    ``pasien.clinical_thresholds`` (ADR-14, default operasional 140/90); krisis
+    dan hipotensi memakai angka yang bersumber dari matriks §9a/§9b.
+    """
     if sistole is None or diastole is None:
         return ''
     if sistole >= KRISIS_SISTOLE or diastole >= KRISIS_DIASTOLE:
         return 'KRISIS'
     if sistole < HIPOTENSI_SISTOLE:
         return 'HIPOTENSI'
-    if sistole >= HT_SISTOLE or diastole >= HT_DIASTOLE:
+    ht_sistole, ht_diastole = hipertensi_thresholds()
+    if sistole >= ht_sistole or diastole >= ht_diastole:
         return 'HIPERTENSI'
     return 'NORMAL'
 

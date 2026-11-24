@@ -149,7 +149,8 @@
       {% endif %}
       {% if clinical.map_value is not None %}
       <dt>MAP</dt>
-      <dd>{{ clinical.map_value }} mmHg — {{ clinical.map_kategori }}</dd>
+      <dd>{{ clinical.map_value }} mmHg — {{ clinical.map_kategori }}
+        <small class="text-muted d-block">{{ clinical.map_kategori_source }}</small></dd>
       {% endif %}
       {% if clinical.imt is not None %}
       <dt>IMT</dt>

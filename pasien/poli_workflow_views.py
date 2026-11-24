@@ -108,6 +108,7 @@ def _clinical_context(visit, values):
     kolom model: jalur rajal tidak menyimpan TTV ke ``KunjunganPasien``.
     """
     from pasien.models import hitung_imt, hitung_map, imt_kategori, map_kategori, ttv_alerts
+    from pasien.clinical_thresholds import hipertensi_threshold_source
     from pasien.forms_igd_workflow import MORSE_SEDANG_MIN, MORSE_TINGGI_MIN, MST_BERISIKO_MIN
     from pasien.workflow_schemas import STEP_LABELS
 
@@ -119,6 +120,9 @@ def _clinical_context(visit, values):
     return {
         'map_value': hitung_map(sistole, diastole),
         'map_kategori': map_kategori(sistole, diastole),
+        # ADR-14: ambang hipertensi berasal dari konfigurasi, jadi sumbernya
+        # wajib ikut tampil — bukan angka telanjang tanpa provenance.
+        'map_kategori_source': hipertensi_threshold_source(),
         'imt': imt,
         'imt_kategori': imt_kategori(imt),
         'morse_grade': (

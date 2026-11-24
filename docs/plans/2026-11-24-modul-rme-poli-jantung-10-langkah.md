@@ -282,6 +282,22 @@ Jadi **tidak ada** akun dokter, dan **tidak ada** join `sdm.Pegawai` yang menghu
 
 ---
 
+### ADR-14 — Ambang hipertensi 140/90 adalah default operasional yang dapat dikonfigurasi, belum diratifikasi
+
+**Konteks.** ADR-13 menetapkan bahwa batas normal → hipertensi derajat 1–2 tidak berangka pada sumber (AMBIGU-01), lalu memilih 140/90 sebagai angka yang dipakai kode. Angka itu ditulis sebagai konstanta modul (`HT_SISTOLE`/`HT_DIASTOLE`), sehingga: (a) mengubahnya menuntut sunting kode dan rilis, (b) tidak ada tempat yang menyatakan bahwa angka itu bukan keputusan klinis, dan (c) pembaca layar/auditor melihat kategori "HIPERTENSI" tanpa tahu ambang mana yang menghasilkannya.
+
+**Keputusan.** 140/90 tetap berlaku sebagai **default operasional**, dengan tiga perubahan bentuk:
+
+1. **Satu modul konstanta.** Angka pindah ke `pasien/clinical_thresholds.py`, dibaca dari settings `CLINICAL_HT_SISTOLE`/`CLINICAL_HT_DIASTOLE` atau environment dengan nama sama, default 140/90. `map_kategori()` memanggil `hipertensi_thresholds()`; tidak ada angka 140/90 yang tersisa di logika kategori.
+2. **Status dinyatakan, bukan diasumsikan.** 140/90 adalah batas lazim JNC/PERHI — bukan angka yang ditulis matriks spesifikasi dan **belum diratifikasi Komite Medis**. Statusnya default operasional yang dapat diganti. Karena itu setiap tempat yang menampilkan kategori hipertensi ikut menampilkan `hipertensi_threshold_source()`, yang menyebut kunci konfigurasi, angka efektif, ADR-14, dan status ratifikasinya.
+3. **Ambang bersumber tetap literal.** Krisis ≥180/120 dan hipotensi sistolik <90 **tidak** dibuat konfigurabel: keduanya berangka pada matriks §9a/§9b. Membuatnya konfigurabel berarti membuka kemungkinan sistem menyimpang dari sumber tanpa jejak, padahal tidak ada ambiguitas yang perlu diselesaikan di sana.
+
+**Konsekuensi.** Mengubah konfigurasi mengubah kategori tanpa menyentuh kode — dibuktikan tes dengan `override_settings`. Nilai konfigurasi non-positif atau bukan bilangan bulat ditolak `ImproperlyConfigured`, bukan diam-diam jatuh ke default. Bila Komite Medis kelak menetapkan angka lain, yang berubah hanya nilai konfigurasi; bila Komite menghendaki kategori tambahan (mis. prehipertensi), itu perubahan daftar kategori dan tetap keputusan produk.
+
+**Cara migrasi.** Tanpa migrasi skema. Satu baris settings ditambahkan; tidak ada kolom atau data yang berubah.
+
+---
+
 ## 4. Delta model data
 
 | Model | Field/Relasi baru | Tipe | Default | Alasan | Fase |
