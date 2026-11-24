@@ -111,10 +111,18 @@ def _field_view(item, values):
         # Sub-field dirender sebagai ``<induk>.<anak>``; layanan menyatukannya
         # kembali menjadi dict sebelum validasi.
         group_values = value if isinstance(value, dict) else {}
-        view['children'] = [
-            _field_view(child, group_values) | {'name': f'{item.name}.{child.name}'}
-            for child in item.children
-        ]
+        rules = {rule.name: rule for rule in item.conditional}
+        children = []
+        for child in item.children:
+            child_view = _field_view(child, group_values) | {'name': f'{item.name}.{child.name}'}
+            rule = rules.get(child.name)
+            if rule is not None:
+                # AMBIGU-17(b): teks bebas hanya tampil untuk satu nilai pemicu.
+                child_view['show_when'] = f'{item.name}.{rule.trigger}'
+                child_view['show_value'] = rule.trigger_value
+                child_view['visible'] = group_values.get(rule.trigger) == rule.trigger_value
+            children.append(child_view)
+        view['children'] = children
     elif item.kind == 'markers':
         import json
         markers = value if isinstance(value, list) else []

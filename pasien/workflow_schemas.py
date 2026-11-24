@@ -290,6 +290,21 @@ KEBUTUHAN_SPIRITUAL_LABELS = {
 MURMUR_DERAJAT_CHOICES = ('1/6', '2/6', '3/6', '4/6', '5/6', '6/6')
 MURMUR_DERAJAT_LABELS = {code: code for code in MURMUR_DERAJAT_CHOICES}
 
+#: AMBIGU-17(b) — keputusan produk: lokasi murmur memakai daftar tertutup lima
+#: nilai supaya dapat diagregasi sebagai indikator mutu. Kasus non-standar tidak
+#: hilang: kode ``LAINNYA`` mewajibkan keterangan bebas di
+#: ``murmur_lokasi_lainnya``. Kode, bukan label, yang disimpan.
+MURMUR_LOKASI_CHOICES = ('AORTA', 'PULMONAL', 'TRIKUSPID', 'MITRAL', 'LAINNYA')
+MURMUR_LOKASI_LABELS = {
+    'AORTA': 'Fokus Aorta (ICS II Kanan)',
+    'PULMONAL': 'Fokus Pulmonal (ICS II Kiri)',
+    'TRIKUSPID': 'Fokus Trikuspid (ICS IV Kiri Parasternal)',
+    'MITRAL': 'Fokus Mitral (Apeks, ICS V LMC Sinistra)',
+    'LAINNYA': 'Lokasi Lain (tuliskan)',
+}
+#: Nilai yang membuka field teks bebas di samping daftar tertutup.
+MURMUR_LOKASI_LAINNYA = 'LAINNYA'
+
 #: S6-L2-01 — JVP, nilai baku v2.1.
 JVP_CHOICES = ('TIDAK_MENINGKAT', 'MENINGKAT')
 JVP_LABELS = {
@@ -340,11 +355,28 @@ STEP_LABELS = {
     'kondisi_psikologis': KONDISI_PSIKOLOGIS_LABELS,
     'kebutuhan_spiritual': KEBUTUHAN_SPIRITUAL_LABELS,
     'murmur_derajat': MURMUR_DERAJAT_LABELS,
+    'murmur_lokasi': MURMUR_LOKASI_LABELS,
     'jvp': JVP_LABELS,
     'edema_ekstremitas': EDEMA_LABELS,
     'perfusi_perifer': PERFUSI_PERIFER_LABELS,
 }
 
+
+@dataclass(frozen=True)
+class ConditionalField:
+    """Sub-field teks yang hanya sah untuk satu nilai pemicu (AMBIGU-17(b)).
+
+    ``name`` wajib terisi bila ``trigger`` bernilai ``trigger_value``, dan wajib
+    kosong untuk nilai lain. Aturan dua arah ini yang membuat daftar tertutup
+    tetap dapat diagregasi: kode ``LAINNYA`` tidak pernah tersimpan tanpa
+    keterangan, dan empat kode baku tidak pernah membawa teks liar.
+    """
+
+    name: str
+    trigger: str
+    trigger_value: str
+    label: str = ''
+    max_length: int = 200
 
 @dataclass(frozen=True)
 class StepField:
@@ -359,6 +391,8 @@ class StepField:
     max_length: int = 4000
     #: Hanya untuk ``kind='group'``: sub-field yang membentuk satu dict.
     children: tuple = ()
+    #: Hanya untuk ``kind='group'``: field kondisional antar sub-field.
+    conditional: tuple = ()
 
     def clean(self, value):
         """Return ``(cleaned, error)``; ``error`` is a message or ``None``."""
@@ -402,6 +436,17 @@ class StepField:
                     problems.append(f'{child.name}: {error}')
                 elif child_value is not None:
                     cleaned[child.name] = child_value
+            if problems:
+                return None, ' '.join(problems)
+            for rule in self.conditional:
+                text = cleaned.get(rule.name)
+                if cleaned.get(rule.trigger) == rule.trigger_value:
+                    if not text:
+                        problems.append(
+                            f'{rule.name}: wajib diisi bila {rule.trigger} = {rule.trigger_value}.')
+                elif text:
+                    problems.append(
+                        f'{rule.name}: hanya boleh diisi bila {rule.trigger} = {rule.trigger_value}.')
             if problems:
                 return None, ' '.join(problems)
             return cleaned, None
@@ -521,15 +566,19 @@ RAJAL_JANTUNG_STEPS = {
         StepField('bunyi_jantung', 'select', label='Bunyi jantung & bunyi tambahan', choices=BUNYI_JANTUNG_CHOICES),
         StepField('bunyi_napas', 'select', label='Bunyi napas paru', choices=BUNYI_NAPAS_CHOICES),
         # F3.5: satu dict ``fisik_kardio`` berisi sub-pemeriksaan kardio
-        # terstruktur. Derajat murmur adalah satu-satunya bagian yang
-        # dienumerasi matriks; lokasi katup tidak, jadi disimpan sebagai teks
-        # bebas (AMBIGU-17).
+        # terstruktur. Derajat murmur dan lokasi katup keduanya dienumerasi.
+        # AMBIGU-17(b) ditutup oleh keputusan produk: lima lokasi tertutup plus
+        # teks bebas yang hanya sah untuk ``LAINNYA``.
         StepField('fisik_kardio', 'group', label='Pemeriksaan fisik kardiovaskular', children=(
             StepField('murmur_derajat', 'select', label='Derajat murmur', choices=MURMUR_DERAJAT_CHOICES),
-            StepField('murmur_lokasi', 'text', label='Lokasi murmur / katup', max_length=200),
+            StepField('murmur_lokasi', 'select', label='Lokasi murmur / katup', choices=MURMUR_LOKASI_CHOICES),
+            StepField('murmur_lokasi_lainnya', 'text', label='Keterangan lokasi lain', max_length=200),
             StepField('jvp', 'select', label='Tekanan vena jugularis (JVP)', choices=JVP_CHOICES),
             StepField('edema_ekstremitas', 'select', label='Edema ekstremitas bawah / sakral', choices=EDEMA_CHOICES),
             StepField('perfusi_perifer', 'select', label='Perfusi & pulsasi perifer', choices=PERFUSI_PERIFER_CHOICES),
+        ), conditional=(
+            ConditionalField('murmur_lokasi_lainnya', 'murmur_lokasi', MURMUR_LOKASI_LAINNYA,
+                             label='Keterangan lokasi lain'),
         )),
         # F3.6: penanda anatomi memakai validasi yang sama dengan jalur IGD
         # (maks 100, koordinat 0–1), disimpan di payload — bukan kolom baru.

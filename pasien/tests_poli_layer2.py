@@ -3,8 +3,10 @@
 Setiap tes menyatakan satu perilaku yang dapat diamati: isi ``draft_payload``,
 daftar finding keselamatan, atau HTML yang dirender ulang. Nilai yang tidak
 diberikan matriks **tidak** diuji karena tidak boleh ada: klasifikasi Indeks
-Brinkman (AMBIGU-03) dan daftar lokasi katup (AMBIGU-17) sengaja tidak ada di
-kode, dan tes di bawah menegaskan ketiadaan itu.
+Brinkman (AMBIGU-03) sengaja tidak ada di kode, dan tes di bawah menegaskan
+ketiadaan itu. AMBIGU-17 ditutup oleh keputusan produk pada Rilis A2: lokasi
+murmur memakai lima kode tertutup (A1) dan pemetaan kelompok kontraindikasi
+kehamilan dibaca dari kolom master, bukan daftar molekul di kode (A2).
 """
 import json
 from decimal import Decimal
@@ -136,22 +138,22 @@ class StepSixFisikKardioTest(RajalLapisDuaFixture):
 
     def test_murmur_grade_and_location_are_stored_as_dict(self):
         workflow = self.save(6, {'fisik_kardio': {
-            'murmur_derajat': '2/6', 'murmur_lokasi': 'Apeks',
+            'murmur_derajat': '2/6', 'murmur_lokasi': 'MITRAL',
             'jvp': 'MENINGKAT', 'edema_ekstremitas': 'PRETIBIAL_RINGAN',
             'perfusi_perifer': 'AKRAL_HANGAT_CRT_NORMAL',
         }})
         stored = workflow.draft_payload['6']['fisik_kardio']
         self.assertEqual(stored['murmur_derajat'], '2/6')
-        self.assertEqual(stored['murmur_lokasi'], 'Apeks')
+        self.assertEqual(stored['murmur_lokasi'], 'MITRAL')
         self.assertEqual(stored['jvp'], 'MENINGKAT')
 
     def test_dotted_form_keys_are_nested_by_the_service(self):
         workflow = self.save(6, {
             'fisik_kardio.murmur_derajat': '4/6',
-            'fisik_kardio.murmur_lokasi': 'Fokus aorta',
+            'fisik_kardio.murmur_lokasi': 'AORTA',
         })
         self.assertEqual(workflow.draft_payload['6']['fisik_kardio'],
-                         {'murmur_derajat': '4/6', 'murmur_lokasi': 'Fokus aorta'})
+                         {'murmur_derajat': '4/6', 'murmur_lokasi': 'AORTA'})
 
     def test_murmur_grade_outside_one_to_six_is_rejected(self):
         with self.assertRaises(WorkflowValidation) as ctx:
@@ -191,6 +193,51 @@ class StepSixFisikKardioTest(RajalLapisDuaFixture):
         self.assertEqual(field.kind, 'markers')
         from pasien.anatomy_markers import KINDS
         self.assertEqual(KINDS, ('LUKA', 'NYERI', 'LAINNYA'))
+
+class StepSixMurmurLokasiTest(RajalLapisDuaFixture):
+    """A1 (AMBIGU-17b): lokasi murmur lima kode tertutup + teks untuk LAINNYA."""
+
+    def test_valid_code_is_stored_as_code(self):
+        workflow = self.save(6, {'fisik_kardio': {'murmur_lokasi': 'PULMONAL'}})
+        self.assertEqual(workflow.draft_payload['6']['fisik_kardio'],
+                         {'murmur_lokasi': 'PULMONAL'})
+
+    def test_lainnya_stores_the_free_text(self):
+        workflow = self.save(6, {'fisik_kardio': {
+            'murmur_lokasi': 'LAINNYA',
+            'murmur_lokasi_lainnya': 'Fokus aorta asendens, menjalar ke karotis',
+        }})
+        self.assertEqual(workflow.draft_payload['6']['fisik_kardio'], {
+            'murmur_lokasi': 'LAINNYA',
+            'murmur_lokasi_lainnya': 'Fokus aorta asendens, menjalar ke karotis',
+        })
+
+    def test_value_outside_the_closed_list_is_rejected(self):
+        with self.assertRaises(WorkflowValidation) as ctx:
+            self.save(6, {'fisik_kardio': {'murmur_lokasi': 'Apeks'}})
+        self.assertIn('fisik_kardio', ctx.exception.errors)
+
+    def test_lainnya_without_text_is_rejected(self):
+        with self.assertRaises(WorkflowValidation) as ctx:
+            self.save(6, {'fisik_kardio': {'murmur_lokasi': 'LAINNYA'}})
+        self.assertIn('murmur_lokasi_lainnya', ctx.exception.errors['fisik_kardio'][0])
+        with self.assertRaises(WorkflowValidation) as ctx:
+            self.save(6, {'fisik_kardio': {'murmur_lokasi': 'LAINNYA',
+                                          'murmur_lokasi_lainnya': '   '}})
+        self.assertIn('murmur_lokasi_lainnya', ctx.exception.errors['fisik_kardio'][0])
+
+    def test_standard_code_with_stray_text_is_rejected(self):
+        with self.assertRaises(WorkflowValidation) as ctx:
+            self.save(6, {'fisik_kardio': {'murmur_lokasi': 'MITRAL',
+                                          'murmur_lokasi_lainnya': 'sisa teks'}})
+        self.assertIn('murmur_lokasi_lainnya', ctx.exception.errors['fisik_kardio'][0])
+
+    def test_switching_away_from_lainnya_drops_the_stale_text(self):
+        self.save(6, {'fisik_kardio': {'murmur_lokasi': 'LAINNYA',
+                                       'murmur_lokasi_lainnya': 'Prekordial kiri'}})
+        workflow = self.save(6, {'fisik_kardio': {'murmur_lokasi': 'TRIKUSPID'}}, version=1)
+        self.assertEqual(workflow.draft_payload['6']['fisik_kardio'],
+                         {'murmur_lokasi': 'TRIKUSPID'})
 
 class StepFiveBiopsikososialTest(RajalLapisDuaFixture):
     """F3.7: psikologis, spiritual, dan dukungan sosial."""
@@ -312,11 +359,25 @@ class LapisDuaRenderTest(RajalLapisDuaFixture):
         self.assertIn('type="checkbox" name="riwayat_jantung" value="GAGAL_JANTUNG"', body)
 
     def test_murmur_selection_renders_as_selected_option(self):
-        self.save(6, {'fisik_kardio': {'murmur_derajat': '2/6', 'murmur_lokasi': 'Apeks'}})
+        self.save(6, {'fisik_kardio': {'murmur_derajat': '2/6', 'murmur_lokasi': 'MITRAL'}})
         body = self.get_step(6)
         self.assertIn('name="fisik_kardio.murmur_derajat"', body)
         self.assertIn('<option value="2/6" selected>2/6</option>', body)
-        self.assertIn('value="Apeks"', body)
+        self.assertIn('<option value="MITRAL" selected>', body)
+
+    def test_free_text_field_is_hidden_unless_lainnya_is_chosen(self):
+        self.save(6, {'fisik_kardio': {'murmur_lokasi': 'MITRAL'}})
+        body = self.get_step(6)
+        self.assertIn('data-poli-show-when="fisik_kardio.murmur_lokasi"', body)
+        self.assertIn('name="fisik_kardio.murmur_lokasi_lainnya"', body)
+        self.assertIn('data-poli-show-value="LAINNYA"', body)
+
+    def test_lainnya_renders_the_free_text_with_its_value(self):
+        self.save(6, {'fisik_kardio': {'murmur_lokasi': 'LAINNYA',
+                                       'murmur_lokasi_lainnya': 'Prekordial kiri'}})
+        body = self.get_step(6)
+        self.assertIn('<option value="LAINNYA" selected>', body)
+        self.assertIn('value="Prekordial kiri"', body)
 
     def test_panel_shows_brinkman_and_pregnancy_warning(self):
         self.save(3, {

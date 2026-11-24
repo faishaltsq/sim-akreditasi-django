@@ -407,13 +407,17 @@ Prasyarat: F2, M1.
 | F3.7 | Biopsikososial/spiritual + dukungan sosial terstruktur | skema langkah → `draft_payload` | POST → kunci `dukungan_sosial` tersimpan; kosong → tidak wajib |
 
 > **Status F3 (2026-11-24).** Ketujuh butir tersedia di `pasien/workflow_schemas.py`
-> dan dibuktikan `pasien/tests_poli_layer2.py` (34 tes). Dua hal sengaja
-> **tidak** diisi karena matriks tidak memberinya, dan keduanya dilaporkan
-> sebagai **AMBIGU-17** (pemetaan obat → kelompok kontraindikasi, dan daftar
-> lokasi katup): `PREGNANCY_CONTRA` menyala dari `class_code`/`ingredient_code`
-> katalog, bukan dari daftar molekul karangan; `murmur_lokasi` disimpan sebagai
-> teks bebas, bukan pilihan. **AMBIGU-03 tetap terbuka**: `indeks_brinkman()`
-> mengembalikan angka mentah dan tidak punya band ringan/sedang/berat.
+> dan dibuktikan `pasien/tests_poli_layer2.py`. Satu hal sengaja **tidak**
+> diisi karena matriks tidak memberinya: **AMBIGU-03 tetap terbuka** —
+> `indeks_brinkman()` mengembalikan angka mentah dan tidak punya band
+> ringan/sedang/berat.
+> **AMBIGU-17 ditutup pada Rilis A2** oleh keputusan produk: (a) pemetaan obat →
+> kelompok kontraindikasi kehamilan dibaca dari kolom master
+> `ProdukFarmasi.pregnancy_class`, bukan daftar molekul di kode (A2, ADR-15);
+> (b) `murmur_lokasi` menjadi daftar tertutup lima kode — `AORTA`, `PULMONAL`,
+> `TRIKUSPID`, `MITRAL`, `LAINNYA` — plus `murmur_lokasi_lainnya` yang **wajib**
+> untuk `LAINNYA` dan **dilarang** untuk empat kode lainnya (A1), sehingga nilai
+> dapat diagregasi tanpa kehilangan kasus non-standar.
 > Catatan penempatan: `onset_gejala`/`pemicu_gejala` dipasang di **Langkah 2**
 > karena matriks menempatkannya di S2-L2-01/S2-L2-02, bukan di Langkah 3.
 

@@ -109,7 +109,7 @@
         <fieldset class="poli-multi" id="poli-field-{{ item.name }}">
           <legend class="visually-hidden">{{ item.label }}</legend>
           {% for child in item.children %}
-          <div class="poli-field">
+          <div class="poli-field"{% if child.show_when %} data-poli-show-when="{{ child.show_when }}" data-poli-show-value="{{ child.show_value }}"{% if not child.visible %} hidden{% endif %}{% endif %}>
             <label for="poli-field-{{ child.name }}">{{ child.label }}</label>
             {% if child.kind == 'select' %}
             <select id="poli-field-{{ child.name }}" name="{{ child.name }}"{% if readonly %} disabled{% endif %}>

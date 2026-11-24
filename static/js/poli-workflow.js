@@ -103,6 +103,24 @@
 
   var stepForm = document.getElementById('poli-step-form');
   if (stepForm) {
+    // AMBIGU-17(b): sub-field teks hanya tampil untuk satu nilai pemicu, dan
+    // nilainya dikosongkan saat disembunyikan supaya teks basi tidak pernah
+    // ikut terkirim bersama kode lokasi lain.
+    Array.prototype.forEach.call(stepForm.querySelectorAll('[data-poli-show-when]'), function (node) {
+      var trigger = stepForm.querySelector('[name="' + node.getAttribute('data-poli-show-when') + '"]');
+      if (!trigger) return;
+      var expected = node.getAttribute('data-poli-show-value');
+      function sync() {
+        var show = trigger.value === expected;
+        node.hidden = !show;
+        if (!show) {
+          var input = node.querySelector('input, textarea');
+          if (input) input.value = '';
+        }
+      }
+      trigger.addEventListener('change', sync);
+      sync();
+    });
     stepForm.addEventListener('submit', function (event) {
       event.preventDefault();
       var node = stepForm.querySelector('[data-poli-status]');
