@@ -304,6 +304,22 @@ class PoliRouteTest(PoliFixture):
             data='penjamin=UMUM', content_type='application/x-www-form-urlencoded')
         self.assertEqual(response.status_code, 400)
 
+    def test_final_workflow_renders_read_only_and_hides_finalize_controls(self):
+        workflow = save_step(self.visit.pk, self.dpjp_user, 1, {'penjamin': 'UMUM'}, 0,
+                             service_line='RAJAL_JANTUNG')
+        workflow.status = 'FINAL'
+        workflow.save(update_fields=['status'])
+        self.visit.status = 'PULANG'
+        self.visit.save(update_fields=['status'])
+
+        self.client.force_login(self.dpjp_user)
+        body = self.client.get(
+            reverse('pasien:poli_workflow', args=[self.visit.pk]) + '?step=1').content.decode()
+        self.assertIn('Asesmen sudah final', body)
+        self.assertIn('id="poli-field-penjamin" name="penjamin" disabled', body)
+        self.assertNotIn('data-poli-action="finalize"', body)
+        self.assertNotIn('Simpan langkah 1', body)
+
 
 @override_settings(POLI_JANTUNG_WORKFLOW_ENABLED=True, STORAGES=TEST_STORAGES)
 class PoliFinalizationTest(PoliFixture):
