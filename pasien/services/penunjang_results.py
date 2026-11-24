@@ -15,6 +15,16 @@ DOCTORS={'DOKTER_UMUM','DOKTER_SPESIALIS'}
 PERFORMERS=DOCTORS|{'ANALIS_LAB','RADIOGRAFER'}
 User=get_user_model()
 
+#: Unit yang menjalankan Langkah 7 kardiologi (ADR-1, F4).
+KODE_UNIT_KARDIOLOGI = 'POLI-JANTUNG'
+
+def is_cardiologi_episode(visit, workflow=None):
+    """True bila order ini milik alur Poli Jantung (F4), bukan IGD."""
+    if workflow is not None and getattr(workflow, 'service_line', None) == 'RAJAL_JANTUNG':
+        return True
+    unit = getattr(visit, 'unit_kerja', None)
+    return bool(unit and unit.code == KODE_UNIT_KARDIOLOGI)
+
 
 def service_units(actor):
     profile=getattr(actor,'profile',None)
@@ -53,7 +63,9 @@ def record_result(order_id,actor,data,*,requesting=False,manage_workflow=True,ex
             raise PermissionDenied('Pencatatan hasil dari IGD memerlukan dokter.')
     elif not service_orders(actor).filter(pk=order.pk).exists():
         raise PermissionDenied('Order bukan penugasan layanan Anda.')
-    form=InvestigationResultForm(data={'order_id':order_id,**data})
+    # F4.3 hanya untuk episode kardiologi; jalur IGD tidak berubah.
+    form=InvestigationResultForm(data={'order_id':order_id,**data},
+        require_interpretation=is_cardiologi_episode(visit,workflow))
     if not form.is_valid():
         raise WorkflowValidation(form.errors.get_json_data())
     values=form.cleaned_data;values.pop('order_id')

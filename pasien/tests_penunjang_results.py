@@ -18,14 +18,14 @@ class ResultBoundaryTest(legacy.LaboratoriumViewTest):
         self.assertContains(response,self.order.nama_pemeriksaan)
         self.assertNotContains(response,hidden.nama_pemeriksaan)
         self.assertEqual(self.client.post(reverse('pasien:ancillary_result',args=[hidden.pk]),{'status':'SELESAI','hasil_pemeriksaan':'Forged'}).status_code,404)
-        hidden.refresh_from_db();self.assertEqual(hidden.status,'ORDERED')
+        hidden.refresh_from_db();self.assertEqual(hidden.status,'DIPROSES')
 
     def test_invalid_complete_and_critical_metadata_rejected_through_legacy_route(self):
         self.client.force_login(self.lab_user)
         for fields in [{'status':'INVALID'},{'status':'SELESAI'},{'status':'SELESAI','hasil_pemeriksaan':'Synthetic','is_critical_value':'1'}]:
             response=self.client.post(reverse('pasien:order_penunjang_update',args=[self.order.pk]),fields)
             self.assertEqual(response.status_code,302)
-            self.order.refresh_from_db();self.assertEqual(self.order.status,'ORDERED')
+            self.order.refresh_from_db();self.assertEqual(self.order.status,'DIPROSES')
         self.assertEqual(self.client.get(reverse('pasien:order_penunjang_update',args=[self.order.pk])).status_code,405)
 
     def test_completed_correction_has_reason_and_before_after_audit(self):

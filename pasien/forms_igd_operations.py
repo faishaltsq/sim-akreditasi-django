@@ -111,13 +111,21 @@ class InvestigationResultForm(OperationForm):
     critical_readback_at = forms.DateTimeField(required=False)
     critical_readback_by = forms.IntegerField(required=False,min_value=1)
 
+    def __init__(self, *args, **kwargs):
+        #: F4.3 hanya berlaku untuk episode kardiologi (S7-L1-02/04). Jalur IGD
+        #: tetap persis seperti sebelumnya: hasil cukup, interpretasi opsional.
+        self.require_interpretation = kwargs.pop('require_interpretation', False)
+        super().__init__(*args, **kwargs)
+
     def clean(self):
         values = super().clean()
         if values.get('status') == 'SELESAI' and not values.get('hasil_pemeriksaan'):
             self.add_error('hasil_pemeriksaan','Hasil wajib sebelum status selesai.')
-        # F4.3: hasil terbaca wajib punya interpretasi klinis; angka hasil saja
-        # tidak menjawab pertanyaan klinis dan tidak dapat diaudit sebagai tafsir.
-        if values.get('status') == 'SELESAI' and not (values.get('interpretasi') or '').strip():
+        # F4.3: hasil terbaca pada episode kardiologi wajib punya interpretasi
+        # klinis; angka hasil saja tidak menjawab pertanyaan klinis dan tidak
+        # dapat diaudit sebagai tafsir.
+        if (self.require_interpretation and values.get('status') == 'SELESAI'
+                and not (values.get('interpretasi') or '').strip()):
             self.add_error('interpretasi','Interpretasi klinis wajib sebelum status selesai.')
         if values.get('is_critical_value') and not values.get('critical_value_catatan'):
             self.add_error('critical_value_catatan','Catatan hasil kritis wajib.')

@@ -161,6 +161,20 @@ class InterpretationLvefTest(PenunjangF4Fixture):
         order.refresh_from_db()
         self.assertEqual(order.status, 'DIPROSES')
 
+    def test_igd_order_keeps_the_old_contract(self):
+        """F4.3 tidak boleh mengubah jalur IGD: hasil saja sudah cukup."""
+        unit_igd = UnitKerja.objects.create(code='QA-IGD-F4', name='IGD Uji', level=2)
+        igd_visit = KunjunganPasien.objects.create(
+            pasien=self.patient, no_kunjungan='QA-F4-IGD', jenis_kunjungan='IGD',
+            tanggal_masuk=timezone.now(), unit_kerja=unit_igd, penjamin='UMUM')
+        order = OrderPenunjang.objects.create(
+            kunjungan=igd_visit, jenis='LAB', nama_pemeriksaan='Darah Lengkap')
+        record_result(order.pk, self.analyst, {
+            'status': 'SELESAI', 'hasil_pemeriksaan': 'Hb 13.5 g/dL'})
+        order.refresh_from_db()
+        self.assertEqual(order.status, 'SELESAI')
+        self.assertEqual(order.interpretasi, '')
+
     def test_lvef_and_interpretation_are_stored_apart_from_status(self):
         order = self.make_order(jenis='EKG', nama_pemeriksaan='Ekokardiografi Transtorakal')
         record_result(order.pk, self.analyst, {
