@@ -426,11 +426,19 @@
                                         </div>
                                         <div class="modal-body">
                                             <div class="mb-3">
-                                                <label class="form-label small fw-semibold">Jenis Penunjang <span class="text-danger">*</span></label>
-                                                <select name="jenis" class="form-select form-select-sm" required>
-                                                    <option value="LAB">Laboratorium Klinik</option>
-                                                    <option value="RADIOLOGI">Radiologi / Rontgen / USG</option>
+                                                <label class="form-label small fw-semibold">Pemeriksaan Penunjang <span class="text-danger">*</span></label>
+                                                <select name="catalogue_item" class="form-select form-select-sm" required>
+                                                    <option value="">— Pilih pemeriksaan dari katalog —</option>
+                                                    {% regroup penunjang_items by jenis_order as penunjang_groups %}
+                                                    {% for group in penunjang_groups %}
+                                                    <optgroup label="{{ group.grouper }}">
+                                                        {% for item in group.list %}
+                                                        <option value="{{ item.id }}">{{ item.kode }} — {{ item.nama }}</option>
+                                                        {% endfor %}
+                                                    </optgroup>
+                                                    {% endfor %}
                                                 </select>
+                                                <div class="form-text" style="font-size:.68rem;">Daftar berasal dari katalog pemeriksaan penunjang yang sudah aktif dan direview.</div>
                                             </div>
                                             <div class="mb-3">
                                                 <label class="form-label small fw-semibold">Prioritas <span class="text-danger">*</span></label>
@@ -438,10 +446,6 @@
                                                     <option value="RUTIN" selected>RUTIN (Sesuai Antrean Poli)</option>
                                                     <option value="CITO">⚡ CITO (Gawat Darurat)</option>
                                                 </select>
-                                            </div>
-                                            <div class="mb-3">
-                                                <label class="form-label small fw-semibold">Nama Pemeriksaan <span class="text-danger">*</span></label>
-                                                <input type="text" name="nama_pemeriksaan" class="form-control form-control-sm" required placeholder="Contoh: Glukosa Darah Sewaktu, Profil Lipid, Rontgen Genu AP/Lat...">
                                             </div>
                                             <div class="mb-3">
                                                 <label class="form-label small fw-semibold">Catatan Klinis / Indikasi</label>

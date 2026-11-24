@@ -38,6 +38,7 @@ from klinis.models import (
 from klinis.services.tarif import sync_billing, _kelompok_for, resolve_detail
 from klinis.services.saran import saran_untuk
 from klinis.services.ep_tindakan import primary_for
+from klinis.services.penunjang_catalogue import item_snapshot, orderable_items, resolve_items
 from .asesmen_tindakan import has_tindakan_payload, parse_tindakan, simpan_tindakan
 from .pdf_utils import generate_resume_pdf
 from .satusehat import sync_encounter_satusehat, parse_qr_medis
@@ -1117,38 +1118,8 @@ def igd_dashboard(request):
             'persen': round((terisi / total) * 100) if total else 0,
         })
 
-    # Predefined exam presets (Revisi 02 — "PILIHAN pemeriksaan penunjang")
-    PEMERIKSAAN_PRESETS = {
-        'LAB': [
-            'Darah Lengkap (DL)',
-            'Glukosa Darah Sewaktu (GDS)',
-            'Elektrolit (Na/K/Cl)',
-            'Fungsi Ginjal (Ureum/Kreatinin)',
-            'Kimia Darah (SGOT/SGPT)',
-            'Hemostasis (PT/APTT/INR)',
-            'Troponin I/T (CKMB)',
-            'Laktat Darah',
-            'Analisa Gas Darah (AGD)',
-            'Urinalisis Lengkap',
-            'Tes Kehamilan (HCG Urin)',
-            'Widal / Malaria RDT',
-            'CRP / PCT (Prokalsitonin)',
-            'Golongan Darah + Crossmatch',
-        ],
-        'RADIOLOGI': [
-            'Rontgen Thorax AP',
-            'Rontgen Pelvis AP',
-            'Rontgen Ekstremitas (Pilih)',
-            'USG Abdomen',
-            'USG FAST (FAST Trauma)',
-            'CT Scan Kepala Non-Kontras',
-            'CT Scan Thorax',
-            'CT Scan Abdomen-Pelvis',
-            'CT Angiografi (Pilih Organ)',
-            'EKG 12 Lead',
-            'Ekokardiografi Bedside',
-        ],
-    }
+    # Pilihan pemeriksaan penunjang berasal dari katalog (ItemPenunjang),
+    # bukan daftar teks bebas — lihat _penunjang_order_choices().
 
     ctx = {
         'pasien_igd_list':    qs,
@@ -1159,7 +1130,7 @@ def igd_dashboard(request):
         'count_hitam':        _cnt('HITAM'),
         'available_beds':     available_beds,
         'bed_matrix':         bed_matrix,
-        'pemeriksaan_presets': PEMERIKSAAN_PRESETS,
+        'penunjang_items':    _penunjang_order_choices(),
         'critical_orders':    critical_orders,
         'active_bookings':    active_bookings,
         'triage_choices':     KunjunganPasien.TRIAGE_CHOICES,
@@ -1362,6 +1333,7 @@ def rajal_dashboard(request):
         'poli_filter':         poli_filter,
         'poliklinik_choices':  POLIKLINIK_CHOICES,
         'poli_counts':         poli_counts,
+        'penunjang_items':     _penunjang_order_choices(),
         'available_beds':      available_beds,
         'active_bookings':     active_bookings,
         'critical_orders':     critical_orders,
@@ -1463,25 +1435,72 @@ def pendaftaran_jadwal_simpan(request):
     return redirect('pasien:pendaftaran_dashboard')
 
 
+def _penunjang_order_choices():
+    """Item katalog yang boleh diorder, untuk dropdown kedua dasbor.
+
+    Sumbernya ``klinis.services.penunjang_catalogue.orderable_items`` — bukan
+    query model langsung — supaya daftar yang ditawarkan ke dokter identik
+    dengan daftar yang akan diterima ``order_penunjang_buat``.
+    """
+    return [
+        {
+            'id': item.pk,
+            'kode': item.kode,
+            'nama': item.nama,
+            'jenis_order': item.get_jenis_order_display(),
+        }
+        for item in orderable_items().order_by('jenis_order', 'kode')
+    ]
+
+def _resolve_penunjang_price(item, penjamin):
+    """Harga satuan satu item penunjang, atau ``None`` bila tarif belum ada.
+
+    F0.8 akan mengisi fungsi ini lewat ``TarifPenunjang(item, penjamin).nominal``
+    (model baru, belum ada). Sampai saat itu tidak ada sumber harga per item,
+    sehingga fungsi ini selalu ``None``. Pemanggil WAJIB melewati pembuatan
+    ``BillingItem`` saat hasilnya ``None`` — lebih baik tagihan menyusul
+    daripada menulis nominal karangan atau Rp 0.
+    """
+    return None
+
 @login_required
 def order_penunjang_buat(request, pk):
-    """Direct-entry diagnostic order (Lab / Radiologi) from doctor's desk."""
+    """Direct-entry diagnostic order (Lab / Radiologi) dari katalog penunjang."""
     k = get_object_or_404(KunjunganPasien, pk=pk)
     if request.method == 'POST':
-        jenis = request.POST.get('jenis', 'LAB')
-        nama = request.POST.get('nama_pemeriksaan', '').strip()
         catatan = request.POST.get('catatan_klinis', '').strip()
         prioritas = request.POST.get('prioritas', 'RUTIN')
         is_critical = request.POST.get('is_critical_value') in ('1', 'true', 'True', 'on')
         critical_catatan = request.POST.get('critical_value_catatan', '').strip()
-        if nama:
-            order = OrderPenunjang.objects.create(
+
+        try:
+            item_id = int((request.POST.get('catalogue_item') or '').strip())
+        except (TypeError, ValueError):
+            item_id = None
+
+        item, snapshot = None, None
+        if item_id is None:
+            messages.error(request, 'Pilih pemeriksaan dari katalog penunjang. Order tanpa item katalog tidak diterima.')
+        else:
+            try:
+                item = resolve_items(request.user, [item_id])[0]
+                snapshot = item_snapshot(item)
+            except ValueError as exc:
+                messages.error(request, f'Pemeriksaan tidak dapat diorder: {exc}')
+                item = None
+
+        if item is not None:
+            OrderPenunjang.objects.create(
                 kunjungan=k,
-                jenis=jenis,
-                nama_pemeriksaan=nama,
+                catalogue_item=item,
+                catalogue_snapshot=snapshot,
+                jenis=item.jenis_order,
+                nama_pemeriksaan=item.nama,
                 catatan_klinis=catatan,
                 prioritas=prioritas,
                 dokter_pengirim=request.user.get_full_name() or request.user.username,
+                ordered_by=request.user,
+                destination_id=item.destination_id,
                 is_critical_value=is_critical,
                 critical_value_catatan=critical_catatan,
             )
@@ -1491,19 +1510,23 @@ def order_penunjang_buat(request, pk):
                 k.triage = 'MERAH'
                 k.save(update_fields=['triage'])
                 messages.warning(request, f'⚠️ CRITICAL VALUE — Triage otomatis di-eskalasi dari {old_triage} → Merah (P1).')
-            # Automatic billing item
-            base_price = 150000 if jenis == 'LAB' else 250000
-            BillingItem.objects.create(
-                kunjungan=k,
-                kategori='LAB' if jenis == 'LAB' else 'RADIOLOGI',
-                nama_item=f'Pemeriksaan {jenis}: {nama}',
-                kuantitas=1,
-                harga_satuan=base_price,
-                dicatat_oleh=request.user,
-            )
-            messages.success(request, f'Order {jenis} "{nama}" berhasil dikirim & ditambahkan ke billing.')
-        else:
-            messages.error(request, 'Nama pemeriksaan tidak boleh kosong.')
+            harga = _resolve_penunjang_price(item, k.penjamin)
+            if harga is None:
+                messages.warning(
+                    request,
+                    f'Order {item.jenis_order} "{item.nama}" berhasil dikirim. '
+                    'Tarif belum ditetapkan untuk item ini; tagihan menyusul.'
+                )
+            else:
+                BillingItem.objects.create(
+                    kunjungan=k,
+                    kategori='LAB' if item.jenis_order == 'LAB' else 'RADIOLOGI',
+                    nama_item=f'Pemeriksaan {item.jenis_order}: {item.nama}',
+                    kuantitas=1,
+                    harga_satuan=harga,
+                    dicatat_oleh=request.user,
+                )
+                messages.success(request, f'Order {item.jenis_order} "{item.nama}" berhasil dikirim & ditambahkan ke billing.')
     back = 'pasien:igd_dashboard' if k.jenis_kunjungan == 'IGD' else 'pasien:rajal_dashboard'
     return redirect(back)
 

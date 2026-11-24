@@ -696,13 +696,6 @@
                                         </div>
                                         <div class="modal-body">
                                             <div class="mb-3">
-                                                <label class="form-label small fw-semibold">Jenis Penunjang <span class="text-danger">*</span></label>
-                                                <select name="jenis" class="form-select form-select-sm" id="jenisSelect{{ k.pk }}" required onchange="updatePemeriksaanList('{{ k.pk }}')">
-                                                    <option value="LAB">Laboratorium PK / Mikrobiologi</option>
-                                                    <option value="RADIOLOGI">Radiologi / Rontgen / CT-Scan</option>
-                                                </select>
-                                            </div>
-                                            <div class="mb-3">
                                                 <label class="form-label small fw-semibold">Prioritas <span class="text-danger">*</span></label>
                                                 <select name="prioritas" class="form-select form-select-sm" required>
                                                     <option value="CITO" selected>⚡ CITO (Gawat Darurat / Hasil Cepat)</option>
@@ -711,17 +704,18 @@
                                             </div>
                                             <div class="mb-3">
                                                 <label class="form-label small fw-semibold">Pilih Pemeriksaan <span class="text-danger">*</span></label>
-                                                <!-- Preset checklist (Revisi 02 — pilihan semua jenis/nama pemeriksaan) -->
-                                                <div id="presetPemeriksaan{{ k.pk }}" class="border rounded p-2 mb-2 bg-light" style="max-height:180px;overflow-y:auto;">
-                                                    {% for nama in pemeriksaan_presets.LAB %}
-                                                    <div class="form-check form-check-sm py-0">
-                                                        <input class="form-check-input preset-check-{{ k.pk }}" type="checkbox" value="{{ nama }}" id="pc_{{ k.pk }}_{{ forloop.counter }}" onchange="syncPemeriksaanInput('{{ k.pk }}')">
-                                                        <label class="form-check-label small" for="pc_{{ k.pk }}_{{ forloop.counter }}">{{ nama }}</label>
-                                                    </div>
+                                                <select name="catalogue_item" class="form-select form-select-sm" required>
+                                                    <option value="">— Pilih pemeriksaan dari katalog —</option>
+                                                    {% regroup penunjang_items by jenis_order as penunjang_groups %}
+                                                    {% for group in penunjang_groups %}
+                                                    <optgroup label="{{ group.grouper }}">
+                                                        {% for item in group.list %}
+                                                        <option value="{{ item.id }}">{{ item.kode }} — {{ item.nama }}</option>
+                                                        {% endfor %}
+                                                    </optgroup>
                                                     {% endfor %}
-                                                </div>
-                                                <input type="text" name="nama_pemeriksaan" id="namaInput{{ k.pk }}" class="form-control form-control-sm" required placeholder="Atau ketik manual / edit pilihan di atas...">
-                                                <div class="form-text" style="font-size:.68rem;">Centang dari daftar standar, atau ketik manual jika pemeriksaan tidak tercantum.</div>
+                                                </select>
+                                                <div class="form-text" style="font-size:.68rem;">Daftar berasal dari katalog pemeriksaan penunjang yang sudah aktif dan direview. Pemeriksaan di luar katalog tidak dapat diorder.</div>
                                             </div>
                                             <div class="mb-3">
                                                 <label class="form-label small fw-semibold">Catatan Klinis / Indikasi</label>
@@ -2882,49 +2876,6 @@
             }
         });
     });
-
-    // Revisi 02: Penunjang preset list — switch LAB/RADIOLOGI presets dynamically
-    const PRESETS = {
-        LAB: [
-            'Darah Lengkap (DL)', 'Glukosa Darah Sewaktu (GDS)', 'Elektrolit (Na/K/Cl)',
-            'Fungsi Ginjal (Ureum/Kreatinin)', 'Kimia Darah (SGOT/SGPT)', 'Hemostasis (PT/APTT/INR)',
-            'Troponin I/T (CKMB)', 'Laktat Darah', 'Analisa Gas Darah (AGD)',
-            'Urinalisis Lengkap', 'Tes Kehamilan (HCG Urin)', 'Widal / Malaria RDT',
-            'CRP / PCT (Prokalsitonin)', 'Golongan Darah + Crossmatch'
-        ],
-        RADIOLOGI: [
-            'Rontgen Thorax AP', 'Rontgen Pelvis AP', 'Rontgen Ekstremitas (Pilih)',
-            'USG Abdomen', 'USG FAST (FAST Trauma)', 'CT Scan Kepala Non-Kontras',
-            'CT Scan Thorax', 'CT Scan Abdomen-Pelvis', 'CT Angiografi (Pilih Organ)',
-            'EKG 12 Lead', 'Ekokardiografi Bedside'
-        ]
-    };
-
-    function updatePemeriksaanList(pk) {
-        const jenisEl = document.getElementById('jenisSelect' + pk);
-        if (!jenisEl) return;
-        const jenis = jenisEl.value;
-        const container = document.getElementById('presetPemeriksaan' + pk);
-        if (!container) return;
-        container.innerHTML = '';
-        (PRESETS[jenis] || []).forEach(function(nama, i) {
-            const div = document.createElement('div');
-            div.className = 'form-check form-check-sm py-0';
-            const id = 'pc_' + pk + '_' + i;
-            div.innerHTML = '<input class="form-check-input preset-check-' + pk + '" type="checkbox" value="' + nama + '" id="' + id + '" onchange="syncPemeriksaanInput(\'' + pk + '\')">' +
-                '<label class="form-check-label small" for="' + id + '">' + nama + '</label>';
-            container.appendChild(div);
-        });
-        // Clear input & uncheck
-        const inp = document.getElementById('namaInput' + pk);
-        if (inp) inp.value = '';
-    }
-
-    function syncPemeriksaanInput(pk) {
-        const checked = Array.from(document.querySelectorAll('.preset-check-' + pk + ':checked')).map(cb => cb.value);
-        const inp = document.getElementById('namaInput' + pk);
-        if (inp) inp.value = checked.join(', ');
-    }
 
     function toggleCheckValue(inputSelector, val, isChecked) {
         const input = document.querySelector(inputSelector);

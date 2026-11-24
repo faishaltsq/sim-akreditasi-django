@@ -57,6 +57,27 @@ class IGDDashboardRevisiTestCase(TestCase):
             tanggal_masuk=timezone.now()
         )
 
+    def buat_item_katalog(self, kode='UJI-IGD-LAB-001', nama='Darah Lengkap Uji IGD',
+                          jenis_order='LAB'):
+        """Item katalog yang bisa diorder lewat ``order_penunjang_buat``.
+
+        Sejak F0.2 order penunjang wajib menunjuk ``klinis.ItemPenunjang``;
+        fixture ini meniru item katalog yang sudah aktif dan direview.
+        """
+        from klinis.models import ItemPenunjang, KategoriPenunjang
+        l1, _ = KategoriPenunjang.objects.get_or_create(
+            kode='UJI-IGD-LAB', defaults={'nama': 'Uji IGD Laboratorium', 'level': 1})
+        l2, _ = KategoriPenunjang.objects.get_or_create(
+            kode='UJI-IGD-LAB-KLINIK',
+            defaults={'nama': 'Uji IGD Klinik', 'level': 2, 'parent': l1})
+        l3, _ = KategoriPenunjang.objects.get_or_create(
+            kode='UJI-IGD-LAB-HEMATOLOGI',
+            defaults={'nama': 'Uji IGD Hematologi', 'level': 3, 'parent': l2})
+        return ItemPenunjang.objects.create(
+            kode=kode, nama=nama, group=l3, jenis_order=jenis_order,
+            destination=self.unit_igd, active=True, source_version='UJI-2026-11-24',
+            reviewed_by=self.user)
+
     def test_igd_dashboard_triage_hitam_filter(self):
         """Filtering by triage=HITAM should return the black triage patient and exclude red."""
         res = self.client.get(reverse('pasien:igd_dashboard') + '?triage=HITAM')
@@ -141,9 +162,9 @@ class IGDDashboardRevisiTestCase(TestCase):
             jenis_kunjungan='IGD', status='TRIAGE', triage='KUNING', tanggal_masuk=timezone.now()
         )
         url = reverse('pasien:order_penunjang_buat', kwargs={'pk': kunjungan_k.pk})
+        item = self.buat_item_katalog()
         res = self.client.post(url, {
-            'jenis': 'LAB',
-            'nama_pemeriksaan': 'Troponin I (CITO)',
+            'catalogue_item': str(item.pk),
             'prioritas': 'CITO',
             'is_critical_value': '1',
             'critical_value_catatan': 'Troponin 1.2 ng/mL TINGGI',
@@ -158,13 +179,17 @@ class IGDDashboardRevisiTestCase(TestCase):
         self.assertEqual(res.status_code, 200)
         self.assertIn('bed_matrix', res.context)
 
-    def test_igd_dashboard_pemeriksaan_presets_in_context(self):
-        """Revisi 02: pemeriksaan_presets context should contain LAB and RADIOLOGI lists."""
+    def test_igd_dashboard_penunjang_items_in_context(self):
+        """Pilihan pemeriksaan penunjang di dasbor IGD berasal dari katalog aktif.
+
+        Sebelum F0.2 daftar pilihan adalah teks bebas di template; sekarang
+        daftar itu adalah ``penunjang_items`` dari katalog, sehingga item yang
+        tidak ada di katalog tidak bisa diorder.
+        """
+        item = self.buat_item_katalog()
         res = self.client.get(reverse('pasien:igd_dashboard'))
         self.assertEqual(res.status_code, 200)
-        self.assertIn('pemeriksaan_presets', res.context)
-        presets = res.context['pemeriksaan_presets']
-        self.assertIn('LAB', presets)
-        self.assertIn('RADIOLOGI', presets)
-        self.assertGreater(len(presets['LAB']), 5)
-        self.assertGreater(len(presets['RADIOLOGI']), 5)
+        self.assertIn('penunjang_items', res.context)
+        ids = [row['id'] for row in res.context['penunjang_items']]
+        self.assertIn(item.pk, ids)
+        self.assertContains(res, item.nama)
