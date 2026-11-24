@@ -19,6 +19,9 @@ from .unit_scope import (
     boleh_detail_kunjungan, can_read_kunjungan, can_read_pasien,
 )
 from akreditasi.input_parsing import parse_int
+from akreditasi.layanan_unit import (
+    POLI_UNIT_CODE, alias_index, resolve_code, visit_unit_code,
+)
 from akreditasi.models import StandardItem, AuditLog
 from django.utils import timezone
 from datetime import timedelta
@@ -1279,13 +1282,51 @@ def igd_status_update(request, pk):
 def rajal_dashboard(request):
     """Dedicated Outpatient Clinics (Poli Rawat Jalan) Dashboard."""
     poli_filter = request.GET.get('poli', '')
-    qs = KunjunganPasien.objects.filter(
+    base_qs = KunjunganPasien.objects.filter(
         jenis_kunjungan='RAJAL',
         status__in=['DAFTAR', 'ASESMEN']
-    ).select_related('pasien')
+    ).select_related('pasien', 'unit_kerja', 'bed__ruangan')
 
+    # Hitungan per poli memakai kode unit (``akreditasi.layanan_unit``), bukan
+    # potongan label: ``poliklinik`` berisi campuran label pilihan
+    # ('Poli Anak (Pediatri)') dan kode ('POLI_ANAK'), sehingga pencocokan
+    # substring melewatkan baris berkode. Satu lintasan dipakai untuk hitungan
+    # sekaligus daftar PK per unit, supaya tabel dan angka pill tidak bisa
+    # berbeda pendapat.
+    index = alias_index()
+    per_unit_count = {}
+    per_unit_pks = {}
+    per_poliklinik_exact = {}
+    for kunjungan in base_qs:
+        kode_unit = visit_unit_code(kunjungan, index)
+        if kode_unit:
+            per_unit_count[kode_unit] = per_unit_count.get(kode_unit, 0) + 1
+            per_unit_pks.setdefault(kode_unit, []).append(kunjungan.pk)
+        else:
+            # Poliklinik tanpa unit kerja (mis. POLI_UMUM): tidak ada kode unit
+            # yang bisa dipakai, jadi hitung lewat kecocokan persis kode/label.
+            nilai = kunjungan.poliklinik
+            per_poliklinik_exact[nilai] = per_poliklinik_exact.get(nilai, 0) + 1
+
+    poli_counts = {}
+    for code, label in POLIKLINIK_CHOICES:
+        unit_code = POLI_UNIT_CODE.get(code)
+        if unit_code:
+            count = per_unit_count.get(unit_code, 0)
+        else:
+            count = per_poliklinik_exact.get(code, 0) + per_poliklinik_exact.get(label, 0)
+        poli_counts[code] = {'label': label, 'count': count}
+
+    qs = base_qs
+    poli_active_code = ''
     if poli_filter:
-        qs = qs.filter(poliklinik__icontains=poli_filter)
+        unit_code = resolve_code(poli_filter, None, index)
+        if unit_code:
+            qs = qs.filter(pk__in=per_unit_pks.get(unit_code, []))
+            poli_active_code = next(
+                (code for code, target in POLI_UNIT_CODE.items() if target == unit_code), '')
+        else:
+            qs = qs.filter(poliklinik__icontains=poli_filter)
     qs = qs.order_by('status_antrean', 'tanggal_masuk')
 
     available_beds = (
@@ -1293,17 +1334,6 @@ def rajal_dashboard(request):
         .select_related('ruangan')
         .order_by('ruangan__kelas', 'ruangan__kode', 'kode_bed')
     )
-
-    poli_counts = {}
-    for code, label in POLIKLINIK_CHOICES:
-        poli_counts[code] = {
-            'label': label,
-            'count': KunjunganPasien.objects.filter(
-                jenis_kunjungan='RAJAL',
-                status__in=['DAFTAR', 'ASESMEN'],
-                poliklinik__icontains=label[:15]
-            ).count()
-        }
 
     try:
         active_bookings = list(
@@ -1333,6 +1363,7 @@ def rajal_dashboard(request):
         'poli_filter':         poli_filter,
         'poliklinik_choices':  POLIKLINIK_CHOICES,
         'poli_counts':         poli_counts,
+        'poli_active_code':    poli_active_code,
         'penunjang_items':     _penunjang_order_choices(),
         'available_beds':      available_beds,
         'active_bookings':     active_bookings,

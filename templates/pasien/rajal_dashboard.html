@@ -223,9 +223,9 @@
                     <span class="badge {% if not poli_filter %}bg-white text-primary{% else %}bg-secondary{% endif %}">{{ pasien_rajal_list|length }}</span>
                 </a>
                 {% for code, data in poli_counts.items %}
-                <a href="{% url 'pasien:rajal_dashboard' %}?poli={{ data.label|urlencode }}" class="poli-pill {% if poli_filter and poli_filter in data.label %}active{% endif %}">
+                <a href="{% url 'pasien:rajal_dashboard' %}?poli={{ data.label|urlencode }}" class="poli-pill {% if poli_active_code == code %}active{% endif %}">
                     {{ data.label }}
-                    <span class="badge {% if poli_filter and poli_filter in data.label %}bg-white text-primary{% else %}bg-primary-subtle text-primary{% endif %}">{{ data.count }}</span>
+                    <span class="badge {% if poli_active_code == code %}bg-white text-primary{% else %}bg-primary-subtle text-primary{% endif %}">{{ data.count }}</span>
                 </a>
                 {% endfor %}
             </div>

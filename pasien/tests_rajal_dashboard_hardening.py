@@ -182,3 +182,49 @@ class AntreanDpjpTest(_RajalFixture):
         kunjungan.refresh_from_db()
         self.assertEqual(kunjungan.status_antrean, 'DIPANGGIL')
         self.assertEqual(kunjungan.status, 'DAFTAR')
+
+
+class PoliCountsTest(_RajalFixture):
+    """F0.4 — hitungan per poli mencakup baris berkode maupun berlabel."""
+
+    def setUp(self):
+        super().setUp()
+        UnitKerja.objects.get_or_create(
+            code='POLI-ANAK', defaults={'name': 'Poliklinik Anak', 'level': 4})
+        self.pasien_anak = Pasien.objects.create(
+            no_rm='RM-RAJAL-HARD-02', nama_lengkap='Pasien Anak',
+            tanggal_lahir='2018-05-05', jenis_kelamin='P')
+        KunjunganPasien.objects.create(
+            pasien=self.pasien_anak, no_kunjungan='KJ-POLI-ANAK-01',
+            jenis_kunjungan='RAJAL', poliklinik='POLI_ANAK',
+            tanggal_masuk=timezone.now(), status='DAFTAR')
+        KunjunganPasien.objects.create(
+            pasien=self.pasien_anak, no_kunjungan='KJ-POLI-ANAK-02',
+            jenis_kunjungan='RAJAL', poliklinik='Poli Anak (Pediatri)',
+            tanggal_masuk=timezone.now(), status='DAFTAR')
+        # Hitungan per poli tetap tunduk pada batas unit (F0.5), jadi angka
+        # seluruh poli hanya terlihat oleh peran tanpa batas.
+        self._user('admin.rs.poli', self.unit_jantung, role='ADMIN_RS')
+        self.assertTrue(self.client.login(
+            username='admin.rs.poli', password=self.password))
+
+    def test_kode_dan_label_terhitung_satu_poli(self):
+        res = self.client.get(reverse('pasien:rajal_dashboard'))
+        self.assertEqual(res.status_code, 200)
+        poli_counts = res.context['poli_counts']
+        self.assertEqual(poli_counts['POLI_ANAK']['count'], 2)
+        self.assertEqual(poli_counts['POLI_ANAK']['label'],
+                         dict(POLIKLINIK_CHOICES)['POLI_ANAK'])
+
+    def test_hitungan_tidak_menyempit_oleh_filter_poli(self):
+        """Pill tetap menampilkan angka seluruh poli saat satu poli difilter."""
+        res = self.client.get(reverse('pasien:rajal_dashboard') + '?poli=POLI_ANAK')
+        self.assertEqual(res.status_code, 200)
+        self.assertEqual(res.context['poli_counts']['POLI_ANAK']['count'], 2)
+        self.assertEqual(len(res.context['pasien_rajal_list']), 2)
+
+    def test_filter_poli_memakai_kode_unit(self):
+        res = self.client.get(reverse('pasien:rajal_dashboard') + '?poli=POLI_ANAK')
+        self.assertEqual(res.status_code, 200)
+        no_kunjungan = {k.no_kunjungan for k in res.context['pasien_rajal_list']}
+        self.assertEqual(no_kunjungan, {'KJ-POLI-ANAK-01', 'KJ-POLI-ANAK-02'})
