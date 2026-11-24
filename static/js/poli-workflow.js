@@ -1,0 +1,129 @@
+/* Simpan draft & aksi asesmen POLI-JANTUNG (F1.7).
+ * Versi optimistik: setiap POST membawa versi yang dirender server; balasan
+ * 409 berarti draft sudah bergerak dan pengguna harus memuat ulang.
+ */
+(function () {
+  'use strict';
+
+  var root = document.querySelector('[data-poli-root]');
+  if (!root) return;
+
+  var version = Number(root.getAttribute('data-version') || 0);
+  var step = root.getAttribute('data-step');
+  var draftUrl = root.getAttribute('data-draft-url');
+  var actionUrl = root.getAttribute('data-action-url');
+
+  function csrfToken() {
+    var match = document.cookie.match(/(?:^|;\s*)csrftoken=([^;]+)/);
+    return match ? decodeURIComponent(match[1]) : '';
+  }
+
+  function statusNode(node) {
+    return node || root.querySelector('[data-poli-status]');
+  }
+
+  function setStatus(node, message, isError) {
+    var target = statusNode(node);
+    if (!target) return;
+    target.textContent = message;
+    target.style.color = isError ? '#b91c1c' : '#166534';
+  }
+
+  function applyVersion(next) {
+    version = Number(next);
+    root.setAttribute('data-version', String(version));
+    var badge = root.querySelector('[data-poli-version]');
+    if (badge) badge.textContent = String(version);
+  }
+
+  function post(url, body) {
+    return fetch(url, {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken() },
+      body: JSON.stringify(body)
+    }).then(function (response) {
+      return response.json().then(function (data) {
+        return { ok: response.ok, status: response.status, data: data };
+      });
+    });
+  }
+
+  function newRequestId() {
+    if (window.crypto && window.crypto.randomUUID) return window.crypto.randomUUID();
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
+      var r = (Math.random() * 16) | 0;
+      var v = c === 'x' ? r : (r & 0x3) | 0x8;
+      return v.toString(16);
+    });
+  }
+
+  function collectFields(form) {
+    var payload = {};
+    Array.prototype.forEach.call(form.querySelectorAll('[name]'), function (field) {
+      if (field.disabled) return;
+      if (field.type === 'number') {
+        payload[field.name] = field.value === '' ? null : Number(field.value);
+      } else {
+        payload[field.name] = field.value;
+      }
+    });
+    return payload;
+  }
+
+  var stepForm = document.getElementById('poli-step-form');
+  if (stepForm) {
+    stepForm.addEventListener('submit', function (event) {
+      event.preventDefault();
+      var node = stepForm.querySelector('[data-poli-status]');
+      setStatus(node, 'Menyimpan…', false);
+      post(draftUrl, { fields: collectFields(stepForm), version: version }).then(function (result) {
+        if (result.ok) {
+          applyVersion(result.data.version);
+          setStatus(node, 'Tersimpan. Versi ' + result.data.version + '.', false);
+          return;
+        }
+        if (result.status === 409) {
+          setStatus(node, 'Konflik versi — muat ulang halaman sebelum menyimpan lagi.', true);
+          return;
+        }
+        var fields = result.data.fields || {};
+        var first = Object.keys(fields)[0];
+        setStatus(node, (first ? first + ': ' : '') + (result.data.error || 'Gagal menyimpan.'), true);
+      }).catch(function () {
+        setStatus(node, 'Gagal menghubungi server.', true);
+      });
+    });
+  }
+
+  Array.prototype.forEach.call(root.querySelectorAll('[data-poli-action]'), function (button) {
+    button.addEventListener('click', function () {
+      var operation = button.getAttribute('data-poli-action');
+      var node = button.parentNode.querySelector('[data-poli-status]');
+      var payload;
+      if (operation === 'sign') {
+        payload = { section: 'MEDIS' };
+      } else {
+        var resume = document.getElementById('poli-resume');
+        payload = { resume: resume ? resume.value : '' };
+      }
+      setStatus(node, 'Memproses…', false);
+      post(actionUrl, {
+        operation: operation,
+        fields: payload,
+        version: version,
+        request_id: newRequestId()
+      }).then(function (result) {
+        if (result.ok) {
+          applyVersion(result.data.version);
+          setStatus(node, 'Selesai. Versi ' + result.data.version + '.', false);
+          if (operation === 'finalize') window.location.reload();
+          return;
+        }
+        setStatus(node, result.data.error || 'Aksi ditolak.', true);
+      }).catch(function () {
+        setStatus(node, 'Gagal menghubungi server.', true);
+      });
+    });
+  });
+})();

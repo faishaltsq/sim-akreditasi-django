@@ -1,0 +1,140 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Asesmen Poli Jantung — {{ kunjungan.no_kunjungan }}{% endblock %}
+{% block page_title %}Asesmen Rawat Jalan Jantung{% endblock %}
+{% block page_subtitle %}{{ kunjungan.no_kunjungan }} — {{ pasien.nama_lengkap }}{% endblock %}
+{% block extra_css %}
+<style>
+.poli-layout{display:grid;grid-template-columns:minmax(180px,250px) minmax(0,1fr) minmax(180px,240px);gap:1.25rem;align-items:start}
+.poli-steps{list-style:none;padding:0;margin:0}
+.poli-steps a{display:block;padding:.6rem .75rem;border-radius:.5rem;text-decoration:none;overflow-wrap:anywhere;color:inherit}
+.poli-steps a:hover{background:var(--bs-tertiary-bg,#f1f5f9)}
+.poli-steps a[aria-current="step"]{background:var(--bs-primary,#2563eb);color:#fff}
+.poli-steps .poli-filled{font-size:.75rem;opacity:.75;margin-inline-start:.35rem}
+.poli-identity{display:flex;flex-wrap:wrap;gap:.4rem 1.5rem;margin-bottom:1rem;font-size:.9rem}
+.poli-field{margin-bottom:.85rem}
+.poli-field label{display:block;font-weight:600;margin-bottom:.25rem}
+.poli-field input,.poli-field select,.poli-field textarea{width:100%;max-width:36rem;padding:.4rem .5rem;border:1px solid var(--bs-border-color,#cbd5e1);border-radius:.4rem}
+.poli-field textarea{min-height:5rem}
+.poli-actions{display:flex;flex-wrap:wrap;gap:.5rem;margin-top:1rem}
+.poli-panel{background:var(--bs-tertiary-bg,#f8fafc);border:1px solid var(--bs-border-color,#e2e8f0);border-radius:.5rem;padding:.85rem;font-size:.85rem}
+.poli-panel dt{font-weight:600;margin-top:.5rem}
+.poli-panel dd{margin:0;overflow-wrap:anywhere}
+.poli-banner{padding:.65rem .85rem;border-radius:.5rem;margin-bottom:1rem;font-weight:600}
+.poli-banner--final{background:#fef3c7;color:#92400e}
+.poli-banner--draft{background:#e0f2fe;color:#075985}
+.poli-status{margin-top:.6rem;font-size:.85rem;min-height:1.2em}
+@media(max-width:1199px){.poli-layout{grid-template-columns:minmax(160px,220px) minmax(0,1fr)}.poli-panel{grid-column:1/-1}}
+@media(max-width:767px){.poli-layout{grid-template-columns:minmax(0,1fr)}}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="poli-layout" data-poli-root
+     data-draft-url="{% url 'pasien:poli_workflow_draft' kunjungan.pk step %}"
+     data-action-url="{% url 'pasien:poli_workflow_action' kunjungan.pk %}"
+     data-version="{{ version }}" data-step="{{ step }}">
+
+  <nav aria-label="Langkah asesmen rawat jalan jantung">
+    <ol class="poli-steps">
+      {% for item in steps %}
+      <li>
+        <a href="?step={{ item.number }}"{% if item.current %} aria-current="step"{% endif %}>
+          {{ item.number }}. {{ item.title }}{% if item.filled %}<span class="poli-filled" aria-hidden="true">&#10003;</span><span class="visually-hidden">(terisi)</span>{% endif %}
+        </a>
+      </li>
+      {% endfor %}
+    </ol>
+  </nav>
+
+  <section aria-labelledby="poli-step-heading">
+    <div class="poli-identity">
+      <span>No. RM: <strong>{{ pasien.no_rm }}</strong></span>
+      <span>Penjamin: <strong>{{ kunjungan.get_penjamin_display }}</strong></span>
+      <span>Unit: <strong>{{ kunjungan.unit_kerja.code|default:"—" }}</strong></span>
+      <span>Status: <strong>{{ kunjungan.get_status_display }}</strong></span>
+    </div>
+
+    {% if is_final %}
+    <p class="poli-banner poli-banner--final" role="status">Asesmen sudah final. Semua isian dikunci; koreksi hanya lewat addendum.</p>
+    {% else %}
+    <p class="poli-banner poli-banner--draft" role="status">Draft berversi — setiap simpan menaikkan versi dan membatalkan tanda tangan sebelumnya.</p>
+    {% endif %}
+
+    <h2 id="poli-step-heading">Langkah {{ step }}. {{ step_title }}</h2>
+
+    <form id="poli-step-form" method="post" action="{{ request.path }}">
+      {% csrf_token %}
+      {% for item in fields %}
+      <div class="poli-field">
+        <label for="poli-field-{{ item.name }}">{{ item.label }}</label>
+        {% if item.kind == 'select' %}
+        <select id="poli-field-{{ item.name }}" name="{{ item.name }}"{% if readonly %} disabled{% endif %}>
+          <option value="">— Pilih —</option>
+          {% for choice in item.choices %}
+          <option value="{{ choice }}"{% if item.value == choice %} selected{% endif %}>{{ choice }}</option>
+          {% endfor %}
+        </select>
+        {% elif item.kind == 'number' %}
+        <input type="number" id="poli-field-{{ item.name }}" name="{{ item.name }}"
+               value="{{ item.value }}"{% if item.minimum is not None %} min="{{ item.minimum }}"{% endif %}{% if item.maximum is not None %} max="{{ item.maximum }}"{% endif %}{% if readonly %} disabled{% endif %}>
+        {% else %}
+        <textarea id="poli-field-{{ item.name }}" name="{{ item.name }}"{% if readonly %} disabled{% endif %}>{{ item.value }}</textarea>
+        {% endif %}
+      </div>
+      {% empty %}
+      <p>Langkah ini tidak memiliki isian langsung.</p>
+      {% endfor %}
+
+      {% if can_fill %}
+      <div class="poli-actions">
+        <button type="submit" class="btn btn-primary">Simpan langkah {{ step }}</button>
+        <span class="poli-status" data-poli-status role="status" aria-live="polite"></span>
+      </div>
+      {% endif %}
+    </form>
+
+    {% if can_finalize %}
+    <section aria-labelledby="poli-final-heading">
+      <h3 id="poli-final-heading">Penutupan episode</h3>
+      <p>Hanya DPJP episode yang dapat menandatangani dan menutup asesmen klinis.</p>
+      <div class="poli-field">
+        <label for="poli-resume">Resume medis</label>
+        <textarea id="poli-resume" name="resume" form="poli-final-form"></textarea>
+      </div>
+      <form id="poli-final-form">
+        <div class="poli-actions">
+          <button type="button" class="btn btn-secondary" data-poli-action="sign">Tandatangani (medis)</button>
+          <button type="button" class="btn btn-primary" data-poli-action="finalize">Finalisasi &amp; tutup episode</button>
+          <span class="poli-status" data-poli-status role="status" aria-live="polite"></span>
+        </div>
+      </form>
+    </section>
+    {% endif %}
+  </section>
+
+  <aside class="poli-panel" aria-labelledby="poli-panel-heading">
+    <h2 id="poli-panel-heading">Status evaluasi</h2>
+    <dl>
+      <dt>Versi draft</dt>
+      <dd data-poli-version>{{ version }}</dd>
+      <dt>Status asesmen</dt>
+      <dd>{{ workflow.get_status_display|default:"Belum dimulai" }}</dd>
+      <dt>Langkah terakhir</dt>
+      <dd>{{ workflow.last_step|default:"—" }}</dd>
+      <dt>Diperbarui</dt>
+      <dd>{{ workflow.updated_at|date:"d/m/Y H:i"|default:"—" }}</dd>
+      <dt>Peran Anda</dt>
+      <dd>{{ role_label }}</dd>
+      {% if missing_sections %}
+      <dt>Belum lengkap</dt>
+      <dd>{% for key in missing_sections %}{{ key }}{% if not forloop.last %}, {% endif %}{% endfor %}</dd>
+      {% endif %}
+    </dl>
+  </aside>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/poli-workflow.js' %}"></script>
+{% endblock %}
