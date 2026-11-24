@@ -4,8 +4,11 @@ name: Clinical Regression Gate
 #
 # PENTING — suite ini HIJAU hari ini dan HARUS tetap hijau.
 # Baseline terukur (Python 3.12.10, Django 6.1, SQLite):
-#   Ran 245 tests in 24.049s
+#   Ran 299 tests in 76.425s
 #   OK (skipped=9)
+# 245 di antaranya adalah suite IGD/asuhan profesional yang sudah ada; 54
+# sisanya modul F1 (pasien.tests_poli_workflow 33, pasien.tests_poli_rbac 21)
+# yang menjaga generalisasi mesin asesmen ke jalur POLI-JANTUNG.
 # Tidak ada `continue-on-error` dan tidak ada `|| true` di berkas ini. Jalur
 # merah HARUS berarti regresi nyata, bukan tes yang dilewati diam-diam.
 #
@@ -85,13 +88,15 @@ jobs:
             pasien.tests_professional_care_context \
             pasien.tests_professional_configuration \
             pasien.tests_professional_rls \
+            pasien.tests_poli_workflow \
+            pasien.tests_poli_rbac \
             --parallel 1 --verbosity 2 2>&1 | tee /tmp/clinical-regression.log
       # Django's test runner has no JUnit output and pytest is not a dependency,
       # so the honest structured artifact is the verbosity-2 log itself. Namun
       # log saja bisa "hijau kosong": modul yang di-rename bisa berhenti
       # mengoleksi tes tanpa ada yang menyadarinya. Langkah ini mencetak jumlah
       # tes yang benar-benar terkoleksi dan menolak run kosong, sehingga
-      # gerbang yang lolos selalu berarti 245 tes benar-benar dieksekusi.
+      # gerbang yang lolos selalu berarti 299 tes benar-benar dieksekusi.
       - name: Verify collected test count
         run: |
           set -euo pipefail
@@ -110,7 +115,7 @@ jobs:
             echo "### Clinical regression gate"
             echo ""
             echo "- Koleksi: ${found_line}"
-            echo "- Baseline: 245 tes, OK (skipped=9), ~24s lokal"
+            echo "- Baseline: 299 tes, OK (skipped=9), ~76s lokal"
           } >> "$GITHUB_STEP_SUMMARY"
           if [ "$found_count" -eq 0 ]; then
             echo "::error::0 tes terkoleksi. Label modul berubah atau hilang — gerbang tidak boleh hijau."
