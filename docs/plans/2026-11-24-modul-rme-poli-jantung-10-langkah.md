@@ -555,7 +555,7 @@ Asumsi lintas fase: 1 pengembang backend + 1 frontend paruh waktu; tidak ada per
 
 ## 13. F0 — Daftar kerja siap eksekusi
 
-Urutan eksekusi: **F0.10 → F0.1–F0.5 → F0.6–F0.8 → F0.9**. ID dipertahankan dari versi 1.0 agar rujukan `F0.6`/`F0.7`/`F0.8`/`F0.9`/`F0.10` di §5, §7, §9 dan §12 tetap sah. Tiga kelompok rilis: **A1** = F0.1–F0.5 (perbaikan produksi murni, rollback = revert commit), **A2** = F0.6–F0.8 (flag + seed, rollback = revert + seed idempoten), **B** = F0.9 (mengganti katalog aktif; rollback = re-aktivasi `Framework` 2022 lewat `AktivasiKatalog`, `akreditasi/models.py:738-769`). B **tidak boleh** menumpang A1/A2.
+Urutan eksekusi: **F0.10 → F0.1–F0.5 → F0.6–F0.8 → F0.9**. ID dipertahankan dari versi 1.0 agar rujukan `F0.6`/`F0.7`/`F0.8`/`F0.9`/`F0.10` di §5, §7, §9 dan §12 tetap sah. Tiga kelompok rilis: **A1** = F0.1–F0.5 (perbaikan produksi murni, rollback = revert commit), **A2** = F0.6–F0.8 (flag + seed, rollback = revert + seed idempoten), **B** = F0.9 (mengganti katalog aktif; rollback = **restore backup database**, bukan re-aktivasi: `reconcile_2024` menghapus `Framework` lama yang kategorinya sudah kosong, `akreditasi/reconcile_2024.py:228-230`, sehingga baris 2022 tidak ada lagi untuk diaktifkan kembali — jalankan dengan `--backup-reference` yang menunjuk berkas backup nyata). B **tidak boleh** menumpang A1/A2.
 
 Semua perintah dijalankan dari akar repo dengan venv aktif. Setiap butir menyebut perintah yang **gagal hari ini** dan lulus setelah perubahan.
 
