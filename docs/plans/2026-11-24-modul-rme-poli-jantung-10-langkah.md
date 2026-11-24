@@ -219,6 +219,51 @@ Penanda artefak: **(baru)** = berkas/tes/route/kolom/fungsi yang **belum ada** d
 
 ---
 
+### ADR-12 — Identitas DPJP: pemilih berbasis akun, `visit.dpjp` hanya tampilan
+
+**Konteks.** ADR-11 menetapkan `PenugasanDpjpEpisode` sebagai satu-satunya sumber otoritas DPJP, tetapi kode hari ini tidak punya jalan dari pilihan DPJP di pendaftaran menuju akun dokter:
+
+* `KunjunganPasien.dpjp` adalah `CharField` bebas (`pasien/models.py:334`) yang diisi dari konstanta `DPJP_CHOICES` (`pasien/models.py:248-273`) — nilai seperti `'dr. Bambang, Sp.JP, FIHA'`.
+* `PenugasanDpjpEpisode.doctor` adalah FK ke `AUTH_USER_MODEL` (`pasien/professional_care_models.py:34-60`).
+* Tidak ada satu pun fungsi di repo yang memetakan string `DPJP_CHOICES` ke `User`.
+
+**Investigasi (diukur 2026-11-24 pada `db.sqlite3` dev).**
+
+```
+>>> UserProfile.objects.filter(profesi__in=['DOKTER_SPESIALIS','DOKTER_UMUM','DOKTER_GIGI']).count()
+0                       # 29 akun total, 0 berprofesi dokter
+>>> Pegawai.objects.exclude(akun=None).count()
+2                       # 'Pegawai Smoke' -> akun 21, 'Siska Lestari, S.Kep., Ners' -> akun 50
+>>> set(nama DPJP_CHOICES) & set(Pegawai.nama_lengkap)
+set()                   # 0 irisan; 6 dokter Sp.JP di Pegawai (Bima Sakti, Cynthia, Dimas, Hendra, Ratna, Wahyu)
+                        # tidak satu pun bernama Faisal/Bambang seperti di DPJP_CHOICES
+```
+
+Jadi **tidak ada** akun dokter, dan **tidak ada** join `sdm.Pegawai` yang menghubungkan orang nyata ke akun untuk dokter. `Pegawai.akun` ada (`sdm/models/pegawai.py:28-34`) tetapi kosong untuk seluruh tenaga medis, dan nama di HC pun tidak cocok dengan `DPJP_CHOICES`.
+
+**Keputusan.** Opsi (b): pemilih DPJP berbasis akun.
+
+1. `pasien/services/poli_dpjp.py` (**baru**) adalah satu-satunya penulis penugasan DPJP. `eligible_dpjp_accounts()` mengembalikan akun `User` aktif yang `profile.profesi ∈ {DOKTER_UMUM, DOKTER_SPESIALIS, DOKTER_GIGI}` — bukan konstanta teks.
+2. **Sumber kebenaran otoritas = `PenugasanDpjpEpisode` aktif.** `KunjunganPasien.dpjp` adalah string tampilan yang **diturunkan**: `assign_dpjp()`/`clear_dpjp()` menulisnya, dan `reconcile_dpjp_display()` memulihkannya dari penugasan bila ada penulisan lama yang membuatnya menyimpang. Kolom itu tidak pernah dibaca sebagai otoritas (`poli_rbac.episode_dpjp`).
+3. **String tanpa akun bukan penugasan.** Jalur lama yang hanya mengirim teks (`dpjp`, `dpjp_igd_baru`, `dpjp_igd_lama`) tetap berjalan apa adanya dan tetap tidak membuat penugasan — perilaku IGD tidak berubah satu bita pun. Konsekuensinya eksplisit: episode dengan DPJP teks tetapi tanpa akun tetap ditolak pada langkah klinis pertama (ADR-11 butir 4).
+4. **Otoritas penetapan** = administrasi unit, bukan klinisi: `SUPER_ADMIN`, `ADMIN_RS`, atau `KEPALA_UNIT` yang `unit_kerja`-nya **sama persis** dengan unit episode. Perawat, farmasi, gizi, fisioterapi, kasir, dan dokter non-DPJP ditolak 403. Dokter tidak boleh menetapkan dirinya sendiri — sudah ditegakkan `PenugasanDpjpEpisode.clean()`.
+5. **Masa berlaku.** `valid_until` wajib (non-null) tetapi tidak ada kebijakan produk untuknya. Dipakai `DEFAULT_ASSIGNMENT_DAYS = 30` dari `valid_from` sebagai jaring pengaman operasional; penggantian DPJP tidak mengandalkan tanggal ini karena penugasan lama dinonaktifkan eksplisit. Angka ini konstanta modul, bukan aturan klinis.
+6. **Idempoten.** Menetapkan ulang dokter yang sama pada penugasan aktif yang masih berlaku tidak membuat baris baru dan tidak menaikkan versi apa pun.
+
+**Alternatif ditolak.**
+- (a) Tabel pemetaan string→akun — menambah lapisan kedua di atas `UserProfile.profesi` yang sudah menyatakan profesi; pemetaan akan basi setiap ada dokter baru, dan tetap butuh akun yang belum ada.
+- Membuat akun dokter dari nama `DPJP_CHOICES` — mengarang orang. `DPJP_CHOICES` tidak cocok dengan `sdm.Pegawai` mana pun, jadi akun hasil karangan tidak akan pernah bisa login oleh dokter nyata.
+
+**Konsekuensi yang dinyatakan terang.**
+- Di instalasi hari ini pemilih DPJP **kosong** karena 0 akun dokter. Formulir menampilkan sebabnya ("belum ada akun dokter terdaftar") dan tidak menawarkan teks bebas sebagai pengganti. Registrasi tetap berjalan; episode hanya tidak punya DPJP berotoritas sampai ops membuat akun dokter dan menetapkannya. Ini konsekuensi yang benar, bukan cacat: ADR-11 menuntut otoritas yang bisa login.
+- Pembuatan akun dokter adalah tugas operasional (menu Pengguna), **bukan** migrasi data dan bukan seed. Repo ini tidak boleh mengarang nama dokter.
+- `DPJP_CHOICES`/`DPJP_POLI_MAP` **tidak dihapus**: keduanya masih dipakai formulir lama dan `tests_pendaftaran_integrasi.py`. Keduanya kini berstatus katalog tampilan untuk unit yang belum punya akun dokter, dan tidak lagi menjadi sumber otoritas. Bila kelak seluruh unit punya akun dokter, keduanya dapat dihapus bersama formulir lamanya.
+- Biaya yang dinilai jujur: mengganti pemilih teks menjadi pemilih akun menuntut kolom `dpjp_user` di `kunjungan_form.html`, di `pendaftaran_route`, dan di `igd_kunjungan_edit`. Karena `DPJP_POLI_MAP` memetakan poli→nama dokter (bukan poli→akun), penyaringan "DPJP poli ini" berbasis akun belum dapat dilakukan tanpa data akun; pemilih karena itu menampilkan seluruh akun dokter, dan penyaringan per unit memakai `profile.unit_kerja` bila ada.
+
+**Cara migrasi.** Tanpa migrasi skema. `PenugasanDpjpEpisode` sudah ada; yang ditambahkan hanya penulis tunggalnya di jalur layanan.
+
+---
+
 ## 4. Delta model data
 
 | Model | Field/Relasi baru | Tipe | Default | Alasan | Fase |

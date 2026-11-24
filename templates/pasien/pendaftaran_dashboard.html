@@ -1386,8 +1386,19 @@
                                                 </select>
                                             </div>
                                             <div class="mb-3">
-                                                <label class="form-label small fw-semibold">DPJP / Dokter Jaga</label>
+                                                <label class="form-label small fw-semibold">DPJP / Dokter Jaga (akun)</label>
+                                                <select name="dpjp_user" class="form-select form-select-sm">
+                                                    <option value="">— Tanpa DPJP —</option>
+                                                    {% for akun_id, akun_nama in dpjp_accounts %}
+                                                    <option value="{{ akun_id }}">{{ akun_nama }}</option>
+                                                    {% endfor %}
+                                                </select>
+                                                {% if not dpjp_accounts %}
+                                                <small class="text-danger d-block mt-1">Belum ada akun dokter terdaftar.</small>
+                                                {% endif %}
+                                                <label class="form-label small fw-semibold mt-2">DPJP / Dokter Jaga (teks)</label>
                                                 <input type="text" name="dpjp" class="form-control form-control-sm" value="{{ k.dpjp }}">
+                                                <small class="text-muted d-block mt-1">Teks tidak membuat penugasan DPJP berotoritas.</small>
                                             </div>
                                         </div>
                                         <div class="modal-footer">

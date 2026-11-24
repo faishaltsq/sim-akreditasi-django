@@ -71,6 +71,7 @@ urlpatterns = [
     path('igd/kunjungan/<int:pk>/status/', views.igd_status_update, name='igd_status_update'),
     path('rajal/', views.rajal_dashboard, name='rajal_dashboard'),
     path('rajal/kunjungan/<int:pk>/antrean/', views.rajal_antrean_status, name='rajal_antrean_status'),
+    path('rajal/kunjungan/<int:pk>/dpjp/', views.rajal_dpjp_simpan, name='rajal_dpjp_simpan'),
     path('rajal/kunjungan/<int:pk>/soap/', views.rajal_soap_simpan, name='rajal_soap_simpan'),
     path('kunjungan/<int:pk>/disposisi/', views.kunjungan_disposisi, name='kunjungan_disposisi'),
     path('kunjungan/<int:pk>/order-penunjang/', views.order_penunjang_buat, name='order_penunjang_buat'),

@@ -295,7 +295,24 @@
                                     </select>
                                 </form>
                             </td>
-                            <td><small class="text-muted">{{ k.dpjp|default:"-" }}</small></td>
+                            <td>
+                                <small class="text-muted">{{ k.dpjp|default:"-" }}</small>
+                                {% if k.dpjp_assignable %}
+                                <form method="POST" action="{% url 'pasien:rajal_dpjp_simpan' k.pk %}" class="d-flex gap-1 mt-1">
+                                    {% csrf_token %}
+                                    <select name="dpjp_user" class="form-select form-select-sm py-0 px-1" style="font-size:.7rem; max-width:10rem;" aria-label="DPJP untuk {{ k.pasien.nama_lengkap }}">
+                                        <option value="">— Tanpa DPJP —</option>
+                                        {% for akun in dpjp_accounts %}
+                                        <option value="{{ akun.pk }}" {% if akun.pk == k.dpjp_doctor_id %}selected{% endif %}>{{ akun.profile.full_name|default:akun.username }}</option>
+                                        {% endfor %}
+                                    </select>
+                                    <button type="submit" class="btn btn-sm btn-outline-primary py-0 px-2" style="font-size:.7rem;">Set</button>
+                                </form>
+                                {% if not dpjp_accounts %}
+                                <small class="text-danger d-block">Belum ada akun dokter terdaftar.</small>
+                                {% endif %}
+                                {% endif %}
+                            </td>
                             <td>
                                 <div class="font-monospace text-muted">{{ k.tanggal_masuk|date:"H:i" }}</div>
                                 <small class="text-muted">{{ k.tanggal_masuk|timesince }} lalu</small>

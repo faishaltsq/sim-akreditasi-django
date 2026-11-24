@@ -90,6 +90,7 @@ jobs:
             pasien.tests_professional_rls \
             pasien.tests_poli_workflow \
             pasien.tests_poli_rbac \
+            pasien.tests_poli_dpjp \
             --parallel 1 --verbosity 2 2>&1 | tee /tmp/clinical-regression.log
       # Django's test runner has no JUnit output and pytest is not a dependency,
       # so the honest structured artifact is the verbosity-2 log itself. Namun

@@ -8,12 +8,15 @@ from django.db.models import Count, Avg, Sum, Q, F
 from django.db.models.functions import Round
 from django.http import HttpResponse, HttpResponseBadRequest, JsonResponse, FileResponse
 from django.views.decorators.http import require_POST
-from django.core.exceptions import PermissionDenied
+from django.core.exceptions import PermissionDenied, ValidationError
 from django.core.paginator import Paginator
 from django.conf import settings
 from pathlib import Path
 import re
 from .decorators import require_patient_module, get_unit_scope, scope_kunjungan_qs, scope_pasien_qs
+from .services.poli_dpjp import (
+    SOURCE_RAJAL_DASHBOARD, SOURCE_REGISTRATION, assert_display_writable,
+)
 from .physical_exam import exam_context
 from .unit_scope import (
     boleh_detail_kunjungan, can_read_kunjungan, can_read_pasien,
@@ -32,7 +35,7 @@ from .models import (
     OrderPenunjang, POLIKLINIK_CHOICES, DPJP_CHOICES, BookingKamar,
     GeneralConsentRawatInap, generate_no_rm, generate_no_kunjungan,
     JadwalDinusAdmission, LogbookHarianAdmission, DPJP_POLI_MAP,
-    KorelasiEpAsesmen, LampiranAsesmen
+    KorelasiEpAsesmen, LampiranAsesmen, PenugasanDpjpEpisode
 )
 from klinis.models import (
     AturanEpAsesmen, MasterIcd9, KasusTindakan, TarifPenunjang,
@@ -526,6 +529,7 @@ def kunjungan_baru(request):
 
                 k.full_clean()
                 k.save()
+                _apply_dpjp_account(k, request, channel=SOURCE_REGISTRATION)
                 invalidate_snapshot_cache()
 
             messages.success(request, f'✅ Pasien {pasien_obj.nama_lengkap} (RM: {pasien_obj.no_rm}) berhasil didaftarkan. Kunjungan: {k.no_kunjungan}')
@@ -545,6 +549,7 @@ def kunjungan_baru(request):
         'triage_choices': KunjunganPasien.TRIAGE_CHOICES,
         'poliklinik_choices': POLIKLINIK_CHOICES,
         'dpjp_choices': DPJP_CHOICES,
+        'dpjp_accounts': _dpjp_account_choices(),
         'agama_choices': Pasien.AGAMA_CHOICES,
         'status_kawin_choices': Pasien.STATUS_KAWIN_CHOICES,
         'pendidikan_choices': Pasien.PENDIDIKAN_CHOICES,
@@ -807,6 +812,7 @@ def pendaftaran_dashboard(request):
         'ke_batal':            qs_today.filter(status='BATAL').count(),
         'poliklinik_choices':  POLIKLINIK_CHOICES,
         'dpjp_choices':        DPJP_CHOICES,
+        'dpjp_accounts':       _dpjp_account_choices(),
         'shift_choices':       JadwalDinusAdmission.SHIFT_CHOICES,
         'today_iso':           today.isoformat(),
         'jadwal_hari_ini':     JadwalDinusAdmission.objects.filter(tanggal=today).select_related('petugas'),
@@ -996,6 +1002,33 @@ def api_ocr_ktp(request):
     })
 
 
+def _dpjp_account_choices():
+    """Akun dokter yang dapat dipilih sebagai DPJP (ADR-12 opsi b)."""
+    from .services.poli_dpjp import dpjp_display_name, eligible_dpjp_accounts
+    return [
+        (account.pk, dpjp_display_name(account))
+        for account in eligible_dpjp_accounts()
+    ]
+
+
+def _apply_dpjp_account(visit, request, *, channel):
+    """F0.11/ADR-12: tetapkan DPJP berbasis akun dalam transaksi yang sama.
+
+    Hanya akun dokter aktif yang dapat dipilih — tidak ada jalur "buat akun
+    dari nama". Bila tidak ada ``dpjp_user`` yang dikirim, tidak ada penugasan
+    yang dibuat dan jalur lama (string ``dpjp``) berjalan seperti sebelumnya.
+    """
+    raw = (request.POST.get('dpjp_user') or '').strip()
+    if not raw:
+        return None
+    from .services.poli_dpjp import assign_dpjp, eligible_dpjp_accounts
+    doctor = eligible_dpjp_accounts().filter(pk=raw).first()
+    if doctor is None:
+        raise PermissionDenied('Akun DPJP yang dipilih bukan akun dokter aktif.')
+    assignment, _created = assign_dpjp(visit, doctor, request.user, channel=channel)
+    return assignment
+
+
 @login_required
 def pendaftaran_route(request, pk):
     """Route a registered visit to IGD or Poli Rawat Jalan."""
@@ -1005,45 +1038,50 @@ def pendaftaran_route(request, pk):
         dpjp = request.POST.get('dpjp', '')
         flag = request.POST.get('flag_khusus', 'NORMAL')
         try:
+            with transaction.atomic():
+                if tujuan == 'IGD':
+                    k.jenis_kunjungan = 'IGD'
+                    k.poliklinik = 'IGD'
+                    from akreditasi.models import UnitKerja
+                    igd_unit = UnitKerja.objects.filter(code='IGD').first()
+                    if igd_unit:
+                        k.unit_kerja = igd_unit
+                    k.triage = request.POST.get('triage', 'HIJAU')
+                    k.flag_khusus = flag
+                    k.status = 'TRIAGE'
+                    k.status_antrean = 'MENUNGGU'
+                    if not k.nomor_antrean:
+                        k.nomor_antrean = generate_nomor_antrean('IGD')
+                    if dpjp:
+                        assert_display_writable(k, dpjp)
+                        k.dpjp = dpjp
+                    k.save()
+                    _apply_dpjp_account(k, request, channel=SOURCE_REGISTRATION)
+                elif tujuan == 'RAJAL':
+                    poli_dict = dict(POLIKLINIK_CHOICES)
+                    poli_key = request.POST.get('poliklinik', '')
+                    k.jenis_kunjungan = 'RAJAL'
+                    k.poliklinik = poli_dict.get(poli_key, poli_key)
+                    k.flag_khusus = flag
+                    k.status = 'DAFTAR'
+                    k.status_antrean = 'MENUNGGU'
+                    if not k.nomor_antrean:
+                        k.nomor_antrean = generate_nomor_antrean('RAJAL', k.poliklinik)
+                    if dpjp:
+                        assert_display_writable(k, dpjp)
+                        k.dpjp = dpjp
+                    k.save()
+                    _apply_dpjp_account(k, request, channel=SOURCE_REGISTRATION)
+                else:
+                    messages.error(request, 'Pilih tujuan: IGD atau Poli Rawat Jalan.')
+                    return redirect('pasien:pendaftaran_dashboard')
+            from akreditasi.kontrol_data import invalidate_snapshot_cache
+            invalidate_snapshot_cache()
             if tujuan == 'IGD':
-                k.jenis_kunjungan = 'IGD'
-                k.poliklinik = 'IGD'
-                from akreditasi.models import UnitKerja
-                igd_unit = UnitKerja.objects.filter(code='IGD').first()
-                if igd_unit:
-                    k.unit_kerja = igd_unit
-                k.triage = request.POST.get('triage', 'HIJAU')
-                k.flag_khusus = flag
-                k.status = 'TRIAGE'
-                k.status_antrean = 'MENUNGGU'
-                if not k.nomor_antrean:
-                    k.nomor_antrean = generate_nomor_antrean('IGD')
-                if dpjp:
-                    k.dpjp = dpjp
-                k.save()
-                from akreditasi.kontrol_data import invalidate_snapshot_cache
-                invalidate_snapshot_cache()
                 messages.success(request, f'Pasien {k.pasien.nama_lengkap} diarahkan ke IGD ({k.get_triage_display()}) — Antrean: {k.nomor_antrean}.')
                 return redirect('pasien:igd_dashboard')
-            elif tujuan == 'RAJAL':
-                poli_dict = dict(POLIKLINIK_CHOICES)
-                poli_key = request.POST.get('poliklinik', '')
-                k.jenis_kunjungan = 'RAJAL'
-                k.poliklinik = poli_dict.get(poli_key, poli_key)
-                k.flag_khusus = flag
-                k.status = 'DAFTAR'
-                k.status_antrean = 'MENUNGGU'
-                if not k.nomor_antrean:
-                    k.nomor_antrean = generate_nomor_antrean('RAJAL', k.poliklinik)
-                if dpjp:
-                    k.dpjp = dpjp
-                k.save()
-                from akreditasi.kontrol_data import invalidate_snapshot_cache
-                invalidate_snapshot_cache()
-                messages.success(request, f'Pasien {k.pasien.nama_lengkap} diarahkan ke {k.poliklinik} — Antrean: {k.nomor_antrean}.')
-                return redirect('pasien:rajal_dashboard')
-            else:
-                messages.error(request, 'Pilih tujuan: IGD atau Poli Rawat Jalan.')
+            messages.success(request, f'Pasien {k.pasien.nama_lengkap} diarahkan ke {k.poliklinik} — Antrean: {k.nomor_antrean}.')
+            return redirect('pasien:rajal_dashboard')
         except Exception as e:
             messages.error(request, f'Gagal routing: {e}')
     return redirect('pasien:pendaftaran_dashboard')
@@ -1204,20 +1242,24 @@ def igd_kunjungan_edit(request, pk):
     diagnosa_masuk = request.POST.get('diagnosa_masuk', '').strip()
     diagnosa_sdki = request.POST.get('diagnosa_keperawatan_sdki', '').strip()
 
-    if catatan_admisi:
-        kunjungan.catatan_admisi = catatan_admisi
-    if dpjp:
-        kunjungan.dpjp = dpjp
-    if triage in dict(KunjunganPasien.TRIAGE_CHOICES):
-        kunjungan.triage = triage
-    if penjamin in dict(KunjunganPasien.TIPE_PENJAMIN):
-        kunjungan.penjamin = penjamin
-    if diagnosa_masuk:
-        kunjungan.diagnosa_masuk = diagnosa_masuk
-    if diagnosa_sdki:
-        kunjungan.diagnosa_keperawatan_sdki = diagnosa_sdki
+    with transaction.atomic():
+        if catatan_admisi:
+            kunjungan.catatan_admisi = catatan_admisi
+        if dpjp:
+            assert_display_writable(kunjungan, dpjp)
+            kunjungan.dpjp = dpjp
+        if triage in dict(KunjunganPasien.TRIAGE_CHOICES):
+            kunjungan.triage = triage
+        if penjamin in dict(KunjunganPasien.TIPE_PENJAMIN):
+            kunjungan.penjamin = penjamin
+        if diagnosa_masuk:
+            kunjungan.diagnosa_masuk = diagnosa_masuk
+        if diagnosa_sdki:
+            kunjungan.diagnosa_keperawatan_sdki = diagnosa_sdki
 
-    kunjungan.save()
+        kunjungan.save()
+        _apply_dpjp_account(kunjungan, request, channel=SOURCE_REGISTRATION)
+
     messages.success(request, f"Data kunjungan {kunjungan.no_kunjungan} berhasil diperbarui.")
     next_url = request.POST.get('next') or request.META.get('HTTP_REFERER') or reverse('pasien:igd_dashboard')
     return redirect(next_url)
@@ -1331,6 +1373,32 @@ def rajal_dashboard(request):
             qs = qs.filter(poliklinik__icontains=poli_filter)
     qs = qs.order_by('status_antrean', 'tanggal_masuk')
 
+    # F0.11: penetapan DPJP episode POLI-JANTUNG langsung dari antrean. Hanya
+    # episode ber-unit POLI-JANTUNG dan pengguna berwenang administrasi yang
+    # mendapat pemilih; akun dokter diambil dari ORM, bukan DPJP_CHOICES.
+    from .services.igd_assessment_workflow import POLI_JANTUNG_UNIT_CODE
+    from .services.poli_dpjp import can_assign_dpjp, eligible_dpjp_accounts
+
+    dpjp_episodes = [
+        k for k in qs
+        if k.unit_kerja_id and k.unit_kerja.code == POLI_JANTUNG_UNIT_CODE
+    ]
+    active_dpjp_doctor = {}
+    if dpjp_episodes:
+        for assignment in PenugasanDpjpEpisode.objects.filter(
+                visit_id__in=[k.pk for k in dpjp_episodes], is_active=True,
+        ).only('visit_id', 'doctor_id'):
+            active_dpjp_doctor[assignment.visit_id] = assignment.doctor_id
+    assignable_dpjp_visit_ids = {
+        k.pk for k in dpjp_episodes if can_assign_dpjp(request.user, k)
+    }
+    dpjp_accounts = list(eligible_dpjp_accounts()) if assignable_dpjp_visit_ids else []
+    # Tempelkan penanda ke baris yang sudah dievaluasi di atas, supaya template
+    # tidak butuh lookup dict bersarang (dan tidak menambah query per baris).
+    for kunjungan in qs:
+        kunjungan.dpjp_assignable = kunjungan.pk in assignable_dpjp_visit_ids
+        kunjungan.dpjp_doctor_id = active_dpjp_doctor.get(kunjungan.pk)
+
     available_beds = (
         Bed.objects.filter(status='TERSEDIA')
         .select_related('ruangan')
@@ -1371,6 +1439,9 @@ def rajal_dashboard(request):
         'active_bookings':     active_bookings,
         'critical_orders':     critical_orders,
         'kondisi_choices':     DischargeRecord.KONDISI_PULANG,
+        'dpjp_accounts':       dpjp_accounts,
+        'assignable_dpjp_visit_ids': assignable_dpjp_visit_ids,
+        'active_dpjp_doctor':  active_dpjp_doctor,
     }
     return render(request, 'pasien/rajal_dashboard.html', ctx)
 
@@ -1399,6 +1470,37 @@ def rajal_antrean_status(request, pk):
                 messages.info(request, f'Status Antrean {k.nomor_antrean} ({k.pasien.nama_lengkap}) diubah ke {k.get_status_antrean_display()}.')
     return redirect('pasien:rajal_dashboard')
 
+
+@login_required
+@require_POST
+def rajal_dpjp_simpan(request, pk):
+    """F0.11 butir 3: jalur produksi menetapkan/mengganti DPJP episode rajal.
+
+    Satu-satunya cara mengubah DPJP episode POLI-JANTUNG yang sedang berjalan
+    tanpa Django admin. Penugasan lama dinonaktifkan, tidak dihapus; string
+    ``visit.dpjp`` diturunkan dari akun yang dipilih (ADR-12).
+    """
+    from .services.igd_assessment_workflow import require_rajal_jantung_episode
+    from .services.poli_dpjp import assign_dpjp, clear_dpjp, eligible_dpjp_accounts
+
+    k = get_object_or_404(KunjunganPasien, pk=pk)
+    require_rajal_jantung_episode(k)
+    raw = (request.POST.get('dpjp_user') or '').strip()
+    try:
+        if raw:
+            doctor = eligible_dpjp_accounts().filter(pk=raw).first()
+            if doctor is None:
+                raise PermissionDenied('Akun DPJP yang dipilih bukan akun dokter aktif.')
+            assign_dpjp(k, doctor, request.user, channel=SOURCE_RAJAL_DASHBOARD)
+            messages.success(request, f'DPJP {k.pasien.nama_lengkap} ditetapkan: {k.dpjp}.')
+        else:
+            clear_dpjp(k, request.user, channel=SOURCE_RAJAL_DASHBOARD)
+            messages.info(request, f'DPJP {k.pasien.nama_lengkap} dicabut.')
+    except PermissionDenied:
+        raise
+    except ValidationError as exc:
+        messages.error(request, f'DPJP tidak berubah: {exc.messages[0]}')
+    return redirect('pasien:rajal_dashboard')
 
 @login_required
 @require_POST

@@ -71,6 +71,22 @@
                     </div>
                     <div class="col-md-6">
                         <label class="form-label" style="font-size:.8rem; font-weight:600;">Dokter Penanggung Jawab (DPJP)</label>
+                        <div class="mb-1">
+                            <select name="dpjp_user" class="form-select form-select-sm" style="font-size:.82rem;" aria-label="Akun DPJP">
+                                <option value="">— Tanpa DPJP —</option>
+                                {% for akun_id, akun_nama in dpjp_accounts %}
+                                <option value="{{ akun_id }}">{{ akun_nama }}</option>
+                                {% endfor %}
+                            </select>
+                            {% if not dpjp_accounts %}
+                            <small class="text-danger d-block mt-1">
+                                Belum ada akun dokter terdaftar. DPJP berotoritas harus dibuat sebagai akun pengguna
+                                terlebih dahulu; teks di bawah tidak membuat penugasan.
+                            </small>
+                            {% else %}
+                            <small class="text-muted d-block mt-1">Akun ini menjadi DPJP berotoritas episode.</small>
+                            {% endif %}
+                        </div>
                         <div id="dpjpSelectWrapper">
                             <select name="dpjp" id="dpjpSelect" class="form-select form-select-sm" style="font-size:.82rem;">
                                 <option value="">— Pilih DPJP Dokter —</option>
