@@ -14,6 +14,7 @@ def current_catalogue_risks(prescription):
             if product:
                 products[product.pk]={'id':product.pk,'flags':product.flags,
                     'active':bool(product.active and product.reviewed_by_id and product.source_version and product.generik.active and product.generik.kelas.active),
+                    'pregnancy_class':product.pregnancy_class,
                     'ingredients':list(product.ingredients.order_by('ingredient_code').values('ingredient_code','strength','unit'))}
     return [products[pk] for pk in sorted(products)]
 
@@ -60,8 +61,19 @@ def evaluate_prescription(prescription, policy=None):
     if any(cls and n>1 for cls,n in Counter(classes).items()):
         add('THERAPY_OVERLAP','Kelas terapi berulang; verifikasi tujuan kombinasi.',review=True)
     # F3.3 (matriks §9a): status kehamilan/menyusui dari draft langkah 3.
+    # AMBIGU-17(a): kelas kontraindikasi dibaca dari master terkini, bukan dari
+    # snapshot resep, supaya resep yang dibuat sebelum kolom itu ada tetap
+    # dievaluasi dengan pemetaan yang berlaku. Snapshot hanya dipakai bila
+    # master belum memetakan produknya.
     from .pregnancy_safety import pregnancy_findings
-    for finding in pregnancy_findings(visit, [row.product_snapshot for row in rows]):
+    snapshots=[]
+    for row in rows:
+        snapshot=row.product_snapshot
+        live_class=current.get(snapshot.get('id'),{}).get('pregnancy_class')
+        if live_class:
+            snapshot={**snapshot,'pregnancy_class':live_class}
+        snapshots.append(snapshot)
+    for finding in pregnancy_findings(visit, snapshots):
         add(finding['code'], finding['message'], blocking=finding['blocking'],
             review=finding['requires_ack'])
     return findings

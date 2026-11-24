@@ -1,50 +1,45 @@
 """Kontraindikasi kehamilan/menyusui pada resep (F3.3, matriks S3-L2-04, §9a).
 
 Matriks menyebut lima kelompok obat yang memicu peringatan bila pasien hamil
-atau menyusui: **ACEi, ARB, ARNI, Statin, Warfarin**. Yang **tidak** diberikan
-matriks adalah pemetaan produk katalog ke kelompok itu.
+atau menyusui: **ACEi, ARB, ARNI, Statin, Warfarin**.
 
-Karena itu modul ini tidak memuat daftar molekul. Ia mencocokkan kelompok
-matriks terhadap **data yang sudah ada di katalog**: ``class_code`` produk dan
-``ingredient_code`` komponennya, dinormalkan (huruf kecil, hanya alfanumerik).
-Bila katalog menamai kelasnya ``ACEI``, ``ARB``, ``ARNI``, ``STAIN``, atau
-``WARFARIN`` — atau memberi awalan itu pada kode zat — peringatan menyala.
+**Sumber kebenaran (AMBIGU-17a, ADR-15).** Pemetaan produk → kelompok dibaca
+dari kolom master ``ProdukFarmasi.pregnancy_class`` / ``pregnancy_contra`` yang
+diisi oleh perintah ``python manage.py seed_pregnancy_contra``. Kode ini tidak
+memuat daftar molekul.
 
-Konsekuensi yang harus diketahui operator: katalog lokal hari ini hanya punya
-kelas kasar ``kardiovaskular-antihipertensi``, yang **tidak** memisahkan ACEi
-dari ARB, ARNI, statin, atau warfarin. Selama kelas per-zat belum ada di master,
-aturan ini tidak akan menyala untuk produk yang seharusnya memicunya. Itu
-dilaporkan sebagai AMBIGU-17, bukan ditambal dengan daftar molekul karangan:
-salah mencocokkan obat kehamilan adalah kesalahan klinis, bukan kesalahan
-tampilan.
+**Urutan prioritas.** Kolom master **menang**. Pencocokan lama atas
+``class_code``/``ingredient_code`` hanya jalan bila ``pregnancy_class`` kosong
+(produk belum dipetakan, atau snapshot resep yang dibuat sebelum kolom ini
+ada). Fallback itu dipertahankan supaya perilaku Rilis A1 tidak berubah, bukan
+supaya menjadi jalur utama: katalog lokal hanya punya kelas kasar
+``kardiovaskular-antihipertensi`` yang tidak memisahkan ACEi dari ARB, ARNI,
+statin, atau warfarin, sehingga fallback tidak dapat menyalakan peringatan
+untuk produk yang seharusnya memicunya.
+
+**Status ratifikasi.** Daftar zat di perintah seed adalah **default
+operasional** yang belum diratifikasi Komite Farmasi & Terapi (ADR-15). Setiap
+baris yang dipetakan menyimpan sumbernya di ``pregnancy_class_source``.
 """
+from klinis.expansion_models import PREGNANCY_CLASS_CODES
 from pasien.workflow_schemas import KEHAMILAN_KONTRAINDIKASI
 
-#: Lima kelompok obat dari matriks §9a, apa adanya.
-PREGNANCY_CONTRA_CLASSES = ('ACEI', 'ARB', 'ARNI', 'STATIN', 'WARFARIN')
+#: Lima kelompok obat dari matriks §9a, apa adanya. Alias dari daftar kanonik
+#: di model supaya hanya ada satu sumber kode.
+PREGNANCY_CONTRA_CLASSES = PREGNANCY_CLASS_CODES
 
 #: Kalimat provenance untuk finding; menyebut sumber kelompoknya.
 PREGNANCY_CONTRA_SOURCE = (
     'Kelompok kontraindikasi kehamilan: ' + ', '.join(PREGNANCY_CONTRA_CLASSES)
-    + ' (matriks §9a). Pemetaan produk ke kelompok bergantung pada kelas/zat '
-      'di katalog formularium.'
+    + ' (matriks §9a; pemetaan zat per produk dari master formularium, ADR-15).'
 )
 
 def _tokens(value):
     """Token pembanding: huruf kecil, hanya alfanumerik."""
     return ''.join(char for char in str(value or '').lower() if char.isalnum())
 
-def _matches(token):
-    """True bila token memuat salah satu kelompok matriks sebagai kata utuh."""
-    return any(token == _tokens(group) or token.startswith(_tokens(group))
-               for group in PREGNANCY_CONTRA_CLASSES)
-
-def contra_groups(snapshot):
-    """Kelompok matriks yang cocok untuk satu snapshot produk.
-
-    ``snapshot`` adalah ``product_snapshot`` yang sudah dipakai
-    ``evaluate_prescription``: memuat ``class_code`` dan ``ingredients``.
-    """
+def _legacy_groups(snapshot):
+    """Pencocokan lama atas ``class_code``/``ingredient_code`` (fallback saja)."""
     hits = set()
     candidates = [snapshot.get('class_code')]
     candidates.extend(
@@ -60,6 +55,18 @@ def contra_groups(snapshot):
             if token == _tokens(group) or token.startswith(_tokens(group)):
                 hits.add(group)
     return hits
+
+def contra_groups(snapshot):
+    """Kelompok matriks yang cocok untuk satu snapshot produk.
+
+    ``snapshot`` adalah ``product_snapshot`` yang sudah dipakai
+    ``evaluate_prescription``: memuat ``pregnancy_class``, ``pregnancy_contra``,
+    ``class_code``, dan ``ingredients``.
+    """
+    declared = str(snapshot.get('pregnancy_class') or '').strip().upper()
+    if declared:
+        return {declared} if declared in PREGNANCY_CONTRA_CLASSES else set()
+    return _legacy_groups(snapshot)
 
 def pregnancy_status(visit):
     """Status kehamilan/menyusui episode, dibaca dari draft langkah 3.

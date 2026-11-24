@@ -296,6 +296,23 @@ Jadi **tidak ada** akun dokter, dan **tidak ada** join `sdm.Pegawai` yang menghu
 
 **Cara migrasi.** Tanpa migrasi skema. Satu baris settings ditambahkan; tidak ada kolom atau data yang berubah.
 
+### ADR-15 — Kelompok kontraindikasi kehamilan adalah atribut master, bukan daftar molekul di kode
+
+**Konteks.** Matriks §9a menyebut lima kelompok obat kontraindikasi kehamilan (ACEi, ARB, ARNI, Statin, Warfarin) tetapi tidak memberi pemetaan produk → kelompok (AMBIGU-17a). Katalog formularium hanya punya kelas kasar `kardiovaskular-antihipertensi` yang mencampur kelimanya, sehingga `PREGNANCY_CONTRA` tidak pernah menyala untuk produk yang seharusnya memicunya.
+
+**Keputusan.** Tiga kolom baru pada `klinis.ProdukFarmasi`: `pregnancy_contra` (boolean, default `False`), `pregnancy_class` (CharField, blank, choices lima kelompok matriks), dan `pregnancy_class_source` (CharField, blank). Pemetaan diisi perintah idempoten `python manage.py seed_pregnancy_contra` dari **baris katalog yang sudah ada**, dicocokkan lewat nama zat pada `GenerikObat`.
+
+1. **Bukan daftar molekul di kode layanan.** `pasien/services/pregnancy_safety.py` membaca kolom master; ia tidak memuat nama obat. Daftar zat hidup di perintah seed, satu tempat, dapat diubah tanpa menyentuh logika keputusan.
+2. **Whitelist `flags` tidak diperluas.** `ProdukFarmasi.clean()` menjaga whitelist `LASA/HIGH_ALERT/OOT/NARKOTIKA/PSIKOTROPIKA/PPRA`; kelompok kehamilan adalah kolom tersendiri, bukan flag, supaya whitelist itu tetap utuh dan dapat difilter ORM.
+3. **Kolom master menang atas pencocokan lama.** `contra_groups()` memakai `pregnancy_class` bila terisi; pencocokan `class_code`/`ingredient_code` hanya fallback ketika kolom kosong, dan itu didokumentasikan di modulnya.
+4. **Tidak menebak.** Zat tanpa baris katalog dilaporkan sebagai `zat_tanpa_generik`, kelompok tanpa baris sebagai `kelompok_tanpa_baris`, dan setiap baris yang tidak dipetakan sebagai `unmapped`. Perintah tidak membuat produk.
+
+**Status ratifikasi.** Daftar zat adalah **default operasional yang belum diratifikasi Komite Farmasi & Terapi**. Setiap baris yang dipetakan menyimpan sumbernya di `pregnancy_class_source`; laporan yang menampilkan peringatan ini menyebut ADR-15 dan status tersebut.
+
+**Konsekuensi.** Pemetaan lokal hari ini menutup 3 dari 59 baris (Captopril → ACEI; Candesartan, Valsartan → ARB). ARNI, Statin, dan Warfarin **tidak punya baris katalog** sehingga peringatannya tidak dapat menyala sampai formularium menambah produknya — celah data yang dilaporkan, bukan ditambal.
+
+**Cara migrasi.** Migrasi aditif `klinis.0008_produk_farmasi_pregnancy_class` (tiga kolom, semua punya default/kosong). Data diisi perintah, bukan migrasi data.
+
 ---
 
 ## 4. Delta model data
@@ -585,7 +602,7 @@ Cabang paralel yang sah: **F4 ∥ F2** setelah F1 (F4 hanya butuh F0.8/F0.9 + gu
 | AMBIGU-14 | NIK wajib atau opsional | Opsional bila pasien tanpa NIK (neonatus/asing), wajib bila ada; validasi 16 digit saat diisi | Rekam Medis | Pendaftaran macet atau NIK palsu |
 | AMBIGU-15 | Label menu "Diagnosis & Rencana (AI)" vs judul resmi | Pakai judul resmi di navigasi; "(AI)" hanya badge fitur | Kepala Unit | Navigasi tidak cocok dengan dokumen akreditasi |
 | AMBIGU-16 | Satu tombol SOAP ke dua target | Aturan eksplisit: langkah 1–6 belum lengkap → step 2; lengkap → step 8 | Kepala Unit | Petugas masuk ke form salah |
-| **AMBIGU-17** — **baru, dari F3** | Matriks §9a menyebut kelompok obat kontraindikasi kehamilan (ACEi, ARB, ARNI, Statin, Warfarin) tetapi **tidak** memberi pemetaan produk → kelompok. Katalog formularium hari ini hanya punya kelas kasar `kardiovaskular-antihipertensi` yang mencampur kelimanya (`klinis` master: Amlodipine, Candesartan, Valsartan, Captopril, Bisoprolol, Furosemide, Spironolactone, Digoxin, ISDN). Selain itu S6-L1-03 meminta "lokasi katup" tanpa mendaftar lokasi mana pun | **Pertanyaan persis:** (a) apakah master farmasi harus menambah kelas per-zat `ACEI`/`ARB`/`ARNI`/`STATIN`/`WARFARIN` (atau atribut `pregnancy_contra`) sehingga aturan menyala dari data, atau Komite Medis menetapkan daftar molekul yang dianggap milik tiap kelompok? (b) lokasi katup mana yang harus tersedia sebagai pilihan: Aorta, Pulmonal, Trikuspid, Mitral/apeks, atau daftar lain? | Komite Medis + Farmasi (a); Kepala Unit (b) | (a) sampai dijawab, `PREGNANCY_CONTRA` hanya menyala bila katalog menamai kelas/zat dengan nama kelompok matriks — produk ACEi di kelas kasar **tidak** akan memblokir; (b) `murmur_lokasi` disimpan sebagai teks bebas sehingga tidak dapat diagregasi |
+| **AMBIGU-17** — **baru, dari F3** | Matriks §9a menyebut kelompok obat kontraindikasi kehamilan (ACEi, ARB, ARNI, Statin, Warfarin) tetapi **tidak** memberi pemetaan produk → kelompok. Katalog formularium hari ini hanya punya kelas kasar `kardiovaskular-antihipertensi` yang mencampur kelimanya (`klinis` master: Amlodipine, Candesartan, Valsartan, Captopril, Bisoprolol, Furosemide, Spironolactone, Digoxin, ISDN). Selain itu S6-L1-03 meminta "lokasi katup" tanpa mendaftar lokasi mana pun | **Pertanyaan persis:** (a) apakah master farmasi harus menambah kelas per-zat `ACEI`/`ARB`/`ARNI`/`STATIN`/`WARFARIN` (atau atribut `pregnancy_contra`) sehingga aturan menyala dari data, atau Komite Medis menetapkan daftar molekul yang dianggap milik tiap kelompok? (b) lokasi katup mana yang harus tersedia sebagai pilihan: Aorta, Pulmonal, Trikuspid, Mitral/apeks, atau daftar lain? | Komite Medis + Farmasi (a); Kepala Unit (b) | **Ditutup Rilis A2 (2026-11-24).** (a) **ADR-15**: master farmasi mendapat kolom `pregnancy_contra`/`pregnancy_class`/`pregnancy_class_source`, diisi `python manage.py seed_pregnancy_contra` dari lima kelompok matriks; statusnya default operasional sampai diratifikasi Komite Farmasi & Terapi. (b) lokasi murmur = lima kode tertutup `AORTA`/`PULMONAL`/`TRIKUSPID`/`MITRAL`/`LAINNYA` + `murmur_lokasi_lainnya` wajib untuk `LAINNYA` dan dilarang untuk empat kode lain, sehingga dapat diagregasi tanpa kehilangan kasus non-standar |
 
 **Urutan keputusan (memblokir fase, bukan sekadar saran).**
 

@@ -2,6 +2,18 @@ from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db import models
 
+#: Lima kelompok obat kontraindikasi kehamilan dari matriks §9a (ADR-15).
+#: Ini satu-satunya daftar kanonik: ``pasien.services.pregnancy_safety``
+#: mengimpornya, jadi tidak ada salinan kedua yang dapat menyimpang.
+PREGNANCY_CLASS_CODES = ('ACEI', 'ARB', 'ARNI', 'STATIN', 'WARFARIN')
+PREGNANCY_CLASS_CHOICES = [
+    ('ACEI', 'ACE Inhibitor'),
+    ('ARB', 'Angiotensin Receptor Blocker'),
+    ('ARNI', 'Angiotensin Receptor-Neprilysin Inhibitor'),
+    ('STATIN', 'Statin'),
+    ('WARFARIN', 'Warfarin'),
+]
+
 
 class KategoriPenunjang(models.Model):
     kode = models.CharField(max_length=80, unique=True)
@@ -125,6 +137,14 @@ class ProdukFarmasi(models.Model):
     kfa_code = models.CharField(max_length=50, blank=True)
     pack = models.CharField(max_length=100, blank=True)
     flags = models.JSONField(default=list, blank=True)
+    #: AMBIGU-17(a): kelompok kontraindikasi kehamilan per produk, diisi dari
+    #: master — bukan daftar molekul di kode. ``pregnancy_class`` menyimpan
+    #: kodenya (ACEI/ARB/ARNI/STATIN/WARFARIN); ``pregnancy_contra`` adalah
+    #: kolom boolean yang dapat difilter ORM untuk laporan tanpa membandingkan
+    #: string. Keduanya selalu konsisten: ``clean()`` menolak satu tanpa yang lain.
+    pregnancy_contra = models.BooleanField(default=False)
+    pregnancy_class = models.CharField(max_length=12, blank=True, choices=PREGNANCY_CLASS_CHOICES)
+    pregnancy_class_source = models.CharField(max_length=200, blank=True)
     tall_man_label = models.CharField(max_length=200, blank=True)
     allowed_routes = models.JSONField(default=list, blank=True)
     price = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
@@ -145,6 +165,11 @@ class ProdukFarmasi(models.Model):
             raise ValidationError('Aktivasi produk memerlukan sumber dan reviewer.')
         if self.price is not None and self.price < 0:
             raise ValidationError('Harga tidak boleh negatif.')
+        if self.pregnancy_class and self.pregnancy_class not in PREGNANCY_CLASS_CODES:
+            raise ValidationError('Kelompok kontraindikasi kehamilan tidak dikenal.')
+        if bool(self.pregnancy_class) != self.pregnancy_contra:
+            raise ValidationError(
+                'pregnancy_contra dan pregnancy_class harus diisi bersama.')
 
 
 class KomposisiProdukFarmasi(models.Model):

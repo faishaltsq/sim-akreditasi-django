@@ -11,6 +11,10 @@ def product_snapshot(product):
         'form':product.generik.bentuk,'unit':product.generik.dispense_unit,
         'conversion':product.generik.conversion,'flags':product.flags,'tall_man_label':product.tall_man_label,
         'allowed_routes':product.allowed_routes,'kfa_code':product.kfa_code,'source_version':product.source_version,
+        # AMBIGU-17(a): kelompok kontraindikasi kehamilan ikut tersimpan di
+        # snapshot supaya resep lama tetap dapat dievaluasi tanpa membaca
+        # master ulang. ``pregnancy_class`` kosong = belum dipetakan.
+        'pregnancy_class':product.pregnancy_class,'pregnancy_contra':product.pregnancy_contra,
         'price':str(product.price) if product.price is not None else None,
         'ingredients':[{'ingredient_code':i.ingredient_code,'nama':i.nama,'strength':str(i.strength),'unit':i.unit} for i in product.ingredients.all()]}
 
