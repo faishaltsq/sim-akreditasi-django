@@ -1,0 +1,127 @@
+name: Clinical Regression Gate
+# Suite regresi jalur klinis: alur IGD (IgdAssessmentWorkflow) dan asuhan
+# profesional (CPPT, billing, eksekusi order, snapshot, RLS).
+#
+# PENTING — suite ini HIJAU hari ini dan HARUS tetap hijau.
+# Baseline terukur (Python 3.12.10, Django 6.1, SQLite):
+#   Ran 245 tests in 24.049s
+#   OK (skipped=9)
+# Tidak ada `continue-on-error` dan tidak ada `|| true` di berkas ini. Jalur
+# merah HARUS berarti regresi nyata, bukan tes yang dilewati diam-diam.
+#
+# Kenapa gerbang ini ada sekarang:
+# `IgdAssessmentWorkflow` akan segera digeneralisasi menjadi mesin asesmen
+# bersama, dengan penambahan diskriminator `service_line` untuk alur baru
+# rawat jalan kardiologi (POLI-JANTUNG). Generalisasi itu menyentuh tepat
+# permukaan yang dijaga suite ini: transisi status, finalisasi, outcome,
+# integrasi, dan snapshot asuhan profesional. Bila perilaku IGD bergeser
+# karena refactor tersebut, gerbang ini wajib merah.
+#
+# Siapa pun yang melihat gerbang ini merah: perbaiki regresinya, atau — bila
+# memang kontraknya berubah — perbaiki tesnya di PR yang sama. Jangan
+# menonaktifkan gerbang ini, jangan menambahkan `continue-on-error`, dan
+# jangan menambahkan `|| true`. Membungkam gerbang berarti kehilangan jaring
+# pengaman satu-satunya sebelum refactor mesin asesmen.
+#
+# Lingkungan uji: SQLite (config/settings.py jatuh ke sqlite saat DATABASE_URL
+# tidak di-set) dan DEBUG=True (default non-produksi). Tidak ada langkah seed;
+# fixture dibuat di dalam TestCase.setUp() masing-masing modul.
+on:
+  push:
+    # Repo ini memakai `master` (origin/HEAD -> origin/master). Filter lama
+    # `[main]` membuat gerbang ini tidak pernah jalan saat push ke master.
+    branches: [master]
+  pull_request:
+  workflow_dispatch:
+concurrency:
+  group: clinical-regression-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  clinical:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      # Kunci khusus CI: mencegah fallback 'django-insecure-...' di settings.py
+      # ikut terpakai. Nilai ini tidak menyentuh data produksi apa pun.
+      DJANGO_SECRET_KEY: ci-only-clinical-regression-key-not-for-production
+      # Dipakai membentuk tautan absolut; nilai lokal agar tidak ada host
+      # produksi yang bocor ke dalam konteks uji.
+      PUBLIC_BASE_URL: http://localhost:8000
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - name: Install dependencies
+        run: |
+          set -euo pipefail
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+      - name: Run clinical regression tests
+        run: |
+          set -euo pipefail
+          python manage.py test \
+            pasien.tests_igd_workflow \
+            pasien.tests_igd_workflow_ai \
+            pasien.tests_igd_workflow_hardening \
+            pasien.tests_igd_workflow_ui \
+            pasien.tests_igd_workflow_clinical \
+            pasien.tests_igd_workflow_finalization \
+            pasien.tests_igd_workflow_outcomes \
+            pasien.tests_igd_workflow_integration \
+            pasien.tests_igd_workflow_cloud_storage \
+            pasien.tests_igd_lifecycle \
+            pasien.tests_igd_step8_replacement \
+            pasien.tests_igd_physical_exam \
+            pasien.tests_igd_diagnosis_lines \
+            pasien.tests_professional_cppt \
+            pasien.tests_professional_http \
+            pasien.tests_professional_billing \
+            pasien.tests_professional_concurrency \
+            pasien.tests_professional_execution \
+            pasien.tests_professional_hardening \
+            pasien.tests_professional_snapshots \
+            pasien.tests_professional_care_context \
+            pasien.tests_professional_configuration \
+            pasien.tests_professional_rls \
+            --parallel 1 --verbosity 2 2>&1 | tee /tmp/clinical-regression.log
+      # Django's test runner has no JUnit output and pytest is not a dependency,
+      # so the honest structured artifact is the verbosity-2 log itself. Namun
+      # log saja bisa "hijau kosong": modul yang di-rename bisa berhenti
+      # mengoleksi tes tanpa ada yang menyadarinya. Langkah ini mencetak jumlah
+      # tes yang benar-benar terkoleksi dan menolak run kosong, sehingga
+      # gerbang yang lolos selalu berarti 245 tes benar-benar dieksekusi.
+      - name: Verify collected test count
+        run: |
+          set -euo pipefail
+          if found_line=$(grep -E '^Found [0-9]+ test' /tmp/clinical-regression.log); then
+            echo "Koleksi tes: ${found_line}"
+          else
+            found_line=""
+            echo "Koleksi tes: <tidak ditemukan>"
+          fi
+          if [ -z "$found_line" ]; then
+            echo "::error::Runner tidak melaporkan jumlah tes — koleksi tes kosong atau gagal."
+            exit 1
+          fi
+          found_count=$(echo "$found_line" | grep -oE '[0-9]+' | head -1)
+          {
+            echo "### Clinical regression gate"
+            echo ""
+            echo "- Koleksi: ${found_line}"
+            echo "- Baseline: 245 tes, OK (skipped=9), ~24s lokal"
+          } >> "$GITHUB_STEP_SUMMARY"
+          if [ "$found_count" -eq 0 ]; then
+            echo "::error::0 tes terkoleksi. Label modul berubah atau hilang — gerbang tidak boleh hijau."
+            exit 1
+          fi
+      # Uploading the verbosity-2 log keeps every test name with its PASS/FAIL
+      # line readable from the PR instead of buried in the job log.
+      - name: Upload clinical test log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: clinical-test-log
+          path: /tmp/clinical-regression.log
+          if-no-files-found: warn

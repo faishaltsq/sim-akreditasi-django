@@ -46,8 +46,11 @@ name: Security Tests
 # TestCase.setUp().
 on:
   push:
-    branches: [main]
+    # Repo ini memakai `master` (origin/HEAD -> origin/master); filter `[main]`
+    # membuat workflow ini tidak pernah jalan saat push ke master.
+    branches: [master]
   pull_request:
+  workflow_dispatch:
 concurrency:
   group: security-tests-${{ github.ref }}
   cancel-in-progress: true
