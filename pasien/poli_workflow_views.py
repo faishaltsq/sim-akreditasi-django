@@ -73,12 +73,7 @@ def poli_workflow(request, pk):
         ],
         'step': step,
         'step_title': spec.title,
-        'fields': [
-            {'name': item.name, 'kind': item.kind, 'label': item.label or item.name,
-             'choices': item.choices, 'minimum': item.minimum, 'maximum': item.maximum,
-             'value': values.get(item.name, '')}
-            for item in spec.fields
-        ],
+        'fields': [_field_view(item, values) for item in spec.fields],
         'can_fill': can_fill,
         'can_finalize': (
             role == DPJP
@@ -90,7 +85,56 @@ def poli_workflow(request, pk):
         'is_final': bool(workflow and workflow.status == 'FINAL'),
         'missing_sections': [] if workflow is None else _missing(visit, workflow),
         'rollout_enabled': settings.POLI_JANTUNG_WORKFLOW_ENABLED,
+        'clinical': _clinical_context(visit, values),
     })
+
+def _field_view(item, values):
+    """Satu field untuk template: kode pilihan + label yang terbaca manusia."""
+    from pasien.workflow_schemas import STEP_LABELS
+
+    labels = STEP_LABELS.get(item.name, {})
+    return {
+        'name': item.name, 'kind': item.kind, 'label': item.label or item.name,
+        'choices': [{'value': code, 'label': labels.get(code, code)} for code in item.choices],
+        'minimum': item.minimum, 'maximum': item.maximum,
+        'value': values.get(item.name, ''),
+    }
+
+
+def _clinical_context(visit, values):
+    """Nilai turunan yang ditampilkan bersama draft (F2.2–F2.6, ADR-6).
+
+    Dihitung dari ``draft_payload`` langkah 4/5 yang sedang dibuka, bukan dari
+    kolom model: jalur rajal tidak menyimpan TTV ke ``KunjunganPasien``.
+    """
+    from pasien.models import hitung_imt, hitung_map, imt_kategori, map_kategori, ttv_alerts
+    from pasien.forms_igd_workflow import MORSE_SEDANG_MIN, MORSE_TINGGI_MIN, MST_BERISIKO_MIN
+    from pasien.workflow_schemas import STEP_LABELS
+
+    sistole, diastole = values.get('ttv_sistole'), values.get('ttv_diastole')
+    berat, tinggi = values.get('berat_badan'), values.get('tinggi_badan')
+    imt = hitung_imt(berat, tinggi)
+    morse = values.get('skrining_jatuh_skor')
+    mst = values.get('skrining_gizi_mst')
+    return {
+        'map_value': hitung_map(sistole, diastole),
+        'map_kategori': map_kategori(sistole, diastole),
+        'imt': imt,
+        'imt_kategori': imt_kategori(imt),
+        'morse_grade': (
+            '' if morse is None
+            else 'TINGGI' if morse >= MORSE_TINGGI_MIN
+            else 'SEDANG' if morse >= MORSE_SEDANG_MIN else 'RENDAH'
+        ),
+        'mst_score': mst,
+        'mst_berisiko': None if mst is None else mst >= MST_BERISIKO_MIN,
+        'alerts': ttv_alerts(
+            sistole=sistole, diastole=diastole, nadi=values.get('ttv_nadi'),
+            spo2=values.get('ttv_spo2'), skala_nyeri=values.get('ttv_skala_nyeri'),
+        ),
+        'red_flag_label': STEP_LABELS['red_flag_kardio'].get(visit.red_flag_kardio, ''),
+        'door_to_ecg': visit.door_to_ecg_indicator(),
+    }
 
 
 def _missing(visit, workflow):

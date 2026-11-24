@@ -229,8 +229,10 @@ def save_step(pk, user, step, payload, version, *, service_line=None):
 def _save_rajal_step(visit, workflow, user, step, payload, version):
     """Simpan satu langkah RAJAL_JANTUNG ke ``draft_payload`` (ADR-9).
 
-    Tidak menyentuh satu pun kolom ``KunjunganPasien``: F1 belum memiliki kolom
-    kardiologi. Sinkronisasi kolom nyata (``red_flag_*``) baru ada di F2.
+    Satu-satunya kolom ``KunjunganPasien`` yang ikut ditulis adalah
+    ``red_flag_kardio``/``red_flag_at`` (F2.5): keduanya di-query per baris
+    antrean dan untuk agregat door-to-ECG, sehingga tidak dapat tinggal di JSON.
+    Nilai langkah lain tidak menyentuh kolom model.
     """
     spec = RAJAL_JANTUNG_STEPS.get(step)
     if spec is None:
@@ -266,10 +268,40 @@ def _save_rajal_step(visit, workflow, user, step, payload, version):
     workflow.updated_by = user
     workflow.signatures = {}
     workflow.save(update_fields=['draft_payload', 'version', 'last_step', 'updated_by', 'updated_at', 'signatures'])
+    if step == 2 and 'red_flag_kardio' in payload:
+        # Kunci dikirim walau nilainya dikosongkan: ``StepField.clean`` membuang
+        # nilai kosong dari ``cleaned``, sehingga memakai ``cleaned`` saja membuat
+        # red flag tidak pernah bisa dicabut.
+        _sync_red_flag(visit, cleaned.get('red_flag_kardio') or '')
     AuditLog.objects.create(user=user, aksi='UPDATE', model_name='IgdAssessmentWorkflow',
                             object_repr=f'Workflow #{workflow.pk}',
                             detail=f'Draft rajal langkah {step}; versi {workflow.version}; field: {", ".join(sorted(cleaned))}')
     return workflow
+
+def _sync_red_flag(visit, code):
+    """Turunkan kolom ``red_flag_*`` dari langkah 2.
+
+    ``red_flag_at`` hanya diisi saat red flag pemicu door-to-ECG dipilih
+    (matriks §7). Memilih ulang red flag pemicu pada episode yang sudah punya
+    stempel **tidak** menggeser jam: door-to-ECG mengukur skrining pertama,
+    bukan penyuntingan terakhir. Mengganti ke red flag non-pemicu menghapus
+    stempel, karena tidak ada lagi indikator yang harus dihitung.
+    """
+    from pasien.workflow_schemas import RED_FLAG_DOOR_TO_ECG
+
+    changed = []
+    if visit.red_flag_kardio != code:
+        visit.red_flag_kardio = code
+        changed.append('red_flag_kardio')
+    if code in RED_FLAG_DOOR_TO_ECG:
+        if visit.red_flag_at is None:
+            visit.red_flag_at = timezone.now()
+            changed.append('red_flag_at')
+    elif visit.red_flag_at is not None:
+        visit.red_flag_at = None
+        changed.append('red_flag_at')
+    if changed:
+        visit.save(update_fields=changed)
 
 
 def legacy_workflow_guard(view):

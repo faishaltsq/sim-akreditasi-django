@@ -29,6 +29,53 @@ BOUNDS = {
     'skrining_gizi_mst': (0, 5),
 }
 
+#: Bobot butir Morse Fall Scale. Satu-satunya sumbernya: form IGD sudah memakai
+#: tabel ini sejak sebelum F2, dan jalur rajal mengimpor objek yang sama supaya
+#: tidak ada dua tabel bobot yang dapat berbeda pendapat.
+MORSE_WEIGHTS = {
+    'jatuh_riwayat': (0, 25), 'jatuh_diagnosis': (0, 15),
+    'jatuh_alat': (0, 15, 30), 'jatuh_infus': (0, 20),
+    'jatuh_jalan': (0, 10, 20), 'jatuh_mental': (0, 15),
+}
+#: Ambang grade Morse — sudah ada di kode IGD (``StepForm.clean``) dan dipakai
+#: ulang apa adanya; tidak ada angka baru di F2.
+MORSE_TINGGI_MIN = 45
+MORSE_SEDANG_MIN = 25
+#: Jawaban MST: ``berat_badan`` 0..4, ``nafsu_makan`` 0..1.
+MST_CHOICES = {'berat_badan': range(5), 'nafsu_makan': (0, 1)}
+#: Ambang "berisiko" MST. **Bukan angka baru dari F2**: tiga template yang sudah
+#: ada memakai ``skrining_gizi_mst >= 2`` sebagai batas risiko
+#: (``_asesmen_awal_wizard.html:213``, ``igd_dashboard.html:1714``,
+#: ``kunjungan_detail.html:232``). F2 memakai ulang konvensi itu supaya dua
+#: layar tidak memberi verdict berbeda untuk skor yang sama. Sumber memang tidak
+#: menetapkan angkanya (AMBIGU-08), jadi bila Komite Keperawatan menetapkan lain,
+#: ubah konstanta ini **dan** ketiga template tersebut dalam satu perubahan.
+MST_BERISIKO_MIN = 2
+
+
+def morse_score(detail):
+    """``(skor, grade)`` dari jawaban Morse, atau ``(None, '')`` bila tidak lengkap.
+
+    Ambang grade memakai ``MORSE_TINGGI_MIN``/``MORSE_SEDANG_MIN`` yang sudah
+    berlaku di jalur IGD — F2 tidak menetapkan angka baru.
+    """
+    if not isinstance(detail, dict) or set(detail) != set(MORSE_WEIGHTS):
+        return None, ''
+    score = sum(detail.values())
+    if score >= MORSE_TINGGI_MIN:
+        return score, 'TINGGI'
+    if score >= MORSE_SEDANG_MIN:
+        return score, 'SEDANG'
+    return score, 'RENDAH'
+
+
+def mst_score(detail):
+    """``(skor, berisiko)``; ``(None, None)`` bila jawaban tidak lengkap."""
+    if not isinstance(detail, dict) or set(detail) != set(MST_CHOICES):
+        return None, None
+    score = detail['berat_badan'] + detail['nafsu_makan']
+    return score, score >= MST_BERISIKO_MIN
+
 
 class StepForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
@@ -88,22 +135,22 @@ class StepForm(forms.ModelForm):
                         self.add_error('penanda_anatomi', 'Koordinat/label penanda tidak valid.')
                         break
         morse = cleaned.get('skrining_jatuh_detail')
-        weights = {'jatuh_riwayat':(0,25),'jatuh_diagnosis':(0,15),'jatuh_alat':(0,15,30),'jatuh_infus':(0,20),'jatuh_jalan':(0,10,20),'jatuh_mental':(0,15)}
+        weights = MORSE_WEIGHTS
         if morse:
             if set(morse) - set(weights) or any(type(value) is not int or value not in weights[key] for key,value in morse.items() if key in weights):
                 self.add_error('skrining_jatuh_detail', 'Jawaban Morse tidak valid.')
             elif set(morse) == set(weights):
-                score = sum(morse.values())
-                cleaned.update(skrining_jatuh_skor=score, skrining_jatuh_grade='TINGGI' if score >= 45 else 'SEDANG' if score >= 25 else 'RENDAH', metode_risiko_jatuh='Morse Fall Scale')
+                score, grade = morse_score(morse)
+                cleaned.update(skrining_jatuh_skor=score, skrining_jatuh_grade=grade, metode_risiko_jatuh='Morse Fall Scale')
             else:
                 cleaned.update(skrining_jatuh_skor=None, skrining_jatuh_grade='', metode_risiko_jatuh='Morse Fall Scale')
         mst = cleaned.get('skrining_gizi_detail')
         if mst:
-            choices = {'berat_badan':range(5),'nafsu_makan':(0,1)}
+            choices = MST_CHOICES
             if set(mst) - set(choices) or any(type(value) is not int or value not in choices[key] for key,value in mst.items() if key in choices):
                 self.add_error('skrining_gizi_detail', 'Jawaban MST tidak valid.')
             elif set(mst) == set(choices):
-                cleaned['skrining_gizi_mst'] = mst['berat_badan'] + mst['nafsu_makan']
+                cleaned['skrining_gizi_mst'] = mst_score(mst)[0]
             else:
                 cleaned['skrining_gizi_mst'] = None
         components = [cleaned.get(name) for name in ('gcs_e','gcs_v','gcs_m')]

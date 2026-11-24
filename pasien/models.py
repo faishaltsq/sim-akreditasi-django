@@ -295,6 +295,119 @@ DPJP_POLI_MAP = {
 }
 
 
+# ── Nilai turunan klinis POLI-JANTUNG (F2, ADR-6) ────────────────────────────
+# Fungsi murni: masukan angka, keluaran angka/kategori. Tidak menyentuh ORM,
+# sehingga dapat diuji di batas ambang tanpa fixture dan dipakai ulang oleh
+# template, layanan langkah, dan indikator mutu.
+
+#: Ambang door-to-ECG (matriks §7). Satu-satunya angka SLA di F2.
+DOOR_TO_ECG_TARGET_MINUTES = 10
+
+#: Ambang IMT Asia-Pasifik (matriks §9b, S4-L2-02).
+IMT_UNDERWEIGHT = 18.5
+IMT_NORMAL_MAX = 22.9
+IMT_OVERWEIGHT_MAX = 24.9
+IMT_OBESITAS_I_MAX = 29.9
+
+#: Ambang kategori tekanan darah. Krisis (>=180/120) dan hipotensi (S<90)
+#: berangka pada sumber; batas normal vs hipertensi derajat 1-2 TIDAK berangka
+#: pada sumber (AMBIGU-01). Nilai di bawah adalah rekomendasi default §8 plan
+#: (JNC/PERHI), bukan keputusan klinis yang sudah disetujui Komite Medis:
+#: normal <140/90, hipertensi derajat 1-2 >=140/90. Bila Komite Medis menetapkan
+#: angka lain, ubah konstanta ini saja — tidak ada aturan lain yang bergantung
+#: pada nilai mentahnya.
+HT_SISTOLE = 140
+HT_DIASTOLE = 90
+KRISIS_SISTOLE = 180
+KRISIS_DIASTOLE = 120
+HIPOTENSI_SISTOLE = 90
+
+#: Ambang alert TTV yang berangka pada matriks §9a. RR dan suhu sengaja tidak
+#: punya ambang: sumber menyatakan "tidak ada ambang alert yang ditetapkan"
+#: (S4-L1-04, S4-L1-06), jadi menambahkannya berarti mengarang aturan klinis.
+TAKIKARDIA_NADI = 100
+BRADIKARDIA_NADI = 50
+HIPOKSIA_SPO2 = 92
+NYERI_ALERT_NRS = 4
+
+
+def hitung_map(sistole, diastole):
+    """MAP = ``(S + 2D) / 3``; ``None`` bila salah satu tidak diukur."""
+    if sistole is None or diastole is None:
+        return None
+    return round((sistole + 2 * diastole) / 3, 1)
+
+
+def map_kategori(sistole, diastole):
+    """Kategori tekanan darah: ``NORMAL``/``HIPERTENSI``/``KRISIS``/``HIPOTENSI``."""
+    if sistole is None or diastole is None:
+        return ''
+    if sistole >= KRISIS_SISTOLE or diastole >= KRISIS_DIASTOLE:
+        return 'KRISIS'
+    if sistole < HIPOTENSI_SISTOLE:
+        return 'HIPOTENSI'
+    if sistole >= HT_SISTOLE or diastole >= HT_DIASTOLE:
+        return 'HIPERTENSI'
+    return 'NORMAL'
+
+
+def hitung_imt(berat, tinggi):
+    """IMT = ``berat / (tinggi_m)^2``, dua desimal; ``None`` bila tidak lengkap.
+
+    ``tinggi`` dalam sentimeter. Nilai nol/negatif dianggap tidak diukur —
+    pembagian dengan nol tidak boleh menjadi 500 di layar.
+    """
+    if berat is None or tinggi is None:
+        return None
+    try:
+        berat = float(berat)
+        tinggi_m = float(tinggi) / 100
+    except (TypeError, ValueError):
+        return None
+    if berat <= 0 or tinggi_m <= 0:
+        return None
+    return round(berat / (tinggi_m ** 2), 2)
+
+
+def imt_kategori(imt):
+    """Kategori IMT Asia-Pasifik (matriks §9b)."""
+    if imt is None:
+        return ''
+    if imt < IMT_UNDERWEIGHT:
+        return 'UNDERWEIGHT'
+    if imt <= IMT_NORMAL_MAX:
+        return 'NORMAL'
+    if imt <= IMT_OVERWEIGHT_MAX:
+        return 'OVERWEIGHT'
+    if imt <= IMT_OBESITAS_I_MAX:
+        return 'OBESITAS_I'
+    return 'OBESITAS_II'
+
+
+def ttv_alerts(*, sistole=None, diastole=None, nadi=None, spo2=None, skala_nyeri=None):
+    """Alert TTV dari satu tempat (matriks §9a).
+
+    Mengembalikan daftar ``{'code', 'label', 'nilai'}`` terurut sesuai tabel
+    sumber. Hanya ambang yang berangka pada sumber yang diterapkan; RR dan suhu
+    tidak masuk karena sumber tidak menetapkan ambangnya (S4-L1-04, S4-L1-06).
+    """
+    alerts = []
+    if nadi is not None and nadi > TAKIKARDIA_NADI:
+        alerts.append({'code': 'TAKIKARDIA', 'label': f'Takikardia (nadi {nadi} bpm > {TAKIKARDIA_NADI})', 'nilai': nadi})
+    if nadi is not None and nadi < BRADIKARDIA_NADI:
+        alerts.append({'code': 'BRADIKARDIA', 'label': f'Bradikardia (nadi {nadi} bpm < {BRADIKARDIA_NADI})', 'nilai': nadi})
+    if spo2 is not None and spo2 < HIPOKSIA_SPO2:
+        alerts.append({'code': 'HIPOKSIA', 'label': f'Hipoksia (SpO2 {spo2}% < {HIPOKSIA_SPO2}%)', 'nilai': spo2})
+    kategori = map_kategori(sistole, diastole)
+    if kategori == 'KRISIS':
+        alerts.append({'code': 'KRISIS_HIPERTENSI', 'label': f'Krisis hipertensi ({sistole}/{diastole} mmHg)', 'nilai': f'{sistole}/{diastole}'})
+    elif kategori == 'HIPOTENSI':
+        alerts.append({'code': 'HIPOTENSI', 'label': f'Hipotensi (sistole {sistole} mmHg < {HIPOTENSI_SISTOLE})', 'nilai': sistole})
+    if skala_nyeri is not None and skala_nyeri >= NYERI_ALERT_NRS:
+        alerts.append({'code': 'NYERI', 'label': f'Nyeri NRS {skala_nyeri} (>= {NYERI_ALERT_NRS}) — asesmen PQRST', 'nilai': skala_nyeri})
+    return alerts
+
+
 class KunjunganPasien(models.Model):
     JENIS_KUNJUNGAN = [
         ('IGD',   'Gawat Darurat (IGD)'),
@@ -430,6 +543,30 @@ class KunjunganPasien(models.Model):
     ttv_gcs         = models.CharField('Glasgow Coma Scale (GCS)', max_length=30, blank=True, help_text='Contoh: E4V5M6 (15) atau Somnolen')
     ttv_skala_nyeri = models.PositiveSmallIntegerField('Skala Nyeri (NRS 0-10)', null=True, blank=True, help_text='0 (Tidak Nyeri) s.d 10 (Sangat Hebat)')
     icd9_tindakan   = models.CharField('Tindakan Medis (ICD-9-CM)', max_length=300, blank=True)
+
+    # ── Red flag kardiologi POLI-JANTUNG (F2.5, ADR-9) ──
+    # Dua kolom ini satu-satunya kolom baru untuk jalur rajal jantung, dan
+    # keduanya ada karena di-query: banner antrean dirender per baris tanpa
+    # join workflow, dan door-to-ECG diagregasi lintas kunjungan. Nilai langkah
+    # lain tinggal di ``IgdAssessmentWorkflow.draft_payload``.
+    RED_FLAG_CHOICES = [
+        ('ANGINA', 'Nyeri Dada Khas Angina (Suspek SKA)'),
+        ('SESAK_BERAT', 'Sesak Napas Berat / Orthopnea / Edema Paru'),
+        ('SINKOP', 'Sinkop / Presinkop'),
+        ('PALPITASI_INSTABIL', 'Palpitasi dengan Hemodinamik Tidak Stabil'),
+    ]
+    #: Kode red flag yang memulai jam door-to-ECG <= 10 menit (matriks §7).
+    RED_FLAG_DOOR_TO_ECG = ('ANGINA', 'SESAK_BERAT')
+
+    red_flag_kardio = models.CharField(
+        'Red Flag Kardiovaskular', max_length=40, blank=True, default='',
+        choices=[('', 'Tidak Ada Red Flags')] + RED_FLAG_CHOICES,
+        help_text='Kode red flag langkah 2; label diambil dari choices.',
+    )
+    red_flag_at = models.DateTimeField(
+        'Waktu Skrining Red Flag', null=True, blank=True, db_index=True,
+        help_text='Stempel waktu saat red flag pemicu door-to-ECG dipilih.',
+    )
 
     # ── Asesmen Awal IGD (Revisi 02 & Formulir Standar 3.09) ──
     keadaan_umum        = models.CharField('Keadaan Umum', max_length=30, blank=True, help_text='Baik / Sedang / Lemah / Buruk')
@@ -648,6 +785,44 @@ class KunjunganPasien(models.Model):
         if rules <= terpenuhi:
             return 'TERPENUHI'
         return 'SEBAGIAN' if terpenuhi & rules else 'BELUM'
+
+    # ── Nilai turunan kardiologi POLI-JANTUNG (F2, ADR-6) ──
+    # Dihitung, tidak disimpan: formula/ambang dapat berubah dan angka historis
+    # tetap terbaca dari snapshot revisi final.
+
+    @property
+    def map_value(self):
+        """Mean arterial pressure ``(S + 2D) / 3``, atau ``None``."""
+        return hitung_map(self.ttv_sistole, self.ttv_diastole)
+
+    @property
+    def map_kategori(self):
+        """Kategori tekanan darah untuk MAP (lihat ``map_kategori``)."""
+        return map_kategori(self.ttv_sistole, self.ttv_diastole)
+
+    def ttv_alerts(self):
+        """Alert TTV episode ini — pembungkus ``ttv_alerts`` modul."""
+        return ttv_alerts(
+            sistole=self.ttv_sistole, diastole=self.ttv_diastole,
+            nadi=self.ttv_nadi, spo2=self.ttv_spo2, skala_nyeri=self.ttv_skala_nyeri,
+        )
+
+    def door_to_ecg_indicator(self):
+        """Indikator door-to-ECG <= 10 menit (F2.6, matriks §7)."""
+        if self.red_flag_at is None:
+            return None
+        ekg = self.order_penunjang.filter(jenis='EKG').order_by('created_at', 'pk').first()
+        if ekg is None:
+            return {
+                'red_flag_at': self.red_flag_at, 'ekg_at': None,
+                'minutes': None, 'status': 'BELUM',
+            }
+        minutes = (ekg.created_at - self.red_flag_at).total_seconds() / 60
+        return {
+            'red_flag_at': self.red_flag_at, 'ekg_at': ekg.created_at,
+            'minutes': round(minutes, 1),
+            'status': 'PATUH' if minutes <= DOOR_TO_ECG_TARGET_MINUTES else 'TERLAMBAT',
+        }
 
     @property
     def news_score(self):

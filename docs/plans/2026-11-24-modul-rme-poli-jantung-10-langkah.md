@@ -264,6 +264,24 @@ Jadi **tidak ada** akun dokter, dan **tidak ada** join `sdm.Pegawai` yang menghu
 
 ---
 
+### ADR-13 — Ambang F2: mana yang dari sumber, mana yang diwarisi kode
+
+**Konteks.** F2 menuntut `imt_kategori`, `map_kategori`, dan `ttv_alerts`. Sebagian ambangnya berangka eksplisit di sumber, sebagian tidak. Mencampur keduanya tanpa catatan membuat angka karangan terlihat sama otoritatifnya dengan angka yang dikutip.
+
+**Keputusan — tiga kelas ambang, dinyatakan terpisah di kode.**
+
+1. **Berangka pada sumber (dikutip apa adanya).** Takikardia >100, bradikardia <50, hipoksia SpO2 <92, krisis hipertensi ≥180/120, hipotensi sistole <90, nyeri NRS ≥4, IMT Asia-Pasifik (<18,5 / 18,5–22,9 / 23–24,9 / 25–29,9 / ≥30), door-to-ECG ≤10 menit.
+2. **Tidak berangka pada sumber, tetapi sudah berlaku di kode (diwarisi, bukan dikarang).** Grade Morse (≥45 TINGGI, ≥25 SEDANG — `pasien/forms_igd_workflow.py` sebelum F2) dan ambang MST "berisiko" (skor ≥2 — dipakai tiga template: `_asesmen_awal_wizard.html:213`, `igd_dashboard.html:1714`, `kunjungan_detail.html:232`). Keduanya dipindah menjadi konstanta bernama (`MORSE_WEIGHTS`, `MORSE_TINGGI_MIN`, `MORSE_SEDANG_MIN`, `MST_CHOICES`, `MST_BERISIKO_MIN`) **tanpa mengubah nilainya**, sehingga form IGD dan jalur rajal tidak dapat berbeda pendapat.
+3. **Tidak berangka pada sumber dan belum ada di kode — sengaja TIDAK diterapkan.** Ambang alert RR dan suhu: sumber menyatakan "tidak ada ambang alert yang ditetapkan" (S4-L1-04, S4-L1-06). `ttv_alerts()` tidak memuatnya, dan tes menegaskan hal itu.
+
+**Batas normal vs hipertensi (AMBIGU-01) — keputusan yang perlu ditinjau.** Sumber hanya memberi empat kategori: normal, hipertensi derajat 1–2, krisis, hipotensi. Karena hanya ada empat, batas normal→HT harus satu angka. Kode memakai **normal <140/90, hipertensi ≥140/90** (ambang JNC-7 untuk derajat 1). Rekomendasi §8 plan ("normal <120/80, HT-1 140–159/90–99") **tidak dapat dipakai apa adanya**: rentang 120–139/80–89 tidak punya kategori pada daftar empat nilai sumber, sehingga kategori akan kosong untuk pasien yang jelas tidak normal. Bila Komite Medis menghendaki pembagian 120–139 sebagai kategori tersendiri, yang berubah adalah daftar kategori (menjadi lima) — bukan sekadar konstanta — dan itu keputusan produk, bukan penyetelan.
+
+**Konsekuensi.** `map_kategori()` mengembalikan `NORMAL`/`HIPERTENSI`/`KRISIS`/`HIPOTENSI`; tidak ada kategori "prehipertensi" yang tidak ada di sumber. `mst_score()` mengembalikan `(skor, berisiko)` dan **tidak** menyimpan kategori baru di model — kolom `skrining_gizi_mst` tetap hanya menyimpan angka, seperti sebelum F2.
+
+**Cara migrasi.** Tanpa migrasi. Seluruh nilai turunan dihitung (ADR-6); tidak ada kolom baru selain `red_flag_*`.
+
+---
+
 ## 4. Delta model data
 
 | Model | Field/Relasi baru | Tipe | Default | Alasan | Fase |

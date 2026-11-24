@@ -23,6 +23,7 @@
 .poli-banner{padding:.65rem .85rem;border-radius:.5rem;margin-bottom:1rem;font-weight:600}
 .poli-banner--final{background:#fef3c7;color:#92400e}
 .poli-banner--draft{background:#e0f2fe;color:#075985}
+.poli-banner--red{background:#fee2e2;color:#991b1b;border:1px solid #fca5a5;display:flex;flex-wrap:wrap;gap:.5rem;align-items:center}
 .poli-status{margin-top:.6rem;font-size:.85rem;min-height:1.2em}
 @media(max-width:1199px){.poli-layout{grid-template-columns:minmax(160px,220px) minmax(0,1fr)}.poli-panel{grid-column:1/-1}}
 @media(max-width:767px){.poli-layout{grid-template-columns:minmax(0,1fr)}}
@@ -61,6 +62,22 @@
     <p class="poli-banner poli-banner--draft" role="status">Draft berversi — setiap simpan menaikkan versi dan membatalkan tanda tangan sebelumnya.</p>
     {% endif %}
 
+    {% if clinical.red_flag_label %}
+    <div class="poli-banner poli-banner--red" role="alert">
+      <span>&#9888; Red flag: {{ clinical.red_flag_label }}</span>
+      {% if clinical.door_to_ecg %}
+        {% if clinical.door_to_ecg.status == 'PATUH' %}
+        <span class="badge bg-success">EKG PATUH — {{ clinical.door_to_ecg.minutes }} menit</span>
+        {% elif clinical.door_to_ecg.status == 'TERLAMBAT' %}
+        <span class="badge bg-danger">EKG TERLAMBAT — {{ clinical.door_to_ecg.minutes }} menit</span>
+        {% else %}
+        <span class="badge bg-warning text-dark">EKG belum diorder</span>
+        {% endif %}
+      {% endif %}
+      <a class="btn btn-sm btn-danger ms-2" href="{% url 'pasien:igd_dashboard' %}">Transfer ke IGD</a>
+    </div>
+    {% endif %}
+
     <h2 id="poli-step-heading">Langkah {{ step }}. {{ step_title }}</h2>
 
     <form id="poli-step-form" method="post" action="{{ request.path }}">
@@ -72,7 +89,7 @@
         <select id="poli-field-{{ item.name }}" name="{{ item.name }}"{% if readonly %} disabled{% endif %}>
           <option value="">— Pilih —</option>
           {% for choice in item.choices %}
-          <option value="{{ choice }}"{% if item.value == choice %} selected{% endif %}>{{ choice }}</option>
+          <option value="{{ choice.value }}"{% if item.value == choice.value %} selected{% endif %}>{{ choice.label }}</option>
           {% endfor %}
         </select>
         {% elif item.kind == 'number' %}
@@ -129,6 +146,39 @@
       {% if missing_sections %}
       <dt>Belum lengkap</dt>
       <dd>{% for key in missing_sections %}{{ key }}{% if not forloop.last %}, {% endif %}{% endfor %}</dd>
+      {% endif %}
+      {% if clinical.map_value is not None %}
+      <dt>MAP</dt>
+      <dd>{{ clinical.map_value }} mmHg — {{ clinical.map_kategori }}</dd>
+      {% endif %}
+      {% if clinical.imt is not None %}
+      <dt>IMT</dt>
+      <dd>{{ clinical.imt }} kg/m² — {{ clinical.imt_kategori }}</dd>
+      {% endif %}
+      {% if clinical.morse_grade %}
+      <dt>Risiko jatuh (Morse)</dt>
+      <dd>{{ clinical.morse_grade }}</dd>
+      {% endif %}
+      {% if clinical.mst_berisiko is not None %}
+      <dt>Skrining gizi (MST)</dt>
+      <dd>Skor {{ clinical.mst_score }} —
+        {% if clinical.mst_berisiko %}Risiko Malnutrisi — konsul ahli gizi{% else %}Risiko Malnutrisi Rendah{% endif %}</dd>
+      {% endif %}
+      {% if clinical.alerts %}
+      <dt>Alert TTV</dt>
+      <dd>
+        <ul class="mb-0 ps-3">
+          {% for alert in clinical.alerts %}<li>{{ alert.label }}</li>{% endfor %}
+        </ul>
+      </dd>
+      {% endif %}
+      {% if clinical.door_to_ecg %}
+      <dt>Door-to-ECG</dt>
+      <dd>
+        {% if clinical.door_to_ecg.status == 'PATUH' %}PATUH — {{ clinical.door_to_ecg.minutes }} menit
+        {% elif clinical.door_to_ecg.status == 'TERLAMBAT' %}TERLAMBAT — {{ clinical.door_to_ecg.minutes }} menit
+        {% else %}Belum ada order EKG{% endif %}
+      </dd>
       {% endif %}
     </dl>
   </aside>
