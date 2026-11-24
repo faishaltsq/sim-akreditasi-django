@@ -1441,10 +1441,21 @@ from .professional_care_models import CpptRevision, PenugasanDpjpEpisode, Verifi
 
 
 class IgdAssessmentWorkflow(models.Model):
+    """Mesin asesmen berversi untuk satu episode.
+
+    Nama model tetap ``Igd*`` karena warisan historis (ADR-1): sejak F1 model ini
+    melayani dua jalur layanan yang dibedakan oleh ``service_line`` —
+    ``IGD`` (perilaku lama, byte-identik) dan ``RAJAL_JANTUNG`` (rawat jalan
+    kardiologi, nilai langkah disimpan di ``draft_payload`` sesuai ADR-9).
+    """
+    SERVICE_LINES = [('IGD', 'Gawat Darurat'), ('RAJAL_JANTUNG', 'Rawat Jalan Jantung')]
     signatures = models.JSONField(default=dict, blank=True)
     exemptions = models.JSONField(default=dict, blank=True)
     kunjungan = models.OneToOneField(KunjunganPasien, on_delete=models.PROTECT, related_name='igd_workflow')
     origin_unit = models.ForeignKey('akreditasi.UnitKerja', null=True, on_delete=models.PROTECT)
+    service_line = models.CharField(max_length=20, choices=SERVICE_LINES, default='IGD')
+    schema_key = models.CharField(max_length=40, blank=True, default='')
+    draft_payload = models.JSONField(default=dict, blank=True, encoder=DjangoJSONEncoder)
     status = models.CharField(max_length=5, choices=[('DRAFT', 'Draft'), ('FINAL', 'Final')], default='DRAFT')
     version = models.PositiveIntegerField(default=0)
     last_step = models.PositiveSmallIntegerField(default=1, validators=[MinValueValidator(1), MaxValueValidator(11)])
