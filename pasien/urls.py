@@ -3,6 +3,7 @@ from . import views
 from . import apm_views
 from . import mobile_views
 from . import igd_workflow_views
+from . import poli_workflow_views
 from . import professional_views
 from . import pharmacy_views
 from . import ancillary_views
@@ -17,6 +18,9 @@ urlpatterns = [
     path('farmasi/ppra/<int:pk>/', pharmacy_views.ppra_decision, name='ppra_decision'),
     path('igd/rekam-final/', igd_workflow_views.igd_workflow_records, name='igd_workflow_records'),
     path('kunjungan/<int:pk>/asesmen-igd/', igd_workflow_views.igd_workflow, name='igd_workflow'),
+    path('kunjungan/<int:pk>/asesmen-poli/', poli_workflow_views.poli_workflow, name='poli_workflow'),
+    path('kunjungan/<int:pk>/asesmen-poli/langkah/<int:step>/draft/', poli_workflow_views.poli_workflow_draft, name='poli_workflow_draft'),
+    path('kunjungan/<int:pk>/asesmen-poli/aksi/', poli_workflow_views.poli_workflow_action, name='poli_workflow_action'),
     path('kunjungan/<int:pk>/asesmen-igd/langkah/<int:step>/draft/', igd_workflow_views.igd_workflow_draft, name='igd_workflow_draft'),
     path('kunjungan/<int:pk>/asesmen-igd/aksi/', igd_workflow_views.igd_workflow_action, name='igd_workflow_action'),
     path('kunjungan/<int:pk>/asesmen-igd/profesional/katalog/', professional_views.igd_professional_catalogue, name='igd_professional_catalogue'),
