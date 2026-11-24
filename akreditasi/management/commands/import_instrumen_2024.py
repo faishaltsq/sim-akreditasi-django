@@ -311,7 +311,32 @@ class Command(BaseCommand):
                               'dihitung terhadap data legacy yang ada)')
 
     # -- import ------------------------------------------------------------
+    def _dedupe_evidence(self):
+        """Buang EvidenceReq ganda per (standard_item, category_type).
+
+        Tabel ini tidak punya unique constraint, sementara ``get_or_create``
+        di bawah memakai dua kolom itu sebagai kunci; begitu data lama
+        menyimpan dua baris untuk kunci yang sama, impor gagal dengan
+        ``MultipleObjectsReturned``. Baris ber-id terkecil dipertahankan.
+        """
+        seen = set()
+        dup_ids = []
+        for pk, item_id, ctype in EvidenceReq.objects.order_by('id').values_list(
+            'id', 'standard_item_id', 'category_type'
+        ):
+            key = (item_id, ctype)
+            if key in seen:
+                dup_ids.append(pk)
+            else:
+                seen.add(key)
+        if dup_ids:
+            EvidenceReq.objects.filter(pk__in=dup_ids).delete()
+            self.stdout.write(self.style.WARNING(
+                f'  EvidenceReq ganda dibersihkan: {len(dup_ids)} baris'
+            ))
+
     def _import(self, standards, framework_name, prune):
+        self._dedupe_evidence()
         framework, created = Framework.objects.get_or_create(
             name=framework_name,
             defaults={'version': '2024', 'cycle_type': 'PDCA'},
