@@ -199,6 +199,72 @@ class PenunjangOrderTarifTest(_RajalFixture):
         self._post(kunjungan)
         self.assertEqual(BillingItem.objects.count(), 0)
 
+class LabOrderKatalogTest(_RajalFixture):
+    """F0.2b — permintaan laboratorium memakai kontrak katalog yang sama.
+
+    Jalur lama menerima ``nama_pemeriksaan`` bebas + checklist ``parameters``
+    tanpa item katalog dan tanpa harga. Checklist itu duplikat katalog pada
+    granularitas berbeda (per-analit vs per-panel) dan tidak dapat divalidasi
+    terhadap item yang dipilih, jadi dihapus; yang tersisa adalah satu item
+    katalog yang juga menentukan tarif.
+    """
+
+    def setUp(self):
+        super().setUp()
+        self.kunjungan = self._kunjungan()
+        self.item = buat_item_penunjang(
+            kode='UJI-LAB-ORDER', nama='Darah Lengkap Uji Order',
+            user=self.dokter, unit=self.unit_jantung)
+        self.url = reverse('pasien:order_lab_create', args=[self.kunjungan.pk])
+
+    def test_tanpa_item_katalog_ditolak(self):
+        res = self.client.post(self.url, {
+            'nama_pemeriksaan': 'Faal Tiroid (teks bebas)',
+            'parameters': ['KIMIA KLINIK:SGOT / SGPT'],
+        })
+        self.assertEqual(res.status_code, 302)
+        self.assertEqual(OrderPenunjang.objects.count(), 0)
+        self.assertEqual(BillingItem.objects.count(), 0)
+
+    def test_item_di_luar_katalog_ditolak(self):
+        self.client.post(self.url, {'catalogue_item': '999999'})
+        self.assertEqual(OrderPenunjang.objects.count(), 0)
+
+    def test_item_non_lab_ditolak(self):
+        ekg = buat_item_penunjang(
+            kode='UJI-EKG-ORDER', nama='EKG Uji', jenis_order='EKG',
+            user=self.dokter, unit=self.unit_jantung)
+        self.client.post(self.url, {'catalogue_item': str(ekg.pk)})
+        self.assertEqual(OrderPenunjang.objects.count(), 0)
+        self.assertEqual(BillingItem.objects.count(), 0)
+
+    def test_tanpa_tarif_order_tetap_dikirim_tagihan_ditunda(self):
+        self.client.post(self.url, {
+            'catalogue_item': str(self.item.pk),
+            'prioritas': 'CITO',
+            'kondisi_sampel': 'Puasa (10-12 Jam)',
+            'catatan_klinis': 'Curiga sepsis',
+        })
+        order = OrderPenunjang.objects.get(kunjungan=self.kunjungan)
+        self.assertEqual(order.catalogue_item_id, self.item.pk)
+        self.assertEqual(order.nama_pemeriksaan, self.item.nama)
+        self.assertEqual(order.jenis, 'LAB')
+        self.assertEqual(order.prioritas, 'CITO')
+        self.assertEqual(order.kondisi_sampel, 'Puasa (10-12 Jam)')
+        self.assertEqual(order.destination_id, self.unit_jantung.pk)
+        self.assertEqual(order.parameter_list, [])
+        self.assertEqual(BillingItem.objects.count(), 0)
+
+    def test_dengan_tarif_membuat_billing(self):
+        TarifPenunjang.objects.create(
+            item=self.item, penjamin='UMUM', nominal=Decimal('185000.00'),
+            valid_from=timezone.localdate() - timedelta(days=1))
+        self.client.post(self.url, {'catalogue_item': str(self.item.pk)})
+        billing = BillingItem.objects.get(kunjungan=self.kunjungan)
+        self.assertEqual(billing.kategori, 'LAB')
+        self.assertEqual(billing.harga_satuan, Decimal('185000.00'))
+        self.assertEqual(billing.nama_item, f'Pemeriksaan LAB: {self.item.nama}')
+
 class AntreanDpjpTest(_RajalFixture):
     """F0.3 — ``SEDANG_DILAYANI`` tanpa DPJP ditolak tanpa mutasi."""
 

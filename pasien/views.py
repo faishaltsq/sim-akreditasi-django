@@ -1134,6 +1134,7 @@ def igd_dashboard(request):
         'available_beds':     available_beds,
         'bed_matrix':         bed_matrix,
         'penunjang_items':    _penunjang_order_choices(),
+        'lab_items':          _penunjang_order_choices('LAB'),
         'critical_orders':    critical_orders,
         'active_bookings':    active_bookings,
         'triage_choices':     KunjunganPasien.TRIAGE_CHOICES,
@@ -1477,13 +1478,18 @@ def pendaftaran_jadwal_simpan(request):
     return redirect('pasien:pendaftaran_dashboard')
 
 
-def _penunjang_order_choices():
+def _penunjang_order_choices(jenis_order=None):
     """Item katalog yang boleh diorder, untuk dropdown kedua dasbor.
 
     Sumbernya ``klinis.services.penunjang_catalogue.orderable_items`` — bukan
     query model langsung — supaya daftar yang ditawarkan ke dokter identik
-    dengan daftar yang akan diterima ``order_penunjang_buat``.
+    dengan daftar yang akan diterima ``order_penunjang_buat`` dan
+    ``order_lab_create``. ``jenis_order`` mempersempit ke satu jenis (mis. 'LAB'
+    untuk formulir permintaan laboratorium).
     """
+    items = orderable_items()
+    if jenis_order:
+        items = items.filter(jenis_order=jenis_order)
     return [
         {
             'id': item.pk,
@@ -1491,7 +1497,7 @@ def _penunjang_order_choices():
             'nama': item.nama,
             'jenis_order': item.get_jenis_order_display(),
         }
-        for item in orderable_items().order_by('jenis_order', 'kode')
+        for item in items.order_by('jenis_order', 'kode')
     ]
 
 def _tarif_penunjang_aktif(item, penjamin, hari):
@@ -3146,56 +3152,84 @@ def asesmen_hapus(request, pk):
 
 @login_required
 def order_lab_create(request, pk):
-    """
-    Creates a formal Laboratory Request (OrderPenunjang) with selected parameter checklists
-    categorized by Hematologi, Hemostasis, Kimia Klinik, Immuno-Serologi, Urinalisis/Feses, Mikrobiologi.
+    """Permintaan laboratorium dari katalog penunjang (jenis ``LAB``).
+
+    Kontraknya sama dengan ``order_penunjang_buat``: item wajib berasal dari
+    katalog aktif yang sudah direview, dan tagihan hanya dibuat bila
+    ``_resolve_penunjang_price`` menemukan tarif. Tanpa tarif, order tetap
+    dikirim dan tagihan ditunda — tidak ada nominal karangan maupun Rp 0.
     """
     k = get_object_or_404(KunjunganPasien, pk=pk)
+    back = 'pasien:igd_dashboard' if k.jenis_kunjungan == 'IGD' else 'pasien:rajal_dashboard'
     if request.method == 'POST':
         prioritas = request.POST.get('prioritas', 'RUTIN')
         kondisi_sampel = request.POST.get('kondisi_sampel', 'Tidak Puasa')
         catatan_klinis = request.POST.get('catatan_klinis', k.diagnosa_masuk or '')
         dokter_pengirim = request.POST.get('dokter_pengirim', k.dpjp or 'dr. Jaga IGD')
 
-        raw_params = request.POST.getlist('parameters')
-        param_list = []
-        for p in raw_params:
-            if '|' in p:
-                cat, item = p.split('|', 1)
-                param_list.append({'category': cat.strip(), 'item': item.strip()})
-            elif ':' in p:
-                cat, item = p.split(':', 1)
-                param_list.append({'category': cat.strip(), 'item': item.strip()})
+        try:
+            item_id = int((request.POST.get('catalogue_item') or '').strip())
+        except (TypeError, ValueError):
+            item_id = None
+
+        item, snapshot = None, None
+        if item_id is None:
+            messages.error(
+                request,
+                'Pilih pemeriksaan laboratorium dari katalog. Order tanpa item katalog tidak diterima.')
+        else:
+            try:
+                item = resolve_items(request.user, [item_id])[0]
+            except ValueError as exc:
+                messages.error(request, f'Pemeriksaan tidak dapat diorder: {exc}')
+                item = None
             else:
-                param_list.append({'category': 'UMUM', 'item': p.strip()})
+                if item.jenis_order != 'LAB':
+                    messages.error(
+                        request,
+                        f'"{item.nama}" bukan pemeriksaan laboratorium; '
+                        'gunakan formulir order penunjang.')
+                    item = None
+                else:
+                    snapshot = item_snapshot(item)
 
-        nama_pemeriksaan = request.POST.get('nama_pemeriksaan', '').strip()
-        if not nama_pemeriksaan:
-            if param_list:
-                nama_pemeriksaan = f'Pemeriksaan Lab ({len(param_list)} parameter)'
+        if item is not None:
+            order = OrderPenunjang.objects.create(
+                kunjungan=k,
+                catalogue_item=item,
+                catalogue_snapshot=snapshot,
+                jenis='LAB',
+                nama_pemeriksaan=item.nama,
+                catatan_klinis=catatan_klinis,
+                prioritas=prioritas,
+                status='ORDERED',
+                dokter_pengirim=dokter_pengirim,
+                ordered_by=request.user,
+                destination_id=item.destination_id,
+                kondisi_sampel=kondisi_sampel,
+            )
+            harga = _resolve_penunjang_price(item, k.penjamin)
+            if harga is None:
+                messages.warning(
+                    request,
+                    f'Permintaan laboratorium "{item.nama}" ({order.prioritas}) berhasil dikirim. '
+                    'Tarif belum ditetapkan untuk item ini; tagihan menyusul.'
+                )
             else:
-                nama_pemeriksaan = 'Permintaan Pemeriksaan Laboratorium'
-
-        order = OrderPenunjang.objects.create(
-            kunjungan=k,
-            jenis='LAB',
-            nama_pemeriksaan=nama_pemeriksaan,
-            catatan_klinis=catatan_klinis,
-            prioritas=prioritas,
-            status='ORDERED',
-            dokter_pengirim=dokter_pengirim,
-            parameter_list=param_list,
-            kondisi_sampel=kondisi_sampel,
-        )
-        messages.success(request, f'Permintaan laboratorium ({order.prioritas}) berhasil dikirim ke Unit Laboratorium.')
-
-        if request.POST.get('print_after_save') == '1':
-            return redirect('pasien:cetak_permintaan_lab_order', pk=k.pk, order_id=order.pk)
-
-        next_url = request.POST.get('next_url')
-        if next_url:
-            return redirect(next_url)
-    return redirect('pasien:igd_dashboard')
+                BillingItem.objects.create(
+                    kunjungan=k,
+                    kategori='LAB',
+                    nama_item=f'Pemeriksaan LAB: {item.nama}',
+                    kuantitas=1,
+                    harga_satuan=harga,
+                    dicatat_oleh=request.user,
+                )
+                messages.success(
+                    request,
+                    f'Permintaan laboratorium "{item.nama}" ({order.prioritas}) berhasil dikirim '
+                    'ke Unit Laboratorium & ditambahkan ke billing.'
+                )
+    return redirect(back)
 
 
 @login_required

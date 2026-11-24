@@ -781,151 +781,20 @@
                                                 </div>
                                             </div>
 
-                                            <!-- Parameter Checklist (6 Kategori Sesuai Dokumen Word) -->
-                                            <div class="row g-3">
-                                                <!-- KOLOM 1: HEMATOLOGI & HEMOSTASIS -->
-                                                <div class="col-lg-4 col-md-6">
-                                                    <!-- HEMATOLOGI -->
-                                                    <div class="card border mb-3 shadow-none">
-                                                        <div class="card-header bg-danger text-white py-1 px-2 fw-bold small d-flex justify-content-between align-items-center">
-                                                            <span><i class="bi bi-droplet-fill me-1"></i> I. HEMATOLOGI</span>
-                                                            <span class="badge bg-white text-danger font-monospace" style="font-size: .68rem;">DARAH</span>
-                                                        </div>
-                                                        <div class="card-body p-2" style="font-size: .8rem;">
-                                                            <div class="form-check mb-1">
-                                                                <input class="form-check-input" type="checkbox" name="parameters" value="HEMATOLOGI:Darah Rutin (Hb, Ht, Leukosit, Trombosit, Ery)" id="lab_dr_{{ k.pk }}" checked>
-                                                                <label class="form-check-label fw-semibold" for="lab_dr_{{ k.pk }}">Darah Rutin (Hb, Ht, Leu, Trombo, Ery)</label>
-                                                            </div>
-                                                            <div class="form-check mb-1">
-                                                                <input class="form-check-input" type="checkbox" name="parameters" value="HEMATOLOGI:Darah Lengkap + Hitung Jenis (Diff Count)" id="lab_dl_{{ k.pk }}">
-                                                                <label class="form-check-label" for="lab_dl_{{ k.pk }}">Darah Lengkap + Hitung Jenis (Diff Count)</label>
-                                                            </div>
-                                                            <div class="form-check mb-1">
-                                                                <input class="form-check-input" type="checkbox" name="parameters" value="HEMATOLOGI:Laju Endap Darah (LED)" id="lab_led_{{ k.pk }}">
-                                                                <label class="form-check-label" for="lab_led_{{ k.pk }}">Laju Endap Darah (LED)</label>
-                                                            </div>
-                                                            <div class="form-check mb-1">
-                                                                <input class="form-check-input" type="checkbox" name="parameters" value="HEMATOLOGI:Golongan Darah &amp; Rhesus" id="lab_goldar_{{ k.pk }}">
-                                                                <label class="form-check-label" for="lab_goldar_{{ k.pk }}">Golongan Darah &amp; Rhesus (ABO / Rh)</label>
-                                                            </div>
-                                                            <div class="form-check">
-                                                                <input class="form-check-input" type="checkbox" name="parameters" value="HEMATOLOGI:Gambaran Darah Tepi (GDT)" id="lab_gdt_{{ k.pk }}">
-                                                                <label class="form-check-label" for="lab_gdt_{{ k.pk }}">Gambaran Darah Tepi (GDT / Morfologi)</label>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-
-                                                    <!-- HEMOSTASIS / KOAGULASI -->
-                                                    <div class="card border shadow-none">
-                                                        <div class="card-header bg-danger text-white py-1 px-2 fw-bold small d-flex justify-content-between align-items-center">
-                                                            <span><i class="bi bi-stopwatch-fill me-1"></i> II. HEMOSTASIS / KOAGULASI</span>
-                                                            <span class="badge bg-white text-danger font-monospace" style="font-size: .68rem;">KOAGULASI</span>
-                                                        </div>
-                                                        <div class="card-body p-2" style="font-size: .8rem;">
-                                                            <div class="form-check mb-1">
-                                                                <input class="form-check-input" type="checkbox" name="parameters" value="HEMOSTASIS:Waktu Perdarahan (BT) / Pembekuan (CT)" id="lab_btct_{{ k.pk }}">
-                                                                <label class="form-check-label" for="lab_btct_{{ k.pk }}">Masa Perdarahan (BT) / Pembekuan (CT)</label>
-                                                            </div>
-                                                            <div class="form-check mb-1">
-                                                                <input class="form-check-input" type="checkbox" name="parameters" value="HEMOSTASIS:PT / APTT / INR" id="lab_ptaptt_{{ k.pk }}">
-                                                                <label class="form-check-label" for="lab_ptaptt_{{ k.pk }}">PT / APTT / INR</label>
-                                                            </div>
-                                                            <div class="form-check">
-                                                                <input class="form-check-input" type="checkbox" name="parameters" value="HEMOSTASIS:D-Dimer" id="lab_ddimer_{{ k.pk }}">
-                                                                <label class="form-check-label" for="lab_ddimer_{{ k.pk }}">D-Dimer Kuantitatif</label>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                </div>
-
-                                                <!-- KOLOM 2: KIMIA KLINIK (LENGKAP SEMUA SUB-PANEL) -->
-                                                <div class="col-lg-4 col-md-6">
-                                                    <div class="card border h-100 shadow-none">
-                                                        <div class="card-header bg-danger text-white py-1 px-2 fw-bold small d-flex justify-content-between align-items-center">
-                                                            <span><i class="bi bi-activity me-1"></i> III. KIMIA KLINIK</span>
-                                                            <span class="badge bg-white text-danger font-monospace" style="font-size: .68rem;">SERUM</span>
-                                                        </div>
-                                                        <div class="card-body p-2" style="font-size: .8rem;">
-                                                            <!-- Ginjal & Elektrolit -->
-                                                            <div class="text-muted fw-bold border-bottom pb-1 mb-1 small text-uppercase" style="font-size: .72rem;">Faal Ginjal &amp; Elektrolit</div>
-                                                            <div class="form-check mb-1"><input class="form-check-input" type="checkbox" name="parameters" value="KIMIA KLINIK:Ureum / Creatinin" id="lab_urcr_{{ k.pk }}"><label class="form-check-label" for="lab_urcr_{{ k.pk }}">Ureum / Creatinin (Faal Ginjal)</label></div>
-                                                            <div class="form-check mb-1"><input class="form-check-input" type="checkbox" name="parameters" value="KIMIA KLINIK:Asam Urat" id="lab_asamurat_{{ k.pk }}"><label class="form-check-label" for="lab_asamurat_{{ k.pk }}">Asam Urat</label></div>
-                                                            <div class="form-check mb-2"><input class="form-check-input" type="checkbox" name="parameters" value="KIMIA KLINIK:Elektrolit (Na+, K+, Cl-)" id="lab_el_{{ k.pk }}"><label class="form-check-label" for="lab_el_{{ k.pk }}">Elektrolit Serum (Na⁺, K⁺, Cl⁻)</label></div>
-
-                                                            <!-- Faal Hati -->
-                                                            <div class="text-muted fw-bold border-bottom pb-1 mb-1 small text-uppercase" style="font-size: .72rem;">Faal Hati &amp; Protein</div>
-                                                            <div class="form-check mb-1"><input class="form-check-input" type="checkbox" name="parameters" value="KIMIA KLINIK:SGOT / SGPT" id="lab_sgot_{{ k.pk }}"><label class="form-check-label" for="lab_sgot_{{ k.pk }}">SGOT / SGPT</label></div>
-                                                            <div class="form-check mb-1"><input class="form-check-input" type="checkbox" name="parameters" value="KIMIA KLINIK:Bilirubin (Total / Direct / Indirect)" id="lab_bil_{{ k.pk }}"><label class="form-check-label" for="lab_bil_{{ k.pk }}">Bilirubin (Total / Direct / Indirect)</label></div>
-                                                            <div class="form-check mb-2"><input class="form-check-input" type="checkbox" name="parameters" value="KIMIA KLINIK:Albumin / Globulin / Total Protein" id="lab_alb_{{ k.pk }}"><label class="form-check-label" for="lab_alb_{{ k.pk }}">Albumin / Globulin / Total Protein</label></div>
-
-                                                            <!-- Karbohidrat & Metabolisme -->
-                                                            <div class="text-muted fw-bold border-bottom pb-1 mb-1 small text-uppercase" style="font-size: .72rem;">Metabolisme &amp; Karbohidrat</div>
-                                                            <div class="form-check mb-1"><input class="form-check-input" type="checkbox" name="parameters" value="KIMIA KLINIK:Glukosa Darah Sewaktu (GDS)" id="lab_gds_{{ k.pk }}" checked><label class="form-check-label fw-semibold" for="lab_gds_{{ k.pk }}">Glukosa Darah Sewaktu (GDS)</label></div>
-                                                            <div class="form-check mb-1"><input class="form-check-input" type="checkbox" name="parameters" value="KIMIA KLINIK:Glukosa Darah Puasa (GDP) / 2 Jam PP" id="lab_gdp_{{ k.pk }}"><label class="form-check-label" for="lab_gdp_{{ k.pk }}">GD Puasa / 2 Jam PP</label></div>
-                                                            <div class="form-check mb-2"><input class="form-check-input" type="checkbox" name="parameters" value="KIMIA KLINIK:HbA1c" id="lab_hba1c_{{ k.pk }}"><label class="form-check-label" for="lab_hba1c_{{ k.pk }}">HbA1c</label></div>
-
-                                                            <!-- Profil Lipid & Jantung -->
-                                                            <div class="text-muted fw-bold border-bottom pb-1 mb-1 small text-uppercase" style="font-size: .72rem;">Profil Lipid &amp; Enzim Jantung</div>
-                                                            <div class="form-check mb-1"><input class="form-check-input" type="checkbox" name="parameters" value="KIMIA KLINIK:Kolesterol Total / Trigliserida / HDL / LDL" id="lab_lipid_{{ k.pk }}"><label class="form-check-label" for="lab_lipid_{{ k.pk }}">Profil Lipid (Kolesterol, TG, HDL, LDL)</label></div>
-                                                            <div class="form-check mb-1"><input class="form-check-input" type="checkbox" name="parameters" value="KIMIA KLINIK:Troponin T / Troponin I" id="lab_trop_{{ k.pk }}"><label class="form-check-label" for="lab_trop_{{ k.pk }}">Troponin T / Troponin I</label></div>
-                                                            <div class="form-check"><input class="form-check-input" type="checkbox" name="parameters" value="KIMIA KLINIK:CK-MB" id="lab_ckmb_{{ k.pk }}"><label class="form-check-label" for="lab_ckmb_{{ k.pk }}">CK-MB</label></div>
-                                                        </div>
-                                                    </div>
-                                                </div>
-
-                                                <!-- KOLOM 3: IMMUNO-SEROLOGI, URINALISIS/FESES, MIKROBIOLOGI & AGD -->
-                                                <div class="col-lg-4 col-md-12">
-                                                    <!-- IMMUNO-SEROLOGI -->
-                                                    <div class="card border mb-3 shadow-none">
-                                                        <div class="card-header bg-danger text-white py-1 px-2 fw-bold small d-flex justify-content-between align-items-center">
-                                                            <span><i class="bi bi-shield-plus me-1"></i> IV. IMMUNO-SEROLOGI</span>
-                                                            <span class="badge bg-white text-danger font-monospace" style="font-size: .68rem;">SEROLOGI</span>
-                                                        </div>
-                                                        <div class="card-body p-2" style="font-size: .8rem;">
-                                                            <div class="form-check mb-1"><input class="form-check-input" type="checkbox" name="parameters" value="IMMUNO-SEROLOGI:HBsAg (Screening Hepatitis B)" id="lab_hbsag_{{ k.pk }}"><label class="form-check-label" for="lab_hbsag_{{ k.pk }}">HBsAg (Screening Hep B)</label></div>
-                                                            <div class="form-check mb-1"><input class="form-check-input" type="checkbox" name="parameters" value="IMMUNO-SEROLOGI:Anti-HCV" id="lab_antihcv_{{ k.pk }}"><label class="form-check-label" for="lab_antihcv_{{ k.pk }}">Anti-HCV</label></div>
-                                                            <div class="form-check mb-1"><input class="form-check-input" type="checkbox" name="parameters" value="IMMUNO-SEROLOGI:Anti-HIV (Screening)" id="lab_antihiv_{{ k.pk }}"><label class="form-check-label" for="lab_antihiv_{{ k.pk }}">Anti-HIV (Screening)</label></div>
-                                                            <div class="form-check mb-1"><input class="form-check-input" type="checkbox" name="parameters" value="IMMUNO-SEROLOGI:Widal / Tubex TF (Tifoid)" id="lab_widal_{{ k.pk }}"><label class="form-check-label" for="lab_widal_{{ k.pk }}">Widal / Tubex TF (Tifoid)</label></div>
-                                                            <div class="form-check mb-1"><input class="form-check-input" type="checkbox" name="parameters" value="IMMUNO-SEROLOGI:NS1 Dengue / Anti-Dengue IgG &amp; IgM" id="lab_ns1_{{ k.pk }}"><label class="form-check-label" for="lab_ns1_{{ k.pk }}">NS1 Dengue / IgG &amp; IgM</label></div>
-                                                            <div class="form-check"><input class="form-check-input" type="checkbox" name="parameters" value="IMMUNO-SEROLOGI:Swab Antigen / PCR COVID-19" id="lab_covid_{{ k.pk }}"><label class="form-check-label" for="lab_covid_{{ k.pk }}">Swab Antigen / PCR COVID-19</label></div>
-                                                        </div>
-                                                    </div>
-
-                                                    <!-- URINALISIS & FESES -->
-                                                    <div class="card border mb-3 shadow-none">
-                                                        <div class="card-header bg-danger text-white py-1 px-2 fw-bold small d-flex justify-content-between align-items-center">
-                                                            <span><i class="bi bi-eyedropper me-1"></i> V. URINALISIS &amp; FESES</span>
-                                                            <span class="badge bg-white text-danger font-monospace" style="font-size: .68rem;">EKSKRESI</span>
-                                                        </div>
-                                                        <div class="card-body p-2" style="font-size: .8rem;">
-                                                            <div class="form-check mb-1"><input class="form-check-input" type="checkbox" name="parameters" value="URINALISIS:Urine Lengkap (Makroskopis, Mikroskopis, Kimia Urine)" id="lab_ul_{{ k.pk }}"><label class="form-check-label" for="lab_ul_{{ k.pk }}">Urine Lengkap (Makro/Mikro/Kimia)</label></div>
-                                                            <div class="form-check mb-1"><input class="form-check-input" type="checkbox" name="parameters" value="URINALISIS:Tes Kehamilan (PP Test)" id="lab_pp_{{ k.pk }}"><label class="form-check-label" for="lab_pp_{{ k.pk }}">Tes Kehamilan (PP / Plano Test)</label></div>
-                                                            <div class="form-check"><input class="form-check-input" type="checkbox" name="parameters" value="URINALISIS:Feses Lengkap / Darah Samar" id="lab_feses_{{ k.pk }}"><label class="form-check-label" for="lab_feses_{{ k.pk }}">Feses Lengkap / Darah Samar</label></div>
-                                                        </div>
-                                                    </div>
-
-                                                    <!-- MIKROBIOLOGI, AGD & LAINNYA -->
-                                                    <div class="card border shadow-none">
-                                                        <div class="card-header bg-danger text-white py-1 px-2 fw-bold small d-flex justify-content-between align-items-center">
-                                                            <span><i class="bi bi-wind me-1"></i> VI. MIKROBIOLOGI &amp; AGD</span>
-                                                            <span class="badge bg-white text-danger font-monospace" style="font-size: .68rem;">KHUSUS</span>
-                                                        </div>
-                                                        <div class="card-body p-2" style="font-size: .8rem;">
-                                                            <div class="form-check mb-1"><input class="form-check-input" type="checkbox" name="parameters" value="MIKROBIOLOGI:Pewarnaan Gram / BTA" id="lab_gram_{{ k.pk }}"><label class="form-check-label" for="lab_gram_{{ k.pk }}">Pewarnaan Gram / BTA</label></div>
-                                                            <div class="form-check mb-1"><input class="form-check-input" type="checkbox" name="parameters" value="MIKROBIOLOGI:Kultur &amp; Uji Sensitivitas Antibiotik" id="lab_kultur_{{ k.pk }}"><label class="form-check-label" for="lab_kultur_{{ k.pk }}">Kultur &amp; Resistensi Antibiotik</label></div>
-                                                            <div class="form-check mb-1"><input class="form-check-input" type="checkbox" name="parameters" value="MIKROBIOLOGI:Analisis Gas Darah (AGD)" id="lab_agd_{{ k.pk }}"><label class="form-check-label" for="lab_agd_{{ k.pk }}">Analisis Gas Darah (AGD / BGA)</label></div>
-                                                            <div class="form-check"><input class="form-check-input" type="checkbox" name="parameters" value="MIKROBIOLOGI:Laktat Darah / Prokalsitonin (PCT)" id="lab_pct_{{ k.pk }}"><label class="form-check-label" for="lab_pct_{{ k.pk }}">Laktat Darah / Prokalsitonin (PCT)</label></div>
-                                                        </div>
-                                                    </div>
-                                                </div>
+                                            <!-- Pemeriksaan laboratorium dari katalog penunjang (jenis LAB) -->
+                                            <div class="mb-3">
+                                                <label class="form-label small fw-semibold">Pemeriksaan Laboratorium <span class="text-danger">*</span></label>
+                                                <select name="catalogue_item" class="form-select form-select-sm" required>
+                                                    <option value="">— Pilih pemeriksaan dari katalog laboratorium —</option>
+                                                    {% for item in lab_items %}
+                                                    <option value="{{ item.id }}">{{ item.kode }} — {{ item.nama }}</option>
+                                                    {% endfor %}
+                                                </select>
+                                                <div class="form-text" style="font-size:.68rem;">Daftar berasal dari katalog pemeriksaan laboratorium yang sudah aktif dan direview. Rincian parameter mengikuti item katalog yang dipilih; pemeriksaan di luar katalog tidak dapat diorder.</div>
                                             </div>
 
                                             <!-- Catatan Tambahan, Dokter Pengirim & Indikasi -->
                                             <div class="row g-2 mt-3 pt-2 border-top">
-                                                <div class="col-md-6">
-                                                    <label class="form-label small fw-semibold mb-1">Pemeriksaan Lainnya (Ketik Manual bila belum ada):</label>
-                                                    <input type="text" name="nama_pemeriksaan" class="form-control form-control-sm" placeholder="Contoh: Faal Tiroid (FT4, TSHs), Cortisol, dsb...">
-                                                </div>
                                                 <div class="col-md-6">
                                                     <label class="form-label small fw-semibold mb-1">Dokter Pengirim:</label>
                                                     <input type="text" name="dokter_pengirim" class="form-control form-control-sm" value="{{ k.dpjp|default:'dr. Darno' }}">

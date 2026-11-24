@@ -3,6 +3,7 @@ from django.contrib.auth.models import User
 from django.urls import reverse
 from django.utils import timezone
 from pasien.models import Pasien, KunjunganPasien, OrderPenunjang
+from pasien.tests_rajal_dashboard_hardening import buat_item_penunjang
 from akreditasi.models import UnitKerja
 from accounts.models import UserProfile
 
@@ -147,27 +148,44 @@ class OrderLabCreateViewTest(TestCase):
             jenis_kunjungan='IGD', tanggal_masuk=timezone.now(), created_by=self.user
         )
         self.client.login(username='dr_lab', password='password123')
+        self.item = buat_item_penunjang(
+            kode='UJI-LAB-LABORDER', nama='Darah Lengkap Uji',
+            user=self.user, unit=self.unit)
 
-    def test_create_order_lab(self):
+    def test_order_lab_wajib_dari_katalog(self):
+        """F0.2b — permintaan lab menunjuk item katalog, bukan teks bebas.
+
+        Kontrak lama menerima ``parameters`` + ``nama_pemeriksaan`` bebas tanpa
+        item katalog dan tanpa harga; order seperti itu tidak dapat ditagih dan
+        tidak dapat diverifikasi terhadap katalog. Tes ini menggantikan
+        ``test_create_order_lab`` lama dengan kontrak yang sama seperti
+        ``order_penunjang_buat``.
+        """
         url = reverse('pasien:order_lab_create', args=[self.kunjungan.pk])
         response = self.client.post(url, {
             'prioritas': 'CITO',
             'kondisi_sampel': 'Tidak Puasa',
             'catatan_klinis': 'Curiga Sepsis',
             'dokter_pengirim': 'dr. Hendra Sp.PD',
-            'parameters': [
-                'HEMATOLOGI|Darah Rutin Lengkap',
-                'KIMIA KLINIK|Ureum & Kreatinin',
-                'KIMIA KLINIK|SGOT / SGPT',
-            ],
+            'catalogue_item': str(self.item.pk),
         }, follow=False)
         self.assertEqual(OrderPenunjang.objects.filter(kunjungan=self.kunjungan, jenis='LAB').count(), 1)
         order = OrderPenunjang.objects.get(kunjungan=self.kunjungan, jenis='LAB')
+        self.assertEqual(order.catalogue_item_id, self.item.pk)
+        self.assertEqual(order.nama_pemeriksaan, self.item.nama)
         self.assertEqual(order.prioritas, 'CITO')
         self.assertEqual(order.kondisi_sampel, 'Tidak Puasa')
-        self.assertEqual(len(order.parameter_list), 3)
-        self.assertEqual(order.parameter_list[0]['category'], 'HEMATOLOGI')
+        self.assertEqual(order.parameter_list, [])
         self.assertRedirects(response, reverse('pasien:igd_dashboard'), fetch_redirect_response=False)
+
+    def test_order_lab_teks_bebas_tanpa_katalog_ditolak(self):
+        url = reverse('pasien:order_lab_create', args=[self.kunjungan.pk])
+        self.client.post(url, {
+            'prioritas': 'CITO',
+            'nama_pemeriksaan': 'Faal Tiroid (FT4, TSHs)',
+            'parameters': ['KIMIA KLINIK:SGOT / SGPT'],
+        })
+        self.assertEqual(OrderPenunjang.objects.filter(kunjungan=self.kunjungan).count(), 0)
 
 
 class CetakAsesmenMedisIgdViewTest(TestCase):
