@@ -135,3 +135,50 @@ class PenunjangOrderKatalogTest(_RajalFixture):
         self.assertEqual(
             BillingItem.objects.filter(harga_satuan__in=[150000, 250000]).count(), 0)
         self.assertEqual(BillingItem.objects.filter(kunjungan=self.kunjungan).count(), 0)
+
+
+class AntreanDpjpTest(_RajalFixture):
+    """F0.3 — ``SEDANG_DILAYANI`` tanpa DPJP ditolak tanpa mutasi."""
+
+    def test_tanpa_dpjp_status_tidak_berubah(self):
+        kunjungan = self._kunjungan(no='KJ-DPJP-01', dpjp='')
+        res = self.client.post(
+            reverse('pasien:rajal_antrean_status', args=[kunjungan.pk]),
+            {'status_antrean': 'SEDANG_DILAYANI'})
+        self.assertEqual(res.status_code, 302)
+
+        kunjungan.refresh_from_db()
+        self.assertEqual(kunjungan.status, 'DAFTAR')
+        self.assertEqual(kunjungan.status_antrean, 'MENUNGGU')
+
+    def test_dpjp_kosong_spasi_tetap_ditolak(self):
+        kunjungan = self._kunjungan(no='KJ-DPJP-02', dpjp='   ')
+        self.client.post(
+            reverse('pasien:rajal_antrean_status', args=[kunjungan.pk]),
+            {'status_antrean': 'SEDANG_DILAYANI'})
+
+        kunjungan.refresh_from_db()
+        self.assertEqual(kunjungan.status, 'DAFTAR')
+        self.assertEqual(kunjungan.status_antrean, 'MENUNGGU')
+
+    def test_dengan_dpjp_transisi_diterima(self):
+        kunjungan = self._kunjungan(
+            no='KJ-DPJP-03', dpjp='dr. Spesialis Jantung')
+        self.client.post(
+            reverse('pasien:rajal_antrean_status', args=[kunjungan.pk]),
+            {'status_antrean': 'SEDANG_DILAYANI'})
+
+        kunjungan.refresh_from_db()
+        self.assertEqual(kunjungan.status, 'ASESMEN')
+        self.assertEqual(kunjungan.status_antrean, 'SEDANG_DILAYANI')
+
+    def test_dipanggil_tanpa_dpjp_tetap_boleh(self):
+        """Penolakan hanya pada transisi yang menaikkan status ke ASESMEN."""
+        kunjungan = self._kunjungan(no='KJ-DPJP-04', dpjp='')
+        self.client.post(
+            reverse('pasien:rajal_antrean_status', args=[kunjungan.pk]),
+            {'status_antrean': 'DIPANGGIL'})
+
+        kunjungan.refresh_from_db()
+        self.assertEqual(kunjungan.status_antrean, 'DIPANGGIL')
+        self.assertEqual(kunjungan.status, 'DAFTAR')

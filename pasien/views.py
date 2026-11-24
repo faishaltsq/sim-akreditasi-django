@@ -1349,11 +1349,21 @@ def rajal_antrean_status(request, pk):
     if request.method == 'POST':
         st = request.POST.get('status_antrean')
         if st in ['MENUNGGU', 'DIPANGGIL', 'SEDANG_DILAYANI', 'SELESAI']:
-            k.status_antrean = st
-            if st == 'SEDANG_DILAYANI':
-                k.status = 'ASESMEN'
-            k.save()
-            messages.info(request, f'Status Antrean {k.nomor_antrean} ({k.pasien.nama_lengkap}) diubah ke {k.get_status_antrean_display()}.')
+            # Pasien tidak boleh masuk asesmen tanpa DPJP yang bertanggung jawab:
+            # status kunjungan ikut naik ke ASESMEN di transisi ini, sehingga
+            # penolakan harus terjadi sebelum ada mutasi apa pun.
+            if st == 'SEDANG_DILAYANI' and not (k.dpjp or '').strip():
+                messages.error(
+                    request,
+                    f'Antrean {k.nomor_antrean or k.no_kunjungan} belum dapat dilayani: '
+                    'DPJP belum ditetapkan. Tetapkan DPJP terlebih dahulu.'
+                )
+            else:
+                k.status_antrean = st
+                if st == 'SEDANG_DILAYANI':
+                    k.status = 'ASESMEN'
+                k.save()
+                messages.info(request, f'Status Antrean {k.nomor_antrean} ({k.pasien.nama_lengkap}) diubah ke {k.get_status_antrean_display()}.')
     return redirect('pasien:rajal_dashboard')
 
 
