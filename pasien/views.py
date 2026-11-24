@@ -35,7 +35,7 @@ from .models import (
     KorelasiEpAsesmen, LampiranAsesmen
 )
 from klinis.models import (
-    AturanEpAsesmen, MasterIcd9, KasusTindakan,
+    AturanEpAsesmen, MasterIcd9, KasusTindakan, TarifPenunjang,
     Pemetaan3S, SlkiLuaran, SikiIntervensi, SdkiDiagnosis
 )
 from klinis.services.tarif import sync_billing, _kelompok_for, resolve_detail
@@ -1494,16 +1494,30 @@ def _penunjang_order_choices():
         for item in orderable_items().order_by('jenis_order', 'kode')
     ]
 
+def _tarif_penunjang_aktif(item, penjamin, hari):
+    return (
+        TarifPenunjang.objects
+        .filter(item=item, penjamin=penjamin, valid_from__lte=hari)
+        .filter(Q(valid_to__isnull=True) | Q(valid_to__gte=hari))
+        .order_by('-valid_from')
+        .first()
+    )
+
 def _resolve_penunjang_price(item, penjamin):
     """Harga satuan satu item penunjang, atau ``None`` bila tarif belum ada.
 
-    F0.8 akan mengisi fungsi ini lewat ``TarifPenunjang(item, penjamin).nominal``
-    (model baru, belum ada). Sampai saat itu tidak ada sumber harga per item,
-    sehingga fungsi ini selalu ``None``. Pemanggil WAJIB melewati pembuatan
+    Sumbernya ``TarifPenunjang`` yang berlaku hari ini untuk penjamin pasien.
+    Bila penjamin itu belum punya baris, dipakai nominal UMUM — ADR-4/ADR-10
+    menetapkan satu nominal per item untuk semua penjamin sampai tabel tarif
+    resmi per penjamin tersedia. Pemanggil WAJIB melewati pembuatan
     ``BillingItem`` saat hasilnya ``None`` — lebih baik tagihan menyusul
     daripada menulis nominal karangan atau Rp 0.
     """
-    return None
+    hari = timezone.localdate()
+    baris = _tarif_penunjang_aktif(item, penjamin, hari)
+    if baris is None and penjamin != 'UMUM':
+        baris = _tarif_penunjang_aktif(item, 'UMUM', hari)
+    return baris.nominal if baris else None
 
 @login_required
 def order_penunjang_buat(request, pk):

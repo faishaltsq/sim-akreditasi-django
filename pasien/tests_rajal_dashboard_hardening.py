@@ -15,14 +15,18 @@ Modul ini mengunci empat cacat produksi pada jalur rawat jalan:
 Semua asersi di sini memeriksa keadaan database atau hasil render, bukan
 keberadaan simbol.
 """
+from datetime import timedelta
+from decimal import Decimal
+
 from django.contrib.auth.models import User
+from django.contrib.messages import get_messages
 from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
 
 from accounts.models import UserProfile
 from akreditasi.models import UnitKerja
-from klinis.models import ItemPenunjang, KategoriPenunjang
+from klinis.models import ItemPenunjang, KategoriPenunjang, TarifPenunjang
 from pasien.models import (
     BillingItem, KunjunganPasien, OrderPenunjang, Pasien, POLIKLINIK_CHOICES,
 )
@@ -67,12 +71,13 @@ class _RajalFixture(TestCase):
         return user
 
     def _kunjungan(self, no='KJ-RAJAL-HARD-01', poliklinik='POLI_JANTUNG',
-                   dpjp='', status='DAFTAR', status_antrean='MENUNGGU'):
+                   dpjp='', status='DAFTAR', status_antrean='MENUNGGU',
+                   penjamin='UMUM'):
         return KunjunganPasien.objects.create(
             pasien=self.pasien, no_kunjungan=no, jenis_kunjungan='RAJAL',
             poliklinik=poliklinik, tanggal_masuk=timezone.now(),
             dpjp=dpjp, status=status, status_antrean=status_antrean,
-            penjamin='UMUM')
+            penjamin=penjamin)
 
 
 class PenunjangOrderKatalogTest(_RajalFixture):
@@ -136,6 +141,63 @@ class PenunjangOrderKatalogTest(_RajalFixture):
             BillingItem.objects.filter(harga_satuan__in=[150000, 250000]).count(), 0)
         self.assertEqual(BillingItem.objects.filter(kunjungan=self.kunjungan).count(), 0)
 
+
+class PenunjangOrderTarifTest(_RajalFixture):
+    """F0.8 — billing penunjang memakai ``TarifPenunjang`` yang berlaku.
+
+    ADR-4/ADR-10: satu nominal per item untuk semua penjamin sampai tabel tarif
+    resmi per penjamin tersedia, sehingga BPJS memakai nominal UMUM. Item tanpa
+    baris, atau baris di luar periode berlaku, tidak menagih apa pun.
+    """
+
+    def setUp(self):
+        super().setUp()
+        self.item = buat_item_penunjang(user=self.dokter, unit=self.unit_jantung)
+        self.hari = timezone.localdate()
+
+    def _tarif(self, *, penjamin='UMUM', nominal='150000.00', mulai=None, sampai=None):
+        return TarifPenunjang.objects.create(
+            item=self.item, penjamin=penjamin, nominal=Decimal(nominal),
+            valid_from=mulai or self.hari - timedelta(days=1),
+            valid_to=sampai,
+        )
+
+    def _post(self, kunjungan):
+        return self.client.post(
+            reverse('pasien:order_penunjang_buat', args=[kunjungan.pk]),
+            {'catalogue_item': str(self.item.pk), 'prioritas': 'RUTIN'})
+
+    def test_tarif_berlaku_membuat_billing(self):
+        kunjungan = self._kunjungan()
+        self._tarif()
+        res = self._post(kunjungan)
+        self.assertEqual(res.status_code, 302)
+        billing = BillingItem.objects.get(kunjungan=kunjungan)
+        self.assertEqual(billing.harga_satuan, Decimal('150000.00'))
+        self.assertEqual(billing.kategori, 'LAB')
+        self.assertEqual(billing.nama_item, f'Pemeriksaan LAB: {self.item.nama}')
+
+    def test_bpjs_memakai_nominal_umum(self):
+        kunjungan = self._kunjungan(no='KJ-RAJAL-HARD-BPJS', penjamin='BPJS')
+        self._tarif(penjamin='UMUM', nominal='150000.00')
+        self._post(kunjungan)
+        billing = BillingItem.objects.get(kunjungan=kunjungan)
+        self.assertEqual(billing.harga_satuan, Decimal('150000.00'))
+
+    def test_tarif_kedaluwarsa_tidak_menagih(self):
+        kunjungan = self._kunjungan()
+        self._tarif(mulai=self.hari - timedelta(days=30),
+                    sampai=self.hari - timedelta(days=1))
+        res = self._post(kunjungan)
+        self.assertEqual(BillingItem.objects.count(), 0)
+        self.assertTrue(
+            any('Tarif belum ditetapkan' in str(m) for m in get_messages(res.wsgi_request)))
+
+    def test_tarif_belum_berlaku_tidak_menagih(self):
+        kunjungan = self._kunjungan()
+        self._tarif(mulai=self.hari + timedelta(days=1))
+        self._post(kunjungan)
+        self.assertEqual(BillingItem.objects.count(), 0)
 
 class AntreanDpjpTest(_RajalFixture):
     """F0.3 — ``SEDANG_DILAYANI`` tanpa DPJP ditolak tanpa mutasi."""

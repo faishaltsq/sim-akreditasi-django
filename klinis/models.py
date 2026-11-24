@@ -17,7 +17,7 @@ RISIKO_CHOICES = [
 ]
 
 
-from .expansion_models import (KategoriPenunjang, ItemPenunjang, KelasTerapiObat, GenerikObat, ProdukFarmasi, KomposisiProdukFarmasi, KeanggotaanFormularium, MedicationPolicy)
+from .expansion_models import (KategoriPenunjang, ItemPenunjang, TarifPenunjang, KelasTerapiObat, GenerikObat, ProdukFarmasi, KomposisiProdukFarmasi, KeanggotaanFormularium, MedicationPolicy)
 
 
 class KelompokLayanan(models.Model):

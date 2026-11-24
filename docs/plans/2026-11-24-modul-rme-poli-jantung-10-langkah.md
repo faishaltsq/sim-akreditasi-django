@@ -87,6 +87,8 @@ Penanda artefak: **(baru)** = berkas/tes/route/kolom/fungsi yang **belum ada** d
 
 **Keputusan.** Tambah `KelompokLayanan` `POLI_JANTUNG` (unit `POLI-JANTUNG`) + model **baru** `TarifPenunjang` (item, penjamin, nominal, `valid_from`) karena spesifikasi menuntut pembedaan BPJS vs Umum. Order katalog wajib membuat `BillingItem` dengan `sumber='ASESMEN'`; koreksi hanya via `PembatalanTagihan` (`pasien/services/professional_billing.py:35-64`).
 
+> **Amandemen Rilis A2 (2026-11-24).** Bagian "pembedaan BPJS vs Umum" pada ADR ini diganti oleh **ADR-10**: satu nominal per item untuk semua penjamin, penyesuaian per penjamin ditunda sampai tabel tarif resmi ada. Model `TarifPenunjang` dan kewajiban order lewat katalog tetap berlaku.
+
 **Alternatif ditolak.** Harga tunggal di `ItemPenunjang` — tidak dapat memenuhi percabangan penjamin pada Langkah 7/9; tarif hardcode — tidak dapat diaudit.
 
 **Konsekuensi.** Setiap item katalog tanpa baris `TarifPenunjang` untuk penjamin pasien **tidak boleh** menghasilkan tagihan; order tetap boleh dikirim, billing berstatus menunggu (pola `charge_state` PENDING, `pasien/services/professional_billing.py:9-13`). `sumber='ASESMEN'` **tidak cukup** sebagai pembeda: `sync_billing` dan `sync_billing_tindakan` menghapus setiap baris `BillingItem(sumber='ASESMEN')` yang tidak ada di daftar ICD-9 (`klinis/services/tarif.py:90,139`), sehingga baris penunjang ikut tersapu saat tindakan disimpan (`pasien/views.py:2186,2632`). Karena itu sapuan dibatasi ke `kategori='JASA_MEDIS'` (F4.6).
@@ -168,6 +170,23 @@ Penanda artefak: **(baru)** = berkas/tes/route/kolom/fungsi yang **belum ada** d
 **Konsekuensi.** Skema langkah RAJAL_JANTUNG dideklarasikan sebagai spesifikasi `(nama, tipe, pilihan/rentang)`, bukan diturunkan dari model lewat `modelform_factory`; validator langkah menjadi fungsi murni. `STEP_SCHEMAS['IGD']` tetap tuple nama field model sehingga perilaku IGD tidak berubah.
 
 **Cara migrasi.** Satu kolom JSONField ber-default pada `IgdAssessmentWorkflow` (F1) + dua kolom nullable pada `KunjunganPasien` (F2). Tidak ada backfill: belum ada data RAJAL_JANTUNG.
+
+---
+
+### ADR-10 — Satu nominal per item penunjang; penyesuaian per penjamin ditunda
+
+**Menggantikan sebagian ADR-4.** ADR-4 menyebut `TarifPenunjang` dibuat "karena spesifikasi menuntut pembedaan BPJS vs Umum". Keputusan produk Rilis A2 (2026-11-24) menetapkan sebaliknya: **satu nominal per item untuk semua penjamin** sampai tabel tarif resmi per penjamin tersedia.
+
+**Konteks.** Tidak ada tabel tarif resmi per penjamin. `klinis/data/master_tarif.py` memuat `tarif_umum` dan `tarif_bpjs` per prosedur ICD-9, tetapi kolom BPJS dokumen sumber itu tidak dapat diverifikasi sebagai tarif BPJS resmi. `ItemPenunjang` sendiri tidak punya harga maupun pemetaan ICD-9 (`klinis/expansion_models.py:56-94`), sehingga harga per item hanya dapat diturunkan lewat pemetaan eksplisit ke prosedur master.
+
+**Keputusan.**
+1. `TarifPenunjang(item, penjamin, nominal, valid_from, valid_to)` tetap ada. Rilis A2 hanya mengisi baris `penjamin='UMUM'` dengan nilai `tarif_umum` master apa adanya. `_resolve_penunjang_price` (`pasien/views.py:1497-1520`) memakai baris penjamin pasien bila ada, lalu jatuh ke nominal UMUM — jadi BPJS dan ASURANSI memakai nominal yang sama tanpa diskon karangan.
+2. `KasusTindakan` kelompok `POLI_JANTUNG` disalin apa adanya dari kelompok `JANTUNG`, termasuk kolom `tarif_bpjs` sumber. Tidak ada kolom yang dihapus atau diskon yang dikarang; `resolve()` karena itu masih membedakan BPJS dan UMUM **bila master memang berbeda** (mis. 89.52: 150.000 vs 120.000).
+3. Cakupan item dibatasi pada yang prosedurnya punya harga otoritatif: **2 item** — EKG 12-Lead → 89.52 (150.000) dan Echocardiography (USG Jantung) → 88.72 (600.000). **92 item** lain tidak mendapat baris sama sekali.
+
+**Konsekuensi yang dinyatakan terang.** Karena BPJS saat ini **sama dengan** UMUM untuk item penunjang, angka `TarifPenunjang` **belum aman untuk klaim** BPJS; nominal itu hanya aman sebagai tagihan internal/UMUM sampai tabel tarif resmi per penjamin disetujui. Item tanpa baris tetap tidak menagih apa pun: order boleh dikirim, tagihan ditunda dengan pesan "tarif belum ditetapkan" — tidak pernah Rp 0 dan tidak pernah angka karangan.
+
+**Cara migrasi.** Migrasi `klinis/migrations/0007_tarif_penunjang.py` + `python manage.py seed_poli_jantung_tarif` (idempoten). Penyesuaian per penjamin kelak = baris `TarifPenunjang` baru dengan `penjamin` yang sesuai; tidak ada perubahan kode.
 
 ---
 
@@ -451,7 +470,7 @@ Cabang paralel yang sah: **F4 ∥ F2** setelah F1 (F4 hanya butuh F0.8/F0.9 + gu
 | **AMBIGU-05** | **F1** (khususnya F1.4, F1.10) | Bentuk guard `authorize_visit` dan matriks peran × 10 langkah ditentukan olehnya; mengubahnya setelah F1 = menulis ulang guard + semua uji akses |
 | AMBIGU-01, AMBIGU-08, AMBIGU-10 | F2 | Ambang MAP/kategori TD, ambang Morse/MST, dan titik akhir door-to-ECG adalah isi uji F2.2–F2.7 |
 | AMBIGU-02, AMBIGU-04 | F4 | Ambang nilai kritis dan set status 4 nilai menentukan `STATUS_CHOICES` + validasi F4.2–F4.4 |
-| Tarif penunjang (ADR-4, F0.8) | F4 | Tanpa nominal per penjamin, order tidak dapat menagih; bentuk model `TarifPenunjang` ikut ditentukan keputusan ini |
+| Tarif penunjang (ADR-4, F0.8) | F4 | Tanpa nominal per penjamin, order tidak dapat menagih; bentuk model `TarifPenunjang` ikut ditentukan keputusan ini. **Selesai Rilis A2: ADR-10** — satu nominal per item, cakupan 2 item bersumber, BPJS = UMUM sementara. Penyesuaian per penjamin tetap terbuka untuk F4 (butuh tabel tarif resmi) |
 | Cutover STARKES 2024 (F0.9) | F7 | Aturan EP yang menunjuk sub-standar 2024 dibuang resolver bila katalog belum berganti (`klinis/services/ep_tindakan.py:29`) |
 
 Keputusan sisanya tidak memblokir **mulai** fase, tetapi harus diambil sebelum item yang memakainya: AMBIGU-03 sebelum F3.2 (rumus Brinkman), AMBIGU-06 sebelum F7.1, AMBIGU-07/12/15 sebelum F7.5, AMBIGU-09 sebelum F7.7, AMBIGU-11/13 sebelum F6.2–F6.3, AMBIGU-14 sebelum F2.1, AMBIGU-16 sebelum F8.2.
@@ -580,9 +599,11 @@ Bukti: `python manage.py shell -c "from klinis.models import KelasTerapiObat,Gen
 
 **F0.8 — Tarif RAJAL tidak ada.**
 Cacat: `_kelompok_for` (`klinis/services/tarif.py:6-18`) mencari `KelompokLayanan` dengan `unit_kerja` = unit kunjungan, lalu fallback `kode=jenis_kunjungan.upper()` (`'RAJAL'`). DB berisi 14 `KelompokLayanan`, tidak ada yang menunjuk `UnitKerja` 136 (`POLI-JANTUNG`) dan tidak ada berkode `RAJAL` → `resolve()` = `None` untuk setiap tindakan rajal jantung.
-Ubah: (a) tambah baris `KelompokLayanan(kode='POLI_JANTUNG', unit_kerja=UnitKerja#136)`; (b) model **baru** `TarifPenunjang(item, penjamin, nominal, valid_from, valid_to)`; (c) seed `KASUS` ber-`kelompok='POLI_JANTUNG'` + `KasusTindakan` — `resolve()` membaca `KasusTindakan.objects.filter(kasus__kelompok=…, icd9__kode=…)` (`klinis/services/tarif.py:29-34`), jadi kelompok saja tidak cukup; (d) seed nominal penunjang kardiologi + lab umum dari `klinis/data/master_tarif.py:4-18`.
+Ubah: (a) tambah baris `KelompokLayanan(kode='POLI_JANTUNG', unit_kerja=UnitKerja#136)`; (b) model **baru** `TarifPenunjang(item, penjamin, nominal, valid_from, valid_to)`; (c) seed `KASUS` ber-`kelompok='POLI_JANTUNG'` + `KasusTindakan` — `resolve()` membaca `KasusTindakan.objects.filter(kasus__kelompok=…, icd9__kode=…)` (`klinis/services/tarif.py:29-34`), jadi kelompok saja tidak cukup; (d) seed `TarifPenunjang` **hanya** untuk item katalog yang prosedurnya punya harga otoritatif di `klinis/data/master_tarif.py` (Rilis A2: 2 item — 89.52 EKG dan 88.72 Ekokardiografi; 92 item lain sengaja tanpa baris).
 Bukti: `resolve(kunjungan_rajal_jantung, '89.52')` → `Decimal`, bukan `None`; `resolve` untuk penjamin `BPJS` ≠ `UMUM` bila master berbeda. Hari ini: `None`.
 Selesai bila: kedua assertion lulus. **Keputusan produk: ya** — nominal per penjamin dan cakupan item harus disetujui (ADR-4).
+
+> **Koreksi Rilis A2 (2026-11-24).** Premis "seed nominal penunjang kardiologi + lab umum dari `master_tarif.py`" hanya separuh benar. `master_tarif.py` tidak punya kelompok `POLI_JANTUNG` dan `ItemPenunjang` tidak punya harga maupun pemetaan ICD-9, sehingga harga per item hanya dapat diturunkan lewat pemetaan eksplisit ke prosedur master. Butir (d) karena itu dibatasi pada item yang pemetaannya tidak ambigu; item laboratorium **tidak** mendapat baris tarif. Satu nominal per item untuk semua penjamin (ADR-10): BPJS = UMUM untuk `TarifPenunjang`, jadi angka itu belum aman untuk klaim. Perintah: `python manage.py seed_poli_jantung_tarif` (idempoten).
 
 **F0.9 — Cutover STARKES 2024.**
 Cacat: `Framework` aktif tunggal ber-`edition='2022'`; `StandardItem` 301 baris edisi 2022.

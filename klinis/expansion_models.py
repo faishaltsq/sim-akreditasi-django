@@ -53,6 +53,46 @@ class ItemPenunjang(models.Model):
             raise ValidationError('Aktivasi memerlukan sumber, reviewer dan unit tujuan.')
 
 
+class TarifPenunjang(models.Model):
+    """Harga satuan satu item penunjang per penjamin, berlaku per periode.
+
+    Baris hanya dibuat bila nominalnya punya sumber otoritatif (ADR-4/ADR-10).
+    Item tanpa baris berarti tarif belum ditetapkan — bukan Rp 0 — dan pemanggil
+    wajib menunda tagihan, bukan mengarang nominal.
+    """
+    PENJAMIN_CHOICES = [
+        ('UMUM', 'Umum'),
+        ('BPJS', 'BPJS'),
+        ('ASURANSI', 'Asuransi'),
+    ]
+
+    item = models.ForeignKey(ItemPenunjang, on_delete=models.PROTECT, related_name='tarif_penunjang')
+    penjamin = models.CharField('Penjamin', max_length=12, choices=PENJAMIN_CHOICES)
+    nominal = models.DecimalField('Nominal (Rp)', max_digits=12, decimal_places=2)
+    valid_from = models.DateField('Berlaku Sejak')
+    valid_to = models.DateField('Berlaku Sampai', null=True, blank=True)
+
+    class Meta:
+        verbose_name = 'Tarif Penunjang'
+        verbose_name_plural = 'Tarif Penunjang'
+        ordering = ['item', 'penjamin', '-valid_from']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['item', 'penjamin', 'valid_from'],
+                name='unique_tarif_penunjang_periode',
+            ),
+        ]
+
+    def __str__(self):
+        return f'{self.item.kode} / {self.penjamin}: {self.nominal}'
+
+    def clean(self):
+        super().clean()
+        if self.nominal is None or self.nominal <= 0:
+            raise ValidationError('Nominal tarif penunjang harus lebih besar dari 0.')
+        if self.valid_from and self.valid_to and self.valid_to < self.valid_from:
+            raise ValidationError('valid_to tidak boleh sebelum valid_from.')
+
 class KelasTerapiObat(models.Model):
     kode = models.CharField(max_length=80, unique=True)
     nama = models.CharField(max_length=200)
