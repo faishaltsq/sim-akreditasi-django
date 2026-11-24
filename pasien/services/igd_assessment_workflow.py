@@ -292,6 +292,18 @@ def legacy_workflow_guard(view):
                 authorize_visit(visit,request.user,workflow=workflow)
                 return JsonResponse({'success':False,'error':'Gunakan pelaksanaan dan CPPT profesional yang tervalidasi.'},status=409)
             if workflow:
+                # F1.9: episode POLI-JANTUNG ber-workflow tetap boleh menulis CPPT lewat
+                # penulis lama sampai F6.1 menyediakan CPPT profesional (ADR-3).
+                # ``rajal_soap_simpan`` hari ini tidak termasuk _WORKFLOW_GUARDED_VIEWS
+                # sehingga sudah terbuka; ia masuk daftar guard di F6.1, saat
+                # pengecualian ini dicabut bersamaan.
+                if workflow.service_line == RAJAL_JANTUNG_SERVICE_LINE and visit.jenis_kunjungan == 'RAJAL':
+                    if view.__name__ == 'cppt_tambah':
+                        authorize_visit(visit, request.user, workflow=workflow)
+                        return view(request, *args, **kwargs)
+                    if view.__name__ in ('order_penunjang_buat', 'order_lab_create'):
+                        authorize_visit(visit, request.user, workflow=workflow)
+                        return JsonResponse({'success': False, 'error': 'Order penunjang POLI-JANTUNG wajib melalui jalur penunjang berversi.'}, status=409)
                 later_care = {'cppt_tambah','order_penunjang_buat','order_lab_create','discharge_proses','kunjungan_disposisi','asesmen_lampiran_upload'}
                 if workflow.status == 'FINAL' and visit.jenis_kunjungan in ('RANAP','RAJAL') and view.__name__ in later_care:
                     profile = getattr(request.user,'profile',None)
