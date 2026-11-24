@@ -226,6 +226,51 @@ def save_step(pk, user, step, payload, version, *, service_line=None):
                             detail=f'Draft langkah {step}; versi {workflow.version}; field: {", ".join(sorted(payload))}')
     return workflow
 
+def _save_rajal_step(visit, workflow, user, step, payload, version):
+    """Simpan satu langkah RAJAL_JANTUNG ke ``draft_payload`` (ADR-9).
+
+    Tidak menyentuh satu pun kolom ``KunjunganPasien``: F1 belum memiliki kolom
+    kardiologi. Sinkronisasi kolom nyata (``red_flag_*``) baru ada di F2.
+    """
+    spec = RAJAL_JANTUNG_STEPS.get(step)
+    if spec is None:
+        raise WorkflowValidation({'__all__': ['Langkah tidak valid.']})
+    if not isinstance(payload, dict):
+        raise WorkflowValidation({'__all__': ['Payload langkah harus objek.']})
+    if set(payload) - set(spec.field_names):
+        raise WorkflowValidation({'__all__': ['Field tidak dimiliki langkah ini.']})
+    authorize_step(user, visit, step, 'fill')
+    if workflow is not None and workflow.status == 'FINAL':
+        raise WorkflowConflict('Asesmen sudah final; gunakan addendum.')
+    try:
+        expected = int(version)
+    except (TypeError, ValueError) as exc:
+        raise WorkflowConflict('Nomor versi tidak valid.') from exc
+    if expected != (workflow.version if workflow else 0):
+        raise WorkflowConflict('Konflik versi: muat ulang draft terbaru sebelum menyimpan.')
+    if not payload and spec.fields:
+        raise WorkflowValidation({'__all__': ['Tidak ada perubahan untuk disimpan.']})
+    cleaned, errors = spec.validate(payload)
+    if errors:
+        raise WorkflowValidation(errors)
+    if workflow is None:
+        workflow = IgdAssessmentWorkflow.objects.create(
+            kunjungan=visit, origin_unit=visit.unit_kerja,
+            service_line=RAJAL_JANTUNG_SERVICE_LINE, schema_key=RAJAL_JANTUNG_SCHEMA_KEY,
+        )
+    draft = dict(workflow.draft_payload or {})
+    draft[str(step)] = {**draft.get(str(step), {}), **cleaned}
+    workflow.draft_payload = draft
+    workflow.version += 1
+    workflow.last_step = step
+    workflow.updated_by = user
+    workflow.signatures = {}
+    workflow.save(update_fields=['draft_payload', 'version', 'last_step', 'updated_by', 'updated_at', 'signatures'])
+    AuditLog.objects.create(user=user, aksi='UPDATE', model_name='IgdAssessmentWorkflow',
+                            object_repr=f'Workflow #{workflow.pk}',
+                            detail=f'Draft rajal langkah {step}; versi {workflow.version}; field: {", ".join(sorted(cleaned))}')
+    return workflow
+
 
 def legacy_workflow_guard(view):
     @wraps(view)
