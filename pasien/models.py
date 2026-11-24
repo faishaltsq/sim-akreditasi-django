@@ -1113,7 +1113,10 @@ class BillingItem(models.Model):
         ('LAINNYA',     'Lainnya'),
     ]
 
-    SUMBER = [('MANUAL', 'Input Manual'), ('ASESMEN', 'Otomatis dari Asesmen'), ('FARMASI','Farmasi'), ('PROFESI','Pelaksanaan profesional')]
+    SUMBER = [('MANUAL', 'Input Manual'), ('ASESMEN', 'Otomatis dari Asesmen'), ('FARMASI','Farmasi'), ('PROFESI','Pelaksanaan profesional'),
+              # F4.0: satu sumber per asal penulisan otomatis. Sebelum ini kedua
+              # penulis memakai 'ASESMEN' dan saling menyapu baris satu sama lain.
+              ('TINDAKAN', 'Turunan Baris Tindakan'), ('PENUNJANG', 'Turunan Order Penunjang')]
 
     kunjungan  = models.ForeignKey(KunjunganPasien, on_delete=models.CASCADE, related_name='billing')
     kategori   = models.CharField('Kategori', max_length=15, choices=KATEGORI)

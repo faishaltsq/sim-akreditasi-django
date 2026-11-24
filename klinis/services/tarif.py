@@ -2,6 +2,20 @@ from decimal import Decimal
 from klinis.models import KelompokLayanan, KasusTindakan, MasterIcd9
 from pasien.models import BillingItem
 
+#: Sumber baris billing otomatis, satu per **asal penulisan** (F4.0).
+#:
+#: Sebelum F4.0 kedua fungsi di modul ini menulis ``sumber='ASESMEN'`` dan
+#: menyapu ``filter(kunjungan, sumber='ASESMEN')`` tanpa melihat kategori.
+#: Akibatnya (a) baris penunjang ber-``ASESMEN`` ikut terhapus setiap kali
+#: tindakan disimpan, dan (b) kedua fungsi saling menghapus baris pada
+#: kunjungan yang sama. Kepemilikan sekarang dinyatakan di data, bukan
+#: disimpulkan dari daftar yang kebetulan sedang disinkronkan.
+SUMBER_ICD9 = 'ASESMEN'      # form teks bebas lama (sync_billing)
+SUMBER_TINDAKAN = 'TINDAKAN'  # baris TindakanAsesmen (sync_billing_tindakan)
+SUMBER_PENUNJANG = 'PENUNJANG'  # order katalog penunjang (F4.6)
+#: Semua sumber yang ditulis kode, bukan petugas. Dipakai laporan/rekonsiliasi.
+SUMBER_OTOMATIS = (SUMBER_ICD9, SUMBER_TINDAKAN, SUMBER_PENUNJANG)
+
 
 def _kelompok_for(kunjungan):
     """
@@ -61,9 +75,18 @@ def resolve(kunjungan, icd9_kode):
 
 def sync_billing(kunjungan, icd9_kodes, user=None):
     """
-    Merekonsiliasi baris BillingItem dengan sumber='ASESMEN' sesuai daftar icd9_kodes.
+    Merekonsiliasi baris BillingItem sesuai daftar icd9_kodes.
+
+    Kepemilikan (F4.0): fungsi ini hanya memiliki baris
+    ``kategori='JASA_MEDIS', sumber=SUMBER_ICD9``. Sapuan hapus dibatasi ke
+    kepemilikan itu, sehingga baris turunan ``TindakanAsesmen``
+    (``SUMBER_TINDAKAN``) dan baris penunjang (``SUMBER_PENUNJANG``) tidak
+    ikut terhapus saat form teks bebas lama disimpan. Sebelum F4.0 sapuan ini
+    menghapus **setiap** baris ``sumber='ASESMEN'`` pada kunjungan, termasuk
+    baris yang ditulis fungsi lain.
+
     - Idempoten: memperbarui tarif jika sudah ada, membuat jika belum ada.
-    - Menghapus BillingItem ASESMEN yang tidak lagi dipilih pada kunjungan ini.
+    - Menghapus baris miliknya yang tidak lagi dipilih pada kunjungan ini.
     - Mengabaikan tindakan yang tarifnya None (tidak menuliskan Rp 0).
     """
     wanted = [k.strip() for k in icd9_kodes if k and k.strip()]
@@ -77,7 +100,7 @@ def sync_billing(kunjungan, icd9_kodes, user=None):
             kunjungan=kunjungan,
             kategori='JASA_MEDIS',
             kode_icd=kode,
-            sumber='ASESMEN',
+            sumber=SUMBER_ICD9,
             defaults={
                 'nama_item': icd9.nama if icd9 else kode,
                 'harga_satuan': nominal,
@@ -87,7 +110,9 @@ def sync_billing(kunjungan, icd9_kodes, user=None):
         )
         keep.append(item.pk)
 
-    BillingItem.objects.filter(kunjungan=kunjungan, sumber='ASESMEN').exclude(pk__in=keep).delete()
+    BillingItem.objects.filter(
+        kunjungan=kunjungan, kategori='JASA_MEDIS', sumber=SUMBER_ICD9,
+    ).exclude(pk__in=keep).delete()
     return list(BillingItem.objects.filter(pk__in=keep))
 
 
@@ -107,7 +132,12 @@ def refresh_acuan(kunjungan, lines):
 
 def sync_billing_tindakan(kunjungan, lines, user=None):
     """
-    Menulis BillingItem ASESMEN dari baris TindakanAsesmen.
+    Menulis BillingItem dari baris TindakanAsesmen.
+
+    Kepemilikan (F4.0): fungsi ini hanya memiliki baris
+    ``kategori='JASA_MEDIS', sumber=SUMBER_TINDAKAN``. Sapuan hapus dibatasi ke
+    kepemilikan itu, sehingga baris ICD-9 form lama (``SUMBER_ICD9``) dan baris
+    penunjang (``SUMBER_PENUNJANG``) tidak ikut terhapus.
 
     Nominal yang dipakai adalah `tarif_efektif` (override bila ada). Baris tanpa
     nominal tidak pernah menulis Rp 0 dan baris billing lamanya dihapus.
@@ -117,7 +147,9 @@ def sync_billing_tindakan(kunjungan, lines, user=None):
         nominal = line.tarif_efektif
         if nominal is None or nominal <= 0:
             if line.billing_item_id:
-                BillingItem.objects.filter(pk=line.billing_item_id, sumber='ASESMEN').delete()
+                BillingItem.objects.filter(
+                    pk=line.billing_item_id, sumber=SUMBER_TINDAKAN,
+                ).delete()
                 line.billing_item = None
             continue
 
@@ -125,7 +157,7 @@ def sync_billing_tindakan(kunjungan, lines, user=None):
             kunjungan=kunjungan,
             kategori='JASA_MEDIS',
             kode_icd=line.kode,
-            sumber='ASESMEN',
+            sumber=SUMBER_TINDAKAN,
             defaults={
                 'nama_item': (line.nama or line.kode)[:200],
                 'harga_satuan': nominal,
@@ -136,5 +168,7 @@ def sync_billing_tindakan(kunjungan, lines, user=None):
         line.billing_item = item
         keep.append(item.pk)
 
-    BillingItem.objects.filter(kunjungan=kunjungan, sumber='ASESMEN').exclude(pk__in=keep).delete()
+    BillingItem.objects.filter(
+        kunjungan=kunjungan, kategori='JASA_MEDIS', sumber=SUMBER_TINDAKAN,
+    ).exclude(pk__in=keep).delete()
     return list(BillingItem.objects.filter(pk__in=keep))

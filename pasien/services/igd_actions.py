@@ -153,8 +153,11 @@ def execute(visit, workflow, user, data):
         raise WorkflowConflict('Status tindakan/penjamin berubah; tinjau rencana terlebih dahulu.')
     note = cppt(visit, workflow, user, {'objektif':f'Tindakan: {line.nama}', 'plan':f'Dilaksanakan {line.quantity} kali oleh petugas terautentikasi.'})
     if line.tarif_efektif is not None and line.tarif_efektif > 0:
+        # F4.0: baris ini turunan TindakanAsesmen, jadi kepemilikannya
+        # SUMBER_TINDAKAN — bukan 'ASESMEN' milik form teks bebas lama.
+        from klinis.services.tarif import SUMBER_TINDAKAN
         line.billing_item = BillingItem.objects.create(kunjungan=visit, kategori='JASA_MEDIS', nama_item=line.nama,
-            kode_icd=line.kode, sumber='ASESMEN', kuantitas=line.quantity, harga_satuan=line.tarif_efektif, dicatat_oleh=user)
+            kode_icd=line.kode, sumber=SUMBER_TINDAKAN, kuantitas=line.quantity, harga_satuan=line.tarif_efektif, dicatat_oleh=user)
     line.execution_status, line.performed_by, line.performed_at = 'PERFORMED', user, occurred
     line.recorded_at=now
     if values['retrospective_reason']:
