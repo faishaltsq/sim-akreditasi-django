@@ -86,7 +86,80 @@ def poli_workflow(request, pk):
         'missing_sections': [] if workflow is None else _missing(visit, workflow),
         'rollout_enabled': settings.POLI_JANTUNG_WORKFLOW_ENABLED,
         'clinical': _clinical_context(visit, values),
+        **_step8_context(request, visit, workflow, step, values),
     })
+
+def _step8_context(request, visit, workflow, step, values):
+    """Data Langkah 8/9: toolbar, diagnosis, GDMT, resep draf, edukasi, SKDP.
+
+    Semua daftar berasal dari matriks (``workflow_schemas``) atau katalog
+    (``pasien.services.gdmt``); tidak ada nama obat atau pilihan yang dikarang
+    di view.
+    """
+    from pasien.services.gdmt import adjustment_choices, empty_gdmt_groups, gdmt_panel
+    from pasien.workflow_schemas import INPUT_MODE_CHOICES, INPUT_MODE_LABELS, INPUT_MODE_UNAVAILABLE
+
+    diagnoses = list(
+        visit.diagnoses.filter(active=True).order_by('pk')
+    ) if step == 8 else []
+    draft_rx = None
+    if step == 8:
+        draft_rx = (
+            visit.resep_list
+            .filter(status='DRAFT', dokter_peresep=request.user)
+            .prefetch_related('items')
+            .order_by('-pk')
+            .first()
+        )
+    from akreditasi.models import UnitKerja
+    from pasien.models import PharmacyServiceGrant
+
+    serving_units = (
+        UnitKerja.objects
+        .filter(pk__in=PharmacyServiceGrant.objects.values('unit_id'))
+        .order_by('name')
+        if step == 8 else UnitKerja.objects.none()
+    )
+    return {
+        # F5.7: toolbar dipakai Langkah 8 dan 9; mode AI ditandai tidak tersedia.
+        'input_modes': [
+            {
+                'value': code,
+                'label': INPUT_MODE_LABELS[code],
+                'available': code not in INPUT_MODE_UNAVAILABLE,
+            }
+            for code in INPUT_MODE_CHOICES
+        ],
+        'input_mode_value': values.get('input_mode', ''),
+        'show_toolbar': step in (8, 9),
+        'step8': step == 8,
+        # F5.1: diagnosis primer/sekunder dari DiagnosisKunjungan (bukan model baru).
+        'diagnoses': diagnoses,
+        'has_primary': any(row.is_primary for row in diagnoses),
+        'primary_diagnosis': next((row for row in diagnoses if row.is_primary), None),
+        # F5.4: panel GDMT — kelompok tanpa produk katalog tampil eksplisit.
+        'gdmt_groups': gdmt_panel() if step == 8 else [],
+        'gdmt_empty_groups': empty_gdmt_groups() if step == 8 else [],
+        'gdmt_adjustments': adjustment_choices() if step == 8 else [],
+        # F5.3/F5.4: draf resep dokter ini untuk episode ini.
+        'draft_prescription': draft_rx,
+        'serving_units': serving_units,
+        'prescription_lines': [
+            {
+                'product_id': item.product_id,
+                'nama': item.nama_obat,
+                'dosis': item.dosis,
+                'aturan_pakai': item.aturan_pakai,
+                'jumlah': item.jumlah,
+                'regimen': item.regimen or {},
+            }
+            for item in (draft_rx.items.all() if draft_rx else [])
+        ],
+        # F5.5/F5.6: bukti edukasi dan surat kontrol yang sudah terbit.
+        'edukasi_codes': values.get('edukasi') or [],
+        'edukasi_penerima': values.get('edukasi_penerima') or '',
+        'skdp': getattr(visit, 'discharge', None),
+    }
 
 def _field_view(item, values):
     """Satu field untuk template: kode pilihan + label yang terbaca manusia."""
@@ -260,3 +333,39 @@ def poli_workflow_action(request, pk):
     except ObjectDoesNotExist:
         return JsonResponse({'success': False, 'error': 'Objek tidak ditemukan pada lingkup ini.'}, status=404)
     return JsonResponse({'success': True, **result})
+
+@login_required
+@require_GET
+@never_cache
+def poli_edukasi_pdf(request, pk):
+    """Ekspor PDF bukti edukasi terstruktur Langkah 8 (F5.5).
+
+    Otorisasi memakai jalur yang sama dengan asesmen (``get_visit`` +
+    ``RAJAL_JANTUNG``) sehingga dokumen bukti tidak dapat diunduh oleh pengguna
+    di luar lingkup episode.
+    """
+    require_poli_rollout()
+    from django.http import HttpResponse
+    from pasien.pdf_utils import generate_edukasi_kardio_pdf
+
+    visit, _workflow = get_visit(pk, request.user, service_line=RAJAL_JANTUNG_SERVICE_LINE)
+    response = HttpResponse(generate_edukasi_kardio_pdf(pk), content_type='application/pdf')
+    response['Content-Disposition'] = (
+        f'attachment; filename=Edukasi_Kardio_{visit.no_kunjungan}.pdf'
+    )
+    return response
+
+@login_required
+@require_GET
+@never_cache
+def poli_edukasi_cetak(request, pk):
+    """Halaman cetak bukti edukasi; isi identik dengan PDF (satu pembangun)."""
+    require_poli_rollout()
+    from .services.edukasi_kardio import edukasi_proof
+
+    visit, workflow = get_visit(pk, request.user, service_line=RAJAL_JANTUNG_SERVICE_LINE)
+    return render(request, 'pasien/cetak_edukasi_kardio.html', {
+        'kunjungan': visit,
+        'pasien': visit.pasien,
+        'proof': edukasi_proof(visit, workflow),
+    })

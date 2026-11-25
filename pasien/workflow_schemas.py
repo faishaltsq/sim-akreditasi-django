@@ -327,6 +327,121 @@ PERFUSI_PERIFER_LABELS = {
     'AKRAL_DINGIN_CRT_MEMANJANG': 'Akral Dingin / CRT >= 3 detik / Pulsasi Melemah',
 }
 
+# ── Langkah 8 & 9 (F5, matriks S8-L1-01..05, S8-L2-01..03, S9-L1-19) ────────
+# Setiap daftar di bawah adalah salinan opsi matriks apa adanya. Tidak ada
+# ambang, interval, atau kelas obat yang dikarang di sini: yang tidak tertulis
+# di matriks tidak ada di daftar.
+
+#: S8-L1-01 — toolbar metode input yang dipakai bersama Langkah 8 dan 9.
+#: ``AI`` ada di daftar matriks, tetapi penyedianya baru F9; karena itu nilai
+#: ``AI`` ditolak saat simpan (lihat ``INPUT_MODE_UNAVAILABLE``), bukan
+#: diterima lalu diabaikan.
+INPUT_MODE_CHOICES = ('MANUAL', 'MASTER', 'AI')
+INPUT_MODE_LABELS = {
+    'MANUAL': 'Manual — pengisian langsung DPJP/PPA',
+    'MASTER': 'Master — katalog ICD-10 / formularium / paket edukasi',
+    'AI': 'Bantuan AI (Clinical Decision Support)',
+}
+#: Mode yang belum punya penyedia pada rilis ini (F9).
+INPUT_MODE_UNAVAILABLE = ('AI',)
+
+#: S8-L1-02 — diagnosis kerja utama. Matriks menulis kode ICD-10 di dalam
+#: labelnya (``I10``, ``I20/I25``, …); kode pendek di sini mempertahankan
+#: pengelompokan itu tanpa memecah satu opsi menjadi beberapa.
+DIAGNOSIS_UTAMA_KATEGORI_CHOICES = (
+    'I10', 'I20_I25', 'I50', 'I48_I49', 'I34_I38', 'LAINNYA',
+)
+DIAGNOSIS_UTAMA_KATEGORI_LABELS = {
+    'I10': 'Hipertensi Esensial (I10)',
+    'I20_I25': 'Penyakit Jantung Koroner / Angina Pektoris (I20/I25)',
+    'I50': 'Gagal Jantung / CHF (I50)',
+    'I48_I49': 'Aritmia Jantung / Atrial Fibrilasi (I48/I49)',
+    'I34_I38': 'Penyakit Katup Jantung (I34–I38)',
+    'LAINNYA': 'Diagnosis Lainnya',
+}
+
+#: S8-L1-04 — klasifikasi fungsional / stratifikasi risiko. Matriks
+#: menempatkan NYHA, CCS, dan risiko rendah–sedang/tinggi pada **satu**
+#: dropdown, jadi tidak dipecah menjadi tiga field.
+KLASIFIKASI_FUNGSIONAL_CHOICES = (
+    'NYHA_I', 'NYHA_II', 'NYHA_III', 'NYHA_IV',
+    'CCS_I', 'CCS_II', 'CCS_III', 'CCS_IV',
+    'RISIKO_RENDAH_SEDANG', 'RISIKO_TINGGI',
+)
+KLASIFIKASI_FUNGSIONAL_LABELS = {
+    'NYHA_I': 'NYHA Kelas I',
+    'NYHA_II': 'NYHA Kelas II',
+    'NYHA_III': 'NYHA Kelas III',
+    'NYHA_IV': 'NYHA Kelas IV',
+    'CCS_I': 'CCS Kelas I',
+    'CCS_II': 'CCS Kelas II',
+    'CCS_III': 'CCS Kelas III',
+    'CCS_IV': 'CCS Kelas IV',
+    'RISIKO_RENDAH_SEDANG': 'Risiko Rendah–Sedang',
+    'RISIKO_TINGGI': 'Risiko Tinggi',
+}
+
+#: S8-L1-05 — rencana tindak lanjut utama.
+RENCANA_TINDAK_LANJUT_CHOICES = (
+    'RAJAL_KONTROL_POLI', 'RAWAT_INAP_ICCU_HCU', 'RUJUK_RS_JEJARING', 'MENUNGGU_PENUNJANG',
+)
+RENCANA_TINDAK_LANJUT_LABELS = {
+    'RAJAL_KONTROL_POLI': 'Rawat Jalan / Kontrol Poli Jantung',
+    'RAWAT_INAP_ICCU_HCU': 'Rawat Inap / ICCU / HCU',
+    'RUJUK_RS_JEJARING': 'Rujuk ke RS Jejaring / Intervensi Lanjut',
+    'MENUNGGU_PENUNJANG': 'Menunggu Hasil Penunjang Lanjutan',
+}
+
+#: S8-L2-01 — status terapi farmakologis / e-resep.
+TERAPI_STATUS_CHOICES = (
+    'RESEP_RAJAL', 'PENYESUAIAN_DOSIS', 'TINDAKAN_POLI', 'BELUM_DIBERIKAN',
+)
+TERAPI_STATUS_LABELS = {
+    'RESEP_RAJAL': 'Diberikan Resep Rawat Jalan',
+    'PENYESUAIAN_DOSIS': 'Penyesuaian Dosis Obat Rutin',
+    'TINDAKAN_POLI': 'Tindakan / Injeksi di Poli',
+    'BELUM_DIBERIKAN': 'Belum Diberikan',
+}
+
+#: S8-L2-02 — edukasi pasien & keluarga (Standar KE STARKES). Multi-select.
+EDUKASI_KARDIO_CHOICES = (
+    'POLA_HIDUP_MEROKOK',
+    'DIET_RENDAH_GARAM_LEMAK_CAIRAN',
+    'KEPATUHAN_GDMT_EFEK_SAMPING',
+    'TANDA_BAHAYA_IGD',
+)
+EDUKASI_KARDIO_LABELS = {
+    'POLA_HIDUP_MEROKOK': 'Pola Hidup Sehat & Berhenti Merokok',
+    'DIET_RENDAH_GARAM_LEMAK_CAIRAN': 'Diet Rendah Garam/Lemak & Pembatasan Cairan',
+    'KEPATUHAN_GDMT_EFEK_SAMPING': 'Kepatuhan Minum Obat GDMT & Pemantauan Efek Samping',
+    'TANDA_BAHAYA_IGD': 'Tanda Bahaya (Red Flags) Kapan Harus ke IGD',
+}
+
+#: S8-L2-03 — jadwal kontrol berikutnya. Interval hari hanya untuk tiga opsi
+#: pertama; opsi terakhir tidak memberi jarak, jadi tidak ada tanggal yang
+#: dihitung untuknya (AMBIGU-19).
+JADWAL_KONTROL_CHOICES = ('H7', 'H14', 'H30', 'SESUAI_JADWAL_TINDAKAN')
+JADWAL_KONTROL_LABELS = {
+    'H7': '7 Hari',
+    'H14': '14 Hari',
+    'H30': '30 Hari',
+    'SESUAI_JADWAL_TINDAKAN': 'Sesuai Jadwal Tindakan / Hasil Lab',
+}
+#: Jarak hari per kode jadwal; opsi tanpa jarak tidak ada di sini.
+JADWAL_KONTROL_HARI = {'H7': 7, 'H14': 14, 'H30': 30}
+
+#: S9-L1-19 — pintasan regimen GDMT & penyesuaian dosis. Matriks memberi empat
+#: pilihan; tidak ada dosis angka di sini karena matriks tidak menyebutnya.
+GDMT_PENYESUAIAN_CHOICES = (
+    'MULAI_DOSIS_RENDAH', 'TITRASI_NAIK', 'TAHAN_TURUNKAN_DOSIS', 'LANJUTKAN_DOSIS',
+)
+GDMT_PENYESUAIAN_LABELS = {
+    'MULAI_DOSIS_RENDAH': 'Mulai Dosis Rendah',
+    'TITRASI_NAIK': 'Titrasi Naik',
+    'TAHAN_TURUNKAN_DOSIS': 'Tahan / Turunkan Dosis',
+    'LANJUTKAN_DOSIS': 'Lanjutkan Dosis Saat Ini',
+}
+
 #: Pemetaan kode → label untuk seluruh langkah; dipakai template dan API draft
 #: supaya nilai mentah tidak pernah tampil sebagai kode di layar.
 STEP_LABELS = {
@@ -359,6 +474,14 @@ STEP_LABELS = {
     'jvp': JVP_LABELS,
     'edema_ekstremitas': EDEMA_LABELS,
     'perfusi_perifer': PERFUSI_PERIFER_LABELS,
+    'input_mode': INPUT_MODE_LABELS,
+    'diagnosis_utama_kategori': DIAGNOSIS_UTAMA_KATEGORI_LABELS,
+    'klasifikasi_fungsional': KLASIFIKASI_FUNGSIONAL_LABELS,
+    'rencana_tindak_lanjut': RENCANA_TINDAK_LANJUT_LABELS,
+    'terapi_status': TERAPI_STATUS_LABELS,
+    'edukasi': EDUKASI_KARDIO_LABELS,
+    'jadwal_kontrol': JADWAL_KONTROL_LABELS,
+    'gdmt_penyesuaian': GDMT_PENYESUAIAN_LABELS,
 }
 
 
@@ -588,10 +711,32 @@ RAJAL_JANTUNG_STEPS = {
         StepField('penunjang_catatan', 'text', label='Catatan penunjang'),
     )),
     8: StepSpec(8, 'Penetapan Diagnosis & Rencana', (
+        # S8-L1-01: toolbar Manual/Master/AI direkam sebagai nilai langkah,
+        # sehingga provenance tiap isian dapat dibedakan tanpa kolom baru.
+        StepField('input_mode', 'select', label='Metode input', choices=INPUT_MODE_CHOICES),
+        StepField('diagnosis_utama_kategori', 'select', label='Diagnosis kerja utama',
+                  choices=DIAGNOSIS_UTAMA_KATEGORI_CHOICES),
         StepField('diagnosa_utama', 'text', label='Diagnosis utama'),
+        # S8-L1-04: satu dropdown memuat NYHA, CCS, dan stratifikasi risiko.
+        StepField('klasifikasi_fungsional', 'select', label='Klasifikasi fungsional / stratifikasi risiko',
+                  choices=KLASIFIKASI_FUNGSIONAL_CHOICES),
+        StepField('rencana_tindak_lanjut', 'select', label='Rencana tindak lanjut utama',
+                  choices=RENCANA_TINDAK_LANJUT_CHOICES),
+        StepField('terapi_status', 'select', label='Status terapi farmakologis / e-resep',
+                  choices=TERAPI_STATUS_CHOICES),
+        StepField('edukasi', 'multiselect', label='Edukasi pasien & keluarga',
+                  choices=EDUKASI_KARDIO_CHOICES),
+        # S8-L2-02 menuntut bukti bertanda tangan pasien/keluarga; nama
+        # penerima edukasi karena itu ikut tercatat, bukan dikarang dari data
+        # pasien saat PDF dibuat.
+        StepField('edukasi_penerima', 'text', label='Nama pasien/keluarga penerima edukasi',
+                  max_length=150),
+        StepField('jadwal_kontrol', 'select', label='Jadwal kontrol berikutnya',
+                  choices=JADWAL_KONTROL_CHOICES),
         StepField('rencana_terapi', 'text', label='Rencana terapi'),
     )),
     9: StepSpec(9, 'Pelaksanaan Asuhan — CPPT & Billing', (
+        StepField('input_mode', 'select', label='Metode input', choices=INPUT_MODE_CHOICES),
         StepField('cppt_ringkas', 'text', label='Ringkasan asuhan'),
     )),
     10: StepSpec(10, 'Evaluasi Akhir & Kondisi Pulang', (

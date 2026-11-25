@@ -279,6 +279,17 @@ def _save_rajal_step(visit, workflow, user, step, payload, version):
     cleaned, errors = spec.validate(payload)
     if errors:
         raise WorkflowValidation(errors)
+    # F5.7: matriks S8-L1-01 menyebut tiga mode, tetapi penyedia AI baru F9.
+    # Menerima nilai AI lalu menyimpannya diam-diam akan membuat provenance
+    # berbohong, jadi ditolak dengan sebab yang eksplisit.
+    from pasien.workflow_schemas import INPUT_MODE_UNAVAILABLE
+    if cleaned.get('input_mode') in INPUT_MODE_UNAVAILABLE:
+        raise WorkflowValidation({
+            'input_mode': [
+                'Bantuan AI belum tersedia pada rilis ini (dijadwalkan F9); '
+                'pilih Manual atau Master.'
+            ],
+        })
     if workflow is None:
         workflow = IgdAssessmentWorkflow.objects.create(
             kunjungan=visit, origin_unit=visit.unit_kerja,
@@ -297,6 +308,15 @@ def _save_rajal_step(visit, workflow, user, step, payload, version):
         # nilai kosong dari ``cleaned``, sehingga memakai ``cleaned`` saja membuat
         # red flag tidak pernah bisa dicabut.
         _sync_red_flag(visit, cleaned.get('red_flag_kardio') or '')
+    if step == 8 and cleaned.get('jadwal_kontrol'):
+        # F5.6: menyimpan jarak kontrol menerbitkan e-SKDP dengan skema nomor
+        # yang sudah dipakai dasbor rawat jalan (lihat pasien/services/skdp.py).
+        from .skdp import apply_jadwal_kontrol
+        apply_jadwal_kontrol(
+            visit, cleaned['jadwal_kontrol'],
+            diagnosa=cleaned.get('diagnosa_utama') or visit.diagnosa_masuk,
+            terapi=cleaned.get('rencana_terapi') or '',
+        )
     AuditLog.objects.create(user=user, aksi='UPDATE', model_name='IgdAssessmentWorkflow',
                             object_repr=f'Workflow #{workflow.pk}',
                             detail=f'Draft rajal langkah {step}; versi {workflow.version}; field: {", ".join(sorted(cleaned))}')

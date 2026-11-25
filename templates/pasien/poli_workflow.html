@@ -28,6 +28,22 @@
 .poli-banner--draft{background:#e0f2fe;color:#075985}
 .poli-banner--red{background:#fee2e2;color:#991b1b;border:1px solid #fca5a5;display:flex;flex-wrap:wrap;gap:.5rem;align-items:center}
 .poli-status{margin-top:.6rem;font-size:.85rem;min-height:1.2em}
+.poli-hint{font-size:.82rem;color:#475569;margin:.25rem 0 .5rem}
+.poli-toolbar{display:flex;flex-wrap:wrap;gap:.4rem;align-items:center;margin:0 0 1rem}
+.poli-toolbar__label{font-size:.85rem;font-weight:600}
+.poli-toolbar__btn{padding:.3rem .7rem;border:1px solid var(--bs-border-color,#cbd5e1);border-radius:.4rem;background:#fff;font-size:.85rem}
+.poli-toolbar__btn.is-active{background:var(--bs-primary,#2563eb);color:#fff;border-color:transparent}
+.poli-toolbar__btn.is-disabled{opacity:.6;cursor:not-allowed}
+.poli-dx-list{margin:.3rem 0 .8rem;padding-inline-start:1.1rem;font-size:.9rem}
+.poli-dx-form{display:flex;flex-wrap:wrap;gap:.5rem;align-items:center;font-size:.85rem}
+.poli-rx-table{width:100%;border-collapse:collapse;font-size:.85rem;margin-bottom:1rem}
+.poli-rx-table th,.poli-rx-table td{border:1px solid var(--bs-border-color,#e2e8f0);padding:.25rem .35rem;text-align:left}
+.poli-rx-table input[type="text"]{width:100%;max-width:8rem}
+.poli-gdmt{border:1px solid var(--bs-border-color,#e2e8f0);border-radius:.5rem;padding:.75rem;margin-bottom:1rem}
+.poli-gdmt-group{border:1px dashed var(--bs-border-color,#cbd5e1);border-radius:.4rem;padding:.4rem .6rem;margin:0 0 .6rem}
+.poli-gdmt-group legend{font-size:.85rem;font-weight:600;padding:0 .3rem}
+.poli-gdmt-empty{font-size:.85rem;color:#92400e;background:#fef3c7;border-radius:.35rem;padding:.3rem .5rem;margin:0}
+.poli-gdmt-apply{display:flex;flex-wrap:wrap;gap:.5rem;align-items:center;font-size:.85rem}
 @media(max-width:1199px){.poli-layout{grid-template-columns:minmax(160px,220px) minmax(0,1fr)}.poli-panel{grid-column:1/-1}}
 @media(max-width:767px){.poli-layout{grid-template-columns:minmax(0,1fr)}}
 </style>
@@ -83,12 +99,19 @@
 
     <h2 id="poli-step-heading">Langkah {{ step }}. {{ step_title }}</h2>
 
+    {% if show_toolbar %}
+      {% include "pasien/_poli_input_toolbar.html" %}
+    {% endif %}
+
     <form id="poli-step-form" method="post" action="{{ request.path }}">
       {% csrf_token %}
       {% for item in fields %}
       <div class="poli-field">
         <label for="poli-field-{{ item.name }}">{{ item.label }}</label>
-        {% if item.kind == 'select' %}
+        {% if item.name == 'input_mode' %}
+        <input type="hidden" id="poli-field-input_mode" name="input_mode" value="{{ input_mode_value }}">
+        <p class="poli-hint">Metode dipilih lewat toolbar di atas formulir; nilai tersimpan: <strong data-poli-mode-value>{{ input_mode_value|default:"belum dipilih" }}</strong></p>
+        {% elif item.kind == 'select' %}
         <select id="poli-field-{{ item.name }}" name="{{ item.name }}"{% if readonly %} disabled{% endif %}>
           <option value="">— Pilih —</option>
           {% for choice in item.choices %}
@@ -146,6 +169,159 @@
       </div>
       {% endif %}
     </form>
+
+    {% if step8 %}
+    <section aria-labelledby="poli-dx-heading" data-poli-diagnosis>
+      <h3 id="poli-dx-heading">Diagnosis episode (ICD-10)</h3>
+      <p class="poli-hint">
+        Satu diagnosis utama aktif per episode — ditegakkan oleh basis data dan
+        oleh server. Diagnosis lain tersimpan sebagai sekunder/komorbid.
+      </p>
+      <ul class="poli-dx-list">
+        {% for dx in diagnoses %}
+        <li>
+          <strong>{{ dx.kode|default:"—" }}</strong> {{ dx.nama }}
+          {% if dx.is_primary %}<span class="badge bg-primary">Utama</span>{% else %}<span class="badge bg-secondary">Sekunder</span>{% endif %}
+          <small class="text-muted">({{ dx.get_mode_display }})</small>
+        </li>
+        {% empty %}
+        <li>Belum ada diagnosis tercatat.</li>
+        {% endfor %}
+      </ul>
+      {% if can_fill %}
+      <div class="poli-dx-form" data-poli-dx-form>
+        <label for="poli-dx-kode">Kode ICD-10 (Master)</label>
+        <input type="text" id="poli-dx-kode" data-poli-dx-code placeholder="mis. I50.0">
+        <label for="poli-dx-teks">atau diagnosis manual</label>
+        <input type="text" id="poli-dx-teks" data-poli-dx-text maxlength="2000">
+        <label class="poli-check">
+          <input type="checkbox" data-poli-dx-primary
+                 {% if primary_diagnosis %}data-poli-primary-id="{{ primary_diagnosis.pk }}" data-poli-primary-mode="{{ primary_diagnosis.mode }}" data-poli-primary-code="{{ primary_diagnosis.kode }}" data-poli-primary-text="{{ primary_diagnosis.nama }}"{% endif %}>
+          Jadikan diagnosis utama
+          {% if primary_diagnosis %}<small class="text-muted">— diagnosis utama saat ini ({{ primary_diagnosis.nama }}) akan diturunkan menjadi sekunder dalam satu penyimpanan.</small>{% endif %}
+        </label>
+        <button type="button" class="btn btn-sm btn-outline-primary" data-poli-dx-add>Tambah diagnosis</button>
+        <span class="poli-status" data-poli-status role="status" aria-live="polite"></span>
+      </div>
+      {% endif %}
+    </section>
+
+    <section aria-labelledby="poli-rx-heading" data-poli-rx{% if draft_prescription %} data-prescription-id="{{ draft_prescription.pk }}"{% endif %}>
+      <h3 id="poli-rx-heading">Terapi farmakologis (e-Resep)</h3>
+      {% if not serving_units %}
+      <p class="poli-banner poli-banner--draft" role="status">
+        Belum ada depo farmasi dengan penugasan. Draf resep dapat disusun, tetapi
+        pengiriman ke farmasi akan ditolak sampai depo dikonfigurasi.
+      </p>
+      {% endif %}
+      <div class="poli-rx-meta">
+        <label for="poli-rx-depo">Depo tujuan</label>
+        <select id="poli-rx-depo" data-poli-rx-depo{% if readonly %} disabled{% endif %}>
+          <option value="">— Pilih depo —</option>
+          {% for unit in serving_units %}
+          <option value="{{ unit.pk }}"{% if draft_prescription and draft_prescription.serving_unit_id == unit.pk %} selected{% endif %}>{{ unit.name }}</option>
+          {% endfor %}
+        </select>
+        {% if draft_prescription %}
+        <span class="badge bg-info text-dark">Draf #{{ draft_prescription.pk }} — {{ draft_prescription.get_status_display }}</span>
+        {% endif %}
+      </div>
+
+      <table class="poli-rx-table">
+        <thead>
+          <tr><th></th><th>Obat</th><th>Dosis</th><th>Satuan</th><th>x/hari</th><th>Hari</th><th>Rute</th><th></th></tr>
+        </thead>
+        <tbody data-poli-rx-rows>
+          {% for line in prescription_lines %}
+          <tr data-poli-rx-row data-product-id="{{ line.product_id }}">
+            <td><input type="radio" name="poli-rx-selected" aria-label="Pilih baris {{ line.nama }}"></td>
+            <td data-poli-rx-name>{{ line.nama }}</td>
+            <td><input type="text" data-poli-rx-dose value="{{ line.regimen.dose|default:'' }}"></td>
+            <td><input type="text" data-poli-rx-dose-unit value="{{ line.regimen.dose_unit|default:'' }}"></td>
+            <td><input type="text" data-poli-rx-times value="{{ line.regimen.times_per_day|default:'' }}"></td>
+            <td><input type="text" data-poli-rx-days value="{{ line.regimen.duration_days|default:'' }}"></td>
+            <td><input type="text" data-poli-rx-route value="{{ line.regimen.route|default:'' }}"></td>
+            <td><button type="button" class="btn btn-sm btn-outline-danger" data-poli-rx-remove aria-label="Hapus baris">×</button></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+
+      <div class="poli-gdmt">
+        <h4>Pintasan GDMT (matriks S9-L1-19)</h4>
+        <p class="poli-hint">
+          Memilih obat mengisi/memperbarui baris draf yang sama — bukan menambah
+          baris ganda. Isi dosis dan lama pemberian pada baris tersebut; pintasan
+          tidak menetapkan dosis.
+        </p>
+        {% for group in gdmt_groups %}
+        <fieldset class="poli-gdmt-group">
+          <legend>{{ group.label }}</legend>
+          {% if group.empty %}
+          <p class="poli-gdmt-empty" role="status">Belum ada di formularium</p>
+          {% else %}
+          {% for product in group.products %}
+          <button type="button" class="btn btn-sm btn-outline-secondary" data-poli-gdmt-add
+                  data-product-id="{{ product.id }}" data-product-name="{{ product.generik }}"
+                  data-product-unit="{{ product.unit }}"
+                  data-product-routes="{{ product.allowed_routes|join:',' }}"
+                  {% if not can_fill or not product.prescribable %}disabled{% endif %}>
+            {{ product.generik }}
+          </button>
+          {% if not product.prescribable %}<small class="text-muted">{{ product.status }}</small>{% endif %}
+          {% endfor %}
+          {% endif %}
+        </fieldset>
+        {% endfor %}
+        <div class="poli-gdmt-apply">
+          <label for="poli-gdmt-adjust">Penyesuaian dosis</label>
+          <select id="poli-gdmt-adjust" data-poli-gdmt-adjust>
+            <option value="">— Pilih —</option>
+            {% for item in gdmt_adjustments %}
+            <option value="{{ item.value }}">{{ item.label }}</option>
+            {% endfor %}
+          </select>
+          <label for="poli-gdmt-note">Catatan klinis</label>
+          <input type="text" id="poli-gdmt-note" data-poli-gdmt-note maxlength="300">
+          <button type="button" class="btn btn-sm btn-outline-primary" data-poli-gdmt-apply{% if readonly %} disabled{% endif %}>Terapkan ke baris terpilih</button>
+        </div>
+        {% if gdmt_empty_groups %}
+        <p class="poli-hint">Kelompok tanpa produk formularium: {{ gdmt_empty_groups|join:", " }}.</p>
+        {% endif %}
+      </div>
+
+      {% if can_fill %}
+      <div class="poli-actions">
+        <button type="button" class="btn btn-primary" data-poli-rx-save>Simpan draf resep</button>
+        <button type="button" class="btn btn-success" data-poli-rx-submit>Kirim ke farmasi</button>
+        <span class="poli-status" data-poli-status role="status" aria-live="polite"></span>
+      </div>
+      {% endif %}
+    </section>
+
+    <section aria-labelledby="poli-edu-heading">
+      <h3 id="poli-edu-heading">Bukti edukasi (Standar KE)</h3>
+      {% if edukasi_codes %}
+      <p>{{ edukasi_codes|length }} materi tercatat untuk episode ini.</p>
+      {% else %}
+      <p>Belum ada materi edukasi tercatat pada langkah ini.</p>
+      {% endif %}
+      <p>
+        <a class="btn btn-sm btn-outline-primary" href="{% url 'pasien:poli_edukasi_pdf' kunjungan.pk %}">Unduh PDF bukti edukasi</a>
+        <a class="btn btn-sm btn-outline-secondary" href="{% url 'pasien:poli_edukasi_cetak' kunjungan.pk %}" target="_blank" rel="noopener">Cetak bukti edukasi</a>
+      </p>
+    </section>
+
+    <section aria-labelledby="poli-skdp-heading">
+      <h3 id="poli-skdp-heading">Surat kontrol (e-SKDP)</h3>
+      {% if skdp and skdp.skdp_nomor %}
+      <p>Nomor <strong>{{ skdp.skdp_nomor }}</strong> — tanggal kontrol
+        <strong>{% if skdp.jadwal_kontrol %}{{ skdp.jadwal_kontrol|date:"d/m/Y" }}{% else %}belum ditetapkan (sesuai jadwal tindakan/hasil lab){% endif %}</strong>.</p>
+      {% else %}
+      <p>Belum terbit. Memilih jadwal kontrol pada langkah ini menerbitkan nomor SKDP.</p>
+      {% endif %}
+    </section>
+    {% endif %}
 
     {% if can_finalize %}
     <section aria-labelledby="poli-final-heading">
@@ -249,4 +425,5 @@
 
 {% block extra_js %}
 <script src="{% static 'js/poli-workflow.js' %}"></script>
+<script src="{% static 'js/poli-prescription.js' %}"></script>
 {% endblock %}

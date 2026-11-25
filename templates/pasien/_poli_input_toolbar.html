@@ -1,0 +1,26 @@
+{% comment %}
+Toolbar metode input Langkah 8 & 9 (F5.7, matriks S8-L1-01).
+
+Tiga mode matriks: Manual, Master (katalog), dan Bantuan AI. AI belum punya
+penyedia pada rilis ini (F9), jadi tombolnya **tidak dirender** sebagai tombol
+aktif: yang tampil adalah keterangan tertutup berlabel "belum tersedia".
+Menyembunyikan tombol lebih jujur daripada tombol yang tidak melakukan apa pun.
+
+Nilai mode disimpan pada field ``input_mode`` langkah yang sedang dibuka,
+sehingga provenance tiap langkah berbeda (Langkah 8 dan 9 punya nilai sendiri).
+{% endcomment %}
+<div class="poli-toolbar" role="group" aria-label="Metode input" data-poli-toolbar>
+  <span class="poli-toolbar__label">Metode input:</span>
+  {% for mode in input_modes %}
+    {% if mode.available %}
+    <button type="button" class="poli-toolbar__btn{% if input_mode_value == mode.value %} is-active{% endif %}"
+            data-poli-mode="{{ mode.value }}" aria-pressed="{% if input_mode_value == mode.value %}true{% else %}false{% endif %}">
+      {{ mode.label }}
+    </button>
+    {% else %}
+    <span class="poli-toolbar__btn is-disabled" aria-disabled="true" title="Bantuan AI belum tersedia pada rilis ini (F9)">
+      {{ mode.label }} — belum tersedia
+    </span>
+    {% endif %}
+  {% endfor %}
+</div>
