@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <title>Bukti Edukasi — {{ pasien.nama_lengkap }}</title>
+    <style>
+        @page { size: A4; margin: 15mm 20mm; }
+        body { font-family: Arial, Helvetica, sans-serif; font-size: 10pt; color: #000; margin: 0; padding: 20px; background: #fff; }
+        .header { text-align: center; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 2px solid #000; }
+        .header h2 { margin: 0; font-size: 14pt; }
+        .header p { margin: 4px 0 0; font-size: 9pt; color: #444; }
+        table.info { width: 100%; border-collapse: collapse; margin: 8px 0; }
+        table.info td { padding: 4px 8px; vertical-align: top; }
+        table.info .label { width: 180px; font-weight: bold; }
+        table.check { width: 100%; border-collapse: collapse; margin: 8px 0; }
+        table.check th, table.check td { border: 1px solid #999; padding: 5px 8px; text-align: left; font-size: 9.5pt; }
+        table.check th { background: #f1f5f9; }
+        .badge { font-weight: bold; }
+        .badge--yes { color: #166534; }
+        .badge--no { color: #92400e; }
+        .note { font-size: 9pt; color: #444; margin-top: 10px; }
+        .ttd-row { display: flex; justify-content: space-between; margin-top: 36px; }
+        .ttd-row div { text-align: center; width: 45%; }
+        .ttd-row .line { margin-top: 56px; border-top: 1px solid #000; padding-top: 4px; }
+        @media print { .no-print { display: none !important; } }
+    </style>
+</head>
+<body>
+    <div class="no-print" style="background:#e0f2fe; padding:8px; text-align:center; margin-bottom:10px; font-size:11px;">
+        <strong>Preview Bukti Edukasi (Standar KE STARKES)</strong>
+        <button onclick="window.print()" style="margin-left:10px; padding:3px 12px; cursor:pointer;">🖨️ Cetak</button>
+        <button onclick="window.close()" style="margin-left:5px; padding:3px 12px; cursor:pointer;">✕ Tutup</button>
+    </div>
+
+    <div class="header">
+        <h2>BUKTI EDUKASI PASIEN &amp; KELUARGA</h2>
+        <p>Poli Jantung — RS MonsisKami</p>
+        <p>No. Kunjungan <strong>{{ kunjungan.no_kunjungan }}</strong> — cap waktu <strong>{{ proof.cap_waktu|date:"d/m/Y H:i" }}</strong></p>
+    </div>
+
+    <h4 style="margin: 12px 0 4px; border-bottom:1px solid #ccc; padding-bottom:3px;">Identitas</h4>
+    <table class="info">
+        <tr><td class="label">No. Rekam Medis</td><td>:</td><td>{{ pasien.no_rm }}</td></tr>
+        <tr><td class="label">Nama Pasien</td><td>:</td><td><strong>{{ pasien.nama_lengkap }}</strong></td></tr>
+        <tr><td class="label">Tanggal Lahir</td><td>:</td><td>{{ pasien.tanggal_lahir|date:"d/m/Y" }}</td></tr>
+        <tr><td class="label">Penjamin</td><td>:</td><td>{{ kunjungan.get_penjamin_display }}</td></tr>
+        <tr><td class="label">DPJP</td><td>:</td><td>{{ kunjungan.dpjp|default:"-" }}</td></tr>
+    </table>
+
+    <h4 style="margin: 14px 0 4px; border-bottom:1px solid #ccc; padding-bottom:3px;">Materi Edukasi Terstruktur (matriks S8-L2-02)</h4>
+    <table class="check">
+        <thead>
+            <tr><th style="width:36px;">No</th><th>Materi</th><th style="width:120px;">Status</th></tr>
+        </thead>
+        <tbody>
+            {% for item in proof.materi %}
+            <tr>
+                <td>{{ forloop.counter }}</td>
+                <td>{{ item.label }}</td>
+                <td>
+                    {% if item.given %}<span class="badge badge--yes">Diberikan</span>
+                    {% else %}<span class="badge badge--no">Belum diberikan</span>{% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% if not proof.edukasi_lengkap %}
+    <p class="note"><strong>Catatan:</strong> tidak seluruh materi matriks dicatat diberikan pada episode ini.</p>
+    {% endif %}
+
+    <h4 style="margin: 14px 0 4px; border-bottom:1px solid #ccc; padding-bottom:3px;">Catatan Edukasi</h4>
+    <p>{{ proof.catatan|default:"-"|linebreaksbr }}</p>
+
+    <div class="ttd-row">
+        <div>
+            <div>Penerima edukasi (pasien/keluarga)</div>
+            <div class="line">{{ proof.penerima }}</div>
+            <div style="font-size:8.5pt;">Dikonfirmasi {{ proof.cap_waktu|date:"d/m/Y H:i" }}</div>
+        </div>
+        <div>
+            <div>Edukator</div>
+            <div class="line">{{ proof.edukator_nama }}</div>
+            <div style="font-size:8.5pt;">{{ proof.edukator_profesi|default:"Petugas kesehatan" }} — dicatat {{ proof.cap_waktu|date:"d/m/Y H:i" }}</div>
+        </div>
+    </div>
+
+    <div style="text-align:center; margin-top:26px; font-size:8pt; color:#666;">
+        Bukti ini sah sebagai dokumen Bukti KE: tanda tangan diwakili nama kedua pihak dan cap waktu elektronik sistem ARIMA.
+    </div>
+</body>
+</html>

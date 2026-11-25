@@ -196,6 +196,19 @@ def apply_disposition(visit, user, values):
     visit.save()
 
 
+def _planned_kontrol(visit):
+    """Tanggal kontrol yang sudah diterbitkan Langkah 8 (F5.6), bila ada.
+
+    ``discharge_patient`` memakai ``update_or_create`` sehingga kolom
+    ``jadwal_kontrol`` akan dikosongkan bila form finalisasi tidak mengisinya.
+    SKDP yang sudah terbit tidak boleh hilang karena itu; tanggal rencananya
+    dipertahankan sampai ada nilai pengganti.
+    """
+    record = getattr(visit, 'discharge', None)
+    if record is None or not record.skdp_nomor:
+        return None
+    return record.jadwal_kontrol
+
 def _finalize_rajal(visit, workflow, user, data):
     """Tutup episode rawat jalan jantung: DPJP-only, kondisi akhir dari langkah 10."""
     require_dpjp(user, visit)
@@ -212,7 +225,8 @@ def _finalize_rajal(visit, workflow, user, data):
     if kondisi not in KONDISI_AKHIR_CHOICES:
         raise WorkflowValidation({'finalisasi': ['Kondisi akhir rawat jalan wajib dipilih pada langkah 10.']})
     visit.discharge_patient(kondisi=kondisi, resume=values['resume'], user=user,
-                            edukasi=values['edukasi'], obat=values['obat'], kontrol=values['kontrol'])
+                            edukasi=values['edukasi'], obat=values['obat'],
+                            kontrol=values['kontrol'] or _planned_kontrol(visit))
     record = visit.discharge
     record.status_clearance = 'PROSES'
     record.save(update_fields=['status_clearance'])

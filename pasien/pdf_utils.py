@@ -286,3 +286,136 @@ def generate_resume_pdf(kunjungan_pk: int) -> bytes:
 
     doc.build(story)
     return buf.getvalue()
+
+# ── Bukti Edukasi Kardio (F5.5) ───────────────────────────────────────────────
+def generate_edukasi_kardio_pdf(kunjungan_pk: int) -> bytes:
+    """PDF bukti edukasi terstruktur Langkah 8 (matriks S8-L2-02).
+
+    Isi diambil dari ``pasien.services.edukasi_kardio.edukasi_proof`` — sumber
+    yang sama dengan halaman cetak — sehingga dua ekspor tidak dapat berbeda.
+    Tanda tangan diwakili nama kedua pihak + cap waktu elektronik; tidak ada
+    gambar tanda tangan yang dikarang.
+    """
+    from pasien.models import IgdAssessmentWorkflow, KunjunganPasien
+    from pasien.services.edukasi_kardio import edukasi_proof
+    from pasien.workflow_schemas import EDUKASI_KARDIO_CHOICES, EDUKASI_KARDIO_LABELS
+
+    k = KunjunganPasien.objects.select_related('pasien').get(pk=kunjungan_pk)
+    workflow = IgdAssessmentWorkflow.objects.filter(kunjungan=k).first()
+    proof = edukasi_proof(k, workflow)
+    p = proof['pasien']
+
+    buf = BytesIO()
+    doc = SimpleDocTemplate(
+        buf, pagesize=A4,
+        leftMargin=20 * mm, rightMargin=20 * mm,
+        topMargin=18 * mm, bottomMargin=18 * mm,
+    )
+    styles = {
+        'hospital': _style('hospital', fontName='Helvetica-Bold', fontSize=16,
+                           textColor=TEAL, alignment=TA_CENTER, spaceAfter=2),
+        'subtitle': _style('subtitle', fontName='Helvetica-Bold', fontSize=10,
+                           textColor=DARK, alignment=TA_CENTER, spaceAfter=1),
+        'sub2': _style('sub2', fontName='Helvetica', fontSize=8,
+                       textColor=MUTED, alignment=TA_CENTER),
+        'sec_head': _style('sec_head', fontName='Helvetica-Bold', fontSize=9,
+                           textColor=WHITE),
+        'label': _style('label', fontName='Helvetica-Bold', fontSize=8.5,
+                        textColor=MUTED),
+        'value': _style('value', fontName='Helvetica', fontSize=8.5,
+                        textColor=DARK),
+        'footer': _style('footer', fontName='Helvetica', fontSize=7.5,
+                         textColor=MUTED, alignment=TA_CENTER),
+        'footer_r': _style('footer_r', fontName='Helvetica', fontSize=7.5,
+                           textColor=MUTED, alignment=TA_RIGHT),
+    }
+    SP = lambda n=4: Spacer(1, n * mm)
+    cap = proof['cap_waktu'].strftime('%d/%m/%Y %H:%M')
+
+    story = []
+    story.append(Paragraph('RS MonsisKami', styles['hospital']))
+    story.append(Paragraph('BUKTI EDUKASI PASIEN & KELUARGA', styles['subtitle']))
+    story.append(Paragraph(
+        f'Poli Jantung &nbsp;|&nbsp; No. Kunjungan: <b>{k.no_kunjungan}</b>'
+        f' &nbsp;|&nbsp; Cap waktu: <b>{cap}</b>',
+        styles['sub2']
+    ))
+    story.append(HRFlowable(width='100%', thickness=1.2, color=TEAL, spaceAfter=6))
+
+    story.append(_section_header('1. IDENTITAS', styles))
+    story.append(_kv_table([
+        ('No. Rekam Medis', p.no_rm),
+        ('Nama Pasien', p.nama_lengkap),
+        ('Tanggal Lahir', _fmt_date(p.tanggal_lahir)),
+        ('Penjamin', k.get_penjamin_display()),
+        ('DPJP', k.dpjp or '-'),
+    ], styles))
+    story.append(SP(3))
+
+    story.append(_section_header('2. MATERI EDUKASI TERSTRUKTUR', styles))
+    rows = [[
+        Paragraph('<b>No</b>', styles['label']),
+        Paragraph('<b>Materi (matriks S8-L2-02)</b>', styles['label']),
+        Paragraph('<b>Status</b>', styles['label']),
+    ]]
+    for index, code in enumerate(EDUKASI_KARDIO_CHOICES, start=1):
+        given = any(item['code'] == code for item in proof['edukasi'])
+        rows.append([
+            Paragraph(str(index), styles['value']),
+            Paragraph(EDUKASI_KARDIO_LABELS[code], styles['value']),
+            Paragraph('Diberikan' if given else 'Belum diberikan', styles['value']),
+        ])
+    table = Table(rows, colWidths=[12 * mm, 118 * mm, 35 * mm])
+    table.setStyle(TableStyle([
+        ('BOX', (0, 0), (-1, -1), 0.5, MUTED),
+        ('INNERGRID', (0, 0), (-1, -1), 0.25, colors.HexColor('#e2e8f0')),
+        ('BACKGROUND', (0, 0), (-1, 0), LIGHT_BG),
+        ('TOPPADDING', (0, 0), (-1, -1), 3),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 3),
+        ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+    ]))
+    story.append(table)
+    if not proof['edukasi_lengkap']:
+        story.append(SP(2))
+        story.append(Paragraph(
+            '<b>Catatan:</b> tidak seluruh materi matriks dicatat diberikan pada episode ini.',
+            styles['value']
+        ))
+    story.append(SP(3))
+
+    story.append(_section_header('3. CATATAN EDUKASI', styles))
+    story.append(_text_box(proof['catatan'] or '-', styles))
+    story.append(SP(6))
+
+    story.append(_section_header('4. TANDA TANGAN', styles))
+    sign_data = [[
+        Paragraph(
+            f'Penerima edukasi (pasien/keluarga)<br/><br/><br/>'
+            f'<b>({proof["penerima"]})</b><br/>Dikonfirmasi pada {cap}',
+            styles['footer']
+        ),
+        Paragraph(
+            f'Edukator<br/><br/><br/>'
+            f'<b>({proof["edukator_nama"]})</b><br/>'
+            f'{proof["edukator_profesi"] or "Petugas kesehatan"}<br/>'
+            f'Dicatat pada {cap}',
+            styles['footer_r']
+        ),
+    ]]
+    sign = Table(sign_data, colWidths=[82 * mm, 83 * mm])
+    sign.setStyle(TableStyle([
+        ('BOX', (0, 0), (-1, -1), 0.5, MUTED),
+        ('INNERGRID', (0, 0), (-1, -1), 0.25, colors.HexColor('#e2e8f0')),
+        ('VALIGN', (0, 0), (-1, -1), 'BOTTOM'),
+        ('TOPPADDING', (0, 0), (-1, -1), 5),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 5),
+    ]))
+    story.append(sign)
+    story.append(SP(3))
+    story.append(Paragraph(
+        'Bukti ini sah sebagai dokumen Bukti KE: tanda tangan diwakili nama kedua pihak '
+        'dan cap waktu elektronik pencatatan sistem ARIMA.',
+        styles['footer']
+    ))
+    doc.build(story)
+    return buf.getvalue()
