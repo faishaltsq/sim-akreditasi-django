@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <title>Informed Consent — {{ pasien.nama_lengkap }}</title>
+    <style>
+        @page { size: A4; margin: 15mm 20mm; }
+        body { font-family: Arial, Helvetica, sans-serif; font-size: 10pt; color: #000; margin: 0; padding: 20px; background: #fff; }
+        .header { text-align: center; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 2px solid #000; }
+        .header h2 { margin: 0; font-size: 14pt; }
+        .header p { margin: 4px 0 0; font-size: 9pt; color: #444; }
+        table.info { width: 100%; border-collapse: collapse; margin: 8px 0; }
+        table.info td { padding: 4px 8px; vertical-align: top; }
+        table.info .label { width: 190px; font-weight: bold; }
+        .body-text { margin: 12px 0; line-height: 1.5; }
+        .ttd-row { display: flex; justify-content: space-between; margin-top: 36px; }
+        .ttd-row div { text-align: center; width: 45%; }
+        .ttd-row .line { margin-top: 56px; border-top: 1px solid #000; padding-top: 4px; }
+        @media print { .no-print { display: none !important; } }
+    </style>
+</head>
+<body>
+    <div class="no-print" style="background:#e0f2fe; padding:8px; text-align:center; margin-bottom:10px; font-size:11px;">
+        <strong>Preview Formulir Informed Consent (S9-L2-03)</strong>
+        <button onclick="window.print()" style="margin-left:10px; padding:3px 12px; cursor:pointer;">Cetak</button>
+        <button onclick="window.close()" style="margin-left:5px; padding:3px 12px; cursor:pointer;">Tutup</button>
+    </div>
+
+    <div class="header">
+        <h2>FORMULIR PERSETUJUAN TINDAKAN (INFORMED CONSENT)</h2>
+        <p>Poli Jantung — No. Kunjungan <strong>{{ kunjungan.no_kunjungan }}</strong></p>
+    </div>
+
+    <table class="info">
+        <tr><td class="label">Nama pasien</td><td>{{ patient.nama }}</td></tr>
+        <tr><td class="label">No. Rekam Medis</td><td>{{ patient.no_rm }}</td></tr>
+        <tr><td class="label">Tanggal lahir</td><td>{{ patient.tanggal_lahir|default:"—" }}</td></tr>
+        <tr><td class="label">Alamat</td><td>{{ patient.alamat|default:"—" }}</td></tr>
+        <tr>
+            <td class="label">Jenis tindakan</td>
+            <td>
+                {% if selected_action %}
+                {{ selected_action.kode }} — {{ selected_action.nama }}
+                {% elif actions %}
+                {% for action in actions %}{{ action.kode }} — {{ action.nama }}{% if not forloop.last %}; {% endif %}{% endfor %}
+                {% else %}
+                Belum ada tindakan tercatat pada episode ini.
+                {% endif %}
+            </td>
+        </tr>
+        <tr><td class="label">Penjamin</td><td>{{ kunjungan.get_penjamin_display }}</td></tr>
+    </table>
+
+    <p class="body-text">
+        Saya yang bertanda tangan di bawah ini menyatakan telah menerima penjelasan
+        mengenai tujuan, tata cara, manfaat, dan risiko tindakan tersebut di atas,
+        serta berhak bertanya dan menarik persetujuan sebelum tindakan dimulai.
+    </p>
+
+    <div class="ttd-row">
+        <div>
+            <div class="line">Pasien / Wali</div>
+        </div>
+        <div>
+            <div class="line">Saksi Petugas</div>
+        </div>
+    </div>
+</body>
+</html>

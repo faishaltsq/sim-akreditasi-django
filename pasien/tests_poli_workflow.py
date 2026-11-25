@@ -430,7 +430,16 @@ class PoliFinalizationTest(PoliFixture):
 
 @override_settings(POLI_JANTUNG_WORKFLOW_ENABLED=True, STORAGES=TEST_STORAGES)
 class LegacyWriterGateTest(PoliFixture):
-    """F1.9 — gate urutan rilis: penunjang ditutup, CPPT/SOAP tetap terbuka."""
+    """Gate urutan rilis F1.9 → F6.1.
+
+    F1.9 menutup penunjang tetapi **membiarkan** CPPT/SOAP legacy terbuka
+    supaya episode POLI-JANTUNG tidak kehilangan satu-satunya jalur pencatatan
+    sebelum pengganti profesionalnya ada (ADR-3). F6.1 mencabut pengecualian
+    itu dalam perubahan yang sama dengan longgarnya ``_writable``, jadi ketiga
+    penulis legacy kini ditutup 409 untuk episode ber-workflow RAJAL_JANTUNG.
+    Episode tanpa workflow tetap terbuka — guard hanya berlaku bila workflow
+    ada, persis seperti sebelumnya.
+    """
 
     def setUp(self):
         self.client.force_login(self.nurse)
@@ -444,21 +453,23 @@ class LegacyWriterGateTest(PoliFixture):
         self.assertEqual(response.status_code, 409)
         self.assertFalse(self.visit.order_penunjang.exists())
 
-    def test_cppt_tambah_still_writes_one_row(self):
+    def test_cppt_tambah_is_closed_after_f6_1(self):
+        """F6.1: penulis legacy CPPT kini 409 — satu baris pun tidak tertulis."""
         response = self.client.post(
             reverse('pasien:cppt_tambah', kwargs={'kunjungan_pk': self.visit.pk}),
             data={'profesi': 'DOKTER', 'nama_ppa': 'dr. Uji', 'tanggal': timezone.now().isoformat(),
                   'subjektif': 'Nyeri dada', 'objektif': 'TD 128/82', 'asesmen': 'Angina',
                   'plan': 'EKG'})
-        self.assertEqual(response.status_code, 302)
-        self.assertEqual(CPPT.objects.filter(kunjungan=self.visit).count(), 1)
+        self.assertEqual(response.status_code, 409)
+        self.assertFalse(CPPT.objects.filter(kunjungan=self.visit).exists())
 
-    def test_rajal_soap_simpan_still_writes_one_row(self):
+    def test_rajal_soap_simpan_is_closed_after_f6_1(self):
+        """F6.1: view SOAP legacy kini masuk daftar guard dan menolak 409."""
         response = self.client.post(
             reverse('pasien:rajal_soap_simpan', args=[self.visit.pk]),
             data={'subjektif': 'Kontrol', 'objektif': 'Baik', 'asesmen': 'Stabil', 'plan': 'Lanjut obat'})
-        self.assertEqual(response.status_code, 302)
-        self.assertEqual(CPPT.objects.filter(kunjungan=self.visit).count(), 1)
+        self.assertEqual(response.status_code, 409)
+        self.assertFalse(CPPT.objects.filter(kunjungan=self.visit).exists())
 
     def test_visit_without_workflow_keeps_all_legacy_writers_open(self):
         plain = self.make_visit('QA-POLI-PLAIN')

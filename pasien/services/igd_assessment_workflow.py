@@ -40,7 +40,15 @@ class WorkflowValidation(ValueError):
 
 
 def resolve_service_line(visit, workflow, service_line=None):
-    """Tentukan jalur layanan tanpa menebak: eksplisit > workflow > IGD."""
+    """Tentukan jalur layanan tanpa menebak: eksplisit > workflow > episode > IGD.
+
+    Langkah terakhir (F6.1) ada karena episode POLI-JANTUNG dapat belum punya
+    workflow saat operasi pertama dijalankan — ``perform_action`` membuatnya
+    sendiri. Tanpa turunan ini, ``require_scope`` (yang tidak membawa workflow)
+    akan memeriksa episode rawat jalan sebagai IGD dan menolaknya karena modul
+    IGD. Episode IGD dan rawat jalan di unit lain tetap menghasilkan ``IGD``
+    persis seperti sebelumnya.
+    """
     if service_line is not None:
         if service_line not in STEP_SCHEMAS:
             raise PermissionDenied('Jalur layanan tidak dikenal.')
@@ -49,6 +57,9 @@ def resolve_service_line(visit, workflow, service_line=None):
         return service_line
     if workflow is not None:
         return workflow.service_line
+    if (visit is not None and visit.jenis_kunjungan == 'RAJAL'
+            and visit.unit_kerja_id and visit.unit_kerja.code == POLI_JANTUNG_UNIT_CODE):
+        return RAJAL_JANTUNG_SERVICE_LINE
     return IGD_SERVICE_LINE
 
 def require_rajal_jantung_episode(visit):
@@ -368,17 +379,15 @@ def legacy_workflow_guard(view):
                 authorize_visit(visit,request.user,workflow=workflow)
                 return JsonResponse({'success':False,'error':'Gunakan pelaksanaan dan CPPT profesional yang tervalidasi.'},status=409)
             if workflow:
-                # F1.9: episode POLI-JANTUNG ber-workflow tetap boleh menulis CPPT lewat
-                # penulis lama sampai F6.1 menyediakan CPPT profesional (ADR-3).
-                # ``rajal_soap_simpan`` hari ini tidak termasuk _WORKFLOW_GUARDED_VIEWS
-                # sehingga sudah terbuka; ia masuk daftar guard di F6.1, saat
-                # pengecualian ini dicabut bersamaan.
+                # F6.1 (ADR-3): pengecualian F1.9 sudah dicabut. Sejak CPPT
+                # profesional tersedia untuk RAJAL_JANTUNG, penulis lama
+                # (`cppt_tambah`, `rajal_soap_simpan`) ditutup 409 agar catatan
+                # rajal tidak bercabang antara status LEGACY dan SIGNED.
                 if workflow.service_line == RAJAL_JANTUNG_SERVICE_LINE and visit.jenis_kunjungan == 'RAJAL':
-                    if view.__name__ == 'cppt_tambah':
-                        authorize_visit(visit, request.user, workflow=workflow)
-                        return view(request, *args, **kwargs)
+                    authorize_visit(visit, request.user, workflow=workflow)
+                    if view.__name__ in ('cppt_tambah', 'rajal_soap_simpan'):
+                        return JsonResponse({'success': False, 'error': 'CPPT POLI-JANTUNG wajib melalui jalur CPPT profesional (create/save/sign) yang tervalidasi.'}, status=409)
                     if view.__name__ in ('order_penunjang_buat', 'order_lab_create'):
-                        authorize_visit(visit, request.user, workflow=workflow)
                         return JsonResponse({'success': False, 'error': 'Order penunjang POLI-JANTUNG wajib melalui jalur penunjang berversi.'}, status=409)
                 later_care = {'cppt_tambah','order_penunjang_buat','order_lab_create','discharge_proses','kunjungan_disposisi','asesmen_lampiran_upload'}
                 if workflow.status == 'FINAL' and visit.jenis_kunjungan in ('RANAP','RAJAL') and view.__name__ in later_care:

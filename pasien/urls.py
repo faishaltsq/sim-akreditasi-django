@@ -23,6 +23,12 @@ urlpatterns = [
     path('kunjungan/<int:pk>/asesmen-poli/aksi/', poli_workflow_views.poli_workflow_action, name='poli_workflow_action'),
     path('kunjungan/<int:pk>/asesmen-poli/edukasi/pdf/', poli_workflow_views.poli_edukasi_pdf, name='poli_edukasi_pdf'),
     path('kunjungan/<int:pk>/asesmen-poli/edukasi/cetak/', poli_workflow_views.poli_edukasi_cetak, name='poli_edukasi_cetak'),
+    # F6.6/F6.7: tindakan poliklinik ber-tarif dan pembatalan beralasan.
+    path('kunjungan/<int:pk>/asesmen-poli/tindakan/', poli_workflow_views.poli_tindakan_tambah, name='poli_tindakan_tambah'),
+    path('kunjungan/<int:pk>/asesmen-poli/tindakan/void/', poli_workflow_views.poli_tindakan_void, name='poli_tindakan_void'),
+    # F6.8: unggahan dokumen pendukung panel kanan (batas sama dengan IGD).
+    path('kunjungan/<int:pk>/asesmen-poli/lampiran/', poli_workflow_views.poli_lampiran_upload, name='poli_lampiran_upload'),
+    path('kunjungan/<int:pk>/asesmen-poli/consent/cetak/', poli_workflow_views.poli_consent_cetak, name='poli_consent_cetak'),
     path('kunjungan/<int:pk>/asesmen-igd/langkah/<int:step>/draft/', igd_workflow_views.igd_workflow_draft, name='igd_workflow_draft'),
     path('kunjungan/<int:pk>/asesmen-igd/aksi/', igd_workflow_views.igd_workflow_action, name='igd_workflow_action'),
     path('kunjungan/<int:pk>/asesmen-igd/profesional/katalog/', professional_views.igd_professional_catalogue, name='igd_professional_catalogue'),
@@ -158,6 +164,10 @@ _WORKFLOW_GUARDED_VIEWS = {
     'cetak_resume_igd', 'cetak_asesmen_medis_igd', 'asesmen_detail',
     'kunjungan_disposisi', 'discharge_proses', 'igd_status_update', 'pendaftaran_route',
     'cppt_tambah', 'igd_cppt_quick_add', 'order_penunjang_buat', 'order_lab_create',
+    # F6.1 (ADR-3): penulis SOAP rawat jalan ikut dijaga. Sebelumnya view ini
+    # tidak ada di daftar sehingga episode POLI-JANTUNG masih dapat menulis
+    # CPPT lewat jalur lama.
+    'rajal_soap_simpan',
     'kunjungan_asesmen_awal', 'igd_asesmen_awal_save', 'igd_asesmen_medis_save',
     'igd_asesmen_copy_prev', 'asesmen_hapus', 'igd_ttv_update', 'pendaftaran_ttv_simpan',
     'igd_kunjungan_edit', 'igd_kunjungan_batal', 'kunjungan_batal',

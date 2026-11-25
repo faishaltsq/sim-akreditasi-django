@@ -323,6 +323,249 @@
     </section>
     {% endif %}
 
+    {% if step9 %}
+    <section aria-labelledby="poli-cppt-heading" data-poli-cppt>
+      <h3 id="poli-cppt-heading">CPPT multiprofesi</h3>
+
+      <div class="poli-cppt-list">
+        {% for note in step9.professional_notes %}
+        <article class="poli-cppt-note" data-poli-note="{{ note.id }}">
+          <header>
+            <strong>{{ note.author_name }}</strong>
+            <span class="badge bg-secondary">{{ note.format_code }}</span>
+            <span class="badge {% if note.status == 'SIGNED' %}bg-success{% else %}bg-info text-dark{% endif %}">{{ note.status }}</span>
+            {% if note.has_tte %}<span class="badge bg-dark">TTE</span>{% endif %}
+            <small class="text-muted d-block">waktu aktual {{ note.actual_at }} · dicatat {{ note.recorded_at }}</small>
+          </header>
+          {% if note.event_log %}<p class="poli-hint">Log kejadian (bukan asesmen klinis): {{ note.event_log }}</p>{% endif %}
+          <dl>
+            {% for field in note.fields %}
+            <dt>{{ field.label }}</dt>
+            <dd style="white-space:pre-wrap;overflow-wrap:anywhere">{{ field.value }}</dd>
+            {% endfor %}
+            {% if note.chips %}
+            <dt>Keluhan terpilih</dt>
+            <dd>{% for chip in note.chips %}<span class="badge bg-light text-dark">{{ chip.label }}</span> {% endfor %}</dd>
+            {% endif %}
+            {% if note.kepatuhan_label %}
+            <dt>Kepatuhan terapi</dt>
+            <dd>{{ note.kepatuhan_label }}</dd>
+            {% endif %}
+            {% if note.kepatuhan_obat %}
+            <dt>Penandaan per obat</dt>
+            <dd>
+              <ul class="mb-0 ps-3">
+                {% for key, row in note.kepatuhan_obat.items %}
+                <li>Obat #{{ key }} — {{ row.status }}{% if row.catatan %} ({{ row.catatan }}){% endif %}</li>
+                {% endfor %}
+              </ul>
+            </dd>
+            {% endif %}
+            {% if note.verification_state %}
+            <dt>Verifikasi DPJP ≤24 jam</dt>
+            <dd>
+              <span class="badge {% if note.verification_state == 'TEPAT' %}bg-success{% elif note.verification_state == 'TERLAMBAT' %}bg-danger{% else %}bg-warning text-dark{% endif %}">
+                {{ note.verification_state_label }}
+              </span>
+              {% if note.verification %}oleh {{ note.verification.verifier_name }} pada {{ note.verification.at }}{% endif %}
+            </dd>
+            {% endif %}
+          </dl>
+          {% if note.can_verify %}
+          <button type="button" class="btn btn-sm btn-outline-primary"
+                  data-poli-verify="{{ note.id }}" data-note-version="{{ note.version }}">
+            Verifikasi sebagai DPJP
+          </button>
+          {% endif %}
+        </article>
+        {% empty %}
+        <p>Belum ada catatan CPPT profesional.</p>
+        {% endfor %}
+      </div>
+
+      {% if step9.professional_can_edit and step9.can_fill_step9 %}
+      <form data-poli-cppt-form method="post">
+        {% csrf_token %}
+        <div class="poli-field">
+          <label for="poli-cppt-service">Layanan / profesi</label>
+          <select id="poli-cppt-service" data-cppt-service>
+            <option value="">— Pilih layanan —</option>
+            {% for service in step9.cppt_services %}
+            <option value="{{ service.id }}" data-format="{{ service.note_format }}">{{ service.code }} — {{ service.name }} ({{ service.group }})</option>
+            {% endfor %}
+          </select>
+          {% if not step9.cppt_services %}
+          <p class="poli-hint">
+            Akun ini belum punya SPK/pemetaan layanan pada unit episode. Catatan
+            tidak dapat dibuat sampai kewenangan efektif tersedia.
+          </p>
+          {% endif %}
+        </div>
+
+        <fieldset class="poli-multi">
+          <legend>S — Keluhan (matriks S9-L1-09)</legend>
+          {% for chip in step9.keluhan_choices %}
+          <label class="poli-check">
+            <input type="checkbox" name="keluhan_chips" value="{{ chip.code }}" data-cppt-chip>
+            {{ chip.label }}
+          </label>
+          {% endfor %}
+        </fieldset>
+
+        <div class="poli-field">
+          <label for="poli-cppt-subjektif">S — Subjektif</label>
+          <textarea id="poli-cppt-subjektif" data-cppt-field="subjektif" maxlength="10000"></textarea>
+        </div>
+
+        <div class="poli-field">
+          <label for="poli-cppt-kepatuhan">Kepatuhan terapi (matriks S9-L1-10)</label>
+          <select id="poli-cppt-kepatuhan" data-cppt-compliance>
+            <option value="">— Pilih —</option>
+            {% for item in step9.kepatuhan_choices %}
+            <option value="{{ item.code }}">{{ item.label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="poli-field">
+          <label>Obat aktif pasien</label>
+          {% if step9.active_drugs %}
+          <ul class="poli-doc-list" data-cppt-drugs>
+            {% for drug in step9.active_drugs %}
+            <li data-drug-id="{{ drug.id }}">
+              <strong>{{ drug.nama }}</strong> <small class="text-muted">{{ drug.dosis }} · {{ drug.aturan_pakai }}</small>
+              <select data-drug-status aria-label="Kepatuhan {{ drug.nama }}">
+                <option value="">— Sesuai resep —</option>
+                {% for item in step9.kepatuhan_choices %}
+                <option value="{{ item.code }}">{{ item.label }}</option>
+                {% endfor %}
+              </select>
+              <input type="text" data-drug-note maxlength="300" placeholder="Catatan ketidaksesuaian dosis/penghentian">
+            </li>
+            {% endfor %}
+          </ul>
+          {% else %}
+          <p class="poli-hint">
+            {{ step9.active_drugs_reason }} Daftar obat aktif kosong, jadi penandaan
+            per obat tidak tersedia; status kepatuhan tetap dapat dicatat.
+          </p>
+          {% endif %}
+        </div>
+
+        <div class="poli-field">
+          <label for="poli-cppt-objektif">O — Objektif (terisi otomatis, dapat disunting)</label>
+          <textarea id="poli-cppt-objektif" data-cppt-field="objektif" maxlength="10000">{{ step9.cppt_objective_default }}</textarea>
+          <p class="poli-hint">
+            Sumber: {{ step9.cppt_vitals.source }}.
+            {% if step9.cppt_vitals.map is not None %}MAP {{ step9.cppt_vitals.map }} mmHg.{% endif %}
+            {{ step9.cppt_investigations|length }} hasil penunjang terakhir, {{ step9.cppt_markers|length }} penanda anatomi.
+          </p>
+        </div>
+
+        <div class="poli-field">
+          <label for="poli-cppt-asesmen">A — Asesmen</label>
+          <textarea id="poli-cppt-asesmen" data-cppt-field="asesmen" maxlength="10000"></textarea>
+        </div>
+
+        <div class="poli-field">
+          <label for="poli-cppt-plan">P — Rencana</label>
+          <textarea id="poli-cppt-plan" data-cppt-field="plan" maxlength="10000"></textarea>
+        </div>
+
+        <fieldset class="poli-multi" data-cppt-tte>
+          <legend>TTE — tanda tangan (matriks S9-L1-05/S9-L1-08)</legend>
+          <p class="poli-hint">
+            Tanda tangan elektronik di sini adalah goresan kanvas ditambah konfirmasi
+            kredensial akun — bukan PIN dan bukan biometrik.
+          </p>
+          <canvas width="420" height="140" data-cppt-canvas aria-label="Kanvas tanda tangan"></canvas>
+          <div class="poli-actions">
+            <button type="button" class="btn btn-sm btn-outline-secondary" data-cppt-clear>Bersihkan</button>
+          </div>
+          <label class="poli-check">
+            <input type="checkbox" data-cppt-credential>
+            Saya mengonfirmasi kredensial akun ini sebagai penanda tangan catatan.
+          </label>
+        </fieldset>
+
+        <div class="poli-actions">
+          <button type="button" class="btn btn-primary" data-cppt-save>Simpan draft CPPT</button>
+          <button type="button" class="btn btn-success" data-cppt-sign>Tanda tangani &amp; simpan</button>
+          <span class="poli-status" data-poli-status role="status" aria-live="polite"></span>
+        </div>
+      </form>
+      {% endif %}
+    </section>
+
+    <section aria-labelledby="poli-tindakan-heading" data-poli-tindakan
+             data-add-url="{% url 'pasien:poli_tindakan_tambah' kunjungan.pk %}"
+             data-void-url="{% url 'pasien:poli_tindakan_void' kunjungan.pk %}">
+      <h3 id="poli-tindakan-heading">Tindakan poliklinik (matriks S9-L2-01/S9-L2-02)</h3>
+      {% if step9.tindakan_options %}
+      <p class="poli-hint">
+        Nominal mengikuti penjamin episode ({{ kunjungan.get_penjamin_display }});
+        EP ditautkan otomatis dari aturan per kode ICD-9-CM.
+      </p>
+      {% else %}
+      <p class="poli-hint">
+        Belum ada Master Tindakan Poli untuk kelompok layanan episode ini; tindakan
+        tidak dapat ditambahkan dan tidak ada tagihan yang dibuat.
+      </p>
+      {% endif %}
+      <table class="poli-rx-table">
+        <thead>
+          <tr><th>Kode</th><th>Tindakan</th><th>Pelaksana</th><th>Qty</th><th>Tarif acuan</th><th>EP</th><th>Status</th><th></th></tr>
+        </thead>
+        <tbody>
+          {% for line in step9.tindakan_lines %}
+          <tr data-tindakan-id="{{ line.id }}">
+            <td>{{ line.kode }}</td>
+            <td>{{ line.nama }}</td>
+            <td>{{ line.execution_team|default:"—" }}</td>
+            <td>{{ line.quantity }}</td>
+            <td>{% if line.tarif_acuan %}Rp {{ line.tarif_acuan }}{% else %}belum ditetapkan{% endif %}</td>
+            <td>{{ line.standard_item__code|default:"—" }} · {{ line.ep_status }}</td>
+            <td>{% if line.financial_status == 'VOID' %}<strong>VOID</strong>{% else %}{{ line.execution_status }}{% endif %}</td>
+            <td>
+              {% if step9.professional_can_void and line.billing_item_id and line.financial_status != 'VOID' %}
+              <button type="button" class="btn btn-sm btn-outline-danger" data-tindakan-void="{{ line.id }}">Batalkan tagihan</button>
+              {% endif %}
+            </td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="8">Belum ada tindakan tercatat.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+
+      {% if step9.can_fill_step9 and step9.tindakan_options %}
+      <form data-tindakan-form class="poli-dx-form">
+        {% csrf_token %}
+        <label for="poli-tindakan-kode">Tindakan</label>
+        <select id="poli-tindakan-kode" data-tindakan-code>
+          <option value="">— Pilih tindakan —</option>
+          {% for option in step9.tindakan_options %}
+          <option value="{{ option.kode }}">{{ option.kode }} — {{ option.nama }} (Rp {{ option.nominal }})</option>
+          {% endfor %}
+        </select>
+        <label for="poli-tindakan-pelaksana">Pelaksana</label>
+        <select id="poli-tindakan-pelaksana" data-tindakan-pelaksana>
+          {% for item in step9.pelaksana_choices %}
+          <option value="{{ item.code }}">{{ item.label }}</option>
+          {% endfor %}
+        </select>
+        <label for="poli-tindakan-qty">Jumlah</label>
+        <input type="number" id="poli-tindakan-qty" data-tindakan-qty value="1" min="0.01" step="0.01">
+        <button type="submit" class="btn btn-sm btn-outline-primary">Tambah tindakan</button>
+        <span class="poli-status" data-poli-status role="status" aria-live="polite"></span>
+      </form>
+      {% for item in step9.pelaksana_unavailable %}
+      <p class="poli-hint">Pelaksana "{{ item.label }}" belum dapat dipilih: {{ item.reason }}</p>
+      {% endfor %}
+      {% endif %}
+    </section>
+    {% endif %}
+
     {% if can_finalize %}
     <section aria-labelledby="poli-final-heading">
       <h3 id="poli-final-heading">Penutupan episode</h3>
@@ -419,6 +662,9 @@
       </dd>
       {% endif %}
     </dl>
+    {% if step9 %}
+    {% include "pasien/_poli_right_panel.html" %}
+    {% endif %}
   </aside>
 </div>
 {% endblock %}
@@ -426,4 +672,5 @@
 {% block extra_js %}
 <script src="{% static 'js/poli-workflow.js' %}"></script>
 <script src="{% static 'js/poli-prescription.js' %}"></script>
+<script src="{% static 'js/poli-cppt.js' %}"></script>
 {% endblock %}

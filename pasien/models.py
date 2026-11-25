@@ -1075,6 +1075,16 @@ class CPPT(models.Model):
     asesmen        = models.TextField('A — Asesmen (Diagnosa)')
     plan           = models.TextField('P — Plan (Rencana)')
     verifikasi_dpjp = models.BooleanField('Terverifikasi DPJP', default=False)
+    #: F6.4 (S9-L1-05/S9-L1-08): goresan tanda tangan pada kanvas TTE, disimpan
+    #: sebagai data URL PNG/JPEG. Bukan PIN dan bukan biometrik — kanvas +
+    #: konfirmasi kredensial penanda tangan. ``ttd_hash`` adalah SHA-256 atas
+    #: byte gambar sehingga isi tanda tangan dapat dibuktikan tidak berubah.
+    ttd_image = models.TextField('Gambar TTE', blank=True, default='')
+    ttd_hash = models.CharField('SHA-256 gambar TTE', max_length=64, blank=True, default='')
+    #: F6.5: batas verifikasi DPJP (waktu tanda tangan + 24 jam). Status
+    #: TERLAMBAT **tidak** disimpan — ia dihitung dari kolom ini dibanding
+    #: ``VerifikasiCppt.performed_at`` (lihat ``professional_cppt.verification_state``).
+    verifikasi_due_at = models.DateTimeField('Batas verifikasi DPJP', null=True, blank=True)
     created_by = models.ForeignKey(User, null=True, blank=True, on_delete=models.SET_NULL, related_name='cppt_authored')
     created_at     = models.DateTimeField(auto_now_add=True)
 
@@ -1151,6 +1161,14 @@ class BillingItem(models.Model):
     def delete(self,*args,**kwargs):
         if self.professional_price_snapshot:
             raise ValidationError('Tagihan profesional dipertahankan sebagai riwayat.')
+        # F6.7: baris yang ditulis kode (tindakan/penunjang/pelaksanaan
+        # profesional) adalah bukti penagihan. Koreksi hanya lewat
+        # ``PembatalanTagihan``; penghapusan langsung ditolak. Penulis yang
+        # memiliki barisnya (rekonsiliasi ``sync_billing_tindakan``,
+        # ``penunjang_billing.release_order``) memakai queryset delete yang
+        # tidak melewati metode ini.
+        if self.sumber in ('TINDAKAN','PENUNJANG','PROFESI') and not kwargs.pop('reconcile',False):
+            raise ValidationError('Tagihan otomatis tidak boleh dihapus; gunakan pembatalan beralasan.')
         return super().delete(*args,**kwargs)
 
 

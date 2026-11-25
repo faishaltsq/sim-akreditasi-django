@@ -26,10 +26,17 @@ def _occurred(data):
     return value
 
 
+def _professional_rollout(visit,workflow):
+    """ADR-8: flag rilis mengikuti jalur layanan episode, bukan satu flag global."""
+    from .igd_assessment_workflow import RAJAL_JANTUNG_SERVICE_LINE, resolve_service_line
+    if resolve_service_line(visit,workflow)==RAJAL_JANTUNG_SERVICE_LINE:
+        return getattr(settings,'POLI_JANTUNG_WORKFLOW_ENABLED',False)
+    return getattr(settings,'IGD_PROFESSIONAL_CARE_ENABLED',False)
+
 def authorize_professional_operation(operation,visit,workflow,actor,data):
     from .professional_billing import void_authorized
     from .professional_cppt import _writable
-    if not getattr(settings,'IGD_PROFESSIONAL_CARE_ENABLED',False):raise PermissionDenied('Layanan profesional belum diaktifkan.')
+    if not _professional_rollout(visit,workflow):raise PermissionDenied('Layanan profesional belum diaktifkan.')
     require_scope(actor,visit);_writable(visit,workflow)
     if operation=='professional_void':
         line=TindakanAsesmen.objects.filter(kunjungan=visit,billing_item_id=data.get('billing_id'),professional_service__isnull=False).first()
@@ -97,10 +104,14 @@ def dispatch_professional(operation,visit,workflow,actor,data,request_id):
         service=_service(data);context=resolve_professional_context(actor,visit,service,at=timezone.now(),for_update=True)
         note=create_care_note(visit,workflow,actor,format_code=data.get('format_code'),payload=data.get('payload'),context=context)
         return {'cppt_id':note.pk,'note_version':note.version}
-    allowed={'note_id','note_version'}|({'payload'} if operation=='cppt_save' else {'payload','reason'} if operation=='cppt_correct' else set())
+    allowed={'note_id','note_version'}
+    if operation=='cppt_save':allowed|={'payload'}
+    elif operation=='cppt_correct':allowed|={'payload','reason'}
+    elif operation=='cppt_sign':allowed|={'ttd_image','credential_confirmed'}
     if set(data)-allowed:raise ValidationError('Field operasi CPPT tidak valid.')
     if operation=='cppt_save':return save_care_note(actor,data['note_id'],data['note_version'],data['payload'])
-    if operation=='cppt_sign':return sign_care_note(actor,data['note_id'],data['note_version'])
+    if operation=='cppt_sign':return sign_care_note(actor,data['note_id'],data['note_version'],
+        ttd_image=data.get('ttd_image',''),credential_confirmed=data.get('credential_confirmed') is True)
     if operation=='cppt_verify':return verify_cppt(actor,data['note_id'],data['note_version'],request_id)
     if operation=='cppt_correct':return correct_care_note(actor,data['note_id'],data['note_version'],data['payload'],data.get('reason'))
     raise ValidationError('Operasi profesional tidak dikenal.')

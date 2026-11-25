@@ -1,5 +1,6 @@
 from decimal import Decimal,ROUND_HALF_UP
 from django.core.exceptions import ValidationError,PermissionDenied
+from django.db import transaction
 from django.utils import timezone
 from pasien.models import BillingItem, PembatalanTagihan, TindakanAsesmen
 from .igd_assessment_workflow import WorkflowConflict
@@ -62,3 +63,50 @@ def void_professional_charge(actor,billing_id,expected_version,request_id,reason
     from .igd_actions import perform_action
     item=BillingItem.objects.get(pk=billing_id)
     return perform_action(item.kunjungan_id,actor,'professional_void',{'billing_id':item.pk,'reason':reason},expected_version,request_id)
+
+@transaction.atomic
+def void_tindakan_poli(actor, line_id, request_id, reason):
+    """F6.7 (S9-L2-01): batalkan tagihan tindakan poli beralasan — tanpa hapus.
+
+    Baris ``BillingItem`` tetap ada dengan ``is_void=True`` dan satu baris
+    ``PembatalanTagihan`` menjadi jejak audit. Wewenang koreksi memakai grant
+    ``VOID_UNPAID_CHARGE`` yang sama dengan tagihan profesional, sehingga hanya
+    ada satu jalur koreksi tagihan di episode ini.
+    """
+    from uuid import UUID
+    line = TindakanAsesmen.objects.select_for_update().filter(pk=line_id).first()
+    if line is None:
+        raise PermissionDenied('Baris tindakan tidak ditemukan.')
+    visit = line.kunjungan
+    void_authorized(actor, visit, None)
+    if not line.billing_item_id:
+        raise WorkflowConflict('Baris tindakan ini belum ditagihkan.')
+    item = BillingItem.objects.select_for_update().get(pk=line.billing_item_id, kunjungan=visit)
+    if item.sumber != 'TINDAKAN':
+        raise PermissionDenied('Tagihan bukan turunan baris tindakan.')
+    if not isinstance(reason, str) or not 5 <= len(reason.strip()) <= 2000:
+        raise ValidationError('Alasan koreksi wajib 5–2000 karakter.')
+    key = UUID(str(request_id))
+    existing = PembatalanTagihan.objects.filter(item=item).first()
+    if existing:
+        if existing.request_id != key:
+            raise WorkflowConflict('Tagihan ini sudah dibatalkan dengan permintaan lain.')
+        return {'void_id': existing.pk, 'billing_id': item.pk}
+    if item.is_void:
+        raise WorkflowConflict('Proyeksi void tanpa audit memerlukan rekonsiliasi.')
+    amount = (item.kuantitas * item.harga_satuan).quantize(Decimal('.01'), rounding=ROUND_HALF_UP)
+    record = PembatalanTagihan.objects.create(
+        item=item, action=line, actor=actor, amount=amount,
+        reason=reason.strip(), request_id=key,
+    )
+    item.is_void = True
+    item.save(professional_update=True, update_fields=['is_void'])
+    line.financial_status = 'VOID'
+    line.save(professional_update=True, update_fields=['financial_status'])
+    return {'void_id': record.pk, 'billing_id': item.pk}
+
+
+def hapus_tindakan_poli(actor, line_id):
+    """F6.7: penghapusan langsung selalu ditolak; arahkan ke void beralasan."""
+    from django.core.exceptions import ValidationError as _ValidationError
+    raise _ValidationError('Tindakan tidak boleh dihapus; gunakan pembatalan tagihan beralasan.')

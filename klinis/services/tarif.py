@@ -31,6 +31,14 @@ def _kelompok_for(kunjungan):
     return KL.objects.filter(kode=kunjungan.jenis_kunjungan.upper()).first()
 
 
+def kelompok_for(kunjungan):
+    """KelompokLayanan episode ini — nama publik dari ``_kelompok_for``.
+
+    Dipakai pemanggil yang perlu menyebut kelompoknya (mis. daftar Master
+    Tindakan Poli) tanpa menyalin aturan pencariannya.
+    """
+    return _kelompok_for(kunjungan)
+
 def resolve_detail(kunjungan, icd9_kode):
     """
     Versi lengkap dari resolve(): mengembalikan dict berisi nominal, baris master,

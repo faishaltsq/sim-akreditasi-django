@@ -345,6 +345,32 @@ INPUT_MODE_LABELS = {
 #: Mode yang belum punya penyedia pada rilis ini (F9).
 INPUT_MODE_UNAVAILABLE = ('AI',)
 
+#: F6.3 — matriks S9-L1-09 (quick-chips keluhan) dan S9-L1-10 (kepatuhan
+#: terapi), verbatim. Kode pendek disimpan; label dirender template.
+KELUHAN_CPPT_CHOICES = (
+    'SESAK_NAPAS', 'NYERI_DADA', 'ORTOPNEA', 'PND', 'BERDEBAR',
+    'EDEMA_TUNGKAI', 'PUSING_PRESINKOP',
+)
+KELUHAN_CPPT_LABELS = {
+    'SESAK_NAPAS': 'Sesak napas',
+    'NYERI_DADA': 'Nyeri dada',
+    'ORTOPNEA': 'Ortopnea',
+    'PND': 'PND (paroxysmal nocturnal dyspnea)',
+    'BERDEBAR': 'Berdebar',
+    'EDEMA_TUNGKAI': 'Edema tungkai',
+    'PUSING_PRESINKOP': 'Pusing / presinkop',
+}
+
+KEPATUHAN_TERAPI_CHOICES = (
+    'PATUH_PENUH', 'SEBAGIAN_TERLEWAT', 'MENGHENTIKAN_SENDIRI', 'BELUM_MEMULAI',
+)
+KEPATUHAN_TERAPI_LABELS = {
+    'PATUH_PENUH': 'Patuh penuh',
+    'SEBAGIAN_TERLEWAT': 'Sebagian terlewat',
+    'MENGHENTIKAN_SENDIRI': 'Menghentikan sendiri',
+    'BELUM_MEMULAI': 'Belum memulai',
+}
+
 #: S8-L1-02 — diagnosis kerja utama. Matriks menulis kode ICD-10 di dalam
 #: labelnya (``I10``, ``I20/I25``, …); kode pendek di sini mempertahankan
 #: pengelompokan itu tanpa memecah satu opsi menjadi beberapa.

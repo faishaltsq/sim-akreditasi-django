@@ -12,7 +12,7 @@ import json
 
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
-from django.core.exceptions import ObjectDoesNotExist, ValidationError
+from django.core.exceptions import ObjectDoesNotExist, PermissionDenied, ValidationError
 from django.http import Http404, HttpResponseBadRequest, JsonResponse
 from django.shortcuts import render
 from django.views.decorators.cache import never_cache
@@ -87,6 +87,7 @@ def poli_workflow(request, pk):
         'rollout_enabled': settings.POLI_JANTUNG_WORKFLOW_ENABLED,
         'clinical': _clinical_context(visit, values),
         **_step8_context(request, visit, workflow, step, values),
+        **_step9_context(request, visit, workflow, step),
     })
 
 def _step8_context(request, visit, workflow, step, values):
@@ -369,3 +370,128 @@ def poli_edukasi_cetak(request, pk):
         'pasien': visit.pasien,
         'proof': edukasi_proof(visit, workflow),
     })
+
+
+# ── F6.6/F6.7/F6.8: tindakan poli, void beralasan, unggahan panel kanan ───────
+
+@login_required
+@require_POST
+@never_cache
+def poli_tindakan_tambah(request, pk):
+    """Tambah tindakan poliklinik (ICD-9-CM) ber-tarif penjamin + EP otomatis."""
+    require_poli_rollout()
+    from .asesmen_tindakan import tambah_tindakan_poli
+
+    visit, workflow = get_visit(pk, request.user, write=True, lock=True,
+                                service_line=RAJAL_JANTUNG_SERVICE_LINE)
+    try:
+        line = tambah_tindakan_poli(
+            visit, request.user,
+            kode=request.POST.get('kode', ''),
+            pelaksana=request.POST.get('pelaksana', ''),
+            quantity=request.POST.get('quantity') or '1',
+            catatan=request.POST.get('catatan', ''),
+        )
+    except PermissionDenied as exc:
+        return JsonResponse({'success': False, 'error': str(exc)}, status=403)
+    except (ValidationError, WorkflowConflict) as exc:
+        message = ' '.join(exc.messages) if isinstance(exc, ValidationError) else str(exc)
+        return JsonResponse({'success': False, 'error': message}, status=400)
+    return JsonResponse({
+        'success': True,
+        'line_id': line.pk,
+        'kode': line.kode,
+        'nama': line.nama,
+        'tarif_acuan': str(line.tarif_acuan) if line.tarif_acuan is not None else None,
+        'tarif_penjamin': line.tarif_penjamin,
+        'billing_id': line.billing_item_id,
+        'billing_amount': str(line.billing_item.harga_satuan) if line.billing_item_id else None,
+        'ep_code': line.standard_item.code if line.standard_item_id else '',
+        'ep_sub_standard': line.standard_item.sub_standard if line.standard_item_id else '',
+    })
+
+
+@login_required
+@require_POST
+@never_cache
+def poli_tindakan_void(request, pk):
+    """Batalkan tagihan tindakan beralasan; baris tagihan tidak dihapus."""
+    require_poli_rollout()
+    from uuid import UUID
+    from .services.professional_billing import void_tindakan_poli
+
+    visit, workflow = get_visit(pk, request.user, write=True, lock=True,
+                                service_line=RAJAL_JANTUNG_SERVICE_LINE)
+    try:
+        line_id = int(request.POST.get('line_id', ''))
+    except (TypeError, ValueError):
+        return JsonResponse({'success': False, 'error': 'Baris tindakan tidak valid.'}, status=400)
+    try:
+        key = UUID(str(request.POST.get('request_id', '')))
+    except (TypeError, ValueError):
+        return JsonResponse({'success': False, 'error': 'ID permintaan tidak valid.'}, status=400)
+    try:
+        result = void_tindakan_poli(request.user, line_id, key, request.POST.get('reason', ''))
+    except PermissionDenied as exc:
+        return JsonResponse({'success': False, 'error': str(exc)}, status=403)
+    except (ValidationError, WorkflowConflict) as exc:
+        message = ' '.join(exc.messages) if isinstance(exc, ValidationError) else str(exc)
+        return JsonResponse({'success': False, 'error': message}, status=400)
+    return JsonResponse({'success': True, **result})
+
+
+@login_required
+@require_POST
+@never_cache
+def poli_lampiran_upload(request, pk):
+    """Unggah dokumen pendukung panel kanan; batas/tipe sama dengan IGD."""
+    require_poli_rollout()
+    from .services.igd_attachments import store_attachment
+    from .services.igd_assessment_workflow import WorkflowValidation
+
+    visit, workflow = get_visit(pk, request.user, write=True, lock=True,
+                                service_line=RAJAL_JANTUNG_SERVICE_LINE)
+    data = {
+        'jenis': request.POST.get('jenis', 'LAINNYA'),
+        'filename': request.POST.get('filename', ''),
+        'size': request.POST.get('size', ''),
+        'sha256': request.POST.get('sha256', ''),
+    }
+    try:
+        result = store_attachment(visit, workflow, request.user, data, request.FILES.get('file'))
+    except WorkflowValidation as exc:
+        return JsonResponse({'success': False, 'error': str(exc), 'fields': exc.errors}, status=400)
+    except ValidationError as exc:
+        return JsonResponse({'success': False, 'error': ' '.join(exc.messages)}, status=400)
+    return JsonResponse({'success': True, **result})
+
+
+@login_required
+@require_GET
+@never_cache
+def poli_consent_cetak(request, pk):
+    """Formulir informed consent siap cetak, identitas pasien terisi otomatis."""
+    require_poli_rollout()
+    from .services.professional_presentation import right_panel_context
+
+    visit, workflow = get_visit(pk, request.user, service_line=RAJAL_JANTUNG_SERVICE_LINE)
+    authorize_step(request.user, visit, 9, 'read')
+    context = right_panel_context(visit, workflow)
+    selected = request.GET.get('tindakan', '')
+    actions = [row for row in context['consent_actions'] if str(row['id']) == selected]
+    return render(request, 'pasien/poli_consent_cetak.html', {
+        'kunjungan': visit,
+        'pasien': visit.pasien,
+        'patient': context['consent_patient'],
+        'actions': actions or context['consent_actions'],
+        'selected_action': actions[0] if actions else None,
+    })
+
+
+def _step9_context(request, visit, workflow, step):
+    """Data Langkah 9 saja; langkah lain tidak membayar biaya query ini."""
+    if step != 9:
+        return {'step9': None}
+    from .services.professional_presentation import step9_context
+
+    return {'step9': step9_context(visit, workflow, request.user)}

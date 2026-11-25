@@ -1,0 +1,99 @@
+{% comment %}
+Panel pendukung sisi kanan Langkah 9 (matriks S9-L2-03, F6.8).
+
+Empat bagian, semuanya dari sumber yang sudah ada:
+1. Regulasi — ``EvidenceFile`` dengan ``EvidenceReq.category_type='R'`` (SK,
+   Pedoman, SPO) berstatus VALID. Tidak ada perpustakaan dokumen baru.
+2. Informed consent — identitas pasien dan jenis tindakan terisi otomatis,
+   siap cetak.
+3. Brosur edukasi — materi edukasi Langkah 8 dan halaman cetak yang sudah ada.
+4. Unggah multi-file — pola dan batas yang sama dengan lampiran IGD
+   (``igd_attachments.store_attachment``): 10 MB, PDF/PNG/JPEG, SHA-256 wajib.
+{% endcomment %}
+<section class="poli-panel poli-panel--support" aria-labelledby="poli-support-heading"
+       data-poli-support
+       data-upload-url="{% url 'pasien:poli_lampiran_upload' kunjungan.pk %}">
+  <h2 id="poli-support-heading">Dokumen pendukung</h2>
+
+  <section aria-labelledby="poli-reg-heading">
+    <h3 id="poli-reg-heading">Regulasi &amp; SOP</h3>
+    {% if step9.right_panel.regulations %}
+    <ul class="poli-doc-list">
+      {% for doc in step9.right_panel.regulations %}
+      <li>
+        <a href="#" data-poli-preview
+           data-preview-title="{{ doc.requirement__title }}"
+           data-preview-file="{{ doc.file_name }}"
+           data-preview-version="v{{ doc.version }}"
+           title="{{ doc.requirement__title }} — {{ doc.file_name }} (v{{ doc.version }})">
+          {{ doc.requirement__title }}
+        </a>
+        <small class="text-muted d-block">{{ doc.requirement__standard_item__code|default:"—" }} · {{ doc.file_name }} · v{{ doc.version }}</small>
+      </li>
+      {% endfor %}
+    </ul>
+    <p class="poli-hint" data-poli-preview-output role="status" aria-live="polite"></p>
+    {% else %}
+    <p class="poli-hint">Belum ada dokumen regulasi berstatus VALID pada perpustakaan bukti akreditasi.</p>
+    {% endif %}
+  </section>
+
+  <section aria-labelledby="poli-consent-heading">
+    <h3 id="poli-consent-heading">Informed consent</h3>
+    {% if step9.right_panel.consent_actions %}
+    <p class="poli-hint">Identitas pasien dan jenis tindakan terisi otomatis.</p>
+    <a class="btn btn-sm btn-outline-primary"
+       href="{% url 'pasien:poli_consent_cetak' kunjungan.pk %}{% if step9.right_panel.consent_actions.0 %}?tindakan={{ step9.right_panel.consent_actions.0.id }}{% endif %}"
+       target="_blank" rel="noopener">Cetak formulir consent</a>
+    {% else %}
+    <p class="poli-hint">Belum ada tindakan tercatat; formulir consent menampilkan identitas pasien saja.</p>
+    <a class="btn btn-sm btn-outline-secondary"
+       href="{% url 'pasien:poli_consent_cetak' kunjungan.pk %}" target="_blank" rel="noopener">Cetak formulir consent</a>
+    {% endif %}
+  </section>
+
+  <section aria-labelledby="poli-brosur-heading">
+    <h3 id="poli-brosur-heading">Brosur edukasi</h3>
+    {% if step9.right_panel.edukasi_codes %}
+    <p class="poli-hint">{{ step9.right_panel.edukasi_codes|length }} materi edukasi tercatat pada Langkah 8.</p>
+    {% else %}
+    <p class="poli-hint">Belum ada materi edukasi tercatat pada Langkah 8.</p>
+    {% endif %}
+    <a class="btn btn-sm btn-outline-secondary"
+       href="{% url 'pasien:poli_edukasi_cetak' kunjungan.pk %}" target="_blank" rel="noopener">Cetak brosur edukasi</a>
+  </section>
+
+  <section aria-labelledby="poli-upload-heading">
+    <h3 id="poli-upload-heading">Unggah dokumen pendukung</h3>
+    <p class="poli-hint">
+      PDF, PNG, atau JPEG maksimal {{ step9.right_panel.upload_limits.max_bytes|filesizeformat }}.
+      Nama berkas asli menjadi judul dokumen.
+    </p>
+    <ul class="poli-doc-list" data-poli-attachments>
+      {% for file in step9.right_panel.attachments %}
+      <li data-attachment-id="{{ file.id }}">
+        <strong>{{ file.nama_asli }}</strong>
+        <small class="text-muted d-block">{{ file.jenis }} · {{ file.ukuran|filesizeformat }} · {{ file.diunggah_pada|date:"d/m/Y H:i" }}</small>
+      </li>
+      {% empty %}
+      <li data-attachment-empty>Belum ada dokumen pendukung.</li>
+      {% endfor %}
+    </ul>
+    {% if step9.can_fill_step9 %}
+    <form data-poli-upload-form enctype="multipart/form-data">
+      {% csrf_token %}
+      <label for="poli-upload-jenis">Jenis</label>
+      <select id="poli-upload-jenis" name="jenis">
+        <option value="LAINNYA">Lainnya</option>
+        <option value="ASESMEN">Dokumen asesmen</option>
+        <option value="PENUNJANG">Hasil penunjang</option>
+        <option value="RUJUKAN">Surat rujukan</option>
+      </select>
+      <label for="poli-upload-file">Berkas</label>
+      <input type="file" id="poli-upload-file" name="file" accept=".pdf,.png,.jpg,.jpeg">
+      <button type="submit" class="btn btn-sm btn-outline-primary">Unggah</button>
+      <span class="poli-status" data-poli-upload-status role="status" aria-live="polite"></span>
+    </form>
+    {% endif %}
+  </section>
+</section>
