@@ -708,14 +708,37 @@ def resume_pdf(request, kunjungan_pk):
 
 @login_required
 def resep_buat(request, kunjungan_pk):
-    """Legacy entry delegates IGD prescribing to the validated composer."""
-    from .services.igd_assessment_workflow import get_visit
+    """Legacy entry delegates prescribing to the validated composer of the line.
+
+    F5.3: episode POLI-JANTUNG memakai komposer pada Langkah 8 alur rawat jalan;
+    episode IGD tetap diarahkan ke Langkah 8 alur IGD. Hanya tujuan
+    pengalihannya yang bercabang — tidak ada peresepan lewat payload bebas di
+    kedua jalur.
+    """
+    from .services.igd_assessment_workflow import (
+        POLI_JANTUNG_UNIT_CODE, RAJAL_JANTUNG_SERVICE_LINE, get_visit,
+    )
     from .services.prescriptions import require_prescriber
+    from .models import IgdAssessmentWorkflow
     require_prescriber(request.user)
-    visit, workflow = get_visit(kunjungan_pk,request.user,write=request.method=='POST')
-    if request.method=='POST':
+    target = get_object_or_404(KunjunganPasien, pk=kunjungan_pk)
+    existing = IgdAssessmentWorkflow.objects.filter(kunjungan=target).first()
+    rajal = (
+        existing is not None and existing.service_line == RAJAL_JANTUNG_SERVICE_LINE
+    ) or (
+        existing is None and target.jenis_kunjungan == 'RAJAL'
+        and target.unit_kerja_id
+        and target.unit_kerja.code == POLI_JANTUNG_UNIT_CODE
+    )
+    visit, _workflow = get_visit(
+        kunjungan_pk, request.user, write=request.method == 'POST',
+        service_line=RAJAL_JANTUNG_SERVICE_LINE if rajal else None,
+    )
+    if request.method == 'POST':
         return HttpResponseBadRequest('Gunakan komposer resep terstruktur pada langkah 8; resep tidak dikirim melalui payload nama/harga bebas.')
-    return redirect(reverse('pasien:igd_workflow',args=[visit.pk])+'?step=8')
+    if rajal:
+        return redirect(reverse('pasien:poli_workflow', args=[visit.pk]) + '?step=8')
+    return redirect(reverse('pasien:igd_workflow', args=[visit.pk]) + '?step=8')
 
 
 @login_required
@@ -1762,8 +1785,9 @@ def kunjungan_disposisi(request, pk):
                 k.status_antrean = 'SELESAI'
                 # If SKDP requested
                 if request.POST.get('jadwal_kontrol'):
-                    today_str = timezone.localdate().strftime('%Y%m%d')
-                    k.discharge.skdp_nomor = f"SKDP-{today_str}-{k.pk:04d}"
+                    # F5.6: satu skema nomor, dipakai juga oleh Langkah 8.
+                    from .services.skdp import skdp_nomor
+                    k.discharge.skdp_nomor = skdp_nomor(k)
                     k.discharge.skdp_diagnosa = request.POST.get('resume_medis', '')[:200]
                     k.discharge.skdp_terapi = request.POST.get('obat_pulang', '')
                     k.discharge.save()

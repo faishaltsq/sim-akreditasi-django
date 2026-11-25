@@ -70,6 +70,44 @@ def require_prescriber(user):
     if user.profile.profesi not in ('DOKTER_UMUM','DOKTER_SPESIALIS') or user.profile.role=='ASESOR':
         raise PermissionDenied('Peresepan memerlukan dokter.')
 
+def prescription_jenis(workflow):
+    """Jenis resep mengikuti jalur layanan episode (F5.3).
+
+    ``RAWAT_JALAN`` sudah ada di ``ResepElektronik.JENIS_RESEP``; yang salah
+    sebelumnya adalah nilai tetap ``IGD`` untuk semua episode. Episode IGD
+    tetap ``IGD`` — perilakunya tidak berubah.
+    """
+    from .igd_assessment_workflow import RAJAL_JANTUNG_SERVICE_LINE
+    if workflow is not None and workflow.service_line == RAJAL_JANTUNG_SERVICE_LINE:
+        return 'RAWAT_JALAN'
+    return 'IGD'
+
+def merge_prescription_lines(lines):
+    """Satu baris per produk; kiriman berikutnya memperbarui baris sebelumnya.
+
+    F5.4/S9-L1-19: pintasan GDMT mengisi baris draf yang **sama**, bukan
+    menambah baris ganda. Klien dapat mengirim dua baris untuk satu produk
+    (pintasan lalu penambahan manual), jadi aturannya ditegakkan di server:
+    baris terakhir menang, urutan kemunculan pertama dipertahankan.
+    """
+    merged = {}
+    order = []
+    for line in lines:
+        if not isinstance(line, dict):
+            raise ValueError('Atribut baris resep tidak valid.')
+        product_id = line.get('product_id')
+        if not isinstance(product_id, int):
+            # Produk yang tidak valid ditolak pada tahap pencarian produk;
+            # di sini baris dibiarkan lewat supaya pesannya tetap satu.
+            order.append(line)
+            continue
+        if product_id in merged:
+            merged[product_id] = {**merged[product_id], **line}
+        else:
+            merged[product_id] = dict(line)
+            order.append(product_id)
+    return [merged[item] if isinstance(item, int) else item for item in order]
+
 
 def save_prescription(visit, workflow, actor, data):
     require_prescriber(actor)
@@ -86,7 +124,7 @@ def save_prescription(visit, workflow, actor, data):
         if rx.items.filter(billing_item__isnull=False).exists():
             raise ValueError('Draft memiliki billing; perlu rekonsiliasi beralasan.')
     prepared=[]
-    for line in data['lines']:
+    for line in merge_prescription_lines(data['lines']):
         if not isinstance(line,dict) or set(line)-{'product_id','kind','regimen','quantity','quantity_reason','components','compound_instructions','compound_form','formulary'}:
             raise ValueError('Atribut baris resep tidak valid.')
         product=ProdukFarmasi.objects.select_related('generik__kelas').filter(pk=line.get('product_id')).first()
@@ -149,7 +187,7 @@ def save_prescription(visit, workflow, actor, data):
         prepared.append((product,snap,kind,regimen,quantity,reason,components))
     before=list(rx.items.values('id','product_snapshot','regimen','quantity_decimal')) if rx else []
     if rx is None:
-        rx=ResepElektronik.objects.create(kunjungan=visit,no_resep='RSP-'+uuid4().hex[:24],dokter_peresep=actor,jenis_resep='IGD',status='DRAFT')
+        rx=ResepElektronik.objects.create(kunjungan=visit,no_resep='RSP-'+uuid4().hex[:24],dokter_peresep=actor,jenis_resep=prescription_jenis(workflow),status='DRAFT')
     else:
         KomponenRacikan.objects.filter(detail__resep=rx).delete()
         rx.items.all().delete()
