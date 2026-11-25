@@ -110,10 +110,27 @@ def episode_dpjp(visit):
 
 def resolve_role(user, visit):
     """Peta akun → peran matriks, atau ``None`` bila tidak berwenang."""
+    if not getattr(user, 'is_authenticated', False):
+        return None
+    # ADR-16: administrator rumah sakit bukan anggota tim pelayanan, tetapi harus
+    # dapat MEMBUKA modul untuk supervisi dan dukungan. Dipetakan ke VIEWER: baca
+    # 200, tulis tetap 403 karena VIEWER tidak ada di FILL_ROLES/VERIFY_ROLES.
+    # Superuser diperiksa lebih dulu karena akun teknis sering tidak punya profil.
+    if getattr(user, 'is_superuser', False):
+        return VIEWER
     profile = getattr(user, 'profile', None)
-    if not getattr(user, 'is_authenticated', False) or profile is None:
+    if profile is None:
         return None
     if profile.role == 'ASESOR':
+        return VIEWER
+    if profile.role in ('SUPER_ADMIN', 'ADMIN_RS'):
+        return VIEWER
+    # ADR-16: administrator rumah sakit (superuser / SUPER_ADMIN / ADMIN_RS) bukan
+    # anggota tim pelayanan, tetapi harus dapat MEMBUKA modul untuk supervisi dan
+    # dukungan. Dipetakan ke VIEWER: baca 200, tulis tetap 403 karena VIEWER tidak
+    # ada di FILL_ROLES/VERIFY_ROLES. Tanpa pemetaan ini seluruh halaman modul
+    # menolak 403 untuk akun administrator, termasuk halaman cetak.
+    if getattr(user, 'is_superuser', False) or profile.role in ('SUPER_ADMIN', 'ADMIN_RS'):
         return VIEWER
     profesi = profile.profesi
     if profesi in DOKTER_PROFESSIONS:

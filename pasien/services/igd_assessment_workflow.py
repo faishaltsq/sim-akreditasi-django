@@ -71,7 +71,14 @@ def require_rajal_jantung_episode(visit):
 
 def _authorize_rajal_visit(visit, user, *, write, workflow):
     profile = getattr(user, 'profile', None)
-    if not user.is_authenticated or profile is None:
+    if not user.is_authenticated:
+        raise PermissionDenied('Profil pengguna diperlukan.')
+    if profile is None:
+        # ADR-16: akun teknis (superuser) sering tidak punya profil. Boleh
+        # MEMBACA modul; penulisan tetap ditolak karena tanpa profil tidak ada
+        # dasar kewenangan unit/profesi.
+        if user.is_superuser and not write:
+            return
         raise PermissionDenied('Profil pengguna diperlukan.')
     modules = profile.get_allowed_patient_modules()
     if not user.is_superuser and not (RAJAL_JANTUNG_MODULES & modules):

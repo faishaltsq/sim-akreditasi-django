@@ -774,6 +774,22 @@ Asumsi lintas fase: 1 pengembang backend + 1 frontend paruh waktu; tidak ada per
 
 ---
 
+## ADR-16 — Administrator rumah sakit: baca boleh, tulis tidak
+
+Ditemukan saat QA URL: akun `SUPER_ADMIN`/`ADMIN_RS` dan superuser tanpa profil
+mendapat **403 di seluruh halaman modul POLI-JANTUNG**, termasuk halaman cetak
+yang hanya membaca. Penyebabnya dua lapis:
+
+1. `resolve_role` (`pasien/services/poli_rbac.py`) memetakan peran hanya dari
+   `profesi` klinis; administrator tidak punya profesi sehingga hasilnya `None`.
+2. `_authorize_rajal_visit` (`pasien/services/igd_assessment_workflow.py`)
+   menolak lebih dulu bila `profile is None`, sebelum pemeriksaan `is_superuser`.
+
+Keputusan: administrator dipetakan ke `VIEWER` — **baca 200, tulis tetap 403**
+karena `VIEWER` tidak ada di `FILL_ROLES`/`VERIFY_ROLES`. Superuser tanpa profil
+juga boleh membaca, tetapi tidak boleh menulis (tanpa profil tidak ada dasar
+kewenangan unit/profesi). Regresi dikunci di `pasien/tests_poli_admin_viewer.py`.
+
 ## 13. F0 — Daftar kerja siap eksekusi
 
 Urutan eksekusi: **F0.10 → F0.1–F0.5 → F0.6–F0.8 → F0.9**. ID dipertahankan dari versi 1.0 agar rujukan `F0.6`/`F0.7`/`F0.8`/`F0.9`/`F0.10` di §5, §7, §9 dan §12 tetap sah. Tiga kelompok rilis: **A1** = F0.1–F0.5 (perbaikan produksi murni, rollback = revert commit), **A2** = F0.6–F0.8 (flag + seed, rollback = revert + seed idempoten), **B** = F0.9 (mengganti katalog aktif; rollback = **restore backup database**, bukan re-aktivasi: `reconcile_2024` menghapus `Framework` lama yang kategorinya sudah kosong, `akreditasi/reconcile_2024.py:228-230`, sehingga baris 2022 tidak ada lagi untuk diaktifkan kembali — jalankan dengan `--backup-reference` yang menunjuk berkas backup nyata). B **tidak boleh** menumpang A1/A2.
