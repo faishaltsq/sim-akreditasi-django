@@ -483,6 +483,29 @@ Prasyarat: F0.7, F4, F3, M1.
 > **Celah formularium (bukan bug):** dari lima kelompok GDMT yang tersedia sebagai daftar ber-kode, katalog lokal hanya punya produk untuk ACEI dan ARB; **ARNI, STATIN, dan WARFARIN kosong** dan dirender "Belum ada di formularium" — dilaporkan sebagai **AMBIGU-19**.
 > Migrasi: **tidak ada** (F5 hanya menulis JSON draft + `DischargeRecord` yang sudah ada).
 
+> **PRASYARAT AKTIVASI FORMULARIUM — pintasan GDMT belum dapat meresepkan (2026-11-25).**
+> Mekanisme F5.4 sudah berfungsi ujung ke ujung secara *kode*: panel membaca katalog, baris disatukan per produk, penyesuaian dosis tersimpan di `regimen.instructions`. Tetapi **belum ada satu pun produk GDMT yang dapat diresepkan** pada instalasi hari ini, karena baris katalognya belum diaktifkan dan belum direview Farmasi. Ini keputusan Farmasi, bukan cacat kode, dan sengaja **tidak** ditambal dengan mengaktifkan obat tanpa reviewer — itu akan memalsukan audit.
+>
+> Keadaan data terukur (`gdmt_panel()`, 3 produk berkelas GDMT di katalog):
+>
+> | Kelompok | Produk di katalog | Prescribable | Sebab |
+> |---|---|---|---|
+> | ACEI | 1 (`kardiovaskular-antihipertensi-4`, Captopril 12,5 mg / 25 mg) | **0** | `active=False`, `generik.active=False`, `reviewed_by` kosong, `price` kosong |
+> | ARB | 2 (`…-2` Candesartan, `…-3` Valsartan) | **0** | idem |
+> | ARNI | 0 | **0** | tidak ada produk — "Belum ada di formularium" |
+> | STATIN | 0 | **0** | tidak ada produk — "Belum ada di formularium" |
+> | WARFARIN | 0 | **0** | tidak ada produk — "Belum ada di formularium" |
+>
+> Ketiga produk yang ada memakai `source_version='DOCX-2026-11-13-STAGING'` (status staging), `price=NULL`, dan `generik.active=False`. Karena itu `product_snapshot` (`klinis/services/medication_catalogue.py`) menolak ketiganya dengan pesan *"Produk belum aktif atau belum direview."*, sehingga `save_prescription` tidak dapat membuat baris resep dari pintasan GDMT.
+>
+> **Prasyarat sebelum F5.4/F5.5 dipakai di produksi (pemilik: Komite Farmasi & Terapi):**
+> 1. `ProdukFarmasi.active=True` **dan** `GenerikObat.active=True` untuk setiap obat yang boleh diresepkan (bukan hanya kelompok GDMT — jalur yang sama dipakai seluruh e-resep).
+> 2. `reviewed_by` terisi akun peninjau Farmasi dan `source_version` menunjuk versi formularium yang disahkan (bukan `…-STAGING`).
+> 3. `price` terisi; tanpa harga, penyelesaian resep akan berstatus `financial_pending` dan tidak menagih (`prescriptions.transition_prescription`).
+> 4. Menambah produk untuk ARNI/STATIN/WARFARIN (dan kelas lain bila AMBIGU-19 dijawab lebih luas) — cukup data master, tidak perlu ubah kode.
+>
+> Sampai keempatnya terpenuhi, DPJP dapat menyelesaikan Langkah 8 (diagnosis, klasifikasi, edukasi, SKDP, PDF bukti) tetapi **berhenti di "belum dapat diresepkan"** dan tidak dapat mengirim resep ke farmasi.
+
 ### F6 — Langkah 9 CPPT multiprofesi & billing
 
 Tujuan: CPPT rajal lewat jalur profesional, TTE, verifikasi 24 jam, tindakan poli ber-tarif.
