@@ -25,6 +25,16 @@
     .q-dilayani { background: var(--success-light); color: var(--success-deep); border: 1px solid #93D8AC; padding: .25rem .55rem; border-radius: .35rem; font-size: .72rem; font-weight: 600; }
     .q-selesai { background: var(--surface-hover); color: #6b7280; border: 1px solid var(--border-strong); padding: .25rem .55rem; border-radius: .35rem; font-size: .72rem; font-weight: 600; text-decoration: line-through; }
     @keyframes pulse-q { 0%,100%{opacity:1;} 50%{opacity:.5;} }
+
+    /* F8.3 — kolom identitas melekat saat tabel digeser mendatar.
+       Latar wajib solid: tanpa itu baris di bawahnya tembus pandang. */
+    .poli-ident-col {
+        position: sticky; left: 0; z-index: 2;
+        background: #fff; min-width: 15rem;
+        box-shadow: 1px 0 0 var(--border);
+    }
+    thead .poli-ident-col { background: var(--bs-tertiary-bg, #f8f9fa); z-index: 3; }
+    tr:hover .poli-ident-col { background: var(--surface-hover, #f5f6f8); }
 </style>
 {% endblock %}
 
@@ -47,7 +57,8 @@
                     </p>
                 </div>
                 <div class="ms-auto pe-4 d-none d-md-block">
-                    <a href="{% url 'pasien:pendaftaran_dashboard' %}" class="btn btn-outline-light btn-sm fw-semibold">
+                    <a href="{% url 'pasien:pendaftaran_dashboard' %}" class="btn btn-outline-light btn-sm fw-semibold"
+                       title="Buat kunjungan baru (Langkah 1 — Registrasi &amp; Penjamin dibuka dari baris antrean setelah kunjungan tersimpan)">
                         <i class="bi bi-plus-circle me-1"></i> Pendaftaran Baru
                     </a>
                 </div>
@@ -249,9 +260,8 @@
                 <table class="table table-hover align-middle mb-0" style="font-size: .85rem;">
                     <thead class="table-light text-muted small">
                         <tr>
-                            <th>No</th>
+                            <th class="poli-ident-col ps-3">Pasien</th>
                             <th>No. Antrean</th>
-                            <th>Nama Pasien</th>
                             <th>Poliklinik</th>
                             <th>Penjamin</th>
                             <th>Status Antrean</th>
@@ -264,19 +274,30 @@
                     <tbody>
                         {% for k in pasien_rajal_list %}
                         <tr>
-                            <td class="ps-3 text-muted">{{ forloop.counter }}</td>
-                            <td>
-                                <span class="badge bg-dark font-monospace fs-6 px-2 py-1">{{ k.nomor_antrean|default:"-" }}</span>
-                                <div><small class="text-muted font-monospace">{{ k.no_kunjungan }}</small></div>
-                            </td>
-                            <td>
+                            <td class="poli-ident-col ps-3">
                                 <a href="{% url 'pasien:pasien_detail' k.pasien.pk %}" class="fw-bold text-decoration-none text-dark">
                                     {{ k.pasien.nama_lengkap }}
                                 </a>
                                 <div class="small text-muted">RM: <strong>{{ k.pasien.no_rm }}</strong> &bull; {{ k.pasien.get_jenis_kelamin_display }}, {{ k.pasien.usia }} th</div>
-                                {% if k.flag_khusus != 'NORMAL' %}
-                                <span class="badge bg-danger text-white small mt-1">⚡ {{ k.get_flag_khusus_display }}</span>
-                                {% endif %}
+                                <div class="d-flex flex-wrap gap-1 mt-1">
+                                    {% if k.has_allergy %}
+                                    <span class="badge bg-danger" data-safety-badge="allergy" title="Alergi tercatat — periksa sebelum meresepkan">
+                                        <i class="bi bi-exclamation-triangle-fill me-1"></i>Alergi
+                                    </span>
+                                    {% endif %}
+                                    {% if k.unread_critical %}
+                                    <span class="badge bg-warning text-dark" data-safety-badge="critical-unread" title="Nilai kritis penunjang belum di-read-back">
+                                        <i class="bi bi-activity me-1"></i>Nilai kritis belum dibaca
+                                    </span>
+                                    {% endif %}
+                                    {% if k.flag_khusus != 'NORMAL' %}
+                                    <span class="badge bg-danger text-white">⚡ {{ k.get_flag_khusus_display }}</span>
+                                    {% endif %}
+                                </div>
+                            </td>
+                            <td>
+                                <span class="badge bg-dark font-monospace fs-6 px-2 py-1">{{ k.nomor_antrean|default:"-" }}</span>
+                                <div><small class="text-muted font-monospace">{{ k.no_kunjungan }}</small></div>
                             </td>
                             <td>
                                 <span class="badge bg-primary-subtle text-primary fw-semibold px-2 py-1">
@@ -319,6 +340,25 @@
                             </td>
                             <td class="text-center">
                                 <div class="btn-group btn-group-sm">
+                                    {% if k.poli_deep_link %}
+                                    <!-- F8.1 — deep-link langkah RME, tautan biasa (tanpa JS).
+                                         1. Registrasi & Penjamin (Langkah 1) -->
+                                    <a class="btn btn-outline-secondary" href="{% url 'pasien:poli_workflow' k.pk %}?step=1" title="Langkah 1 — Registrasi &amp; Penjamin">
+                                        <i class="bi bi-person-vcard me-1"></i>Registrasi
+                                    </a>
+                                    <!-- 2. SOAP: Langkah 2 bila Langkah 1–6 belum lengkap, Langkah 8 bila sudah -->
+                                    <a class="btn btn-outline-primary" href="{% url 'pasien:poli_workflow' k.pk %}?step={{ k.soap_step }}" title="Langkah {{ k.soap_step }} — {% if k.soap_step == 8 %}diagnosis &amp; rencana{% else %}skrining awal (Langkah 1–6 belum lengkap){% endif %}">
+                                        <i class="bi bi-pencil-square me-1"></i>SOAP
+                                    </a>
+                                    <!-- 3. Penunjang (Langkah 7) -->
+                                    <a class="btn btn-outline-info text-dark" href="{% url 'pasien:poli_workflow' k.pk %}?step=7" title="Langkah 7 — Pemeriksaan penunjang &amp; order 3 tingkat">
+                                        <i class="bi bi-radioactive me-1"></i>Penunjang
+                                    </a>
+                                    <!-- 4. Disposisi (Langkah 10) -->
+                                    <a class="btn btn-outline-success" href="{% url 'pasien:poli_workflow' k.pk %}?step=10" title="Langkah 10 — Evaluasi akhir &amp; disposisi">
+                                        <i class="bi bi-check-circle me-1"></i>Disposisi
+                                    </a>
+                                    {% else %}
                                     <!-- 1. SOAP CPPT -->
                                     <button class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#modalSoap{{ k.pk }}" title="Catat SOAP Medis">
                                         <i class="bi bi-pencil-square me-1"></i>SOAP
@@ -331,10 +371,29 @@
                                     <button class="btn btn-outline-success" data-bs-toggle="modal" data-bs-target="#modalPulangR{{ k.pk }}" title="Selesai & SKDP">
                                         <i class="bi bi-check-circle me-1"></i>Pulang
                                     </button>
+                                    {% endif %}
                                     <!-- 4. MORE DROPDOWN (RANAP, KONSUL, CETAK) -->
                                     <div class="btn-group btn-group-sm">
                                         <button type="button" class="btn btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown"></button>
                                         <ul class="dropdown-menu dropdown-menu-end shadow-sm" style="font-size: .82rem;">
+                                            {% if k.poli_deep_link %}
+                                            <li>
+                                                <a class="dropdown-item text-secondary" href="#" data-bs-toggle="modal" data-bs-target="#modalSoap{{ k.pk }}">
+                                                    <i class="bi bi-pencil-square me-1"></i> SOAP cepat (jalur lama)
+                                                </a>
+                                            </li>
+                                            <li>
+                                                <a class="dropdown-item text-secondary" href="#" data-bs-toggle="modal" data-bs-target="#modalOrderR{{ k.pk }}">
+                                                    <i class="bi bi-radioactive me-1"></i> Order penunjang (modal lama)
+                                                </a>
+                                            </li>
+                                            <li>
+                                                <a class="dropdown-item text-secondary" href="#" data-bs-toggle="modal" data-bs-target="#modalPulangR{{ k.pk }}">
+                                                    <i class="bi bi-check-circle me-1"></i> Pulang / SKDP (modal lama)
+                                                </a>
+                                            </li>
+                                            <li><hr class="dropdown-divider"></li>
+                                            {% endif %}
                                             <li>
                                                 <a class="dropdown-item text-primary" href="#" data-bs-toggle="modal" data-bs-target="#modalRanapR{{ k.pk }}">
                                                     <i class="bi bi-hospital me-1"></i> Admisi Rawat Inap (SPRI)
@@ -378,9 +437,15 @@
                                 </div>
                             </td>
                             <td class="text-end pe-3">
+                                {% if k.poli_deep_link %}
+                                <a href="{% url 'pasien:rajal_longitudinal' k.pk %}" class="btn btn-sm btn-outline-secondary" title="Panel pratinjau longitudinal RME">
+                                    <i class="bi bi-folder2-open"></i>
+                                </a>
+                                {% else %}
                                 <a href="{% url 'pasien:kunjungan_detail' k.pk %}" class="btn btn-sm btn-outline-secondary" title="Buka Rekam Medis">
                                     <i class="bi bi-folder2-open"></i>
                                 </a>
+                                {% endif %}
                             </td>
                         </tr>
 

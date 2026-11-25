@@ -35,8 +35,10 @@ from .models import (
     OrderPenunjang, POLIKLINIK_CHOICES, DPJP_CHOICES, BookingKamar,
     GeneralConsentRawatInap, generate_no_rm, generate_no_kunjungan,
     JadwalDinusAdmission, LogbookHarianAdmission, DPJP_POLI_MAP,
-    KorelasiEpAsesmen, LampiranAsesmen, PenugasanDpjpEpisode
+    KorelasiEpAsesmen, LampiranAsesmen, PenugasanDpjpEpisode,
+    IgdAssessmentWorkflow,
 )
+from .expansion_models import AlergiPasienTerstruktur
 from klinis.models import (
     AturanEpAsesmen, MasterIcd9, KasusTindakan, TarifPenunjang,
     Pemetaan3S, SlkiLuaran, SikiIntervensi, SdkiDiagnosis
@@ -1417,28 +1419,74 @@ def rajal_dashboard(request):
     # F0.11: penetapan DPJP episode POLI-JANTUNG langsung dari antrean. Hanya
     # episode ber-unit POLI-JANTUNG dan pengguna berwenang administrasi yang
     # mendapat pemilih; akun dokter diambil dari ORM, bukan DPJP_CHOICES.
-    from .services.igd_assessment_workflow import POLI_JANTUNG_UNIT_CODE
+    from .services.igd_assessment_workflow import (
+        POLI_JANTUNG_UNIT_CODE, RAJAL_JANTUNG_SERVICE_LINE,
+    )
+    from .services.poli_completeness import poli_completeness
     from .services.poli_dpjp import can_assign_dpjp, eligible_dpjp_accounts
+    from .services.poli_rbac import resolve_role
 
-    dpjp_episodes = [
-        k for k in qs
+    rows = list(qs)
+    poli_visit_ids = {
+        k.pk for k in rows
         if k.unit_kerja_id and k.unit_kerja.code == POLI_JANTUNG_UNIT_CODE
-    ]
+    }
     active_dpjp_doctor = {}
-    if dpjp_episodes:
+    if poli_visit_ids:
         for assignment in PenugasanDpjpEpisode.objects.filter(
-                visit_id__in=[k.pk for k in dpjp_episodes], is_active=True,
+                visit_id__in=poli_visit_ids, is_active=True,
         ).only('visit_id', 'doctor_id'):
             active_dpjp_doctor[assignment.visit_id] = assignment.doctor_id
     assignable_dpjp_visit_ids = {
-        k.pk for k in dpjp_episodes if can_assign_dpjp(request.user, k)
+        k.pk for k in rows if k.pk in poli_visit_ids and can_assign_dpjp(request.user, k)
     }
     dpjp_accounts = list(eligible_dpjp_accounts()) if assignable_dpjp_visit_ids else []
+
+    # ── F8.1–F8.3: deep-link langkah + indikator keselamatan per baris ──────
+    # Tautan hanya dirender untuk episode POLI-JANTUNG saat flag rilis aktif
+    # (ADR-8) dan akun ini punya peran asesmen: route asesmen menolak peran
+    # lain dengan 403, dan tautan yang pasti ditolak bukan tautan.
+    poli_workflows = {
+        workflow.kunjungan_id: workflow
+        for workflow in IgdAssessmentWorkflow.objects.filter(
+            kunjungan_id__in=poli_visit_ids, service_line=RAJAL_JANTUNG_SERVICE_LINE,
+        )
+    } if poli_visit_ids else {}
+    # Alergi: baris terstruktur aktif (F3) atau kolom teks lama — keduanya
+    # data nyata, tidak ada badge hiasan.
+    allergy_patient_ids = set(
+        AlergiPasienTerstruktur.objects.filter(
+            pasien_id__in={k.pasien_id for k in rows}, active=True,
+        ).values_list('pasien_id', flat=True)
+    )
+    # Nilai kritis yang belum di-read-back: yang belum dibaca, bukan semua
+    # nilai kritis historis.
+    unread_critical_visit_ids = set(
+        OrderPenunjang.objects.filter(
+            kunjungan_id__in=[k.pk for k in rows],
+            is_critical_value=True, critical_readback_at__isnull=True,
+        ).values_list('kunjungan_id', flat=True)
+    )
+    role_visit = next((k for k in rows if k.pk in poli_visit_ids), None)
+    poli_deep_links = bool(
+        getattr(settings, 'POLI_JANTUNG_WORKFLOW_ENABLED', False)
+        and role_visit is not None
+        and resolve_role(request.user, role_visit) is not None
+    )
     # Tempelkan penanda ke baris yang sudah dievaluasi di atas, supaya template
     # tidak butuh lookup dict bersarang (dan tidak menambah query per baris).
-    for kunjungan in qs:
+    for kunjungan in rows:
         kunjungan.dpjp_assignable = kunjungan.pk in assignable_dpjp_visit_ids
         kunjungan.dpjp_doctor_id = active_dpjp_doctor.get(kunjungan.pk)
+        kunjungan.has_allergy = bool(
+            kunjungan.pasien.has_alergi or kunjungan.pasien_id in allergy_patient_ids
+        )
+        kunjungan.unread_critical = kunjungan.pk in unread_critical_visit_ids
+        kunjungan.poli_deep_link = poli_deep_links and kunjungan.pk in poli_visit_ids
+        if kunjungan.poli_deep_link:
+            # F8.2: satu tombol SOAP, dua target, satu aturan bernama.
+            kunjungan.soap_step = poli_completeness(
+                poli_workflows.get(kunjungan.pk)).soap_step
 
     available_beds = (
         Bed.objects.filter(status='TERSEDIA')
@@ -1483,9 +1531,31 @@ def rajal_dashboard(request):
         'dpjp_accounts':       dpjp_accounts,
         'assignable_dpjp_visit_ids': assignable_dpjp_visit_ids,
         'active_dpjp_doctor':  active_dpjp_doctor,
+        'poli_deep_links':     poli_deep_links,
     }
     return render(request, 'pasien/rajal_dashboard.html', ctx)
 
+
+@login_required
+@require_patient_module('rajal')
+def rajal_longitudinal(request, pk):
+    """F8.4 — panel pratinjau longitudinal RME, dirender server (tanpa JS).
+
+    Riwayat, tren TTV/LVEF, alergi, dan obat aktif dibaca dari data yang sudah
+    ada; kunjungan di luar lingkup unit profil tidak ikut tampil.
+    """
+    from .services.poli_longitudinal import longitudinal_panel
+
+    profile = getattr(request.user, 'profile', None)
+    kunjungan = get_object_or_404(
+        scope_kunjungan_qs(KunjunganPasien.objects.select_related('pasien'), profile),
+        pk=pk,
+    )
+    return render(request, 'pasien/rajal_longitudinal.html', {
+        'kunjungan': kunjungan,
+        'pasien': kunjungan.pasien,
+        'panel': longitudinal_panel(kunjungan, profile),
+    })
 
 @login_required
 def rajal_antrean_status(request, pk):

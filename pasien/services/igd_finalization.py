@@ -17,6 +17,7 @@ from pasien.workflow_schemas import (
 )
 from .igd_actions import validate, digest, require_doctor, DOCTORS, NURSES
 from .igd_assessment_workflow import RAJAL_JANTUNG_SERVICE_LINE, WorkflowConflict, WorkflowValidation
+from .poli_completeness import step_minimally_filled
 from .poli_rbac import require_dpjp
 
 EXEMPTIONS = {'triage','anamnesis','primary_survey','initial_vitals','screening','physical_exam','diagnosis','nursing','investigations','care','evaluation'}
@@ -90,7 +91,8 @@ def missing_rajal_sections(workflow):
     Sengaja **tidak** memakai ``physical_exam.exam_present`` — pemeriksaan fisik
     IGD bertingkat per regio, sedangkan kerangka rajal (F1) belum punya bentuk
     itu. Kelengkapan di sini berarti "setiap langkah punya minimal satu nilai
-    terisi", ditambah kondisi akhir wajib pada langkah 10. F2/F3 dapat
+    terisi" (predikat bersama ``poli_completeness.step_minimally_filled``,
+    F8.2), ditambah kondisi akhir wajib pada langkah 10. F2/F3 dapat
     memperketat pemeriksaan per langkah tanpa mengubah kontrak ini.
     """
     draft = workflow.draft_payload or {}
@@ -100,8 +102,7 @@ def missing_rajal_sections(workflow):
         key = f'step_{number}'
         if key in exemptions:
             continue
-        values = draft.get(str(number)) or {}
-        if not any(value not in (None, '', [], {}) for value in values.values()):
+        if not step_minimally_filled(draft.get(str(number))):
             missing.append(key)
     if not (draft.get('10') or {}).get('kondisi_akhir_rajal') and 'step_10' not in exemptions and 'step_10' not in missing:
         missing.append('step_10')

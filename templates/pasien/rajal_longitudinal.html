@@ -1,0 +1,223 @@
+{% extends "base.html" %}
+
+{% block title %}Pratinjau Longitudinal — {{ pasien.nama_lengkap }} — ARIMA{% endblock %}
+{% block page_title %}Pratinjau Longitudinal RME{% endblock %}
+{% block page_subtitle %}Riwayat kunjungan, tren TTV/LVEF, alergi, dan obat aktif — {{ pasien.nama_lengkap }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .long-card { border: 1px solid var(--border); border-radius: .75rem; background: #fff; }
+    .long-card h2 { font-size: .95rem; font-weight: 700; }
+    .long-table { font-size: .82rem; margin-bottom: 0; }
+    .long-table th { font-weight: 600; color: var(--text-secondary); white-space: nowrap; }
+    .long-bar { height: .55rem; border-radius: 1rem; background: var(--surface-hover, #eef0f4); overflow: hidden; min-width: 4rem; }
+    .long-bar > span { display: block; height: 100%; background: var(--primary-deep, #232C66); }
+    .long-empty { font-size: .82rem; color: var(--text-secondary); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid p-0">
+
+    <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
+        <a href="{% url 'pasien:rajal_dashboard' %}" class="btn btn-sm btn-outline-secondary">
+            <i class="bi bi-arrow-left me-1"></i>Kembali ke dasbor antrean
+        </a>
+        <a href="{% url 'pasien:kunjungan_detail' kunjungan.pk %}" class="btn btn-sm btn-outline-secondary">
+            <i class="bi bi-journal-medical me-1"></i>Rekam medis kunjungan ini
+        </a>
+    </div>
+
+    <!-- IDENTITAS & INDIKATOR KESELAMATAN -->
+    <div class="long-card p-3 mb-3">
+        <div class="d-flex flex-wrap justify-content-between align-items-start gap-3">
+            <div>
+                <div class="fw-bold" style="font-size: 1.1rem;">{{ pasien.nama_lengkap }}</div>
+                <div class="small text-muted">
+                    RM: <strong>{{ pasien.no_rm }}</strong> &bull;
+                    {{ pasien.get_jenis_kelamin_display }}, {{ pasien.usia }} th &bull;
+                    Kunjungan <span class="font-monospace">{{ kunjungan.no_kunjungan }}</span>
+                    {% if kunjungan.nomor_antrean %}&bull; Antrean {{ kunjungan.nomor_antrean }}{% endif %}
+                </div>
+                <div class="small text-muted">
+                    {{ kunjungan.poliklinik|default:"Poli Umum" }} &bull;
+                    DPJP: {{ kunjungan.dpjp|default:"-" }} &bull;
+                    Masuk {{ kunjungan.tanggal_masuk|date:"d/m/Y H:i" }}
+                </div>
+            </div>
+            <div class="d-flex flex-wrap gap-2">
+                {% if panel.allergies %}
+                <span class="badge bg-danger">
+                    <i class="bi bi-exclamation-triangle-fill me-1"></i>Alergi tercatat ({{ panel.allergies|length }})
+                </span>
+                {% else %}
+                <span class="badge bg-secondary-subtle text-secondary">Tidak ada alergi tercatat</span>
+                {% endif %}
+                <span class="badge bg-light text-dark border">{{ panel.history|length }} kunjungan dalam lingkup unit Anda</span>
+            </div>
+        </div>
+        {% if panel.allergies %}
+        <ul class="mb-0 mt-2 small">
+            {% for alergi in panel.allergies %}
+            <li>
+                <strong>{{ alergi.label }}</strong> — {{ alergi.reaction }}
+                <span class="text-muted">({{ alergi.source }})</span>
+            </li>
+            {% endfor %}
+        </ul>
+        {% endif %}
+    </div>
+
+    <div class="row g-3">
+        <!-- TREN TTV -->
+        <div class="col-lg-6">
+            <div class="long-card p-3 h-100">
+                <h2 class="mb-2"><i class="bi bi-activity me-1"></i>Tren TTV</h2>
+                {% if panel.ttv_points %}
+                <div class="table-responsive">
+                    <table class="table table-sm long-table align-middle">
+                        <thead>
+                            <tr>
+                                <th>Tanggal</th>
+                                <th>Sistole</th>
+                                <th>Diastole</th>
+                                <th>Nadi</th>
+                                <th>SpO2</th>
+                                <th>Sumber</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for titik in panel.ttv_points %}
+                            <tr>
+                                <td class="font-monospace">{{ titik.tanggal|date:"d/m/Y H:i" }}</td>
+                                <td>{{ titik.values.ttv_sistole|default:"-" }}</td>
+                                <td>{{ titik.values.ttv_diastole|default:"-" }}</td>
+                                <td>{{ titik.values.ttv_nadi|default:"-" }}</td>
+                                <td>{{ titik.values.ttv_spo2|default:"-" }}</td>
+                                <td class="text-muted">{{ titik.source }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p class="long-empty mb-0">Belum ada TTV terukur pada kunjungan yang dapat Anda buka.</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- TREN LVEF -->
+        <div class="col-lg-6">
+            <div class="long-card p-3 h-100">
+                <h2 class="mb-2"><i class="bi bi-heart-pulse me-1"></i>Tren LVEF</h2>
+                {% if panel.lvef_points %}
+                <div class="table-responsive">
+                    <table class="table table-sm long-table align-middle">
+                        <thead>
+                            <tr>
+                                <th>Tanggal</th>
+                                <th>Pemeriksaan</th>
+                                <th>LVEF (%)</th>
+                                <th class="w-25">Skala</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for titik in panel.lvef_points %}
+                            <tr>
+                                <td class="font-monospace">{{ titik.tanggal|date:"d/m/Y H:i" }}</td>
+                                <td>{{ titik.nama_pemeriksaan }}</td>
+                                <td class="fw-semibold">{{ titik.lvef }}</td>
+                                <td>
+                                    <div class="long-bar" role="img" aria-label="LVEF {{ titik.lvef }} persen">
+                                        <span style="width: {{ titik.lvef }}%;"></span>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p class="long-empty mb-0">Belum ada hasil ekokardiografi dengan LVEF tercatat.</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- OBAT AKTIF (GDMT) -->
+        <div class="col-lg-6">
+            <div class="long-card p-3 h-100">
+                <h2 class="mb-2"><i class="bi bi-capsule me-1"></i>Obat aktif (GDMT)</h2>
+                {% if panel.active_medications %}
+                <div class="small text-muted mb-1">
+                    Sumber: resep terakhir berstatus <strong>Selesai &amp; Diserahkan</strong>
+                    {% if panel.active_prescription %}
+                    ({{ panel.active_prescription.no_resep }}, {{ panel.active_prescription.tanggal_resep|date:"d/m/Y" }})
+                    {% endif %}
+                </div>
+                <ul class="mb-0 small">
+                    {% for obat in panel.active_medications %}
+                    <li>
+                        <strong>{{ obat.nama_obat }}</strong> {{ obat.dosis }}
+                        &mdash; {{ obat.aturan_pakai }} ({{ obat.jumlah }})
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% else %}
+                <p class="long-empty mb-1">Belum ada obat aktif: tidak ada resep berstatus Selesai &amp; Diserahkan untuk pasien ini.</p>
+                {% if panel.prescribable_gdmt_products == 0 %}
+                <p class="long-empty mb-0">
+                    Formularium GDMT belum punya satu pun produk yang dapat diresepkan
+                    (0 produk aktif &amp; tervalidasi di katalog), sehingga daftar ini memang kosong.
+                </p>
+                {% endif %}
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- RIWAYAT KUNJUNGAN -->
+        <div class="col-lg-6">
+            <div class="long-card p-3 h-100">
+                <h2 class="mb-2"><i class="bi bi-clock-history me-1"></i>Riwayat kunjungan</h2>
+                {% if panel.history %}
+                <div class="table-responsive">
+                    <table class="table table-sm long-table align-middle">
+                        <thead>
+                            <tr>
+                                <th>Tanggal</th>
+                                <th>No. Kunjungan</th>
+                                <th>Unit</th>
+                                <th>Status</th>
+                                <th>TTV</th>
+                                <th>LVEF</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for baris in panel.history %}
+                            <tr>
+                                <td class="font-monospace">{{ baris.kunjungan.tanggal_masuk|date:"d/m/Y" }}</td>
+                                <td>
+                                    <a href="{% url 'pasien:rajal_longitudinal' baris.kunjungan.pk %}" class="text-decoration-none">
+                                        {{ baris.kunjungan.no_kunjungan }}
+                                    </a>
+                                </td>
+                                <td>{{ baris.kunjungan.poliklinik|default:"-" }}</td>
+                                <td>{{ baris.kunjungan.get_status_display }}</td>
+                                <td>
+                                    {% if baris.ttv %}
+                                    {{ baris.ttv.values.ttv_sistole|default:"-" }}/{{ baris.ttv.values.ttv_diastole|default:"-" }}
+                                    {% else %}-{% endif %}
+                                </td>
+                                <td>{{ baris.lvef|default:"-" }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p class="long-empty mb-0">Tidak ada kunjungan lain yang dapat Anda buka untuk pasien ini.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
