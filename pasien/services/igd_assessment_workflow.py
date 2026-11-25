@@ -12,7 +12,7 @@ from pasien.forms_igd_workflow import STEPS, VITAL_FIELDS, form_for_step
 from pasien.models import IgdAssessmentWorkflow, IgdVitalObservation, KunjunganPasien
 from pasien.unit_scope import can_read_kunjungan, get_unit_scope
 from pasien.workflow_schemas import (
-    RAJAL_JANTUNG_SCHEMA_KEY, RAJAL_JANTUNG_STEPS, STEP_SCHEMAS,
+    RAJAL_JANTUNG_SCHEMA_KEY, RAJAL_JANTUNG_STEPS, STEP_SCHEMAS, validate_disposisi_rajal,
 )
 from .poli_rbac import authorize_step, can_write, episode_dpjp
 
@@ -290,6 +290,13 @@ def _save_rajal_step(visit, workflow, user, step, payload, version):
     cleaned, errors = spec.validate(payload)
     if errors:
         raise WorkflowValidation(errors)
+    if step == 10:
+        # Percabangan S10-L1-05 divalidasi memakai nilai gabungan: isian cabang
+        # boleh dikirim bertahap, jadi syaratnya diperiksa terhadap draft baru.
+        merged_step10 = {**(((workflow.draft_payload if workflow else {}) or {}).get('10') or {}), **cleaned}
+        branch_errors = validate_disposisi_rajal(merged_step10)
+        if branch_errors:
+            raise WorkflowValidation(branch_errors)
     # F5.7: matriks S8-L1-01 menyebut tiga mode, tetapi penyedia AI baru F9.
     # Menerima nilai AI lalu menyimpannya diam-diam akan membuat provenance
     # berbohong, jadi ditolak dengan sebab yang eksplisit.

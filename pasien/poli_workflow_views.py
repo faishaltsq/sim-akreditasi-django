@@ -88,6 +88,10 @@ def poli_workflow(request, pk):
         'clinical': _clinical_context(visit, values),
         **_step8_context(request, visit, workflow, step, values),
         **_step9_context(request, visit, workflow, step),
+        **_step10_context(visit, workflow, step),
+        'can_addendum': bool(
+            workflow and workflow.status == 'FINAL' and role == DPJP
+        ),
     })
 
 def _step8_context(request, visit, workflow, step, values):
@@ -495,3 +499,81 @@ def _step9_context(request, visit, workflow, step):
     from .services.professional_presentation import step9_context
 
     return {'step9': step9_context(visit, workflow, request.user)}
+
+# ── F7.3/F7.6: panel versi, addendum, bukti EP ───────────────────────────────
+
+def _step10_context(visit, workflow, step):
+    """Panel Langkah 10: revisi final, addendum, dan tautan bukti.
+
+    Nilai yang tampil diambil dari revisi tersimpan, bukan dihitung ulang —
+    panel versi/waktu harus menunjukkan keadaan yang benar-benar difinalisasi.
+    """
+    if step != 10:
+        return {'step10': None}
+    revisions = []
+    latest = None
+    if workflow is not None:
+        revisions = list(workflow.revisions.order_by('-revision')[:5])
+        latest = revisions[0] if revisions else None
+    return {
+        'step10': {
+            'disposition': (workflow.draft_payload or {}).get('10', {}) if workflow else {},
+            'revisions': revisions,
+            'latest_revision': latest,
+            'disposition_documents': _document_links(visit, workflow),
+        },
+    }
+
+def _document_links(visit, workflow):
+    """Dokumen yang sudah dapat dicetak untuk cabang disposisi episode ini.
+
+    Semua route adalah route cetak yang sudah ada; tidak ada pencetak baru.
+    """
+    if workflow is None:
+        return []
+    branch = (workflow.draft_payload or {}).get('10', {}).get('disposisi')
+    links = []
+    if branch in ('PULANG', 'RUJUK_ANTAR_POLI', 'RUJUK_KELUAR') and hasattr(visit, 'discharge'):
+        links.append({'label': 'Resume Rawat Jalan', 'route': 'pasien:resume_pdf'})
+    if branch == 'PULANG':
+        if getattr(visit.discharge, 'skdp_nomor', ''):
+            links.append({'label': 'Surat Kontrol (SKDP)', 'route': 'pasien:cetak_skdp'})
+        links.append({'label': 'Bukti Edukasi', 'route': 'pasien:poli_edukasi_pdf'})
+    if branch == 'RAWAT_INAP':
+        links.append({'label': 'Surat Pengantar Rawat Inap', 'route': 'pasien:cetak_spri'})
+        links.append({'label': 'Persetujuan Rawat Inap', 'route': 'pasien:cetak_general_consent'})
+    if visit.korelasi_ep.exists() or visit.tindakan_asesmen.exists():
+        links.append({'label': 'Bukti Pelaksanaan EP (PDF)', 'route': 'pasien:poli_bukti_ep_pdf'})
+    return links
+
+@login_required
+@require_GET
+@never_cache
+def poli_bukti_ep_pdf(request, pk):
+    """F7.6 — ekspor PDF bukti EP per kunjungan (kode + status + catatan + waktu)."""
+    require_poli_rollout()
+    from django.http import HttpResponse
+    from pasien.pdf_utils import generate_bukti_ep_pdf
+
+    visit, _workflow = get_visit(pk, request.user, service_line=RAJAL_JANTUNG_SERVICE_LINE)
+    response = HttpResponse(generate_bukti_ep_pdf(pk), content_type='application/pdf')
+    response['Content-Disposition'] = (
+        f'attachment; filename=Bukti_EP_{visit.no_kunjungan}.pdf'
+    )
+    return response
+
+@login_required
+@require_GET
+@never_cache
+def poli_bukti_ep_cetak(request, pk):
+    """Halaman cetak bukti EP; isi identik dengan PDF (satu sumber data)."""
+    require_poli_rollout()
+    from .services.ep_evidence import bukti_ep
+
+    visit, workflow = get_visit(pk, request.user, service_line=RAJAL_JANTUNG_SERVICE_LINE)
+    return render(request, 'pasien/cetak_bukti_ep.html', {
+        'kunjungan': visit,
+        'pasien': visit.pasien,
+        'workflow': workflow,
+        'proof': bukti_ep(visit),
+    })

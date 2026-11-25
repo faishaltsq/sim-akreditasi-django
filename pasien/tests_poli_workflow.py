@@ -70,7 +70,14 @@ FULL_RAJAL_DRAFT = {
     '7': {'penunjang_catatan': 'EKG 12-lead, TTE.'},
     '8': {'diagnosa_utama': 'I20.0 Angina tidak stabil', 'rencana_terapi': 'DAPT + evaluasi TTE.'},
     '9': {'cppt_ringkas': 'Edukasi diet rendah garam.'},
-    '10': {'kondisi_akhir_rajal': 'MEMBAIK', 'evaluasi_respon_terapi': 'Nyeri turun NRS 3→1.'},
+    # F7.1/F7.2: opsi kondisi akhir dan respons terapi mengikuti matriks
+    # S10-L1-02/03 verbatim; cabang disposisi wajib ada untuk finalisasi.
+    '10': {'kondisi_akhir_rajal': 'STABIL_MEMBAIK',
+           'respons_terapi': 'BAIK',
+           'evaluasi_respon_terapi': 'Nyeri turun NRS 3→1.',
+           'ttv_pulang_sistole': 124, 'ttv_pulang_diastole': 78, 'ttv_pulang_nadi': 82,
+           'disposisi': 'PULANG',
+           'insiden_keselamatan': 'TIDAK_ADA'},
 }
 
 
@@ -372,7 +379,9 @@ class PoliFinalizationTest(PoliFixture):
         self.assertEqual(workflow.finalized_by_id, self.dpjp_user.pk)
         revision = IgdAssessmentRevision.objects.get(workflow=workflow)
         self.assertEqual(revision.revision, 1)
-        self.assertEqual(revision.snapshot['disposition']['kondisi_akhir'], 'MEMBAIK')
+        # F7.1: kondisi akhir matriks disimpan verbatim di snapshot, dan
+        # diproyeksikan ke ``DischargeRecord.kondisi_pulang`` (AMBIGU-21).
+        self.assertEqual(revision.snapshot['disposition']['kondisi_akhir'], 'STABIL_MEMBAIK')
         self.visit.refresh_from_db()
         self.assertEqual(self.visit.status, 'PULANG')
         self.assertEqual(self.visit.discharge.kondisi_pulang, 'MEMBAIK')

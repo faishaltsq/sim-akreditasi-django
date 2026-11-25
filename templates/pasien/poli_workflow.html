@@ -566,6 +566,32 @@
     </section>
     {% endif %}
 
+    {% if step10 %}
+    <section aria-labelledby="poli-step10-heading" data-poli-step10>
+      <h3 id="poli-step10-heading">Percabangan disposisi (S10-L1-05)</h3>
+      <ul class="poli-hint">
+        <li><strong>Pulang (Selesai)</strong> — berkas pulang: resume rawat jalan, e-resep, surat kontrol, bukti edukasi.</li>
+        <li><strong>Admisi Rawat Inap</strong> — surat pengantar rawat inap + persetujuan rawat inap; bed dipilih saat finalisasi.</li>
+        <li><strong>Rujuk Antar-Poli</strong> — wajib poliklinik tujuan internal dan alasan konsultasi.</li>
+        <li><strong>Rujuk Keluar RS</strong> — wajib RS tujuan, alasan rujukan, dan kondisi stabilisasi.</li>
+      </ul>
+      {% if step10.disposition.disposisi %}
+      <p class="poli-hint">Cabang tersimpan:
+        <strong>{{ step10.disposition.disposisi }}</strong>
+        {% if step10.disposition.disposisi_poli %}· tujuan {{ step10.disposition.disposisi_poli }}{% endif %}
+      </p>
+      {% endif %}
+      {% if is_final and step10.disposition_documents %}
+      <p class="poli-hint">Dokumen episode ini:</p>
+      <ul class="poli-hint">
+        {% for doc in step10.disposition_documents %}
+        <li><a href="{% url doc.route kunjungan.pk %}">{{ doc.label }}</a></li>
+        {% endfor %}
+      </ul>
+      {% endif %}
+    </section>
+    {% endif %}
+
     {% if can_finalize %}
     <section aria-labelledby="poli-final-heading">
       <h3 id="poli-final-heading">Penutupan episode</h3>
@@ -574,6 +600,11 @@
         <label for="poli-resume">Resume medis</label>
         <textarea id="poli-resume" name="resume" form="poli-final-form"></textarea>
       </div>
+      <div class="poli-field">
+        <label for="poli-bed">Bed tujuan (hanya cabang Admisi Rawat Inap)</label>
+        <input type="number" id="poli-bed" name="bed_id" min="1" form="poli-final-form">
+        <small class="text-muted d-block">Ketersediaan bed diperiksa ulang saat finalisasi.</small>
+      </div>
       <form id="poli-final-form">
         <div class="poli-actions">
           <button type="button" class="btn btn-secondary" data-poli-action="sign">Tandatangani (medis)</button>
@@ -581,6 +612,28 @@
           <span class="poli-status" data-poli-status role="status" aria-live="polite"></span>
         </div>
       </form>
+    </section>
+    {% endif %}
+
+    {% if can_addendum %}
+    <section aria-labelledby="poli-addendum-heading" data-poli-addendum>
+      <h3 id="poli-addendum-heading">Mode Addendum (S10-L2-02)</h3>
+      <p class="poli-hint">
+        Catatan asli tidak ditimpa. Setiap addendum membuat revisi baru beserta
+        alasan klinis, identitas pengguna, dan cap waktu.
+      </p>
+      <div class="poli-field">
+        <label for="poli-addendum-reason">Alasan klinis (wajib)</label>
+        <textarea id="poli-addendum-reason" data-addendum-field="reason"></textarea>
+      </div>
+      <div class="poli-field">
+        <label for="poli-addendum-text">Isi addendum</label>
+        <textarea id="poli-addendum-text" data-addendum-field="text"></textarea>
+      </div>
+      <div class="poli-actions">
+        <button type="button" class="btn btn-warning" data-poli-action="addendum">Simpan addendum</button>
+        <span class="poli-status" data-poli-status role="status" aria-live="polite"></span>
+      </div>
     </section>
     {% endif %}
   </section>
@@ -596,6 +649,26 @@
       <dd>{{ workflow.last_step|default:"—" }}</dd>
       <dt>Diperbarui</dt>
       <dd>{{ workflow.updated_at|date:"d/m/Y H:i"|default:"—" }}</dd>
+      {% if workflow.finalized_at %}
+      <dt>Versi final</dt>
+      <dd>
+        Versi {{ workflow.version }} · {{ workflow.finalized_at|date:"d/m/Y H:i" }} WIB
+        {% if workflow.finalized_by %}<small class="text-muted d-block">DPJP: {{ workflow.finalized_by.get_full_name|default:workflow.finalized_by.username }}</small>{% endif %}
+      </dd>
+      <dt>Status finalisasi</dt>
+      <dd>Final Terkunci (Read-Only setelah verifikasi DPJP){% if can_addendum %} — Mode Addendum tersedia{% endif %}</dd>
+      {% endif %}
+      {% if step10 and step10.revisions %}
+      <dt>Revisi tersimpan</dt>
+      <dd>
+        <ul class="mb-0 ps-3">
+          {% for rev in step10.revisions %}
+          <li>Revisi {{ rev.revision }} · {{ rev.signed_at|date:"d/m/Y H:i" }}
+            {% if rev.reason %}<small class="text-muted d-block">{{ rev.reason }}</small>{% endif %}</li>
+          {% endfor %}
+        </ul>
+      </dd>
+      {% endif %}
       <dt>Peran Anda</dt>
       <dd>{{ role_label }}</dd>
       {% if missing_sections %}

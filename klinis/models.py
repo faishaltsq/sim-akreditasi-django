@@ -206,8 +206,19 @@ class Pemetaan3S(models.Model):
 
 
 class AturanEpAsesmen(models.Model):
+    #: Cakupan jalur layanan. Kosong = berlaku untuk semua jalur (perilaku lama,
+    #: seluruh baris yang ada sebelum F7). Baris baru POLI-JANTUNG memakai
+    #: ``RAJAL_JANTUNG`` supaya form asesmen IGD tidak berubah satu baris pun.
+    LAYANAN = [
+        ('', 'Semua Jalur Layanan'),
+        ('IGD', 'Gawat Darurat'),
+        ('RAJAL_JANTUNG', 'Rawat Jalan Jantung'),
+    ]
+
     sub_standard = models.CharField('Sub-Standar Akreditasi', max_length=50, unique=True)
     label = models.CharField('Label Penjelasan', max_length=150)
+    layanan = models.CharField('Cakupan Layanan', max_length=20, choices=LAYANAN,
+                               blank=True, default='')
     wajib = models.BooleanField('Wajib Ditautkan', default=True)
     urutan = models.PositiveIntegerField('Urutan', default=0)
 
@@ -230,6 +241,11 @@ class AturanEpTindakan(models.Model):
     jenis = models.CharField('Jenis Tindakan', max_length=6, choices=JENIS, default='ICD9')
     kode = models.CharField('Kode Tindakan', max_length=20, blank=True,
                             help_text='Kosongkan untuk berlaku pada semua kode')
+    layanan = models.CharField(
+        'Cakupan Layanan', max_length=20, blank=True, default='',
+        choices=AturanEpAsesmen.LAYANAN,
+        help_text='Kosong = semua jalur. Baris POLI-JANTUNG tidak terlihat oleh IGD.',
+    )
     sub_standard = models.CharField('Sub-Standar EP', max_length=50)
     label = models.CharField('Label Penjelasan', max_length=150)
     wajib = models.BooleanField('Wajib Ditautkan', default=True)
@@ -238,7 +254,7 @@ class AturanEpTindakan(models.Model):
     class Meta:
         verbose_name = 'Aturan EP per Tindakan'
         verbose_name_plural = 'Aturan EP per Tindakan'
-        unique_together = [('jenis', 'kode', 'sub_standard')]
+        unique_together = [('jenis', 'kode', 'sub_standard', 'layanan')]
         ordering = ['urutan', 'jenis', 'kode']
 
     def __str__(self):

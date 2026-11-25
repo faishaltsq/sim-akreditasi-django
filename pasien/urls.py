@@ -29,6 +29,9 @@ urlpatterns = [
     # F6.8: unggahan dokumen pendukung panel kanan (batas sama dengan IGD).
     path('kunjungan/<int:pk>/asesmen-poli/lampiran/', poli_workflow_views.poli_lampiran_upload, name='poli_lampiran_upload'),
     path('kunjungan/<int:pk>/asesmen-poli/consent/cetak/', poli_workflow_views.poli_consent_cetak, name='poli_consent_cetak'),
+    # F7.6: bukti pelaksanaan EP per kunjungan (PDF + halaman cetak).
+    path('kunjungan/<int:pk>/asesmen-poli/bukti-ep/pdf/', poli_workflow_views.poli_bukti_ep_pdf, name='poli_bukti_ep_pdf'),
+    path('kunjungan/<int:pk>/asesmen-poli/bukti-ep/cetak/', poli_workflow_views.poli_bukti_ep_cetak, name='poli_bukti_ep_cetak'),
     path('kunjungan/<int:pk>/asesmen-igd/langkah/<int:step>/draft/', igd_workflow_views.igd_workflow_draft, name='igd_workflow_draft'),
     path('kunjungan/<int:pk>/asesmen-igd/aksi/', igd_workflow_views.igd_workflow_action, name='igd_workflow_action'),
     path('kunjungan/<int:pk>/asesmen-igd/profesional/katalog/', professional_views.igd_professional_catalogue, name='igd_professional_catalogue'),

@@ -20,6 +20,10 @@ Modul ini tidak boleh mengimpor ``pasien.services.*``: validator mengembalikan
 """
 from dataclasses import dataclass, field
 
+# Satu sumber daftar poliklinik: matriks tidak mendaftar ulang poli internal,
+# jadi daftar tujuan rujuk diturunkan dari ``POLIKLINIK_CHOICES`` model.
+from .models import POLIKLINIK_CHOICES
+
 VITAL_FIELDS = ('ttv_sistole', 'ttv_diastole', 'ttv_nadi', 'ttv_rr', 'ttv_suhu',
                 'ttv_spo2', 'ttv_gcs', 'ttv_skala_nyeri', 'gcs_e', 'gcs_v', 'gcs_m')
 
@@ -49,7 +53,64 @@ RAJAL_JANTUNG_SCHEMA_KEY = 'RAJAL_JANTUNG_V1'
 PENJAMIN_CHOICES = ('UMUM', 'BPJS', 'ASURANSI')
 JENIS_KUNJUNGAN_KLINIS_CHOICES = ('BARU', 'LAMA', 'KONTROL')
 CARA_DATANG_CHOICES = ('SENDIRI', 'AMBULANS', 'RUJUKAN')
-KONDISI_AKHIR_CHOICES = ('MEMBAIK', 'SEMBUH', 'RUJUK')
+
+# ── Langkah 10 (F7): evaluasi akhir, disposisi 4 cabang, mutu unit ───────────
+# Matriks S10-L1-02/03/05, S10-L2-01 — opsi dikutip verbatim. Kode pendek
+# disimpan di ``draft_payload``; label Indonesia hanya untuk render.
+
+KONDISI_AKHIR_RAJAL_CHOICES = ('STABIL_MEMBAIK', 'TETAP_PEMANTAUAN', 'MEMBURUK_IGD')
+KONDISI_AKHIR_RAJAL_LABELS = {
+    'STABIL_MEMBAIK': 'Stabil / Membaik',
+    'TETAP_PEMANTAUAN': 'Tetap / Perlu Pemantauan Ketat',
+    'MEMBURUK_IGD': 'Memburuk / Dirujuk ke IGD',
+}
+
+#: Proyeksi kondisi akhir rawat jalan → ``DischargeRecord.KONDISI_PULANG``.
+#:
+#: Dua kosakata ini berbeda asal: ``DischargeRecord`` memakai daftar lima nilai
+#: yang sudah dipakai modul rawat inap, sedangkan matriks S10-L1-02 memakai tiga
+#: opsi. Proyeksi ini adalah **keputusan pemetaan**, bukan aturan klinis baru —
+#: nilainya tetap utuh di ``draft_payload`` dan di snapshot revisi, sehingga
+#: pemetaan dapat diubah tanpa kehilangan data. Lihat AMBIGU-21.
+KONDISI_AKHIR_TO_KONDISI_PULANG = {
+    'STABIL_MEMBAIK': 'MEMBAIK',
+    'TETAP_PEMANTAUAN': 'MEMBAIK',
+    'MEMBURUK_IGD': 'RUJUK',
+}
+
+RESPONS_TERAPI_CHOICES = ('BAIK', 'CUKUP_BAIK', 'KURANG_OPTIMAL')
+RESPONS_TERAPI_LABELS = {
+    'BAIK': 'Baik — Keluhan Berkurang & Hemodinamik Stabil',
+    'CUKUP_BAIK': 'Cukup Baik — Perlu Evaluasi Lanjutan',
+    'KURANG_OPTIMAL': 'Kurang Optimal — Perlu Eskalasi Terapi',
+}
+
+#: S10-L1-05. Label "Admisi Rawat Inap" mengikuti AMBIGU-12 (satu label di
+#: semua tempat), bukan kata "Rawat Inap" yang berdiri sendiri.
+DISPOSISI_RAJAL_CHOICES = ('PULANG', 'RAWAT_INAP', 'RUJUK_ANTAR_POLI', 'RUJUK_KELUAR')
+DISPOSISI_RAJAL_LABELS = {
+    'PULANG': 'Pulang (Selesai)',
+    'RAWAT_INAP': 'Admisi Rawat Inap',
+    'RUJUK_ANTAR_POLI': 'Rujuk Antar-Poli',
+    'RUJUK_KELUAR': 'Rujuk Keluar RS',
+}
+
+#: S10-L2-01. Pemetaan ke ``InsidenKeselamatan.JENIS_CHOICES`` ada di
+#: ``pasien/services/igd_finalization.py`` — hanya KNC dan KTD yang punya padanan
+#: langsung; "Risiko Kepatuhan" belum punya jenis insiden (AMBIGU-22).
+INSIDEN_RAJAL_CHOICES = ('TIDAK_ADA', 'KNC', 'KTD_SENTINEL', 'RISIKO_KEPATUHAN')
+INSIDEN_RAJAL_LABELS = {
+    'TIDAK_ADA': 'Tidak Ada Insiden / Risiko Terkendali',
+    'KNC': 'Kejadian Nyaris Cedera (KNC) Tercatat',
+    'KTD_SENTINEL': 'Kejadian Tidak Diharapkan (KTD) / Sentinel',
+    'RISIKO_KEPATUHAN': 'Risiko Kepatuhan / Alur Pelayanan Tercatat',
+}
+
+#: Poliklinik tujuan rujuk antar-poli: daftar ``POLIKLINIK_CHOICES`` tanpa
+#: POLI_JANTUNG sendiri (rujukan ke unit asal bukan rujukan).
+POLI_TUJUAN_CHOICES = tuple(
+    code for code, _label in POLIKLINIK_CHOICES if code != 'POLI_JANTUNG'
+)
 
 # ── Pilihan Lapis 1 langkah 1–6 (matriks S1-L1..S6-L1, verbatim) ─────────────
 # Nilai disimpan sebagai kode pendek; label Indonesia ada di ``*_LABELS`` dan
@@ -508,6 +569,11 @@ STEP_LABELS = {
     'edukasi': EDUKASI_KARDIO_LABELS,
     'jadwal_kontrol': JADWAL_KONTROL_LABELS,
     'gdmt_penyesuaian': GDMT_PENYESUAIAN_LABELS,
+    'kondisi_akhir_rajal': KONDISI_AKHIR_RAJAL_LABELS,
+    'respons_terapi': RESPONS_TERAPI_LABELS,
+    'disposisi': DISPOSISI_RAJAL_LABELS,
+    'disposisi_poli': dict(POLIKLINIK_CHOICES),
+    'insiden_keselamatan': INSIDEN_RAJAL_LABELS,
 }
 
 
@@ -647,6 +713,32 @@ class StepSpec:
 def _vital(name, minimum, maximum, label):
     return StepField(name, 'number', label=label, minimum=minimum, maximum=maximum)
 
+def validate_disposisi_rajal(values):
+    """Aturan percabangan S10-L1-05; fungsi murni tanpa akses basis data.
+
+    Kembalian berbentuk ``{field: [pesan]}`` seperti ``StepSpec.validate``.
+    Syarat per cabang dikutip dari matriks: rujuk antar-poli menuntut
+    poliklinik tujuan + alasan konsultasi; rujuk keluar menuntut RS tujuan,
+    alasan rujukan, dan kondisi stabilisasi.
+    """
+    errors = {}
+    disposition = values.get('disposisi')
+    if disposition not in DISPOSISI_RAJAL_CHOICES:
+        return {'disposisi': ['Pilih disposisi pasien.']}
+    if disposition == 'RUJUK_ANTAR_POLI':
+        if values.get('disposisi_poli') not in POLI_TUJUAN_CHOICES:
+            errors['disposisi_poli'] = ['Pilih poliklinik tujuan internal.']
+        if not (values.get('disposisi_alasan') or '').strip():
+            errors['disposisi_alasan'] = ['Alasan konsultasi wajib diisi.']
+    elif disposition == 'RUJUK_KELUAR':
+        if not (values.get('disposisi_rs_tujuan') or '').strip():
+            errors['disposisi_rs_tujuan'] = ['RS tujuan rujukan wajib diisi.']
+        if not (values.get('disposisi_alasan') or '').strip():
+            errors['disposisi_alasan'] = ['Alasan rujukan wajib diisi.']
+        if not (values.get('disposisi_stabilisasi') or '').strip():
+            errors['disposisi_stabilisasi'] = ['Kondisi stabilisasi wajib diisi.']
+    return errors
+
 
 #: Kerangka 10 langkah POLI-JANTUNG (F1.3). Kedalaman klinis kardiologi
 #: ditambahkan F2/F3/F5/F6/F7 pada langkah yang sama — F1 hanya menetapkan
@@ -765,9 +857,35 @@ RAJAL_JANTUNG_STEPS = {
         StepField('input_mode', 'select', label='Metode input', choices=INPUT_MODE_CHOICES),
         StepField('cppt_ringkas', 'text', label='Ringkasan asuhan'),
     )),
-    10: StepSpec(10, 'Evaluasi Akhir & Kondisi Pulang', (
-        StepField('kondisi_akhir_rajal', 'select', label='Kondisi akhir', choices=KONDISI_AKHIR_CHOICES),
-        StepField('evaluasi_respon_terapi', 'text', label='Evaluasi respons terapi'),
+    10: StepSpec(10, 'Evaluasi Akhir, Disposisi & Mutu', (
+        # S10-L1-02/03 — kondisi akhir dan respons terapi, keduanya dropdown.
+        StepField('kondisi_akhir_rajal', 'select', label='Kondisi akhir',
+                  choices=KONDISI_AKHIR_RAJAL_CHOICES),
+        StepField('respons_terapi', 'select', label='Respons terapi',
+                  choices=RESPONS_TERAPI_CHOICES),
+        # Catatan bebas pendamping dropdown; sudah ada sejak F1 dan tetap
+        # dipakai sebagai keterangan, bukan pengganti pilihan matriks.
+        StepField('evaluasi_respon_terapi', 'text', label='Catatan respons terapi'),
+        # S10-L1-04 — tiga parameter TTV pulang, batas angka sama dengan
+        # langkah 4 (tidak ada batas baru yang dikarang).
+        _vital('ttv_pulang_sistole', 0, 350, 'Tekanan darah sistolik pulang (mmHg)'),
+        _vital('ttv_pulang_diastole', 0, 250, 'Tekanan darah diastolik pulang (mmHg)'),
+        _vital('ttv_pulang_nadi', 0, 350, 'Nadi pulang (bpm)'),
+        # S10-L1-05 — percabangan disposisi beserta isian per cabang.
+        StepField('disposisi', 'select', label='Disposisi pasien',
+                  choices=DISPOSISI_RAJAL_CHOICES),
+        StepField('disposisi_poli', 'select', label='Poliklinik tujuan (rujuk antar-poli)',
+                  choices=POLI_TUJUAN_CHOICES),
+        StepField('disposisi_alasan', 'text', label='Alasan konsultasi / rujukan',
+                  max_length=2000),
+        StepField('disposisi_rs_tujuan', 'text', label='RS tujuan (rujuk keluar)',
+                  max_length=200),
+        StepField('disposisi_stabilisasi', 'text',
+                  label='Kondisi stabilisasi sebelum rujuk', max_length=2000),
+        # S10-L2-01 — catatan insiden/risiko mutu unit.
+        StepField('insiden_keselamatan', 'select',
+                  label='Catatan insiden keselamatan / risiko mutu unit',
+                  choices=INSIDEN_RAJAL_CHOICES),
     )),
 }
 

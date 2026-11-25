@@ -4,7 +4,7 @@ name: Clinical Regression Gate
 #
 # PENTING — suite ini HIJAU hari ini dan HARUS tetap hijau.
 # Baseline terukur (Python 3.12.10, Django 6.1, SQLite):
-#   Ran 547 tests
+#   Ran 580 tests
 #   OK (skipped=9)
 # 245 di antaranya adalah suite IGD/asuhan profesional yang sudah ada; 260
 # sisanya modul POLI-JANTUNG: F1 (pasien.tests_poli_workflow 33,
@@ -14,7 +14,8 @@ name: Clinical Regression Gate
 # P3 (pasien.tests_poli_no_doctor 6), P4 (pasien.tests_seed_dokter_demo 6),
 # A2 (pasien.tests_pregnancy_contra_master 9), F4.0
 # (pasien.tests_billing_ownership 7), F4 (pasien.tests_penunjang_f4 32), dan
-# F5 (pasien.tests_poli_langkah8_f5 28), dan F6 (pasien.tests_poli_langkah9_f6 42).
+# F5 (pasien.tests_poli_langkah8_f5 28), F6 (pasien.tests_poli_langkah9_f6 42), dan
+# F7 (pasien.tests_poli_langkah10_f7 33).
 # Tidak ada `continue-on-error` dan tidak ada `|| true` di berkas ini. Jalur
 # merah HARUS berarti regresi nyata, bukan tes yang dilewati diam-diam.
 #
@@ -108,6 +109,7 @@ jobs:
             pasien.tests_penunjang_f4 \
             pasien.tests_poli_langkah8_f5 \
             pasien.tests_poli_langkah9_f6 \
+            pasien.tests_poli_langkah10_f7 \
             --parallel 1 --verbosity 2 2>&1 | tee /tmp/clinical-regression.log
       # Django's test runner has no JUnit output and pytest is not a dependency,
       # so the honest structured artifact is the verbosity-2 log itself. Namun
@@ -133,7 +135,7 @@ jobs:
             echo "### Clinical regression gate"
             echo ""
             echo "- Koleksi: ${found_line}"
-            echo "- Baseline: 547 tes, OK (skipped=9)"
+            echo "- Baseline: 580 tes, OK (skipped=9)"
           } >> "$GITHUB_STEP_SUMMARY"
           if [ "$found_count" -eq 0 ]; then
             echo "::error::0 tes terkoleksi. Label modul berubah atau hilang — gerbang tidak boleh hijau."

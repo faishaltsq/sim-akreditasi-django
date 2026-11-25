@@ -553,6 +553,12 @@ class InsidenKeselamatan(models.Model):
     ]
 
     unit               = models.ForeignKey(UnitKerja, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='Unit Terkait')
+    kunjungan          = models.ForeignKey(
+        'pasien.KunjunganPasien', on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='insiden_otomatis', verbose_name='Kunjungan Sumber',
+        help_text=('Diisi hanya oleh laporan otomatis Langkah 10 POLI-JANTUNG. '
+                   'Kunci idempotensi: satu episode = satu laporan otomatis.'),
+    )
     tanggal_kejadian   = models.DateField('Tanggal Kejadian')
     waktu_kejadian     = models.TimeField('Waktu Kejadian', null=True, blank=True)
     jenis_insiden      = models.CharField('Jenis Insiden', max_length=15, choices=JENIS_CHOICES)

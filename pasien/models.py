@@ -807,8 +807,15 @@ class KunjunganPasien(models.Model):
 
     @property
     def status_ep_ringkas(self):
+        from django.db.models import Q
         from klinis.models import AturanEpAsesmen
-        rules = set(AturanEpAsesmen.objects.filter(wajib=True).values_list('sub_standard', flat=True))
+        workflow = getattr(self, 'igd_workflow', None)
+        line = workflow.service_line if workflow is not None else ''
+        rules = set(
+            AturanEpAsesmen.objects
+            .filter(Q(layanan='') | Q(layanan=line), wajib=True)
+            .values_list('sub_standard', flat=True)
+        )
         if not rules:
             return '-'
         rows = self.korelasi_ep.select_related('standard_item')

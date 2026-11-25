@@ -374,7 +374,9 @@ def kunjungan_asesmen_awal(request, pk):
     all_standard_items = StandardItem.objects.select_related('category').order_by('category__order', 'order', 'code')
 
     aturan_rules = []
-    for r in AturanEpAsesmen.objects.all().order_by('urutan'):
+    # F7.5: aturan ber-cakupan RAJAL_JANTUNG hanya untuk episode poli jantung;
+    # baris global (''), termasuk seluruh data lama, tetap tampil seperti dulu.
+    for r in AturanEpAsesmen.objects.filter(layanan='').order_by('urutan'):
         std_item = StandardItem.objects.filter(sub_standard=r.sub_standard).first()
         aturan_rules.append({
             'rule': r,
@@ -1233,7 +1235,7 @@ def igd_dashboard(request):
                 'standard_item': StandardItem.objects.filter(sub_standard=r.sub_standard).first(),
                 'unresolved': not StandardItem.objects.filter(sub_standard=r.sub_standard).exists(),
             }
-            for r in AturanEpAsesmen.objects.all().order_by('urutan')
+            for r in AturanEpAsesmen.objects.filter(layanan='').order_by('urutan')
         ],
         'pemetaan_3s':        Pemetaan3S.objects.select_related('sdki', 'slki', 'siki').all(),
         'slki_list':          SlkiLuaran.objects.all().order_by('kode'),
@@ -2413,7 +2415,7 @@ def igd_asesmen_awal_save(request, pk):
                 sync_billing(k, kode_list, user=request.user)
 
         # ── Korelasi EP ──
-        for rule in AturanEpAsesmen.objects.all():
+        for rule in AturanEpAsesmen.objects.filter(layanan=''):
             status = request.POST.get(f'ep_status_{rule.pk}')
             if status not in ('TERPENUHI', 'BELUM', 'NA'):
                 continue
@@ -2859,7 +2861,7 @@ def igd_asesmen_medis_save(request, pk):
                 sync_billing(k, kode_list, user=request.user)
 
         # ── Korelasi EP ──
-        for rule in AturanEpAsesmen.objects.all():
+        for rule in AturanEpAsesmen.objects.filter(layanan=''):
             status = request.POST.get(f'ep_status_{rule.pk}')
             if status not in ('TERPENUHI', 'BELUM', 'NA'):
                 continue

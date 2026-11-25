@@ -151,9 +151,20 @@
       var payload;
       if (operation === 'sign') {
         payload = { section: 'MEDIS' };
+      } else if (operation === 'addendum') {
+        var reasonNode = document.querySelector('[data-addendum-field="reason"]');
+        var textNode = document.querySelector('[data-addendum-field="text"]');
+        payload = {
+          section: 'MEDIS',
+          reason: reasonNode ? reasonNode.value : '',
+          text: textNode ? textNode.value : ''
+        };
       } else {
         var resume = document.getElementById('poli-resume');
+        var bed = document.getElementById('poli-bed');
         payload = { resume: resume ? resume.value : '' };
+        // S10-L1-05 cabang Admisi Rawat Inap: bed dipilih di panel penutupan.
+        if (bed && bed.value !== '') payload.bed_id = Number(bed.value);
       }
       setStatus(node, 'Memproses…', false);
       post(actionUrl, {
@@ -165,7 +176,7 @@
         if (result.ok) {
           applyVersion(result.data.version);
           setStatus(node, 'Selesai. Versi ' + result.data.version + '.', false);
-          if (operation === 'finalize') window.location.reload();
+          if (operation === 'finalize' || operation === 'addendum') window.location.reload();
           return;
         }
         setStatus(node, result.data.error || 'Aksi ditolak.', true);

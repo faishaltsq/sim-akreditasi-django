@@ -91,6 +91,30 @@ def _fmt_rupiah(amount):
         return '-'
 
 
+def _rajal_discharge_vitals(kunjungan):
+    """TTV pulang dari ``draft_payload`` langkah 10 (F7.1, S10-L1-04).
+
+    Hanya tiga parameter yang ditetapkan matriks (AMBIGU-06): sistolik,
+    diastolik, nadi. Kembalian kosong bila episode tidak menyimpan nilainya,
+    sehingga resume IGD tidak berubah bentuk.
+    """
+    workflow = getattr(kunjungan, 'igd_workflow', None)
+    if workflow is None:
+        return []
+    step10 = (workflow.draft_payload or {}).get('10') or {}
+    rows = [
+        ('Tekanan Darah Sistolik', step10.get('ttv_pulang_sistole'), 'mmHg'),
+        ('Tekanan Darah Diastolik', step10.get('ttv_pulang_diastole'), 'mmHg'),
+        ('Nadi', step10.get('ttv_pulang_nadi'), 'bpm'),
+    ]
+    if all(value in (None, '') for _label, value, _unit in rows):
+        return []
+    return [
+        (label, f'{value} {unit}' if value not in (None, '') else '-')
+        for label, value, unit in rows
+    ]
+
+
 # ── Main generator ────────────────────────────────────────────────────────────
 def generate_resume_pdf(kunjungan_pk: int) -> bytes:
     """
@@ -260,6 +284,17 @@ def generate_resume_pdf(kunjungan_pk: int) -> bytes:
         ('Tanggal Discharge', _fmt_date(d.tanggal_discharge, '%d/%m/%Y %H:%M')),
         ('Total Tagihan',    _fmt_rupiah(d.total_tagihan)),
     ], styles))
+    story.append(SP(3))
+
+    # ── 9. TTV Akhir Kunjungan (F7.1, S10-L1-04) ─────────────────────────────
+    # Hanya muncul bila episode menyimpan TTV pulang di ``draft_payload``
+    # langkah 10 (jalur RAJAL_JANTUNG). Episode IGD tidak punya kunci ini,
+    # sehingga resume IGD tidak berubah.
+    ttv_pulang = _rajal_discharge_vitals(k)
+    if ttv_pulang:
+        story.append(_section_header('9. TANDA VITAL AKHIR KUNJUNGAN', styles))
+        story.append(_kv_table(ttv_pulang, styles))
+        story.append(SP(3))
     story.append(SP(6))
 
     # ── Footer / Signature ────────────────────────────────────────────────────
@@ -417,5 +452,141 @@ def generate_edukasi_kardio_pdf(kunjungan_pk: int) -> bytes:
         'dan cap waktu elektronik pencatatan sistem ARIMA.',
         styles['footer']
     ))
+    doc.build(story)
+    return buf.getvalue()
+
+# ── Bukti Pelaksanaan EP (F7.6) ───────────────────────────────────────────────
+def generate_bukti_ep_pdf(kunjungan_pk: int) -> bytes:
+    """PDF bukti pelaksanaan EP satu kunjungan (matriks §6, S10-L2-01).
+
+    Isi diambil dari ``pasien.services.ep_evidence.bukti_ep`` — sumber yang sama
+    dengan halaman cetak. Setiap baris memuat kode EP, status, catatan, dan
+    timestamp verifikator; tidak ada kode EP yang ditulis di sini.
+    """
+    from pasien.models import KunjunganPasien
+    from pasien.services.ep_evidence import bukti_ep
+
+    k = KunjunganPasien.objects.select_related('pasien').get(pk=kunjungan_pk)
+    proof = bukti_ep(k)
+    p = proof['pasien']
+
+    buf = BytesIO()
+    doc = SimpleDocTemplate(
+        buf, pagesize=A4,
+        leftMargin=18 * mm, rightMargin=18 * mm,
+        topMargin=16 * mm, bottomMargin=16 * mm,
+    )
+    styles = {
+        'hospital': _style('hospital', fontName='Helvetica-Bold', fontSize=16,
+                           textColor=TEAL, alignment=TA_CENTER, spaceAfter=2),
+        'subtitle': _style('subtitle', fontName='Helvetica-Bold', fontSize=10,
+                           textColor=DARK, alignment=TA_CENTER, spaceAfter=1),
+        'sub2': _style('sub2', fontName='Helvetica', fontSize=8,
+                       textColor=MUTED, alignment=TA_CENTER),
+        'sec_head': _style('sec_head', fontName='Helvetica-Bold', fontSize=9,
+                           textColor=WHITE),
+        'label': _style('label', fontName='Helvetica-Bold', fontSize=7.5,
+                        textColor=MUTED),
+        'value': _style('value', fontName='Helvetica', fontSize=7.5,
+                        textColor=DARK),
+        'footer': _style('footer', fontName='Helvetica', fontSize=7.5,
+                         textColor=MUTED, alignment=TA_CENTER),
+    }
+    SP = lambda n=4: Spacer(1, n * mm)
+
+    story = []
+    story.append(Paragraph('RS MonsisKami', styles['hospital']))
+    story.append(Paragraph('BUKTI PELAKSANAAN ELEMEN PENILAIAN (EP)', styles['subtitle']))
+    story.append(Paragraph(
+        f'Poli Jantung &nbsp;|&nbsp; No. Kunjungan: <b>{k.no_kunjungan}</b>'
+        f' &nbsp;|&nbsp; Dicetak: <b>{proof["generated_at"].strftime("%d/%m/%Y %H:%M")}</b>',
+        styles['sub2']
+    ))
+    story.append(HRFlowable(width='100%', thickness=1.2, color=TEAL, spaceAfter=6))
+
+    story.append(_section_header('1. IDENTITAS', styles))
+    story.append(_kv_table([
+        ('No. Rekam Medis', p.no_rm),
+        ('Nama Pasien', p.nama_lengkap),
+        ('Tanggal Lahir', _fmt_date(p.tanggal_lahir)),
+        ('DPJP', k.dpjp or '-'),
+        ('Penjamin', k.get_penjamin_display()),
+        ('Status Asesmen', (
+            proof['workflow'].get_status_display() if proof['workflow'] else 'Belum dimulai'
+        )),
+    ], styles))
+    story.append(SP(3))
+
+    story.append(_section_header('2. BUKTI EP ASESMEN', styles))
+    rows = [[
+        Paragraph('<b>Sub-Standar</b>', styles['label']),
+        Paragraph('<b>Kode EP</b>', styles['label']),
+        Paragraph('<b>Status</b>', styles['label']),
+        Paragraph('<b>Catatan</b>', styles['label']),
+        Paragraph('<b>Verifikator &amp; waktu</b>', styles['label']),
+    ]]
+    for row in proof['asesmen']:
+        stamp = ''
+        if row['verified_at']:
+            stamp = row['verified_at'].strftime('%d/%m/%Y %H:%M')
+        rows.append([
+            Paragraph(row['sub_standard'], styles['value']),
+            Paragraph(row['code'], styles['value']),
+            Paragraph(row['status_label'], styles['value']),
+            Paragraph(row['catatan'] or '-', styles['value']),
+            Paragraph(f'{row["verifier"] or "-"}<br/>{stamp or "-"}', styles['value']),
+        ])
+    if len(rows) == 1:
+        rows.append([Paragraph('Belum ada bukti EP asesmen.', styles['value'])] + [''] * 4)
+    table = Table(rows, colWidths=[24 * mm, 30 * mm, 26 * mm, 62 * mm, 32 * mm])
+    table.setStyle(TableStyle([
+        ('BOX', (0, 0), (-1, -1), 0.5, MUTED),
+        ('INNERGRID', (0, 0), (-1, -1), 0.25, colors.HexColor('#e2e8f0')),
+        ('BACKGROUND', (0, 0), (-1, 0), LIGHT_BG),
+        ('TOPPADDING', (0, 0), (-1, -1), 3),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 3),
+        ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+    ]))
+    story.append(table)
+    story.append(SP(3))
+
+    story.append(_section_header('3. BUKTI EP TINDAKAN', styles))
+    rows = [[
+        Paragraph('<b>Kode Tindakan</b>', styles['label']),
+        Paragraph('<b>Kode EP</b>', styles['label']),
+        Paragraph('<b>Status</b>', styles['label']),
+        Paragraph('<b>Catatan</b>', styles['label']),
+        Paragraph('<b>Waktu</b>', styles['label']),
+    ]]
+    for row in proof['tindakan']:
+        stamp = row['verified_at'].strftime('%d/%m/%Y %H:%M') if row['verified_at'] else '-'
+        rows.append([
+            Paragraph(f'{row["kode_tindakan"]} — {row["nama"]}', styles['value']),
+            Paragraph(row['code'] or '-', styles['value']),
+            Paragraph(row['status_label'], styles['value']),
+            Paragraph(row['catatan'] or '-', styles['value']),
+            Paragraph(stamp, styles['value']),
+        ])
+    if len(rows) == 1:
+        rows.append([Paragraph('Belum ada tindakan tercatat.', styles['value'])] + [''] * 4)
+    table = Table(rows, colWidths=[52 * mm, 30 * mm, 26 * mm, 40 * mm, 26 * mm])
+    table.setStyle(TableStyle([
+        ('BOX', (0, 0), (-1, -1), 0.5, MUTED),
+        ('INNERGRID', (0, 0), (-1, -1), 0.25, colors.HexColor('#e2e8f0')),
+        ('BACKGROUND', (0, 0), (-1, 0), LIGHT_BG),
+        ('TOPPADDING', (0, 0), (-1, -1), 3),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 3),
+        ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+    ]))
+    story.append(table)
+    story.append(SP(4))
+
+    story.append(Paragraph(
+        f'Ringkasan: {proof["terpenuhi"]} dari {proof["total_asesmen"]} EP asesmen '
+        'berstatus Terpenuhi. Dokumen ini dihasilkan otomatis dari aturan EP '
+        '(AturanEpAsesmen/AturanEpTindakan) dan rekam pelaksanaan kunjungan.',
+        styles['footer']
+    ))
+
     doc.build(story)
     return buf.getvalue()

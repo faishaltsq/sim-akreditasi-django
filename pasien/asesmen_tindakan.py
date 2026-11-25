@@ -293,7 +293,7 @@ def tambah_tindakan_poli(visit, actor, *, kode, pelaksana, quantity=Decimal('1')
     if catatan:
         line.catatan_klinis = catatan[:2000]
     if not line.standard_item_id:
-        rule = primary_for('ICD9', kode)
+        rule = primary_for('ICD9', kode, service_line='RAJAL_JANTUNG')
         if rule:
             line.standard_item = _ep_standard_item(rule.sub_standard)
     line.save()

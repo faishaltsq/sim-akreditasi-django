@@ -10,7 +10,11 @@ from akreditasi.models import UnitKerja
 from pasien.forms_igd_workflow import snapshot_visit_fields
 from pasien.forms_igd_operations import SignatureForm, FinalizationForm, AddendumForm, RajalFinalizationForm
 from pasien.models import Bed, IgdAssessmentRevision, DischargeRecord, POLIKLINIK_CHOICES
-from pasien.workflow_schemas import KONDISI_AKHIR_CHOICES, RAJAL_JANTUNG_STEP_NUMBERS
+from pasien.workflow_schemas import (
+    DISPOSISI_RAJAL_CHOICES, KONDISI_AKHIR_RAJAL_CHOICES,
+    KONDISI_AKHIR_TO_KONDISI_PULANG, RAJAL_JANTUNG_STEP_NUMBERS,
+    validate_disposisi_rajal,
+)
 from .igd_actions import validate, digest, require_doctor, DOCTORS, NURSES
 from .igd_assessment_workflow import RAJAL_JANTUNG_SERVICE_LINE, WorkflowConflict, WorkflowValidation
 from .poli_rbac import require_dpjp
@@ -100,6 +104,10 @@ def missing_rajal_sections(workflow):
         if not any(value not in (None, '', [], {}) for value in values.values()):
             missing.append(key)
     if not (draft.get('10') or {}).get('kondisi_akhir_rajal') and 'step_10' not in exemptions and 'step_10' not in missing:
+        missing.append('step_10')
+    elif (draft.get('10') or {}).get('disposisi') not in DISPOSISI_RAJAL_CHOICES and 'step_10' not in exemptions and 'step_10' not in missing:
+        # F7.2: penutupan episode selalu punya satu cabang disposisi; tanpa itu
+        # dokumen pulang/rawat inap/rujukan tidak dapat ditentukan.
         missing.append('step_10')
     return missing
 
@@ -209,6 +217,296 @@ def _planned_kontrol(visit):
         return None
     return record.jadwal_kontrol
 
+#: S10-L2-01 → ``InsidenKeselamatan.jenis_insiden``. Hanya dua opsi matriks
+#: yang punya padanan langsung di model insiden yang sudah ada; "Risiko
+#: Kepatuhan / Alur Pelayanan Tercatat" belum punya jenis padanan (AMBIGU-22),
+#: sehingga nilainya tetap tersimpan di ``draft_payload`` tetapi tidak membuat
+#: baris insiden dengan jenis karangan.
+INSIDEN_JENIS_MAP = {'KNC': 'KNC', 'KTD_SENTINEL': 'KTD'}
+
+#: Indikator PDCA unit yang diumpan F7.7 (dibuat oleh
+#: ``seed_poli_jantung_ep``). Bila baris tidak ada, pengumpanan dilewati —
+#: definisi indikator tidak pernah dikarang di kode.
+INDIKATOR_WAKTU_TUNGGU = 'IMU-POLJAN-01'
+INDIKATOR_NILAI_KRITIS = 'IMU-POLJAN-02'
+#: Batas SLA dari matriks §7 ("Waktu tunggu pelayanan rawat jalan <= 60 menit").
+WAIT_MINUTES_TARGET = 60
+#: Batas SLA dari matriks §7 ("Lapor nilai kritis ke DPJP <= 30 menit").
+CRITICAL_MINUTES_TARGET = 30
+
+def _rajal_documents(disposition):
+    """Dokumen per cabang disposisi — semuanya memakai pencetak yang sudah ada."""
+    return {
+        'PULANG': ('pasien:resume_pdf', 'pasien:cetak_skdp', 'pasien:poli_edukasi_pdf'),
+        'RAWAT_INAP': ('pasien:cetak_spri', 'pasien:cetak_general_consent'),
+        'RUJUK_ANTAR_POLI': ('pasien:resume_pdf',),
+        'RUJUK_KELUAR': ('pasien:resume_pdf',),
+    }[disposition]
+
+def _record_incident(visit, workflow, user, now):
+    """S10-L2-01 → satu baris ``InsidenKeselamatan`` untuk episode ini.
+
+    Idempoten: kunci ``kunjungan`` (FK aditif) memastikan satu episode hanya
+    punya satu laporan otomatis, walau finalisasi diulang setelah addendum.
+    """
+    from akreditasi.risiko_models import InsidenKeselamatan
+
+    pilihan = (workflow.draft_payload or {}).get('10', {}).get('insiden_keselamatan')
+    jenis = INSIDEN_JENIS_MAP.get(pilihan)
+    if not jenis:
+        return None
+    unit = visit.unit_kerja or workflow.origin_unit
+    row, _created = InsidenKeselamatan.objects.get_or_create(
+        kunjungan=visit,
+        defaults={
+            'unit': unit,
+            'tanggal_kejadian': timezone.localdate(now),
+            'waktu_kejadian': timezone.localtime(now).time().replace(microsecond=0),
+            'jenis_insiden': jenis,
+            # Keparahan tidak ditetapkan matriks untuk laporan otomatis;
+            # nilai paling rendah yang tersedia dipakai agar baris tetap sah
+            # tanpa mengarang grading klinis.
+            'tingkat_keparahan': 'TIDAK_CEDERA' if jenis == 'KNC' else 'MODERAT',
+            'lokasi_kejadian': f'Poli Jantung — {visit.no_kunjungan}',
+            'deskripsi_kejadian': (
+                f'Laporan otomatis Langkah 10 (S10-L2-01): {pilihan} '
+                f'pada kunjungan {visit.no_kunjungan}.'
+            ),
+            'pasien_terpapar': jenis != 'KNC',
+            'pelapor_anonim': False,
+        },
+    )
+    return row
+
+def _record_ep_evidence(visit, workflow, user, now):
+    """F7.5 — bukti EP asesmen sebagai baris ``KorelasiEpAsesmen``.
+
+    Aturan datang dari tabel ``AturanEpAsesmen`` (ADR-7); kode Python tidak
+    memuat satu pun sub-standar. Status diturunkan dari kontrak kelengkapan
+    yang sama dengan gerbang finalisasi: episode yang lolos finalisasi adalah
+    episode lengkap, sehingga setiap aturan wajib berstatus TERPENUHI.
+    """
+    from akreditasi.models import StandardItem
+    from klinis.models import AturanEpAsesmen
+    from pasien.models import KorelasiEpAsesmen
+
+    complete = not missing_rajal_sections(workflow)
+    rows = []
+    rules = AturanEpAsesmen.objects.filter(
+        layanan__in=('', RAJAL_JANTUNG_SERVICE_LINE), wajib=True,
+    ).order_by('urutan', 'sub_standard')
+    for rule in rules:
+        item = StandardItem.objects.filter(sub_standard=rule.sub_standard).first()
+        if item is None:
+            # Resolver ADR-7: aturan yang menunjuk sub-standar di luar katalog
+            # aktif dibuang, bukan ditautkan ke EP karangan.
+            continue
+        status = 'TERPENUHI' if complete else 'BELUM'
+        catatan = (
+            f'{rule.label} — bukti: asesmen 10 langkah POLI-JANTUNG '
+            f'{"lengkap" if complete else "belum lengkap"} '
+            f'(versi {workflow.version}).'
+        )
+        KorelasiEpAsesmen.objects.update_or_create(
+            kunjungan=visit, standard_item=item,
+            defaults={
+                'status': status, 'catatan': catatan,
+                'diverifikasi_oleh': user, 'diverifikasi_pada': now,
+            },
+        )
+        rows.append({
+            'sub_standard': rule.sub_standard, 'code': item.code,
+            'status': status, 'catatan': catatan,
+            'verified_at': now.isoformat(),
+        })
+    return rows
+
+def _waiting_minutes(visit):
+    """AMBIGU-09: ``registrasi_selesai_at`` → CPPT pertama berstatus SIGNED."""
+    start = visit.registrasi_selesai_at
+    if start is None:
+        return None
+    first_signed = (
+        visit.cppt.filter(status='SIGNED').order_by('tanggal', 'pk').first()
+    )
+    if first_signed is None:
+        return None
+    return (first_signed.tanggal - start).total_seconds() / 60.0
+
+def _month_bounds(now):
+    from datetime import date
+
+    start = date(now.year, now.month, 1)
+    end = date(now.year + (now.month == 12), (now.month % 12) + 1, 1)
+    return start, end
+
+def _finished_rajal_visits(unit_id, now):
+    from pasien.models import KunjunganPasien
+
+    start, end = _month_bounds(now)
+    return (
+        KunjunganPasien.objects
+        .filter(
+            unit_kerja_id=unit_id,
+            igd_workflow__service_line=RAJAL_JANTUNG_SERVICE_LINE,
+            igd_workflow__status='FINAL',
+            tanggal_kunjungan__gte=start, tanggal_kunjungan__lt=end,
+        )
+        .prefetch_related('cppt', 'order_penunjang')
+    )
+
+def _write_indicator(kode, now, patuh, catatan):
+    """Tulis satu ``CatatanIndikator`` dari daftar ``patuh`` (bool per kasus).
+
+    Angka adalah hasil hitung ulang seluruh episode bulan itu, bukan penambahan
+    buta — sehingga finalisasi ulang setelah addendum tidak menggandakan angka.
+    """
+    from akreditasi.risiko_models import CatatanIndikator, IndikatorMutu
+
+    indikator = IndikatorMutu.objects.filter(kode_indikator=kode).first()
+    if indikator is None:
+        return None
+    denominator = len(patuh)
+    numerator = sum(1 for value in patuh if value)
+    if not denominator:
+        return None
+    record, _created = CatatanIndikator.objects.update_or_create(
+        indikator=indikator, bulan=now.month, tahun=now.year,
+        defaults={
+            'nilai_numerator': numerator, 'nilai_denominator': denominator,
+            'catatan': catatan,
+        },
+    )
+    return record
+
+def _record_unit_indicators(visit, now):
+    """F7.7 — umpan indikator PDCA unit Poli Jantung untuk bulan berjalan.
+
+    Dua metrik diumpan; yang ketiga ("kelengkapan asesmen awal <= 24 jam")
+    sengaja **tidak** diumpan karena matriks tidak memberi definisi
+    terukurnya — dilaporkan sebagai AMBIGU-23, bukan dikarang.
+
+    * Waktu tunggu (matriks §7, AMBIGU-09): ``registrasi_selesai_at`` →
+      ``CPPT`` pertama ``SIGNED``; patuh bila <= 60 menit.
+    * Lapor nilai kritis (matriks §7): ``critical_found_at`` →
+      ``critical_reported_at``; patuh bila <= 30 menit.
+    """
+    unit_id = visit.unit_kerja_id
+    if unit_id is None:
+        return {}
+    selesai = list(_finished_rajal_visits(unit_id, now))
+    results = {}
+
+    wait_pairs = []
+    for row in selesai:
+        minutes = _waiting_minutes(row)
+        if minutes is None:
+            continue
+        wait_pairs.append(minutes <= WAIT_MINUTES_TARGET)
+    record = _write_indicator(
+        INDIKATOR_WAKTU_TUNGGU, now, wait_pairs,
+        f'Dihitung otomatis F7.7 dari {len(selesai)} kunjungan POLI-JANTUNG '
+        f'selesai bulan {now.month}/{now.year} '
+        '(AMBIGU-09: registrasi selesai → CPPT pertama SIGNED; ambang 60 menit).',
+    )
+    if record is not None:
+        results[INDIKATOR_WAKTU_TUNGGU] = record.pk
+
+    critical_pairs = []
+    for row in selesai:
+        for order in row.order_penunjang.all():
+            if not order.is_critical_value:
+                continue
+            if order.critical_found_at is None or order.critical_reported_at is None:
+                continue
+            minutes = (order.critical_reported_at - order.critical_found_at).total_seconds() / 60.0
+            critical_pairs.append(minutes <= CRITICAL_MINUTES_TARGET)
+    record = _write_indicator(
+        INDIKATOR_NILAI_KRITIS, now, critical_pairs,
+        f'Dihitung otomatis F7.7 dari nilai kritis POLI-JANTUNG bulan '
+        f'{now.month}/{now.year} (matriks §7: lapor <= 30 menit).',
+    )
+    if record is not None:
+        results[INDIKATOR_NILAI_KRITIS] = record.pk
+    return results
+
+def _apply_rajal_disposition(visit, user, payload, values, kondisi, now):
+    """S10-L1-05 — empat cabang, masing-masing memakai jalur yang sudah ada.
+
+    Tidak ada pencetak baru: tiap cabang hanya menunjuk route cetak yang sudah
+    dipakai dasbor IGD/rawat jalan.
+    """
+    disposition = payload['disposisi']
+    resume = values['resume']
+    if disposition == 'PULANG':
+        visit.discharge_patient(
+            kondisi=kondisi, resume=resume, user=user,
+            edukasi=values['edukasi'], obat=values['obat'],
+            kontrol=values['kontrol'] or _planned_kontrol(visit),
+        )
+        record = visit.discharge
+        record.status_clearance = 'PROSES'
+        record.save(update_fields=['status_clearance'])
+        visit.status_antrean = 'SELESAI'
+        visit.save(update_fields=['status', 'status_antrean'])
+    elif disposition == 'RAWAT_INAP':
+        bed = (
+            Bed.objects.select_for_update().select_related('ruangan')
+            .filter(pk=values['bed_id']).first()
+        )
+        dpjp = values.get('dpjp') or visit.dpjp
+        if bed is None or bed.status != 'TERSEDIA' or not bed.ruangan.unit_kerja_id or not dpjp:
+            raise WorkflowValidation({'bed_id': [
+                'Pilih bed tersedia dengan unit tujuan dan DPJP yang jelas.'
+            ]})
+        visit.admit_to_ranap(bed, dpjp=dpjp)
+        visit.unit_kerja = bed.ruangan.unit_kerja
+        visit.status_antrean = 'SELESAI'
+        visit.save(update_fields=['unit_kerja', 'status_antrean'])
+    elif disposition == 'RUJUK_ANTAR_POLI':
+        visit.konsul_ke_poli = payload['disposisi_poli']
+        visit.konsul_catatan = payload['disposisi_alasan']
+        visit.status = 'DISPOSISI'
+        visit.status_antrean = 'SELESAI'
+        visit.tanggal_keluar = now
+        visit.save()
+        _write_rajal_discharge(visit, user, values, kondisi, now)
+    else:  # RUJUK_KELUAR
+        visit.status = 'RUJUK'
+        visit.status_antrean = 'SELESAI'
+        visit.tanggal_keluar = now
+        visit.sisrute_rs_tujuan = payload['disposisi_rs_tujuan']
+        visit.sisrute_alasan = payload['disposisi_alasan']
+        visit.save()
+        # ``DischargeRecord.RUJUK`` berarti "dirujuk ke RS lain" — fakta
+        # disposisi, bukan proyeksi kondisi klinis.
+        _write_rajal_discharge(visit, user, values, 'RUJUK', now)
+    return {
+        'branch': disposition,
+        'kondisi_akhir': payload.get('kondisi_akhir_rajal'),
+        'kondisi_pulang': getattr(getattr(visit, 'discharge', None), 'kondisi_pulang', ''),
+        'status_after': visit.status,
+        'service_after': visit.jenis_kunjungan,
+        'documents': list(_rajal_documents(disposition)),
+    }
+
+def _write_rajal_discharge(visit, user, values, kondisi, now):
+    """DischargeRecord untuk cabang yang tidak memakai ``discharge_patient``."""
+    DischargeRecord.objects.update_or_create(
+        kunjungan=visit,
+        defaults={
+            'tanggal_discharge': now,
+            'kondisi_pulang': kondisi,
+            'resume_medis': values['resume'] or 'Pelayanan selesai.',
+            'edukasi_pulang': values['edukasi'],
+            'obat_pulang': values['obat'],
+            'jadwal_kontrol': values['kontrol'] or _planned_kontrol(visit),
+            'total_tagihan': sum((b.subtotal for b in visit.billing.all()), 0),
+            'status_clearance': 'PROSES',
+            'dibuat_oleh': user,
+        },
+    )
+
 def _finalize_rajal(visit, workflow, user, data):
     """Tutup episode rawat jalan jantung: DPJP-only, kondisi akhir dari langkah 10."""
     require_dpjp(user, visit)
@@ -219,28 +517,48 @@ def _finalize_rajal(visit, workflow, user, data):
     signature = workflow.signatures.get('MEDIS', {})
     if signature.get('content_digest') != fingerprint:
         errors.append('Tanda tangan MEDIS untuk data terkini')
+    payload = (workflow.draft_payload or {}).get('10', {})
+    kondisi = payload.get('kondisi_akhir_rajal')
+    if kondisi not in KONDISI_AKHIR_RAJAL_CHOICES:
+        errors.append('Kondisi akhir rawat jalan wajib dipilih pada langkah 10.')
+    branch_errors = validate_disposisi_rajal(payload)
+    if branch_errors:
+        errors.extend(message for messages in branch_errors.values() for message in messages)
     if errors:
         raise WorkflowValidation({'finalisasi': errors})
-    kondisi = (workflow.draft_payload or {}).get('10', {}).get('kondisi_akhir_rajal')
-    if kondisi not in KONDISI_AKHIR_CHOICES:
-        raise WorkflowValidation({'finalisasi': ['Kondisi akhir rawat jalan wajib dipilih pada langkah 10.']})
-    visit.discharge_patient(kondisi=kondisi, resume=values['resume'], user=user,
-                            edukasi=values['edukasi'], obat=values['obat'],
-                            kontrol=values['kontrol'] or _planned_kontrol(visit))
-    record = visit.discharge
-    record.status_clearance = 'PROSES'
-    record.save(update_fields=['status_clearance'])
-    visit.status_antrean = 'SELESAI'
-    if kondisi == 'RUJUK':
-        visit.status = 'RUJUK'
-    visit.save(update_fields=['status', 'status_antrean'])
+    now = timezone.now()
+    kondisi_pulang = KONDISI_AKHIR_TO_KONDISI_PULANG[kondisi]
+    disposition = _apply_rajal_disposition(visit, user, payload, values, kondisi_pulang, now)
+    # F7.4/F7.5/F7.7 — bukti mutu ditulis sebelum revisi final agar snapshot
+    # memuat keadaan yang benar-benar tersimpan. Status FINAL disimpan lebih
+    # dulu supaya agregat indikator (yang menyaring `status='FINAL'`) sudah
+    # menghitung episode ini sendiri.
+    workflow.status, workflow.finalized_by, workflow.finalized_at, workflow.last_step = (
+        'FINAL', user, now, 10,
+    )
+    workflow.save(update_fields=['status', 'finalized_by', 'finalized_at', 'last_step', 'updated_at'])
+    incident = _record_incident(visit, workflow, user, now)
+    ep_evidence = _record_ep_evidence(visit, workflow, user, now)
+    indicators = _record_unit_indicators(visit, now)
     snapshot['signatures'] = copy.deepcopy(workflow.signatures)
-    snapshot['disposition'] = {'kondisi_akhir': kondisi, 'resume': values['resume'],
-                               'status_after': visit.status, 'service_after': visit.jenis_kunjungan,
-                               'finalized_by': user.pk, 'finalized_at': timezone.now().isoformat()}
-    revision = IgdAssessmentRevision.objects.create(workflow=workflow, revision=1, snapshot=snapshot, signed_by=user)
-    workflow.status, workflow.finalized_by, workflow.finalized_at, workflow.last_step = 'FINAL', user, timezone.now(), 10
-    return {'revision_id': revision.pk, 'kondisi_akhir': kondisi}
+    snapshot['disposition'] = {
+        **disposition,
+        'resume': values['resume'],
+        'finalized_by': user.pk,
+        'finalized_at': now.isoformat(),
+    }
+    snapshot['ep_evidence'] = ep_evidence
+    snapshot['incident_id'] = incident.pk if incident else None
+    snapshot['indicator_records'] = indicators
+    revision = IgdAssessmentRevision.objects.create(
+        workflow=workflow, revision=1, snapshot=snapshot, signed_by=user,
+    )
+    return {
+        'revision_id': revision.pk,
+        'kondisi_akhir': kondisi,
+        'disposition': disposition['branch'],
+        'documents': disposition['documents'],
+    }
 
 def finalize(visit, workflow, user, data):
     if _is_rajal(workflow):

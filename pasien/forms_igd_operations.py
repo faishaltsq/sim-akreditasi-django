@@ -80,11 +80,19 @@ class FinalizationForm(OperationForm):
 
 
 class RajalFinalizationForm(OperationForm):
-    """Penutupan episode rawat jalan: kondisi akhir berasal dari langkah 10 (DPJP)."""
+    """Penutupan episode rawat jalan: kondisi akhir berasal dari langkah 10 (DPJP).
+
+    ``bed_id``/``dpjp`` hanya dipakai cabang "Admisi Rawat Inap" (S10-L1-05);
+    cabang lain mengabaikannya. Pemilihan bed sengaja tidak menjadi field
+    langkah 10 karena ketersediaan bed berubah per detik — matriks menaruhnya di
+    modul Manajemen Bed, dan nilainya diperiksa ulang saat finalisasi.
+    """
     resume = forms.CharField(max_length=20000, widget=forms.Textarea)
     edukasi = forms.CharField(required=False, max_length=10000, widget=forms.Textarea)
     obat = forms.CharField(required=False, max_length=10000, widget=forms.Textarea)
     kontrol = forms.DateField(required=False, widget=forms.DateInput(attrs={'type':'date'}))
+    bed_id = forms.IntegerField(required=False, min_value=1, label='Bed tujuan (khusus Admisi Rawat Inap)')
+    dpjp = forms.CharField(required=False, max_length=150)
 
 
 class AddendumForm(OperationForm):
